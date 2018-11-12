@@ -90,7 +90,7 @@
 
 %\preprintfooter{internal memo}
 
-\author{ author1}\affiliation{ContinentOne}
+\author{ author}\affiliation{ContinentOne}
  
 %\authorinfo{Sophia Drossopoulou$^1$, James Noble$^{2,1}$, Toby Murray$^4$, Mark Miller$^3$, Shupeng Loh$^1$, Susan Eisenbach$^1$}{$^1$Imperial College London, $^2$Victoria University Wellington, $^3$Google Inc, $^3$NICTA and UNSW.}{}
 
@@ -98,10 +98,9 @@
 \title{Holistic Specifications for Robustness} 
 
 
+
+
 \begin{abstract}
-\note{We need to make a better connection with work on safety. And why it is not sufficient.}
-
-
 Functional specifications of program components describe what
 components \emph{can} do --- the \emph{sufficient} conditions to
 invoke the component's behaviour: a client who supplies arguments
@@ -122,6 +121,7 @@ of robust and reliable programs.
 
 %% especially in an open world
 
+\note{We need to make a better connection with work on safety. And why it is not sufficient.}
 
 %% We argue  that it is essential to specify policies which make a program robust,
 %% and that the specification of what such robustness policies goes beyond  traditional function pre- and post-conditions.
@@ -136,510 +136,137 @@ of robust and reliable programs.
 \maketitle
 
 
-\section{Introduction}
-\label{section:introduction}
-
-
-Traditional functional specifications describe what components are
-guaranteed to do. So long as a method is called in a state satisfying
-its preconditions, the method will complete its work and establish a
-state satisfying its postconditions.   Method specifications
-are \textit{sufficient} conditions under which methods can be called,
-that is. sufficient conditions under which their method's behaviour
-can be invoked.
-
-
-Consider the specification of a trivial Bank component in
-fig.~\ref{fig:BankSpec}.  The bank is essentially a wrapper for a map
-from account objects to account balances: given an instance of a Bank
-component, calling \prg{newAccount} returns a new account object and
-then calling \prg{initialise} sets up initial accounts and balances.
-(GRRR: not really happy about this. should have a boolean setup ghost
-field so initialise can onlyt be called once. which the functions have
-as precondtion :ARGH).  Given an account, calling \prg{balance} with an
-account returns the account balance, and calling \prg{deposit} with
-two accounts deposits funds from the source to the destination account.
-
-
-\begin{figure}[tbp]
-\begin{lstlisting}
-  specification Bank {
-
-    ghost field ledger : Map[Account, Number]
-
-    function newAccount {
-      a \in Account, b \in Bank
-        { a := b.newAccount }
-      FRESH(a)
-    }
-
-    function balance {
-      a \in Account, b \in Bank, n \in Number
-        { n := b.balance(a) }
-      n == ledger.at( a )
-    }
-
-    function deposit {
-      src, dst \in Account, b \in Bank, n \in Number
-      sb == ledger.at(src), db == ledger.at(dst), n > 0
-        { b.deposit(dst, src, n) }
-      ledger.at(src) == sb - n
-      ledger.at(dst) == db + n
-    }
-
-    function initialise {
-      b \in Bank, m in Map[Account, Number]
-        { b.initialise( m ) }
-      ledger == m
-    }
-
-  }
-\end{lstlisting}
-\caption{Functional specification of a Bank}
-\label{fig:BankSpec}
-\end{figure}
-
-The specification in fig.~\ref{fig:BankSpec} is enough to let us
-calculate the result of operations on the bank and the accounts ---
-for example it is straightforward to determine that the code in
-fig.~\ref{fig:rego} satisfies its assertions: given that the
-\prg{acm} object has a balance of 10,000 before an author is
-registered then afterwards it will have a balance of 11,000 while the
-\prg{author} now has a balance of 500 from a starting balance of 1,500
-(barely enough to buy a round of drinks at the conference hotel bar).
-
-
-\begin{figure}[tbp]
-\begin{lstlisting}
-  assume b.balance(acm) == 10000
-  assume b.balance(author) == 1500
-
-  b.deposit(acm, author, 1000)
-
-  assert b.balance(acm) == 11000
-  assert b.balance(author) == 500
-\end{lstlisting}
-\caption{Registering at a Conference}
-\label{fig:rego}
-\end{figure}
-
-
-This reasoning is fine in a closed world, where we only have to
-consider complete programs, where all the code in our programs (or any
-other systems with which they interact) is under our control.   In an
-open world, however, things are more complex: our systems will be made
-up of a range of components, many of which we do not control; and
-furthermore will have to interact with external systems which we
-certainly do not control.  Returning to our author, say some time
-after regisering by executing the code in fig.~\ref{fig:rego}, they
-attempt to pay for a round at the bar.  Under what circumstances can
-they be sure they have enough funds in their account?
-
-To see the problem, consider the additional function specified in
-fig.~\ref{fig:steal}. This method says the bank additional provides a
-\prg{steal} method that empties out every account in the bank and puts
-all their funds into the thief's account. If this method exists, and
-if it is somehow called between registering at the conference and
-going to the bar, the author (actually everyone using the same bank)
-will find all their accounts empty (except the thief, of course).
-
-\begin{figure}[tbp]
-\begin{lstlisting}
-  specification Theft {
-
-    function steal {
-      b \in Bank, thief in Account, m in Map[Account, Number]
-      m == b.ledger
-        { b.steal(thief) }
-      forall a in dom(m) :
-      ledger.at(a) =
-        if (a == thief)
-          then sum(codom(m))
-          else 0
-    }
-  }
-\end{lstlisting}
-\caption{Functional specification of taxation}
-\label{fig:steal}
-\end{figure}
-
-The critical problem is that a bank implementation including a \prg{steal}
-method would meet the functional specifications of the bank friom
-fig.~\ref{fig:BankSpec}, so long as its \prg{newAccount},
-\prg{balance}, \prg{deposit}, and \prg{initialise} methods do meet
-that specification.
-
-One obvious solution would be to return to a closed-world
-interpretation of specifications: we interpret specifications such as
-fig.~\ref{fig:BankSpec} as \emph{exact} in the sense that only
-implementations that meet the functional specification exactly,
-\emph{with no extra methods or behaivour}, are considered as suitable
-implementations of the functional specification. The problem is that
-this solution is far too strong: it would for example rule out a bank
-that simply counted the number of deposits that had taken place,
-i.e. met fig.~\ref{fig:count} as well as fig.~\ref{fig:BankSpec}.
-
-
-\begin{figure}[tbp]
-\begin{lstlisting}
-  specification CountDeposits {
-
-    ghost field count : Number = 0
-
-    function deposit {
-      c : Number = count
-        { b.deposit(dst, src, n) }
-      count == c + 1
-    }
-
-    function count {
-      b : Bank
-        { c = b.countDeposits }
-      c == b.count
-    }
-  }
-\end{lstlisting}
-\caption{Functional specification counting the number of deposits}
-\label{fig:count}
-\end{figure}
-
-
-What we need is some way to permit bank implementations that meet
-fig.~\ref{fig:count} but to forbit implementatons that meet
-fig.\ref{fig:steal}.  The key here is to capture the (implicit)
-assumptionms underlying fig.\ref{fig:BankSpec}, and to provide
-additional specifications that capture those assumptions.  There are
-at least two assumptions that can prevent methods like \prg{steal}:
-
-\begin{enumerate}
-\item after initialisation, the \emph{only} way an account's
-  balance can be changed is if a client calls the \prg{deposit} method
-\item an account's balance can \emph{only} be changed if a client has
-  that particular account object.
-\end{enumerate}
-
-Compared with the functional specification we have seen so far, these
-assunmptions capture \emph{necessary} conditions rather than
-\emph{sufficient} conditions. It is necessary that the \prg{deposit}
-method is called to change an account's balance, and it is necessary
-that the particular account object can be passed as a parameter to
-that method. The fig.~\ref{fig:steal} specification is not consistent
-with these assumptions, while the.~\ref{fig:count} specification is
-consistent with these assunmptions.
-
-
-The contribution of this paper is a specification langauge and
-semantics that can be used to specify necessary specifications, and a
-semantics for those specifications that can determine whether some
-functional (sufficient) specifications are consistent (or not) with
-the necessary specifications. Fig.~\ref{fig:nec} shows how we
-can express these two informal assumptions using our specification
-language Chainmail II.  Rather than specifying \prg{functions} to
-describe the behaviour of particular methods when they are called, we
-write \prg{policies} that range across the whole behvaiour of the
-component.
-
-
-An overall ``holistic'' specification for the bank account, then,
-would be our original sufficient functional specification from
-fig.~\ref{fig:BankSpec} plus the necessary security policy
-specification in fig.~\ref{fig:nec}.  This holistic specification
-permits an implememntation of the bank that also meets the \prg{count}
-specification from fig.~\ref{fig:count}, but does not permit an
-implementation that also meets the \prg{steal} specification from
-fig.~\ref{fig:steal}.
-
-
-\begin{figure}[htbp]
-%\begin{definition}
-%\label{def:pol2}
-
-    (1)\ \  $\triangleq$\ \ $\forall \prg{a}.\forall \prg{S}.\ [ \ \  \prg{a}:\prg{Account}\   \wedge\   \prg{this}\neq\prg{a} \ \wedge\ \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \   \
-    \longrightarrow$ \\
- $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \Calls{\prg{deposit}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$
-
-\vspace{.1cm}
-
-    (2)\ \  $\triangleq$\ \ $\forall \prg{a}.\forall \prg{S}.\ [ \ \  \prg{a}:\prg{Account}\   \wedge\   \prg{this}\neq\prg{a} \ \wedge\ \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \   \
-    \longrightarrow$ \\
- $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$
-
-%\end{definition}
-
-\caption{Necessary specifications for \prg{deposit}}
-\label{fig:nec}
-\end{figure}
-
-
-Policy (1) in fig.~\ref{fig:nec} says that if --- in any future state
-($\Future$\ldots) an account's balance is changed
-($\Changes{\prg{a.balance}}$)
-then there must be some client object $o$ which is outside the
-bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)t
-that calls the \prg{deposit} method: ($\Calls{\prg{deposit}}$).
-Policy (2) similarly constraints any possible code that may change an
-account's balance, but requires that the client object making the call
-has direct access to the account object
-($\CanAccess{\prg{o}}{\prg{a}}$).
-
-We can then prove that e.g.\ the \prg{steal} method from
-fig.~\ref{fig:steal} is inconsistent with both of these policies.
-First, the \prg{steal} method clearly changes the balance of
-every account in the bank, but policy (1) requires that any method
-that changes the balance of any account must be called \prg{deposit}.
-Second, the \prg{steal} method changes the balance of every account in
-the system, and will do so without the called having a reference to
-most of those accounts, which breaches policy (2).   Note
-that \prg{steal} putting all the funds into the thief's account
-does not breach policy (2) with respect to the thief's own account,
-because that account is passed in as a parameter to the \prg{steal}
-method, and so the called of the \prg{steal} must have access to that
-account.
-
-
-\paragraph{random minor point}
-
-These necessary specification policies
-can be defined and interpreted independently of any particular
-implementation of a specification --- rather our policies constrain
-implementations, in just the same way as traditional functional
-specifications.  This is in contrast to e.g.\ class invariants, which
-establish invariants across the implementation of an abstract, or
-abstraction functions, which link an abstract model to a concrete
-implementation of that model.
-
-
-
-
-\cleardoublepage
-
-\begin{figure}[tbp]
-\begin{lstlisting}
- class Bank {
-   field ledger;       // a Node
-   Bank( ){ ledger = null; }
-   fun makeAccount(amt){ ...  }
-   fun deposit(source, destination, amnt){ ... }
- }
-
- class Account {
-    fun myBank;        // a Bank
-    Account(aBank){ myBank = aBank;  }
-    fun deposit(source, destination, amnt){ ... }
- }
-
-  class Node{
-    field balance;     // the  money held in theAccount a number
-    field next;        // the next node
-    field theAccount;  // the account
-     ...
- }
-\end{lstlisting}
-\caption{Sketch of the code of the Bank example -- not robust}
-\label{fig:BankInitial}
- \end{figure}
-
-
-
-\section{Introduction}
-\label{section:introduction}
-
-
-Write the intro -- use following structure:
-\begin{enumerate}
-\item
-Show the bank/account without protection from Figure \ref{fig:BankInitial}, and discuss why it is not robust
-\item
-Say that the code is not robust
-\item
-Show robust version of same code; this appears here in Figure \ref{fig:Bank}. Argue that the two versions have same HL spec.
-\item
-How to specify robustness?
-\item
-outline our proposal
-\item
-short comparison with other works
-\item
-Contributions  ...
-
-\item
-Structure of this paper  ...
-
-\end{enumerate}
-
-\begin{figure}[tbp]
-\begin{lstlisting}
- class Bank {
-   private field ledger;   // a Node
-
-   Bank( )
-     { ledger = null; }
-   fun makeAccount(amt)
-     { account = new Account(this);
-       ledger = new Node(account, amt, ledger);
-       return account; }
-   fun deposit(source, destination, amnt)
-     {  ... }
- }
-
- class Account {
-    private field myBank;  // a Bank
-
-   Account(aBank)
-     { myBank = aBank;  }
-   fun sprout( )
-     // create Account in same Bank with 0 balance
-     { return this.myBank.create(0)  }
-   fun deposit(source, amnt)
-     // if destination is an Account in myBank,  and  source holds enough money,
-     // then transfer amnt from source into receiver
-     { ... }
-}
-
-  class Node{
-   field balance;     // the  money held in theAccount a number
-   field next;        // the next node
-   field theAccount;  // the account
-     ...
- }
-
-\end{lstlisting}
-\caption{Sketch of the Bank example  -- robust version}
-\label{fig:Bank}
- \end{figure}
-
- \section{Our Research Question: How to specify Robustness}
- Here we explain what  makes our code robust.
-
- In the code from Figure \ref{fig:Bank} .... explain what it does .... explain what currency is, and why it is important to protect it.
-
- Now consider the objects from the diagram in Figure \ref{fig:Diagram}.
- The boxes represent objects (at a certain address and of a certain class), and
-  the arrows represent fields pointing to other objects. For example, at address \prg{1} we have an object of class \prg{Bank}, at
- \prg{4} and  \prg{5} we have objects of class \prg{Node}, ...
- The \prg{myBank} field from object  \prg{2} points to  \prg{1}, etc ...
- The grey objects, at  \prg{10},  \prg{11},  \prg{20} and  \prg{21}
- are objects of unknown provenance, but we know that  \prg{10} has
- a field pointing to the \prg{Bank} at  \prg{1}, and a field pointing to  \prg{11}, and
- similarly for objects  \prg{20} and  \prg{21}.
-
-\paragraph{What  might  happen?} Since object \prg{10} has access to the \prg{Bank} object at \prg{1},
-and given the code from Figure  \ref{fig:Bank}, and given that we know
-nothing about \prg{10}'s provenance,
-it is conceivable that \prg{10} would call method \prg{makeAccount} on \prg{1} with any amount, and thus increase the currency.
-%Similarly, since object \prg{11} has access to object \prg{11}, it is conceivable that \prg{11} could increase the currency
-%(either by obtaining access to \prg{1} and calling the \prg{Account} constructor, or by calling some method on \prg{10} which
-%then increases the currency).
-Similarly, \prg{21} has direct access to \prg{3}, and indirect access (through  \prg{20}) to \prg{4}, it can call the method \prg{deposit}, and thus affect the \prg{balance} of both \prg{3} and \prg{4}.
-
-
-\paragraph{What is guaranteed not  to happen?}
-Even though \prg{20}
-has indirect access to \prg{1} (through \prg{4}), it cannot navigate the path to \prg{1},
-and cannot call a method on \prg{1} that affects the currency, nor ask \prg{4} to give access to \prg{1}.
-Therefore, it is guaranteed that \prg{20} and \prg{21} cannot affect the currency. Similarly,
-it is guaranteed that \prg{20}, \prg{21}, \prg{10} and \prg{11} cannot affect the \prg{balance} of \prg{2}.
-
-\paragraph{Are we interested in what is guaranteed not to happen?}
-%\paragraph{What does this all have to do with robustness?}
-We argue that knowing  what is guaranteed not  to happen is crucial in understanding
-whether a program is robust and what way it is robust.
-For example, the fact that an execution which has access to objects \prg{20} and \prg{21} only, cannot affect the currency of
-\prg{1}, means that we can pass \prg{Account} objects as arguments in calls to unverified, or even to objects of unknown provenance,
-safe in  the knowledge that the only risk we are running is to lose the money stored in the specific \prg{Account}s,
-but without worrying about the money in other \prg{Account}s, and without worry about the
-integrity of the currency in the \prg{Bank}.
-Such considerations %have inspired the expression of
- are expressed in two of the   five policies  proposed in~\cite{ELang}.
- %Two of these policies are concerned with expressing what will {\em not} happen:
-
-\begin{description}
-\item[\Pol 2]
-Only someone with the bank of a given currency can violate conservation of that currency.
- \item[\Pol 4]
-No one can affect the balance of a account they don't have.
-\end{description}
-
-Robustness has inspired the introduction of several language features \eg annotations such as
-\prg{const}, \prg{private}, \prg{unique} \etc,    type disciplines \eg   linear types, ownership types \etc, and
-also programming patterns such as proxies, membranes \etc. These are {\em mechanisms}
-that support the development of robust code, and they each come with their own hyper-properties (\eg \prg{const} fields
-do not change, or \prg{own}ed objects are dominated by their owner), proven \cite{..} for each case.
-Code become robust through an interplay of the use of such features  with programming pattern\footnote{I think I am not clear here}.
-We argue, with some few exceptions, \cite{...}
-there is little work in  the {\em specification} of robust code.
-
-
-\begin{figure}[btph]
-\includegraphics[width=11cm,height=5cm]{diagram1}
- \caption{Diagrammatic representation of some objects from  \prg{Bank}, \prg{Account} \etc  }
-  \label{fig:Diagram}
-  \end{figure}
-
-
-
-
-\paragraph{Our Approach}
-In order to specify robustness, we need to express
-\begin{enumerate}
-\item
-access (permission) and  change (authority)
-\item
-{\em potential} effects (the future) and {\em causes} of effects (the past)
-\item
-footprints\footnote{use instead the tern footprint or witness?} (space) of executions as well as of assertions.
-For example, an execution which starts (has as receiver) an object different than \prg{1}, and
- which involves objects
-\prg{1}, \prg{2}, \prg{3}, \prg{4}, \prg{5}, \prg{6}, \prg{7}, \prg{20} and \prg{21},
-might end up calling methods on \prg{1}, but is guaranteed not to affect the \prg{currency} on \prg{1}.
-
-Interestingly, the temporal aspects of our assertions unify the footprint of an execution and an assertion\footnote{Better word?}: The foorprint of an assertion which talks about time is essentially the footprint of the execution involved in satisfying that assertion.
-\end{enumerate}
-
-
-
-
-
-
-
-\section{Our Proposal}
-
-\subsection{Preliminaries}
-
-Here we define some preliminaries ... they are more or less standard.\footnote{Most of the below can be taken from Swapsies work -- it is slightly simpler as we do not need $\obeys$}.
-We will define the following:
-\begin{enumerate}
-\item
-Runtime configuration $\sigma$; it consists of a heap, and a {\em rich} expression\footnote{Better term than "rich expression"?}. A rich expression consists of a stack of frames end expression contexts as well as the expression currently being executed. Explain that this is slightly unusual, but why it is useful
-\item
-A small OO PL with its syntax.
-\item Also, syntax definitions for expressions $e$
-\item
-Also, syntax definitions for assertions $\A$.
-\item
-Modules $\M$:  a module maps a class identifier to a class definition; a function identifier to a function  and a predicate identifier to an assertion. A module concatenation operator,  $\M*\M'$ -- the operation is defined only when the
-two modules do not have overlapping definitions.
-\item
-A small step operational semantics with the  format $\M, \sigma \leadsto \sigma'$
-\item
-an interpretation function for expressions $\interp{e}{\M,\sigma}$ which maps expressions and configurations to values.
-\footnote{NOTE\_TO\_SELF: careful with undefinedness -- as per below for $\A$'s.
-Also, we need to distinguish bad formedness because of infinite recursion
-from undefinedness because of missing definitions.
-We have all that in the Swapsies paper.}
-\item
-Define validity for assertions $\M, \sigma \models \A$. Eg the term
- $\prg{x}:\prg{C}$ expresses that $\interp {\prg{x} }{\M,\sigma}$ is the address of an object of class \prg{C};
-\footnote{NOTE\_TO\_SELF: This is standard, but as we   allow for recursive efintions in $\M$ we also need to cater about infinite recursion and thus introduce undefinedness. In particular, if $\A \rightarrow \A'$, and if $\A$ undefined or  $\A$ is false but $\A'$ undefined? Ideally, these things have to be defined in such a way that usual manipulations hold, eg $\A \rightarrow \A' \ \equiv \neg A \vee \A'$.}
-\item
-Definition of the notion of initial configuration $\Initial{\_}$ and arising configuration $\Arising({\M})$. The   set  $\Arising(\M)$ contains all runtime configurations which can be reached
-when starting with an empty heap,  and executing any expression consisting of constructor  and method calls
-as defined in $\M$.\footnote{That is,
-$\Arising(\M)$=$\{ \ \sigma\ \mid\ \exists \prg{e}.\ \M \vdash (\prg{e},\emptyset) \leadsto* \sigma \ \}$}
-
-\end{enumerate}
-
-\subsection{Extensions}
+\section{Modules}
+
+\begin{definition}[Modules]
+We define modules $\M\in\syntax{Module}$ as follows   \\  % to force line break
+
+\begin{tabular}  {@{}l@{\,}c@{\,}ll}
+\syntax{Module} \ \  &    =   & ( \syntax{ClassIdentifier}\,  $\cup$\, \prg{Internal} \` )\     $\longrightarrow$\
+   \syntax{ClassDescr}    $\cup$  \syntax{InternalDescr}
+ \end{tabular}
+\\ 
+such that for any any module  $\M$, class identifier \prg{C},  we have $\M(\prg{C})\in \syntax{ClassDescr}$ or undefined, and $\M(\prg{Interna;})\in \syntax{SimpleAssertion}$.
+We describe \syntax{ClassDescr}s in Definition \ref{def:syntax:classes}, and  \syntax{SimpleAssertion}s in Defintion \ref{def:syntax:classes}.
+\end{definition}
+
+
+
+\paragraph{Classes}
+
+We define the syntax of class definitions below. {Class definitions serve two purposes:
+They describe how a class contributes to the runtime behaviour of a program: for this we use its field and method declarations.
+They also describe how a class contributes to the
+semantics of its module: which specifications it claims to obey,
+how functions and  predicates are to be interpreted when applied to its objects\footnote{TODO: say earlier that  functions and predicates are interpreted depending on the class of receiver},
+and how ghost fields are to be interpreted.\footnote{TODO: perhaps use model field and not ghost field.}
+Note that ghost fields are interpreted according to the syntax of expressions - \syntax{Expr} - which will be given later.}
+
+Note that the language is untyped. Method bodies consist of sequences of statements; these can be field read or field assignments (only allowed if the object is \prg{this} -- i.e. as in Smalltalk), conditionals, and method calls. All else can be encoded.
+
+ {The keyword \kw{private} indicates that a class, say \prg{C},  is  private to its module. This means that even though anybody who has access to  objects of class \prg{C} may  call any methods on these objects, only classes from the same module as \prg{C} may construct objects of class \prg{C}.
+   In terms of the capabilities literature, this means that the capability to create new objects of that class is hidden within this module.
+   This form of privacy is enforced through the linking operator defined in Definition \ref{formal:Linking}.}
+
+ \begin{definition}[Classes, Methods, Args]
+\label{def:syntax:classes}
+We define the syntax of modules below.
+
+\begin{tabular}{lcll}
+ \syntax{ClassDescr}   &   \BBC  &     \kw{class}  \syntax{ClassId}    \lb\,  $($\ \kw{field} \syntax{FieldId}\ $)^*$ \    
+ $($\ \syntax{methBody}\ $)^*$   \ \rb
+\\
+\syntax{methBody} &\BBC&
+     \kw{method}    m\lp \syntax{ParId}$^*$ \rp   \lb\, \syntax{Stmts} \semi   \kw{return}  \syntax{Arg}  \,
+    \rb
+ \\
+ \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
+\syntax{Stmt}    &\BBC&     \kw{var} \syntax{VarId}  {\kw{:=}} \syntax{Rhs}\\
+&  ~\SOR~ &     \syntax{VarId} {\kw{:=}} \syntax{Rhs} \\
+&  ~\SOR~ &    \kw{this}.\syntax{FieldId} {\kw{:=}} \syntax{Rhs} \\
+&  ~\SOR~ &   \kw{if}  \syntax{Arg}  \kw{then} \syntax{Stmts} \kw{else} \syntax{Stmts}\\
+&  ~\SOR~ &   \kw{skip}\\
+\syntax{Rhs} & \BBC&    {\syntax{Arg}}{\kw{.}}\syntax{MethId}\lp  \syntax{Arg}$^*$ \rp    ~\SOR~   \syntax{Arg}  \\
+&  ~\SOR~ &   {\kw{new} \syntax{ClassId}\lp \, \syntax{Arg}$^*$\, \rp} \\
+ \syntax{Arg} &\BBC&  \syntax{ParId} ~\SOR~ \syntax{VarId} ~\SOR~ {\kw{this}} \\
+&  ~\SOR~ & {\kw{this}}.\syntax{FieldId}
+ \end{tabular}
+\end{definition}
+
+Note that \LangOO\, supports a limited form of protection: the syntax
+  supports  reading of fields of any object, but restricts each object
+  to being able to modify only its \emph{own} fields.
+  
+  We define  method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class and a method identifier, where we assume that \prg{C} is a class identifier,   \prg{m} a method identifier: $ ~ $ \\
+
+  
+ \begin{definition}[Lookup]For a class identifier \prg{C}  and a method identifier \prg{m} : $ ~ $ \\
+
+\noindent
+$
+\Meths {} {\prg{C}} {m}      =       \kw{method}\, m\, \lp p_1, ... p_n \rp
+\lb stms \semi\, \kw{return}\ {\syntax{a}} \rb
+ $
+
+\noindent
+ iff \ $ \M(\prg{C}) =   \kw{class}\, \prg{C}\, \  \lb ...  $
+ % \\ $ ~ $  \hspace{.8in} $ 
+ $\kw{method}\, m\, \lp p_1, ... p_n \rp \lb stms \semi\, \kw{return}\ {\syntax{a}} \rb  ... \rb.$
+\\
+\noindent
+undefined, otherwise. $ ~ $ \\
+
+$
+{\mathcal{ I}} ( {\M} )     =      $\syntax {SA}$\ \ \ 
+%  \noindent
+ iff\ \  \ $ \M(\prg{Internal}) =  $\syntax {SA}$
+\\
+
+ 
+  \end{definition}
+
+\subsection{The Operational Semantics of \LangOO}
+\label{formal:semantics}
+
+TODO
+
+\subsection{Module linking}
+
+ In this section we define  module linking and module ??? term ???
+ 
+ Linking is an operation that takes two modules, and creates a module which corresponds  to the union of the two. We use the concept of module liking in order to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know. 
+
+We place some conditions for module linking to be defined: We require that the two modules do not contain implementations for the same class identifiers,  
+
+We require that $dom(\M_1) \cap dom(\M_2)$=$\{ \prg{Internal} \}$
+
+\begin{itemize}
+     \item 
+   ....
+    \item  
+   $(\M_1 \circ \M_2)(\prg{Internal})$ = $ \M_1(\prg{Internal}) \cup  \M_2(\prg{Internal})$
+ \end{itemize}
+ 
+ \begin{lemma}[properties of linking]
+ For any modules $\M_0$, and $\M_1$ and $\M_2$, such that $\M_1*\M_2$ is defined:  
+ \label{lemma:linking:properties}
+ For all modules $\M_1$, $\M_2$ and $\M_3$:
+ 
+ \begin{itemize}
+     \item 
+     $(\M_1\circ \M_2)\circ \M_3$ = $(\M_1\circ (\M_2 \circ \M_3)$.
+    \item  
+      $\M_0*\M_1$ i= $\M_0*\M_1*\M_2$.
+   \end{itemize}
+ 
+ \end{lemma}
+
+\section{ Assertions}
+ 
+ 
+ 
+
+
 
 We will define the OCAP assertions $\CanAccess{\_}{\_}$  (permission)
 and   $\Changes{\_}$ (authority). \footnote{Note that they are slightly different
