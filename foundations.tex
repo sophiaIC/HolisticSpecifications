@@ -90,7 +90,7 @@
 
 %\preprintfooter{internal memo}
 
-\author{ author}\affiliation{ContinentOne}
+\author{ author}\affiliation{Address}
  
 %\authorinfo{Sophia Drossopoulou$^1$, James Noble$^{2,1}$, Toby Murray$^4$, Mark Miller$^3$, Shupeng Loh$^1$, Susan Eisenbach$^1$}{$^1$Imperial College London, $^2$Victoria University Wellington, $^3$Google Inc, $^3$NICTA and UNSW.}{}
 
@@ -138,36 +138,34 @@ of robust and reliable programs.
 
 \section{Modules}
 
+Modules are repositories for class lookups, and have a special entry, under \prg{Internal} to describe the internals of 
+
 \begin{definition}[Modules]
-We define modules $\M\in\syntax{Module}$ as follows   \\  % to force line break
+We define modules $\syntax{Module}$ as  the set of mappings from identifiers to class descriptions or a simple assertion\\  % to force line break
 
 \begin{tabular}  {@{}l@{\,}c@{\,}ll}
-\syntax{Module} \ \  &    =   & ( \syntax{ClassIdentifier}\,  $\cup$\, \prg{Internal} \` )\     $\longrightarrow$\
-   \syntax{ClassDescr}    $\cup$  \syntax{InternalDescr}
+\syntax{Module} \ \  &    =   &  \ \prg{Identifier}   \     $\longrightarrow$\
+$  \ ( \  \syntax{ClassDescr}     \cup  \syntax{SimpleAssertion} \ ) $
  \end{tabular}
-\\ 
-such that for any any module  $\M$, class identifier \prg{C},  we have $\M(\prg{C})\in \syntax{ClassDescr}$ or undefined, and $\M(\prg{Interna;})\in \syntax{SimpleAssertion}$.
-We describe \syntax{ClassDescr}s in Definition \ref{def:syntax:classes}, and  \syntax{SimpleAssertion}s in Defintion \ref{def:syntax:classes}.
+
+\noindent
+such that\\
+ for any any $\M\in\syntax{Module}$ and the special identifier \prg{Internal} we have 
+$\M(\prg{Internal})\in \syntax{SimpleAssertion}$, and for all other identifiers, \prg{C}, we have
+ $\M(\prg{C})\in \syntax{ClassDescr}$ or undefined.
+
 \end{definition}
+We describe \syntax{ClassDescr}s in Definition \ref{def:syntax:classes}, and  \syntax{SimpleAssertion}s in Defintion 
+??? %\ref{def:syntax:classes}.
 
 
 
 \paragraph{Classes}
 
-We define the syntax of class definitions below. {Class definitions serve two purposes:
-They describe how a class contributes to the runtime behaviour of a program: for this we use its field and method declarations.
-They also describe how a class contributes to the
-semantics of its module: which specifications it claims to obey,
-how functions and  predicates are to be interpreted when applied to its objects\footnote{TODO: say earlier that  functions and predicates are interpreted depending on the class of receiver},
-and how ghost fields are to be interpreted.\footnote{TODO: perhaps use model field and not ghost field.}
-Note that ghost fields are interpreted according to the syntax of expressions - \syntax{Expr} - which will be given later.}
-
+We define the syntax of class definitions below. 
 Note that the language is untyped. Method bodies consist of sequences of statements; these can be field read or field assignments (only allowed if the object is \prg{this} -- i.e. as in Smalltalk), conditionals, and method calls. All else can be encoded.
 
- {The keyword \kw{private} indicates that a class, say \prg{C},  is  private to its module. This means that even though anybody who has access to  objects of class \prg{C} may  call any methods on these objects, only classes from the same module as \prg{C} may construct objects of class \prg{C}.
-   In terms of the capabilities literature, this means that the capability to create new objects of that class is hidden within this module.
-   This form of privacy is enforced through the linking operator defined in Definition \ref{formal:Linking}.}
-
+ 
  \begin{definition}[Classes, Methods, Args]
 \label{def:syntax:classes}
 We define the syntax of modules below.
@@ -181,45 +179,41 @@ We define the syntax of modules below.
     \rb
  \\
  \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
-\syntax{Stmt}    &\BBC&     \kw{var} \syntax{VarId}  {\kw{:=}} \syntax{Rhs}\\
-&  ~\SOR~ &     \syntax{VarId} {\kw{:=}} \syntax{Rhs} \\
-&  ~\SOR~ &    \kw{this}.\syntax{FieldId} {\kw{:=}} \syntax{Rhs} \\
-&  ~\SOR~ &   \kw{if}  \syntax{Arg}  \kw{then} \syntax{Stmts} \kw{else} \syntax{Stmts}\\
-&  ~\SOR~ &   \kw{skip}\\
-\syntax{Rhs} & \BBC&    {\syntax{Arg}}{\kw{.}}\syntax{MethId}\lp  \syntax{Arg}$^*$ \rp    ~\SOR~   \syntax{Arg}  \\
-&  ~\SOR~ &   {\kw{new} \syntax{ClassId}\lp \, \syntax{Arg}$^*$\, \rp} \\
- \syntax{Arg} &\BBC&  \syntax{ParId} ~\SOR~ \syntax{VarId} ~\SOR~ {\kw{this}} \\
-&  ~\SOR~ & {\kw{this}}.\syntax{FieldId}
+\syntax{Stmt}    &\BBC&    % \kw{var} \syntax{VarId}  {\kw{:=}} \syntax{Rhs}\\
+%&  ~\SOR~ &    
+ \syntax{VarId} {\kw{:=}} \syntax{Rhs}
+   ~\SOR~      \kw{this}.\syntax{FieldId} {\kw{:=}} \syntax{Rhs} \\
+%&  ~\SOR~ &   \kw{if}  \syntax{Arg}  \kw{then} \syntax{Stmts} \kw{else} \syntax{Stmts}\\
+%&  ~\SOR~ &   \kw{skip}\\
+ \syntax{Rhs} & \BBC&    {\syntax{Arg}}{\kw{.}}\syntax{MethId}\lp  \syntax{Arg}$^*$ \rp    ~\SOR~   \syntax{Arg}  
+  ~\SOR~     {\kw{new} \syntax{ClassId}\lp \, \syntax{Arg}$^*$\, \rp} \\
+ \syntax{Arg} &\BBC&  \syntax{ParId} ~\SOR~ \syntax{VarId} ~\SOR~ {\kw{this}} 
+ % \\ &  ~\SOR~ & 
+ ~\SOR~ {\kw{this}}.\syntax{FieldId}
  \end{tabular}
 \end{definition}
 
-Note that \LangOO\, supports a limited form of protection: the syntax
-  supports  reading of fields of any object, but restricts each object
-  to being able to modify only its \emph{own} fields.
-  
-  We define  method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class and a method identifier, where we assume that \prg{C} is a class identifier,   \prg{m} a method identifier: $ ~ $ \\
+Note that \LangOO\, supports a limited form of protection: like in Smalltalk,
+  the syntax allows an object to read/write its own fields, but forbids it from reading/writing any other object's fields.
+   
+We define  method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class and a method identifier, where we assume that \prg{C} is a class identifier,   \prg{m} a method identifier: $ ~ $ \\
 
   
  \begin{definition}[Lookup]For a class identifier \prg{C}  and a method identifier \prg{m} : $ ~ $ \\
 
 \noindent
 $
-\Meths {} {\prg{C}} {m}      =       \kw{method}\, m\, \lp p_1, ... p_n \rp
-\lb stms \semi\, \kw{return}\ {\syntax{a}} \rb
- $
-
-\noindent
- iff \ $ \M(\prg{C}) =   \kw{class}\, \prg{C}\, \  \lb ...  $
- % \\ $ ~ $  \hspace{.8in} $ 
- $\kw{method}\, m\, \lp p_1, ... p_n \rp \lb stms \semi\, \kw{return}\ {\syntax{a}} \rb  ... \rb.$
+\Meths {} {\prg{C}} {m}      =  \ \left\{  
+\begin{array}{l}
+                          \kw{method}\, m\, \lp p_1, ... p_n \rp \lb stms \semi\, \kw{return}\ {\syntax{a}} \rb\\
+\hspace{1in} \mbox{if}  \M(\prg{C}) =   
+\kw{class}\, \prg{C}\, \  \lb ...   \kw{method}\, m\, \lp p_1, ... p_n \rp \lb stms \semi\, \kw{return}\ {\syntax{a}} \rb  ... \rb.  
 \\
-\noindent
-undefined, otherwise. $ ~ $ \\
-
-$
-{\mathcal{ I}} ( {\M} )     =      $\syntax {SA}$\ \ \ 
-%  \noindent
- iff\ \  \ $ \M(\prg{Internal}) =  $\syntax {SA}$
+\mbox{undefined},  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.$
+ 
+${\mathcal{ I}} ( {\M} ) \    =  \     \M(\prg{Internal} )$
 \\
 
  
@@ -234,39 +228,92 @@ TODO
 
  In this section we define  module linking and module ??? term ???
  
- Linking is an operation that takes two modules, and creates a module which corresponds  to the union of the two. We use the concept of module liking in order to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know. 
+ Linking is an operation that takes two modules, and creates a module which corresponds  to the union of the two. We use the concept of module linking in order to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know. 
 
 We place some conditions for module linking to be defined: We require that the two modules do not contain implementations for the same class identifiers,  
 
-We require that $dom(\M_1) \cap dom(\M_2)$=$\{ \prg{Internal} \}$
+\begin{definition}[Module Linking]
 
+The linking operator $\circ : \syntax{Module} \times  \syntax{Module} \longrightarrow \syntax{Module}$ is defifned as follows:
+
+$
+\M \circ \M{'}  =\ \left\{
+\begin{array}{l}
+                        \M \circ_{aux} \M{'},\ \ \   \hbox{if}\  \ dom(\M)\!\cap\!dom(\M')\!=\!\emptyset\\
+\bot  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.$
+                    
+and where,                  
 \begin{itemize}
      \item 
-   ....
+   For \prg{C}$\neq\prg{Internal}$, we have: \ \
+   $(\M \circ_{aux} \M')(\prg{C})$ = $\M(\prg{C})$  if  $\prg{C}\in dom(\M)$, and  $\M'(\prg{C})$ otherwise.
     \item  
-   $(\M_1 \circ \M_2)(\prg{Internal})$ = $ \M_1(\prg{Internal}) \cup  \M_2(\prg{Internal})$
+   $(\M \circ_{aux} \M')(\prg{Internal})$ = $ \M(\prg{Internal}) \cup  \M'(\prg{Internal})$
  \end{itemize}
+\end{definition}
+
  
  \begin{lemma}[properties of linking]
- For any modules $\M_0$, and $\M_1$ and $\M_2$, such that $\M_1*\M_2$ is defined:  
+ For any modules $\M$,   $\M'$ and $\M''$, we have$:$
  \label{lemma:linking:properties}
- For all modules $\M_1$, $\M_2$ and $\M_3$:
  
  \begin{itemize}
      \item 
-     $(\M_1\circ \M_2)\circ \M_3$ = $(\M_1\circ (\M_2 \circ \M_3)$.
+     $(\M \circ \M')\circ \M''$ = $\M \circ (\M' \circ \M'')$.
     \item  
-      $\M_1\circ \M_2$  = $\M_2\circ\M_1$.
+      $\M \circ \M'$  = $\M' \circ\M$.
    \end{itemize}
  
  \end{lemma}
-
+ 
 \section{ Assertions}
- 
- 
- 
 
+We first define simple assertions, vvvv
+ 
+ \subsection{Simple Assertions}
+ 
+ \begin{definition}[Simple Expressions and simple Assertions] $ $ \\
+ 
+ $ \SE ::=  \prg{true}  \ \mid\ \prg{false}  \ \mid \ \prg{x}  \ \mid\ \prg{this}  \ \mid \ \SE.\prg{f} \  \mid \ \SE.\prg{f} ^{k}    $
 
+$ \SA ::= \SE  \ \mid \ \SE > \SE \ \mid \ \SA \rightarrow \SA \ \mid \ \exists x:Object.\SA  \ \mid \  \exists s:SET.\SA  \ \mid \  \exists f:FLD.\SA
+ \ \mid \  \exists k:\mathbb{N}.\SA $ 
+
+\noindent
+In the above, \prg{f} is a field identifier , and  $k$ is a natural number.
+\end{definition} 
+
+The validity of simple assertions can be judged in the context of a runtime configuration
+
+ \begin{definition}[Validity of Assertions]
+We define validity of simple assertions as follows
+
+\begin{itemize}
+\item
+$\sigma \models \SE$ iff $\interp{\SE}{\sigma}$ = \prg{true}.
+\item
+$\sigma \models \SEOne>\SETwo$ iff $\interp{\SEOne}{\sigma}$ > $\interp{\SETwo}{\sigma}$
+\item
+...
+\end{itemize}
+\end{definition}
+
+Simple assertions form a classical logic: TODO: check the term; also to check whether we need any more from the classical logic's properties, since the rest of them probably hold by definition.
+
+\begin{lemma}[Simple Assertions are classical]
+For all runtime configurations $\sigma$, and simple assertions $\SA$, we have
+\begin{itemize}
+\item
+$\sigma \models \SA$ or $\sigma \models \neg\SA$
+\end{itemize}
+\end{lemma}
+\begin{proof} By induction over the structure of $\SA$. \end{proof}.
+ 
+ \subsection{Assertions}
+
+We now define an "full assertions" ....
 
 We will define the OCAP assertions $\CanAccess{\_}{\_}$  (permission)
 and   $\Changes{\_}$ (authority). \footnote{Note that they are slightly different
@@ -282,7 +329,7 @@ We extend the syntax for assertions as follows:\footnote{The symbols are not tha
 $$\A ::=\  ... \mbox{as before} ...\ \ \mid \ \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls{m} \ \mid\  \\ \Future \A \ \mid \ \Using \A S  \ \mid \  \Past \A$$
 \end{definition}
 
-
+\end{document}
 
 \begin{definition}[Time, Permission, Authority,  and Space ]
 \label{def:permission}
