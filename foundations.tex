@@ -1,10 +1,14 @@
+ \section*{LATEX mysteries}
  
+ 1) How can we make the references refer to the Definitions, Lemmas etc rather than the section where these appear?
+ 
+ Why do the references to 
 \section{Modules}
 
 Modules are repositories for class lookups, and have a special entry, under \prg{Internal} to describe the internals of 
 
 \begin{definition}[Modules]
-We define modules $\syntax{Module}$ as  the set of mappings from identifiers to class descriptions or a simple assertion\\  % to force line break
+We define $\syntax{Module}$-s  as  the set of mappings from identifiers to class descriptions or a simple assertion\\  % to force line break
 
 \begin{tabular}  {@{}l@{\,}c@{\,}ll}
 \syntax{Module} \ \  &    =   &  
@@ -22,18 +26,21 @@ We define modules $\syntax{Module}$ as  the set of mappings from identifiers to 
 % $\M(\prg{C})\in \syntax{ClassDescr}$ or undefined.
 
 \end{definition}
-We describe \syntax{ClassDescr}-s in Definition \ref{def:syntax:classes}, and  \syntax{SimpleAssertion}-s in Defintion 
+We describe \syntax{ClassDescr}-s in Definition \ref{def:syntax:classes}, and  \syntax{SimpleAssertion}-s in Definition 
  \ref{def:syntax:classes}.
 
 
 
 \paragraph{Classes}
 
-We define the syntax of class definitions below. 
-Note that the language is untyped. Method bodies consist of sequences of statements; these can be field read or field assignments (only allowed if the object is \prg{this} -- i.e. as in Smalltalk), conditionals, and method calls. All else can be encoded.
-
+Class definitions are described below. 
+Note that the language is untyped. Method bodies consist of sequences of statements; 
+these can be field read or field assignments (only allowed if the target object is \prg{this} -- i.e. as in Smalltalk), and method calls. 
+All else can be encoded.
+TODO: explain why we want  Argument.
+TODO: Do we really need many parameters?  
  
- \begin{definition}[Classes, Methods, Args]
+ \begin{definition}[Classes, Methods, Arguments]
 \label{def:syntax:classes}
 We define the syntax of modules below.
 
@@ -81,15 +88,24 @@ $
                     \right.$
  
 ${\mathcal{ I}} ( {\M} ) \    =  \     \M(\prg{Internal} )$
-\\
-
- 
   \end{definition}
 
 \subsection{The Operational Semantics of \LangOO}
 \label{formal:semantics}
 
-TODO
+TODO define operational semantics
+
+\begin{definition}[Lookup in runtime configurations]
+We define convenient shorthands for looking up in a runtime configuration $\sigma$. We assume that
+$\sigma$ consists of components so that $\sigma$ = $(\phi.\sigma', \chi, \prg{code} )$.
+\begin{itemize}
+\item 
+$\sigma(\prg{x})$ = $\phi(\prg{x})$ 
+\item
+$\sigma(\iota, \prg{f})$ = $\chi(\iota,\prg{f})$ 
+\end{itemize}
+
+\end{definition}
 
 \subsection{Module linking}
 
@@ -123,7 +139,7 @@ and where,
 
  
  \begin{lemma}[properties of linking]
- For any modules $\M$,   $\M'$ and $\M''$, we have$:$
+ For any modules $\M$,   $\M'$ and $\M''$, and runtime configurations $\sigma$, we have$:$
  \label{lemma:linking:properties}
  
  \begin{itemize}
@@ -131,16 +147,20 @@ and where,
      $(\M \circ \M')\circ \M''$ = $\M \circ (\M' \circ \M'')$.
     \item  
       $\M \circ \M'$  = $\M' \circ\M$.
+      \item
+      $\M, \sigma \leadsto \sigma'$  implies that  $\M\circ \M', \sigma \leadsto \sigma'$
    \end{itemize}
  
  \end{lemma}
  
 \section{ Assertions}
 
-We first define simple assertions, vvvv
+Assertions allow us to reflect over the current runtime configuration, but also over possible future and past configurations, over 
+the control ... TODO describe this
+A simpler form of assertion only reflects over the current runtime configuration. These are described in Definition \ref{def:simple_assertion}.
  
  \subsection{Simple Assertions}
- 
+ \label{def:simple_assertion}
  \begin{definition}[Simple Expressions and simple Assertions] $ $ \\
  
  $ \SE ::=  \prg{true}  \ \mid\ \prg{false}  \ \mid \ \prg{x}  \ \mid\ \prg{this}  \ \mid \ \SE.\prg{f} \  \mid \ \SE.\prg{f} ^{k}    $
@@ -151,6 +171,27 @@ $ \SA ::= \SE  \ \mid \ \SE > \SE \ \mid \ \SA \rightarrow \SA \ \mid \ \exists 
 \noindent
 In the above, \prg{f} is a field identifier , and  $k$ is a natural number.
 \end{definition} 
+
+Simple expressions have a value which can be determined with reference to 
+
+\begin{definition}[Interpretations]
+
+For any runtime configuration, $\sigma$, and any simple expression, $\SE$, we define its interpretation as follows:
+
+\begin{itemize}
+     \item 
+  $\interp {\prg{true}}{\sigma}$ = \prg{true}
+  \item
+  $\interp {\prg{false}}{\sigma}$ = \prg{false}
+ \item
+  $\interp {\prg{null}}{\sigma}$ = \prg{null}
+  \item
+  $\interp {\prg{x}}{\sigma}$ = $\sigma(\prg{x})$
+  \item
+  $\interp {\SE.\prg{f}}{\sigma}$ = $\sigma({\interp {\SE}{\sigma}}, \prg{f})$
+   \end{itemize}
+\end{definition}
+
 
 The validity of simple assertions can be judged in the context of a runtime configuration
 
@@ -194,7 +235,7 @@ We extend the syntax for assertions as follows:\footnote{The symbols are not tha
 
 \begin{definition}[Assertions]
 $$\A ::=\  ... \mbox{as before} ...\ \ \mid \ \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls{m} \ \mid\  \\ \Future \A \ \mid \ \Using \A S  \ \mid \  \Past \A$$
-\end{definition}
+\end{definition}\M
 
 \end{document}
 
@@ -205,12 +246,12 @@ we define validity of the assertions   .... as follows:
 
 \begin{itemize}
 \item
-$\Prog{},\sigma \models  \Future \A$\ \ iff\ \  $\exists \sigma'.\, [\ \ \M,\sigma \leadsto^* \sigma' \ \wedge \ \M,\sigma' [\overline{x \mapsto \sigma(x)}]\models \A, \mbox{ where } \overline{x}=Free(\A)\   ]$.
+$\M,\sigma \models  \Future \A$\ \ iff\ \  $\exists \sigma'.\, [\ \ \M,\sigma \leadsto^* \sigma' \ \wedge \ \M,\sigma' [\overline{x \mapsto \sigma(x)}]\models \A, \mbox{ where } \overline{x}=Free(\A)\   ]$.
 \item
-$\Prog{},\sigma \models  \Past \A$\ \   iff\ \  $\exists \sigma_1,....\sigma_n, k\!\in\![1..n-1).\ [ \Initial {\sigma_1}\  \wedge\ \sigma_n=\sigma\ \wedge\ \forall i\!\in\![1..n).\ \M,\sigma_i\leadsto  \sigma_{i+1}  $\\
+$\M,\sigma \models  \Past \A$\ \   iff\ \  $\exists \sigma_1,....\sigma_n, k\!\in\![1..n-1).\ [ \Initial {\sigma_1}\  \wedge\ \sigma_n=\sigma\ \wedge\ \forall i\!\in\![1..n).\ \M,\sigma_i\leadsto  \sigma_{i+1}  $\\
 \strut \hspace{5.7cm} $\ \wedge \  \ \M,\sigma_k[\overline{x \mapsto \sigma(x)}]\models \A, \mbox{ where } \overline{x}=Free(\A)\  ]$.
 \item
-$\Prog{},\sigma \models   \CanAccess{\prg{x}}{\prg{y}}$   \ \ iff  \begin{itemize}
+$\M,\sigma \models   \CanAccess{\prg{x}}{\prg{y}}$   \ \ iff  \begin{itemize}
 \item
 $\sigma(x)$=$\sigma(y)$, or
 \item
@@ -222,7 +263,7 @@ $\sigma(\prg{this})$=$\sigma(\prg{x})$ and
 for some some parameter of local variable \prg{z}.
  \end{itemize}
  \item
- $\Prog{},\sigma \models   \Changes{\prg{e}}$   \ \ iff \  \
+ $\M,\sigma \models   \Changes{\prg{e}}$   \ \ iff \  \
  $\exists \sigma'.\, [\ \ \M,\sigma \leadsto \sigma' \ \wedge \interp{e}{\M,\sigma} \neq \interp{e}{\M,\sigma'}\ \ ]$
 
 
