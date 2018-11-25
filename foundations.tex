@@ -2,6 +2,11 @@
  
  1) How can we make the references refer to the Definitions, Lemmas etc rather than the section where these appear?
  
+ 2) Improve the "looks" os $\SE$ and of $\SA$.
+ 
+ 3) Need a nice metavariable for set of addresses, currencly in ti $\iota-s$. Perhaps just $\{ \ \iota_1,...\iota_n\ \} $
+ or $\kappa$?
+ 
  Why do the references to 
 \section{Modules}
 
@@ -103,6 +108,8 @@ $\sigma$ consists of components so that $\sigma$ = $(\phi.\sigma', \chi, \prg{co
 $\sigma(\prg{x})$ = $\phi(\prg{x})$ 
 \item
 $\sigma(\iota, \prg{f})$ = $\chi(\iota,\prg{f})$ 
+\item
+$\ClassOf {\iota} {\sigma} $ = $\chi(\iota)\downarrow_1$
 \end{itemize}
 
 \end{definition}
@@ -163,48 +170,85 @@ A simpler form of assertion only reflects over the current runtime configuration
  \label{def:simple_assertion}
  \begin{definition}[Simple Expressions and simple Assertions] $ $ \\
  
- $ \SE ::=  \prg{true}  \ \mid\ \prg{false}  \ \mid \ \prg{x}  \ \mid\ \prg{this}  \ \mid \ \SE.\prg{f} \  \mid \ \SE.\prg{f} ^{k}    $
-
-$ \SA ::= \SE  \ \mid \ \SE > \SE \ \mid \ \SA \rightarrow \SA \ \mid \ \exists x:Object.\SA  \ \mid \  \exists s:SET.\SA  \ \mid \  \exists f:FLD.\SA
- \ \mid \  \exists k:\mathbb{N}.\SA $ 
+ $\begin{array}{lcl}
+ \SE & ::= &  \prg{true}  \ \mid\ \prg{false}  \ \mid \ \prg{x}  \ \mid\ \prg{this}  \ \mid \ \SE.\prg{f} \    \ \mid \ \SE.\prg{f}^n \  \\
+ ~ \\
+  \SA\ &\ \  ::=\ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \ \mid  \ \SA \rightarrow \SA \ \mid \   \SE:\prg{ClassId}  \ \mid \   
+    \SE\in\prg{S}  \\
+ & &   \exists \prg{x}.\SA  \ \mid \  \exists \prg{S}:SET.\SA  \ \mid \  \exists fs:FLD^k.\SA
+ \ \mid \  \exists k:\mathbb{N}.\SA  
+\end{array}$
 
 \noindent
-In the above, \prg{f} is a field identifier , and  $k$ is a natural number.
+In the above, \prg{f} is a field identifier , and  $n$ is a natural number.
 \end{definition} 
 
 Simple expressions have a value which can be determined with reference to 
 
 \begin{definition}[Interpretations]
 
-For any runtime configuration, $\sigma$, and any simple expression, $\SE$, we define its interpretation as follows:
+For any runtime configuration, $\sigma$, and any simple expression, $\SE$, and any $k\in \mathbb{N}$ we define its interpretation as follows:
 
 \begin{itemize}
      \item 
-  $\interp {\prg{true}}{\sigma}$ = \prg{true}
-  \item
-  $\interp {\prg{false}}{\sigma}$ = \prg{false}
- \item
-  $\interp {\prg{null}}{\sigma}$ = \prg{null}
+  $\interp {\prg{true}}{\sigma}$ = \prg{true}, \ and \ \    $\interp {\prg{false}}{\sigma}$ = \prg{false}, \ and \ \ 
+   $\interp {\prg{null}}{\sigma}$ = \prg{null}
   \item
   $\interp {\prg{x}}{\sigma}$ = $\sigma(\prg{x})$
   \item
   $\interp {\SE.\prg{f}}{\sigma}$ = $\sigma({\interp {\SE}{\sigma}}, \prg{f})$
+  \item
+    $\interp {\SE.\prg{f}^0}{\sigma}$ =  $\interp {\SE}{\sigma}$, \ \ \ and \ \ \ $\interp {\SE.\prg{f}^{k+1}}{\sigma}$ =  $\sigma({\interp {\SE.\prg{f}^k}{\sigma}}, \prg{f})$
    \end{itemize}
 \end{definition}
+
+\begin{lemma}[Interpretation corresponds to execution]
+For any simple expression $\SE$, runtime configuration $\sigma$, and value $v$:
+
+\begin{itemize}
+     \item 
+  $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M_\emptyset, \sigma[\prg{code}\mapsto \SE] \leadsto v$,\\
+  where $\M_\emptyset$ stands for the empty module.
+  \item
+   $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M, \sigma[\prg{code}\mapsto \SE] \leadsto v$ \ \ \ for any module $\M$ .
+   \end{itemize}
+   \end{lemma}
+   
+   \begin{proof} The  first guarantee is proven structural induction  over the definition of $\SE$.
+   The second guarantee  is a corollary of the first guarantee  and of lemma \ref{lemma:linking:properties}.\end{proof}
 
 
 The validity of simple assertions can be judged in the context of a runtime configuration
 
- \begin{definition}[Validity of Assertions]
-We define validity of simple assertions as follows
+ \begin{definition}[Validity of Simple Assertions] is defined  as follows
 
 \begin{itemize}
 \item
-$\sigma \models \SE$ iff $\interp{\SE}{\sigma}$ = \prg{true}.
+$\sigma \models \SE$ \IFF  $\interp{\SE}{\sigma}$ = \prg{true}.
 \item
-$\sigma \models \SEOne>\SETwo$ iff $\interp{\SEOne}{\sigma}$ > $\interp{\SETwo}{\sigma}$
+$\sigma \models \SE>\SEPrime$ \IFF $\interp{\SE}{\sigma}$ > $\interp{\SEPrime}{\sigma}$.
 \item
-...
+$\sigma \models \SE=\SEPrime$ \IFF $\interp{\SE}{\sigma}$ = $\interp{\SEPrime}{\sigma}$.
+\item
+$\sigma \models \SE\equiv\SEPrime$ \IFF $\SE$ and $\SEPrime$ are textually identical.
+\item
+$\sigma \models \SA \rightarrow \SAPrime $ \IFF $\sigma \models \SA$ implies $\sigma \models \SAPrime$. 
+\item
+$\sigma \models  \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
+\item
+$\sigma \models  \SE\in \prg{S}$ \IFF $\interp{\SE}{\sigma}\in \interp{\prg{S}}{\sigma}$
+\item
+$\sigma \models  \exists x.\SA$ \IFF  exist  $\iota\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\SA$, so that
+$\sigma[\prg{z}\mapsto \iota \models  \SA[\prg{x}/\prg{z}]$ \footnote{TO THINK: if \prg{x} is free in $A$ and $\sigma$ it could be simplified}
+\item
+$\sigma \models  \exists \prg{S}:\prg{SET}.\SA$ \IFF  exists a set of addresses $\iota-s\subset dom(\sigma)$, and a \prg{R} free in $\sigma$ and $\SA$, so that
+$\sigma[\prg{R}\mapsto \iota-s \models  \SA[\prg{S}/\prg{R}]$ 
+\item
+$\sigma \models  \exists \prg{fs}:\prg{FLD}^k.\SA$ \IFF  exist $k$ field identifiers $\prg{f}_1$, ... $\prg{f}_k$ so that 
+$\sigma \models  \SA[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k$ 
+\item
+$\sigma \models  \exists \prg{n}:\prg{Nat}.\SA$ \IFF  exists a $m\in\mathbb{N}$, so that $\sigma \models  \exists \SA[\prg{n}/m$ 
+\footnote{TO THINK Should we instead allow the frames to map variables to numbers as we do for sets?}
 \end{itemize}
 \end{definition}
 
@@ -388,6 +432,8 @@ $\M \models \A \weakImplies \A$
 $\M \models   \Using{(\Future{\A})}{\prg{S}}\ \strongImplies\ \Future{(\Using{\A} }{\prg{S}})$
 \item
 $ \M \models\  \Future{\A}\rightarrow \A' \  \  \weakImplies \ \ \A\rightarrow\Past{\A'}$
+\item
+
  \end{itemize}
 \end{lemma}
 
