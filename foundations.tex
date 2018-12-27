@@ -45,27 +45,32 @@ these can be field read or field assignments (only allowed if the target object 
 All else can be encoded.
 TODO: explain why we want   $Arg$ (SD has forgotten the reason)
  
+
+ 
  \begin{definition}[Classes, Methods, Arguments]
 \label{def:syntax:classes}
 We define the syntax of modules below.
 
 \begin{tabular}{lcll}
- \syntax{ClassDescr}   &   \BBC  &     \kw{class}  \syntax{ClassId}    \lb\,  $($\ \kw{field} \syntax{FieldId}\ $)^*$ \    
- $($\ \syntax{methBody}\ $)^*$   \ \rb
+ \syntax{ClassDescr}   &   \BBC  &     \kw{class}  \syntax{ClassId}    \lb\,  $($\ \kw{field} \f\ $)^*$ \    
+ $($  \kw{method}\ \syntax{MethBody}\ $)^*$   \ \rb
 \\
-\syntax{methBody} &\BBC&
-     \kw{method}    m\lp \syntax{ParId}  \rp   \lb\, \syntax{Stmts} \semi   \kw{return}  \syntax{Arg}  \,
+\syntax{MethBody} &\BBC&
+       m\lp \v$^*$\rp     \lb\, \syntax{Stmts}  \,
     \rb
  \\
  \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
 \syntax{Stmt}    &\BBC&   
- \syntax{VarId} {\kw{:=}} \syntax{Rhs}
-   ~\SOR~      \kw{this}.\syntax{FieldId} {\kw{:=}} \syntax{Rhs} \\
- \syntax{Rhs} & \BBC&    {\syntax{Arg}}{\kw{.}}\syntax{MethId}\lp  \syntax{Arg}  \rp    ~\SOR~   \syntax{Arg}  
-  ~\SOR~     {\kw{new} \syntax{ClassId}\lp \, \syntax{Arg}$^*$\, \rp} \\
- \syntax{Arg} &\BBC&  \syntax{ParId} ~\SOR~ \syntax{VarId} ~\SOR~ {\kw{this}} 
- ~\SOR~ {\kw{this}}.\syntax{FieldId}
+       \kw{this}.\f {\kw{:=}} \v   ~\SOR~  \v{\kw{:=}}  \kw{this}.\f    ~\SOR~        \v  {\kw{:=}} \v.\m\lp \v$^*$\rp    ~\SOR~  
+   \v  {\kw{:=}}     {\kw{new}} \c\lp \v$^*$\rp   ~\SOR~  
+   {\kw{return}}    \v   \\
+ \v, \f, \m &\BBC&  \prg{Identifier}
  \end{tabular}
+ 
+  \vspace{.03in}
+  \noindent
+ where we use metavariables as follows: 
+ $\v \in  \syntax{VarId} \ \ \  \f \in  \syntax{FldId} \ \ \  \m \in  \syntax{MethId} \ \ \  \c \in  \syntax{ClassId}$
 \end{definition}
 
 Note that \LangOO\, supports a limited form of protection: like in Smalltalk,
@@ -94,18 +99,25 @@ ${\mathcal{ I}} ( {\M} ) \    =  \     \M(\prg{Internal} )$
 \subsection{The Operational Semantics of \LangOO}
 \label{formal:semantics}
 
-We first define runtime configurations, $\sigma$ as tuples 
+We first define runtime configurations, $\sigma$ which keep track of the 
 
-\begin{definition}[Lookup in runtime configurations]
-We define c 
+\begin{definition}[Runtime Entities]
+We define  addresses, values, frames, stacks, heaps and runtime configurations.
 
 \begin{itemize}
 \item 
-An enumerable set of ddresses \prg{Addr}.
+We take addresses to be an  enumerable set,  \prg{Addr}, and use the identifier $\alpha$ to indicate addresses.
 \item
-Values, $v$, are either addresses or null: $v \in \{ \prg{null} \} \cup \prg{Addr}.
+Values, $v$, are either addresses or null: $v \in \{ \prg{null} \} \cup \prg{Addr}$.
 \item
-Frames, $\phi$, are mapping from identifiers to values: $\phi \ \in\ \prg{Ident} \rightarrow Value$,
+Stubs are either code statements or a marker for a nested call, \v {\kw{:=}} $\bullet$, followed by code statements.
+
+\begin{tabular}{lcll}
+\syntax{Stub} &\BBC&   \syntax{Stmts} ~\SOR~   \v {\kw{:=}} $\bullet$ \semi\ \syntax{Stmts} \\
+ \end{tabular}
+
+\item
+Frames, $\phi$, are tuples of stubs and a  mapping from identifiers to values: $\phi \ \in\ \syntax{Stub} \times \prg{Ident} \rightarrow Value$,
 \item
 Stacks,  $\psi$, are sequences of frames, $\psi\ ::= \  \phi \ | \ \phi\cdot\psi $.
 \item
@@ -118,37 +130,118 @@ Runtime configurations, $\sigma$,
 
 \end{definition}
 
-\begin{definition}[Lookup in runtime configurations]
-We define convenient shorthands for looking up in a runtime configuration $\sigma$. We assume that
-$\sigma$ consists of components so that $\sigma$ = $(\phi.\sigma', \chi, \prg{code} )$.
+We define the interpretation of variables \v, and the field look up  \this.f in the context of frames, 
+heaps and runtime configurations
+
+\begin{definition}[Interpretations]
+Interpretations are defined as follows:
+
 \begin{itemize}
 \item 
-$\sigma(\prg{x})$ = $\phi(\prg{x})$ 
+$\interp {\v}{\phi} $ = $\phi(\v)$  
 \item
-$\sigma(\iota, \prg{f})$ = $\chi(\iota,\prg{f})$ 
+$\interp {\this.\f}{\phi,\chi} $ =  $\v$, \ \ if \ \ $\chi(\phi(\this))=(\_, fldMap)$ and $fldMap(\f)$=$\v$ 
 \item
-$\ClassOf {\iota} {\sigma} $ = $\chi(\iota)\downarrow_1$
+$\ClassOf {\alpha} {\chi} $ = $\c$ \ \ if \ \ $\chi(\alpha)=(\c,\_)$ 
+
+\end{itemize}
+
+\noindent
+For ease of notation, we also use
+\begin{itemize}
+\item
+$\interp {\v}{(\phi\cdot\psi,\chi)} $=$\interp {\v}{\phi} $
+\item
+$\interp {\this.\f}{(\phi\cdot\psi,\chi)} $=$\interp  {\this.\f}{phi,\chi} $
+\item
+$\ClassOf {\alpha} {(\phi\cdot\psi,\chi)} $ = $\c$ \ \ if \ \ $\chi(\alpha)=(\c,\_)$ 
 \end{itemize}
 
 \end{definition}
 
 
-
-Define operational semantics, of the form $\M, \sigma \leadsto \sigma'$ -- what about return values?
-
-\begin{definition}[Lookup in runtime configurations]
-We define convenient shorthands for looking up in a runtime configuration $\sigma$. We assume that
-$\sigma$ consists of components so that $\sigma$ = $(\phi.\sigma', \chi, \prg{code} )$.
+\begin{definition}[Lookup and update of runtime configurations]
+We define convenient shorthands for looking up in  runtimeentities. 
+%We assume that
+% $\sigma$ consists of components so that $\sigma$ = $(\phi.\sigma', \chi, \prg{code} )$.
 \begin{itemize}
-\item 
-$\sigma(\prg{x})$ = $\phi(\prg{x})$ 
 \item
-$\sigma(\iota, \prg{f})$ = $\chi(\iota,\prg{f})$ 
+Assuming that $\phi$ is the tuple  $(\prg{stub1}, varMap)$, we use the notation  $\phi.\prg{stub}$ to obtain \prg{stub1}.
 \item
-$\ClassOf {\iota} {\sigma} $ = $\chi(\iota)\downarrow_1$
+Assuming a value v, and that $\phi$ is the tuple  $(\prg{stub1}, varMap)$, we define $\phi[\prg{stub}\mapsto\prg{stub2}]$ to be the tuple   
+$(\prg{stub1}, varMap)$, and   $\phi[\v \mapsto v]$    $\phi[\prg{stub1}, varMap\mapsto v]$.
+\item
+Assuming a heap $\chi$, a value $v$, and assuming that $\chi(\alpha)=(\c, fieldMap)$,
+we use $\chi[\alpha,\f \mapsto v]$ as a shorthand for $\chi[\alpha \mapsto (\c, fieldMap[\f \mapsto v]]$.
 \end{itemize}
 
 \end{definition}
+
+
+\begin{figure*}
+$\begin{array}{l}
+\inferenceruleNN {methCall\_OS} { 
+%\sigma \ = \  (\ \phi\cdot\psi,\ \chi\ )
+\\
+\phi.\prg{stub}\ =\ \v {\kw{:= }} \v_0.\m \lp \v_1, ... \v_n \rp \semi \prg{stms}
+\\ 
+\interp{\v_0}{\phi} = \alpha 
+\\
+\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp par_1, \ldots par_n \rp \lb \prg{stms}_1   \rb
+  \\
+ \phi''\ =\  (\  \prg{stmts}_1,\ \ (\ \this \mapsto \iota, \caller \mapsto  \interp{\this}{\phi}, par_1 \mapsto  \interp{\v_1}{\phi}, \ldots par_n \mapsto  \interp{\v_n}{\phi}\ ) \ )
+}
+{
+ \M,\, (\ \phi\cdot\psi,\ \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot\phi[\prg{code}\mapsto\v  \kw{:=} \bullet \semi \prg{stms}] \cdot\psi,\ \chi\ ) 
+}
+
+\\ \\
+\inferenceruleNN {varAssgn\_OS} {
+ \phi.\prg{code} \ = \ \v  {\kw{:= }}   \this.\f \ \semi \prg{stms}
+}
+{
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{stub} \mapsto \prg{stms}, \v\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
+}
+\\
+\\
+\inferenceruleNN{fieldAssgn\_OS} {
+ \phi.\prg{code}\ =\  \this.\f  \kw{:=} \v  \semi \prg{stms}
+}
+{
+ \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{stub}\mapsto  \prg{stms} ] \cdot\psi, \chi[\interp{\this}{\phi},\f \mapsto \interp{\v}{\phi,\chi}]\  ) 
+}
+\\
+\\
+\inferenceruleNN {objCreate\_OS} {
+ \phi.\prg{code}\ =\  \v  \kw{:=} \kw{new }\, \c \lp \v_1, ... \v_n \rp  \semi \prg{stms}
+ \\
+ \alpha\ \mbox{new in}\ \chi
+ \\
+\f_1, .. \f_n\ \mbox{are the fields declared in } \M(\c)
+}
+{
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[\prg{stub}\mapsto  \prg{stms},\v \mapsto \alpha\ ] \cdot\psi, \ \chi[\alpha \mapsto (\c,\f_1 \mapsto \interp{\v_1}{\phi},  ... \f_n \mapsto \interp{\v_n}{\phi}  ) ]\ ) 
+}
+\\
+\\
+\inferenceruleNN {return\_OS} {
+ \phi.\prg{code}\ =\   {\kw {return }}\, \v  \semi \prg{stms}\ \  \ or\  \ \  \phi.\prg{code}\ =\   {\kw{return}} \v 
+ \\
+\phi.\prg{code}\ =\  \v' \kw{:=} \bullet  \semi \prg{stms}'
+}
+{
+ \M,\,  (\ \phi\cdot\phi'\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi'[\prg{stub}\mapsto  \prg{stms'},\v' \mapsto \interp{\v}{\phi}] \cdot\psi, \ \chi \ ) 
+}
+\end{array}
+$
+\caption{Operational Semantics}
+\label{fig:Execution}
+\end{figure*}
+
+
+
+Execution of statement has   form $\M, \sigma \leadsto \sigma'$, it is defined in figure \ref{fig:Execution}.
+
 
 TODO add definition of  $\Initial$ -- probably exists in rest.tex
 
