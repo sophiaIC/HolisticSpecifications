@@ -20,19 +20,19 @@ it does not create a new module, it is only used in execution ($\M\mkpair \M', \
 Modules are repositories for class lookups, and have a special entry, under \prg{Internal} to describe the internals of 
 
 \begin{definition}[Modules]
-We define $\syntax{Module}$-s  as  the set of mappings from identifiers to class descriptions or a simple assertion\\  % to force line break
+We define $\syntax{Module}$-s  as  the set of mappings from identifiers to class descriptions or a basic assertion\\  % to force line break
 
 \begin{tabular}  {@{}l@{\,}c@{\,}ll}
 \syntax{Module} \ \  &    =   &  
    $ \{ \ \ \M \ \ \mid \ \  \M: \ \prg{Identifier} \   \longrightarrow \
-  \ ( \  \syntax{ClassDescr}     \cup  \syntax{SimpleAssertion} \ ) \ \ \} $ \\
+  \ ( \  \syntax{ClassDescr}     \cup  \syntax{BasicAssertion} \ ) \ $ \\
  & & $\strut \ \ \ \ \quad\quad$ such that
- $\M(\prg{Internal})\in \syntax{SimpleAssertion}$, \\
+ $\M(\prg{Internal})\in \syntax{basicAssertion}$, \\
 & & $\strut \ \ \ \ \quad\quad$  and \  $\forall \prg{C}\in dom(\M). \ [ \ \prg{C}\neq\prg{Internal}\ \rightarrow\ \M(\prg{C})\in \syntax{ClassDescr}\ ] $   \  $ \ \}$
  \end{tabular}
 \end{definition}
 
-We describe \syntax{ClassDescr}-s in Definition \ref{def:syntax:classes}, and  \syntax{SimpleAssertion}-s in Definition 
+We describe \syntax{ClassDescr}-s in Definition \ref{def:syntax:classes}, and  \syntax{basicAssertion}-s in Definition 
  \ref{def:syntax:classes}.
 
 
@@ -41,10 +41,11 @@ We describe \syntax{ClassDescr}-s in Definition \ref{def:syntax:classes}, and  \
 
 Class definitions are described below. 
 Note that the language is untyped. Method bodies consist of sequences of statements; 
-these can be field read or field assignments (only allowed if the target object is \prg{this} -- i.e. as in Smalltalk), and method calls. 
-All else can be encoded.
-TODO: explain why we want   $Arg$ (SD has forgotten the reason)
- 
+these can be field read or field assignments, object creation,   method calls, and return statements.
+All else, \eg booleans, loops, more complex  can be encoded. 
+Note that field read or write is only allowed if the target object is \prg{this} -- as, \eg, can
+  in Smalltalk -- this is encapsulation.
+
 
  
  \begin{definition}[Classes, Methods, Arguments]
@@ -56,21 +57,21 @@ We define the syntax of modules below.
  $($  \kw{method}\ \syntax{MethBody}\ $)^*$   \ \rb
 \\
 \syntax{MethBody} &\BBC&
-       m\lp \v$^*$\rp     \lb\, \syntax{Stmts}  \,
+       m\lp \x$^*$\rp     \lb\, \syntax{Stmts}  \,
     \rb
  \\
  \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
 \syntax{Stmt}    &\BBC&   
-       \kw{this}.\f {\kw{:=}} \v   ~\SOR~  \v{\kw{:=}}  \kw{this}.\f    ~\SOR~        \v  {\kw{:=}} \v.\m\lp \v$^*$\rp    ~\SOR~  
-   \v  {\kw{:=}}     {\kw{new}} \c\lp \v$^*$\rp   ~\SOR~  
-   {\kw{return}}    \v   \\
- \v, \f, \m &\BBC&  \prg{Identifier}
+       \kw{this}.\f {\kw{:=}} \x   ~\SOR~  \x{\kw{:=}}  \kw{this}.\f    ~\SOR~        \x  {\kw{:=}} \x.\m\lp \x$^*$\rp    ~\SOR~  
+   \x  {\kw{:=}}     {\kw{new}} \c\lp \x$^*$\rp   ~\SOR~  
+   {\kw{return}}    \x   \\
+ \x, \f, \m &\BBC&  \prg{Identifier}
  \end{tabular}
  
-  \vspace{.03in}
+  \xspace{.03in}
   \noindent
  where we use metavariables as follows: 
- $\v \in  \syntax{VarId} \ \ \  \f \in  \syntax{FldId} \ \ \  \m \in  \syntax{MethId} \ \ \  \c \in  \syntax{ClassId}$
+ $\x \in  \syntax{VarId} \ \ \  \f \in  \syntax{FldId} \ \ \  \m \in  \syntax{MethId} \ \ \  \c \in  \syntax{ClassId}$
 \end{definition}
 
 Note that \LangOO\, supports a limited form of protection: like in Smalltalk,
@@ -110,10 +111,10 @@ We take addresses to be an  enumerable set,  \prg{Addr}, and use the identifier 
 \item
 Values, $v$, are either addresses or null: $v \in \{ \prg{null} \} \cup \prg{Addr}$.
 \item
-Stubs are either code statements or a marker for a nested call, \v {\kw{:=}} $\bullet$, followed by code statements.
+Stubs are either code statements or a marker for a nested call, \x {\kw{:=}} $\bullet$, followed by code statements.
 
 \begin{tabular}{lcll}
-\syntax{Stub} &\BBC&   \syntax{Stmts} ~\SOR~   \v {\kw{:=}} $\bullet$ \semi\ \syntax{Stmts} \\
+\syntax{Stub} &\BBC&   \syntax{Stmts} ~\SOR~   \x {\kw{:=}} $\bullet$ \semi\ \syntax{Stmts} \\
  \end{tabular}
 
 \item
@@ -130,7 +131,7 @@ Runtime configurations, $\sigma$,
 
 \end{definition}
 
-We define the interpretation of variables \v, and the field look up  \this.f in the context of frames, 
+We define the interpretation of variables \x, and the field look up  \this.f in the context of frames, 
 heaps and runtime configurations
 
 \begin{definition}[Interpretations]
@@ -138,9 +139,9 @@ Interpretations are defined as follows:
 
 \begin{itemize}
 \item 
-$\interp {\v}{\phi} $ = $\phi(\v)$  
+$\interp {\x}{\phi} $ = $\phi(\x)$  
 \item
-$\interp {\this.\f}{\phi,\chi} $ =  $\v$, \ \ if \ \ $\chi(\phi(\this))=(\_, fldMap)$ and $fldMap(\f)$=$\v$ 
+$\interp {\this.\f}{\phi,\chi} $ =  $\x$, \ \ if \ \ $\chi(\phi(\this))=(\_, fldMap)$ and $fldMap(\f)$=$\x$ 
 \item
 $\ClassOf {\alpha} {\chi} $ = $\c$ \ \ if \ \ $\chi(\alpha)=(\c,\_)$ 
 
@@ -150,7 +151,7 @@ $\ClassOf {\alpha} {\chi} $ = $\c$ \ \ if \ \ $\chi(\alpha)=(\c,\_)$
 For ease of notation, we also use
 \begin{itemize}
 \item
-$\interp {\v}{(\phi\cdot\psi,\chi)} $=$\interp {\v}{\phi} $
+$\interp {\x}{(\phi\cdot\psi,\chi)} $=$\interp {\x}{\phi} $
 \item
 $\interp {\this.\f}{(\phi\cdot\psi,\chi)} $=$\interp  {\this.\f}{phi,\chi} $
 \item
@@ -169,7 +170,7 @@ We define convenient shorthands for looking up in  runtimeentities.
 Assuming that $\phi$ is the tuple  $(\prg{stub1}, varMap)$, we use the notation  $\phi.\prg{stub}$ to obtain \prg{stub1}.
 \item
 Assuming a value v, and that $\phi$ is the tuple  $(\prg{stub1}, varMap)$, we define $\phi[\prg{stub}\mapsto\prg{stub2}]$ to be the tuple   
-$(\prg{stub1}, varMap)$, and   $\phi[\v \mapsto v]$    $\phi[\prg{stub1}, varMap\mapsto v]$.
+$(\prg{stub1}, varMap)$, and   $\phi[\x \mapsto v]$    $\phi[\prg{stub1}, varMap\mapsto v]$.
 \item
 Assuming a heap $\chi$, a value $v$, and assuming that $\chi(\alpha)=(\c, fieldMap)$,
 we use $\chi[\alpha,\f \mapsto v]$ as a shorthand for $\chi[\alpha \mapsto (\c, fieldMap[\f \mapsto v]]$.
@@ -183,54 +184,54 @@ $\begin{array}{l}
 \inferenceruleNN {methCall\_OS} { 
 %\sigma \ = \  (\ \phi\cdot\psi,\ \chi\ )
 \\
-\phi.\prg{stub}\ =\ \v {\kw{:= }} \v_0.\m \lp \v_1, ... \v_n \rp \semi \prg{stms}
+\phi.\prg{stub}\ =\ \x {\kw{:= }} \x_0.\m \lp \x_1, ... \x_n \rp \semi \prg{stms}
 \\ 
-\interp{\v_0}{\phi} = \alpha 
+\interp{\x_0}{\phi} = \alpha 
 \\
 \Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp par_1, \ldots par_n \rp \lb \prg{stms}_1   \rb
   \\
- \phi''\ =\  (\  \prg{stmts}_1,\ \ (\ \this \mapsto \iota, \caller \mapsto  \interp{\this}{\phi}, par_1 \mapsto  \interp{\v_1}{\phi}, \ldots par_n \mapsto  \interp{\v_n}{\phi}\ ) \ )
+ \phi''\ =\  (\  \prg{stmts}_1,\ \ (\ \this \mapsto \iota, \caller \mapsto  \interp{\this}{\phi}, par_1 \mapsto  \interp{\x_1}{\phi}, \ldots par_n \mapsto  \interp{\x_n}{\phi}\ ) \ )
 }
 {
- \M,\, (\ \phi\cdot\psi,\ \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot\phi[\prg{code}\mapsto\v  \kw{:=} \bullet \semi \prg{stms}] \cdot\psi,\ \chi\ ) 
+ \M,\, (\ \phi\cdot\psi,\ \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot\phi[\prg{code}\mapsto\x  \kw{:=} \bullet \semi \prg{stms}] \cdot\psi,\ \chi\ ) 
 }
 
 \\ \\
 \inferenceruleNN {varAssgn\_OS} {
- \phi.\prg{code} \ = \ \v  {\kw{:= }}   \this.\f \ \semi \prg{stms}
+ \phi.\prg{code} \ = \ \x  {\kw{:= }}   \this.\f \ \semi \prg{stms}
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{stub} \mapsto \prg{stms}, \v\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{stub} \mapsto \prg{stms}, \x\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
 }
 \\
-\\
+\\\vee
 \inferenceruleNN{fieldAssgn\_OS} {
- \phi.\prg{code}\ =\  \this.\f  \kw{:=} \v  \semi \prg{stms}
+ \phi.\prg{code}\ =\  \this.\f  \kw{:=} \x  \semi \prg{stms}
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{stub}\mapsto  \prg{stms} ] \cdot\psi, \chi[\interp{\this}{\phi},\f \mapsto \interp{\v}{\phi,\chi}]\  ) 
+ \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{stub}\mapsto  \prg{stms} ] \cdot\psi, \chi[\interp{\this}{\phi},\f \mapsto \interp{\x}{\phi,\chi}]\  ) 
 }
 \\
 \\
 \inferenceruleNN {objCreate\_OS} {
- \phi.\prg{code}\ =\  \v  \kw{:=} \kw{new }\, \c \lp \v_1, ... \v_n \rp  \semi \prg{stms}
+ \phi.\prg{code}\ =\  \x  \kw{:=} \kw{new }\, \c \lp \x_1, ... \x_n \rp  \semi \prg{stms}
  \\
  \alpha\ \mbox{new in}\ \chi
  \\
 \f_1, .. \f_n\ \mbox{are the fields declared in } \M(\c)
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[\prg{stub}\mapsto  \prg{stms},\v \mapsto \alpha\ ] \cdot\psi, \ \chi[\alpha \mapsto (\c,\f_1 \mapsto \interp{\v_1}{\phi},  ... \f_n \mapsto \interp{\v_n}{\phi}  ) ]\ ) 
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[\prg{stub}\mapsto  \prg{stms},\x \mapsto \alpha\ ] \cdot\psi, \ \chi[\alpha \mapsto (\c,\f_1 \mapsto \interp{\x_1}{\phi},  ... \f_n \mapsto \interp{\x_n}{\phi}  ) ]\ ) 
 }
 \\
 \\
 \inferenceruleNN {return\_OS} {
- \phi.\prg{code}\ =\   {\kw {return }}\, \v  \semi \prg{stms}\ \  \ or\  \ \  \phi.\prg{code}\ =\   {\kw{return}} \v 
+ \phi.\prg{code}\ =\   {\kw {return }}\, \x  \semi \prg{stms}\ \  \ or\  \ \  \phi.\prg{code}\ =\   {\kw{return}}\, \x 
  \\
-\phi.\prg{code}\ =\  \v' \kw{:=} \bullet  \semi \prg{stms}'
+\phi.\prg{code}\ =\  \x' \kw{:=} \bullet  \semi \prg{stms}'
 }
 {
- \M,\,  (\ \phi\cdot\phi'\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi'[\prg{stub}\mapsto  \prg{stms'},\v' \mapsto \interp{\v}{\phi}] \cdot\psi, \ \chi \ ) 
+ \M,\,  (\ \phi\cdot\phi'\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi'[\prg{stub}\mapsto  \prg{stms'},\x' \mapsto \interp{\x}{\phi}] \cdot\psi, \ \chi \ ) 
 }
 \end{array}
 $
@@ -242,8 +243,42 @@ $
 
 Execution of statement has   form $\M, \sigma \leadsto \sigma'$, it is defined in figure \ref{fig:Execution}.
 
+\begin{definition}[Execution] of one or more steps is defined as follows:
 
-TODO add definition of  $\Initial$ -- probably exists in rest.tex
+\begin{itemize}
+     \item 
+   The relation $\M, \sigma \leadsto \sigma'$, it is defined in figure \ref{fig:Execution}.
+   \item
+   $\M, \sigma \leadsto^* \sigma'$ holds, if a) $\sigma$=$\sigma'$, or b) there exists a $\sigma''$ such that
+   $\M, \sigma \leadsto^* \sigma''$ and $\M, \sigma'' \leadsto \sigma'$.
+ \end{itemize}
+
+\end{definition}
+
+\begin{lemma}
+Assume module $\M$, stacks $\psi$, $\psi'$ and $\psi''$,  object $o$, and address $\alpha$  free in $\chi$ and $\chi'$.
+\begin{itemize}
+     \item 
+   $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi,\chi[\alpha\mapsto o])\ \leadsto^*\ (\psi',\chi'[\alpha\mapsto o])$
+   \item
+    $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi\cdot\psi'',\chi)\ \leadsto^*\ (\psi'\cdot\psi'',\chi')$
+    \end{itemize}
+\end{lemma}
+
+\begin{proof}
+Both assertions by structural induction  over the derivation of  $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$.
+\end{proof}
+
+We define initial configurations to be those which may contain arbitrary code stubs, but which contain no objects. Objects will be created, and further methods will be called through execution of the code in $\phi.\prg{stub}$.
+
+\begin{definition}[Initial Configurations] are defined as follows \\
+
+\begin{itemize}
+     \item 
+   $\Initial (\psi,\chi)$, \ \ if \ \ $\psi$ consists of a single frame $\phi$ with $dom(\phi)=\{ \this, \caller \}$, and $\interp {\caller}{\phi}$= $\interp {\this}{\phi}$=\nullK, and $dom(\chi)$=$\emptyset$.
+ \end{itemize}
+
+\end{definition}
 
 \subsection{Module linking}
 
@@ -255,13 +290,13 @@ We place some conditions for module linking to be defined: We require that the t
 
 \begin{definition}[Module Linking]
 
-The linking operator $\link: \syntax{Module} \times  \syntax{Module} \longrightarrow \syntax{Module}$ is defined as follows:
+The linking operator\  \ $\link:\  \syntax{Module} \times  \syntax{Module} \longrightarrow \syntax{Module}$ is defined as follows:
 
 $
 \M \link \M{'}  =\ \left\{
 \begin{array}{l}
-                        \M \link_{aux} \M{'},\ \ \   \hbox{if}\  \ dom(\M)\!\cap\!dom(\M')\!=\!\emptyset\\
-\bot  \ \ \ \mbox{otherwise.}
+                        \M\ \link\!_{aux}\ \M{'},\ \ \   \hbox{if}\  \ dom(\M)\!\cap\!dom(\M')\!=\!\emptyset\\
+\mbox{undefined}  \ \ \ \mbox{otherwise.}
 \end{array}
                     \right.$
                     
@@ -269,9 +304,9 @@ and where,
 \begin{itemize}
      \item 
    For \prg{C}$\neq\prg{Internal}$, we have: \ \
-   $(\M \link_{aux} \M')(\prg{C})$ = $\M(\prg{C})$  if  $\prg{C}\in dom(\M)$, and  $\M'(\prg{C})$ otherwise.
+   $(\M\ \link\!_{aux}\ \M')(\prg{C})$ = $\M(\prg{C})$  if  $\prg{C}\in dom(\M)$, and  $\M'(\prg{C})$ otherwise.
     \item  
-   $(\M \link_{aux} \M')(\prg{Internal})$ = $ \M(\prg{Internal}) \cup  \M'(\prg{Internal})$
+   $(\M\ \link\!_{aux}\ \M')(\prg{Internal})$ = $ \M(\prg{Internal}) \cup  \M'(\prg{Internal})$
  \end{itemize}
 \end{definition}
 
@@ -286,7 +321,7 @@ and where,
     \item  
       $\M \link \M'$  = $\M' \link\M$.
       \item
-      $\M, \sigma \leadsto \sigma'$  implies that  $\M\link \M', \sigma \leadsto \sigma'$
+      $\M, \sigma \leadsto \sigma'$, and $\M\link \M'$ is defined, \  \  implies\ \   $\M\link \M', \sigma \leadsto \sigma'$
    \end{itemize}
  
  \end{lemma}
@@ -295,19 +330,20 @@ and where,
 
 Assertions allow us to reflect over the current runtime configuration, but also over possible future and past configurations, over 
 the control ... TODO describe this
-A simpler form of assertion only reflects over the current runtime configuration. These are described in Definition \ref{def:simple_assertion}.
+A basic form of assertion only reflects over the current runtime configuration. These are described in Definition \ref{def:simple_assertion}.
  
- \subsection{Simple Assertions}
- \label{def:simple_assertion}
- \begin{definition}[Simple Expressions and simple Assertions] $ $ \\
+ \subsection{basic Assertions}
+ \label{def:basic_assertion}
+ \begin{definition}[Basic Expressions and Basic Assertions] $ $ \\
  
  $\begin{array}{lcl}
- \SE & ::= &  \prg{true}  \ \mid\ \prg{false}  \ \mid \ \prg{x}  \ \mid\ \prg{this}  \ \mid \ \SE.\prg{f} \    \ \mid \ \SE.\prg{f}^n \  \\
+ \SE & ::= &  \prg{true}  \ \mid\ \prg{false}  \    \mid\ \prg{null}  \ \mid \ \x  \ \mid \ \SE.\f    \ \mid \ \SE.\f^n \  \\
  ~ \\
-  \SA\ &\ \  ::=\ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \ \mid  \ \SA \rightarrow \SA \ \mid \   \SE:\prg{ClassId}  \ \mid \   
-    \SE\in\prg{S}  \\
- & &   \exists \prg{x}.\SA  \ \mid \  \exists \prg{S}:SET.\SA  \ \mid \  \exists fs:FLD^k.\SA
- \ \mid \  \exists k:\mathbb{N}.\SA  
+  \SA\ &\ \  ::=\ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \ \mid  \ \SA \rightarrow \SA \ \mid \   \SE:\prg{ClassId}  % \ \mid \       \SE\in\prg{S} 
+  \\  & &   
+\ \mid \   \exists \prg{x}.\SA  \ \mid \ % \exists \prg{S}:SET.\SA 
+  \ \mid \  \exists k:\mathbb{N}.\SA  
+  \ \mid \  \exists \prg{fs}:FLD^k.\SA
 \end{array}$
 
 \noindent
@@ -325,11 +361,11 @@ For any runtime configuration, $\sigma$, and any simple expression, $\SE$, and a
   $\interp {\prg{true}}{\sigma}$ = \prg{true}, \ and \ \    $\interp {\prg{false}}{\sigma}$ = \prg{false}, \ and \ \ 
    $\interp {\prg{null}}{\sigma}$ = \prg{null}
   \item
-  $\interp {\prg{x}}{\sigma}$ = $\sigma(\prg{x})$
+  $\interp {\x}{\sigma}$ = $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
   \item
-  $\interp {\SE.\prg{f}}{\sigma}$ = $\sigma({\interp {\SE}{\sigma}}, \prg{f})$
-  \item
-    $\interp {\SE.\prg{f}^0}{\sigma}$ =  $\interp {\SE}{\sigma}$, \ \ \ and \ \ \ $\interp {\SE.\prg{f}^{k+1}}{\sigma}$ =  $\sigma({\interp {\SE.\prg{f}^k}{\sigma}}, \prg{f})$
+  $\interp {\SE.\prg{f}}{\sigma}$ = $\chi({\interp {\SE}{\sigma}}, \prg{f})$  \ \ if \ \ $\sigma$=$(\_,\chi)$
+   \item
+     $\interp {\SE.\prg{f}^0}{\sigma}$ =  $\interp {\SE}{\sigma}$, \ \ \ and \ \ \ $\interp {\SE.\prg{f}^{k+1}}{\sigma}$ =  $\chi({\interp {\SE.\prg{f}^k}{\sigma}}, \prg{f})$, where $\sigma$=$(\_,\chi)$.
    \end{itemize}
 \end{definition}
 
@@ -349,9 +385,9 @@ For any simple expression $\SE$, runtime configuration $\sigma$, and value $v$:
    The second guarantee  is a corollary of the first guarantee  and of lemma \ref{lemma:linking:properties}.\end{proof}
 
 
-The validity of simple assertions can be judged in the context of a runtime configuration
+The validity of basic assertions can be judged in the context of a runtime configuration
 
- \begin{definition}[Validity of Simple Assertions] is defined  as follows
+ \begin{definition}[Validity of basic Assertions] is defined  as follows
 
 \begin{itemize}
 \item
@@ -367,30 +403,30 @@ $\sigma \models \SA \rightarrow \SAPrime $ \IFF $\sigma \models \SA$ implies $\s
 \item
 $\sigma \models  \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
 \item
-$\sigma \models  \SE\in \prg{S}$ \IFF $\interp{\SE}{\sigma}\in \interp{\prg{S}}{\sigma}$
+$\sigma \models  \SE\in \prg{S}$ \IFF $\interp{\SE}{\sigma}\in \interp{\prg{S}}{\sigma}$.
 \item
-$\sigma \models  \exists x.\SA$ \IFF  exist  $\iota\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\SA$, so that
-$\sigma[\prg{z}\mapsto \iota] \models  \SA[\prg{x}/\prg{z}]$ \footnote{TO THINK: if \prg{x} is free in $A$ and $\sigma$ it could be simplified}
+$\sigma \models  \exists \x.\SA$ \IFF % there exists some  $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$ and $\SA$, so that\\
+%$\strut \hspace{1.1in} $ 
+$\sigma[\prg{z}\mapsto \alpha] \models  \SA[\prg{x}/\prg{z}]$, for some $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$.
 \item
-$\sigma \models  \exists \prg{S}:\prg{SET}.\SA$ \IFF  exists a set of addresses $R\subseteq dom(\sigma)$, and a \prg{Q} free in $\sigma$ and $\SA$, so that
-$\sigma[\prg{Q}\mapsto R \models  \SA[\prg{S}/\prg{Q}]$ 
-\item
-$\sigma \models  \exists \prg{fs}:\prg{FLD}^k.\SA$ \IFF  exist $k$ field identifiers $\prg{f}_1$, ... $\prg{f}_k$ so that 
-$\sigma \models  \SA[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k]$ 
-\item
-$\sigma \models  \exists \prg{n}:\prg{Nat}.\SA$ \IFF  exists a $m\in\mathbb{N}$, so that $\sigma \models    \SA[\prg{n}/m]$ 
+$\sigma \models  \exists \prg{k}:\prg{Nat}.\SA$ \IFF  there exists a $n\in\mathbb{N}$, so that   $\sigma \models    \SA[\prg{k}/n]$. 
 \footnote{TO THINK Should we instead allow the frames to map variables to numbers as we do for sets?}
+%\item
+%$\sigma \models  \exists \prg{S}:\prg{SET}.\SA$ \IFF  exists a set of addresses $R\subseteq dom(\sigma)$, and a \prg{Q} free in $\sigma$ and $\SA$, so that
+%$\sigma[\prg{Q}\mapsto R \models  \SA[\prg{S}/\prg{Q}]$ 
+\item
+$\sigma \models  \exists \prg{fs}:\prg{FLD}^k.\SA$ \IFF  there exist $k$ field identifiers $\prg{f}_1$, ... $\prg{f}_k$ so that 
+$\sigma \models  \SA[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k]$. 
 \end{itemize}
 \end{definition}
 
-Simple assertions form a classical logic: TODO: check the term; also to check whether we need any more from the classical logic's properties, since the rest of them probably hold by definition.
+Basic assertions form a classical logic: TODO: check the term; also to check whether we need any more from the classical logic's properties, since the rest of them probably hold by definition.
 
-Using this small language of simple assertions we can encode all the classical connectives, \ie $\wedge$, and $\vee$ and $\neg$. We can also model
+Using this small language of basic assertions we can encode all the classical connectives, \ie $\wedge$, and $\vee$ and $\neg$, and we can also encode universal quantifiers.
 
-
-\begin{lemma}[Simple Assertions are classical]
-For all runtime configurations $\sigma$, and simple assertions $\SA$ and $\SAPrime$, we have
-\label{lemma:simple_assertions_classical}
+\begin{lemma}[Basic Assertions are classical]
+For all runtime configurations $\sigma$, and basic assertions $\SA$ and $\SAPrime$, we have
+\label{lemma:basic_assertions_classical}
 \begin{itemize}
 \item
 $\sigma \models \SA$ or $\sigma \models \neg\SA$
@@ -408,7 +444,7 @@ but perhaps we need some auxiliary lemmas, as we are using encodings. \end{proof
 
 \subsection{Module pairs and visible states semantics}
 
-TODO: make the connection with classical visible state semantics, explain why ours is more flexible. why we use \prg{Internal} instead. Wexplain the internal-external part of the pair $\M\mkpair\M'$.
+TODO: make the connection with classical visible state semantics, explain why ours is more flexible. why we use \prg{Internal} instead. We explain the internal-external part of the pair $\M\mkpair\M'$.
 
  
 \begin{definition}
@@ -450,7 +486,7 @@ $(\M\link\M'') \mkpair \M' , \sigma \leadsto \sigma'$.
 
 We also define 
 \begin{definition}
-$\Arising {\M\mkpair\M'} \ = \ \{ \sigma \ \mid \ \exists \sigma_0 \in \Initial. \M\mkpair\M', \sigma \leadsto^* \sigma' \} $
+$\Arising ({\M\mkpair\M'}) \ = \ \{ \ \sigma \ \mid \ \exists \sigma_0. \  \Initial{\sigma_0} \ \wedge  \M\mkpair\M', \sigma_0 \leadsto^* \sigma' \ \} $
 \end{definition}
  
  \subsection{Assertions}
@@ -471,8 +507,11 @@ We extend the syntax for assertions as follows:\footnote{The symbols are not tha
 \label{def:assertions}
 
 $\begin{array}{lcl}
-\A &\ ::=\  &  \SA \ \mid  \ \A \rightarrow \A \ \mid \     \exists \prg{x}.\A  \ \mid \  \exists \prg{S}:SET.\A  \ \mid \  \exists fs:FLD^k.\A
- \ \mid \  \exists k:\mathbb{N}.\A  \ \mid \ \\
+\A &\ ::=\    \ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \ \mid  \ \A \rightarrow \A \ \mid \   \SE:\prg{ClassId}  \ \mid \   
+    \SE\in\prg{S}  \\
+ & &   \exists \x.\A  \ \mid \  \exists \prg{S}:SET.\A  \ \mid \  \exists fs:FLD^k.\A
+ \ \mid \  \exists k:\mathbb{N}.\A  
+\\
  & &    \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls{\prg{x},\prg{y},\prg{m},\prg{z}} \ \mid\  \  \Future \A  \ \mid \  \Past \A \ \mid \ \Using \A \prg{S }
 \end{array}$
 \end{definition} 
@@ -590,8 +629,8 @@ $\M\mkpair \M', \sigma[\prg{Q}\mapsto R ]\models   \A[\prg{S}/\prg{Q}]$
 \end{enumerate}
 We will be able to decide this when we study the examples. But I think the answer will be no to both.
 
-\begin{lemma}[Preservation of validity of simple assertions]
-For any simple assertion $\SA$, runtime configurations $\sigma$,...
+\begin{lemma}[Preservation of validity of basic assertions]
+For any basic assertion $\SA$, runtime configurations $\sigma$,...
 \begin{itemize}
 \item $\sigma \models \SA$ \ \ if and only if \ \  for any $\M$, $\M'$. \, $\M\mkpair \M', \sigma \models\SA$.
 \end{itemize}
@@ -601,7 +640,7 @@ For any simple assertion $\SA$, runtime configurations $\sigma$,...
 For all runtime configurations $\sigma$, and   assertions $\A$ and $\A'$, and modules
 $\M$, $\M'$,
 we have
-\label{lemma:simple_assertions_classical}
+\label{lemma:basic_assertions_classical}
 \begin{itemize}
 \item
 $\M\mkpair \M', \sigma \models \A$ or  $\M\mkpair \M', \sigma \models \neg\A$
