@@ -15,9 +15,11 @@ for module pairing (currently a $\M\mkpair \M'$) -- perhaps there should not be 
 it does not create a new module, it is only used in execution ($\M\mkpair \M', \sigma \leadsto \sigma'$) and in validity of assertions ($\M\mkpair \M', \sigma\models \A$).
 
 
-\section{ \LangOO\ and Modules}
+\section{The language \LangOO}
 
-Modules are repositories for class lookups, and have a special entry, under \prg{Internal} to describe the internals of 
+\subsection{Modules}
+
+\LangOO programs are described in modules, which are repositories for definitions. Thus, modules are map  identifiers to such class definitions, and map the special identifier   \prg{Internal} to a basic assertion, which describes which runtime configurations are internak to the module, \ie are not visible fro the clients to the module. 
 
 \begin{definition}[Modules]
 We define $\syntax{Module}$-s  as  the set of mappings from identifiers to class descriptions or a basic assertion\\  % to force line break
@@ -39,18 +41,20 @@ We describe \syntax{ClassDescr}-s in Definition \ref{def:syntax:classes}, and  \
 
 \paragraph{Classes}
 
-Class definitions are described below. 
-Note that the language is untyped. Method bodies consist of sequences of statements; 
+Class definitions are described below. They consist of field and method definitions.
+Note that \LangOO is untyped. Method bodies consist of sequences of statements; 
 these can be field read or field assignments, object creation,   method calls, and return statements.
-All else, \eg booleans, loops, more complex  can be encoded. 
-Note that field read or write is only allowed if the target object is \prg{this} -- as, \eg, can
-  in Smalltalk -- this is encapsulation.
+All else, \eg booleans, loops,  can be encoded. 
+Note also that field read or write is only allowed if the target object is \prg{this} -- as, \eg, can
+  in Smalltalk -- this is encapsulation: the syntax allows an object to read/write its own fields, but
+   forbids it from reading/writing any other object's fields.
+ 
 
 
  
- \begin{definition}[Classes, Methods, Arguments]
+ \begin{definition}[Classes]
 \label{def:syntax:classes}
-We define the syntax of modules below.
+We define the syntax of class descriptions below.
 
 \begin{tabular}{lcll}
  \syntax{ClassDescr}   &   \BBC  &     \kw{class}  \syntax{ClassId}    \lb\,  $($\ \kw{field} \f\ $)^*$ \    
@@ -68,19 +72,17 @@ We define the syntax of modules below.
  \x, \f, \m &\BBC&  \prg{Identifier}
  \end{tabular}
  
-  \xspace{.03in}
+  \vspace{.03in}
   \noindent
  where we use metavariables as follows: 
  $\x \in  \syntax{VarId} \ \ \  \f \in  \syntax{FldId} \ \ \  \m \in  \syntax{MethId} \ \ \  \c \in  \syntax{ClassId}$
 \end{definition}
 
-Note that \LangOO\, supports a limited form of protection: like in Smalltalk,
-  the syntax allows an object to read/write its own fields, but forbids it from reading/writing any other object's fields.
-   
-We define  method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class and a method identifier, where we assume that \prg{C} is a class identifier,   \prg{m} a method identifier: $ ~ $ \\
+     
+We define  method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class \c\ and a method identifier \m. We also define  the internal lookup function ${\mathcal{ I}}$ which returns the description of what is internal to the module.
 
   
- \begin{definition}[Lookup]For a class identifier \prg{C}  and a method identifier \prg{m} : $ ~ $ \\
+ \begin{definition}[Lookup] For a class identifier \prg{C}  and a method identifier \prg{m} : $ ~ $ \\
 
 \noindent
 $
@@ -100,63 +102,46 @@ ${\mathcal{ I}} ( {\M} ) \    =  \     \M(\prg{Internal} )$
 \subsection{The Operational Semantics of \LangOO}
 \label{formal:semantics}
 
-We first define runtime configurations, $\sigma$ which keep track of the 
+We will now define execution of \LangOO code. We start by  defining the  runtime entities, and runtime configurations, $\sigma$, which consist of stacks of frames and heaps. The frames are pairs of code stubs, and mapping from identifiers to values. We use the code stub to keep the code to be executed next. Code stubs are therefore are statements (as defined in \ref{def:syntax:classes}) potentially preceded by a marker for the place of a nested call of the from \x {\kw{:=}} $\bullet$.\footnote{Can we explain better?} 
 
 \begin{definition}[Runtime Entities]
 We define  addresses, values, frames, stacks, heaps and runtime configurations.
 
 \begin{itemize}
 \item 
-We take addresses to be an  enumerable set,  \prg{Addr}, and use the identifier $\alpha$ to indicate addresses.
+We take addresses to be an  enumerable set,  \prg{Addr}, and use the identifier $\alpha\in \prg{Addr}$ to indicate addresses.
 \item
-Values, $v$, are either addresses or null: $v \in \{ \prg{null} \} \cup \prg{Addr}$.
+Values, $v$, are either addresses, or sets of addresses or null:\\
+ $v \in \{ \prg{null} \} \cup \prg{Addr}\cup {\mathcal P}( \prg{Addr})$.
 \item
-Stubs are either code statements or a marker for a nested call, \x {\kw{:=}} $\bullet$, followed by code statements.
+Stubs are either code statements or a marker for a nested call, , followed by code statements.
 
 \begin{tabular}{lcll}
 \syntax{Stub} &\BBC&   \syntax{Stmts} ~\SOR~   \x {\kw{:=}} $\bullet$ \semi\ \syntax{Stmts} \\
  \end{tabular}
 
 \item
-Frames, $\phi$, are tuples of stubs and a  mapping from identifiers to values: $\phi \ \in\ \syntax{Stub} \times \prg{Ident} \rightarrow Value$,
+Frames, $\phi$, consist of a call stub  and a  mapping from identifiers to values: $\phi \ \in\ \syntax{Stub} \times \prg{Ident} \rightarrow Value$,
 \item
-Stacks,  $\psi$, are sequences of frames, $\psi\ ::= \  \phi \ | \ \phi\cdot\psi $.
+Stacks,  $\psi$, are sequences of frames, $\psi\ ::= (\  \phi \ | \ \phi\cdot\psi $.
 \item
 Objects consist of a class identifier, and a partial mapping from field identifier to values: \  \ $Object\ = \ \prg{ClassID} \times (\prg{FieldId} \rightarrow Value)$.
 \item
 Heaps, $\chi$, are mappings from addresses to objects:\  \  $\chi\ \in\ \prg{Addr} \rightarrow Object$.
 \item
-Runtime configurations, $\sigma$,
+Runtime configurations, $\sigma$, are pairs of stacks and heaps, $\sigma\ ::=\ (\ \psi, \chi\ )$.
 \end{itemize}
 
 \end{definition}
 
-We also define the relation $\sigma \subseteq \sigma'$ to express that   $\sigma$ has more information than $\sigma'$:
 
-\begin{definition}[Extending runtime configurations]
-The relation $\subconf$   is defined on runtime configurations as follows. Take arbitrary 
-configurations $\sigma$, $\sigma'$, $\sigma''$, frame $\phi$, stacks $\psi$, $\psi'$,  heap $\chi$, address $\alpha$ free in $\chi$, value $v$ and object $o$, and define $\sigma  \subconf \sigma'$ as the smallest relation such that:
+Note that values may be sets of addresses. Such values are never part of the execution of \LangOO, but are used to give semantics to assertions -- we shall see that in Definition \ref{def:valid:assertion}.
 
-\begin{itemize}
-\item 
-$\sigma  \subconf \sigma$
-\item
-$(\phi[\x \mapsto v]\cdot \psi, \chi) \subconf  (\phi\cdot \psi, \chi)$ 
-\item
-$(\phi\cdot\psi\cdot\psi', \chi) \subconf  (\phi\cdot \psi, \chi)$ 
-\item
-$(\phi, \chi[\alpha \mapsto o) \subconf  (\phi\cdot \psi, \chi)$ 
-\item
-$(\phi, \chi[\alpha \mapsto o) \subconf  (\phi\cdot \psi, \chi)$ 
-\item
-$\sigma'  \subconf \sigma''$ and $\sigma''  \subconf \sigma$ imply $\sigma'  \subconf \sigma$
-\end{itemize}
-\end{definition}
 
- 
 
-We define the interpretation of variables \x, and the field look up  \this.f in the context of frames, 
-heaps and runtime configurations
+Next, we define the interpretation of variables \x, and the field look up  \this.\f in the context of frames, 
+heaps and runtime configurations; these interpretations are used to define the operational semantics and   the 
+validity of assertions, later on:
 
 \begin{definition}[Interpretations]
 Interpretations are defined as follows:
@@ -184,35 +169,28 @@ $\ClassOf {\alpha} {(\phi\cdot\psi,\chi)} $ = $\c$ \ \ if \ \ $\chi(\alpha)=(\c,
 
 \end{definition}
 
-\begin{lemma}[Preservation of interpretations]
-If $\sigma'  \subconf \sigma$, then
-
-\begin{itemize}
-\item
-If $\interp {\x}{\sigma}$ is defined, then $\interp {\x}{\sigma'}$=$\interp {\x}{\sigma}$.
-\item
-If $\interp {\this.\f}{\sigma}$ is defined, then $\interp {\this/f}{\sigma'}$=$\interp {\this.\f}{\sigma}$.
-\item
-$\ClassOf {\alpha} {\sigma} $  is defined, then  $\ClassOf {\alpha} {\sigma'} $  = $\ClassOf {\alpha} {\sigma} $. 
-\end{itemize}
-\end{lemma}
+In the definition of the operational semantics of \LangOO we use the following notations for lookup and updates of runtime entities : 
 
 \begin{definition}[Lookup and update of runtime configurations]
-We define convenient shorthands for looking up in  runtimeentities. 
+We define convenient shorthands for looking up in  runtime entities. 
 %We assume that
 % $\sigma$ consists of components so that $\sigma$ = $(\phi.\sigma', \chi, \prg{code} )$.
 \begin{itemize}
 \item
 Assuming that $\phi$ is the tuple  $(\prg{stub1}, varMap)$, we use the notation  $\phi.\prg{stub}$ to obtain \prg{stub1}.
 \item
-Assuming a value v, and that $\phi$ is the tuple  $(\prg{stub1}, varMap)$, we define $\phi[\prg{stub}\mapsto\prg{stub2}]$ to be the tuple   
-$(\prg{stub1}, varMap)$, and   $\phi[\x \mapsto v]$    $\phi[\prg{stub1}, varMap\mapsto v]$.
+Assuming a value v, and that $\phi$ is the tuple  $(\prg{stub1}, varMap)$, we define $\phi[\prg{stub}\mapsto\prg{stub2}]$ for updating the stub, \ie   
+$(\prg{stub1}, varMap)$.   We use  $\phi[\x \mapsto v]$  for updating the variable map, \ie  $\phi[\prg{stub1}, varMap\mapsto v]$.
 \item
-Assuming a heap $\chi$, a value $v$, and assuming that $\chi(\alpha)=(\c, fieldMap)$,
-we use $\chi[\alpha,\f \mapsto v]$ as a shorthand for $\chi[\alpha \mapsto (\c, fieldMap[\f \mapsto v]]$.
+Assuming a heap $\chi$, a value $v$, and   that $\chi(\alpha)=(\c, fieldMap)$,
+we use $\chi[\alpha,\f \mapsto v]$ as a shorthand for updating the object, \ie $\chi[\alpha \mapsto (\c, fieldMap[\f \mapsto v]]$.
 \end{itemize}
 
 \end{definition}
+
+
+
+
 
 
 \begin{figure*}
@@ -240,7 +218,7 @@ $\begin{array}{l}
  \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{stub} \mapsto \prg{stms}, \x\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
 }
 \\
-\\\vee
+\\
 \inferenceruleNN{fieldAssgn\_OS} {
  \phi.\prg{code}\ =\  \this.\f  \kw{:=} \x  \semi \prg{stms}
 }
@@ -291,37 +269,78 @@ Execution of statement has   form $\M, \sigma \leadsto \sigma'$, it is defined i
 
 \end{definition}
 
-\begin{lemma}
-Assume module $\M$, stacks $\psi$, $\psi'$ and $\psi''$,  object $o$, and address $\alpha$  free in $\chi$ and $\chi'$.
+Note that interpretations and executions need not always be defined. For example, in a configuration whose top frame does not contain \x tin its domain, $\interp {\x}{\phi} $ is undefined. We define the relation $\sigma \subseteq \sigma'$ to express that   $\sigma$ has more information than $\sigma'$, and then prove that more defined configurations preserve interpretations:
+
+\begin{definition}[Extending runtime configurations]
+The relation $\subconf$   is defined on runtime configurations as follows. Take arbitrary 
+configurations $\sigma$, $\sigma'$, $\sigma''$, frame $\phi$, stacks $\psi$, $\psi'$,  heap $\chi$, address $\alpha$ free in $\chi$, value $v$ and object $o$, and define $\sigma  \subconf \sigma'$ as the smallest relation such that:
+
 \begin{itemize}
-     \item 
-   $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi,\chi[\alpha\mapsto o])\ \leadsto^*\ (\psi',\chi'[\alpha\mapsto o])$
-   \item
-    $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi\cdot\psi'',\chi)\ \leadsto^*\ (\psi'\cdot\psi'',\chi')$
-    \end{itemize}
+\item 
+$\sigma  \subconf \sigma$
+\item
+$(\phi[\x \mapsto v]\cdot \psi, \chi) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$(\phi\cdot\psi\cdot\psi', \chi) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$(\phi, \chi[\alpha \mapsto o) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$(\phi, \chi[\alpha \mapsto o) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$\sigma'  \subconf \sigma''$ and $\sigma''  \subconf \sigma$ imply $\sigma'  \subconf \sigma$
+\end{itemize}
+\end{definition}
+
+
+ 
+\begin{lemma}[Preservation of interpretations and executions]
+If $\sigma'  \subconf \sigma$, then
+
+\begin{itemize}
+\item
+If $\interp {\x}{\sigma}$ is defined, then $\interp {\x}{\sigma'}$=$\interp {\x}{\sigma}$.
+\item
+If $\interp {\this.\f}{\sigma}$ is defined, then $\interp {\this/f}{\sigma'}$=$\interp {\this.\f}{\sigma}$.
+\item
+$\ClassOf {\alpha} {\sigma} $  is defined, then  $\ClassOf {\alpha} {\sigma'} $  = $\ClassOf {\alpha} {\sigma} $. 
+\item
+$\M, \sigma \ \leadsto^*\ \sigma''$\ \ implies    \ \ there exists a $\sigma''$, so that $\M, \sigma'\ \leadsto^*\ \sigma'''$
+and $\sigma''' \subconf \sigma''$.
+\end{itemize}
 \end{lemma}
 
-\begin{proof}
-Both assertions by structural induction  over the derivation of  $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$.
-\end{proof}
 
-We define initial configurations to be those which may contain arbitrary code stubs, but which contain no objects. Objects will be created, and further methods will be called through execution of the code in $\phi.\prg{stub}$.
+%\begin{lemma}
+%Assume module $\M$, stacks $\psi$, $\psi'$ and $\psi''$,  object $o$, and address $\alpha$  free in $\chi$ and $\chi'$.
+%\begin{itemize}
+%     \item 
+%   $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi,\chi[\alpha\mapsto o])\ \leadsto^*\ (\psi',\chi'[\alpha\mapsto o])$
+%   \item
+%    $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi\cdot\psi'',\chi)\ \leadsto^*\ (\psi'\cdot\psi'',\chi')$
+%    \end{itemize}
+%\end{lemma}
+%\begin{proof}
+%Both assertions by structural induction  over the derivation of  $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$.
+%\end{proof}
+
+Where does execution start? We define initial configurations to be those which may contain arbitrary code stubs, but which contain no objects. Objects will be created, and further methods will be called through execution of the code in $\phi.\prg{stub}$.
 
 \begin{definition}[Initial Configurations] are defined as follows \\
 
 \begin{itemize}
      \item 
-   $\Initial (\psi,\chi)$, \ \ if \ \ $\psi$ consists of a single frame $\phi$ with $dom(\phi)=\{ \this, \caller \}$, and $\interp {\caller}{\phi}$= $\interp {\this}{\phi}$=\nullK, and $dom(\chi)$=$\emptyset$.
+   $\Initial {(\psi,\chi)}$, \ \ if \ \ $\psi$ consists of a single frame $\phi$ with $dom(\phi)=\{ \this, \caller \}$, and $\interp {\caller}{\phi}$= $\interp {\this}{\phi}$=\nullK, and $dom(\chi)$=$\emptyset$.
  \end{itemize}
 
 \end{definition}
 
 \subsection{Module linking}
 
- In this section we define  module linking and module ??? term ???
- 
- Linking is an operation that takes two modules, and creates a module which corresponds  to the union of the two. We use the concept of module linking in order to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know. 
-
+In this work, we study validity of assertions in the open world, \ie   does a module 
+make a certain guarantee when executed in conjunction with other modules? To study this, we 
+ need the concept of linking external modules to the one  under consideration.
+ Linking is an operation that takes two modules, and creates a module which corresponds  to the union of the two. 
+ %We use the concept of module linking in order to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know. 
 We place some conditions for module linking to be defined: We require that the two modules do not contain implementations for the same class identifiers,  
 
 \begin{definition}[Module Linking]
@@ -346,6 +365,7 @@ and where,
  \end{itemize}
 \end{definition}
 
+We can prove that inking is associative and commutative, and preserves execution.
  
  \begin{lemma}[properties of linking]
  For any modules $\M$,   $\M'$ and $\M''$, and runtime configurations $\sigma$, we have$:$
@@ -368,25 +388,31 @@ Assertions allow us to reflect over the current runtime configuration, but also 
 the control ... TODO describe this
 A basic form of assertion only reflects over the current runtime configuration. These are described in Definition \ref{def:simple_assertion}.
  
- \subsection{basic Assertions}
+ \subsection{Basic Assertions}
  \label{def:basic_assertion}
  \begin{definition}[Basic Expressions and Basic Assertions] $ $ \\
  
  $\begin{array}{lcl}
  \SE & ::= &  \prg{true}  \ \mid\ \prg{false}  \    \mid\ \prg{null}  \ \mid \ \x  \ \mid \ \SE.\f    \ \mid \ \SE.\f^n \  \\
  ~ \\
-  \SA\ &\ \  ::=\ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \ \mid  \ \SA \rightarrow \SA \ \mid \   \SE:\prg{ClassId}  % \ \mid \       \SE\in\prg{S} 
-  \\  & &   
-\ \mid \   \exists \prg{x}.\SA   % \exists \prg{S}:SET.\SA 
+  \SA\ &\ \  ::=\ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \  \mid \   \SE:\prg{ClassId}    \\  
+& & \ \mid  \ \SA \rightarrow \SA \ \mid  \ \SA \wedge \SA  \ \mid  \ \SA \vee \SA  \ \mid  \ \neg \SA \\
+& & \ \mid \   \exists \prg{x}.\SA   % \exists \prg{S}:SET.\SA 
   \ \mid \  \exists k:\mathbb{N}.\SA  
-  \ \mid \  \exists \prg{fs}:FLD^k.\SA
+  \ \mid \  \exists \prg{fs}:FLD^k.\SA \\
+& & \ \mid \   \forall \prg{x}.\SA   % \exists \prg{S}:SET.\SA 
+  \ \mid \  \forall k:\mathbb{N}.\SA  
+  \ \mid \  \forall \prg{fs}:FLD^k.\SA  
 \end{array}$
+
 
 \noindent
 In the above, \f\  is a field identifier , and  $n$ is a natural number.
 \end{definition} 
 
-Simple expressions have a value which can be determined with reference to 
+Note that the operators $\wedge$, $\vee$, $\neg$ and $\forall$ can be encoded in terms of the other operators, but here we defined them explicitly.\footnote{Should we have just introduced them through the encodings} 
+
+Simple expressions have a value which can be determined with reference to a runtime configuration.
 
 \begin{definition}[Interpretations]
 
@@ -435,23 +461,30 @@ $\sigma \models \SE=\SEPrime$ \IFF $\interp{\SE}{\sigma}$ = $\interp{\SEPrime}{\
 \item
 $\sigma \models \SE\equiv\SEPrime$ \IFF $\SE$ and $\SEPrime$ are textually identical.
 \item
+$\sigma \models  \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
+\item
 $\sigma \models \SA \rightarrow \SAPrime $ \IFF $\sigma \models \SA$ implies $\sigma \models \SAPrime$. 
 \item
-$\sigma \models  \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
-%\item
-%$\sigma \models  \SE\in \prg{S}$ \IFF $\interp{\SE}{\sigma}\in \interp{\prg{S}}{\sigma}$.
+$\sigma \models \SA \wedge \SAPrime $ \IFF $\sigma \models \SA$ and $\sigma \models \SAPrime$. 
 \item
-$\sigma \models  \exists \x.\SA$ \IFF % there exists some  $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$ and $\SA$, so that\\
-%$\strut \hspace{1.1in} $ 
-$\sigma[\prg{z}\mapsto \alpha] \models  \SA[\prg{x}/\prg{z}]$, for some $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$.
+$\sigma \models \SA \vee \SAPrime $ \IFF $\sigma \models \SA$ or $\sigma \models \SAPrime$. 
+\item
+$\sigma \models\neg  \SA $ \IFF $\sigma \not\models \SA$. 
+\item
+$\sigma \models  \exists \x.\SA$ \IFF $\sigma[\prg{z}\mapsto \alpha] \models  \SA[\prg{x}/\prg{z}]$, for some $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$.
 \item
 $\sigma \models  \exists \prg{k}:\prg{Nat}.\SA$ \IFF  there exists a $n\in\mathbb{N}$, so that   $\sigma \models    \SA[\prg{k}/n]$. 
-\footnote{TO THINK Should we instead allow the frames to map variables to numbers as we do for sets?}
-%\item
-%$\sigma \models  \exists \prg{S}:\prg{SET}.\SA$ \IFF  exists a set of addresses $R\subseteq dom(\sigma)$, and a \prg{Q} free in $\sigma$ and $\SA$, so that
-%$\sigma[\prg{Q}\mapsto R \models  \SA[\prg{S}/\prg{Q}]$ 
+%\footnote{TO THINK Should we instead allow the frames to map variables to numbers as we do for sets?}
 \item
 $\sigma \models  \exists \prg{fs}:\prg{FLD}^k.\SA$ \IFF  there exist $k$ field identifiers $\prg{f}_1$, ... $\prg{f}_k$ so that 
+$\sigma \models  \SA[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k]$. 
+\item
+$\sigma \models  \forall \x.\SA$ \IFF $\sigma[\prg{z}\mapsto \alpha] \models  \SA[\prg{x}/\prg{z}]$, for all $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$.
+\item
+$\sigma \models  \forall \prg{k}:\prg{Nat}.\SA$ \IFF for all $n\in\mathbb{N}$, we have   $\sigma \models    \SA[\prg{k}/n]$. 
+%\footnote{TO THINK Should we instead allow the frames to map variables to numbers as we do for sets?}
+\item
+$\sigma \models  \forall \prg{fs}:\prg{FLD}^k.\SA$ \IFF  for all   field identifiers $\prg{f}_1$, ... $\prg{f}_k$ we have
 $\sigma \models  \SA[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k]$. 
 \end{itemize}
 \end{definition}
@@ -482,8 +515,7 @@ $\sigma \models \SA \vee \SAPrime$ \SP if and only if \SP $\sigma \models \SA$ o
 $\sigma \models \SA \wedge \neg\SA$ never holds.
 \end{enumerate}
 \end{lemma}
-\begin{proof} By application of the corresponding definitions from \ref{def:valid"basic:assert}, and using the encoding for 
-$\wedge$ and $\vee$. \end{proof}.
+\begin{proof} By application of the corresponding definitions from \ref{def:valid"basic:assert}.\end{proof}.
 
 \begin{lemma}[Basic Assertions are classical-2]
 For   basic assertions $\SA$, $\SAPrime$, and $\SA''$ the following equivalences hold
@@ -519,8 +551,26 @@ $\neg (\forall \prg{fs}:FLD^k.. \SA)  \  \ \equiv \  \  \exists \prg{fs}:FLD^k..
 All points follow by application of the corresponding definitions from \ref{def:valid"basic:assert}.
  \end{proof}
 
+Moreover, with growing configurations, validity is preserved, provided the assertion is well-defined in the smaller configuration
 
+\begin{definition}
+We say that $\sigma \vdash \SA$ if % all variables that appear free in $\SA$ are in the domain of the top frame in $\sigma$, and
+for any term $\x.\f_1...\f_n$ appearing in $\SA$ such that \x\, is free in $\SA$, the interpretation $\interp{\x.\f_1...\f_n} \sigma$ is defined.
+\end{definition}
 
+Note that if we take $n=0$ in the definition above we obtain as corollary that   all variables that appear free in $\SA$ they  are in the domain of the top frame in $\sigma$.
+
+\begin{lemma}[Preservation of validity] $ $
+\label{lemma:preserve:valid}
+\begin{itemize}
+\item
+If  $\sigma \vdash \SA$ and $\sigma \models \SA$ and $\sigma' \subconf \sigma$, \  then  \ $\sigma' \models \SA$.
+\end{itemize}
+\end{lemma}
+
+Nota that without the requirement  that $\sigma \vdash \SA$, the implication from lemma \ref{lemma:preserve:valid} does not hold. For example, in a $\sigma$ where \x\ is undefined, we have that $\sigma \neg\vdash \x = \prg{y}$ and 
+$\sigma \neg\models \x = \prg{y}$, but we can then construct a $\sigma'$ such that $\sigma' \subconf \sigma$,  and
+ \ $\sigma' \models \x = \prg{y}$.
 
 \subsection{Module pairs and visible states semantics}
 
@@ -587,19 +637,24 @@ We extend the syntax for assertions as follows:\footnote{The symbols are not tha
 \label{def:assertions}
 
 $\begin{array}{lcl}
-\A &\ ::=\    \ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \ \mid  \ \A \rightarrow \A \ \mid \   \SE:\prg{ClassId}  \ \mid \   
+\A &\ ::=\    \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \ \mid  \ \A \rightarrow \A \ \mid \   \SE:\prg{ClassId}  \ \mid \   
     \SE\in\prg{S}  \\
  & &   \exists \x.\A  \ \mid \  \exists \prg{S}:SET.\A  \ \mid \  \exists fs:FLD^k.\A
  \ \mid \  \exists k:\mathbb{N}.\A  
 \\
  & &    \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls{\prg{x},\prg{y},\prg{m},\prg{z}} \ \mid\  \  \Future \A  \ \mid \  \Past \A \ \mid \ \Using \A \prg{S }
 \end{array}$
+We also define the operators $\wedge$, $\vee$,  $\neg$ and $\forall$  through the usual shorthands, \ie $\neg \A$ is short for 
+$\A \rightarrow \ff$,\etc.\footnote{Is that better this way?}
+
+ is short for 
+
 \end{definition} 
 
 Validity of assertions has the format $\M\mkpair \M', \sigma \models \A$ - TODO justify why \M, and why we need an external/internal part.
 
 \begin{definition}[Validity of  Assertions] is defined  as follows
-
+\label{def:valid:assertion}
 \begin{itemize}
 \item
 $\M\mkpair \M', \sigma \models\SE$ \IFF  $\interp{\SE}{\sigma}$ = \prg{true}.
@@ -740,6 +795,6 @@ A module $\M$ satisfies an assertion $\A$ if for all modules $\M'$, in all confi
 \label{def:module_satisfies}
 For any module $\M$, and  assertion $\A$, we define:
 
-$\M \models \A$ \IFF  $\forall \M',\sigma\in \Arising{\M\mkpair\M'}. \, \M\mkpair\M', \sigma \models \A$
+$\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma\in \Arising{\M\mkpair\M'}.   \M\mkpair\M', \sigma \models \A$
 \end{definition}
 
