@@ -462,11 +462,11 @@ $\sigma \models \SE\equiv\SEPrime$ \IFF $\SE$ and $\SEPrime$ are textually ident
 \item
 $\sigma \models  \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
 \item
-$\sigma \models \SA \rightarrow \SAPrime $ \IFF $\sigma \models \SA$ implies $\sigma \models \SAPrime$. 
+$\sigma \models \SA \rightarrow \A' $ \IFF $\sigma \models \SA$ implies $\sigma \models \A'$. 
 \item
-$\sigma \models \SA \wedge \SAPrime $ \IFF $\sigma \models \SA$ and $\sigma \models \SAPrime$. 
+$\sigma \models \SA \wedge \A' $ \IFF $\sigma \models \SA$ and $\sigma \models \A'$. 
 \item
-$\sigma \models \SA \vee \SAPrime $ \IFF $\sigma \models \SA$ or $\sigma \models \SAPrime$. 
+$\sigma \models \SA \vee \A' $ \IFF $\sigma \models \SA$ or $\sigma \models \A'$. 
 \item
 $\sigma \models\neg  \SA $ \IFF $\sigma \not\models \SA$. 
 \item
@@ -674,12 +674,19 @@ The operator\  $\adapt$ \ \ combines runtime configurations: $\sigma \adapt \sig
  
 \begin{itemize}
 \item
-$\sigma \adapt \sigma' \triangleq (\phi,\chi')$  \IFF $\sigma=(\phi\cdot\_,\_)$, and $\sigma'= (\_,\chi')$ .
+$\sigma \adapt \sigma' \triangleq (\phi''\cdot\psi',\chi')$  \IFF $\sigma=(\phi\cdot\_,\_)$, and $\sigma'= (\phi'\cdot\psi',\chi')$, and $\phi$=$(\prg{stub},varMap)$, and $\phi$=$(\prg{stub}',varMap')$
+\\ and  $\phi''$ such that 
+  $\phi''=(\, \prg{stub}'[\prg{zs}/\prg{zs}' ],\,varMap'[\prg{zs}'\mapsto varMap(\prg{zs})]\, ) $
+where \\
+\prg{zs}=$dom(varMap)$, and   $\prg{zs}'$ is a set  of variables which has  the  same cardinality as \prg{zs}, and where all variables in
+$\prg{zs}'$  are fresh in $varMap$ and in $varMap'$.
+
+
 \end{itemize}
 
 \end{definition}
 
-bbbb
+ 
 
  \begin{definition}[Restriction on Runtime Configurations]  The restriction operator $\restrct{} {} $ applied to a runtime configuration $\sigma$ and a set $R$ is defined as follows:   
  \label{def:config:restrct}
@@ -697,8 +704,11 @@ $\ \strut \ \ \hspace{1.2in} $
 
 cccc
 
-\begin{definition}[Validity of  Assertions] is defined  as follows
+\begin{definition}[Validity of  Assertions] We define validity of assertions below.
 \label{def:valid:assertion}
+
+We fist consider simpler assertions wihch only involve expresssions:
+
 \begin{itemize}
 \item
 $\M\mkpair \M', \sigma \models\SE$ \IFF  $\interp{\SE}{\sigma}$ = \prg{true}.
@@ -712,6 +722,11 @@ $\M\mkpair \M', \sigma \models\SE\equiv\SEPrime$ \IFF $\SE$ and $\SEPrime$ are t
 $\M\mkpair \M', \sigma \models \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
 \item
 $\M\mkpair \M', \sigma \models \SE\in \prg{S}$ \IFF $\interp{\SE}{\sigma}\in \interp{\prg{S}}{\sigma}$.
+\end{itemize}
+
+Next, we consider assertions involve existential quantifiers over program variables, field sequences, sets and numbers.
+
+\begin{itemize}
 \item
 $\M\mkpair \M', \sigma \models \exists x.\A$ \IFF  
 $\sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$ \ for some  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$.\item
@@ -720,9 +735,17 @@ $\strut ~ \hspace{1.4in} $ for some set of addresses $R\subseteq dom(\sigma)$, a
  
 \item
 $\M\mkpair \M', \sigma \models  \exists \prg{fs}:\prg{FLD}^k.\A$ \IFF  
-$\M\mkpair \M', \sigma \models  \A[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k]$\  for  $k$ field identifiers $\prg{f}_1$, ... $\prg{f}_k$.
+$\M\mkpair \M', \sigma \models  \A[\prg{fs}/\prg{f}_1.\f_2.\,...\,\prg{f}_k]$\  for  $k$ field identifiers $\prg{f}_1$,..,$\prg{f}_k$.
 \item
-$\M\mkpair \M', \sigma \models  \exists \prg{n}:\prg{Nat}.\A$ \IFF  $\M\mkpair \M', \sigma \A[\prg{n}/k]$\ \ for some $k\in\mathbb{N}$.\item
+$\M\mkpair \M', \sigma \models  \exists \prg{n}:\prg{Nat}.\A$ \IFF  $\M\mkpair \M', \sigma \A[\prg{n}/k]$\ \ for some $k\in\mathbb{N}$.
+\item
+$\M\mkpair \M', \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M', \sigma \models \A $ implies $\M\mkpair \M', \sigma \models \A' $
+\end{itemize}
+
+And now, we consider the assertions which involve space, time or control:
+
+\begin{itemize}
+\item
 $\M\mkpair \M', \sigma \models  \CanAccess{\prg{x}}{\prg{y}}$   \IFF  \begin{itemize}
 \item
 $\interp {\x} {\sigma}$=$\interp {\y} {\sigma}$, or
@@ -736,85 +759,170 @@ and \z\ appears in  $\sigma$.\prg{stub}.\footnote{That is, \z is a local variabl
  \end{itemize}
  \item
  $\M\mkpair \M', \sigma \models   \Changes{\prg{e}}$  \IFF 
- $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto \sigma' \ \wedge \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$,\\
- %where $\phi$ is so that $\sigma$=$\phi.\_$.\footnote{explain why we take $\phi$}
+ $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto \sigma' \ \wedge \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$.
+ \\
+ $\strut ~ \hspace{1.4in} $ where $\phi$ is so that $\sigma$=$(\phi.\_,\_)$.\footnote{explain why we take $\phi$}
  \item
 $\M\mkpair \M', \sigma \models  \Calls{\prg{x},\prg{y},\prg{m},\prg{z}}$ \IFF \
  $\sigma.\prg{code}$=\prg{u.m(v);\_} for some variables \prg{u} and \prg{v},  \ and \  
+\\ $\strut ~ \hspace{1.4in} $ 
 $\interp{\prg{this}}{\sigma}$=$\interp{\prg{x}}{\sigma}$, \ and\ $\interp{\prg{y}}{\sigma}$=$\interp{\prg{u}}{\sigma}$,
  \ and\ $\interp{\prg{z}}{\sigma}$=$\interp{\prg{v}}{\sigma}$.
  \item
   $\M\mkpair \M', \sigma \models  \Future \A $
   \IFF
-  $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto^* \sigma' \ \wedge \M\mkpair \M',\sigma,\sigma' \models \A \ \  ]$,\\
- where $\phi$ is so that $\sigma$=$\phi.\_$.
-
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto^* \sigma' \ \wedge \M\mkpair \M',\sigma\adapt\sigma' \models \A \ \  ]$, 
+ \\
+$\strut ~ \hspace{1.4in} $  and where $\phi$ is so that $\sigma$=$(\phi\cdot\_,\_)$.
  \item
  $\M\mkpair \M', \sigma \models  \Past \A $ \IFF 
- $\forall \sigma_1, ... \sigma_n. [\ \ \sigma_1\in \Initial{}\ \wedge \ 
- \forall i\in\{1..n-1\}. \M\mkpair \M', \sigma_{i} \leadsto  \sigma_{i+1} \ \wedge \ 
- \sigma_n=\sigma \ \ \longrightarrow \ \ \exists j\in\{1..n-1\}.
- \M\mkpair \M', \sigma, \sigma_j  \models \A\ \ 
+ $\forall \sigma_1, ... \sigma_n. [\ \ \Initial{\sigma_1}\ \wedge \ 
+ \forall i\in[1..n). \M\mkpair \M', \sigma_{i} \leadsto  \sigma_{i+1} \ \wedge \ 
+ \sigma_n=\sigma$
+ \\
+$\strut ~ \hspace{1.9in} $  $ \longrightarrow \ \ \  \exists j\in [1..n-1).
+ \M\mkpair \M', \sigma\adapt\sigma_j  \models \A\ \ 
  ]$\footnote{past includes the present, perhaps change this}
- 
  \item
  $\M\mkpair \M', \sigma \models \Using \A \prg{S}$
  \IFF
  $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
-
-
 \end{itemize}
 
-\end{definition} 
+The remaining assertions introduce the remaining logical operators (\ie $\wedge$, $\vee$, $\neg$ and the universal quantifiers). These could be encoded in terms of the preceding operators, but we nevertheless give their meaning explicitly here.
 
-\noindent
-{\bf Question} SD wonders whether we should have taken the ${\mathcal I}(\M)$ aspect in some of
-the definitions  earlier on. 
-For example, should we have defined
-\begin{enumerate}
-\item 
-$\M\mkpair \M', \sigma \models \exists x.\A$ \IFF  exist  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$, \hl{and $\sigma[\prg{z}\mapsto \alpha] \not\models {\mathcal I}(\M)[\prg{this}/\prg{z}]$}  so that
-$\sigma[\prg{z}\mapsto \alpha \models  \A[\prg{x}/\prg{z}]$ 
+\begin{itemize}
 \item
-$\M\mkpair \M', \sigma \models \exists \prg{S}:\prg{SET}.\A$ \IFF 
- exists a set of addresses $R\subseteq dom(\sigma)$, and a \prg{Q} free in $\sigma$ and $\A$, so that
-\hl{for all $\alpha\in R$,} for \prg{z}    free in $\sigma$ and $\A$, \hl{we have }
-  \hl{$\sigma[\prg{z}\mapsto \alpha] \not\models {\mathcal I}(\M)[\prg{this}/\prg{z}]$}, and
-$\M\mkpair \M', \sigma[\prg{Q}\mapsto R ]\models   \A[\prg{S}/\prg{Q}]$ 
-\end{enumerate}
-We will be able to decide this when we study the examples. But I think the answer will be no to both.
+$\M\mkpair \M', \sigma \models  \A \wedge \A'$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+and $\M\mkpair \M', \sigma \models  \A'$.
+\item
+$\M\mkpair \M', \sigma \models  \A \vee \A'$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+or $\M\mkpair \M', \sigma \models  \A'$.
+\item
+$\M\mkpair \M', \sigma \models  \neg\A$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+does not hold.
+\item
+$\M\mkpair \M', \sigma \models \forall x.\A$ \IFF  
+$\sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$ \ for all  $\alpha\in dom(\sigma)$, and   all \prg{z} free in $\sigma$ and $\A$.\item
+$\M\mkpair \M', \sigma \models \forall \prg{S}:\prg{SET}.\A$ \IFF  $\M\mkpair \M', \sigma[\prg{Q}\mapsto R] \models  \A[\prg{S}/\prg{Q}]$ \\
+$\strut ~ \hspace{1.4in} $ for all sets of addresses $R\subseteq dom(\sigma)$, and  all \prg{Q} free in $\sigma$ and $\A$.
+ 
+\item
+$\M\mkpair \M', \sigma \models \forall \prg{fs}:\prg{FLD}^k.\A$ \IFF  
+$\M\mkpair \M', \sigma \models  \A[\prg{fs}/\prg{f}_1.\f_2.\,...\,\prg{f}_k]$\  for  all  field identifiers $\prg{f}_1$,..,$\prg{f}_k$.
+\item
+$\M\mkpair \M', \sigma \models  \forall \prg{n}:\prg{Nat}.\A$ \IFF  $\M\mkpair \M', \sigma \A[\prg{n}/k]$\ \ for all $k\in\mathbb{N}$.
+\end{itemize}\end{definition} 
+
+%\noindent
+%{\bf Question} SD wonders whether we should have taken the ${\mathcal I}(\M)$ aspect in some of
+%the definitions  earlier on. 
+%For example, should we have defined
+%\begin{enumerate}
+%\item 
+%$\M\mkpair \M', \sigma \models \exists x.\A$ \IFF  exist  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$, \hl{and $\sigma[\prg{z}\mapsto \alpha] \not\models {\mathcal I}(\M)[\prg{this}/\prg{z}]$}  so that
+%$\sigma[\prg{z}\mapsto \alpha \models  \A[\prg{x}/\prg{z}]$ 
+%\item
+%$\M\mkpair \M', \sigma \models \exists \prg{S}:\prg{SET}.\A$ \IFF 
+% exists a set of addresses $R\subseteq dom(\sigma)$, and a \prg{Q} free in $\sigma$ and $\A$, so that
+%\hl{for all $\alpha\in R$,} for \prg{z}    free in $\sigma$ and $\A$, \hl{we have }
+%  \hl{$\sigma[\prg{z}\mapsto \alpha] \not\models {\mathcal I}(\M)[\prg{this}/\prg{z}]$}, and
+%$\M\mkpair \M', \sigma[\prg{Q}\mapsto R ]\models   \A[\prg{S}/\prg{Q}]$ 
+%\end{enumerate}
+%We will be able to decide this when we study the examples. But I think the answer will be no to both.
 
 \begin{lemma}[Preservation of validity of basic assertions]
 For any basic assertion $\SA$, runtime configurations $\sigma$,...
 \begin{itemize}
 \item $\sigma \models \SA$ \ \ if and only if \ \  for any $\M$, $\M'$. \, $\M\mkpair \M', \sigma \models\SA$.
 \end{itemize}
+
 \end{lemma}
- 
-\begin{lemma}[Assertions are classical]
-For all runtime configurations $\sigma$, and   assertions $\A$ and $\A'$, and modules
-$\M$, $\M'$,
-we have
-\label{lemma:basic_assertions_classical}
+
+We define equivalence of basic assertions in the usual sense: two assertions are equivalent if they are valid in 
+the context of the same configurations.
+
+\begin{definition}[Equivalence and entailments of assertions] 
+$ ~ $ 
+
 \begin{itemize}
 \item
-$\M\mkpair \M', \sigma \models \A$ or  $\M\mkpair \M', \sigma \models \neg\A$
+$\A \equiv \A'\  \IFF\    \forall \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma \models \A\ \mbox{ if and only if }\ \M\mkpair \M', \sigma \models \A'\ \ ].$
 \item
-$\M\mkpair \M', \sigma \models \A \wedge \A'$ \SP if and only if \SP  $\M\mkpair \M', \sigma \models \A$ and  $\M\mkpair \M', \sigma \models \A'$ 
+$\A \subseteqq \A'\  \IFF\    \forall \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma \models \A\ \mbox{ implies }\ \M\mkpair \M', \sigma \models \A'\ \ ].$
+\end{itemize}
+\end{definition}
+
+ 
+
+\begin{lemma}[Assertions are classical-1]
+For all runtime configurations $\sigma$,    assertions $\A$ and $\A'$, and modules $\M$  and $\M'$, we have
+\begin{enumerate}
+\item 
+$\M\mkpair \M', \sigma \models \A$\ or\ $\M\mkpair \M', \sigma \models \neg\A$
 \item
-$\$\M\mkpair \M', \sigma \A \vee \A'$ \SP if and only if \SP $\M\mkpair \M', \sigma \A$ or  $\M\mkpair \M', \sigma \A'$ 
+$\M\mkpair \M', \sigma  \models \A \wedge \A'$ \SP if and only if \SP $\M\mkpair \M', \sigma \models \A$ and $\M\mkpair \M', \sigma  \models \A'$ 
 \item
-$\M\mkpair \M', \sigma\models \A \wedge \neg\A$ never holds.
+$\M\mkpair \M', \sigma  \models \A \vee \A'$ \SP if and only if \SP $\M\mkpair \M', \sigma  \models \A$ or  $\sigma \models \A'$ 
+\item
+$\M\mkpair \M', \sigma  \models \A \wedge \neg\A$ never holds.
+\end{enumerate}
+\end{lemma}
+\begin{proof} By application of the corresponding definitions from \ref{def:valid:assertion}.\end{proof}.
+
+\begin{lemma}[Basic Assertions are classical-2]
+For     assertions $\A$, $\A'$, and $\A''$ the following equivalences hold
+\label{lemma:basic_assertions_classical}
+\begin{enumerate}
+\item
+$(\A \wedge \A') \wedge \A'' \ \equiv \  \A \wedge (\A' \wedge \A'')$
+\item 
+$(\A \vee \A') \vee \A'' \ \equiv \  \A \vee (\A' \vee\A'')$
+\item 
+$(\A \vee \A') \wedge \A'' \ \equiv \  (\A \wedge \A')\, \vee\, (\A \wedge \A'')$
+\item 
+$(\A \wedge \A') \vee \A'' \ \equiv \  (\A \vee \A')\, \wedge\, (\A \vee \A'')$
+\item 
+$\neg (\A \wedge \A') \  \ \equiv \  \neg  \A   \vee\, \neg \A''$
+\item 
+$\neg (\A \vee \A') \  \ \equiv \  \neg  \A   \wedge\, \neg \A''$
+\item
+$\neg (\exists \prg{x}.\A )  \  \ \equiv \  \forall \prg{x}.(\neg  \A)$
+\item
+$\neg (\exists k:\mathbb{N}.\A )  \  \ \equiv \  \forall  k:\mathbb{N}.(\neg  \A)$
+\item
+$\neg (\exists \prg{fs}:FLD^k.\A )  \  \ \equiv \  \forall \prg{fs}:FLD^k.(\neg  \A)$
+\item
+$\neg (\forall \prg{x}. \A)  \  \ \equiv \  \  \exists \prg{x}.\neg(\A )$
+\item
+$\neg (\forall k:\mathbb{N}.. \A)  \  \ \equiv \  \  \exists k:\mathbb{N}..\neg(\A )$
+\item
+$\neg (\forall \prg{fs}:FLD^k.. \A)  \  \ \equiv \  \  \exists \prg{fs}:FLD^k..\neg(\A )$
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+All points follow by application of the corresponding definitions from \ref{def:valid:assertion}.
+ \end{proof}
+
+Moreover, with growing configurations, validity is preserved, provided the assertion is well-defined in the smaller configuration
+ 
+
+\begin{lemma}[Preservation of validity] $ $
+\label{lemma:preserve:valid}
+\begin{itemize}
+\item
+If  $\sigma \vdash \A$ and $\M\mkpair \M',  \sigma \vdash \A$ and   $\sigma' \subconf \sigma$, \  then  \ $\M\mkpair \M',  \sigma' \models \SA$.
 \end{itemize}
 \end{lemma}
-\begin{proof} By induction over the structure of $\A$ -- TODO  SD has not yet thought about this, but believes it holds. \end{proof}.
 
 A module $\M$ satisfies an assertion $\A$ if for all modules $\M'$, in all configurations arising from executions of $\M\mkpair\M'$, the asserttion $\A$ holds.
 
 \begin{definition}
 \label{def:module_satisfies}
 For any module $\M$, and  assertion $\A$, we define:
-
-$\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma\in \Arising{\M\mkpair\M'}.   \M\mkpair\M', \sigma \models \A$
+\begin{itemize}
+\item
+$\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma\!\in\!\Arising{\M\mkpair\M'}.\   \M\mkpair\M', \sigma \models \A$
+\end{itemize}
 \end{definition}
 
