@@ -1,109 +1,187 @@
-{
- ERC20~\cite{ERC20} is a widely used contract on the Ethereum blockchain. It keeps track of participants' tokens;  tokens may be transferred between participants, provided
- the transfer was instigated by the account holder, or somebody authorized by them.
-% Traditional specification languages express this requirement implicitly only, while
-% we seek to make it explicit. 
+ 
+ ERC20~\cite{ERC20} is a widely used token standard which describes the 
+ basic functionality expected by any    Ethereum-based token contract. 
+ It issues and keeps track of participants' tokens, and supports the  transfer
+ of tokens between participants. 
 
-Below we give a holistic specification of 
-the necessary conditions for a % below says that %~policy \prg{Pol\_ERC20\_tranfer} from below says:  
- decrease in  a participant's balance:  %with an \prg{ERC20}   
- Namely, the decrease (i.e.,  $Next(\prg{e}.\prg{balance}(\prg{p}))$=$...$)  
-is caused either by a transfer instigated by the account holder themselves (i.e., $Call(\prg{p},...)$), or by
-a transfer instigated by another participant $\prg{p}''$  (i.e., $Call(\prg{p}''...$) who   had   been given authority earlier.
- % by the account holder 
-($Authorized(\prg{p},\prg{p}'',\prg{m})$). 
-% We show this in Figure 2.
 
- % \FigAuthorize  
+An important question, therefore, the circumstances under which a transfer of tokens may take place.
+The answer is that transfer of tokens 
+ can only take place only provided that  there were sufficient tokens in the
+ owner's account, and that
+ the transfer was instigated by the owner, or by somebody authorized by them.
+ 
+We can answer this question with the holistic specification from below, which mandates 
+the necessary conditions for necessary conditions for a 
+ decrease in  a participant's balance, and the necessary conditions for authorization.
 
-\noindent  
-%\prg{Pol\_ERC20\_withdraw} \ $\equiv$ \\ 
-\strut \hspace{0.3cm} $\forall \prg{e}:\prg{ERC20}.\forall \prg{p}:\prg{Any}.\forall \prg{m}:\prg{Nat}.$\\
-\strut \hspace{0.3cm} $[\ \ \Next{\prg{e}.\prg{balance(p)}}=\prg{e}.\prg{balance(p)}-\prg{m}$ \\ %.\forall\prg{m}:\prg{Nat}.$\\
+Namely, a decrease in  a participant's balance 
+(\ie  $\prg{e}.\prg{balance}=...\, \wedge\, \Next{\prg{e}.\prg{balance}=...}$)
+is caused either by a transfer instigated by the 
+account holder themselves (\ie $\Calls{\prg{p}, ...}$), or by
+a transfer instigated by another participant $\prg{p}''$  (\ie $\Calls{\prg{p}''...}$) who 
+has authority for more than the tokens spent(\ie  $\prg{e}.\prg{allowed}(\prg{p},\prg{p}'')\geq \prg{m}'$)
+This is described by the following invariant, which
+is expected from any \prg{e} which is an \prg{ERC20}  contract:
+
+\vspace{.15cm}
+\noindent
+% \strut \hspace{0.3cm} 
+$\forall \prg{e}:\prg{ERC20}.\forall \prg{p}:\prg{Object}.\forall \prg{m},\prg{m}':\prg{Nat}.$\\
+\strut \hspace{0.3cm} $[\ \ \prg{e}.\prg{balance}=\prg{m}+\prg{m'}\ \wedge \ \Next{\prg{e}.\prg{balance}=\prg{m}'}$ \\ %.\forall\prg{m}:\prg{Nat}.$\\
 \strut \hspace{0.4cm} \ \ \ $\longrightarrow$\\
-\strut \hspace{0.4cm} $\exists \prg{p}',\prg{p}'':\prg{Any}.$ \\
-\strut \hspace{0.4cm} $[\ \  \Calls{\prg{p},\prg{e.transfer(p'.m),\_)}}\  \ \  \vee\, $\\
-\strut \hspace{0.4cm} $\ \ \ \ \Calls{\prg{p}'',\prg{e.transferFrom(p,cl',m),\_}}\  \wedge\   \prg{e}.\prg{authorized}(\prg{p},\prg{p}'')=\prg{m}' \ \wedge \prg{m}'\geq \prg{m} \ ] \ \  ]$\\
-%\strut \hspace{0.4cm} $\ \ \ \ Authorized(\prg{e},\prg{p},\prg{p}'',\prg{m}) \ ] \ \  ]$\\
-\strut \hspace{0.3cm} $] $
-%\strut \hspace{0.5cm} \ \ \ $\prg{d}.\prg{ether}\geq \prg{m}\ \wedge$ $\ Fut(Call(\prg{d.send(p)},m))\ \ ] $ 
+\strut \hspace{0.4cm} \ \ \ $\exists \prg{p}',\prg{p}'':\prg{Object}.$ \\
+\strut \hspace{0.4cm} \ \ \  $[\ \  \Calls{\prg{p},\prg{e.transfer(p',m)},\_} \  \  \ \vee\, $\\
+\strut \hspace{0.4cm} \ \ \   $\ \ \ \ \prg{e}.\prg{allowed}(\prg{p},\prg{p}'')\geq \prg{m} \ \wedge \ \Calls{\prg{p}'',\prg{e.transferFrom(p,p',m),\_}}\       \  ]$\\
+\strut \hspace{0.3cm} \ \ \ $] $
+\vspace{.15cm}
 
 \noindent
-In summary, any decrease of balance is instigated either by the account holder or by somebody authorized to make such a transfer on their behalf. Note the term \prg{e}.\prg{authorized}(\prg{p},\prg{p}''); this means that the 
-ERC20 variable \prg{e} holds a field called \prg{auhtorized} of   mapping type, which maps pairs of participants to numbers; such
-mappings are supported in Solidity\cite{Solidity,}. % allow for fields which are mappings, as supported 
-We use the undescrore ($\_$) to indicate some value of no importance, \eg $\Calls(\prg{p}'',\prg{e.transferFrom(p,cl',m),\_})$ 
+ 
+ In more detail, if the next configuration witnesses a decrease of the balance by
+ $\prg{m}'$, then the current configuration was a call of \prg{transfer} instigated by
+ the owner, or it was a call of \prg{transferFrom} instigated by somebody authorized.
+Note the term \prg{e}.\prg{allowed}(\prg{p},\prg{p}''), which means that the
+ERC20 variable \prg{e} holds a field called \prg{allowed} of   mapping type, which maps pairs of participants to numbers; such
+mappings are supported in Solidity\cite{Solidity}, but could also be understood as ghost fields or predicates\footnote{cite ghost field}.
+Also, % allow for fields which are mappings, as supported
+we use an underscore ($\_$) to indicate some value or variable of no importance, thus the term $\Calls{\prg{p}'',\prg{e.transferFrom(p,cl',m),\_}}$ is a shorthand for 
+$\exists \prg{m}''.\Calls{\prg{p}'',\prg{e.transferFrom(p,cl',m),m''}}$.
 
-We now define what it means for $\prg{p}'$ to be authorized to spend \prg{m} tokens on behalf of $\prg{p}$: At some point in the
-past,  \prg{p} gave authority to $\prg{p}'$  to spend on their behalf  a number %of tokens  
-which is larger or equal   \prg{m} 
-plus the sum of  tokens 
-spent so far by $\prg{p}' $ on the behalf of \prg{p}. We use \hlc[yellow]{yellow highlights for informal explanations.}
+We now define what it means for $\prg{p}$ to have authorized $\prg{p}'$ to  spend 
+up to \prg{m} tokens on the behalf of $\prg{p}$: At some point in the
+past,  \prg{p} gave authority to $\prg{p}'$  to spend   \prg{m}
+plus the sum of  tokens
+spent so far by $\prg{p}' $ on the behalf of \prg{p}. 
 
-\vspace{.06cm}
+ 
+\vspace{.15cm}
 \noindent
-$
-\begin{array}{lcl}
- \prg{e}.\prg{authorized}(\prg{p},\prg{p}'',\prg{m})
-&
- \triangleq 
-&
-  \left\{
-                            \begin{array}{l}
-                              \Prev(\Calls(\prg{p},\prg{e.authorize(p,m)\ )}\     \\
-                             \strut \ \  \mbox{\hlc[yellow]{In the previous step, {\tt p} authorized {\tt p'} to spend up to  {\tt m}}}\\
-                               \vee \\
-                           \Prev(\ \prg{e}.\prg{authorized}(\prg{p},\prg{p}'',\prg{m})\ ) \,  \,   \wedge\,   \\
-                               \ \  \neg (\Prev(\Calls(\prg{p}',\prg{e.transferFrom(p,p',\_)},\_ ) ) )\\
-                               \strut \ \  \mbox{\hlc[yellow]{In the previous step, {\tt p'} was authorized for  {\tt m}}}\\
-                               \strut \ \  \mbox{\hlc[yellow]{and did not transfer on behalf of  {\tt p}}}\\
-                               \vee \\
-                              \Prev(\, \prg{e}.\prg{authorized}(\prg{p},\prg{p}'',\prg{m})\,  \,   \wedge\, \prg{m}\leq \prg{m}'-\prg{m}''\, \wedge \, \\
-                               \ \  \Prev(\Calls(\prg{p}',\prg{e.transferFrom(p,cl'',m'')},\_ ) ) 
-                               \\
-                                  \strut \ \  \mbox{\hlc[yellow]{In the previous step, {\tt p'} was authorized for  {\tt m'}}}\\
-                               \strut \ \  \mbox{\hlc[yellow]{and transfered an amount smaller than   {\tt m'-m}}}
-                        \end{array} 
-                         \right.
- \end{array}
- $                        
+ $\forall \prg{e}:\prg{ERC20}.\forall \prg{p},\prg{p'}:\prg{Object}.\forall \prg{m}:\prg{Nat}.$\\
+\strut \hspace{0.3cm} $[\ \ \prg{e}.\prg{allowed}(\prg{p},\prg{p}')=\prg{m} $\\
+\strut \hspace{0.4cm} \ \ \ $\longrightarrow$\\
+\strut \hspace{0.4cm} \ \ \  
+     $\PrevId\langle\ \  \Calls{\prg{p},\prg{e}.\prg{approve}(\prg{p}',\prg{m})} $\\
+      \strut \hspace{1.7cm} \ $\vee $\\
+\strut \hspace{1.7cm} \  
+     $    \prg{e}.\prg{allowed}(\prg{p},\prg{p}')=\prg{m}   
+        \  \wedge\ $\\
+\strut \hspace{1.5cm} \ \ \ \ \          $  \neg   (\, \Calls{\prg{p}',\prg{e.transferFrom(p,\_,\_)},\_ }\, \vee \, \Calls{\prg{p},\prg{e}.\prg{approve}(\prg{p}',\_)\ }\, ) $\\
+      \strut \hspace{1.7cm}\  $\vee $\\
+\strut \hspace{1.7cm}   \  $ \exists \prg{p}'':\prg{Object}.\exists\prg{m'}:\prg{Nat}.$\\
+ \strut \hspace{1.7cm}\  $[\   
+  \prg{e}.\prg{allowed}(\prg{p},\prg{p}')=\prg{m}+\prg{m}'  \, \wedge\,   \Calls{\prg{p}',\prg{e.transferFrom(p,p'',\prg{m}')},\_ }\  ]$\\
+\strut \hspace{0.4cm} \ \ \  \ \ \  \ \ \ \ \ $\rangle $\\
+\strut \hspace{0.3cm} $]$
+\vspace{.15cm}
  
- \vspace{.09cm}  
- 
- \noindent
- 
+In more detail, $\prg{p}'$ is allowed to spend 
+up to \prg{m} tokens on their behalf of $\prg{p}$, if in the immediately previous step either a)
+ \prg{p} made the call \prg{approve} on \prg{e} 
+with arguments $\prg{p}'$ and \prg{m}, or b)  
+$\prg{p}'$ was allowed to spend  up to \prg{m} tokens for $\prg{p}$
+and did not transfer any of \prg{p}'s tokens, nor did \prg{p} issue a fresh authorization,
+or c) \prg{p} was authorized for $\prg{m}+\prg{m}'$ and spent $\prg{m}'$ 
   
- %on \prg{p}'s behalf 
-%
-%Wrt transfer of tokens, the  \RoSpec~specification from 
-
-
-
-
-
-%\vspace{.05cm}
-
- This holistic specification  gives  to  account holders an "authorization-guarantee": their balance cannot decrease unless they themselves,  or somebody they had  authorized, instigates a transfer of tokens. Moreover, authorization is not transitive.
  
-% \FigEscrow 
-%\vspace{-.2in}
-\paragraph{Comparison with Traditional Specifications} 
- %
- Traditional  specifications %for the ERC20 example would consist of 
- describe the behaviour of each function separately even for a single object. 
+
+ Thus, the holistic specification  gives  to  account holders an "authorization-guarantee": their balance cannot decrease unless they themselves,  or somebody they had  authorized, instigates a transfer of tokens. Moreover, authorization is not transitive.
+ 
+\paragraph{Comparison with Traditional Specifications}
+ 
+ Traditional  specifications %for the ERC20 example would consist of
+ describe the behaviour of each function separately.
  They  give pre- and postconditions, % for a function,
-  and thus describe a  {\em sufficient} condition for the effect of the particular function. 
-% \noindent
-%
-%As stated earlier,  traditional specifications give {\em sufficient} conditions, 
- e.g., if \prg{p''}  is authorized and executes \prg{transferFrom}, then   the balance decreases. But they are {\em implicit} about the overall behaviour and the   {\em necessary} conditions, 
-e.g., what are all the possible actions that can cause a decrease of balance?
-%effect (e.g, a decrease of balance) can only take place if the necessary conditions hold (e.g., the owner called \prg{transfer} or somebody authorized  called  \prg{transferFrom}). 
+  and thus describe a  {\em sufficient} condition for the effect of the particular function.
+  Thus, to specify the \prg{ERC20} we would need to give two 
+  entries per function in the \prg{ERC20}, one which satisfies the pre-condition, and ine which does not.
+In Figure \ref{fig:classicalERC20} we outline   a traditional specification for the \prg{ERC20}.
+This specification will have two . 
+Namely we would state
+ that if \prg{p} has sufficient tokens, then the transfer will take place.  
+ 
+ 
 
-  
-With traditional  specifications, to obtain the "authorization-guarantee", one would need to inspect the pre- and post- conditions of {\em all} the functions 
-in the contract, and determine which ones decrease balances, and then determine which ones affect authorizations. 
-Moreover, with traditional  specifications, nothing stops the next release of the contract to add, e.g., a method which 
+\noindent
+And if \prg{p} has insufficient tokens, then the transfer will not take place (we assume that in this
+specification language, any entities not mentioned in the pre- or post-condition are not affected).\footnote{cite framing -- but anyway, our subject is not the classical spec.}
+ 
+ \vspace{.15cm}
+\noindent
+\strut \hspace{0.5cm}  $ \prg{e}:\prg{ERC20}\ \wedge\  \prg{p},\prg{p'}:\prg{Object} 
+  \wedge\ \prg{m},\prg{m}',\prg{m}'':\prg{Nat}\ \wedge\  $ \\
+\strut \hspace{0.5cm} $ \prg{e}.\prg{balance(p)} = \prg{m} \ \ \wedge \prg{m} <  \prg{m}' $\\
+ \strut \hspace{0.9cm} $\{ \ \prg{e.transfer(p',m')} \ \} $ \\
+\strut \hspace{0.5cm} $ \prg{e}.\prg{balance(p)} = \prg{m}$
+\vspace{.15cm}
+ 
+ Similarly, we would have to give another two specifications to define the behaviour of 
+
+if \prg{p''} is authorized and executes \prg{transferFrom}, then   the balance decreases. But they are {\em implicit} about the overall behaviour and the   {\em necessary} conditions,
+e.g., what are all the possible actions that can cause a decrease of balance?
+
+With traditional  specifications, to obtain the "authorization-guarantee", one would need to inspect the pre- and post- conditions of {\em all} the functions
+in the contract, and determine which ones decrease balances, and then determine which ones affect authorizations.
+Moreover, with traditional  specifications, nothing stops the next release of the contract to add, e.g., a method which
 allows participants to share their authority, and thus
  violate the "authorization-guarantee".
- }
+ 
+\begin{figure}   
+\fbox{
+$
+\begin{array}{c}
+ \prg{e}:\prg{ERC20}\ \wedge\  \prg{p},\prg{p'}:\prg{Object} 
+  \wedge\ \prg{m},\prg{m}',\prg{m}'':\prg{Nat}\ \wedge\   \\
+ \prg{e}.\prg{balance(p)} = \prg{m}+\prg{m}'\ \ \wedge\ \ \prg{e}.\prg{balance(p'')} = \prg{m}''\ \ \wedge\ \ \prg{this}=\prg{p} \\
+   \{ \ \ \prg{e.transfer(p'',m')} \ \ \}   \\
+    \prg{e}.\prg{balance(p)} = \prg{m}\ \ \wedge\ \ \prg{e}.\prg{balance(p'')} = \prg{m}''+\prg{m}'
+\ \ \\
+\ \ \\
+  \prg{e}:\prg{ERC20}\ \wedge\  \prg{p},\prg{p'}:\prg{Object}  \wedge\ \prg{m},\prg{m}',\prg{m}'':\prg{Nat}\ \wedge\     \prg{e}.\prg{balance(p)} = \prg{m} \ \ \wedge \prg{m} <  \prg{m}'  \\
+   \{ \ \ \prg{e.transfer(p',m')} \ \ \}   \\
+  \prg{e}.\prg{balance(p)} = \prg{m}  
+  \\
+  \\
+\prg{e}:\prg{ERC20}\ \wedge\  \prg{p},\prg{p'},\prg{p}'':\prg{Object} 
+  \wedge\ \prg{m},\prg{m}',\prg{m}'':\prg{Nat}\ \wedge\   \\
+ \prg{e}.\prg{balance(p)} = \prg{m}+\prg{m}'\ \ \wedge\ \ \prg{e}.\prg{allowed(p,p')=\prg{m'}} \prg{e}.\prg{balance(p'')} = \prg{m}''\ \ \wedge\ \ \prg{this}=\prg{p'} \\
+   \{ \ \ \prg{e.transferFrom(p',p'',m')} \ \ \}   \\
+    \prg{e}.\prg{balance(p)} = \prg{m}\ \ \wedge\ \ \prg{e}.\prg{balance(p'')} = \prg{m}''+\prg{m}'
+\ \ \\
+\ \ \\
+  \prg{e}:\prg{ERC20}\ \wedge\  \prg{p},\prg{p'}:\prg{Object}  \wedge\ \prg{m},\prg{m}',\prg{m}'':\prg{Nat}\ \wedge\ \prg{this}=\prg{p}' \ \wedge \\
+      ( \ \prg{e}.\prg{balance(p)}  <  \prg{m}'\  \vee \ 
+  \prg{e}.\prg{allowed(p,p')} < \prg{m}' \ ) \\
+   \{ \ \ \prg{e.transferFrom(p,p'',m')} \ \ \}   \\
+  \prg{e}.\prg{balance(p)} = \prg{m} 
+  \\
+  \\
+ \prg{e}:\prg{ERC20}\ \wedge\  \prg{p},\prg{p'}:\prg{Object}  \wedge\ \prg{m}:\prg{Nat}\ \wedge\ \prg{this}=\prg{p}  \\
+   \{ \ \ \prg{e.approve(p',m')} \ \ \}   \\
+  \prg{e}.\prg{allowed(p,p')} = \prg{m}    
+ \\
+ \\
+ \prg{e}:\prg{ERC20}\ \wedge\  \prg{p},\prg{p'}:\prg{Object}  \wedge\ \prg{m}:\prg{Nat}\ \wedge\ \prg{this}=\prg{p}  \\
+   \{ \ \ \prg{e.approve(p',m')} \ \ \}   \\
+  \prg{e}.\prg{allowed(p,p')} = \prg{m} 
+  \\
+  \\
+   \prg{e}:\prg{ERC20}\ \wedge\ \prg{m}:\prg{Nat}\ \wedge\    \prg{p}.\prg{balance}=\prg{m}    \\
+   \{ \ \ \prg{k}=\prg{e.balanceOf(p)} \ \ \}   \\
+  \prg{k}=\prg{m} \ \wedge \ \prg{e.balanceOf(p)} = \prg{m}  
+  \\
+  \\
+   \prg{e}:\prg{ERC20}\ \wedge\ \prg{m}:\prg{Nat}\ \wedge\    \prg{e}.\prg{allowed(p,p')}=\prg{m}    \\
+   \{ \ \ \prg{k}=\prg{e.allowance(p,p')} \ \ \}   \\
+  \prg{k}=\prg{m} \ \wedge \ \prg{e}.\prg{allowed(p,p')}=\prg{m} 
+  \\
+  \\
+   \prg{e}:\prg{ERC20}\ \wedge\ \prg{m}:\prg{Nat}\ \wedge\     \sum_{\prg{p}\in dom(\prg{e}.\prg{balance})}^{}{\prg{e}.\prg{balance}(\prg{p})}=\prg{m}    \\
+   \{ \ \ \prg{k}=\prg{e.totalSupply()} \ \ \}   \\
+  \prg{k}=\prg{m}   
+\end{array}
+$
+}
+\caption{Classical specification for the \prg{ERC20}}
+\label{fig:classicalERC20}
+\end{figure}
