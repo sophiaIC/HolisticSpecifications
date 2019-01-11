@@ -1,0 +1,61 @@
+The DAO ~\cite{DAO}  is a famous Ethereum contract  aiming  to support
+collective management of funds,  and to place power directly in the hands of owners the DAO 
+rather than delegate to directors. 
+Nevertheless, a re-entrancy bug   exploited in June 2016, lead  to a loss of   \$50M, and
+a hard-fork in the  chain ~\cite{DaoBug}. 
+ 
+%In a similar style as that  of the ERC20 spec earlier, 
+%We can give a \Chainmail~specification 
+Holistic specifications allow us to write specifications which avoid the bug, and guarantee that under all circumstances,
+all owners will be able to be reapid their money.
+Namely, we
+requiring that  % holds as much ether as the sum of
+% the   its clients' balances, and
+ the owners'  balances may only be affected by clients joining or leaving, and
+projects being approved or repaying.
+We also require,
+as below, that % Consider a  simplified version of the DAO~\cite{DAO}:
+% It keeps the moneys of a set of clients, and will refund them when they call the function \prg{repay}. 
+%
+% The \RoSpec~policy   from below says:  
+if  \prg{p}  has a balance of \prg{m} at a \prg{DAO} contract \prg{d},
+and if \prg{p} calls \prg{repay} on \prg{d}, then  
+ \prg{d} is required to hold at least \prg{m} ether at the time of that call ($\prg{d}.\prg{ether}\geq \prg{m}$), and will eventually send \prg{m} back to \prg{p} (expressed as $\Future{\Calls{\prg{d.send(p)},m}}$:
+
+%Formally: 
+\vspace{.07cm}
+
+\noindent  
+% \prg{Pol\_DAO\_withdraw} \ $\equiv$ \\ 
+\strut \hspace{0.5cm} $\forall \prg{d}:\prg{DAO}.\forall \prg{p}:\prg{Any}.\forall\prg{m}:\prg{Nat}.$\\
+\strut \hspace{0.5cm} $[\ \  \Calls(\prg{p},\prg{d.repay(),\_})\, \wedge\, \prg{d.Balance(p)}=\prg{m} $\\ 
+\strut \hspace{0.5cm} \ \ \ $\longrightarrow$\\
+\strut \hspace{0.5cm} \ \ \ $\prg{d}.\prg{ether}\geq \prg{m}\ \wedge$ $\ \Future(\Calls(\prg{d.send(p)},\prg{m}))\ \ ] $ 
+
+\noindent
+The requirement that \prg{d} holds at least \prg{m} ether precludes the DAO bug,
+in the sense that  any contract satisfying that spec cannot exhibit  the  bug:   a contract
+which satisfies the spec  is guaranteed to always have enough money to satisfy all \prg{repay} requests.
+This guarantee  holds, regardless of how many functions there are in the DAO.
+In contrast, to preclude the DAO  bug with a classical spec, one would need to write a spec for each of the 
+DAO functions (currently 19) and then study their emergent  behaviour. 
+
+
+\vspace{.005cm}
+
+We can now define  what it means for \prg{p} to have a  \prg{Balance} at  \prg{d}. The \prg{Balance}  is \prg{0} if the previous call was
+a repayment; it is \prg{m} if  the previous call was \prg{p} joining \prg{d} and paying in \prg{m}. More cases are needed to reflect the financing and repayments of proposals, but they can be expressed with the concepts described so far.
+
+\noindent
+$\strut \hspace{0.5cm} \forall \prg{d}:\prg{DAO}.\forall \prg{p}.\forall:\prg{m}:\prg{Nat}.$\\
+$\strut \hspace{0.5cm} [ \ \ \  $\\
+$\strut \hspace{0.5cm} \ \  \ \  \prg{d.Balance(p)}=\prg{m}$\ $\longrightarrow$ \ $ \left\{
+                            \begin{array}{ll}
+                             \prg{0}, & \hbox{if}\ Prev(Call(\prg{p},\prg{d.repay(),\_})    \\
+                             \vee
+                             \\
+                             \prg{m},  & \hbox{if}\  Prev(Call(\prg{p},\prg{d.join(),m}))   \\
+                             ..., & ... 
+                           \end{array} 
+                         \right.    $\\
+$\strut \hspace{0.5cm} ] $                         

@@ -1,0 +1,109 @@
+{
+ ERC20~\cite{ERC20} is a widely used contract on the Ethereum blockchain. It keeps track of participants' tokens;  tokens may be transferred between participants, provided
+ the transfer was instigated by the account holder, or somebody authorized by them.
+% Traditional specification languages express this requirement implicitly only, while
+% we seek to make it explicit. 
+
+Below we give a holistic specification of 
+the necessary conditions for a % below says that %~policy \prg{Pol\_ERC20\_tranfer} from below says:  
+ decrease in  a participant's balance:  %with an \prg{ERC20}   
+ Namely, the decrease (i.e.,  $Next(\prg{e}.\prg{balance}(\prg{p}))$=$...$)  
+is caused either by a transfer instigated by the account holder themselves (i.e., $Call(\prg{p},...)$), or by
+a transfer instigated by another participant $\prg{p}''$  (i.e., $Call(\prg{p}''...$) who   had   been given authority earlier.
+ % by the account holder 
+($Authorized(\prg{p},\prg{p}'',\prg{m})$). 
+% We show this in Figure 2.
+
+ % \FigAuthorize  
+
+\noindent  
+%\prg{Pol\_ERC20\_withdraw} \ $\equiv$ \\ 
+\strut \hspace{0.3cm} $\forall \prg{e}:\prg{ERC20}.\forall \prg{p}:\prg{Any}.\forall \prg{m}:\prg{Nat}.$\\
+\strut \hspace{0.3cm} $[\ \ \Next{\prg{e}.\prg{balance(p)}}=\prg{e}.\prg{balance(p)}-\prg{m}$ \\ %.\forall\prg{m}:\prg{Nat}.$\\
+\strut \hspace{0.4cm} \ \ \ $\longrightarrow$\\
+\strut \hspace{0.4cm} $\exists \prg{p}',\prg{p}'':\prg{Any}.$ \\
+\strut \hspace{0.4cm} $[\ \  \Calls{\prg{p},\prg{e.transfer(p'.m),\_)}}\  \ \  \vee\, $\\
+\strut \hspace{0.4cm} $\ \ \ \ \Calls{\prg{p}'',\prg{e.transferFrom(p,cl',m),\_}}\  \wedge\   \prg{e}.\prg{authorized}(\prg{p},\prg{p}'')=\prg{m}' \ \wedge \prg{m}'\geq \prg{m} \ ] \ \  ]$\\
+%\strut \hspace{0.4cm} $\ \ \ \ Authorized(\prg{e},\prg{p},\prg{p}'',\prg{m}) \ ] \ \  ]$\\
+\strut \hspace{0.3cm} $] $
+%\strut \hspace{0.5cm} \ \ \ $\prg{d}.\prg{ether}\geq \prg{m}\ \wedge$ $\ Fut(Call(\prg{d.send(p)},m))\ \ ] $ 
+
+\noindent
+In summary, any decrease of balance is instigated either by the account holder or by somebody authorized to make such a transfer on their behalf. Note the term \prg{e}.\prg{authorized}(\prg{p},\prg{p}''); this means that the 
+ERC20 variable \prg{e} holds a field called \prg{auhtorized} of   mapping type, which maps pairs of participants to numbers; such
+mappings are supported in Solidity\cite{Solidity,}. % allow for fields which are mappings, as supported 
+We use the undescrore ($\_$) to indicate some value of no importance, \eg $\Calls(\prg{p}'',\prg{e.transferFrom(p,cl',m),\_})$ 
+
+We now define what it means for $\prg{p}'$ to be authorized to spend \prg{m} tokens on behalf of $\prg{p}$: At some point in the
+past,  \prg{p} gave authority to $\prg{p}'$  to spend on their behalf  a number %of tokens  
+which is larger or equal   \prg{m} 
+plus the sum of  tokens 
+spent so far by $\prg{p}' $ on the behalf of \prg{p}. We use \hlc[yellow]{yellow highlights for informal explanations.}
+
+\vspace{.06cm}
+\noindent
+$
+\begin{array}{lcl}
+ \prg{e}.\prg{authorized}(\prg{p},\prg{p}'',\prg{m})
+&
+ \triangleq 
+&
+  \left\{
+                            \begin{array}{l}
+                              \Prev(\Calls(\prg{p},\prg{e.authorize(p,m)\ )}\     \\
+                             \strut \ \  \mbox{\hlc[yellow]{In the previous step, {\tt p} authorized {\tt p'} to spend up to  {\tt m}}}\\
+                               \vee \\
+                           \Prev(\ \prg{e}.\prg{authorized}(\prg{p},\prg{p}'',\prg{m})\ ) \,  \,   \wedge\,   \\
+                               \ \  \neg (\Prev(\Calls(\prg{p}',\prg{e.transferFrom(p,p',\_)},\_ ) ) )\\
+                               \strut \ \  \mbox{\hlc[yellow]{In the previous step, {\tt p'} was authorized for  {\tt m}}}\\
+                               \strut \ \  \mbox{\hlc[yellow]{and did not transfer on behalf of  {\tt p}}}\\
+                               \vee \\
+                              \Prev(\, \prg{e}.\prg{authorized}(\prg{p},\prg{p}'',\prg{m})\,  \,   \wedge\, \prg{m}\leq \prg{m}'-\prg{m}''\, \wedge \, \\
+                               \ \  \Prev(\Calls(\prg{p}',\prg{e.transferFrom(p,cl'',m'')},\_ ) ) 
+                               \\
+                                  \strut \ \  \mbox{\hlc[yellow]{In the previous step, {\tt p'} was authorized for  {\tt m'}}}\\
+                               \strut \ \  \mbox{\hlc[yellow]{and transfered an amount smaller than   {\tt m'-m}}}
+                        \end{array} 
+                         \right.
+ \end{array}
+ $                        
+ 
+ \vspace{.09cm}  
+ 
+ \noindent
+ 
+  
+ %on \prg{p}'s behalf 
+%
+%Wrt transfer of tokens, the  \RoSpec~specification from 
+
+
+
+
+
+%\vspace{.05cm}
+
+ This holistic specification  gives  to  account holders an "authorization-guarantee": their balance cannot decrease unless they themselves,  or somebody they had  authorized, instigates a transfer of tokens. Moreover, authorization is not transitive.
+ 
+% \FigEscrow 
+%\vspace{-.2in}
+\paragraph{Comparison with Traditional Specifications} 
+ %
+ Traditional  specifications %for the ERC20 example would consist of 
+ describe the behaviour of each function separately even for a single object. 
+ They  give pre- and postconditions, % for a function,
+  and thus describe a  {\em sufficient} condition for the effect of the particular function. 
+% \noindent
+%
+%As stated earlier,  traditional specifications give {\em sufficient} conditions, 
+ e.g., if \prg{p''}  is authorized and executes \prg{transferFrom}, then   the balance decreases. But they are {\em implicit} about the overall behaviour and the   {\em necessary} conditions, 
+e.g., what are all the possible actions that can cause a decrease of balance?
+%effect (e.g, a decrease of balance) can only take place if the necessary conditions hold (e.g., the owner called \prg{transfer} or somebody authorized  called  \prg{transferFrom}). 
+
+  
+With traditional  specifications, to obtain the "authorization-guarantee", one would need to inspect the pre- and post- conditions of {\em all} the functions 
+in the contract, and determine which ones decrease balances, and then determine which ones affect authorizations. 
+Moreover, with traditional  specifications, nothing stops the next release of the contract to add, e.g., a method which 
+allows participants to share their authority, and thus
+ violate the "authorization-guarantee".
+ }
