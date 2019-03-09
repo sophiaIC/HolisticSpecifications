@@ -1,54 +1,25 @@
-%We will now discuss  an example demonstrating the need to describe attenuation in specifications.
-\emph{Attenuation} is the ability to give restricted access to an object's functionality. Thus is usually done thorugh
-introduction of an intermediate object. While it is a common programming practice the term was coined, and the practice 
-was studied in detail in the object capabilities literature \cite{millerPhD}. 
+\section{Wrappers -- traditional Specification}
 
-The example of attenuating the DOM was proposed in \cite{dd}. 
-In this section we revisit that example, and use it to motivate the need for holistic specifications, to give an informal introduction
-to  our language for such holistic specifications. We also argue that compared with the soecifcation in \cite{dd}, our specification xxxx.
-
-This example deals with a tree of DOM nodes: Access to a DOM node gives access to all its parent and children nodes, and the ability to modify the node's properties. However, as the top nodes of the tree usually contain privileged information, while the lower nodes contain less crucial information, such as xxxx, we want to be able to limit  the access that we give  to third parties to only part of the DOM tree. We do this through \prg{Wrapper}, which has a field \prg{node} pointing to a \prg{Node}, and a field \prg{height} which restricts the range of \prg{Node}s which may be modified through the use of the particular \prg{Wrapper}. Namely, when you hold a \prg{Wrapper}  you can modify the \prg{property} of all the descendants    and also all the \prg{height}-th ancestors of the \prg{node} of that particular \prg{Wtrapper}.
-
-The corresponding code appears in Figure \ref{fig:DOM}. 
-We write our code in a small, fictitious, class-based, dynamically typed, imperative programming language. All functions are public, \ie may be called by any other object, and all fields are private, \ie may be read or written only by the object itself. 
+The figure needs some beautification
 
 \begin{figure}[htb]
 \begin{tabular}{llll}
-&
-\begin{minipage}{0.40\textwidth}
-\begin{lstlisting}
-class Node(par,prop){
-
-  fld parent = par;
-  fld property = prop;
-  fld children = new array[10];
-  fld maxChild=0;
-  children[maxChild++]=this
-  
-  func getParent(){
-       parent 
-  }  
-  func getChild(i){
-       children[i] 
-  }
-  func setProperty(prp){
-       property = prp 
-  }  
-  func setChild(nd){
-       children[i] = nd
-  }  
-}
-\end{lstlisting}
-\end{minipage}
-& & 
-\begin{minipage}{0.40\textwidth}
 \begin{lstlisting}
 class Wrapper(nd,hgt){
 
   fld node=nd;
   fld height=hgt;
 
-  func setPropety(i,prp){
+  func setPropety(i,prp)
+  // PRE: i
+  // POST:
+  //     i>this.height -> modifies nothing
+  //     &&
+  //     i<=this.height -->
+  //           modifies = { this.node.parent^i.property }
+  //          &&
+  //          this.node,parent^i.property == prp
+  {
     if (i>height){ 
        return 
     } 
@@ -59,7 +30,9 @@ class Wrapper(nd,hgt){
           i--;    };
         nd.setProperty(prp); }
   }    
-  func getChild(i){ 
+  func getChild(i)
+  
+  { 
     Wrapper(node.getChild(i),
                     height+1); 
  }                           
