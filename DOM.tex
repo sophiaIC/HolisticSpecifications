@@ -1,6 +1,6 @@
 %We will now discuss  an example demonstrating the need to describe attenuation in specifications.
-\emph{Attenuation} is the provide  to third objects \emph{restricted}  access to an object's functionality. This is usually achieved through the introduction of an intermediate object. While such intermediate objects are a common programming practice, the term was coined, and the practice 
-was studied in detail in the object capabilities literature \cite{millerPhD}. 
+\emph{Attenuation} is ability to provide  to third objects \emph{restricted}  access to an object's functionality. This is usually achieved through the introduction of an intermediate object. While such intermediate objects are a common programming practice, 
+the term was coined, and the practice  was studied in detail in the object capabilities literature \cite{millerPhD}. 
 
 Specifications for attenuation for the DOM were proposed in \cite{dd}. 
 In this section we revisit that example, and use it to motivate the need for holistic specifications, to give an informal introduction
@@ -54,21 +54,28 @@ func usingWrappers(unknwn){
 \end{figure}
 
 Even though we know nothing about the \prg{unknown} object or its \prg{untrusted} function, and even though the call gives to \prg{unknown}  access to \prg{w}, which in turn has transitively access to all  \prg{Node}-s in the tree, 
-we know that the call to the \prg{untrusted} function is guaranteed not to affect the   \prg{property} fields of the nodes \prg{n1}, \prg{n2}, and \prg{n4}. 
-Thus, the assertion on line 10 is guaranteed to succeed. 
-The question is how do we specify \prg{Wrapper}, so as to be able to prove this assertion.
+we know that %the call to the \prg{untrusted} function is guaranteed not to 
+line 100 will not affect the   \prg{property} fields of the nodes \prg{n1}, \prg{n2}, and \prg{n4}. 
+Thus, the assertion on line 12 is guaranteed to succeed. 
+The question is how do we specify \prg{Wrapper}, so as to be able to make such an argument. %prove this assertion.
 
 A  specification of the class \prg{Wrapper} 
-in the traditional   style, \eg  \cite{Leavens-etal07} (\cf appendix \ref{DOM:traditional}) consists of pairs of pre- and post- conditions for each of the functions of that class. Each of these pairs gives a {\em sufficient} condition for some effect to take place: for example the call \prg{w.setProperty(i,prp)} where \prg{i} is smaller than \prg{w.height} is a sufficient condition to  modify   \prg{property} of the \prg{i}-th parent of \prg{nd}. But we do not know what other ways there may be  to modify a node's  \prg{property}. In other words, we have not specified the \emph{necessary conditions}. \footnote{Shell we say the following, or does it break the flow? \\
+in the traditional   style, \eg  \cite{Leavens-etal07} (\cf appendix \ref{DOM:traditional}) consists of pairs of pre- and post- conditions for each of the functions of that class. Each such pair gives a {\em sufficient} condition for some effect to take place: for example the call \prg{w.setProperty(i,prp)} where \prg{i} is smaller than \prg{w.height} is a sufficient condition to  modify   \prg{property} of the \prg{i}-th parent of \prg{w.node}. But we do not know what other ways there may be  to modify a node's  \prg{property}. In other words, we have not specified the \emph{necessary conditions}. \footnote{Shell we say the following, or does it break the flow? \\
 Moreover, on line 10 we do not know which functions are called on \prg{w}.}
+
+Instead, in this work, we propose \emph{holistic specifications}, which describe the behaviour of an abstract data type as a hole, taking all possible method calls into account. Such holistic specifications typically describe \emph{necessary conditions} for some effect to take place. In our example:
 
 \begin{quote}
 The \emph{necessary} condition for the modification of \prg{nd.property} for some \prg{nd} of class \prg{Node}  is either access to some   \prg{Node} in the same tree, or  access to a \prg{w} of class \prg{Wrapper} where the \prg{w.height}-th parent of \prg{w} is an ancestor of \prg{nd}.
 \end{quote}
 
 
-Having justified the need for  necessary conditions in specifications, we   express the requirement from above in \Chainmail. 
- This  gives us the opportunity to  demonstrate primitives for time ($\Future{\_}$) and authority ($\Changes{\_}$ and $\Using {\_} {\_}$).
+With such a specification we can prove that the assertion on line 12 will succeed. And, more importantly, we can ensure that all future updates of the \prg{Wrapper} abstract data type will uphold the \emph{protection} of the \prg{Node} data.
+%
+% Having justified the need for  necessary conditions in specifications, 
+%
+To give a flavour of \Chainmail, we use it  express the requirement from above:
+%  This  gives us the opportunity to  demonstrate primitives for time ($\Future{\_}$) and authority ($\Changes{\_}$ and $\Using {\_} {\_}$).
  % and   more traditional relations between objects ( $\prg{nd}.\prg{parnt}^k\!=\! ...$):
 % $\strut$ 
 \vspace{.1cm}
@@ -91,9 +98,10 @@ $ ]$
 \noindent
 That is, if  the value of \prg{nd.property} is modified ($\Changes{\_}$) at some future point ($\Future{\_}$) 
 and if reaching that future point involves no more objects than those from
-set \prg{S} (\ie ${\Using{\_} {\prg{S}}}$), then at least one (\prg{o}) of the objects in \prg{S} is not a \prg{Node} nor a \prg{Wrapper}, and \prg{o} has direct access to some  node ($\CanAccess{\prg{o}}{\prg{nd}'}$), or   to some wrapper \prg{w} and the \prg{w.height}-th parent of \prg{w} is an ancestor of \prg{nd} (that is $\prg{parnt}^k\!=\!\prg{w.node}.\prg{parnt}^{\prg{w.height}}$).
+set \prg{S} (\ie ${\Using{\_} {\prg{S}}}$), then at least one (\prg{o}) of the objects in \prg{S} is not a \prg{Node} nor a \prg{Wrapper}, and \prg{o} has direct access to some  node ($\CanAccess{\prg{o}}{\prg{nd}'}$), or  to some wrapper \prg{w} and the \prg{w.height}-th parent of \prg{w} is an ancestor of \prg{nd} (that is, $\prg{parnt}^k\!=\!\prg{w.node}.\prg{parnt}^{\prg{w.height}}$).
 % It is important to clarify what we mean by ``access''. 
-Definitions of these concepts   appear later (Definition \ref{def:valid:assertion}), but  note that our ``access'' is intransitive: $\CanAccess x y$ hols if  either \prg{x} has a field  pointing to \prg{y}, or  \prg{x}  is the receiver and \prg{y} is one of the arguments  in the executing method call.
+Definitions of these concepts   appear later (Definition \ref{def:valid:assertion}), but  note that our ``access'' is intransitive: $\CanAccess x y$ holds if  either \prg{x} has a field  pointing to \prg{y}, or  \prg{x}  is the receiver and \prg{y} is one of the arguments  in the executing method call.
  
-In the next section we will proceed with the meaning of executions, and then will discuss validity of assertions.
+In the next sections we proceed with a formal model of our model. In the appendix we discuss more -- and simpler -- examples.
+We chose the DOM for the introduction, in order to give a flavour of the \Chainmail features.
  
