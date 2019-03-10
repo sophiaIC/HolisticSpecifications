@@ -1,0 +1,271 @@
+
+\label{section:motivationBank}
+
+
+Traditional functional specifications describe what components are
+guaranteed to do. So long as a method is called in a state satisfying
+its preconditions, the method will complete its work and establish a
+state satisfying its postconditions.   Method specifications
+are \textit{sufficient} conditions under which methods can be called,
+that is. sufficient conditions under which their method's behaviour
+can be invoked.
+
+
+Consider the specification of a trivial Bank component in
+fig.~\ref{fig:BankSpec}.  The bank is essentially a wrapper for a map
+from account objects to account balances: given an instance of a Bank
+component, calling \prg{newAccount} returns a new account object and
+then calling \prg{initialise} sets up initial accounts and balances.
+(GRRR: not really happy about this. should have a boolean setup ghost
+field so initialise can onlyt be called once. which the functions have
+as precondtion :ARGH).  Given an account, calling \prg{balance} with an
+account returns the account balance, and calling \prg{deposit} with
+two accounts deposits funds from the source to the destination account.
+
+
+\begin{figure}[tbp]
+\begin{lstlisting}
+  specification Bank {
+
+    ghost field ledger : Map[Account, Number]
+
+    function newAccount {
+      a \in Account, b \in Bank
+        { a := b.newAccount }
+      FRESH(a)
+    }
+
+    function balance {
+      a \in Account, b \in Bank, n \in Number
+        { n := b.balance(a) }
+      n == ledger.at( a )
+    }
+
+    function deposit {
+      src, dst \in Account, b \in Bank, n \in Number
+      sb == ledger.at(src), db == ledger.at(dst), n > 0
+        { b.deposit(dst, src, n) }
+      ledger.at(src) == sb - n
+      ledger.at(dst) == db + n
+    }
+
+    function initialise {
+      b \in Bank, m in Map[Account, Number]
+        { b.initialise( m ) }
+      ledger == m
+    }
+
+  }
+\end{lstlisting}
+\caption{Functional specification of a Bank}
+\label{fig:BankSpec}
+\end{figure}
+
+The specification in fig.~\ref{fig:BankSpec} is enough to let us
+calculate the result of operations on the bank and the accounts ---
+for example it is straightforward to determine that the code in
+fig.~\ref{fig:rego} satisfies its assertions: given that the
+\prg{acm} object has a balance of 10,000 before an author is
+registered then afterwards it will have a balance of 11,000 while the
+\prg{author} now has a balance of 500 from a starting balance of 1,500
+(barely enough to buy a round of drinks at the conference hotel bar).
+
+
+\begin{figure}[tbp]
+\begin{lstlisting}
+  assume b.balance(acm) == 10000
+  assume b.balance(author) == 1500
+
+  b.deposit(acm, author, 1000)
+
+  assert b.balance(acm) == 11000
+  assert b.balance(author) == 500
+\end{lstlisting}
+\caption{Registering at a Conference}
+\label{fig:rego}
+\end{figure}
+
+
+This reasoning is fine in a closed world, where we only have to
+consider complete programs, where all the code in our programs (or any
+other systems with which they interact) is under our control.   In an
+open world, however, things are more complex: our systems will be made
+up of a range of components, many of which we do not control; and
+furthermore will have to interact with external systems which we
+certainly do not control.  Returning to our author, say some time
+after regisering by executing the code in fig.~\ref{fig:rego}, they
+attempt to pay for a round at the bar.  Under what circumstances can
+they be sure they have enough funds in their account?
+
+To see the problem, consider the additional function specified in
+fig.~\ref{fig:steal}. This method says the bank additional provides a
+\prg{steal} method that empties out every account in the bank and puts
+all their funds into the thief's account. If this method exists, and
+if it is somehow called between registering at the conference and
+going to the bar, the author (actually everyone using the same bank)
+will find all their accounts empty (except the thief, of course).
+
+\begin{figure}[tbp]
+\begin{lstlisting}
+  specification Theft {
+
+    function steal {
+      b \in Bank, thief in Account, m in Map[Account, Number]
+      m == b.ledger
+        { b.steal(thief) }
+      forall a in dom(m) :
+      ledger.at(a) =
+        if (a == thief)
+          then sum(codom(m))
+          else 0
+    }
+  }
+\end{lstlisting}
+\caption{Functional specification of taxation}
+\label{fig:steal}
+\end{figure}
+
+The critical problem is that a bank implementation including a \prg{steal}
+method would meet the functional specifications of the bank friom
+fig.~\ref{fig:BankSpec}, so long as its \prg{newAccount},
+\prg{balance}, \prg{deposit}, and \prg{initialise} methods do meet
+that specification.
+
+One obvious solution would be to return to a closed-world
+interpretation of specifications: we interpret specifications such as
+fig.~\ref{fig:BankSpec} as \emph{exact} in the sense that only
+implementations that meet the functional specification exactly,
+\emph{with no extra methods or behaivour}, are considered as suitable
+implementations of the functional specification. The problem is that
+this solution is far too strong: it would for example rule out a bank
+that simply counted the number of deposits that had taken place,
+i.e. met fig.~\ref{fig:count} as well as fig.~\ref{fig:BankSpec}.
+
+
+\begin{figure}[tbp]
+\begin{lstlisting}
+  specification CountDeposits {
+
+    ghost field count : Number = 0
+
+    function deposit {
+      c : Number = count
+        { b.deposit(dst, src, n) }
+      count == c + 1
+    }
+
+    function count {
+      b : Bank
+        { c = b.countDeposits }
+      c == b.count
+    }
+  }
+\end{lstlisting}
+\caption{Functional specification counting the number of deposits}
+\label{fig:count}
+\end{figure}
+
+
+What we need is some way to permit bank implementations that meet
+fig.~\ref{fig:count} but to forbit implementatons that meet
+fig.\ref{fig:steal}.  The key here is to capture the (implicit)
+assumptionms underlying fig.\ref{fig:BankSpec}, and to provide
+additional specifications that capture those assumptions.  There are
+at least two assumptions that can prevent methods like \prg{steal}:
+
+\begin{enumerate}
+\item after initialisation, the \emph{only} way an account's
+  balance can be changed is if a client calls the \prg{deposit} method
+\item an account's balance can \emph{only} be changed if a client has
+  that particular account object.
+\end{enumerate}
+
+Compared with the functional specification we have seen so far, these
+assunmptions capture \emph{necessary} conditions rather than
+\emph{sufficient} conditions. It is necessary that the \prg{deposit}
+method is called to change an account's balance, and it is necessary
+that the particular account object can be passed as a parameter to
+that method. The fig.~\ref{fig:steal} specification is not consistent
+with these assumptions, while the.~\ref{fig:count} specification is
+consistent with these assunmptions.
+
+
+The contribution of this paper is a specification langauge and
+semantics that can be used to specify necessary specifications, and a
+semantics for those specifications that can determine whether some
+functional (sufficient) specifications are consistent (or not) with
+the necessary specifications. Fig.~\ref{fig:nec} shows how we
+can express these two informal assumptions using our specification
+language Chainmail II.  Rather than specifying \prg{functions} to
+describe the behaviour of particular methods when they are called, we
+write \prg{policies} that range across the whole behvaiour of the
+component.
+
+
+An overall ``holistic'' specification for the bank account, then,
+would be our original sufficient functional specification from
+fig.~\ref{fig:BankSpec} plus the necessary security policy
+specification in fig.~\ref{fig:nec}.  This holistic specification
+permits an implememntation of the bank that also meets the \prg{count}
+specification from fig.~\ref{fig:count}, but does not permit an
+implementation that also meets the \prg{steal} specification from
+fig.~\ref{fig:steal}.
+
+
+\begin{figure}[htbp]
+%\begin{definition}
+%\label{def:pol2}
+
+    (1)\ \  $\triangleq$\ \ $\forall \prg{a}.\forall \prg{S}.\ [ \ \  \prg{a}:\prg{Account}\   \wedge\   \prg{this}\neq\prg{a} \ \wedge\ \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \   \
+    \longrightarrow$ \\
+ $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \Calls{\prg{deposit}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$
+
+\vspace{.1cm}
+
+    (2)\ \  $\triangleq$\ \ $\forall \prg{a}.\forall \prg{S}.\ [ \ \  \prg{a}:\prg{Account}\   \wedge\   \prg{this}\neq\prg{a} \ \wedge\ \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \   \
+    \longrightarrow$ \\
+ $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$
+
+%\end{definition}
+
+\caption{Necessary specifications for \prg{deposit}}
+\label{fig:nec}
+\end{figure}
+
+
+Policy (1) in fig.~\ref{fig:nec} says that if --- in any future state
+($\Future$\ldots) an account's balance is changed
+($\Changes{\prg{a.balance}}$)
+then there must be some client object $o$ which is outside the
+bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)t
+that calls the \prg{deposit} method: ($\Calls{\prg{deposit}}$).
+Policy (2) similarly constraints any possible code that may change an
+account's balance, but requires that the client object making the call
+has direct access to the account object
+($\CanAccess{\prg{o}}{\prg{a}}$).
+
+We can then prove that e.g.\ the \prg{steal} method from
+fig.~\ref{fig:steal} is inconsistent with both of these policies.
+First, the \prg{steal} method clearly changes the balance of
+every account in the bank, but policy (1) requires that any method
+that changes the balance of any account must be called \prg{deposit}.
+Second, the \prg{steal} method changes the balance of every account in
+the system, and will do so without the called having a reference to
+most of those accounts, which breaches policy (2).   Note
+that \prg{steal} putting all the funds into the thief's account
+does not breach policy (2) with respect to the thief's own account,
+because that account is passed in as a parameter to the \prg{steal}
+method, and so the called of the \prg{steal} must have access to that
+account.
+
+
+\paragraph{random minor point}
+
+These necessary specification policies
+can be defined and interpreted independently of any particular
+implementation of a specification --- rather our policies constrain
+implementations, in just the same way as traditional functional
+specifications.  This is in contrast to e.g.\ class invariants, which
+establish invariants across the implementation of an abstract, or
+abstraction functions, which link an abstract model to a concrete
+implementation of that model. 
