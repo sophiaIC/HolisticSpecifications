@@ -5,23 +5,27 @@
 Traditional functional specifications describe what components are
 guaranteed to do. So long as a method is called in a state satisfying
 its preconditions, the method will complete its work and establish a
-state satisfying its postconditions.   Method specifications
-are \textit{sufficient} conditions under which methods can be called,
-that is. sufficient conditions under which their method's behaviour
+state satisfying its postconditions.  Method specifications thus
+define the \textit{sufficient} conditions for their methods' behaviour
 can be invoked.
 
 
 Consider the specification of a trivial Bank component in
 fig.~\ref{fig:BankSpec}.  The bank is essentially a wrapper for a map
 from account objects to account balances: given an instance of a Bank
-component, calling \prg{newAccount} returns a new account object and
+component, calling \prg{newAccount} returns a new account object with
+an initial balance. \scd{USED TO BE: 
 then calling \prg{initialise} sets up initial accounts and balances.
 (GRRR: not really happy about this. should have a boolean setup ghost
 field so initialise can onlyt be called once. which the functions have
-as precondtion :ARGH).  Given an account, calling \prg{balance} with an
+as precondtion :ARGH).} \kjx{changed it so it behaves more like a
+bank, rather an a currency:  you open an account with a new balance.
+We can no longer talk about the preservation of a currency,
+but the amount in the bank must be the sum of arguments to newAccount.}
+
+Given an account, calling \prg{balance} with an
 account returns the account balance, and calling \prg{deposit} with
 two accounts deposits funds from the source to the destination account.
-
 
 \begin{figure}[tbp]
 \begin{lstlisting}
@@ -29,34 +33,28 @@ two accounts deposits funds from the source to the destination account.
 
     ghost field ledger : Map[Account, Number]
 
-    function newAccount {
-      a \in Account, b \in Bank
-        { a := b.newAccount }
-      FRESH(a)
+    policy newAccount {
+        a : Account, b : Bank, n : Number
+          { def a = b.newAccount(n) }
+        FRESH(a) & ledger.containsKey(a)
     }
 
-    function balance {
-      a \in Account, b \in Bank, n \in Number
+    policy balance {
+      a : Account, b : Bank, n : Number
         { n := b.balance(a) }
       n == ledger.at( a )
     }
 
-    function deposit {
-      src, dst \in Account, b \in Bank, n \in Number
+    policy deposit {
+      src, dst : Account, b : Bank, sb, db, n : Number
       sb == ledger.at(src), db == ledger.at(dst), n > 0
         { b.deposit(dst, src, n) }
       ledger.at(src) == sb - n
       ledger.at(dst) == db + n
     }
-
-    function initialise {
-      b \in Bank, m in Map[Account, Number]
-        { b.initialise( m ) }
-      ledger == m
-    }
-
   }
 \end{lstlisting}
+\kjx{will update style sometime}
 \caption{Functional specification of a Bank}
 \label{fig:BankSpec}
 \end{figure}
@@ -109,26 +107,24 @@ will find all their accounts empty (except the thief, of course).
 \begin{lstlisting}
   specification Theft {
 
-    function steal {
-      b \in Bank, thief in Account, m in Map[Account, Number]
+    policy steal {
+      b : Bank, thief in Account, m in Map[Account, Number]
       m == b.ledger
         { b.steal(thief) }
       forall a in dom(m) :
-      ledger.at(a) =
-        if (a == thief)
-          then sum(codom(m))
-          else 0
+        ledger.at(a) =
+          if (a == thief) then {sum(codom(m))} else 0
     }
   }
 \end{lstlisting}
-\caption{Functional specification of taxation}
+\caption{Sufficient Specification of Theft}
 \label{fig:steal}
 \end{figure}
 
 The critical problem is that a bank implementation including a \prg{steal}
 method would meet the functional specifications of the bank friom
 fig.~\ref{fig:BankSpec}, so long as its \prg{newAccount},
-\prg{balance}, \prg{deposit}, and \prg{initialise} methods do meet
+\prg{balance}, and \prg{deposit} methods do meet
 that specification.
 
 One obvious solution would be to return to a closed-world
@@ -141,20 +137,19 @@ this solution is far too strong: it would for example rule out a bank
 that simply counted the number of deposits that had taken place,
 i.e. met fig.~\ref{fig:count} as well as fig.~\ref{fig:BankSpec}.
 
-
 \begin{figure}[tbp]
 \begin{lstlisting}
   specification CountDeposits {
 
     ghost field count : Number = 0
 
-    function deposit {
+    policy deposit {
       c : Number = count
         { b.deposit(dst, src, n) }
       count == c + 1
     }
 
-    function count {
+    policy count {
       b : Bank
         { c = b.countDeposits }
       c == b.count
@@ -174,7 +169,7 @@ additional specifications that capture those assumptions.  There are
 at least two assumptions that can prevent methods like \prg{steal}:
 
 \begin{enumerate}
-\item after initialisation, the \emph{only} way an account's
+\item after creation, the \emph{only} way an account's
   balance can be changed is if a client calls the \prg{deposit} method
 \item an account's balance can \emph{only} be changed if a client has
   that particular account object.
@@ -189,7 +184,7 @@ that method. The fig.~\ref{fig:steal} specification is not consistent
 with these assumptions, while the.~\ref{fig:count} specification is
 consistent with these assunmptions.
 
-
+\kjx{\textbf{NEED TO DECIDE ON CONTRIBUTIONS}}
 The contribution of this paper is a specification langauge and
 semantics that can be used to specify necessary specifications, and a
 semantics for those specifications that can determine whether some
@@ -230,6 +225,28 @@ fig.~\ref{fig:steal}.
 
 \caption{Necessary specifications for \prg{deposit}}
 \label{fig:nec}
+\end{figure}
+
+
+\begin{figure}[tbp]
+\begin{lstlisting}[escapeinside=`']
+  specification Robust-Bank {
+
+    policy call-deposit {
+      `$\forall$' a : Account, S : Footprint
+         this != a `$\wedge \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \ \longrightarrow$'
+             `$\exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \Calls{\prg{deposit}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ]$'  
+    }
+
+    policy access-account {
+      `$\forall$' a : Account, S : Footprint
+         this != a `$\wedge \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \ \longrightarrow$'
+             `$\exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$'
+    }
+  }
+\end{lstlisting}
+\caption{Necessary specifications for \prg{deposit} -- James version}
+\label{fig:kjx}
 \end{figure}
 
 
