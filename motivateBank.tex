@@ -1,4 +1,3 @@
-
 \label{section:motivationBank}
 
 
@@ -7,7 +6,7 @@ guaranteed to do. So long as a method is called in a state satisfying
 its preconditions, the method will complete its work and establish a
 state satisfying its postconditions.  Method specifications thus
 define the \textit{sufficient} conditions for their methods' behaviour
-can be invoked.
+to be invoked.
 
 
 Consider the specification of a trivial Bank component in
@@ -59,6 +58,8 @@ two accounts deposits funds from the source to the destination account.
 \label{fig:BankSpec}
 \end{figure}
 
+\se{I am very confused about deposit. If sb and db can be the same bank, then the statements to ensure that {\tt{steal}} cannot be included in the system (that is only one account is changed) won't hold. If they must be different as is in the Chainmail spec, it is a very peculiar bank where one cannot transfer money between two accounts in the same bank. I also am unclear about the changes to an account caused by a deposit to another account.}
+
 The specification in fig.~\ref{fig:BankSpec} is enough to let us
 calculate the result of operations on the bank and the accounts ---
 for example it is straightforward to determine that the code in
@@ -91,12 +92,12 @@ open world, however, things are more complex: our systems will be made
 up of a range of components, many of which we do not control; and
 furthermore will have to interact with external systems which we
 certainly do not control.  Returning to our author, say some time
-after regisering by executing the code in fig.~\ref{fig:rego}, they
+after registering by executing the code in fig.~\ref{fig:rego}, they
 attempt to pay for a round at the bar.  Under what circumstances can
 they be sure they have enough funds in their account?
 
 To see the problem, consider the additional function specified in
-fig.~\ref{fig:steal}. This method says the bank additional provides a
+fig.~\ref{fig:steal}. This method says the bank additionally provides a
 \prg{steal} method that empties out every account in the bank and puts
 all their funds into the thief's account. If this method exists, and
 if it is somehow called between registering at the conference and
@@ -122,7 +123,7 @@ will find all their accounts empty (except the thief, of course).
 \end{figure}
 
 The critical problem is that a bank implementation including a \prg{steal}
-method would meet the functional specifications of the bank friom
+method would meet the functional specifications of the bank from
 fig.~\ref{fig:BankSpec}, so long as its \prg{newAccount},
 \prg{balance}, and \prg{deposit} methods do meet
 that specification.
@@ -131,7 +132,7 @@ One obvious solution would be to return to a closed-world
 interpretation of specifications: we interpret specifications such as
 fig.~\ref{fig:BankSpec} as \emph{exact} in the sense that only
 implementations that meet the functional specification exactly,
-\emph{with no extra methods or behaivour}, are considered as suitable
+\emph{with no extra methods or behavour}, are considered as suitable
 implementations of the functional specification. The problem is that
 this solution is far too strong: it would for example rule out a bank
 that simply counted the number of deposits that had taken place,
@@ -162,27 +163,27 @@ i.e. met fig.~\ref{fig:count} as well as fig.~\ref{fig:BankSpec}.
 
 
 What we need is some way to permit bank implementations that meet
-fig.~\ref{fig:count} but to forbit implementatons that meet
-fig.\ref{fig:steal}.  The key here is to capture the (implicit)
-assumptionms underlying fig.\ref{fig:BankSpec}, and to provide
+fig.~\ref{fig:count} but to forbid implementations that meet fig.~\ref{fig:steal}.  
+The key here is to capture the (implicit)
+assumptions underlying fig.~\ref{fig:BankSpec}, and to provide
 additional specifications that capture those assumptions.  There are
 at least two assumptions that can prevent methods like \prg{steal}:
 
 \begin{enumerate}
 \item after creation, the \emph{only} way an account's
-  balance can be changed is if a client calls the \prg{deposit} method
+  balance can be changed is if a client (source of funds) calls the \prg{deposit} method 
 \item an account's balance can \emph{only} be changed if a client has
   that particular account object.
 \end{enumerate}
 
 Compared with the functional specification we have seen so far, these
-assunmptions capture \emph{necessary} conditions rather than
+assumptions capture \emph{necessary} conditions rather than
 \emph{sufficient} conditions. It is necessary that the \prg{deposit}
 method is called to change an account's balance, and it is necessary
 that the particular account object can be passed as a parameter to
 that method. The fig.~\ref{fig:steal} specification is not consistent
 with these assumptions, while the.~\ref{fig:count} specification is
-consistent with these assunmptions.
+consistent with these assumptions.
 
 \kjx{\textbf{NEED TO DECIDE ON CONTRIBUTIONS}}
 The contribution of this paper is a specification langauge and
@@ -193,7 +194,7 @@ the necessary specifications. Fig.~\ref{fig:nec} shows how we
 can express these two informal assumptions using our specification
 language Chainmail II.  Rather than specifying \prg{functions} to
 describe the behaviour of particular methods when they are called, we
-write \prg{policies} that range across the whole behvaiour of the
+write \prg{policies} that range across the entire behaviour of the
 component.
 
 
@@ -201,7 +202,7 @@ An overall ``holistic'' specification for the bank account, then,
 would be our original sufficient functional specification from
 fig.~\ref{fig:BankSpec} plus the necessary security policy
 specification in fig.~\ref{fig:nec}.  This holistic specification
-permits an implememntation of the bank that also meets the \prg{count}
+permits an implementation of the bank that also meets the \prg{count}
 specification from fig.~\ref{fig:count}, but does not permit an
 implementation that also meets the \prg{steal} specification from
 fig.~\ref{fig:steal}.
@@ -256,10 +257,12 @@ Policy (1) in fig.~\ref{fig:nec} says that if --- in any future state
 then there must be some client object $o$ which is outside the
 bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)t
 that calls the \prg{deposit} method: ($\Calls{\prg{deposit}}$).
-Policy (2) similarly constraints any possible code that may change an
+Policy (2) similarly constrains any possible code that may change an
 account's balance, but requires that the client object making the call
 has direct access to the account object
 ($\CanAccess{\prg{o}}{\prg{a}}$).
+
+\se{I think your necessary conditions don't really tally with what happens with banks. In banks you can transfer to an account that you know nothing about, just by giving a bank account number, so I don't see the purpose of the access rule. Also you can transfer within a bank and it is a null action but you usually can transfer money to yourself. The thing you usually can't do is transfer more money than you have in the account, but that would be more code in deposit so I understand why it is omitted.}
 
 We can then prove that e.g.\ the \prg{steal} method from
 fig.~\ref{fig:steal} is inconsistent with both of these policies.
