@@ -104,10 +104,6 @@ systems.\scd{TODO: add references here}. \kjx{don't forget the whole
   to allow wholistic specifations with as extra little machinery as
   possible over a basic Hoare language}.
 
-\kjx{doing this as a I suggest below --- rather than Sophia's single
-  paragraph --- will probably just guarantee referee's comments to
-  ``delete the tutorial material''}
-
 \subsection{Permission: Access}
 
 Our first holistic assertion $\CanAccess{\x}{\y}$ asserts that one
@@ -142,7 +138,9 @@ ${\x}$ makes a method call ${\y}.{\m}({\z})$ --- that is calls method
 
 \subsection{Authority Changes}
 
-$\Changes{\x.\f}$  blah blah blahn
+The $\Changes{\x.\f}$  assertion is true when the value of \prg{x.f}
+in the next state is different to the value in the current state.
+For example, we 
 
 \begin{lstlisting}
    another illustrative example, presumably in the context of the
@@ -151,7 +149,12 @@ $\Changes{\x.\f}$  blah blah blahn
 
 \subsection{Space: With}
 
-$\Using{\A}{S}$ blah blah blahn
+The space assertionn $\Using{\A}{S}$ states the some assertion $\A$ is
+true when the heap used by that assertion is restrcited to the
+footprint $\S$  \kjx{footprint F?}.
+
+\kjx{OK someone needs to explain what that's for and when/why it is sound to
+do it}
 
 \begin{lstlisting}
    another illustrative example, presumably in the context of the
@@ -161,36 +164,72 @@ $\Using{\A}{S}$ blah blah blahn
 
 \subsection{Time: Next, Will, Prev, Was}
 
-$\Future \A$ or $\Past \A$ or $\Next \A$ or $\Prev \$A$
-blah blah blahn
+Chainmail supports several temporal operators familiar from temporl
+logic ($\Future \A$ or $\Past \A$ or $\Next \A$ or $\Prev \$A$). 
+We support birectional temporal
+assertions, constraining either future ($\Future \A$. $\Next \A$)
+or past behaviour ($\Past \A$.  $\Prev \$A$) either considering only
+the  immediate next or immediate previous step ($\Next \A$,
+$\Prev \$A$) or for conditions that become eventually true in some
+distant future, or were true once in some distant past  
+($\Future \A$, $\Past \A$). We have bidirectional pairs of operators
+to give expressivenes in writing assertions: this does not offer any
+additional reasoning power. 
+
+For example, a part of the observer pattern is that when
+a subject is notified of a change, then the observer must
+be told to update itself.    We can write this from the
+subject's perspective, looking forwards:
 
 \begin{lstlisting}
-   another illustrative example, presumably in the context of the
-   running example from the intro. which we need to pick first.
+  Call(_,subject,notify,_) --> Will(Call(subject,observer,update,_))
 \end{lstlisting}
+
+\noindent meaning that once notify is called on a subejct, then its
+observer will be updated sometime in the future.  We can write a very
+similar specification for an observer, looking backwards.
+
+\begin{lstlisting}
+  Call(subject,observer,update,_) --> Was(Call(_,subject,notify,_))
+\end{lstlisting}
+
+\noindent meaning that if a subject updates an observer, that subject
+have been notified somtime previously. We could tighten each
+specifaction, so that the update must immediately follow the
+notificaiton, by replacing $\Future \A$ or $\Past \A$ with 
+$\Next \A$ or $\Prev \A$.
+
+\kjx{bother. should probably do time earlier, because most of the
+   example assertions I can think of a things like
+   \lstinline+(change(x.f) ->  past(call(_,xm,_)+
+
+which needs the temporal opreator}
+
+
+\kjx{OK really do need the example to be chosen to do more work here for this}
+
 
 \subsection{The Open World}
 
+\kjx{moved stuff about, only lightly touched. I'd want to down-rate
+   this more, sophia would want to tighten everythign up}
+   
 To interpret \Chainmail\ specifiactions we need to have a model of the
 programs whose behaviour they are specifying.
 
-
 In our approach we represent code through modules ($\M$); these are
-repositories of class definitions(we use classes, because we concentrate on class-based, object-oriented programming; but we believe that the ideas are also applicable to other paradigms.)
+repositories of class definitions. \kjx{move to discussion: we use
+classes, because we concentrate on class-based, object-oriented
+programming; but we believe that the ideas are also applicable to
+other kinds of languages}.  
 
-
-
-
-\kjx{wondered about moving this into the formal bit}
-  
-The invariants are in the form of holistic assertions $\A$. We concentrate on what it means for a module to satisfy an assertion $\A$; we model this through the judgment $\M \models \A$.
-%The judgment $\M \models \A$
-This holds if for all further modules $\M'$ and in  all runtime configurations $\sigma$ which may be obseved through execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
-$~ \strut  \hspace{1.3in} \M \models \A \ \ \  \ \ \ \mbox{             if               } \ \ \  \ \ \   \forall \sigma\in\Arising {\M \mkpair  {\M'}}. \ \M \mkpair  {\M'}, \sigma \models \A$.  \\
-In that sense, module {\M'}  represents all possible clients of {\M}; and as it is arbitrarily chosen, it reflects the open world nature of our specifications.
-
-Note that when we consider $\M \mkpair  {\M'}$, we distinguish between $\M$ the module
-whose code  is supposed to satisfy the assertion, and $\M'$, the module which exercises
+We also use modules to model the crucial fact that our specifications
+must hold ``in the open world'' --- that is, when our module may bhe
+linked with \textit{arbitrary untrusted code}. To do this, we consider
+the semantics of a module $\M$ as part of a pair
+$\M \mkpair {\M'}$,  where $\M$ the module 
+whose code is supposed to satisfy the assertion,
+and $\M'$, is \textit{any} module which exercises
 the functionality of $\M$. We call $\M$ the {\em internal} module, while $\M'$ is the {\em external}
 or {\em potentially adversarial} module. When examining program executions, we are interested
  in those runtime configurations which are {\em external} to module $\M$, \ie those where the
@@ -198,6 +237,20 @@ or {\em potentially adversarial} module. When examining program executions, we a
  \footnote{\toby{TM: This looks like an \emph{excellent} way to handle this. Bravo. SD: :-)}}
  In  that sense, our approach is similar to that of visible states semantics, without, however the need to consider issues
 around different objects of the same class or re-entrancy.\footnote{TODO: add references here.}
+
+
+
+\kjx{wondered about moving this into the formal bit:}
+  
+The invariants are in the form of holistic assertions $\A$. We concentrate on what it means for a module to satisfy an assertion $\A$; we model this through the judgment $\M \models \A$.
+%The judgment $\M \models \A$
+This holds if for all further modules $\M'$ and in  all runtime configurations $\sigma$ which may be obseved through execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
+$~ \strut  \hspace{1.3in} \M \models \A \ \ \  \ \ \ \mbox{
+if               } \ \ \  \ \ \   \forall \sigma\in\Arising
+{\M \mkpair  {\M'}}. \ \M \mkpair  {\M'}, \sigma \models \A$.  \\
+%
+\kjx{keep this bit:}
+In that sense, module {\M'}  represents all possible clients of {\M}; and as it is arbitrarily chosen, it reflects the open world nature of our specifications.
 
 
 \section{The language \LangOO}
