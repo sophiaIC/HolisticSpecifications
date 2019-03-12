@@ -1,13 +1,7 @@
- 
- 
-
-
-\section{Overview of our approach}
-
-In this section we give a brief overview of the most salient features of our approach, and give a full exposition in the next two sections.
-
-% As we already stated, this work is devoted to the specification of code in the open world. For these we propose what we call {\em holistic specifications.}
-
+\kjx{\textbf{all these points should (already) be made by the example - the
+  first one probably as early as the intro}
+ As we already stated, this work is devoted to the specification of code in the open world. For these we propose what we call {\em holistic specifications.}
+%
 We claim that the most pertinent aspects of behaviour in the open world
 are   in terms of  {\em necessary} conditions (\eg what can cause -- what are necessary conditions for --
  the balance of an account to decrease), rather than sufficient conditions (\eg the owner of an account may
@@ -15,9 +9,180 @@ are   in terms of  {\em necessary} conditions (\eg what can cause -- what are ne
 Such necessary conditions are not attached to particular function calls or program points; they apply
 throughout program execution.
 Therefore, they are expressed through  {\em invariants} that can be observed throughout the lifetime of a program, rather than at specific points in program execution.
+  }
+ 
 
-In our approach we represent code through modules ($\M$); these are repositories of class definitions (we use classes, because we concentrate on class-based, object-oriented programming; but we believe that the ideas are also applicable to other paradigms.)
 
+\section{Chainmail: Holistic Specifications in Open Worlds}
+
+%KJX In this section we give a brief overview of the most salient features of our approach, and give a full exposition in the next two sections.
+
+\kjx{stuff shamlessly copied in from unplublisghed chainmail rejecta}
+
+In this section we introduce our specification language \Chainmail,
+and describe how it can be used to write holistic specifications.
+We define \Chainmail'semantics formally below 
+sections~4~to~7432 below.
+
+
+
+
+  
+Unlike JML or Dafny \cite{jml,daafny} Chainmail specifications are not
+tied tightly to the systems they are specifying. Rather, a system may
+be described by a set of \Chainmail\ specifications, each consiting of
+a number of named \lstinline+policy+ clauses.
+\Chainmail\ specifications and policies overlap and are interlinked to
+provide strong protection against attacks --- just like the links in
+physical chainmail.  Each policy should aim to capture one very
+specific concern in the design of a system. Traditional policies are
+expressed as Hoare triples --- often describing a single method
+invocation on an instance of the class being specified (as in
+Figure~\ref{BANK-OR-DOM}).  Holistic policies are expressed as 
+temporal or spatial invariants that a module that
+conforms to the specification must maintain even though any other code
+may be executed (as in policy FOO in Figure~\ref{DOM-OR-BANK}.
+
+%% \Chainmail\ policies (and specifications) can cross cut both each
+%% other and the various modules and objects in the system being
+%% specified.  The validity of a specification is the conjunction of its
+%% policies; a module or an object must satisfy all the specification's
+%% policies for us to consider that the object meets the specification.
+%% Policies and specifications are not tied to any specific module or
+%% class: rather, any implementing module that satisfies the
+%% specification's policies obeys the specification.
+
+
+\Chainmail can express necessary specifications because its invariant
+language includes \kjx{several carefully-chosen} \textit{holistic}
+assertion constructs, along with traditional state-based assertions.
+\kjx{if we say things like that, need to discuss alternative
+  constructs in the discussion section. do we have alternatives?
+  transitive Access. two-state assertions. what else?}.
+That is, as well as supporting assertions on the contents of local
+variabes and object fields (\eg $\prg{x}.\f1 > \prg{this}.\f2$),
+\Chainmail\ incorporates assertions which talk about
+%
+\textit{access}
+--- objects being accessible from other objects (\eg
+$\CanAccess{\x}{\y}$);
+%
+\textit{control} --- the
+next method to be invoked ($\Calls {\x} {\y} {\m} {\z}$);
+%
+\textit{authority} --- about the change of some
+property (\eg $\Changes{\x.\f}$);
+%
+\textit{space} --- some property being observable within a subset of
+the current state ( $\Using{\A}{S}$);
+%
+and
+%
+\textit{time} --- about some property
+holding in the future or in the past (\eg $\Future \A$ or $\Past \A$).
+%
+.
+\scd{While
+many  individual
+features of \Chainmail can  be found also in other work, we
+%claim that their  combination as well as
+%their application in the specification of open systems are novel.
+argue that their power and novelty for specifying open systems lies in their careful
+  combination}\kjx{Hmm. a delicate, subtle argument\ldots }
+%
+%
+These assertions draw from some concepts from object capabilities
+($\CanAccess{\_}{\_}$  for  permission and $\Changes{\_}$ for
+authority) 
+as well as temporal logic ($\Future \A$, $\Past \A$ and friends), and the relation of
+our spatial connective ($\Using{\A}{S}$)  with ownership and effect
+systems.\scd{TODO: add references here}. \kjx{don't forget the whole
+  AOP mionitoring/specs stuff, just for fun.  (HELM contracts!!! (vs
+  Meyer Contracts :-)}  
+%
+\kjx{somerwhere, should we say something like: the goal is
+  to allow wholistic specifations with as extra little machinery as
+  possible over a basic Hoare language}.
+
+\kjx{doing this as a I suggest below --- rather than Sophia's single
+  paragraph --- will probably just guarantee referee's comments to
+  ``delete the tutorial material''}
+
+\subsection{Permission: Access}
+
+Our first holistic assertion $\CanAccess{\x}{\y}$ asserts that one
+object $\x$ has a direct reference to another object $\y$: that a
+reference to $\y$ is the value of at least one of $\x$'s fields.
+This assertion can be used make assertions about heap structrues (and thus
+obejct values), for example that if a \prg{cacheValid} field is true,
+then that object can access to a cached value:
+
+\begin{lstlisting}
+  a.cacheValid == true `$\weakImplies \CanAccess(a)(cacheValue)$` 
+\end{lstlisting}
+
+\kjx{do we really not also need reachable (transitive closure of access)}
+
+
+\subsection{Control: Calls}
+
+The  $\Calls {\x} {\y} {\m} {\z}$
+assertion is more-or-less the control flow analogue of
+the access assertion, and is true 
+in program states where a method on object 
+${\x}$ makes a method call ${\y}.{\m}({\z})$ --- that is calls method 
+{\m} on object {\y} with arguments {\z}.
+
+
+\begin{lstlisting}
+   another illustrative example, presumably in the context of the
+   running example from the intro. which we need to pick first.
+\end{lstlisting}
+
+
+\subsection{Authority Changes}
+
+$\Changes{\x.\f}$  blah blah blahn
+
+\begin{lstlisting}
+   another illustrative example, presumably in the context of the
+   running example from the intro. which we need to pick first.
+\end{lstlisting}
+
+\subsection{Space: With}
+
+$\Using{\A}{S}$ blah blah blahn
+
+\begin{lstlisting}
+   another illustrative example, presumably in the context of the
+   running example from the intro. which we need to pick first.
+\end{lstlisting}
+
+
+\subsection{Time: Next, Will, Prev, Was}
+
+$\Future \A$ or $\Past \A$ or $\Next \A$ or $\Prev \$A$
+blah blah blahn
+
+\begin{lstlisting}
+   another illustrative example, presumably in the context of the
+   running example from the intro. which we need to pick first.
+\end{lstlisting}
+
+\subsection{The Open World}
+
+To interpret \Chainmail\ specifiactions we need to have a model of the
+programs whose behaviour they are specifying.
+
+
+In our approach we represent code through modules ($\M$); these are
+repositories of class definitions(we use classes, because we concentrate on class-based, object-oriented programming; but we believe that the ideas are also applicable to other paradigms.)
+
+
+
+
+\kjx{wondered about moving this into the formal bit}
+  
 The invariants are in the form of holistic assertions $\A$. We concentrate on what it means for a module to satisfy an assertion $\A$; we model this through the judgment $\M \models \A$.
 %The judgment $\M \models \A$
 This holds if for all further modules $\M'$ and in  all runtime configurations $\sigma$ which may be obseved through execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
@@ -33,25 +198,6 @@ or {\em potentially adversarial} module. When examining program executions, we a
  \footnote{\toby{TM: This looks like an \emph{excellent} way to handle this. Bravo. SD: :-)}}
  In  that sense, our approach is similar to that of visible states semantics, without, however the need to consider issues
 around different objects of the same class or re-entrancy.\footnote{TODO: add references here.}
-
-The assertions expressed in $\A$  encompass concepts found in
- standard program specification languages, temporal and spacial operators, and operators which talk about the control structures.
-Thus we support assertions which reflect on the contents of local variables
- and of objects  (\eg $\prg{x}.\f1 > \prg{this}.\f2$), assertions which talk about objects being accessible from other objects
-(\eg $\CanAccess{\x}{\y}$), about the change of some property
-(\eg $\Changes{\x.\f}$, about some property   holding in the future   or in the past
-(\eg $\Future \A$  or $\Past \A$), some property being observable within a subset of the current state
-( $\Using{\A}{S}$), and the next call in the control ($\Calls {\x} {\y} {\m} {\z}$). Note the parallels with
-some concepts from object capabilities ($\CanAccess{\_}{\_}$  for  permission and $\Changes{\_}$ for authority)
-as well as temporal logic ($\Future \A$  and $\Past \A$), and the relation of
-our spatial connective ($\Using{\A}{S}$)  with effect systems.\footnote{TODO: add references here.}  Whilst
-many  individual
-features of our specification language can  be found also in other works, we
-%claim that their  combination as well as
-%their application in the specification of open systems are novel.
-argue that their power and novelty for specifying open systems lies in their careful
-  combination.
-
 
 
 \section{The language \LangOO}
