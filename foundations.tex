@@ -226,7 +226,7 @@ Note that \LangOO is untyped. Method bodies consist of sequences of statements;
 these can be field read or field assignments, object creation, method calls, and return statements.
 All else, \eg booleans, conditionals, loops,  can be encoded.
 
-Note also that field read or write is only allowed if the target object is \prg{this} -- as, \eg, can
+Note also that field read or write is only allowed if the target object is \prg{this} -- as, \eg, as
   in Smalltalk -- this is encapsulation: the syntax allows an object to read/write its own fields, but
    forbids it from reading/writing any other object's fields.
 
@@ -269,8 +269,8 @@ We define a method lookup function, $\mathcal{M}$ which returns the correspondin
 $
 \Meths {} {\prg{C}} {m}       \triangleq  \ \left\{
 \begin{array}{l}
-                        \m\, \lp \p_1, ... \p_n \rp \lb stms   \rb\\
-\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...   \kwN{method}\ ...\  \m\, \lp \p_1, ... \p_n \rp \lb stms  \rb  ... \ \rb.
+                        \m\, \lp \p_1, ... \p_n \rp \lb Stmts   \rb\\
+\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...   \kwN{method}\ ...\  \m\, \lp \p_1, ... \p_n \rp \lb Stmts  \rb  ... \ \rb.
 \\
 \mbox{undefined},  \ \ \ \mbox{otherwise.}
 \end{array}
@@ -282,7 +282,7 @@ $
 \label{formal:semantics}
 
 We will now define execution of \LangOO code.
-We start by  defining the  runtime entities, and runtime configurations, $\sigma$, which consist of stacks of frames and heaps.
+We start by  defining the  runtime entities, and runtime configurations, $\sigma$, which consist of heaps and stacks of frames.
  The frames are pairs consisting of a continuation, and a mapping from identifiers to values.
 The continuation represents the code to be executed next, and the mapping gives meaning
 to the formal and local parameters.
@@ -292,7 +292,7 @@ We define  addresses, values, frames, stacks, heaps and runtime configurations.
 
 \begin{itemize}
 \item
-We take addresses to be an  enumerable set,  \prg{Addr}, and use the identifier $\alpha\in \prg{Addr}$ to indicate addresses.
+We take addresses to be an  enumerable set,  \prg{Addr}, and use the identifier $\alpha\in \prg{Addr}$ to indicate an address.
 \item
 Values, $v$, are either addresses, or sets of addresses or null:\\
  $~ ~ ~ \ v \in \{ \prg{null} \} \cup \prg{Addr}\cup {\mathcal P}( \prg{Addr})$.
@@ -351,7 +351,7 @@ $\interp {\this.\f}{(\phi,\chi)} $ $\triangleq$ $v$, \ \ \ if \ \ $\chi(\phi(\th
 \end{itemize}
 
 \noindent
-For ease of notation, we also use shorthands as below:
+For ease of notation, we also use the shorthands below:
 \begin{itemize}
 \item
 $\interp {\x}{(\phi\cdot\psi,\chi)} $ $\triangleq$ $\interp {\x}{\phi} $
@@ -386,55 +386,55 @@ we use $\chi[\alpha,\f \mapsto v]$ as a shorthand for updating the object, \ie $
 $\begin{array}{l}
 \inferenceruleNN {methCall\_OS} {
 \\
-\phi.\prg{contn}\ =\ \x {\kw{:= }} \x_0.\m \lp \prg{par}_1, ... \prg{par}_n \rp \semi \prg{stms}
+\phi.\prg{contn}\ =\ \x {\kw{:= }} \x_0.\m \lp \prg{par}_1, ... \prg{par}_n \rp \semi \prg{Stmts}
 \\
 \interp{\x_0}{\phi} = \alpha
 \\
-\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp par_1, \ldots par_n \rp \lb \prg{stms}_1   \rb
+\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp par_1, \ldots par_n \rp \lb \prg{Stmts}_1   \rb
   \\
- \phi''\ =\  (\  \prg{stmts}_1,\ \ (\ \this \mapsto \alpha,
+ \phi''\ =\  (\  \prg{Stmts}_1,\ \ (\ \this \mapsto \alpha,
   \prg{par}_1 \mapsto  \interp{\x_1}{\phi}, \ldots \prg{par}_n \mapsto  \interp{\x_n}{\phi}\ ) \ )
 }
 {
- \M,\, (\ \phi\cdot\psi,\ \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot\phi[\prg{contn}\mapsto\x  \kw{:=} \bullet \semi \prg{stms}] \cdot\psi,\ \chi\ )
+ \M,\, (\ \phi\cdot\psi,\ \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot\phi[\prg{contn}\mapsto\x  \kw{:=} \bullet \semi \prg{Stmts}] \cdot\psi,\ \chi\ )
 }
 
 \\ \\
 \inferenceruleNN {varAssgn\_OS} {
- \phi.\prg{contn} \ = \ \x  {\kw{:= }}   \this.\f \ \semi \prg{stms}
+ \phi.\prg{contn} \ = \ \x  {\kw{:= }}   \this.\f \ \semi \prg{Stmts}
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{contn} \mapsto \prg{stms}, \x\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{contn} \mapsto \prg{Stmts}, \x\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
 }
 \\
 \\
 \inferenceruleNN{fieldAssgn\_OS} {
- \phi.\prg{contn}\ =\  \this.\f  \kw{:=} \x  \semi \prg{stms}
+ \phi.\prg{contn}\ =\  \this.\f  \kw{:=} \x  \semi \prg{Stmts}
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{contn}\mapsto  \prg{stms} ] \cdot\psi, \chi[\interp{\this}{\phi},\f \mapsto \interp{\x}{\phi,\chi}]\  )
+ \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{contn}\mapsto  \prg{Stmts} ] \cdot\psi, \chi[\interp{\this}{\phi},\f \mapsto \interp{\x}{\phi,\chi}]\  )
 }
 \\
 \\
 \inferenceruleNN {objCreate\_OS} {
- \phi.\prg{contn}\ =\  \x  \kw{:=} \kwN{new }\, \c \lp \x_1, ... \x_n \rp  \semi \prg{stms}
+ \phi.\prg{contn}\ =\  \x  \kw{:=} \kwN{new }\, \c \lp \x_1, ... \x_n \rp  \semi \prg{Stmts}
  \\
  \alpha\ \mbox{new in}\ \chi
  \\
 \f_1, .. \f_n\ \mbox{are the fields declared in } \M(\c)
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[\prg{contn}\mapsto  \prg{stms},\x \mapsto \alpha\ ] \cdot\psi, \ \chi[\alpha \mapsto (\c,\f_1 \mapsto \interp{\x_1}{\phi},  ... \f_n \mapsto \interp{\x_n}{\phi}  ) ]\ )
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[\prg{contn}\mapsto  \prg{Stmts},\x \mapsto \alpha\ ] \cdot\psi, \ \chi[\alpha \mapsto (\c,\f_1 \mapsto \interp{\x_1}{\phi},  ... \f_n \mapsto \interp{\x_n}{\phi}  ) ]\ )
 }
 \\
 \\
 \inferenceruleNN {return\_OS} {
- \phi.\prg{contn}\ =\   {\kwN{return }}\, \x  \semi \prg{stms}\ \  \ or\  \ \  \phi.\prg{contn}\ =\   {\kwN{return}}\, \x
+ \phi.\prg{contn}\ =\   {\kwN{return }}\, \x  \semi \prg{Stmts}\ \  \ or\  \ \  \phi.\prg{contn}\ =\   {\kwN{return}}\, \x
  \\
-\phi'.\prg{contn}\ =\  \x' \kw{:=} \bullet  \semi \prg{stms}'
+\phi'.\prg{contn}\ =\  \x' \kw{:=} \bullet  \semi \prg{Stmts}'
 }
 {
- \M,\,  (\ \phi\cdot\phi'\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi'[\prg{contn}\mapsto  \prg{stms'},\x' \mapsto \interp{\x}{\phi}] \cdot\psi, \ \chi \ )
+ \M,\,  (\ \phi\cdot\phi'\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi'[\prg{contn}\mapsto  \prg{Stmts'},\x' \mapsto \interp{\x}{\phi}] \cdot\psi, \ \chi \ )
 }
 \end{array}
 $
@@ -442,7 +442,7 @@ $
 \label{fig:Execution}
 \end{figure*}
 
-Execution of statement has   form $\M, \sigma \leadsto \sigma'$, it is defined in figure \ref{fig:Execution}.
+Execution of a statement has the form $\M, \sigma \leadsto \sigma'$, it is defined in figure \ref{fig:Execution}.
 
 \begin{definition}[Execution] of one or more steps is defined as follows:
 
