@@ -5,24 +5,26 @@
  of tokens between participants. 
 
 
-An important question, therefore, the circumstances under which a transfer of tokens may take place.
+An important question, therefore, is to identify the precise circumstances under which a transfer of tokens may take place.
 The answer is that transfer of tokens 
  can only take place only provided that  there were sufficient tokens in the
  owner's account, and that
- the transfer was instigated by the owner, or by somebody authorized by them.
- 
-We can answer this question with the holistic specification from below, which mandates 
-the necessary conditions for necessary conditions for a 
- decrease in  a participant's balance, and the necessary conditions for authorization.
+ the transfer was instigated by the owner, or by somebody authorized
+ by the owner.
 
-Namely, a decrease in  a participant's balance 
+We can use holistic specifications to express our understanding of
+these circumstances, by specifying the necessary conditions for a
+decrease in a participant's balance, and the necessary conditions for
+authorization.
+
+A decrease in  a participant's balance 
 (\ie  $\prg{e}.\prg{balance}=...\, \wedge\, \Next{\prg{e}.\prg{balance}=...}$)
-is caused either by a transfer instigated by the 
+can only be caused by a transfer instigated by the 
 account holder themselves (\ie $\Calls{\prg{p}, ...}$), or by
 a transfer instigated by another participant $\prg{p}''$  (\ie $\Calls{\prg{p}''...}$) who 
 has authority for more than the tokens spent(\ie  $\prg{e}.\prg{allowed}(\prg{p},\prg{p}'')\geq \prg{m}'$)
-This is described by the following invariant, which
-is expected from any \prg{e} which is an \prg{ERC20}  contract:
+This is described by the following policy, which
+binds any \prg{e} which is an \prg{ERC20}  contract:
 
 \vspace{.15cm}
 \noindent
@@ -37,15 +39,20 @@ $\forall \prg{e}:\prg{ERC20}.\forall \prg{p}:\prg{Object}.\forall \prg{m},\prg{m
 \vspace{.15cm}
 
 \noindent
-In more detail, if the next configuration witnesses a decrease of the balance by
+That is to say: if next configuration witnesses a decrease of the balance by
  $\prg{m}'$, then the current configuration was a call of \prg{transfer} instigated by
  the owner, or it was a call of \prg{transferFrom} instigated by somebody authorized.
 Note the term \prg{e}.\prg{allowed}(\prg{p},\prg{p}''), which means that the
 ERC20 variable \prg{e} holds a field called \prg{allowed} of   mapping type, which maps pairs of participants to numbers; such
-mappings are supported in Solidity\cite{Solidity}, but could also be understood as ghost fields or predicates\footnote{cite ghost field}.
+mappings are supported in Solidity\cite{Solidity}, but could also be
+ understood as ghost fields or predicates\footnote{cite ghost
+ field\kjx{actually, be clear about the context, \Chainmail seems to
+ have its own ghost fields, so we just use them without apology}}.
 Also, % allow for fields which are mappings, as supported
 we use an underscore ($\_$) to indicate some value or variable of no importance; thus the term $\Calls{\prg{p}'',\prg{e.transferFrom(p,cl',m),\_}}$ is a convenient shorthand for 
-$\exists \prg{m}''.\Calls{\prg{p}'',\prg{e.transferFrom(p,cl',m),m''}}$.
+$\exists \prg{m}''.\Calls{\prg{p}'',\prg{e.transferFrom(p,cl',m),m''}}$. \kjx{thjis
+ shorthand should go into the overview of chainmail, if we want to
+ keep it. add a ``notational conventions'' section or something.}
 
 We now define what it means for $\prg{p}$ to have authorized $\prg{p}'$ to  spend 
 up to \prg{m} tokens on the behalf of $\prg{p}$: At some point in the
@@ -81,10 +88,17 @@ with arguments $\prg{p}'$ and \prg{m}, or b)
 $\prg{p}'$ was allowed to spend  up to \prg{m} tokens for $\prg{p}$
 and did not transfer any of \prg{p}'s tokens, nor did \prg{p} issue a fresh authorization,
 or c) \prg{p} was authorized for $\prg{m}+\prg{m}'$ and spent $\prg{m}'$ 
-  
+\kjx{This seems to be MUCH NICER than the previous versions. Still
+stepwise, but a better style of definition}.  
  
 
- Thus, the holistic specification  gives  to  account holders an "authorization-guarantee": their balance cannot decrease unless they themselves,  or somebody they had  authorized, instigates a transfer of tokens. Moreover, authorization is {\em not} transitive.
+ Thus, the holistic specification gives to account holders an
+ "authorization-guarantee": their balance cannot decrease unless they
+ themselves, or somebody they had authorized, instigates a transfer of
+ tokens. Moreover, authorization is {\em not} transitive: only the
+ account holder can authorise some other party to transfer funds from
+ their account: authorisation to spend from an account does not confer
+ the ability to authorise yet more others to spend also.
  
 \paragraph{Comparison with Traditional Specifications}
  
@@ -95,7 +109,8 @@ or c) \prg{p} was authorized for $\prg{m}+\prg{m}'$ and spent $\prg{m}'$
  Usually, for each function, we need one specification for the case 
  where the function's pre-condition holds, another for the case where it does not.\footnote{ARGH! 
  Here we use pre-condition with two different meanings! What to do?}
-  
+ \kjx{HUh? why?  we support/need this, but traditional contracts,
+ Hoare, Meyer \& co, don't!}  
 With traditional  specifications, to obtain the "authorization-guarantee", 
 one would need to inspect the pre- and post- conditions of {\em all} the functions
 in the contract, and determine which of the functions decrease balances, and which of the functions 
@@ -105,7 +120,8 @@ in the contract, and determine which of the functions decrease balances, and whi
  In other cases, \eg the DAO, the number of the functions which are unrelated
  to the question at hand can be very large.
  Moreover, with the traditional specification, the "authorization-guarantee" can only be 
- obtained if we all the functions have a pre- and post-conditions, while this is not necessaty for the
+ obtained if  all the functions have pre- and post-conditions which we
+ trust while this is not necessaty for the
  holistic case.
  
 More importantly, with traditional  specifications, nothing stops the next release of the contract to add, 
@@ -119,10 +135,13 @@ the remaining functions. The  first specification says, \eg, that if
 The second specification says that  if \prg{p} has insufficient tokens, then 
 the transfer will not take place (we assume that in this
 specification language, any entities not mentioned in the pre- or post-condition 
-are not affected).\footnote{cite framing -- but anyway, our subject is not the classical spec.}
+are not affected).\footnote{cite framing -- but anyway, our subject is
+not the classical spec.} \kjx{again why. classical specs just say WTF
+happens if preconditions are met, and intentionally do not say what
+happens if they are not met.  Two specs is one of our innovations,
+isn't it. One we dont want to talk about here, but...}
  
  Similarly, we would have to give another two specifications to define the behaviour of 
-
 if \prg{p''} is authorized and executes \prg{transferFrom}, then   the balance decreases. 
 But they are {\em implicit} about the overall behaviour and the   {\em necessary} conditions,
 e.g., what are all the possible actions that can cause a decrease of balance?
