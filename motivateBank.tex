@@ -1,5 +1,25 @@
 \label{section:motivationBank}
 
+\sd{Consider a simplified banking application. We assume that consists of a \prg{Bank} object at \prg{1},
+and three \prg{Account} objects at \prg{2}, \prg{3} and \prg{4}.}
+
+ \begin{tabular}{ll}
+ \begin{minipage}{0.45\textwidth}
+ \includegraphics[width=\linewidth, trim=85  330 300 70,clip]{diagrams/BankAccount_With_Internal.pdf}
+%% x y z w
+%% x eats space from left, if you increase it the diagram decreases from left
+%% y seems to eat up the bollom
+%% z takes from right
+%% w eats space from top, if you increase it the diagram decreases from top
+ \end{minipage}
+&
+ \begin{minipage}{0.45\textwidth}
+The objects of the \prg{Bank}/\prg{Account} module are depicted in dark green, while those
+outside the module are depicted in grey; here objects \prg{10}, \prg{11}, \prg{20}, and \prg{21}.
+Moreover, the module has an unknown number of \emph{internal} objects, here depicted in  feint green colour.
+\end{minipage}
+\end{tabular}
+\sdcomment{After discussion with Susan I think we need such a diagram.}
 
 Traditional functional specifications describe what components are
 guaranteed to do. So long as a method is called in a state satisfying
@@ -51,7 +71,7 @@ such syntax in this paper.}
 
     policy deposit {
       src, dst : Account, b : Bank, sb, db, n : Number
-      sb == ledger.at(src), db == ledger.at(dst), n > 0
+      sb == ledger.at(src), db == ledger.at(dst), n > 0, src=/=dst
         { b.deposit(dst, src, n) }
       ledger.at(src) == sb - n
       ledger.at(dst) == db + n
@@ -63,8 +83,10 @@ such syntax in this paper.}
 \label{fig:BankSpec}
 \end{figure}
 
-\sdcomment{Map shoukd be a mathemativcal consttuction, not some more syntax. And why does "at" mean lookup}
+\sdcomment{"Map" should be a mathematical construction, not some more syntax. And why does "at" mean lookup}
 \secomment{Why not "dst.deposit(src,n)" instead.}
+\secomment{The name "deposit" is confusing because it depostis into dst, but withdraws from the argument.}
+
 
 
 The specification in fig.~\ref{fig:BankSpec} is enough to let us
@@ -203,15 +225,51 @@ the necessary specifications. }}Also think that we do not do
 functional (sufficient) specifications are consistent (or not) with
 the necessary specifications."}
 
-Fig.~\ref{fig:nec} shows how we
-can express these two informal assumptions using our specification
-language Chainmail II.  Rather than specifying \prg{functions} to
+%Fig.~\ref{fig:nec} shows how we
+%can 
+\sd{Below we} express these two informal \sd{requirments} %assumptions using 
+in \Chainmail.  Rather than specifying \prg{functions} to
 describe the behaviour of particular methods when they are called, we
 write \prg{policies} that range across the entire behaviour of the
 component.
 
+%\begin{figure}[htbp]
+%\begin{definition}
+%\label{def:pol2}
 
-An overall ``holistic'' specification for the bank account, then,
+(1)\ \  $\triangleq$\ \ $\forall \prg{a}:\prg{Account}\ [\ \ \ \  \Changes{\prg{a.balance}}  \ \    
+    \longrightarrow \ \  % \hfill$ \\
+% $\strut \hspace{3.9cm} \hfill 
+% \exists \prg{o}.\ [\ \External{\prg{o}} \ \wedge \  \Past{\Calls{\prg{o},\prg{deposit},\_,\_}}   \  \ ] \ \  \ \ ]$
+% External holds implcitlyy
+ \exists \prg{o}. \Past{\Calls{\prg{o},\prg{deposit},\_,\_}}   \ \ ]$
+
+\vspace{.1cm}
+
+    (2)\ \  $\triangleq$\ \ $\forall \prg{a}:\prg{Account}\ .\forall \prg{S}:\prg{Set}.\ [  \ \Using{(\Future{\,\Changes{\prg{a.balance}}})\,}{\prg{S}\,}\ \ \   \
+    \longrightarrow$ \\
+ $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$
+
+\sdcomment{We have to explain that the two objects above may be different breaking the above into two.}
+%\end{definition}
+
+%\caption{Necessary specifications for \prg{deposit}}
+%\label{fig:nec}
+%\end{figure}
+Policy (1) %in fig.~\ref{fig:nec} says 
+that if   an account's balance is changed
+($\Changes{\prg{a.balance}}$)
+then there must be some client object $o$ 
+that in the past called the \prg{deposit} method: ($\Calls{\prg{deposit}}$).
+which is outside the
+bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)t
+
+Policy (2) similarly constrains any possible code that may change an
+account's balance, but requires that the client object making the call
+has direct access to the account object
+($\CanAccess{\prg{o}}{\prg{a}}$).
+
+A \sd{holistic} specification for the bank account, then,
 would be our original sufficient functional specification from
 fig.~\ref{fig:BankSpec} plus the necessary security policy
 specification in fig.~\ref{fig:nec}.  This holistic specification
@@ -220,26 +278,8 @@ specification from fig.~\ref{fig:count}, but does not permit an
 implementation that also meets the \prg{steal} specification from
 fig.~\ref{fig:steal}.
 
+\sdcomment{We no longer need this=/=a}
 
-\begin{figure}[htbp]
-%\begin{definition}
-%\label{def:pol2}
-
-    (1)\ \  $\triangleq$\ \ $\forall \prg{a}.\forall \prg{S}.\ [ \ \  \prg{a}:\prg{Account}\   \wedge\   \prg{this}\neq\prg{a} \ \wedge\ \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \   \
-    \longrightarrow$ \\
- $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \Calls{\prg{deposit}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$
-
-\vspace{.1cm}
-
-    (2)\ \  $\triangleq$\ \ $\forall \prg{a}.\forall \prg{S}.\ [ \ \  \prg{a}:\prg{Account}\   \wedge\   \prg{this}\neq\prg{a} \ \wedge\ \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \   \
-    \longrightarrow$ \\
- $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$
-
-%\end{definition}
-
-\caption{Necessary specifications for \prg{deposit}}
-\label{fig:nec}
-\end{figure}
 
 
 \begin{figure}[tbp]
@@ -264,16 +304,7 @@ fig.~\ref{fig:steal}.
 \end{figure}
 
 
-Policy (1) in fig.~\ref{fig:nec} says that if --- in any future state
-($\Future\ldots$) an account's balance is changed
-($\Changes{\prg{a.balance}}$)
-then there must be some client object $o$ which is outside the
-bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)t
-that calls the \prg{deposit} method: ($\Calls{\prg{deposit}}$).
-Policy (2) similarly constrains any possible code that may change an
-account's balance, but requires that the client object making the call
-has direct access to the account object
-($\CanAccess{\prg{o}}{\prg{a}}$).
+
 
 \sdcomment{\se{I think your necessary conditions don't really tally with what happens with banks. In banks you can transfer to an account that you know nothing about, just by giving a bank account number, \sd{I think that what we call Account here is the account number, but we should perhaps clarify} so I don't see the purpose of the access rule. Also you can transfer within a bank and it is a null action but you usually can transfer money to yourself. The thing you usually can't do is transfer more money than you have in the account, but that would be more code in deposit so I understand why it is omitted. I can see from Chainmail why you wish to have rule 2, but as your bank differs from a real bank you should describe this very simple bank so that people don't have a real bank in their heads when reading your policies.}}
 
