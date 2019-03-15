@@ -1,0 +1,222 @@
+%\section{\Chainmail\ Overview}
+%\label{sect:chainmail}
+
+%KJX In this section we give a brief overview of the most salient features of our approach, and give a full exposition in the next two sections.
+
+%\jncomment
+\james{stuff shamelessly copied in from unpublished chainmail rejects}
+
+In this section we introduce our specification language \Chainmail,
+and describe how it can be used to write holistic specifications.
+We define \Chainmail's semantics formally below 
+sections~4~to~7432 below.
+
+
+
+
+  
+Unlike JML or Dafny \cite{jml,dafny} \Chainmail specifications are not
+tied tightly to the systems they are specifying.
+%\sdcomment
+\sophia{Not sure what this means.}
+ Rather, a system may
+be described by a set of \Chainmail\ specifications, each consisting of
+a number of named \lstinline+policy+ clauses.
+%\sdcomment
+\sophia{We do not have that 
+syntax any more. Do we need it?}
+\Chainmail\ specifications and policies overlap and are interlinked to
+provide strong protection against attacks --- just like the links in
+physical chainmail.
+%\sdcomment
+\sophia{What does overlap mean?}
+Each policy should aim to capture one very
+specific concern in the design of a system. 
+%\sdcomment
+\sophia{Do we want to discuss style before semantics? I can see the appeal}Traditional policies are
+expressed as Hoare triples --- often describing a single method
+invocation on an instance of the class being specified (as in
+Figure~\ref{BANK-OR-DOM}).  Holistic policies are expressed as 
+temporal or spatial invariants that a module that
+conforms to the specification must maintain even though any other code
+may be executed (as in policy FOO in Figure~\ref{DOM-OR-BANK}).
+
+%% \Chainmail\ policies (and specifications) can cross cut both each
+%% other and the various modules and objects in the system being
+%% specified.  The validity of a specification is the conjunction of its
+%% policies; a module or an object must satisfy all the specification's
+%% policies for us to consider that the object meets the specification.
+%% Policies and specifications are not tied to any specific module or
+%% class: rather, any implementing module that satisfies the
+%% specification's policies obeys the specification.
+
+
+\Chainmail can express necessary specifications because its invariant
+language includes \kjx{several carefully-chosen} \textit{holistic}
+assertion constructs, along with traditional state-based assertions.
+%\jncomment
+\james{if we say things like that, need to discuss alternative
+  constructs in the discussion section. do we have alternatives?
+  transitive Access. two-state assertions. what else? \sd{that would be good, but 
+  more work to do. Can some body do it? Is it very important to have?}}.
+That is, as well as supporting assertions on the contents of local
+variables and object fields (\eg $\prg{x}.\f1 > \prg{this}.\f2$),
+\Chainmail\ incorporates assertions which talk about
+%
+\textit{access}
+--- objects being accessible from other objects (\eg
+$\CanAccess{\x}{\y}$);
+%
+\textit{control} --- the
+next method to be invoked ($\Calls {\x} {\y} {\m} {\z}$);
+%
+\textit{authority} --- about the change of some
+property (\eg $\Changes{\x.\f}$);
+%
+\textit{space} --- some property being observable within a subset of
+the current state ( $\Using{\A}{S}$);
+%
+and
+%
+\textit{time} --- about some property
+holding in the future or in the past (\eg $\Future \A$ or $\Past \A$).
+%
+.
+%\scd
+  \sophia{While
+many  individual
+features of \Chainmail can  be found also in other work, we
+%claim that their  combination as well as
+%their application in the specification of open systems are novel.
+argue that their power and novelty for specifying open systems lies in their careful
+  combination}
+  %\kjx
+  \james{Hmm. a delicate, subtle argument \ldots }
+%
+%
+These assertions draw from some concepts from object capabilities
+($\CanAccess{\_}{\_}$  for  permission and $\Changes{\_}$ for
+authority) 
+as well as temporal logic ($\Future \A$, $\Past \A$ and friends), and the relation of
+our spatial connective ($\Using{\A}{S}$)  with ownership and effect
+systems.
+%\sdcomment
+\sophia{TODO: add references here}. 
+%\jncomment
+\james{don't forget the whole
+  AOP mionitoring/specs stuff, just for fun.  (HELM contracts!!! (vs
+  Meyer Contracts :-)}  
+%
+%\jncomment
+\james{somewhere, should we say something like: the goal is
+  to allow wholistic specifations with as extra little machinery as
+  possible over a basic Hoare language}.
+
+\paragraph{Permission: Access}
+
+Our first holistic assertion $\CanAccess{\x}{\y}$ asserts that one
+object $\x$ has a direct reference to another object $\y$: that a
+reference to $\y$ is the value of at least one of $\x$'s fields.
+This assertion can be used to make assertions about heap structures (and thus
+object values), for example if a \prg{cacheValid} field is true,
+then that object can access to a cached value:
+
+\begin{lstlisting}
+  a.cacheValid == true `$\weakImplies \CanAccess(a)(cacheValue)$` 
+\end{lstlisting}
+
+%\kjx
+\james{do we really not also need reachable (transitive closure of access)}
+\susan{we don't seem to need transitivity in any of the examples}
+
+
+\paragraph{Control: Calls}
+
+The  $\Calls {\x} {\y} {\m} {\z}$
+assertion is more-or-less the control flow analogue of
+the access assertion, and is true 
+in program states where a method on object 
+${\x}$ makes a method call ${\y}.{\m}({\z})$ --- that is it calls method 
+{\m} on object {\y} with arguments {\z}.
+
+
+\begin{lstlisting}
+   another illustrative example, presumably in the context of the
+   running example from the intro. which we need to pick first.
+\end{lstlisting}
+
+
+\paragraph{Authority Changes}
+
+The $\Changes{\x.\f}$  assertion is true when the value of \prg{x.f}
+in the next state is different to the value in the current state.
+For example, we 
+
+\begin{lstlisting}
+   another illustrative example, presumably in the context of the
+   running example from the intro. which we need to pick first.
+\end{lstlisting}
+
+\paragraph{Space: With}
+
+The space assertionn $\Using{\A}{S}$ states the some assertion $\A$ is
+true when the heap used by that assertion is restrcited to the
+footprint $\S$  
+%\kjx
+\james{footprint F?}.
+
+%\kjx
+\james{OK someone needs to explain what that's for and when/why it is sound to
+do it}
+
+\begin{lstlisting}
+   another illustrative example, presumably in the context of the
+   running example from the intro. which we need to pick first.
+\end{lstlisting}
+
+
+\paragraph{Time: Next, Will, Prev, Was}
+
+\Chainmail supports several temporal operators familiar from temporal
+logic ($\Future \A$ or $\Past \A$ or $\Next \A$ or $\Prev \$A$). 
+We support birectional temporal
+assertions, constraining either future ($\Future \A$. $\Next \A$)
+or past behaviour ($\Past \A$.  $\Prev \$A$) either considering only
+the  immediate next or immediate previous step ($\Next \A$,
+$\Prev \$A$) or for conditions that become eventually true in some
+distant future, or were true once in some distant past  
+($\Future \A$, $\Past \A$). We have bidirectional pairs of operators
+to give expressiveness in writing assertions: this does not offer any
+additional reasoning power. 
+
+For example, a part of the observer pattern is that when
+a subject is notified of a change, then the observer must
+be told to update itself.    We can write this from the
+subject's perspective, looking forwards:
+
+\begin{lstlisting}
+  Call(_,subject,notify,_) --> Will(Call(subject,observer,update,_))
+\end{lstlisting}
+
+\noindent meaning that once notify is called on a subejct, then its
+observer will be updated sometime in the future.  We can write a very
+similar specification for an observer, looking backwards.
+
+\begin{lstlisting}
+  Call(subject,observer,update,_) --> Was(Call(_,subject,notify,_))
+\end{lstlisting}
+
+\noindent meaning that if a subject updates an observer, that subject
+have been notified sometime previously. We could tighten each
+specifaction, so that the update must immediately follow the
+notification, by replacing $\Future \A$ or $\Past \A$ with 
+$\Next \A$ or $\Prev \A$.
+
+%\kjx
+\james{bother. should probably do time earlier, because most of the
+   example assertions I can think of a things like
+   \lstinline+(change(x.f) ->  past(call(_,xm,_)+ which needs the temporal operator}
+
+
+%\jncomment
+\james{OK really do need the example to be chosen to do more work here for this}
