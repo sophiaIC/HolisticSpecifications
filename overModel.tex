@@ -1,14 +1,16 @@
 %\section{Overview of the \Chainmail\  formal model}
 % \subsection{The Open World}
 
-\sd{Having outlined the ingredients of our holistic specification language, the next question to ask is: When does a module 
-$\M$ satisfy such a holistic assertion $\A$? In our notation, when does} \\
+Having outlined the ingredients of our holistic specification language, the next question to ask is: When does a module 
+$\M$ satisfy such a holistic assertion $\A$? \sd{Note that we use the term \emph{module} to talk about repositories of code; in this work modules are mappings from
+class identifiers to class definitions.}
+\sd{So, the question about modules satisfying assertions put formally is,} when does  \\
 $~ \strut  \hspace{1.3in}\ \M \models \A$ \\
 hold? 
    
-\sd{Our  answer must reflect the fact that we are dealing with the 
+Our  answer has to reflect the fact that we are dealing with the 
 \emph{open  world},  where  $\M$, our module, may be
-linked with \textit{arbitrary untrusted code}. To reflect this}  we consider
+linked with \textit{arbitrary untrusted code}. To reflect this we consider
  pairs of modules, 
 $\M \mkpair {\M'}$,  where $\M$ is the module 
 whose code is supposed to satisfy the assertion,
@@ -17,30 +19,56 @@ and $\M'$  is  another % wused to say \textit{any}  -- but why?
 the functionality of $\M$. We call $\M$ the {\em internal}, and $\M'$ is the {\em external} module.
 %or {\em potentially adversarial} module. 
     
-We can now answer our original question.  $\M \models \A$ 
-  holds if for all further, {\em potentially adversarial}, modules $\M'$ and in  all runtime configurations $\sigma$ which may be observed through execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
+We can now answer our original question: $\M \models \A$ 
+ holds if for all further, {\em potentially adversarial}, modules $\M'$ and in  all runtime configurations $\sigma$ which may be observed through execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
 $~ \strut  \hspace{1.3in} \M \models \A \ \ \  \ \ \ \ \ \mbox{
-if               } \ \ \  \ \ \  \  \forall \sigma\in\Arising
+if               } \ \ \  \ \ \  \  \forall \M'.\forall \sigma\in\Arising
 {\M \mkpair  {\M'}}. [\ \M \mkpair  {\M'},\sigma \models \A\ ]$.  \\
 In that sense, module $\M'$ represents all possible clients of {\M}; and as it is arbitrarily chosen, it reflects the open world nature of our specifications.%\sdcomment
-\sophia{James had said to keep that sentence, but now that I reworked 
-the above, perhaps it is superfluous.}
+\sophia{Is is sentence superfluous now?.}
+\sophia{In contrast to what we said on Friday's conf call we do not need to put any restrictions
+on $\M'$ -- not even disjointness is required.}
 
-The assertion $\M \mkpair  {\M'},\sigma \models \A$ means that the runtime configuration $\sigma$ satisfies the 
-assertion $\A$. \sd{In contrast to traditional specification languages \cite{Leavens-etal07,Meyer92}, satisfaction has to be judged 
-in the context of a module pair, here $\M \mkpair  {\M'}$.
-We need the modules, because our assertions may 
-talk about the future. In order to be able to talk about the future we need to have access to the
-method bodies defined in these modules. We} also need to distinguish between  the internal and the external module,
-because when examining program executions, we are only interested
- in those runtime configurations which are {\em external} to module $\M$, \ie those where the
+The judgement $\M \mkpair  {\M'},\sigma \models \A$ means that  
+assertion $\A$ is satisfied by  $\M \mkpair  {\M'}$ and $\sigma$.  
+\sd{As in traditional specification languages \cite{Leavens-etal07,Meyer92}, satisfaction is judged 
+in the context of  runtime configuration $\sigma$; but in addition, it is judged in the context of modules.
+ The reason for this is that assertions may
+talk about possible future configurations. To determine the possible future 
+configurations we need  the class definitions --
+these are found in the modules.}
+
+Note   the distinction between the internal and the external module. The
+reason for this distinction is some assertions require object to  be \emph{external},\sophia{TODO commect with example earlier}
+ and also, because  we model progrm execution as if all executions within a modue were atomic.
+We only record runtime configurations which are {\em external} to module $\M$, \ie those where the
  executing object (\ie the current receiver) comes from module $\M'$. 
-
-\sd{Similarly, when considering $\Arising {\M \mkpair  {\M'}}$, \ie the configurations arising from 
+ Thus, program execution is
+ a judgment of the form\\
+ $~ \strut  \hspace{1.3in}    \M \mkpair  {\M'},\sigma \leadsto \sigma'$\\  
+ we ignore all intermediate steps
+ whose receivers are internal to $\M$. Thus, our executions correspond to some
+ form of visible states semantics. \sophia{TODO: add references here.}
+Similarly, when considering $\Arising {\M \mkpair  {\M'}}$, \ie the configurations arising from 
 executions in $\M \mkpair  {\M'}$, we can take method bodies defined in $\M$ or in $\M'$, but we will only consider the runtime 
 configurations which are external to $\M$.
-}
-\sd{Therefore, the pair $\M \mkpair  {\M'}$ is different than the concatenation of the two modules}
-In  that sense, our approach is similar to that of visible states semantics, without, however the need to consider issues
-around different objects of the same class or re-entrancy.\footnote{TODO: add references here.}
+
+%\sd{Therefore, the pair $\M \mkpair  {\M'}$ is different than the concatenation of the two modules}
+%In  that sense, our approach is similar to that of visible states semantics, without, however the need to consider issues
+%around different objects of the same class or re-entrancy.
+\sd{As a notational convenience, we keep the code to be executed as a component of the runtime configuration.
+Thus, $\sigma$ consists of a stack of frames and a heap, and each frame consists of a variable map and a continuation.
+The variable map is a mapping from variables to addresses or to set of addresses -- the latter are needed to
+deal with assertions which quantify over footprints, as \eg (1) and (2) from section \ref{sect:motivate:Bank}.}
+
+
+\sd{To give meaning to assertions with footprint restrictions such as \eg $\Using {\A} {\prg{S}}$ ,we define  restrictions on the
+configuration. Thus $\sigma\!\!\downarrow_{\sigma(\prg{S})}$ is the same as $\sigma$ but with the domain of the heap restricted
+to the addresses from $\sigma(\prg{S})$. And then we define\\
+  $~ \strut  \hspace{1.3in} \M \mkpair  {\M'},\sigma  \models\Using {\A} {\prg{S}}$\ \ \ \ \ if \ \ \ \  \  $\M \mkpair  {\M'},\sigma\!\!\downarrow_{\sigma(\prg{S})}  \models {\A}$}
+  
+\sd{The meaning of assertions therefore may depend on the variable map, eg \prg{x} may be pointing to a different 
+object in .... TODO
+The treatment of time in combination with the fact that the meaing od assertions TODO}
+
 
