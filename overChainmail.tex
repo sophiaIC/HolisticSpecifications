@@ -26,7 +26,7 @@ and
 
 
 
-\sdparagraph{Configurations} We  will explain these concepts in terms of examples coming from  \prg{Bank}/\prg{Account} as  in the previous Section.
+\sdparagraph{Example Configurations} We  will explain these concepts in terms of examples coming from  \prg{Bank}/\prg{Account} as  in the previous Section.
 We will use the runtime configurations $\sigma_1$ and $\sigma_2$ 
 shown in the left and right diagrams in Figure \ref{fig:BakAccountDiagrams}.
 %These configurations could arise from the execution of different implementation of the \prg{Bank}/\prg{Account}
@@ -207,116 +207,140 @@ $\strut$ \hspace{2cm}    $\forall \prg{a}. [ \ \ \prg{a}:\prg{Account} \ \longri
 
 
 \sdparagraph{Permission: Access}
-
-Our first holistic assertion $\CanAccess{\x}{\y}$ asserts that one
+%
+Our first holistic assertion, $\CanAccess{\x}{\y}$, asserts that  
 object $\x$ has a direct reference to another object $\y$: either one
 of $\x$'s fields contains a 
 reference to $\y$, or the receiver of the currently executing method is \prg{x}, and \prg{y}
 is one of the arguments or a local variable. 
 For example:\\
  $\strut$ \hspace{2cm}  $...,\sigma_1 \ \models \  \CanAccess{\prg{a}_2}{\prg{b}_1}$
+\\
+If   $\sigma_1$ was currently executing  a call like ${\prg{a}_2}$.\prg{deposit}\prg{(}${\prg{a}_2}$,\prg{100.00}\prg{)}, then we 
+would  have\\
+ $\strut$ \hspace{2cm}  $...,\sigma_1 \ \models \  \CanAccess{\prg{a}_2}{\prg{a}_3}$, \\
+ Namely, during execution of that method, $\prg{a}_2$ has access to $\prg{a}_3$, and could,
+ %  in ptinciple and
+ if the method body chose to,
+ store a reference to $\prg{a}_3$ in its own fields.\sophia{ALL: does this clarify why 
+ we define access to take method execution into account?}
+ Note that access is not symmetric, nor transitive:\\
+  $\strut$ \hspace{2cm}  $...,\sigma_1 \ \not\models \  \CanAccess{\prg{a}_3}{\prg{a}_2}$, \\
+  $\strut$ \hspace{2cm}  $...,\sigma_2 \ \models \  \CanAccessTr{\prg{a}_2}{\prg{a}_3}$, \\
+    $\strut$ \hspace{2cm}  $...,\sigma_2 \ \not\models \  \CanAccess{\prg{a}_2}{\prg{a}_3}$.
 
-This assertion can be used to make assertions about heap structures (and thus
-object values), for example if a \prg{cacheValid} field is true,
-then that object can access to a cached value:
 
-\begin{lstlisting}
-  a.cacheValid == true `$\weakImplies \CanAccess(a)(cacheValue)$` 
-\end{lstlisting}
-
-%\kjx
-\james{do we really not also need reachable (transitive closure of access)}
-\susan{we don't seem to need transitivity in any of the examples}
-
+%\james{do we really not also need reachable (transitive closure of access)}
+%\susan{we don't seem to need transitivity in any of the examples}
+%\sophia{We do not want transitivity, our policies where access is in the conclusion would become too weak.}
 
 \sdparagraph{Control: Calls}
-
-The  $\Calls {\x} {\y} {\m} {\z}$
-assertion is more-or-less the control flow analogue of
-the access assertion, and is true 
+%
+The  assertion $\Calls {\x} {\y} {\m} {\zs}$
+\sophia{it said " is more-or-less the control flow analogue of
+the access assertion" -- that is a nice simile, but is it true?}  holds 
 in program states where a method on object 
-${\x}$ makes a method call ${\y}.{\m}({\z})$ --- that is it calls method 
-{\m} on object {\y} with arguments {\z}.
-
-
-\begin{lstlisting}
-   another illustrative example, presumably in the context of the
-   running example from the intro. which we need to pick first.
-\end{lstlisting}
-
-
-\paragraph{Authority Changes}
-
-The $\Changes{\x.\f}$  assertion is true when the value of \prg{x.f}
-in the next state is different to the value in the current state.
-For example, we 
-
-\begin{lstlisting}
-   another illustrative example, presumably in the context of the
-   running example from the intro. which we need to pick first.
-\end{lstlisting}
-
-\paragraph{Space: With}
-
-The space assertionn $\Using{\A}{S}$ states the some assertion $\A$ is
-true when the heap used by that assertion is restrcited to the
-footprint $\S$  
-%\kjx
-\james{footprint F?}.
-
-%\kjx
-\james{OK someone needs to explain what that's for and when/why it is sound to
-do it}
-
-\begin{lstlisting}
-   another illustrative example, presumably in the context of the
-   running example from the intro. which we need to pick first.
-\end{lstlisting}
-
-
-\paragraph{Time: Next, Will, Prev, Was}
-
-\Chainmail supports several temporal operators familiar from temporal
-logic ($\Future \A$ or $\Past \A$ or $\Next \A$ or $\Prev \$A$). 
-We support birectional temporal
-assertions, constraining either future ($\Future \A$. $\Next \A$)
-or past behaviour ($\Past \A$.  $\Prev \$A$) either considering only
-the  immediate next or immediate previous step ($\Next \A$,
-$\Prev \$A$) or for conditions that become eventually true in some
-distant future, or were true once in some distant past  
-($\Future \A$, $\Past \A$). We have bidirectional pairs of operators
-to give expressiveness in writing assertions: this does not offer any
-additional reasoning power. 
-
-For example, a part of the observer pattern is that when
-a subject is notified of a change, then the observer must
-be told to update itself.    We can write this from the
-subject's perspective, looking forwards:
-
-\begin{lstlisting}
-  Call(_,subject,notify,_) --> Will(Call(subject,observer,update,_))
-\end{lstlisting}
-
-\noindent meaning that once notify is called on a subejct, then its
-observer will be updated sometime in the future.  We can write a very
-similar specification for an observer, looking backwards.
-
-\begin{lstlisting}
-  Call(subject,observer,update,_) --> Was(Call(_,subject,notify,_))
-\end{lstlisting}
-
-\noindent meaning that if a subject updates an observer, that subject
-have been notified sometime previously. We could tighten each
-specifaction, so that the update must immediately follow the
-notification, by replacing $\Future \A$ or $\Past \A$ with 
-$\Next \A$ or $\Prev \A$.
-
-%\kjx
-\james{bother. should probably do time earlier, because most of the
-   example assertions I can think of a things like
-   \lstinline+(change(x.f) ->  past(call(_,xm,_)+ which needs the temporal operator}
-
+${\x}$ makes a method call ${\y}.{\m}({\zs})$ --- that is it calls method 
+{\m} with object {\y} as the receiver, and with arguments {\zs}.
+For example, \\
+ $\strut$ \hspace{2cm}  $...,\sigma_0 \models \  \Calls {\x} {\prg{a}_2} {\prg{deposit}} {\prg{(}{\prg{a}_3},\prg{100.00}\prg{)}}$.\\
+ %{{...}} {\prg{a}_2}} {\prg{deposit}} {\prg{(}{\prg{a}_3},\prg{100.00}\prg{)}}$.\\
+ means that the receiver in %configuration 
+ $\sigma_0$ is \x, and the next statement to be executed  
+ is  $\prg{a}_2.\prg{deposit}\prg{(}\prg{a}_3,\prg{100.00}\prg{)}$.
  
+
+\sdparagraph{Authority --  Changes and Internal/External}\sophia{Is it good to put these together?}
+The assertion $\Changes{\prg{e}}$  holds when the value of {\prg{e}}
+in the next configuration is different to the value in the current configuration.
+For example, if the code being executed in $\sigma_1$ started with $\acc_2.\bal=\acc_2.\bal+\prg{100.00}$, then:\\
+  $\strut$ \hspace{2cm}  $..., \sigma_1 \ \models \  \Changes {\acc_2.\bal}$.\\
+  Moreover, the assertion $\External {\prg{e}}$ expresses that the object {\prg{e}} does not belong to the module under consideration. 
+  For example, \\
+$\strut$ \hspace{2cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \models \ \External{\pu_{92}}$\\
+$\strut$ \hspace{2cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \not\models \ \External{\acc_2}$\\
+$\strut$ \hspace{2cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \not\models \ \External{\pb_{1}.\prg{ledger}}$\\
+Notice the use of the \emph{internal} module, $\M_{AB2}$, needed to judge which objects are internal, and which are external.
+ 
+
+\sdparagraph{Space: With}
+The space assertion $\Using{\A}{\SF}$ states that  assertion $\A$ is
+true in a configuration is restricted to the 
+objects from the set \SF. In other words, it restricts the set of objects which may be used to establish property \A. For example, 
+if $\SF_1$ includes object \prg{94}, and  $\SF_2$ does not include  it, then we   have\\ 
+ $\strut$ \hspace{2cm}  $..., \sigma_1 \ \models \ \Using{ \exists \prg{o}.[ \ \External{\prg{o}} \wedge \CanAccess{\prg{o}} {\acc_4}\ ]}{\SF_1}$\\
+ $\strut$ \hspace{2cm}  $..., \sigma_1 \ \not\models \ \Using{ \exists \prg{o}.[ \ \External{\prg{o}} \wedge \CanAccess{\prg{o}} {\acc_4}\ ]} {\SF_2}$.\\
+ $\Using{\A}{\SF}$  is therefore {\em not} the footprint of the assertion $\A$; it is more like the \emph{fuel} \sophia{TODO add 
+ citation to Amal's fuel} given to establish that assertion. Note that $\Using {\A} {\SF}$ does not imply  
+  $\Using {\A} {\SF\cup\SF'}$, nor the other direction.
+
+\sdparagraph{Time: Next, Will, Prev, Was}
+%
+%\Chainmail 
+We supports several temporal operators familiar from temporal
+logic ($\Next \A$, and $\Future \A$, and  $\Prev \A$, and $\Past \A$) to
+talk about the future or the past in one or any number of steps.
+%We support birectional temporal
+%assertions, constraining either future ($\Future \A$. $\Next \A$)
+%or past behaviour ($\Past \A$.  $\Prev \$A$) either considering only
+%the  immediate next or immediate previous step ($\Next \A$,
+%$\Prev \$A$) or for conditions that become eventually true in some
+%distant future, or were true once in some distant past  
+%($\Future \A$, $\Past \A$). We have bidirectional pairs of operators
+%to give expressiveness in writing assertions: this does not offer any
+%additional reasoning power. 
+The assertion $\Future \A$ expresses that after one or more execution steps 
+$\A$ will hold. For example, if the code being executed in $\sigma_2$ was 
+method $\prg{m()}$ with receiver $\pu_{94}$,  and if $\sigma_2(\prg{94},\f_1)=\prg{2}$ and
+$\sigma_2(\prg{94},\f_2)=\prg{93}$, and calling   \prg{m2} on \prg{93} returns \prg{4},
+ and the body of \prg{m} was \prg{this}.$\f_1$.\prg{deposit(}\prg{\this.}$\f_2$.\prg{m2()},\prg{4.00}\prg{)},then\\
+ $\strut$ \hspace{2cm}  $\M_{BA2}\mkpair ..., \sigma_2 \ \models \ \Future{ \Changes {\acc_2.\bal}}$.\sophia{It would
+ be nice to have a simpler example; what makes it difficult is the fact that $\M_{AB2}$-internal transitions are
+ not registered.}
+ 
+ 
+
+
+\sophia{The observer pattern example is very nice, but unfortunately we cannot use it, because the
+calls are internal, and therefore not visible in the current system.}
+%For example, a part of the observer pattern is that when
+%a subject is notified of a change, then the observer must
+%be told to update itself.    We can write this from the
+%subject's perspective, looking forwards:
+%
+%\begin{lstlisting}
+%  Call(_,subject,notify,_) --> Will(Call(subject,observer,update,_))
+%\end{lstlisting}
+%
+%\noindent meaning that once notify is called on a subejct, then its
+%observer will be updated sometime in the future.  We can write a very
+%similar specification for an observer, looking backwards.
+%
+%\begin{lstlisting}
+%  Call(subject,observer,update,_) --> Was(Call(_,subject,notify,_))
+%\end{lstlisting}
+%
+%\noindent meaning that if a subject updates an observer, that subject
+%have been notified sometime previously. We could tighten each
+%specifaction, so that the update must immediately follow the
+%notification, by replacing $\Future \A$ or $\Past \A$ with 
+%$\Next \A$ or $\Prev \A$.
+
+\sdparagraph{Putting these together} We now look at some composite assertions which use ingredients
+from several families from above. The assertion below says that if the call to be made next is $\pu_{94}$.\m\prg{()},
+then the balance of $\acc_2$ will eventually change:\\
+ $\strut$ \hspace{2cm}  $\M_{BA2}\mkpair ..., \sigma_2 \ \models \ {\Calls {..} {\pu_{94}} {\m} {()}}  \longrightarrow \Future{ \Changes {\acc_2.\bal}}$.\sophia{some delicate issues with $\sigma_2$ as used in prev. paragraph, where we already assumed that
+ the code in $\sigma_2$ started with $\pu_{94}$.\m\prg{()} -- what can we do?}
+
+We now add space to the mix, and demonstrate that in general $\Future {\Using {\A} {\SF}}$ is different from 
+  $\Using {\Future {\A}} {\SF}$. Consider $\SF_1$ consisting of objects \prg{1}, \prg{2}, \prg{4}, \prg{93}, and \prg{94}, 
+  and $\SF_2$ consisting of objects \prg{1}, \prg{2}, \prg{4}. Assume also that $\sigma_1$ contained the 
+  call $\prg{m()}$ with receiver $\pu_{94}$,   that the code of \prg{m} and \prg{m2} were as above. Then\\
+  $\strut$ \hspace{2cm}  $\M_{BA1}\mkpair ..., \sigma_1 \ \models \ \Using {\Future{ \Changes {\acc_2.\bal}}} {\SF_1}$\\ 
+   $\strut$ \hspace{2cm}  $\M_{BA1}\mkpair ..., \sigma_1 \ \not\models \ \Using {\Future{ \Changes {\acc_2.\bal}}} {\SF_2}$\\ 
+ $\strut$ \hspace{2cm}  $\M_{BA1}\mkpair ..., \sigma_1 \ \models \ \Future{ \Using {\Changes {\acc_2.\bal}} {\SF_2}}$\
+
+%\vspace{.2in} 
 \sophia{While
 many  individual
 features of \Chainmail can  be found also in other work, we
@@ -328,7 +352,7 @@ argue that their power and novelty for specifying open systems lies in their car
   \james{Hmm. a delicate, subtle argument \ldots }
 %
 %
-These assertions draw from some concepts from object capabilities
+\sdparagraph{In summary,} our holistic assertions draw from some concepts from object capabilities
 ($\CanAccess{\_}{\_}$  for  permission and $\Changes{\_}$ for
 authority) 
 as well as temporal logic ($\Future \A$, $\Past \A$ and friends), and the relation of
@@ -338,10 +362,9 @@ systems.
 \sophia{TODO: add references here}. 
 %\jncomment
 \james{don't forget the whole
-  AOP mionitoring/specs stuff, just for fun.  (HELM contracts!!! (vs
+  AOP monitoring/specs stuff, just for fun.  (HELM contracts!!! (vs
   Meyer Contracts :-)}  
-%
-%\jncomment
+ 
 \james{somewhere, should we say something like: the goal is
   to allow wholistic specifations with as extra little machinery as
   possible over a basic Hoare language}.
