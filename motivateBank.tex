@@ -1,204 +1,167 @@
-We now consider a simplified banking application.  %consisting of a \prg{Bank} object at \prg{1},
-%and three \prg{Account} objects at \prg{2}, \prg{3} and \prg{4}.}
-\sophia{TODO: say the things that were in SLACK}
-
-
-%\sdcomment
-\sophia{After discussion with Susan I think we need such a diagram. But the flow with the next para is not good.}
-
-\susan{component is a new word, you've used method, module, and object up to now}
-Traditional functional specifications describe what components are
-guaranteed to do. So long as a method is called in a state satisfying
+  
+Traditional functional specifications describe what objects are
+guaranteed to do. 
+So long as a method is called in a state satisfying
 its preconditions, the method will complete its work and establish a
 state satisfying its postconditions.  
-\sd{Thus, the pre-condition and the method call together form a \emph{sufficient}
-condition for the method's effect.}
+Thus, the pre-condition and the method call together form a \emph{sufficient}
+condition for the method's effect.
+% SD The below is wrong:
 % Method specifications thus
 % define the \textit{sufficient} conditions for their methods' behaviour
 % to be invoked.
 
+As a motivating example, we consider a simplified banking application,
+with objects representing \prg{Account}s or \prg{Bank}s. 
+As in \cite{ELang},   \prg{Account}s belong to \prg{Bank}s and hold money (here \prg{balance}s);  
+with access  to two \prg{Account}s of the same  \prg{Bank} on cane transfer any amount of money from
+the one to the other.  We give a traditional specification in Figure \ref{fig:BankSpec}.
 
-Consider the specification of a trivial Bank component in
-fig.~\ref{fig:BankSpec}.  
-%\sdcomment
-\sophia{ kjx{changed it so it behaves more like a
-bank, rather an a currency:  you open an account with a new balance.
-We can no longer talk about the preservation of a currency,
-but the amount in the bank must be the sum of arguments to newAccount.}
-That is exactly what currency is and the Bank here is no different than the Mint.}
-
-The bank is essentially a wrapper for a map
-from account objects to account balances: given an instance of a Bank
-component, calling \prg{newAccount} returns a new account object with
-an initial balance. 
-
-Given an account, calling \prg{balance} with an 
-account returns the account balance, and calling \prg{deposit} with
-two accounts deposits funds from the source to the destination account.
-%\sdcomment
-%\sophia{\se{I am very confused about deposit. If sb and db can be the same bank, 
-%\sd{se and sb are numbers in the spec} then the statements to ensure that {\tt{steal}} cannot be included in the system (that is only one account is changed) won't hold. If they must be different as is in the Chainmail spec, it is a very peculiar bank where one cannot transfer money between two accounts in the same bank. I also am unclear about the changes to an account caused by a deposit to another account. Perhaps my difficulty comes from the policy deposit where sb and db are of equal weight whereas the Chainmail spec has the client in sb calling deposit on the player in db and it can only do so if it knows db's account number.}}
-%\sdcomment{Perhaps we should inline Fig. 3 and 4? Also, do we need both specification and policy? We do not have
-%such syntax in this paper.}
-
-\begin{figure}[tbp]
+\begin{figure}[htbp] 
 \begin{lstlisting}
-  specification Bank {
+   function deposit(src, amt)
+   PRE:  this,src:Account $\wedge$  this$\neq$src $\wedge$ this.myBank=src.myBank $\wedge$ 
+         amt:$\mathbb{N}$  $\wedge$   src.balance$\geq$amt
+   POST: src.balance=src.balance$\pre$-amt $\wedge$ this.balance=this.balance$\pre$+amt
 
-    ghost field ledger : Map[Account, Number]
+   function makeNewAccount(amt)
+   PRE: this:Account $\wedge$  amt:$\mathbb{N}$ $\wedge$  this.balance$\geq$amt
+   POST: this.balance=this.balance$\pre$-amt $\wedge$ fresh result $\wedge$ 
+         result: Account $\wedge$ this.myBank=result.myBank $\wedge$ result.balance=amt
 
-    policy newAccount {
-        a : Account, b : Bank, n : Number
-          { def a ;= b.newAccount(n) }
-        FRESH(a) & ledger.containsKey(a)
-    }
-
-    policy balance {
-      a : Account, b : Bank, n : Number
-        { n := b.balance(a) }
-      n == ledger.at( a )
-    }
-
-    policy deposit {
-      src, dst : Account, b : Bank, sb, db, n : Number
-      sb == ledger.at(src), db == ledger.at(dst), n > 0, src=/=dst
-        { b.deposit(dst, src, n) }
-      ledger.at(src) == sb - n
-      ledger.at(dst) == db + n
-    }
-  }
-\end{lstlisting}
-\caption{Functional specification of a Bank}
+   function newAccount(amt)
+   PRE:  this:Bank  
+   POST:  result: Account $\wedge$  result.myBank=this $\wedge$ result.balance=amt
+ \end{lstlisting}
+ \vspace{-.8cm}
+\caption{Functional specification of \prg{Bank} and \prg{Account}}
+\label{fig:functionalSpecBankAccount}
 \label{fig:BankSpec}
-\end{figure}
-\james{will update style sometime}
-\sophia{to add: FRESH(a) AND ledger.containsKey(a) AND  ledger.at(a)=n  AND a:Account }
-%\sdcomment
-\sophia{"Map" should be a mathematical construction, not syntax. And why does "at" mean lookup}
+\end{figure} 
+
+The PRE-condition of \prg{deposit} requires that  the receiver and the first argument  (\prg{this}, \prg{scr}) are \prg{Account}s
+and belong to the same bank,
+that \prg{amt} is a number, and that \prg{src} holds at leat \prg{amt} moneys.
+The POST-condition mandates that \prg{amt} has been transferred from \prg{src} to the receiver.
+ The function \prg{makeNewAccount} specified below returns a fresh \prg{Account} with the same bank, and transfers \prg{amt}
+ from the receiver \prg{Account} to the new \prg{Account}.
+ Finally, the function \prg{newAccount} when run by a \prg{Bank} creates a new \prg{Account} with corresponding 
+ amount of money in it.
 
 
-The specification in fig.~\ref{fig:BankSpec} is enough to let us
-calculate the result of operations on the bank and the accounts ---
-for example it is straightforward to determine that the code in
-fig.~\ref{fig:rego} satisfies its assertions: given that the
-\prg{acm} object has a balance of 10,000 before an author is
-registered then afterwards it will have a balance of 11,000 while the
-\prg{author} now has a balance of 500 from a starting balance of 1,500
+ 
+%Notice that the specification means that access to an \prg{Account} allows one to withdraw all the money it holds
+%-- the concept of account owner who has exclusive right of withdrawal is not supported.
+%This simplified view allows  us to keep the example short, but compare with appendix \sophia{TO ADD}
+%for a specification which supports owners.
+
+
+With such a specification %it is enough%to let us
+%calculate the result of operations on the accounts ---
+%for example % it is straightforward to determine that 
+the code below  satisfies its assertions: assuming that 
+\prg{acm\_acc} and \prg{auth\_ascc} are \prg{Account}s, and  \prg{acm\_acc} has a balance of 10,000 before an author is
+registered, then afterwards it will have a balance of 11,000 while the
+\prg{auth\_acc}'s balance  will be f 500 from a starting balance of 1,500
 (barely enough to buy a round of drinks at the conference hotel bar).
-%\secomment
-\susan{can we have 2 methods deposit and withdraw?}
-%\secomment
-\susan{Not obivious what is PRE and what is POST. We aren't trying to have our own unique sufficient spec stuff are we?}
 
 
 
-\begin{figure}[tbp]
 \begin{lstlisting}
-  assume b.balance(acm) == 10000
-  assume b.balance(author) == 1500
-
-  b.deposit(acm, author, 1000)
-
-  assert b.balance(acm) == 11000
-  assert b.balance(author) == 500
+    assume acm_acc,auth_scc: Account $\wedge$ acm.balance=10000 $\wedge$  auhtor.balance=1500
+    acm.deposit(author, 1000)
+    assert acm_acc.balance=11000  $\wedge$ auth_acc.balance=500
 \end{lstlisting}
-\caption{Registering at a Conference}
-\label{fig:rego}
-\end{figure}
 
-%\kjx
+\vspace{-.2in}
 
 This reasoning is fine in a closed world, where we only have to
 consider complete programs, where all the code in our programs (or any
 other systems with which they interact) is under our control.   
 In an
 open world, however, things are more complex: our systems will be made
-up of a range of components, many of which we do not control; and
+up of a range of modules, many of which we do not control; and
 furthermore will have to interact with external systems which we
 certainly do not control.  Returning to our author, say some time
-after registering by executing the code in fig.~\ref{fig:rego}, they
+after registering by executing the code from earlier, they
 attempt to pay for a round at the bar.  Under what circumstances can
 they be sure they have enough funds in their account?
 
-To see the problem, consider the additional function specified in
-fig.~\ref{fig:steal}. This method says the bank additionally provides a
-\prg{steal} method that empties out every account in the bank and puts
-all their funds into the thief's account. If this method exists, and
-if it is somehow called between registering at the conference and
-going to the bar, the author (actually everyone using the same bank)
-will find all their accounts empty (except the thief, of course).
+To see the problem, what if the bank provided a \prg{steal} method that 
+ emptied out every account in the bank and put  them into a thief's account?
+%all their funds into the thief's account.
+%consider the additional function specified below.
+% The bank additionally provides a
+%\prg{steal} method that empties out every account in the bank and puts
+%all their funds into the thief's account. 
+If this method existed and
+if it was somehow called between registering at the conference and
+going to the bar, then the author (actually everyone using the same bank)
+woud find all their accounts empty (except the thief, of course).
+%
 
-\begin{figure}[tbp]
-\begin{lstlisting}
-  specification Theft {
-
-    policy steal {
-      b : Bank, thief in Account, m in Map[Account, Number]
-      m == b.ledger
-        { b.steal(thief) }
-      forall a in dom(m) :
-        ledger.at(a) =
-          if (a == thief) then {sum(codom(m))} else 0
-    }
-  }
-\end{lstlisting}
-\caption{Sufficient Specification of Theft}
-\label{fig:steal}
-\end{figure}
-
+%\vspace{-2in}
+%\begin{lstlisting}
+%   function steal(thief)
+%   PRE:  this:Bank $\wedge$  thief.myBank=this 
+%   POST: $\forall$a:Account.[a.myBank=this $\rightarrow$ a.balance=0 ] $\wedge$ 
+%         thief.balance=thief.balance$\pre$+$\sum_{\prg{a}:\prg{Account} \wedge \prg{a.myBank}=\prg{this}}$ a.balance$\pre$
+% \end{lstlisting}
+%\vspace{-2in}
+ 
 The critical problem is that a bank implementation including a \prg{steal}
 method would meet the functional specifications of the bank from
-fig.~\ref{fig:BankSpec}, so long as its \prg{newAccount},
-\prg{balance}, and \prg{deposit} methods do meet
-that specification.
+fig.~\ref{fig:functionalSpecBankAccount}, so long as the methods \prg{deposit},
+\prg{makeNewAccount}, and \prg{newAccount}    meet
+their specification.
 
 One obvious solution would be to return to a closed-world
 interpretation of specifications: we interpret specifications such as
 fig.~\ref{fig:BankSpec} as \emph{exact} in the sense that only
 implementations that meet the functional specification exactly,
-\emph{with no extra methods or behavour}, are considered as suitable
+\emph{with no extra methods or behaviour}, are considered as suitable
 implementations of the functional specification. The problem is that
 this solution is far too strong: it would for example rule out a bank
-that  during maintenance was given a new method that simply counted the number of deposits that had taken place,
-i.e. met fig.~\ref{fig:count} as well as fig.~\ref{fig:BankSpec}.
-
-\begin{figure}[tbp]
-\begin{lstlisting}
-  specification CountDeposits {
-
-    ghost field count : Number = 0
-
-    policy deposit {
-      c : Number = count
-        { b.deposit(dst, src, n) }
-      count == c + 1
-    }
-
-    policy count {
-      b : Bank
-        { c = b.countDeposits }
-      c == b.count
-    }
-  }
-\end{lstlisting}
-\caption{Functional specification counting the number of deposits}
-\label{fig:count}
-\end{figure}
+that  during maintenance was given a new method \prg{deposit}
+that simply counted the number of deposits that had taken place,
+or a bank which occasionally sent notifications  to its customers.
+% occasionally paid interest to its clients.
+%i.e. met fig.~\ref{fig:extras} as well as fig.~\ref{fig:BankSpec}.
+%
+%\begin{figure}[tbp]
+%\begin{lstlisting}
+%   function deposit(src, amt)
+%   PRE:  $\mbox{ ... as before ...}$  
+%   POST:  $\mbox{ ... as before ...}$  this.myBank.count=this.myBank.count$\pre$+1
+% \end{lstlisting}
+%\vspace{-.8cm}
+%\caption{Counting deposits} %and paying interest}
+%\label{fig:extras}
+%\end{figure} 
+% removed as payInterest affects the balance
+%
+%   function payInterest()
+%   PRE: this:Bank  
+%   POST: $\forall$a:Account.[a.myBank=this $\rightarrow$ a.balance=a.balance$\pre$+a.balance$\pre$/1000]
 
 
-What we need is some way to permit bank implementations that meet
-fig.~\ref{fig:count} but to forbid implementations that meet fig.~\ref{fig:steal}.  
+What we need is some way to permit bank implementations that 
+%meet fig.~\ref{fig:extral} 
+\sd{send notifications to customers} but to forbid implementations of \prg{steal}, % that meet fig.~\ref{fig:steal}.  
 The key here is to capture the (implicit)
 assumptions underlying fig.~\ref{fig:BankSpec}, and to provide
-additional specifications that capture those assumptions.  There are
-at least two assumptions that can prevent methods like \prg{steal}:
+additional specifications that capture those assumptions.  The following
+ three requirements   prevent methods like \prg{steal}:
 
 \begin{enumerate}
-\item after creation, the \emph{only} way an account's
-  balance can be changed is if a client   calls the \prg{deposit} method \sd{with the
-  account as the receiver or as an argument} \susan{point out that this is not sufficient to stop steal because it could be rewritten to use deposit}
-\item an account's balance can \emph{only} be changed if a client has
+\item After creation, the \emph{only} way an account's
+  balance can be changed is if a client   calls the \prg{deposit} method  with the
+  account as the receiver or as an argument. 
+%  \susan{point out that this is not sufficient to stop steal because it could be rewritten to use deposit.}
+%  \sophia{I think that is what we say below}
+\item An account's balance can \emph{only} be changed if a client has
   that particular account object.
+\item Accounts and Banks are not leaked.   
 \end{enumerate}
 
 Compared with the functional specification we have seen so far, these
@@ -206,50 +169,51 @@ assumptions capture \emph{necessary} conditions rather than
 \emph{sufficient} conditions. It is necessary that the \prg{deposit}
 method is called to change an account's balance, and it is necessary
 that the particular account object can be passed as a parameter to
-that method. The fig.~\ref{fig:steal} specification is not consistent
-with these assumptions, while the.~\ref{fig:count} specification is
-consistent with these assumptions.
+that method. The  function 
+\prg{steal} is inconsistent with requirement  (1), as it reduces the balance of an \prg{Account} without calling the
+function \prg{deposit}. 
+However, requirement  (1) is not enough to protect our money. We need to (2) avoid that an \prg{Account}'s balance is
+modified without access to the particular \prg{Account}, and (3) ensure that such accesses are not leaked. 
 
-%\sdcomment
-\sophia{Chopped this as I believe we have said earlier:}
-%\kjx
-\james{NEED TO DECIDE ON CONTRIBUTIONS.
-The contribution of this paper is a specification langauge and
-semantics that can be used to specify necessary specifications, and a
-semantics for those specifications that can determine whether some
-functional (sufficient) specifications are consistent (or not) with
-the necessary specifications. Also think that we do not do
-"can determine whether some
-functional (sufficient) specifications are consistent (or not) with
-the necessary specifications."}
+%\james{NEED TO DECIDE ON CONTRIBUTIONS.
+%The contribution of this paper is a specification langauge and
+%semantics that can be used to specify necessary specifications, and a
+%semantics for those specifications that can determine whether some
+%functional (sufficient) specifications are consistent (or not) with
+%the necessary specifications. Also think that we do not do
+%"can determine whether some
+%functional (sufficient) specifications are consistent (or not) with
+%the necessary specifications."}
 
-%Fig.~\ref{fig:nec} shows how we
-%can 
-\sd{Below we} express these two informal \sd{requirements} %assumptions using 
-in \Chainmail.  Rather than %specifying \prg{functions} to  describe
-\sd{specifying} the behaviour of particular methods when they are called, we
-write policies 
-%\sdcomment
-\sophia{Not using \prg{policies}, as we have no synatx for these}  that range across the entire behaviour of the
-component.
+ 
+Below we  express these  informal requirements  %assumptions using 
+through \Chainmail assertions.  Rather than %specifying \prg{functions} to  describe
+specifying the behaviour of particular methods when they are called, we
+write  invariants   that range across the entire behaviour of the
+\prg{Bank}/\prg{Account}  module:
 \vspace{.2cm}
 
 %\begin{figure}[htbp]
 %%\begin{definition}
 %\label{def:pol2}
 
-(1)\ \  $\triangleq$\ \ $\forall \prg{a}:\prg{Account}\ [\ \ \ \  \Changes{\prg{a.balance}}  \ \    
+(1)\ \  $\triangleq$\ \ $\forall \prg{a}:\prg{Account}.\ [\ \  \Changes{\prg{a.balance}}  \ \    
     \longrightarrow \ \    \hfill$ \\
   $\strut \hspace{2.3cm} 
 % \exists \prg{o}.\ [\ \External{\prg{o}} \ \wedge \  \Past{\Calls{\prg{o},\prg{deposit},\_,\_}}   \  \ ] \ \  \ \ ]$
 % External holds implcitlyy
- \exists \prg{o}. [\  \Past{\Calls{\prg{o},\prg{deposit},\prg{a},\_,\_}}\ \vee\  \Past{\Calls{\prg{o},\prg{deposit},\_,\prg{a},\_}} \ ] \ \ ] \hfill $
+ \exists \prg{o}. [\  \Past{\ \Calls{\prg{o}}{\prg{deposit}}{\prg{a}}{\_}{\_} \vee\  \Calls{\prg{o}}{\prg{deposit}}{\_}{\prg{a}}{\_}\ } \ ] \ \ ] \hfill $
 
 \vspace{.4cm}
 
-    (2)\ \  $\triangleq$\ \ $\forall \prg{a}:\prg{Account}\ .\forall \prg{S}:\prg{Set}.\ [  \ \Using{(\Future{\,\Changes{\prg{a.balance}}})\,}{\prg{S}\,}\ \ \   \
+    (2)\ \  $\triangleq$\ \ $\forall \prg{a}:\prg{Account}.\forall \prg{S}:\prg{Set}.\ [    \Using{(\Future{\,\Changes{\prg{a.balance}}})\,}{\prg{S}\,}\ \ \   \
     \longrightarrow$ \\
- $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \  \External{\prg{o}}  \ ] \ \ \ \ ]$
+ $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge\  \External{\prg{o}}  \ \wedge \ \CanAccess{\prg{o}}{\prg{a}}    ] \ \ \ \ ]$
+\vspace{.4cm} 
+ 
+     (3)\ \  $\triangleq$\ \ $\forall \prg{a}:\prg{Account}.\forall \prg{S}:\prg{Set}.\ [ \ \ \ {\Using{(\Future{\ \exists \prg{o}.[\ \External{\prg{o}} \ \wedge\ \CanAccess{\prg{o}}{\prg{a}}]\ })}{\SF}} \  \ \
+    \longrightarrow$ \\
+ $\strut \hspace{3.9cm} \hfill \exists \prg{o}'.\ [\, \prg{o}'\in \prg{S}\  \wedge  \ \External{\prg{o}'}  \ \wedge \ \CanAccess{\prg{o}'}{\prg{a}}   \ ] \ \ \ \ ]$
 
 %\end{definition}
 %\vspace{-.2cm}
@@ -258,115 +222,101 @@ component.
 % \end{figure}
 \vspace{.2cm}
 
-%\sdcomment
-\sophia{We have to explain that the two objects above may be different .}
+We will discuss the meaning of  \Chainmail assertions in more detail in the next sections, but 
+give here a first impression, and discuss (1)-(3):
  
-Policy (1) %in fig.~\ref{fig:nec} says 
-says that if   an account's balance is changed
-($\Changes{\prg{a.balance}}$)
+Assertion (1) %in fig.~\ref{fig:nec} says 
+says that if   an account's balance changes
+($\Changes{\prg{a.balance}}$),
 then there must be some client object \prg{o}
 that in the past (${\Past{...}}$) called the \prg{deposit} method with \prg{a} as a receiver or an an argument 
 ($\Calls{\prg{o}} {\prg{deposit}} {\_} {\_}$).
-%\sdcomment
-\sophia{ We no longer need "which is outside the
-bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)" -- and I have chopped it from
-the spec. This is because of the visible states :-)}
-%\sdcomment
-\sophia{ I propose that we change deposit so that it is called on the account object.}
-
-Policy (2) similarly constrains any possible change to an 
+\sophia{ explain in some later section on that  this assertion implicilty gives   that \prg{o} is external}
+%bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)" -- and I have chopped it from
+%the spec. This is because of the visible states :-)}
+% TODO say later that the object
+ 
+Assertion (2) similarly constrains any possible change to an 
 account's balance: 
-If at some future point the balance changes   (${\Future{...}}$) %(${\Future{\,\Changes{...}}}}$), 
-and if the footprint of the
-execution that brings about this change is the set of objects in \prg{S} (\ie $\Using{...}{\prg{S}}$), then 
-at least one of these objects (\prg{o}) has (direct) access to that account object
+If at some future point the balance changes  (${\Future{\,\Changes{...}}}$),  % (${\Future{...}}$) %
+and if this future change is observed with the configuration restricted to the objects from \SF 
+  (\ie $\Using{...}{\prg{S}}$), then 
+at least one of these objects ($\prg{o}\in\SF$) is external to the \prg{Bank}/\prg{Account} system ($\External{\prg{o}}$) and 
+has (direct) access to that account object
 ($\CanAccess{\prg{o}}{\prg{a}}$).
+Notice that while the change in the \prg{balance} happens some time in the future,
+the external object \prg{o} has access to \prg{a} in the \emph{current} configuration.
+Notice also, that the object which makes the call to \prg{deposit} described in (1), and the object which 
+has access to \prg{a} in the current configuration described in (2) need not be the same:It may well be that the
+latter passes (indirectly) to the former access to \prg{a}, which then   makes the call
+to \prg{deposit}.
+
 % \sdcomment
- \sophia{chopped "but requires that the client object making the call
-has direct access" because a) the spec did not say it, and b) it is not the case.}
+It remains to think about how access to a \prg{Account} may be obtained. This is the remit of assertion (3): 
+Assertion (3) says that if at sometime in the future observed in the configuration restricted to \SF, 
+some object \prg{o} which is external has access to some account \prg{a}, then in the current configuration some object 
+from \SF has access to \prg{a}. Note that \prg{o} and $\prg{o}'$ may but need not be the same object. Note also
+that $\prg{o}'$ has to exists and have access to \prg{a} in the current configuration, but 
+\prg{o} need not exist in the current configuration -- it may be allocated later.
 
+\vspace{.1cm}
 
-A \sd{holistic} specification for the bank account, then,
+A  holistic  specification for the bank account, then,
 would be our original sufficient functional specification from
 fig.~\ref{fig:BankSpec} plus the necessary security policy
-specification in fig.~\ref{fig:necBank}.   \sd{We swill discuss the meaning of the
-policies in more detail in the next section. }
-%\sdcomment
-\sophia{Where shall we say this?}
+specifications (1)-(3) from above. %in fig.~\ref{fig:necBank}.   
 This holistic specification
-permits an implementation of the bank that also meets the \prg{count}
-specification from fig.~\ref{fig:count}, but does not permit an
-implementation that also meets the \prg{steal} specification from
-fig.~\ref{fig:steal}.
-
-%\sdcomment
-\sophia{We no longer need this=/=a}
-
-
-
-\begin{figure}[tbp]
-\begin{lstlisting}[escapeinside=`']
-  specification Robust-Bank {
-
-    policy call-deposit {
-      `$\forall$' a : Account, S : Footprint
-         this != a `$\wedge \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \ \longrightarrow$'
-             `$\exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \Calls{\prg{deposit}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ]$'  
-    }
-
-    policy access-account {
-      `$\forall$' a : Account, S : Footprint
-         this != a `$\wedge \Using{(\Future\Changes{\prg{a.balance}})}{\prg{S}}\ \ \ \longrightarrow$'
-             `$\exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \ \prg{o} \notin\prg{Internal}(\prg{a}) \ ] \ \ \ \ ]$'
-    }
-  }
-\end{lstlisting}
-\caption{Necessary specifications for \prg{deposit} -- James version}
-\label{fig:kjx}
-\end{figure}
-
-\begin{figure}[tbp]
-\begin{lstlisting}[escapeinside=`']
-(1) $\triangleq$  $\forall \prg{a}:\prg{Account}\ [\ \Changes{\prg{a.balance}}  
-    \longrightarrow \ \    \hfill$ 
-  $\strut \hspace{2.3cm} 
-% \exists \prg{o}.\ [\ \External{\prg{o}} \ \wedge \  \Past{\Calls{\prg{o},\prg{deposit},\_,\_}}   \  \ ] \ \  \ \ ]$
-% External holds implcitlyy
- \exists \prg{o}. [\ \Past{\Calls{\prg{o},\prg{deposit},\prg{a},\_,\_}}\ \vee\  \Past{\Calls{\prg{o},\prg{deposit},\_,\prg{a},\_}} \ ]  \ ] \hfill $
-
-(2) $\triangleq$ $\forall \prg{a}:\prg{Account}\ .\forall \prg{S}:\prg{Set}.\ [ \ \Using{(\Future{\,\Changes{\prg{a.balance}}})\,}{\prg{S}\,}
-    \longrightarrow$ 
- $\strut \hspace{3.9cm} \hfill \exists \prg{o}.\ [\, \prg{o}\in \prg{S}\ \wedge \ \CanAccess{\prg{o}}{\prg{a}}\ \wedge  \  \External{\prg{o}}  \ ]  \ ] \hfill $
-\end{lstlisting}
-
-\caption{Necessary specifications for \prg{deposit} -- Sophia's version}
-\label{fig:necBank}
-\end{figure}
-
-
-
-We can then prove that e.g.\ the \prg{steal} method from
-fig.~\ref{fig:steal} is inconsistent with both of these policies.
+permits an implementation of the bank that also provides  \prg{count}
+and \prg{notify} methods,  but does not permit an
+%specification from fig.~\ref{fig:count},
+implementation that also provides the \prg{steal} method.
+\sophia{We said this earlier, do we repeat?} 
 First, the \prg{steal} method clearly changes the balance of
 every account in the bank, but policy (1) requires that any method
 that changes the balance of any account must be called \prg{deposit}.
 Second, the \prg{steal} method changes the balance of every account in
-the system, and will do so without the called having a reference to
-most of those accounts, which breaches policy (2).   Note
-that \prg{steal} putting all the funds into the thief's account
-does not breach policy (2) with respect to the thief's own account,
-because that account is passed in as a parameter to the \prg{steal}
-method, and so the called of the \prg{steal} must have access to that
-account.
+the system, and will do so without the caller having a reference to
+most of those accounts, thus breaching policy (2).   
+% SD chopped. unnecessary
+%Note that \prg{steal} putting all the funds into the thief's account
+%does not breach policy (2) with respect to the thief's own account,
+%because that account is passed in as a parameter to the \prg{steal}
+%method, and so the called of the \prg{steal} must have access to that
+%account.
+ 
+Assertion (3) gives essential protection when dealing with foreign, untrusted code.
+ \sophia{I like the story of this paragraph. Please make more eloquent.}
+\sophia{Assertion (3) is a corollary of (2), and thus actually superfluous -- do we say that?
+Do we way the story just using (2)?}
+When an \prg{Account} is given out to untrusted third parties, assertion (3) guarantees that
+this \prg{Account} cannot be used to obtain access to further  \prg{Account}s. 
+Thus, if the \prg{ACM} does not trust the \prg{author}, it will not pass to them \prg{acm\_acc}, which
+contains all of \prg{ACM}'s money. Instead, it will pass a secondary, empty account, \prg{acm\_aux},
+into which the \prg{author}  will pay her fee, and from which the \prg{ACM} will transfer the money
+back into the main \prg{acm\_acc}. Assertion (3) is crucial, because it guarantees that even 
+if the \prg{author} were malicious, she could not use  \prg{acm\_aux} to obtain access to
+ \prg{acm\_acc} or any other account. %, to which she did not have access.
 
 
-\paragraph{random minor point}
+ 
+\vspace{.1cm} 
 
-These necessary specification policies
-can be defined and interpreted independently of any particular
-implementation of a specification --- rather our policies constrain
-implementations, in just the same way as traditional functional
-specifications.  This is in contrast to e.g.\ class invariants, which
-establish invariants across the implementation of an abstract, or
-abstraction functions, which link an abstract model to a concrete
-implementation of that model. 
+In summary, our  necessary specifications are invariants that describe the
+behaviour of a module as observed from its clients. 
+These invariants are (usually) independent of the concrete implementation --
+in fact, in section XXX\sophia{TO ADD} we show two very different implementations
+of the \prg{Bank}/\prg{Account} specification which also satisfy (1)-(3).
+Our invariants 
+ can talk about space, time and control, and thus go beyond
+%can be defined and interpreted independently of any particular
+%implementation of a specification --- rather our policies constrain
+%implementations, in just the same way as traditional functional
+%specifications. 
+ %This is in contrast to e.g.\ 
+ class invariants, which can only
+talk   about relations between the  values of the fields state of the objects.
+\sophia{This is james' original point, made a bit more concrete. Please check whether it makes sense.}
+% of a module.
+% invariants across the implementation of an abstract, or
+% abstraction functions, which link an abstract model to a concrete
+% implementation of that model. 
