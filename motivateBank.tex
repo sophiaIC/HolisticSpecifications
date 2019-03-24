@@ -4,7 +4,7 @@ guaranteed to do.
 So long as a method is called in a state satisfying
 its preconditions, the method will complete its work and establish a
 state satisfying its postconditions.  
-Thus, the pre-condition and the method call together form a \emph{sufficient}
+Thus, the precondition and the method call together form a \emph{sufficient}
 condition for the method's effect.
 % SD The below is wrong:
 % Method specifications thus
@@ -14,8 +14,8 @@ condition for the method's effect.
 As a motivating example, we consider a simplified banking application,
 with objects representing \prg{Account}s or \prg{Bank}s. 
 As in \cite{ELang},   \prg{Account}s belong to \prg{Bank}s and hold money (here \prg{balance}s);  
-with access  to two \prg{Account}s of the same  \prg{Bank} on can  transfer any amount of money from
-the one to the other.  We give a traditional specification in Figure \ref{fig:BankSpec}.
+with access  to two \prg{Account}s of the same  \prg{Bank} one can  transfer any amount of money from
+ one to the other.  We give a traditional specification in Figure \ref{fig:BankSpec}.
 
 \begin{figure}[htbp] 
 \begin{lstlisting}
@@ -39,14 +39,15 @@ the one to the other.  We give a traditional specification in Figure \ref{fig:Ba
 \label{fig:BankSpec}
 \end{figure} 
 
-The PRE-condition of \prg{deposit} requires that  the receiver and the first argument  (\prg{this}, \prg{scr}) are \prg{Account}s
+The PREcondition of \prg{deposit} requires that  the receiver and the first argument  (\prg{this}, \prg{scr}) are \prg{Account}s
 and belong to the same bank,
 that \prg{amt} is a number, and that \prg{src} holds at leat \prg{amt} moneys.
-The POST-condition mandates that \prg{amt} has been transferred from \prg{src} to the receiver.
+The POSTcondition mandates that \prg{amt} has been transferred from \prg{src} to the receiver.
  The function \prg{makeNewAccount} specified below returns a fresh \prg{Account} with the same bank, and transfers \prg{amt}
  from the receiver \prg{Account} to the new \prg{Account}.
  Finally, the function \prg{newAccount} when run by a \prg{Bank} creates a new \prg{Account} with corresponding 
- amount of money in it.
+ amount of money in it. 
+ \se{As specified in our \prg{BankSpec} the only way to put money into the \prg{Bank} is with a call to \prg{newAccount} and there is no way to remove money from the \prg{Bank}.}
 
 
  
@@ -59,16 +60,15 @@ The POST-condition mandates that \prg{amt} has been transferred from \prg{src} t
 With such a specification %it is enough%to let us
 %calculate the result of operations on the accounts ---
 %for example % it is straightforward to determine that 
-the code below  satisfies the assertion: assuming that 
-\prg{acm\_acc} and \prg{auth\_ascc} are \prg{Account}s, and  \prg{acm\_acc} has a balance of 10,000 before an author is
+\susan{ Can I switch assume to pre and assertion to post?}
+the code below  satisfies its assertion: assuming that 
+\prg{acm\_acc} and \prg{auth\_acc} are \prg{Account}s, and  \prg{acm\_acc} has a balance of 10,000 before an author is
 registered, then afterwards it will have a balance of 11,000 while the
-\prg{auth\_acc}'s balance  will be f 500 from a starting balance of 1,500
+\prg{auth\_acc}'s balance  will be 500 from a starting balance of 1,500
 (barely enough to buy a round of drinks at the conference hotel bar).
 
-
-
 \begin{lstlisting}
-  assume acm_acc,auth_scc: Account $\wedge$ acm_acc.balance=10000 $\wedge$  auth_acc.balance=1500
+  assume acm_acc,auth_acc: Account $\wedge$ acm_acc.balance=10000 $\wedge$  auth_acc.balance=1500
   acm_acc.deposit(auth_acc,1000)
   assert acm_acc.balance=11000  $\wedge$ auth_acc.balance=500
 \end{lstlisting}
@@ -83,21 +83,21 @@ open world, however, things are more complex: our systems will be made
 up of a range of modules, many of which we do not control; and
 furthermore will have to interact with external systems which we
 certainly do not control.  Returning to our author, say some time
-after registering by executing the code from earlier, they
+after registering by executing the \prg{deposit} code above, they
 attempt to pay for a round at the bar.  Under what circumstances can
 they be sure they have enough funds in their account?
 
 To see the problem, what if the bank provided a \prg{steal} method that 
- emptied out every account in the bank and put  them into a thief's account?
+ emptied out every account in the bank into a thief's account \se{(also in the \prg{Bank})}?
 %all their funds into the thief's account.
 %consider the additional function specified below.
 % The bank additionally provides a
 %\prg{steal} method that empties out every account in the bank and puts
 %all their funds into the thief's account. 
 If this method existed and
-if it was somehow called between registering at the conference and
+if it were somehow called between registering at the conference and
 going to the bar, then the author (actually everyone using the same bank)
-woud find all their accounts empty (except the thief, of course).
+would find an empty account (as would every other account holder other than the thief, of course).
 %
 
 %\vspace{-2in}
@@ -110,7 +110,7 @@ woud find all their accounts empty (except the thief, of course).
 %\vspace{-2in}
  
 The critical problem is that a bank implementation including a \prg{steal}
-method would meet the functional specifications of the bank from
+method would meet the functional specification of the bank from
 fig.~\ref{fig:functionalSpecBankAccount}, so long as the methods \prg{deposit},
 \prg{makeNewAccount}, and \prg{newAccount}    meet
 their specification.
@@ -122,9 +122,9 @@ implementations that meet the functional specification exactly,
 \emph{with no extra methods or behaviour}, are considered as suitable
 implementations of the functional specification. The problem is that
 this solution is far too strong: it would for example rule out a bank
-that  during maintenance was given a new method \prg{deposit}
-that simply counted the number of deposits that had taken place,
-or a bank which occasionally sent notifications  to its customers.
+that  during software maintenance was given a new method \prg{count}
+that simply counted the number of deposits that had taken place, or a method \prg{notify}
+to enable the bank to occasionally send notifications  to its customers.
 % occasionally paid interest to its clients.
 %i.e. met fig.~\ref{fig:extras} as well as fig.~\ref{fig:BankSpec}.
 %
@@ -161,7 +161,7 @@ additional specifications that capture those assumptions.  The following
 %  \sophia{I think that is what we say below}
 \item An account's balance can \emph{only} be changed if a client has
   that particular account object.
-\item Accounts and Banks are not leaked.   
+\item Neither accounts nor banks can leak money.   \susan{ I changed what you had in point 3 because it didn't make sense in context. I don't think what I put is what you were saying is it? Did you want to say something like 'There is no way that references to either accounts or banks can be passed to third parties?}
 \end{enumerate}
 
 Compared with the functional specification we have seen so far, these
@@ -172,7 +172,7 @@ that the particular account object can be passed as a parameter to
 that method. The  function 
 \prg{steal} is inconsistent with requirement  (1), as it reduces the balance of an \prg{Account} without calling the
 function \prg{deposit}. 
-However, requirement  (1) is not enough to protect our money. We need to (2) avoid that an \prg{Account}'s balance is
+However, requirement  (1) is not enough to protect our money. We need to (2) to avoid an \prg{Account}'s balance getting
 modified without access to the particular \prg{Account}, and (3) ensure that such accesses are not leaked. 
 
 %\james{NEED TO DECIDE ON CONTRIBUTIONS.
@@ -247,7 +247,7 @@ has (direct) access to that account object
 Notice that while the change in the \prg{balance} happens some time in the future,
 the external object \prg{o} has access to \prg{a} in the \emph{current} configuration.
 Notice also, that the object which makes the call to \prg{deposit} described in (1), and the object which 
-has access to \prg{a} in the current configuration described in (2) need not be the same:It may well be that the
+has access to \prg{a} in the current configuration described in (2) need not be the same: It may well be that the
 latter passes (indirectly) to the former access to \prg{a}, which then   makes the call
 to \prg{deposit}.
 
@@ -255,8 +255,8 @@ to \prg{deposit}.
 It remains to think about how access to a \prg{Account} may be obtained. This is the remit of assertion (3): 
 Assertion (3) says that if at sometime in the future observed in the configuration restricted to \SF, 
 some object \prg{o} which is external has access to some account \prg{a}, then in the current configuration some object 
-from \SF has access to \prg{a}. Note that \prg{o} and $\prg{o}'$ may but need not be the same object. Note also
-that $\prg{o}'$ has to exists and have access to \prg{a} in the current configuration, but 
+from \SF~has access to \prg{a}. Note that \prg{o} and $\prg{o}'$ may but need not be the same object. Note also
+that $\prg{o}'$ has to exist and have access to \prg{a} in the current configuration, but 
 \prg{o} need not exist in the current configuration -- it may be allocated later.
 
 \vspace{.1cm}
@@ -290,11 +290,11 @@ Assertion (3) gives essential protection when dealing with foreign, untrusted co
 Do we way the story just using (2)?}
 When an \prg{Account} is given out to untrusted third parties, assertion (3) guarantees that
 this \prg{Account} cannot be used to obtain access to further  \prg{Account}s. 
-Thus, if the \prg{ACM} does not trust the \prg{author}, it will not pass to them \prg{acm\_acc}, which
-contains all of \prg{ACM}'s money. Instead, it will pass a secondary, empty account, \prg{acm\_aux},
-into which the \prg{author}  will pay her fee, and from which the \prg{ACM} will transfer the money
+Thus, if the \prg{ACM} does not trust \prg{author}s, it will not pass them access to \prg{acm\_acc}, which
+contains all of the \prg{ACM}'s money. Instead to receive money, it will pass a secondary, empty account, \prg{acm\_aux},
+into which an \prg{author}  will pay the fee, and from which the \prg{ACM} will transfer the money
 back into the main \prg{acm\_acc}. Assertion (3) is crucial, because it guarantees that even 
-if the \prg{author} were malicious, she could not use  \prg{acm\_aux} to obtain access to
+malicious \prg{author}s  could not use  \prg{acm\_aux} to obtain access to
  \prg{acm\_acc} or any other account. %, to which she did not have access.
 
 
@@ -302,7 +302,7 @@ if the \prg{author} were malicious, she could not use  \prg{acm\_aux} to obtain 
 \vspace{.1cm} 
 
 In summary, our  necessary specifications are invariants that describe the
-behaviour of a module as observed from its clients. 
+behaviour of a module as observed by its clients. 
 These invariants are (usually) independent of the concrete implementation --
 in fact, in section XXX\sophia{TO ADD} we show two very different implementations
 of the \prg{Bank}/\prg{Account} specification which also satisfy (1)-(3).
@@ -314,7 +314,7 @@ Our invariants
 %specifications. 
  %This is in contrast to e.g.\ 
  class invariants, which can only
-talk   about relations between the  values of the fields state of the objects.
+talk   about relations between the  values of the fields of the objects.
 \sophia{This is james' original point, made a bit more concrete. Please check whether it makes sense.}
 % of a module.
 % invariants across the implementation of an abstract, or
