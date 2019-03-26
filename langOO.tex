@@ -22,10 +22,9 @@ consist of field and method definitions.
 Note that \LangOO is untyped. Method bodies consist of sequences of statements;
 these can be field read or field assignments, object creation, method calls, and return statements.
 All else, \eg booleans, conditionals, loops,  can be encoded.
-
-Note also that field read or write is only allowed if the target object is \prg{this} -- as, \eg,
-  in Smalltalk -- this is encapsulation: the syntax allows an object to read/write its own fields, but
-   forbids it from reading/writing any other object's fields. 
+Field read or write is only allowed \sd{if the object whose field is being read 
+belongs to the same class as the current method. This is enforced by the operational semantics, \cf
+Fig.  \ref{fig:Execution}.}
 
 \label{sec:syntax:classes}
 
@@ -33,7 +32,7 @@ Note also that field read or write is only allowed if the target object is \prg{
 \begin{definition}[Classes]
 \label{def:syntax:classes}
 We define the syntax of class descriptions below.
-
+ 
 \begin{tabular}{lcll}
  \syntax{ClassDescr}   &   \BBC  &     \kwN{class}  \syntax{ClassId}    \lb\,  $($\ \kw{field} \f\ $)^*$ \
  $($  \kwN{method}\ \syntax{MethBody}\ $)^*$   \ \rb
@@ -44,10 +43,10 @@ We define the syntax of class descriptions below.
  \\
  \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
 \syntax{Stmt}    &\BBC&
-       \kw{this}.\f {\kw{:=}} \x   ~\SOR~  \x{\kw{:=}}  \kw{this}.\f    ~\SOR~        \x  {\kw{:=}} \x.\m\lp \x$^*$\rp  \\
+      \x.\f {\kw{:=}} \x   ~\SOR~  \x{\kw{:=}}  \x.\f    ~\SOR~        \x  {\kw{:=}} \x.\m\lp \x$^*$\rp  \\
        & &    ~\SOR~     \x  {\kw{:=}}     \newKW\, \c\,\lp \x$^*$\rp   ~\SOR~
    \returnKW \,  \x   \\
- \x, \f, \m &\BBC&  \prg{Identifier}
+ \x, \f, \m &\BBC&  \prg{Identifier}, \ \  \x includes \this
  \end{tabular}
 
   \vspace{.03in}
@@ -118,7 +117,8 @@ Runtime configurations, $\sigma$, are pairs of stacks and heaps, $\sigma\ ::=\ (
 \end{definition}
 
 
-Note that values may be sets of addresses. Such values are never part of the execution of \LangOO, but are used to give semantics to assertions -- we shall see that in Definition \ref{def:valid:assertion}.
+Note that values may be sets of addresses. Such values are never part of the execution of 
+\LangOO, but are used to give semantics to assertions -- we shall see that in Definition \ref{def:valid:assertion}.
 
 
 
@@ -156,6 +156,8 @@ $\interp {\x}{(\phi\cdot\psi,\chi)} $ $\triangleq$ $\interp {\x}{\phi} $
 $\interp {\this.\f}{(\phi\cdot\psi,\chi)} $ $\triangleq$ $\interp  {\this.\f}{(\phi,\chi)} $
 \item
 $\ClassOf {\alpha} {(\psi,\chi)} $ $\triangleq$ $\ClassOf {\alpha} {\chi} $
+\item
+$\ClassOf {\x} {\sigma} $ $\triangleq$ $\ClassOf {\interp {\x}{\sigma}} {\sigma} $
 \end{itemize}
 
 \end{definition}
@@ -198,18 +200,18 @@ $\begin{array}{l}
 
 \\ \\
 \inferenceruleNN {varAssgn\_OS} {
- \phi.\prg{contn} \ = \ \x  {\kw{:= }}   \this.\f \ \semi \prg{Stmts}
+ \phi.\prg{contn} \ = \ \x  {\kw{:= }}  \y.\f \ \semi \prg{Stmts}\ \hspace{2cm} \ClassOf {\y} {\sigma} =\ClassOf {\this} {\sigma}
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{contn} \mapsto \prg{Stmts}, \x\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{contn} \mapsto \prg{Stmts}, \x\mapsto \interp{\y.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
 }
 \\
 \\
 \inferenceruleNN{fieldAssgn\_OS} {
- \phi.\prg{contn}\ =\  \this.\f  \kw{:=} \x  \semi \prg{Stmts}
+ \phi.\prg{contn}\ =\  \x.\f  \kw{:=} \y  \semi \prg{Stmts} \hspace{2cm} \ClassOf {\x} {\sigma} =\ClassOf {\this} {\sigma}
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{contn}\mapsto  \prg{Stmts} ] \cdot\psi, \chi[\interp{\this}{\phi},\f \mapsto \interp{\x}{\phi,\chi}]\  )
+ \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{contn}\mapsto  \prg{Stmts} ] \cdot\psi, \chi[\interp{\x}{\phi},\f \mapsto \interp{\y}{\phi,\chi}]\  )
 }
 \\
 \\
@@ -311,9 +313,9 @@ under consideration makes  a certain guarantee when executed in conjunction with
  %We use the concept of module linking in order to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know.
 We place some conditions for module linking to be defined: We require that the two modules do not contain implementations for the same class identifiers,
 
-%\secomment{where does the aux come from? I think what you said in the fragment calculus about disjointedness is neater \sd{aux is defined in last line of Def. below. In the Frag Calculus the modules were not mappings, so we did not need something like aux; any idea how to avoid?}}
-\susan{where does the aux come from? I think what you said in the fragment calculus about disjointedness is neater} 
-\sophia{aux is defined in last line of Def. below. In the Frag Calculus the modules were not mappings, so we did not need something like aux; any idea how to avoid?}
+%SD removed the below as I think it is settled.
+%\susan{where does the aux come from? I think what you said in the fragment calculus about disjointedness is neater} 
+%\sophia{aux is defined in last line of Def. below. In the Frag Calculus the modules were not mappings, so we did not need something like aux; any idea how to avoid?}
 
 
 \begin{definition}[Module Linking]
