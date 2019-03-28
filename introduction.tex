@@ -4,26 +4,33 @@ corporate information to software which works in an \emph{open} world,
 where  it interacts with % a vast number of
 third party software of unknown provenance, possibly buggy and potentially malicious.
 
-Thus, we expect and hope that our software will be \emph{robust}:
-We expect and hope our software to behave correctly even if  used 
-by erroneous or malicious third parties. Robustness means 
-something different for different software.\susan{I put in the ERC20 citation but I don't see what that has to do with banks authorising payments}
+This means we need our software to be \emph{robust}.
+We expect software to behave correctly even if  used 
+by erroneous or malicious third parties.
+\susan{I put in the ERC20 citation but I don't see what that has to do with banks authorising payments}
  We expect that our bank will only make payments 
-from our account if instructed by us or somebody authorized\cite{ ERC20}, 
-and that  space on a web given to an advertiser will not be used
-to obtain access to our bank details\cite{cwe}. 
+from our account if instructed by us, or by somebody we have authorized \cite{ERC20}, 
+that space on a web given to an advertiser will not be used
+to obtain access to our bank details \cite{cwe}, or that a given
+airline seat will only be sold once. 
 
 The importance of robustness has lead to the design of many programming
 language mechanisms which help write robust programs:
-constant fields or methods, private methods/fields, ownership\cite{ownalias}
+constant fields, private methods, ownership\cite{ownalias}
 as well as the object capability paradigm\cite{MillerPhD},
 and its adoption in  web systems
 \cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14} and programming languages such as Newspeak
 \cite{newspeak17}, Dart \cite{dart15}, Grace \cite{grace,graceClasses}, Wyvern \cite{wyverncapabilities}.
 
 While such programming language mechanisms make it \textit{possible} to write robust
-programs, they cannot \textit{ensure} that programs are robust. 
-To be able to do this, we need ways to specify what robustness means for the 
+programs, they cannot \textit{ensure} that programs are robust.
+Ensuring robustness is difficult because it means 
+different things for different systems: perhaps
+that critical operations should only be invoked with the requisite authority;
+perhaps that sensitive personal information should not be leaked; 
+or perhaps that resources belonging to one user should not be consumed by another.
+%
+To be able to ensure robustness, we need ways to specify what robustness means for the 
 particular program, and ways to demonstrate that the particular program 
 adheres to its specific robustness requirements.
 
@@ -32,13 +39,15 @@ functional correctness of programs. Such specifications describe what are
 essentially \emph{sufficient} conditions for some
 effect to happen. For example, if you make a payment request to your bank, money will be transferred
 and as a result your funds will be reduced: the payment request is a sufficient condition for the
-reduction of funds. However, a bank client is also interested in \emph{necessary} conditions:
+reduction of funds. A bank client is also interested in \emph{necessary} conditions:
 they want to be assured that no reduction in their funds will take place unless they themselves
 requested it.
 
 Necessary conditions are essentially about things that will  \emph{not} happen. For example,
-there  will be no reduction to the account's funds without the owner's explicit request: the request being made by
-the owner is the necessary condition - under no other circumstances will the funds be reduced.
+if there should be no reduction to an account's funds without the
+owner's explicit request, then that request being made by
+the owner is the necessary condition for reducing funds - under no
+other circumstances will the funds be reduced. 
 
 We give a visual representation of the difference between sufficient and necessary conditions in 
 Fig. \ref{fig:NecessaryAndSuff}. We
@@ -80,35 +89,58 @@ sufficient  spec.& & necessary spec. & & holistic spec.
  \label{fig:NecessaryAndSuff}
  \end{figure}
  
- We propose that  necessary conditions should be explicitly stated. Specifications should be \emph{holistic}, in the sense that they describe the  overall behaviour of a module: not only the behaviour of each of its functions separately, but also 
- emerging behaviours through combination of functions.
-% Necessary conditions are  depicted by the black
-% triangles in the middle  diagram in Fig \ref{fig:NecessaryAndSuff}.
-A holistic specification should therefore consist of   the sufficient as well as the necessary conditions, as  
+ We propose that  necessary conditions should be stated
+ explicitly. Specifications should be \emph{holistic}, in the sense
+ that they describe the  overall behaviour of a module: not only the
+ behaviour of each individual functions, but also the 
+ behaviour that emerges through combinations of functions.
+
+Holistic specifications should therefore consist of   the sufficient as well as the necessary conditions, as  
 depicted in right hand side  diagram in Fig. \ref{fig:NecessaryAndSuff}.
-\se{When our module which has been specified holistically, executes, possibly interacting with other software, the behaviours represented by the black triangles cannot occur.}
+When a component has been specified holistically,  the behaviours
+represented by the black triangles cannot occur, even when the
+component interacts with other software of unknown provenance.
 In Section \ref{sec:discussion} we argue why necessary conditions are more than the complement of
 sufficient conditions.
 
 Necessary conditions are guarantees upheld throughout program execution.
-Other systems which give such ``permanent'' guarantees are  type systems, 
-\susan{I would stop after the first sentence - the other points perhaps in related work}
-which ensure that well-formed programs  always produce well-formed runtime
-configurations, or information flow control systems \cite{infoflow}, which ensure that values 
-classified as high  will not be passed into contexts classified as low. 
-Such  guarantees %made by types or information flow control
- are  practical to check, but   too coarse grained
-for the purpose of fine-grained,  module-specific specifications. 
+In this way, 
+necessary conditions are closer to monitor or object
+invariants \cite{Hoare74,Meyer97}. The difference between 
+classical invariants and our holistic specifications is that classical invariants can only reflect  on
+the current program state (\ie the contents of the
+stack frame and the heap for an individual program component) while
+holistic specifications reflect on all aspects of a program's
+execution, potentially across all the components making up that program.
 
-Necessary conditions are  akin to monitor or object invariants\cite{Hoare74,Meyer97}. The difference between
-these and our holistic specifications is that object/monitor invariants can only reflect  on
-the current state (\ie the contents of the
-stack frame and the heap), while  holistic specifications reflect on all aspects of execution.
 
-In this paper we propose \Chainmail, a specification language to express holistic specifications. \Chainmail extends 
-traditional program specification languages\cite{Leavens-etal07,Meyer92}, with features which talk about:
+In this paper we propose \Chainmail, a specification language to
+express holistic specifications.
+\kjx{has moved things around through here}
+The design of \Chainmail was guided by the study of a sequence of
+examples from the OCAP literature and the smart contracts world: the
+membrane, the DOM, the Mint/Purse, the Escrow, the DAO and
+ERC20 \cite{cite-all-these-yet-again}.  As we worked through the
+examples, we found a small set of language constructs that let us
+write holistic specifications across a range of different contexts.
+%
+%
+While many individual features of \Chainmail can be found in other work, 
+their power and novelty for specifying open systems lies in their careful combination.
+%\sdcomment
+\sophia{ I think that James does not like this sentence. What could we say instead? Also, we need to
+stress that the selection of these features was not arbitrary.}
+\kjx{no, it's OK}
+%
+In particular, \Chainmail extends 
+traditional program specification languages\cite{Leavens-etal07,Meyer92} with features which talk about:
 
-\susan{These features sort of come from nowhere, so I wonder whether we even want them in the introduction. I think if you do then something more about open systems, (that what is critical is controlling access from foreign code and that you need to be able to talk about that in the specification language) should come first.}
+\susan{These features sort of come from nowhere, so I wonder whether
+we even want them in the introduction. I think if you do then
+something more about open systems, (that what is critical is
+controlling access from foreign code and that you need to be able to
+talk about that in the specification language) should come
+first.}\kjx{jI tried to link them in a bit more}
 \begin{description}
 \item[Permission] Which object may have access to which other objects. 
 Accessibility is central since access to an object usually also grants access to the functions it provides.
@@ -125,25 +157,18 @@ related to, but different from memory footprints and separation logics.
 \item[Time] Assertions about the past or the future.
 \end{description}
 
-The design of \Chainmail was guided by the study of a sequence of examples from the OCAP literature and the 
-smart contracts world: the membrane, the DOM, the Mint/Purse, the Escrow, the DAO and ERC20. 
-We were satisfied to see that the same concepts were used to specify examples from  different contexts.
-Holistic assertions often have the form of a guarantee
- that if some property ever holds in the future, then some other property holds now.
+
+\kjx{moved around --- not sure we need this para}
+Formally, holistic assertions typically have the form of a guarantee
+that if some property ever holds in the future, then some other property holds now.
 For example, if within a certain heap some change is possible in the future, then this particular heap contains 
 at least one object which has access to a specific other, privileged object.
-%
-While many individual features of \Chainmail can be found also in other work, 
-we argue that their power and novelty for specifying open systems lies in their careful combination.
-%\sdcomment
-\sophia{ I think that James does not like this sentence. What could we say instead? Also, we need to
-stress that the selection of these features was not arbitrary.}
- 
 A module satisfies such a holistic assertion if, for all other modules,
   the assertion is satisfied  in all runtime configurations reachable through execution of the two modules combined.
   This reflects the open-world view.
-  
-The contributions of this paper are:
+
+
+\noindent The contributions of this paper are:\kjx{can we claim each of these?}
 \begin{itemize}
 \item the design of the holistic specification language \Chainmail,
 \item the semantics of \Chainmail,
@@ -154,4 +179,4 @@ The contributions of this paper are:
   
 The rest of the paper is organized as follows: Section~\ref{sect:motivate:Bank} 
 motivates our work in terms of an example. Sections~\ref{sect:LangOO} contain a formal definition of \LangOO, and Section~\ref{sect:assertions} the semantics of assertions. Section ... related work .... Section xxxx concludes.
-
+\kjx{TODO AT THE END}
