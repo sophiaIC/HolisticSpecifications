@@ -3,8 +3,8 @@
 \subsection{Modules and Classes}
 \label{secONE}
 
-\LangOO programs are described through modules, which are repositories of code. Since we study class based oo languages,
-code is represented as classes, and  modules are mappings from  identifiers to class  descriptions.
+\LangOO programs consist of modules, which are repositories of code. Since we study class based oo languages,
+in this work, code is represented as classes, and  modules are mappings from  identifiers to class  descriptions.
 
 \begin{definition}[Modules]
 \label{defONE}
@@ -18,13 +18,23 @@ We define $\syntax{Module}$ as  the set of mappings from identifiers to class de
 \end{definition}
  
 Classes, as defined   below,
-consist of field and method definitions.
-Note that \LangOO is untyped. Method bodies consist of sequences of statements;
+consist of field, method definitions and ghost field declarations.
+ \LangOO is untyped, and therefore fields are declared without types, 
+ and method signatures consist of  sequences of parameters without types, and no return type.
+ Method bodies consist of sequences of statements;
 these can be field read or field assignments, object creation, method calls, and return statements.
 All else, \eg booleans, conditionals, loops,  can be encoded.
 Field read or write is only allowed \sd{if the object whose field is being read 
 belongs to the same class as the current method. This is enforced by the operational semantics, \cf
 Fig.  \ref{fig:Execution}.}
+\sd{Ghost fields are defined as implicit, sideeffect-free functions with zero or more parameters. They are ghost information, \ie 
+they are not directly stored in the objects, and are not read/written during execution. When such a ghostfield is
+mentioned in an assertion, the corresponding function is evaluated. More in XXX. \sophia{TODO}.
+Note that the expressions that consist the bodies of ghostfield declarations (\prg{e}) are more complex than the terms that 
+appear in
+individual statements.}
+
+From now on we expect that the set of field and the set of ghostfields defined in a class are disjoint.  
 
 \label{sec:syntax:classes}
 
@@ -59,8 +69,7 @@ Class descriptions consist of field declarations, method declarations, and ghost
 \end{definition}
 
 
-We define a method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class \c\ and a method identifier \m.
-
+We define a method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class \c\ and a method identifier \m, and similarly a ghostfield lookup function, $\mathcal{G}$ 
 
  \begin{definition}[Lookup] For a class identifier \prg{C}  and a method identifier \prg{m} : $ ~ $ \\
 
@@ -69,12 +78,21 @@ $
 \Meths {} {\prg{C}} {m}       \triangleq  \ \left\{
 \begin{array}{l}
                         \m\, \lp \p_1, ... \p_n \rp \lb Stmts   \rb\\
-\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...   \kwN{method}\ ...\  \m\, \lp \p_1, ... \p_n \rp \lb Stmts  \rb  ... \ \rb.
+\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...   \kwN{method}\, \m\, \lp \p_1, ... \p_n \rp \lb Stmts  \rb  ... \ \rb.
 \\
 \mbox{undefined},  \ \ \ \mbox{otherwise.}
 \end{array}
                     \right.$
-
+\\
+$
+{\mathcal G} (\M, {\prg{C}}, {\f})    \ \   \triangleq  \ \left\{
+\begin{array}{l}
+                        \f\, \lp \p_1, ... \p_n \rp \lb \prg{e}  \rb\\
+\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...   \kwN{ghost}  \m\, \lp \p_1, ... \p_n \rp \lb \prg{e}  \rb  ... \ \rb.
+\\
+\mbox{undefined},  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.$
   \end{definition}
 
 \subsection{The Operational Semantics of \LangOO}
@@ -189,14 +207,14 @@ we use $\chi[\alpha,\f \mapsto v]$ as a shorthand for updating the object, \ie $
 $\begin{array}{l}
 \inferenceruleNN {methCall\_OS} {
 \\
-\phi.\prg{contn}\ =\ \x {\kw{:= }} \x_0.\m \lp \prg{par}_1, ... \prg{par}_n \rp \semi \prg{Stmts}
+\phi.\prg{contn}\ =\ \x {\kw{:= }} \x_0.\m \lp \x_1, ... \x_n \rp \semi \prg{Stmts}
 \\
 \interp{\x_0}{\phi} = \alpha
 \\
-\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp par_1, \ldots par_n \rp \lb \prg{Stmts}_1   \rb
+\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp \p_1, \ldots \p_n \rp \lb \prg{Stmts}_1   \rb
   \\
  \phi''\ =\  (\  \prg{Stmts}_1,\ \ (\ \this \mapsto \alpha,
-  \prg{par}_1 \mapsto  \interp{\x_1}{\phi}, \ldots \prg{par}_n \mapsto  \interp{\x_n}{\phi}\ ) \ )
+  \p_1 \mapsto  \interp{\x_1}{\phi}, \ldots \p_n \mapsto  \interp{\x_n}{\phi}\ ) \ )
 }
 {
  \M,\, (\ \phi\cdot\psi,\ \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot\phi[\prg{contn}\mapsto\x  \kw{:=} \bullet \semi \prg{Stmts}] \cdot\psi,\ \chi\ )
@@ -293,6 +311,7 @@ Execution of a statement has the form $\M, \sigma \leadsto \sigma'$, and is defi
 ~ \\
 ~ \\
 ~ \\
+~ \\
  \M,\,  \sigma, \SE \ \hookrightarrow_\SAF\   \alpha \\
  \sigma(\alpha,\f)=v
 }
@@ -306,13 +325,13 @@ Execution of a statement has the form $\M, \sigma \leadsto \sigma'$, and is defi
 \\
  \M,\, \sigma, \SE_i  \ \hookrightarrow_{\SAF_i}\   v_i\ \ \ \ i\in\{1..n\}
  \\
-{\mathcal{G}}host
+{\mathcal{G}}
 (\M, {\ClassOf {\alpha} {\sigma}}, {\f}) \  =  
 \ \f\lp \prg{par}_1, \ldots \prg{par}_n \rp \lb\ \SE \ \rb
   \\
-  \M,\, \sigma[\prg{par}_1\mapsto v_1, .... \prg{par}_n\mapsto v_n], \SE    \hookrightarrow_{\SAF}\   v 
+  \M,\, \sigma[\p_1\mapsto v_1, .... \p_n\mapsto v_n], \SE    \hookrightarrow_{\SAF}\   v 
   \\
-  \SAF,\ \SAF_i,\ \{ \, (\alpha, \f)\,  \}\  \ \mbox{are all disjoint}
+  \SAF,\ \SAF_i,\ \{ \, (\alpha, \f)\,  \}\  \ \mbox{are all disjoint for} \ i\in\{1..n\}
   \\
   \SAF' =  \SAF\cup\SAF_1 \cup \ldots \cup \SAF_n \cup \{ \alpha, \f \}
 }
@@ -363,7 +382,7 @@ Execution of a statement has the form $\M, \sigma \leadsto \sigma'$, and is defi
 \end{array}
 \end{array}
 $}
-\caption{The Value of Simple Expressions, where we take $\SE.\f$  as a shorthand for $\SE.\f\lp\ \rp$}
+\caption{The Value of Simple Expressions, where we take $\SE.\f$  is a shorthand for $\SE.\f\lp\ \rp$}
 \label{fig:ValueSimpleExpressions}
 \end{figure*}
 
