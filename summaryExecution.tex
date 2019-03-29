@@ -1,31 +1,37 @@
- %\newcommand{\appref}[1]{, c.f. App. Def.\ref{#1}}
+\renewcommand{\appref}[1]{, c.f. Appendix, Def.\,\ref{#1}}
  
  
 As was have already seen, \Chainmail assertions not only talk about the contents of the current state (stack frame and heap),
-but they also talk about future and past states, Therefore, the meaning to \Chainmail assertions depends on the underlying programming
-language. In this section, we outline a minimal such language, which we call  \LangOO. Full definitions appear in Appendix \ref{app:LangOO}. \sophia{TODO-say which features need to be in such a language and say that \LangOO is an example of such one.}
+but they also talk about future and past states, Therefore, the meaning to \Chainmail assertions depends on the existence of an
+underlying object oriented programming language, with modules (\M) as repositories of code, objects described by classes,
+a concept of linking several modules together, and a concept of 
+program execution, where  actions that happen within the objects belonging to a module are considered atomic.
 
-Central to our work is the concept of \emph{module}, which is a repository of code. Modules map class identifiers to class definitions, \appref{defONE}, and class definitions consist of method declarations and field declarations, \appref{def:syntax:classes}.  \LangOO is untyped -- this reflects the open world, where we link with external modules which come without any guarantees. \footnote{In further work we want to work in a setting where the internal module is typed, and the external is untyped.} Statements
-these can be field read or field assignments, object creation, method calls, and return statements.
+In this section, we outline a minimal such language, which we call  \LangOO, but we believe that \Chainmail can be applied to 
+any language that supports the features listed above. 
+Full, and mostly unsurprising,
+ definitions for  \LangOO~appear in Appendix \ref{app:LangOO}. 
+In this section we summarize the more conventional parts, and describe the novel aspects. 
+
+Central to our work is the concept of \emph{module}, which is a repository of code. Modules map class identifiers to class definitions, \appref{defONE}; and class definitions consist of field, method and ghost field declarations, \appref{def:syntax:classes}.  \LangOO is untyped -- this reflects the open world, where we link with external modules which come without any guarantees. \footnote{In further work we want to work in a setting where the internal module is typed, and the external is untyped.} Method bodies are sequences of
+statements, which  can be field read or field assignments, object creation, method calls, and return statements.
 %All else, \eg booleans, conditionals, loops,  can be encoded.
 All fields are private in the sense of C++: Field read or write is only allowed  if the object whose field is being read 
 belongs to the same class as the current method. 
-This is enforced by the operational semantics, \cf
-Fig.  \ref{fig:Execution}.
+This is enforced by the operational semantics, \cf Fig.  \ref{fig:Execution}.
+We will discuss ghost fields in the next section.
 
-We use runtime configurations $\sigma$ to describe   all pertinent information about an execution snapshot: the heap, and a
-stack of fames. Each frame consists of a continuation, \prg{contn} and a map from variables to values. We define execution  through a judgment of the form $\M, \sigma \leadsto \sigma'$ in the Appendix, Fig.  \ref{fig:Execution}. 
-
-We also  define the
-interpretation of of simple expressions through $\interp e {\sigma}$, and class look-up through $\ClassOf {e} {\chi} $, \appref{def:interp}.
+Runtime configurations, $\sigma$,  contain   all pertinent information about an execution snapshot: the heap, and a
+stack of fames. Each frame consists of a continuation, \prg{contn}, and a map from variables to values. 
+We define execution  through a judgment of the form $\M, \sigma \leadsto \sigma'$ in the Appendix, Fig.  \ref{fig:Execution}. 
+%
   
 
-In  order to deal with the distinction of external and internal modules, we define a module linking operator,  $\link$ si that
+In  order to deal with the distinction of external and internal modules, we define a module linking operator,  $\link$ so that
 $\M\link\M'$ is the union of the two modules, provided that their domains are disjoint, \appref{def:link}.
-
-
-As we said earlier, our notion of execution distinguishes between the internal and external module, and treats execution of 
-methods from the internal module as atomic. Therefore we define \emph{modular execution} \sophia{better term} as follows:
+%
+As we said earlier, in execution we distinguish  between the internal and external module, and treat  execution of 
+methods from the internal module as atomic. For this, we define\sd{ \emph{two-module execution} } as follows:
 
 \begin{definition}
 \label{def:execution:internal:external}
@@ -53,7 +59,9 @@ $\ClassOf{\this} {\sigma'} \not\in dom({\M})$,
 
 \end{definition}
 
-In the definition above $n$ is allowed to have the value $2$. In this case the final bullet is trivial and  there exists a direct, external transition from $\sigma$ to $\sigma'$.  Our definition is related to the concept of visible states semantics, but differs in that visible states semantics select the configurations at which an invariant is expected to hold, while we select the states which are considered for executions which are expected to satisfy an invariant. 
+In the definition above,  $\ClassOf {\x} {\sigma} $ looks up the class of the object stores at \x, \appref{def:interp}.
+If  $n$  has the value $2$, %. In this case the final bullet is trivial and  
+then  there exists a direct, external transition from $\sigma$ to $\sigma'$.  Our definition is related to the concept of visible states semantics\cite{MuellerPoetzsch-HeffterLeavens06}, but differs in that visible states semantics select the configurations at which an invariant is expected to hold, while we select the states which are considered for executions which are expected to satisfy an invariant. 
 % SD deleted the below, as I do not like it any more
 % Our assertions can talk about several states (through the use of the $\Future {\_}$ and $\Past{\_}$ connectives), and thus, the intention of ignoring some intermediate configurations can only be achieved if we refine the concept of execution.
 
@@ -73,5 +81,24 @@ The lemma below says  that linking is associative and commutative, and preserves
   \end{itemize}
 
  \end{lemma}
+ 
+ We can now answer the question as to which runtime configurations are pertinent when judging a module's
+adherence to an assertion.
+We define as  {\em arising} configurations those that can be reached by two-module execution, starting from any initial configuration.
+An initial configuration has a heap with only one object, of class \prg{0bject}, and only one frame, whose continuation may be arbitrary.
+ 
+\begin{definition}[Initial and Arising Configurations] are defined as follows: \label{defn:iniial-and-arising}
+MuellerPoetzsch-HeffterLeavens06
+\begin{itemize}
+     \item
+   $\Initial {(\psi,\chi)}$, \ \ if \ \ $\psi$ consists of a single frame $\phi$ with $dom(\phi)=\{ \this \}$, and there exists  some address $\alpha$, such that \ \ \    $\interp {\this}{\phi}$=$\alpha$, and \ $dom(\chi)$=$\alpha$,\  and\  
+    $\chi(\alpha)=(\prg{Object},\emptyset)$.
+ \item
+ $\Arising  {\M\mkpair\M'} \ = \ \{ \ \sigma \ \mid \ \exists \sigma_0. \ [\  \Initial{\sigma_0} \  \ \wedge\ \  \M\mkpair\M', \sigma_0 \leadsto^* \sigma \ \ ] \ \ \} $
+ \end{itemize}
+
+\end{definition}
+
+ 
 
 
