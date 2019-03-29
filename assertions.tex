@@ -3,83 +3,162 @@
 %\label{sect:assertions}
 
 %\subsection{The syntax of Expressions and Assertions}
-We now define the syntax of  expressions and assertions.
-%\secomment{if you like this I will write macros so as not to have parameter lists with the keywords, alternatively this list could just have the identifiers and no descriptions\sd{not clear what is meant}}
-%In section~\ref{sect:chainmail} we introduced our assertion language \Chainmail with keywords 
-%$\CanAccess{}{}$ to check whether one object can call another, $\Calls{}$ for the current function call, 
-%$\Changes{}$ to check whether the next configuration will affect validity of some assertion, and 
-% $\Next {}$ or $\Future {}$  for expressing an assertion will hold at
-%the immediate successor execution point or at some future point, and
-%$\Prev{}$ or $\Past{}$ to express  that an assertion held at the immediately previous or
-%some point in the past, and  $\Using{}{}$, 
-%for expressing that an assertion holds in
-%the sub-configuration determined by a witness.
-%
-%The keywords enable \Chainmail assertions to support 
-%reflection over various aspects of the current 
-%runtime configurations, reflection over past or future configurations, and 
-%reflection over sub-configurations.
-%Assertions can contain logical operators and interestingly, the existential and universal quantifiers may quantify over object addresses, as well as 
-%over sets of addresses, numbers, and sequences of field identifiers of a given length.
-%
-%
-%\secomment{if you prefer this paragraph then link it back to section 4. \sd{Yes, it may now be superfluous.}}
-%
-%
-%Assertions, $\A$, support standard logical operators, 
-%reflection over various aspects of the current 
-%runtime configurations, reflection over past or future configurations, and 
-%reflection over sub-configurations.
-%The standard logical operators are, unsurprisingly,
-% $\wedge$, $\vee$, $\rightarrow$, $\neg$, $\exists$ and $\forall$.
-%Interestingly, the existential and universal quantifiers may quantify over object addresses, but also 
-%over sets of addresses, numbers, and sequences of field identifiers of a given length.
-%When reflecting over the current state, we can reflect over the class and contents of objects
-%(\eg \x:\prg{ClassId} or \x.\f=\y.\f'), whether an
-%object has direct access to (and thus may call on) another object $\CanAccess{\_}{\_}$,
-%and the current function call $\Calls{\prg{\_},\prg{\_},\prg{\_},\prg{\_}}$.
-%We can also talk about whether the next configuration will affect the 
-%validity of some assertion $\Changes{\_}$
-%\footnote{Note that $\Changes{\_}$ may be encoded; do we keep it?
-%The reason to keep it is that we can then talk of "permission" and "authority" }.  
-%We also support {\em temporal} modifiers, where $\Next \A$ or $\Future \A$  express  that $\A$ will hold at
-%the immediate successor execution point or at some future point, while
-%$\Prev \A$ or $\Past \A$ express  that $\A$ held at the immediately previous or
-%some point in the past.
-%Finally, we support a {\em spatial modifier}, $\Using{\A}{S}$, 
-%which expresses that assertion $\A$ holds in
-%the sub-configuration determined by the witness \prg{S}.
+We now define the syntax and semantics of expressions and holistic assertions.
+Expressions may appear as the bodies of ghost field definitions \appref{def:syntax:classes}, and also as part of assertions.
 
-
-\subsection{Syntax of Assertions}
+ \subsection{Syntax of Assertions}
 
 \begin{definition}[Assertions] The syntax of   expressions ($\SE$) and assertions ($\A$) is:
 \label{def:assertions}
 
  $\begin{array}{lcl}
   ~  \\
-  \SE & ::= &  \prg{true}  \ \mid\ \prg{false}  \    \mid\ \prg{null}  \ \mid \ \x  \ \mid \ \SE.\f  \\  
- ~ \\
-\A &\ ::=\  &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
+ \SE  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \x  \   ~\SOR~  
+     \   \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp\\
+     \\
+ \A &\ \BBC   &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
     \SE\in\prg{S}   \mid  \  \\
     & &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \ \A \vee \A  \ \mid\  \ \neg A   \ \mid \  \forall \x.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \x.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid\   \\
- &    & \External x   \ \mid\   \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls {\prg{x}} {\prg{y}}  {\prg{m}} {\prg{zS}} \ \mid\  \\  
- &    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A    \ \mid \  \Past \A \ 
+ &    & \External x   \ \mid\   \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls {\prg{x}}  {\prg{m}} {\prg{x}}  {\prg{x}^*} \ \mid\  \\  
+ &    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A    \ \mid \  \Past \A \\
+ \\
+ \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
 \end{array}$
 \end{definition}
 \footnote{
-Note that the operators $\wedge$, $\vee$,  $\neg$ and $\forall$  could have been defined  through the usual shorthands, \eg, $\neg \A$ is short for
-$\A \rightarrow \ff$ \etc, but here we give full definitions instead.\sd{SD: Perhaps we should just do that, it make the defs implicit}}
+The operators $\wedge$, $\vee$,  $\neg$ and $\forall$  could have been defined  through the usual shorthands, \eg, $\neg \A$ is short for $\A \rightarrow \ff$ \etc, but here we give full definitions instead}
 
 
-As we discussed in section \sd{TODO} validity of assertions has the format $\M\mkpair \M', \sigma \models \A$, where  $\M$ is the internal module, whose internal workings
- are opaque to the external, client module $\M'$.
+As we already discussed, validity of assertions has the format $\M\mkpair \M', \sigma \models \A$.
+%, where  $\M$ is the internal module, %whose internal workings
+% are opaque to the external, client module $\M'$.
  % We next define satisfaction of assertions in the context of an internal module \M, and externalk module $\M'$
 %and a runtime configuration $\sigma$, in terms of the judgement $\M\mkpair \M', \sigma \models\A$.
- We break the definition into four parts: In definition  \ref{def:valid:assertion:basic} we define validity 
+ We break the definition of validity into four parts:
+In Figure \ref{fig:ValueSimpleExpressions}    we define the partial function $\hookrightarrow$ which returns the value of an expression.
+  In Definition  \ref{def:valid:assertion:basic} we define validity 
  of basic assertions which reflect over the contents of the frame or the heap. 
- In  definition  \ref{def:valid:assertion:logical} we define validity 
+ In  Definition  \ref{def:valid:assertion:logical} we define validity 
  of basic assertions which reflect over the contents of the frame or the heap. 
+
+\subsection{Values of Expressions}
+
+The value of an expression is described through the judgment $ \M,\, \sigma, \SE \ \hookrightarrow\  v$
+defined in  Figure \ref{fig:ValueSimpleExpressions}.
+In this judgment, we use the configuration, $\sigma$, to read the value of variables defined in the stack frame
+(rule ${\sf {Var\_Val}}$), or to read the contents of the heap (rule ${\sf {Field\_Heap\_Val}}$, and the module, \M, to find the 
+definition of the ghost field declaration (rule ${\sf {Field\_Ghost\_Val}}$. Notice that for an expression of the form  
+\prg{e.f()}, both ${\sf {Field\_Heap\_Val}}$ and ${\sf {Field\_Ghost\_Val}}$ could be applicable: rule ${\sf {Field\_Heap\_Val}}$
+will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf {Field\_Heap\_Val}}$
+will be applied if \prg{f} is a ghost field of the object at \prg{e} -- and we expect the set of fields and ghostfields in a 
+given class to be disjoint.
+
+
+Notice that $ \hookrightarrow$ is   partial.For example, assume a module $\M_0$ with
+a class \prg{Node} with a ghostfield \prg{acyclic}, 
+defined as 
+\ \ \ \prg{if}\ \prg{this.next}=\prg{null}\  \prg{then} \ \prg{true} \ \prg{else} \ \prg{this.next.acyclic},\ \ \  assume a configuration
+$\sigma_0$ where
+\prg{acyc} pointed to a \prg{Node} whose field \prg{next} with value \prg{null}, and   
+\prg{cyc} pointed to a \prg{Node} whose field \prg{next} has the same value as \prg{cyc}, then  
+$\M_0,\sigma_0,\,\prg{acyc.acylcic}  \ \hookrightarrow\  \kwN{true}$, but we would have no value for 
+$\M_0,\sigma_0,\, \prg{cyc.acylcic}  \ \hookrightarrow\  ...$
+
+\begin{figure*}
+{$\begin{array}{l}
+\begin{array}{llll}
+\inferenceruleN {True\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{true} \ \hookrightarrow\  \kwN{true}
+}
+& 
+\inferenceruleN {False\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{false} \ \hookrightarrow\  \kwN{false}
+}
+&
+\inferenceruleN  {Null\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{null} \ \hookrightarrow\  \kwN{null}
+}
+&
+\inferenceruleN {Var\_Val} {
+}
+{
+ \M,\,  \sigma, \x \ \hookrightarrow\   \sigma({\x})
+}
+\end{array}
+\\ \\
+\begin{array}{lll}
+\inferenceruleNM{Field\_Heap\_Val} {
+~ \\
+~ \\
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha \\
+ \sigma(\alpha,\f)=v
+}
+{
+ \M,\, \sigma, \SE.\f \lp \rp \ \hookrightarrow\   v
+}
+& &
+\inferenceruleNM{Field\_Ghost\_Val}
+{
+ \M,\, \sigma, \SE_0   \ \hookrightarrow\  \alpha
+\\
+ \M,\, \sigma, \SE_i  \ \hookrightarrow\   v_i\ \ \ \ i\in\{1..n\}
+ \\
+{\mathcal{G}}
+(\M, {\ClassOf {\alpha} {\sigma}}, {\f}) \  =  
+\ \f\lp \p_1, \ldots \p_n \rp \lb\ \SE \ \rb
+  \\
+  \M,\,\sigma(\p_1\mapsto v_1, .... \p_n\mapsto v_n), \SE    \hookrightarrow_{\SAF}\   v 
+ }
+{
+ \M,\,  \sigma, \ \SE_0.\f \lp \SE_1,....\SE_n\rp \hookrightarrow   \ v
+}
+\\ \\
+\inferenceruleNM{If\_True\_Val} 
+{
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}  \\
+   \M,\,  \sigma, \SE_1 \ \hookrightarrow\   v  
+}
+{
+ \M,\, \sigma, \kwN{if}\ \SE\  \kwN{then} \ \SE_1 \ \kwN{else} \ \SE_2\  \hookrightarrow  \ v
+}
+& &
+\inferenceruleNM {If\_False\_Val} 
+{
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{false}  \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\   v  }
+{
+ \M,\, \sigma, \kwN{if}\ \SE\  \kwN{then} \ \SE_1 \ \kwN{else} \ \SE_2\  \hookrightarrow\  v
+}
+\\ \\ 
+\inferenceruleNM {Equals\_True\_Val} 
+{
+ \M,\,  \sigma, \SE_1 \ \hookrightarrow\    v \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\     v 
+}
+{
+ \M,\, \sigma, \SE_1 =  \SE_2 \hookrightarrow \prg{true}
+}
+& &
+\inferenceruleNM {Equals\_False\_Val} 
+{
+ \M,\,  \sigma, \SE_1 \ \hookrightarrow\    v \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\     v' \hspace{2cm}  v\neq v'
+}
+{
+ \M,\, \sigma, \SE_1 =  \SE_2 \hookrightarrow \ \prg{false}
+}
+\end{array}
+\end{array}
+$}
+\caption{Value of  Expressions -- we take $\SE.\f$  is a shorthand for $\SE.\f\lp\ \rp$}
+\label{fig:ValueSimpleExpressions}
+\end{figure*}
 
 \subsection{SatIsfaction of Assertions - standard}
 
@@ -87,27 +166,27 @@ As we discussed in section \sd{TODO} validity of assertions has the format $\M\m
 
  \begin{definition}[Interpretations for simple expressions]
 
-For any runtime configuration, $\sigma$, and any $k\in \mathbb{N}$, and any simple expression, $\SE$, we define its interpretation as follows:
+For a runtime configuration, $\sigma$,   and a variable, $\x$, we define its interpretation as follows:
 
 \begin{itemize}
      \item
-  $\interp {\prg{true}}{\sigma}$ $ \triangleq$   \prg{true}, \ and \ \    $\interp {\prg{false}}{\sigma}$ $ \triangleq$ \prg{false}, \ and \ \
-   $\interp {\prg{null}}{\sigma}$ $ \triangleq$  \prg{null}
+%  $\interp {\prg{true}}{\sigma}$ $ \triangleq$   \prg{true}, \ and \ \    $\interp {\prg{false}}{\sigma}$ $ \triangleq$ \prg{false}, \ and \ \
+%   $\interp {\prg{null}}{\sigma}$ $ \triangleq$  \prg{null}
   \item
   $\interp {\x}{\sigma}$ $ \triangleq$ $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
-  \item
-  $\interp {\SE.\prg{f}}{\sigma}$ $ \triangleq$ $\chi({\interp {\SE}{\sigma}}, \prg{f})$  \ \ if \ \ $\sigma$=$(\_,\chi)$
+% \item
+%  $\interp {\SE.\prg{f}}{\sigma}$ $ \triangleq$ $\chi({\interp {\SE}{\sigma}}, \prg{f})$  \ \ if \ \ $\sigma$=$(\_,\chi)$
    \end{itemize}
 \end{definition}
 
-\begin{lemma}[Interpretation corresponds to execution]
-For any simple expression $\SE$, module $\M$,  runtime configuration $\sigma$, and value $v$:
-\begin{itemize}
-  \item
-   $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M, \sigma[\prg{contn}\mapsto \SE] \leadsto v$ .
-\end{itemize}
-\end{lemma}
-\begin{proof} by structural induction  over the definition of $\SE$.\end{proof}
+%\begin{lemma}[Interpretation corresponds to execution]
+%For any simple expression $\SE$, module $\M$,  runtime configuration $\sigma$, and value $v$:
+%\begin{itemize}
+%  \item
+%   $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M, \sigma[\prg{contn}\mapsto \SE] \leadsto v$ .
+%\end{itemize}
+%\end{lemma}
+%\begin{proof} by structural induction  over the definition of $\SE$.\end{proof}
    
 
 \begin{definition}[ Basic Assertions] We define   when a configuration satisfies basic assertions, consisting of %simple
@@ -115,15 +194,25 @@ expressions.
  \label{def:valid:assertion:basic}
 \begin{itemize}
 \item
-$\M\mkpair \M', \sigma \models\SE$ \IFF  $\interp{\SE}{\sigma}$ = \prg{true}.
+$\M\mkpair \M', \sigma \models\SE$ \IFF   $ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}$ 
 \item
-$\M\mkpair \M', \sigma \models\SE=\SEPrime$ \IFF $\interp{\SE}{\sigma}$ = $\interp{\SEPrime}{\sigma}$.
+$\M\mkpair \M', \sigma \models\SE=\SEPrime$ \IFF there exists a value $v$ such that  $\M,\,  \sigma, \SE \ \hookrightarrow\   v$  and $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$.
 \item
-$\M\mkpair \M', \sigma \models\SE:\prg{ClassId}$ \IFF $\ClassOf{\interp{\SE}{\sigma}}{\sigma}$ = \prg{ClassId}.
+$\M\mkpair \M', \sigma \models\SE:\prg{ClassId}$ \IFF there exists an address $\alpha$ such that \\
+$\strut ~ $ \hspace{2in} \hfill   
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha$, and $\ClassOf{\alpha}{\sigma}$ = \prg{ClassId}.
 \item
-$\M\mkpair \M', \sigma \models \SE\in \prg{S}$ \IFF $\interp{\SE}{\sigma}\in \interp{\prg{S}}{\sigma}$.
+$\M\mkpair \M', \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
 \end{itemize}
 \end{definition}
+
+Notice that satisfaction of assertions which contain expressions is predicated on termination of these expressions.
+Continuing our earlier example, we would have  for any $\M'$ that
+$\M_0\mkpair \M', \sigma_0 \models \prg{acyc.acyclic}$ holds, that $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}$
+does not hold, and $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}=\prg{false}$ does not hold either.
+In general, if $\M\mkpair \M', \sigma  \models \prg{e}$ holds, then this implies that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too,
+but if $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
 
 % \subsubsection{Logical connectives, quantifiers, space and control} 
 We now define satisfaction of assertions which involve logical connectives and existential or universal quantifiers.
