@@ -1,54 +1,75 @@
 %\section{Overview of the \Chainmail\  formal model}
 % \subsection{The Open World}
 
-Having outlined the ingredients of our holistic specification language, the next question to ask is: When does a module 
-$\M$ satisfy such a holistic assertion $\A$? \sd{Note that we use the term \emph{module} to talk about repositories of code; in this work modules are mappings from
-class identifiers to class definitions.}
-\sd{So, the question about modules satisfying assertions put formally is,} when does  \\
+\kjx{Can we have a better title? is this style of modelling the adversary claimed contribution of the paper that we should claim explicitly?  IF so the title should highlight that claim.}
+
+Having outlined the ingredients of our holistic specification
+language, the next question to ask is: When does a module $\M$ satisfy
+an holistic assertion $\A$?  More formally: when does
+%
+%\sd{So, the question about modules satisfying assertions put formally is,} when does  \\
 $~ \strut  \hspace{1.3in}\ \M \models \A$ \\
-hold? 
-   
-Our  answer has to reflect the fact that we are dealing with the 
+hold? \kjx{do we really want M modles A on a line on its own?}
+
+  
+Our answer has to reflect the fact that we are dealing with an 
 \emph{open  world},  where  $\M$, our module, may be
-linked with \textit{arbitrary untrusted code}. To reflect this we consider
+linked with \textit{arbitrary untrusted code}.
+Modules are repositories of code, so we adopt the common formalisation 
+of modules as  mappings from
+class identifiers to class definitions.
+%
+%% \sd{Note that we use the term \emph{module} to talk about repositories of code; in this work modules are mappings from
+%% class identifiers to class definitions.}
+%
+%
+To model the open world, we consider
  pairs of modules, 
 $\M \mkpair {\M'}$,  where $\M$ is the module 
 whose code is supposed to satisfy the assertion,
 and $\M'$  is  another % wused to say \textit{any}  -- but why?
  module which exercises
-the functionality of $\M$. We call $\M$ the {\em internal}, and $\M'$ is the {\em external} module.
+the functionality of $\M$. We call our module $\M$ the {\em internal} module, and
+ $\M'$ the {\em external} module, which represents potential
+ attackers or adversaries.
 %or {\em potentially adversarial} module. 
     
-We can now answer our original question: $\M \models \A$ 
- holds if for all further, {\em potentially adversarial}, modules $\M'$ and in  all runtime configurations $\sigma$ which may be observed through execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
+We can now answer the question: $\M \models \A$ 
+ holds if for all further, {\em potentially adversarial}, modules $\M'$ and in  all runtime configurations $\sigma$ which may be observed as arising from the  execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
 $~ \strut  \hspace{1.3in} \M \models \A \ \ \  \ \ \ \ \ \mbox{
 if               } \ \ \  \ \ \  \  \forall \M'.\forall \sigma\in\Arising
 {\M \mkpair  {\M'}}. [\ \M \mkpair  {\M'},\sigma \models \A\ ]$.  \\
-In that sense, module $\M'$ represents all possible clients of {\M}; and as it is arbitrarily chosen, it reflects the open world nature of our specifications.%\sdcomment
-\sophia{Is is sentence superfluous now?.}
-\sophia{In contrast to what we said on Friday's conf call we do not need to put any restrictions
-on $\M'$ -- not even disjointness is required.}
+Module $\M'$ represents all possible clients of {\M}; and as it is arbitrarily chosen, it reflects the open world nature of our specifications.%\sdcomment
+
+%% \sophia{Is is sentence superfluous now?.}
+%% \sophia{In contrast to what we said on Friday's conf call we do not need to put any restrictions
+%% on $\M'$ -- not even disjointness is required.}
+%% \kjx{OK so in the \textbf{next iteration} we can just replace M;M' with a ' operator applied to any module\ldots}
 
 The judgement $\M \mkpair  {\M'},\sigma \models \A$ means that  
 assertion $\A$ is satisfied by  $\M \mkpair  {\M'}$ and $\sigma$.  
 \sd{As in traditional specification languages \cite{Leavens-etal07,Meyer92}, satisfaction is judged 
-in the context of  runtime configuration $\sigma$; but in addition, it is judged in the context of modules.
- The reason for this is that assertions may
-talk about possible future configurations. To determine the possible future 
-configurations we need  the class definitions --
-these are found in the modules.}
+in the context of  runtime configuration $\sigma$; but in addition, it is judged in the context of the internal and external modules.
+We need the modules, because temporal assertions may
+talk about future configurations: the modules contain the code necessary to reach those configurations.
 
-Note   the distinction between the internal and the external module. The
-reason for this distinction is some assertions require object to  be \emph{external},\sophia{TODO commect with example earlier}
- and also, because  we model progrm execution as if all executions within a modue were atomic.
-We only record runtime configurations which are {\em external} to module $\M$, \ie those where the
- executing object (\ie the current receiver) comes from module $\M'$. 
- Thus, program execution is
+Our distinction between internal and external modules offers two other advantages.
+\kjx{is this distinction a claimed contribution?}
+First, 
+\Chainmail\ includes the ``$\External{\prg{o}}$'' assertion to require
+that an object belongs to the external module, as in the Bank
+Account's assertion (2)and (3) in
+section~\ref{sect:motivate:Bank}. Second, we adopt a version of
+visible states semantics \cite{visible-state-semantics}, treating all
+executions within a module as atomic.
+We only record runtime configurations which are {\em external}
+ to module $\M$, \ie those where the
+ executing object (\ie the current receiver) comes from module $\M'$.
+ Program execution is
  a judgment of the form\\
  $~ \strut  \hspace{1.3in}    \M \mkpair  {\M'},\sigma \leadsto \sigma'$\\  
- we ignore all intermediate steps
- whose receivers are internal to $\M$. Thus, our executions correspond to some
- form of visible states semantics. \sophia{TODO: add references here.}
+ where we ignore all intermediate steps
+ whose receivers are internal to $\M$. 
 Similarly, when considering $\Arising {\M \mkpair  {\M'}}$, \ie the configurations arising from 
 executions in $\M \mkpair  {\M'}$, we can take method bodies defined in $\M$ or in $\M'$, but we will only consider the runtime 
 configurations which are external to $\M$.
@@ -56,6 +77,10 @@ configurations which are external to $\M$.
 %\sd{Therefore, the pair $\M \mkpair  {\M'}$ is different than the concatenation of the two modules}
 %In  that sense, our approach is similar to that of visible states semantics, without, however the need to consider issues
 %around different objects of the same class or re-entrancy.
+
+\kjx{if this is about the internal/external distinction, I'd move the
+following to section 6?, someoone else should check}
+
 \sd{As a notational convenience, we keep the code to be executed as a component of the runtime configuration.
 Thus, $\sigma$ consists of a stack of frames and a heap, and each frame consists of a variable map and a continuation.
 The variable map is a mapping from variables to addresses or to set of addresses -- the latter are needed to
