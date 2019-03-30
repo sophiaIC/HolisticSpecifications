@@ -1,13 +1,68 @@
-\paragraph{Necessary conditions vs the complement of the sufficient condtiions?}
-One might ask whether the necessary conditions are different from the complement of all the sufficient conditions.
-In other words, the possible behaviours of a module is the union of all possible behaviours of 
-each individual function, and the necessary conditions is their complement,
-We described this in the left hand side of the diagram in Figure \ref{fig:NecessaryAndSuff}: we 
-represent the space of all theoretically possible behaviours as points in the rectangle, 
-each function is a coloured oval and its possible behaviours are the points in the area of that oval.   
-Then, the necessary conditions are all the points  outside the ovals.  
 
-This view is mathematically sound but it is  impractical,  brittle wrt software maintenance, and weak wrt reasoning in the open world.
+\paragraph{Design choices}
+
+For our underlying language, we have chosen a class based language; we
+use classes, because we concentrate on class-based, object-oriented
+programming: we could extend our work to prototype-based programming
+by creating an (anonynous) class to reify each
+prototype \cite{graceClasses}. We expect the ideas will also be
+applicable to other kinds of languages (object-oriented or
+otherwise).
+
+We have chosen to use a dynamically langauge because many of the
+problems we hope to address are written in dynamically typed
+languages: web apps and mashups in Javascript; backends in Ruby or
+PHP.  We expect that supporting types would make the problem easier,
+not harder, but at the cost of significantly increasing the complexity
+of the trusted computing base that we assume will run our programs. In
+an open world, without some level of assurance (e.g. proof-carrying
+code) about the trustworthiness of type information, unfounded
+assumptions about types can give rise to new vulnerabilities that
+attackers can exploit \cite{pickles}.
+
+Finally, we don't address inheritance. As a specification language,
+individual \Chainmail assertions can be combined or reused without any
+inheritance mechanism: the semantics are simply that all
+the \Chainmail\ assertions are expected to hold at all the points of
+execution that they constrain.  \LangOO\ does not contain inheritance
+simply because it is not necessary to demonstrate specifications of
+robustness: whether an \LangOO class is defined in one place, or
+whether it is split into many multiply-inherited superclasses, traits,
+default methods in interfaces or protocols, etc.\ is irrelevant,
+provided we can model the resulting (flattened) behaviour of such a
+composition as a single logical \LangOO\ class.
+
+\paragraph{Contracts and Preconditions}
+
+Traditional specification lanaguges based on pre- and post-conditions
+are generally based on design-by-contract assumptions: ``if the
+precondition is not satisfied, the routine is not bound to do
+anything'' \cite{meyer92dbc} --- that is, the routine can do
+anything. Ensuring preconditions is the responsibility of the caller,
+and if the caller fails to meet that responsibility it is not the
+responsibility of the invoked function to fix the problem \cite{oosc}.
+Underlying this approach, however, is the assumption of a close
+system: that all the modules in a system are equally trusted, and so
+inserting redundant tests would just make the system more complex and
+more buggy. Indeed, \citet{meyer92dbc} states that ``This principle is
+the exact opposite of the idea of defensive programming.''
+
+In an open world, however, we do not have the luxury of trusting the
+other components with which we interact --- indeed we barely have the
+luxury of trusting ourselves.  We must assume that our methods may be
+invoked at any time, with any combination of arguments the underlying
+platform will support, irrespective of the overall state of the
+system, or of the object that recives the method request: in some
+sense, this is the very definition of an open system in an open world.
+Since methods cannot control when they are invokved, we must work
+as if all (potentially) externally-visible methods just have the precondition
+\prg{true} --- and we had better be very careful about any assumptions
+we make about which method or objects are in fact externally visible
+and which are not.  \kjx{likes this sentence: Holistic specifications
+directly support robust programming by making those kinds of
+assumptions explicit, giving the necessary conditions under which
+objects should be accessesd or their methods invoked, and then can
+help programmers ensure their programs maintain those conditions.}
 
 %\footnote{Shall we add this, or is it too technical? 
 %It is hypothetical, because it holds only under the hypothesis that all functions have been
@@ -18,30 +73,56 @@ This view is mathematically sound but it is  impractical,  brittle wrt software 
 %precondtion does not hold. Thus, its beahviour would fall outside the ovals.  }
 
 
-It is impractical, because it suggests that when interested in a necessity guarantee 
-one would need to read the specifications of all the functions  in a module.
-In view of the number of these functions, and also 
-  the number of   behaviours emerging from their combination, this can be a  very large undertaking.
- What if the bank did indeed enforce that only the account
-owner may withdraw funds, but had another function which allowed the manager
-to appoint an account supervisor, and another which allowed the account supervisor to
-assign owners?
+%%% it's a point James would like made somewhre? but where?
 
-It is brittle wrt software maintenance, because it
- gives no guidance to the team maintaining a piece of software: if the 
-necessary conditions which were implicitly in the developers' intentions are not explicitly 
-described, subsequent developers may inadvertenty add functions which break these intentions.
 
-It is weak wrt reasoning in the open world because if does not give any guarantees about objects' when
-these are passed as arguments to calls into unknown code. For example, what  guarantees  
-can we make about the top of the DOM tree when we pass  to an unknown advertiser a wrapper 
-pointing to lower parts of the tree.
 
-\paragraph{Design choices}
-For our underlying language, we have chosen a class based language; 
-we used classes, because we concentrate on class-based, object-oriented
-programming. But  we believe that the ideas are also applicable to
-other kinds of languages.  
+\paragraph{Necessary v.s.\ sufficient condtiions.}
 
-In further work we want to work in a setting
-  where the internal module is typed, and the external is untyped.
+%%One might ask whether the necessary conditions are different from
+%%the complement of all the sufficient conditions.
+%%
+%%one might ask indeed. but then one would sound like jacob rees-mogg
+Are the necessary conditions the same as the complement of all the
+sufficient conditions?  The possible behaviour of a component is the
+union of all possible behaviours of each individual function on that
+component.  This is shown in the left hand side of
+Figure \ref{fig:NecessaryAndSuff}. The all theoretically possible
+behaviours are the points in the rectangle.  Each function is a
+coloured oval and its possible behaviours are the points in the area
+of that oval.  Then, presumably, the necessary conditions are all the
+points outside the ovals.
+
+This view is mathematically sound but it is impractical, brittle with
+regards to software maintenance, and weak with regards to reasoning in
+the open world.
+
+
+Treating necessary conditions as the complement of the sufficient
+conditions is impractical, because it suggests that when interested in
+a necessity guarantee a programmer would need to read the
+specifications of all the functions in that module.  In view of the
+number of these functions, and also the number of behaviours emerging
+from their combination, this can be a very large undertaking.  What if
+the bank did indeed enforce that only the account owner may withdraw
+funds, but had another function which allowed the manager to appoint
+an account supervisor, and another which allowed the account
+supervisor to assign owners?
+
+This approach is also brittle when it comes to software maintenance,
+because it gives no guidance to the team maintaining a piece of
+software.  If the necessary conditions are only implicit in the
+sufficient conditions, then developers' intentions about those
+conditiions are not represented anywhere: there can be no distinction
+bewteen a condition that is accidental (if logging is not
+implemnented, then it cannot be permitted) and once that is essential
+(money can only be transferred by account owners).
+Subsequent developers may inadvertenty add functions which break these
+intentions, without knowning they've done so.
+
+Finally, this implicit approach is weak when it comes to reasoning
+about programs in an open world, because if does not give any
+guarantees about objects when they are passed as arguments to calls
+into unknown code. For example, what guarantees can we make about the
+top of the DOM tree when we pass a wrapper pointing to lower parts of
+the tree to an unknown advertisement?
