@@ -1,0 +1,536 @@
+
+%\section{ Assertions} 
+%\label{sect:assertions}
+
+%\subsection{The syntax of Expressions and Assertions}
+We now define the syntax and semantics of expressions and holistic assertions.
+Expressions may appear as the bodies of ghost field definitions\appref{def:syntax:classes}, and as part of assertions.
+
+ \subsection{Syntax of Assertions}
+
+\begin{definition}[Assertions] The syntax of   expressions ($\SE$) and assertions ($\A$) is:
+\label{def:assertions}
+
+ $\begin{array}{lcl}
+  ~  \\
+ \SE  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \x  \   ~\SOR~  
+     \   \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp\\
+     \\
+ \A &\ \BBC   &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
+    \SE\in\prg{S}   \mid  \  \\
+    & &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \ \A \vee \A  \ \mid\  \ \neg A   \ \mid \  \forall \x.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \x.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid\   \\
+ &    & \External x   \ \mid\   \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls {\prg{x}}  {\prg{m}} {\prg{x}}  {\prg{x}^*} \ \mid\  \\  
+ &    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A    \ \mid \  \Past \A \\
+ \\
+ \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
+\end{array}$
+\end{definition}
+\footnote{
+The operators $\wedge$, $\vee$,  $\neg$ and $\forall$  could have been defined  through the usual shorthands, \eg, $\neg \A$ is short for $\A \rightarrow \ff$ \etc, but here we give full definitions instead}
+
+%, where  $\M$ is the internal module, %whose internal workings
+% are opaque to the external, client module $\M'$.
+ % We next define satisfaction of assertions in the context of an internal module \M, and externalk module $\M'$
+%and a runtime configuration $\sigma$, in terms of the judgement $\M\mkpair \M', \sigma \models\A$.
+
+%In Figure \ref{fig:ValueSimpleExpressions} we define the partial function $\hookrightarrow$ which returns the value of an expression.
+Our definition of validity reflects over the contents of the current frame and the heap. 
+We break the definition of validity into four parts:
+\susan{I changed this paragraph because it didn't make sense - please check}
+Definition \ref{def:valid:assertion:basic} defines validity 
+ of basic assertions, definition  \ref{def:valid:assertion:logical} defines validity 
+ of assertions with logical connectives and quantifiers, 
+definitions \ref{def:valid:assertion:space} and \ref{def:valid:assertion:using} define validity involving space and control, and definition 
+\ref{def:valid:assertion:time} defines validity involving time.
+As has been discussed, validity of assertions has the format $\M\mkpair \M', \sigma \models \A$.
+
+
+\subsection{Values of Expressions}
+
+The value of an expression is described through the judgment $ \M,\, \sigma, \SE \ \hookrightarrow\  v$
+defined in  Figure \ref{fig:ValueSimpleExpressions}.
+In this judgment, we use the configuration, $\sigma$, to read the value of variables defined in the stack frame
+(rule ${\sf {Var\_Val}}$), or to read the contents of the heap (rule ${\sf {Field\_Heap\_Val}}$), and the module, \M, to find the 
+definition of the ghost field declaration (rule ${\sf {Field\_Ghost\_Val}}$). Notice that for an expression of the form  
+\prg{e.f()}, both ${\sf {Field\_Heap\_Val}}$ and ${\sf {Field\_Ghost\_Val}}$ could be applicable: rule ${\sf {Field\_Heap\_Val}}$
+will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf {Field\_Ghost\_Val}}$
+will be applied if \prg{f} is a ghost field of the object at \prg{e} -- and we expect the set of fields and ghostfields in a 
+given class to be disjoint.
+
+Notice that $ \hookrightarrow$ is partial. For example, assume a module $\M_0$ with
+a class \prg{Node} with a ghostfield \prg{acyclic},  defined as 
+ \prg{if}\ \prg{this.next}=\prg{null}\  \prg{then} \ \prg{true} \ \prg{else} \ \prg{this.next.acyclic}. 
+Assume a configuration $\sigma_0$ where
+\prg{acyc} points to a \prg{Node} whose field \prg{next} has value \prg{null}, and   
+\prg{cyc} points to a \prg{Node} whose field \prg{next} has the same value as \prg{cyc}, then  
+$\M_0,\sigma_0,\,\prg{acyc.acylcic}  \ \hookrightarrow\  \kwN{true}$, but we would have no value for 
+$\M_0,\sigma_0,\, \prg{cyc.acylcic}  \ \hookrightarrow\  ...$
+
+\begin{figure*}
+{$\begin{array}{l}
+\begin{array}{llll}
+\inferenceruleN {True\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{true} \ \hookrightarrow\  \kwN{true}
+}
+& 
+\inferenceruleN {False\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{false} \ \hookrightarrow\  \kwN{false}
+}
+&
+\inferenceruleN  {Null\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{null} \ \hookrightarrow\  \kwN{null}
+}
+&
+\inferenceruleN {Var\_Val} {
+}
+{
+ \M,\,  \sigma, \x \ \hookrightarrow\   \sigma({\x})
+}
+\end{array}
+\\ \\
+\begin{array}{lll}
+\inferenceruleNM{Field\_Heap\_Val} {
+~ \\
+~ \\
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha \\
+ \sigma(\alpha,\f)=v
+}
+{
+ \M,\, \sigma, \SE.\f \lp \rp \ \hookrightarrow\   v
+}
+& &
+\inferenceruleNM{Field\_Ghost\_Val}
+{
+ \M,\, \sigma, \SE_0   \ \hookrightarrow\  \alpha
+\\
+ \M,\, \sigma, \SE_i  \ \hookrightarrow\   v_i\ \ \ \ i\in\{1..n\}
+ \\
+{\mathcal{G}}
+(\M, {\ClassOf {\alpha} {\sigma}}, {\f}) \  =  
+\ \f\lp \p_1, \ldots \p_n \rp \lb\ \SE \ \rb
+  \\
+  \M,\,\sigma(\p_1\mapsto v_1, .... \p_n\mapsto v_n), \SE    \hookrightarrow_{\SAF}\   v 
+ }
+{
+ \M,\,  \sigma, \ \SE_0.\f \lp \SE_1,....\SE_n\rp \hookrightarrow   \ v
+}
+\\ \\
+\inferenceruleNM{If\_True\_Val} 
+{
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}  \\
+   \M,\,  \sigma, \SE_1 \ \hookrightarrow\   v  
+}
+{
+ \M,\, \sigma, \kwN{if}\ \SE\  \kwN{then} \ \SE_1 \ \kwN{else} \ \SE_2\  \hookrightarrow  \ v
+}
+& &
+\inferenceruleNM {If\_False\_Val} 
+{
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{false}  \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\   v  }
+{
+ \M,\, \sigma, \kwN{if}\ \SE\  \kwN{then} \ \SE_1 \ \kwN{else} \ \SE_2\  \hookrightarrow\  v
+}
+\\ \\ 
+\inferenceruleNM {Equals\_True\_Val} 
+{
+ \M,\,  \sigma, \SE_1 \ \hookrightarrow\    v \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\     v 
+}
+{
+ \M,\, \sigma, \SE_1 =  \SE_2 \hookrightarrow \prg{true}
+}
+& &
+\inferenceruleNM {Equals\_False\_Val} 
+{
+ \M,\,  \sigma, \SE_1 \ \hookrightarrow\    v \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\     v' \hspace{2cm}  v\neq v'
+}
+{
+ \M,\, \sigma, \SE_1 =  \SE_2 \hookrightarrow \ \prg{false}
+}
+\end{array}
+\end{array}
+$}
+\caption{Value of  Expressions -- we take $\SE.\f$  is a shorthand for $\SE.\f\lp\ \rp$}
+\label{fig:ValueSimpleExpressions}
+\end{figure*}
+
+\subsection{SatIsfaction of Assertions - standard}
+
+% \subsubsection{Interpretations  and   Basic Assertions}
+
+ \begin{definition}[Interpretations for simple expressions]
+
+For a runtime configuration, $\sigma$,   and a variable, $\x$, we define its interpretation as follows:
+
+\begin{itemize}
+   %  \item
+%  $\interp {\prg{true}}{\sigma}$ $ \triangleq$   \prg{true}, \ and \ \    $\interp {\prg{false}}{\sigma}$ $ \triangleq$ \prg{false}, \ and \ \
+%   $\interp {\prg{null}}{\sigma}$ $ \triangleq$  \prg{null}
+  \item
+  $\interp {\x}{\sigma}$ $ \triangleq$ $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
+% \item
+%  $\interp {\SE.\prg{f}}{\sigma}$ $ \triangleq$ $\chi({\interp {\SE}{\sigma}}, \prg{f})$  \ \ if \ \ $\sigma$=$(\_,\chi)$
+   \end{itemize}
+\end{definition}
+
+%\begin{lemma}[Interpretation corresponds to execution]
+%For any simple expression $\SE$, module $\M$,  runtime configuration $\sigma$, and value $v$:
+%\begin{itemize}
+%  \item
+%   $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M, \sigma[\prg{contn}\mapsto \SE] \leadsto v$ .
+%\end{itemize}
+%\end{lemma}
+%\begin{proof} by structural induction  over the definition of $\SE$.\end{proof}
+   
+\susan{consistency? the succeeding definitions start with for modules M, M' etc - I assume this should have the same start or should we remove the declarations at the top of each of the validity defs}
+\begin{definition}[ Basic Assertions] We define when a configuration satisfies basic assertions, consisting of %simple
+expressions.
+ \label{def:valid:assertion:basic}
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma \models\SE$ \IFF   $ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}$ 
+\item
+$\M\mkpair \M', \sigma \models\SE=\SEPrime$ \IFF there exists a value $v$ such that  $\M,\,  \sigma, \SE \ \hookrightarrow\   v$  and $ \M,\,  \sigma, \SEPrime \ \hookrightarrow\   v$.
+\item
+$\M\mkpair \M', \sigma \models\SE:\prg{ClassId}$ \IFF there exists an address $\alpha$ such that \\
+$\strut ~ $ \hspace{2in} \hfill   
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha$, and $\ClassOf{\alpha}{\sigma}$ = \prg{ClassId}.
+\item
+$\M\mkpair \M', \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
+\end{itemize}
+\end{definition}
+
+Notice that satisfaction of assertions which contain expressions is predicated on termination of these expressions.
+Continuing our earlier example, we would have  for any $\M'$ that
+$\M_0\mkpair \M', \sigma_0 \models \prg{acyc.acyclic}$ holds, that $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}$
+does not hold, and $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}=\prg{false}$ does not hold either.
+In general, if $\M\mkpair \M', \sigma  \models \prg{e}$ holds, then this implies that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too,
+but if $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
+
+% \subsubsection{Logical connectives, quantifiers, space and control} 
+We now define satisfaction of assertions which involve logical connectives and existential or universal quantifiers.
+
+\begin{definition}[Assertions with logical connectives and quantifiers]  
+%We now consider 
+\label{def:valid:assertion:logical}
+\susan{add y?}
+For modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x} and \prg{S},  configuration $\sigma$, we define$:$
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma \models \exists \prg{x}.\A$ \IFF
+$\M\mkpair \M', \sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$\\
+$\strut ~ $ \hfill for some  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$.
+\item
+$\M\mkpair \M', \sigma \models \forall \prg{S}:\prg{SET}.\A$ \IFF  $\M\mkpair \M', \sigma[\prg{Q}\mapsto R] \models  \A[\prg{S}/\prg{Q}]$ \\
+$\strut ~ $ \hfill for all sets of addresses $R\subseteq dom(\sigma)$, and  all \prg{Q} free in $\sigma$ and $\A$.
+\item
+$\M\mkpair \M', \sigma \models \exists \prg{S}:\prg{SET}\!.\,\A$ \IFF  $\M\mkpair \M', \sigma[\prg{Q}\mapsto R] \models  \A[\prg{S}/\prg{Q}]$ \\
+ $\strut ~ $ \hfill  for some set of addresses $R\subseteq dom(\sigma)$, and   \prg{Q} free in $\sigma$ and $\A$.
+\item
+$\M\mkpair \M', \sigma \models \forall \prg{x}.\A$ \IFF
+$\sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$ \ for all  $\alpha\in dom(\sigma)$, and  some \prg{z} free in $\sigma$ and $\A$.
+\item
+$\M\mkpair \M', \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M', \sigma \models \A $ implies $\M\mkpair \M', \sigma \models \A' $
+\item
+$\M\mkpair \M', \sigma \models  \A \wedge \A'$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+and $\M\mkpair \M', \sigma \models  \A'$.
+\item
+$\M\mkpair \M', \sigma \models  \A \vee \A'$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+or $\M\mkpair \M', \sigma \models  \A'$.
+\item
+$\M\mkpair \M', \sigma \models  \neg\A$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+does not hold.
+\end{itemize}
+\end{definition}
+
+\subsection{Satisfaction of Assertions - Space}
+%\subsubsection{Space and Contol} 
+And now, we consider the assertions which involve space and  control:
+
+\begin{definition}[Satisfaction of  Assertions about Space-1]  \label{def:valid:assertion:space}
+For any modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x} and \prg{S}, we define
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma \models  \CanAccess{\prg{x}}{\prg{y}}$   \IFF  \begin{itemize}
+\item
+$\interp {\x} {\sigma}$=$\interp {\y} {\sigma}$, or
+\item
+$\interp {\x.\f} {\sigma}$=$\interp {\y} {\sigma}$  for some field \prg{f},  or
+\item
+$\interp {\x} {\sigma}$=$\interp {\this} {\sigma}$ and
+  $\interp {\y} {\sigma}$=$\interp {\z} {\sigma}$,\ 
+and \z\ appears in  $\sigma$.\prg{contn}.
+ \end{itemize}
+   \item
+$\M\mkpair \M', \sigma \models  \Calls {\prg{x}} {\prg{y}}  {\prg{m}} {\prg{zS}}$ \IFF \
+ $\sigma.\prg{contn}$=\prg{u.m(v);\_}\ \ for some variables \prg{u} and \prg{v},  \ and \
+\\ $\strut ~ \hspace{1.4in} $
+$\interp{\prg{this}}{\sigma}$=$\interp{\prg{x}}{\sigma}$, \ and\ $\interp{\prg{y}}{\sigma}$=$\interp{\prg{u}}{\sigma}$,
+ \ and\ $\interp{\prg{z}}{\sigma}$=$\interp{\prg{v}}{\sigma}$.
+ \item
+ $\M\mkpair \M', \sigma \models \Using {\A} {\prg{S}}$
+ \IFF
+ $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
+ \item
+  \sd{$\M\mkpair \M', \sigma \models \External {\prg{e}}$}
+  \IFF
+$\sd{ {\ClassOf {\interp{\SE}{\sigma}}{\sigma}}\notin dom(\M)}$
+\end{itemize}
+\end{definition}
+\noindent 
+$\CanAccess{\prg{x}}{\prg{y}}$ expresses that \x\, has a {\em direct} path to \y.
+It says that in the current frame,
+either \x~and \y\, are  aliases, or \x~points to an object which has a field
+whose value is the same as that of \y, or \x\, is the currently executing object and \y\, is
+ a local variable or formal parameter \z\,which appears in the code in the continuation ($\sigma$.\prg{contn}).
+The latter requirement ensures that variables which were introduced into the variable map,  
+in order to give meaning to existentially quantified assertions, are not considered.
+
+On the other hand, an assertion of the form $\Using{A}{S}$ promises that $\A$ holds in a subconfiguration, whose heap is restricted to the objects from \prg{S}.
+
+ 
+ 
+\begin{definition}[Restriction of Runtime Configurations]   \label{def:restrict}
+The restriction operator~$\;\restrct{} {} $ applied to a runtime configuration $\sigma$ and a set $R$ is defined as follows:
+ \label{def:config:restrct}
+ $~ $
+
+\begin{itemize}
+\item
+$\restrct {\sigma}{\prg{S}} \ \triangleq \ (\sd{\psi}, \chi')$, \IFF  $\sigma$=$(\psi,\chi)$, \ and  \  $dom(\chi')=\interp {\prg{S}} {\sigma}$, and   
+% \\ $\ \strut \ \ \hspace{1.2in} $
+ $\forall \alpha\!\in\!dom(\chi').\chi(\alpha)=\chi'(\alpha)$
+ \sdcomment{I had written instead $[ \ClassOf {\alpha} {\chi'} =  \ClassOf {\alpha} {\chi}\ \wedge \ \forall \f.  \chi'(\alpha,\f)=\chi(\alpha,\f)\ ]$, but I do not see why}
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Satisfaction of  Assertions about Space-2]  \label{def:valid:assertion:using}
+For any modules $\M$, $\M'$, assertion  $\A$, set variable \prg{S},  and configuration $\sigma$, we define
+\begin{itemize}
+ \item
+ $\M\mkpair \M', \sigma \models \Using {\A} {\prg{S}}$
+ \IFF
+ $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
+\end{itemize}
+\end{definition}
+
+\susan{is this okay?}
+Perhaps $\Using {\A} {\prg{S}}$ is the most intriguing of our holistic assertions. It allows us to restrict the set of objects that need to be considered when testing an assertion.
+
+
+\subsection{Satisfaction of Assertions - Time}
+ Finally, we  consider assertions involving time. 
+ \susan{not sure whether I got this right}
+ To do this, we need  an  auxiliary concept:
+$\adapt$, the adaptation of a runtime configuration to the scope  
+of another one. This operator is needed in changes of scope during execution. For example, the assertion
+$\Future {\x.\f=\prg{3}}$  is satisfied in the \emph{current} configuration % $\sigma$,
+ if in some {\em future} configuration the field  \f\, of the object that is pointed at 
+ by \x\, in the {\em current} configuration has the value \prg{3}.
+ % That is, $\Future {\x.\f=\prg{3}}$  is satisfied in $\sigma$, if there exists a $\sigma'$ in the future of $\sigma$ such that
+% $\sigma'[\prg{z}\mapsto\interp \sigma
+ Note that in the future  configuration, \x\, may be pointing to a different object, or may
+even no longer be in scope (\eg if a nested call  is executed).
+Therefore, we introduce the operator \  $\adapt\;$,  \ which combines runtime configurations: $\sigma \adapt \sigma'$ adapts the second configuration to the top frame's view of the former: it returns a new configuration whose stack has  the top frame as taken from $\sigma$ and where the \prg{contn} has been consistently renamed, while the heap is taken from $\sigma'$. This allows us to interpret expressions  in the newer (or older) configuration $\sigma'$ but with the variables bound according to the top frame from $\sigma$; \eg we can obtain that value of \prg{x} in configuration  $\sigma'$ even if \prg{x} was out of scope. The consistent renaming of the code allows the correct modelling of execution (as needed,   for the semantics of  nested time assertions, as \eg in $\Future {\x.\f=\prg{3} \wedge \Future {\x.\f=\prg{5}}}$
+
+
+
+ \begin{definition}[Adaptation  of Runtime Configurations]   \label{def:config:adapt}
+ For runtime configurations $\sigma$, $\sigma'$.$:$
+ $~ $ 
+
+\begin{itemize}
+\item
+$\sigma \adapt \sigma' \triangleq (\phi''\cdot\psi',\chi')$  \IFF $\sigma=(\phi\cdot\_,\_)$, and $\sigma'= (\phi'\cdot\psi',\chi')$, and
+ \\
+$\ \strut \ \ \hspace{1.45in} $
+$\phi$=$(\prg{contn},\varMap)$, and $\phi'$=$(\prg{contn}',\varMap')$, and
+ \\
+$\ \strut \ \ \hspace{1.45in} $     % $\phi''$ such that
+  $\phi''=(\, \prg{contn}'[\prg{zs}/\prg{zs}' ],\,\varMap[\prg{zs}'\mapsto \varMap'(\prg{zs})]\, ) $, where
+ \\
+$\ \strut \ \ \hspace{1.45in} $
+\prg{zs}=$dom(\varMap)$, and
+ \\
+$\ \strut \ \ \hspace{1.45in} $      $\prg{zs}'$ is a set  of variables with  the  same cardinality as \prg{zs}, and
+ \\
+$\ \strut \ \ \hspace{1.45in} $   all variables in
+$\prg{zs}'$  are fresh in $\varMap$ and in $\varMap'$.
+\end{itemize}
+\end{definition}
+
+That is, in the new frame $\phi''$ from above, we keep the same continuation as from $\sigma'$ but rename all
+variables with fresh names $prg{zs}'$, and in the variable map we comnine that from $\sigma$ and $\sigma'$
+but avoid names clashes through the renaming $[\prg{zs}'\mapsto \varMap'(\prg{zs})]$.
+With this auxiliary definition, we can now define satisfaction of assertions which involve time:
+
+
+\begin{definition}[Assertions over Time]  \label{def:valid:assertion:time}
+For any modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x} and \prg{S}, we define
+  
+\begin{itemize}
+ \item
+ $\M\mkpair \M', \sigma \models   \Changes{\prg{e}}$  \IFF
+ $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \leadsto \sigma' \ \wedge \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$.
+ \item
+  $\M\mkpair \M', \sigma \models  \Next \A $
+  \IFF
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto  \sigma' \ \wedge \M\mkpair \M',\sigma\adapt\sigma' \models \A \ \  ]$,
+ \\
+$\strut ~ \hspace{1.4in} $  and where $\phi$ is
+so that $\sigma$=$(\phi\cdot\_,\_)$.\item
+  $\M\mkpair \M', \sigma \models  \Future \A $
+  \IFF
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto^* \sigma' \ \wedge \M\mkpair \M',\sigma\adapt\sigma' \models \A \ \  ]$,
+ \\
+$\strut ~ \hspace{1.4in} $  and where $\phi$ is
+so that $\sigma$=$(\phi\cdot\_,\_)$.  
+  \item
+ $\M\mkpair \M', \sigma \models  \Prev \A $ \IFF
+ $\forall \sigma_1, \sigma_2. [\ \ \Initial{\sigma_1}\ \wedge \   \M\mkpair \M', \sigma  \leadsto^*  \sigma_2 \ \wedge \   \M\mkpair \M', \sigma_2  \leadsto   \sigma  
+$
+ \\
+$\strut ~ \hspace{1.9in} $  $ \longrightarrow \ \ \   
+ \M\mkpair \M', \sigma\adapt\sigma_2  \models \A\ \
+ ]$\footnote{past includes the present, perhaps change this}
+ \item
+ $\M\mkpair \M', \sigma \models  \Past \A $ \IFF
+ $\forall \sigma_1, ... \sigma_n. [\ \ \Initial{\sigma_1}\ \wedge \  \sigma_n=\sigma 
+  \ \wedge \ \forall i\in[1..n). \M\mkpair \M', \sigma_{i} \leadsto  \sigma_{i+1}
+$
+ \\
+$\strut ~ \hspace{1.9in} $  $ \longrightarrow \ \ \  \exists j\in [1..n-1).
+ \M\mkpair \M', \sigma\adapt\sigma_j  \models \A\ \
+ ]$\footnote{past includes the present, perhaps change this}
+\end{itemize}
+\end{definition}
+
+Thus,  $\M\mkpair \M', \sigma \models  \Future \A $ holds if
+$\A$ holds in some configuration $\sigma'$ which arises from execution of $\phi$, where $\phi$ is the top frame of $\sigma$. By requiring that $\phi \leadsto^* \sigma' $ rather than
+$\sigma \leadsto^* \sigma' $ we are restricting the set of possible future configurations to
+just those that are caused by the top frame;
+that is, we do not want to consider the effect of  enclosing function calls.
+This allows us to write more natural specifications
+when giving necessary conditions for some future effect.
+ 
+
+\subsection{Entailment and Equivalence}
+ 
+We define equivalence of   assertions in the usual sense: two assertions are equivalent if they are satisfied  in
+the context of the same configurations.
+Similarly, an assertion entails another assertion, iff all configurations 
+which satisfy the former also satisfy the latter.  
+
+\begin{definition}[Equivalence and entailments of assertions]
+$ ~ $
+
+\begin{itemize}
+\item
+$\A \equiv \A'\  \IFF\    \forall \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma \models \A\ \mbox{ if and only if }\ \M\mkpair \M', \sigma \models \A'\ \ ].$
+\item
+$\A \subseteqq \A'\  \IFF\    \forall \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma \models \A\ \mbox{ implies }\ \M\mkpair \M', \sigma \models \A'\ \ ].$
+\end{itemize}
+\end{definition}
+
+
+
+\begin{lemma}[Assertions are classical-1]
+For all runtime configurations $\sigma$,    assertions $\A$ and $\A'$, and modules $\M$  and $\M'$, we have
+\begin{enumerate}
+\item
+$\M\mkpair \M', \sigma \models \A$\ or\ $\M\mkpair \M', \sigma \models \neg\A$
+\item
+$\M\mkpair \M', \sigma  \models \A \wedge \A'$ \SP if and only if \SP $\M\mkpair \M', \sigma \models \A$ and $\M\mkpair \M', \sigma  \models \A'$
+\item
+$\M\mkpair \M', \sigma  \models \A \vee \A'$ \SP if and only if \SP $\M\mkpair \M', \sigma  \models \A$ or  $\sigma \models \A'$
+\item
+$\M\mkpair \M', \sigma  \models \A \wedge \neg\A$ never holds.
+\item
+$\M\mkpair \M', \sigma  \models \A$ and  $\M\mkpair \M', \sigma  \models \A \rightarrow \A'$  implies
+$\M\mkpair \M', \sigma  \models \A '$.
+\end{enumerate}
+\end{lemma}
+\begin{proof} By application of the corresponding definitions from \ref{def:valid:assertion:logical}.\end{proof}.
+ \susan{ I have put the logic definition in to the proofs these two lemmas - please confirm}
+\begin{lemma}[Assertions are classical-2]
+For     assertions $\A$, $\A'$, and $\A''$ the following equivalences hold
+\label{lemma:basic_assertions_classical}
+\begin{enumerate}
+\item
+$ \A \wedge\neg \A \ \equiv \  \prg{false}$
+\item
+$ \A \vee \neg\A   \ \equiv \  \prg{true}$
+\item
+$ \A \wedge \A'  \ \equiv \  \A' \wedge \A$
+\item
+$ \A \vee \A'  \ \equiv \  \A' \vee \A$
+\item
+$(\A \vee \A') \vee \A'' \ \equiv \  \A \vee (\A' \vee\A'')$
+\item
+$(\A \vee \A') \wedge \A'' \ \equiv \  (\A \wedge \A')\, \vee\, (\A \wedge \A'')$
+\item
+$(\A \wedge \A') \vee \A'' \ \equiv \  (\A \vee \A')\, \wedge\, (\A \vee \A'')$
+\item
+$\neg (\A \wedge \A') \  \ \equiv \  \neg  \A   \vee\, \neg \A''$
+\item
+$\neg (\A \vee \A') \  \ \equiv \  \neg  \A   \wedge\, \neg \A''$
+\item
+$\neg (\exists \prg{x}.\A )  \  \ \equiv \  \forall \prg{x}.(\neg  \A)$
+\item
+$\neg (\exists k:\mathbb{N}.\A )  \  \ \equiv \  \forall  k:\mathbb{N}.(\neg  \A)$
+\item
+$\neg (\exists \prg{fs}:FLD^k.\A )  \  \ \equiv \  \forall \prg{fs}:FLD^k.(\neg  \A)$
+\item
+$\neg (\forall \prg{x}. \A)  \  \ \equiv \  \  \exists \prg{x}.\neg(\A )$
+\item
+$\neg (\forall k:\mathbb{N}. \A)  \  \ \equiv \  \  \exists k:\mathbb{N}.\neg(\A )$
+\item
+$\neg (\forall \prg{fs}:FLD^k. \A)  \  \ \equiv \  \  \exists \prg{fs}:FLD^k.\neg(\A )$
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+All points follow by application of the corresponding definitions from \ref{def:valid:assertion:logical}.
+ \end{proof}
+
+Notice that satisfaction is not preserved with growing configurations; for example, the assertion $\forall \x. [\ \x : \prg{Account} \rightarrow \x.\prg{balance}>100\ ]$ 
+may hold in a smaller configuration, but not hold in an extended configuration. 
+Nor is it preserved with configurations getting smaller; consider \eg $\exists \x. [\ \x : \prg{Account} \wedge \x.\prg{balance}>100\ ]$.
+
+% \begin{definition}
+%We say that $\sigma \vdash \A$ if for any  \x\, is free in $\A$ and any
+%  any term $\x.\f_1...\f_n$ appearing in $\A$,
+% the interpretation $\interp{\x.\f_1...\f_n} \sigma$ is defined.
+%\end{definition}
+%
+%Note that if we take $n=0$ in the definition above we obtain as corollary that   all variables that appear free in $\A$ they  are in the domain of the top frame in $\sigma$.
+%
+%\begin{lemma}[Preservation of satisfaction] $ $
+%\label{lemma:preserve:valid}
+%\begin{itemize}
+%\item
+%If  $\sigma \vdash \A$ and $\M\mkpair \M',  \sigma \vdash \A$ and   $\sigma' \subconf \sigma$, \  then  \ $\M\mkpair \M',  \sigma' \models \A$.
+%\end{itemize}
+%\end{lemma}
+
+Finally, we define satisfaction of assertions by modules: A module $\M$ satisfies an assertion $\A$ if for all modules $\M'$, in all configurations arising from executions of $\M\mkpair\M'$, the assertion $\A$ holds.
+
+\begin{definition}
+\label{def:module_satisfies}
+For any module $\M$, and  assertion $\A$, we define:
+\begin{itemize}
+\item
+$\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma\!\in\!\Arising{\M\mkpair\M'}.\   \M\mkpair\M', \sigma \models \A$
+\end{itemize}
+\end{definition}
+
+
+
