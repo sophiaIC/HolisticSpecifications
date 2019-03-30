@@ -1,15 +1,10 @@
-
-%\section{ Assertions} 
-%\label{sect:assertions}
-
-%\subsection{The syntax of Expressions and Assertions}
 We now define the syntax and semantics of expressions and holistic assertions.
-Expressions may appear within assertions, and 
- as the bodies of ghost field definitions \appref{def:syntax:classes}.
+\sd{Expressions appear in assertions and support conditional, comparisons, field read, as well as ghost field read.
+Through ghost fields we support recursive definitions.}
 
  \subsection{Syntax of Assertions}
 
-\begin{definition}[Assertions] The syntax of   expressions ($\SE$) and assertions ($\A$) is:
+\begin{definition}[Assertions] The syntax of   expressions $(\SE)$ and assertions $(\A)$ is:
 \label{def:assertions}
 
  $\begin{array}{lcl}
@@ -31,22 +26,22 @@ Expressions may appear within assertions, and
 %% defined  through the usual shorthands, \eg, $\neg \A$ is short for
 %% $\A \rightarrow \ff$ \etc, but here we give full definitions
 %% instead\kjx{can we just cut this please?}}
+ 
 
-
-As we already discussed, validity of assertions has the format $\M\mkpair \M', \sigma \models \A$.
-%, where  $\M$ is the internal module, %whose internal workings
-% are opaque to the external, client module $\M'$.
- % We next define satisfaction of assertions in the context of an internal module \M, and externalk module $\M'$
-%and a runtime configuration $\sigma$, in terms of the judgement $\M\mkpair \M', \sigma \models\A$.
-
-Our definition of validity reflects over the contents of the current frame and the heap. 
+\sd{Assertions} reflect over the contents of the current \sd{configuration but also over the possible 
+past and future configurations.} 
 We break the definition of validity into four parts:
-\susan{I changed this paragraph because it didn't make sense - please check}\kjx{LGTM. sd?}
-definition \ref{def:valid:assertion:basic} defines validity 
- of basic assertions, definition  \ref{def:valid:assertion:logical} defines validity 
+\susan{I changed this paragraph because it didn't make sense - please check}\james{LGTM. sd?}
+\sophia{What I was trying to defined "basic assertion". Otherwise what are they?
+Do you like the new form?}
+Def. \ref{def:valid:assertion:basic} % as we say Def. in other palces too
+\sd{describes} validity 
+ of basic assertions \sd{(\ie those reflecting over the current configuration}), 
+ Def. \ref{def:valid:assertion:logical} \sd{describes}  validity 
  of assertions with logical connectives and quantifiers, 
-definitions \ref{def:valid:assertion:space} and \ref{def:valid:assertion:using} define validity involving space and control, and definition 
-\ref{def:valid:assertion:time} defines validity involving time.
+Defs \ref{def:valid:assertion:space} and \ref{def:valid:assertion:using} 
+\sd{describe}  validity involving space and control, and Def. 
+\ref{def:valid:assertion:time} \sd{describes}  validity involving time.
 As has been discussed, validity of assertions has the format $\M\mkpair \M', \sigma \models \A$.
 
 
@@ -58,21 +53,26 @@ As has been discussed, validity of assertions has the format $\M\mkpair \M', \si
 %%  of basic assertions which reflect over the contents of the frame or the heap. 
 
 \subsection{Values of Expressions}
+\label{sect:expressions}
 
 The value of an expression is described through the judgment $ \M,\, \sigma, \SE \ \hookrightarrow\  v$
 defined in  Figure \ref{fig:ValueSimpleExpressions}.
 In this judgment, we use the configuration, $\sigma$, to read the value of variables defined in the stack frame
 (rule ${\sf {Var\_Val}}$), or to read the contents of the heap (rule
-${\sf {Field\_Heap\_Val}}$). We use $\sigma$ and the module \M, to find the 
-definition of the ghost field declarations (rule ${\sf {Field\_Ghost\_Val}}$). Notice that for an expression of the form  
-\prg{e.f()}, both ${\sf {Field\_Heap\_Val}}$ and ${\sf {Field\_Ghost\_Val}}$ could be applicable: rule ${\sf {Field\_Heap\_Val}}$
-will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf {Field\_Ghost\_Val}}$
-will be applied if \prg{f} is a ghost field of the object at \prg{e}. We expect the set of fields and ghostfields in a 
-given class to be disjoint.
+${\sf {Field\_Heap\_Val}}$), and the module, \M, to find the corresponding ghost filed declaration. 
 
-\kjx{Sophia - need to explain the Field Ghost Val rule a bit
-more. what's the CAL G?.  what are the ps?  I can guess but I
-shouldn't have to, and they don't seem to be in the appendix}
+\sd{
+The treatment of fields and ghostfields is described in rules ${\sf {Field\_Heap\_Val}}$,  ${\sf {Field\_Ghost\_Val}}$ and 
+${\sf {Field\_Ghost\_Val2}}$.  If the field \f~ exists in the heap, then its value is returned (${\sf {Field\_Heap\_Val}}$). 
+Ghostfiled reads, on the other hand, have the form $\e_0.\f(\e_1,...\e_n)$, and their value is
+described in rule ${\sf {Field\_Ghost\_Val}}$:
+%
+The lookup function $\mathcal G$  (defined in the obvious way in the Appendix, Def.\refdef:lookup})
+returns the expression constituting the body for that ghost field, as defined in the class of $\e_0$.
+We return  that expression
+evaluated in a configuration where the formal parameters have been substituted by the values of the actual
+parameters.
+}
 
 Notice that $ \hookrightarrow$ is partial. For example, assume a module $\M_0$ with
 a class \prg{Node} with a ghostfield \prg{acyclic}, 
@@ -83,6 +83,15 @@ $\sigma_0$ where
 \prg{cyc} points to a \prg{Node} whose field \prg{next} has the same value as \prg{cyc}, then  
 $\M_0,\sigma_0,\,\prg{acyc.acyclic}  \ \hookrightarrow\  \kwN{true}$, but we would have no value for 
 $\M_0,\sigma_0,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$
+
+Notice that for an expression of the form  
+\prg{\e.\f}, both ${\sf {Field\_Heap\_Val}}$ and ${\sf {Field\_Ghost\_Val2}}$ could be applicable: rule ${\sf {Field\_Heap\_Val}}$
+will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf {Field\_Ghost\_Val}}$
+will be applied if \prg{f} is a ghost field of the object at \prg{e}. We expect the set of fields and ghostfields in a 
+given class to be disjoint.
+ 
+ 
+
 
 \begin{figure*}
 {$\begin{array}{l}
@@ -113,18 +122,27 @@ $\M_0,\sigma_0,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$
 \end{array}
 \\ \\
 \begin{array}{lll}
+\begin{array}{l}
 \inferenceruleNM{Field\_Heap\_Val} {
-~ \\
-~ \\
- \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha \\
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha \hspace{1.5cm} 
  \sigma(\alpha,\f)=v
 }
 {
+ \M,\, \sigma, \SE.\f  \ \hookrightarrow\   v
+}
+\\
+\\
+\inferenceruleNM{Field\_Ghost\_Val2} {
  \M,\, \sigma, \SE.\f \lp \rp \ \hookrightarrow\   v
 }
+{
+ \M,\, \sigma, \SE.\f   \ \hookrightarrow\   v
+}
+\end{array}
 & &
 \inferenceruleNM{Field\_Ghost\_Val}
 {
+~ \\
  \M,\, \sigma, \SE_0   \ \hookrightarrow\  \alpha
 \\
  \M,\, \sigma, \SE_i  \ \hookrightarrow\   v_i\ \ \ \ i\in\{1..n\}
@@ -133,7 +151,7 @@ $\M_0,\sigma_0,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$
 (\M, {\ClassOf {\alpha} {\sigma}}, {\f}) \  =  
 \ \f\lp \p_1, \ldots \p_n \rp \lb\ \SE \ \rb
   \\
-  \M,\,\sigma(\p_1\mapsto v_1, .... \p_n\mapsto v_n), \SE    \hookrightarrow_{\SAF}\   v 
+  \M,\,\sigma[\p_1\mapsto v_1, .... \p_n\mapsto v_n], \SE    \hookrightarrow_{\SAF}\   v 
  }
 {
  \M,\,  \sigma, \ \SE_0.\f \lp \SE_1,....\SE_n\rp \hookrightarrow   \ v
@@ -176,7 +194,7 @@ $\M_0,\sigma_0,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$
 \end{array}
 \end{array}
 $}
-\caption{Value of  Expressions -- we take $\SE.\f$  is a shorthand for $\SE.\f\lp\ \rp$}
+\caption{Value of  Expressions}
 \label{fig:ValueSimpleExpressions}
 \end{figure*}
 
