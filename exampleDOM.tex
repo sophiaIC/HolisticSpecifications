@@ -1,21 +1,21 @@
 %We will now discuss  an example demonstrating the need to describe attenuation in specifications.
-In this section we look at a couple of examples from the literature where a holistic specification would provide obvious benefits in ensuring the robustness.
+In this section we look at a couple of examples from the literature where a holistic specification would provide obvious benefits in ensuring robustness.
 \subsection{Attenuating the DOM}
 \label{sect:example:DOM}
 
 \emph{Attenuation} is the ability to provide an untrusted client \emph{restricted}  access to an object's functionality. This is usually achieved through the introduction of an intermediate object. Such intermediate objects --- protection proxies \cite{gof} --- are a common design pattern, and their security properties have been studied at length in the object capabilities literature \cite{MillerPhD,murray10-infoflow}.
 
-Devrise et. al. proposed specifications for attenuation of trees of DOM \cite{dd} nodes.
+\citet{dd} proposed specifications for attenuation of trees of DOM  nodes.
 Access to a DOM node
 gives access to its parent and all its children nodes, and the ability to
 modify the properties of any accessible node. As the top nodes of the
 tree usually contain privileged information (such as web content
-showing your banking details), while the lower nodes contain less
-crucial information (such as advertisements for BREXIT), we want to be
+showing your banking details) while the lower nodes contain less
+crucial information (such as advertisements for BREXIT) we want to be
 able to limit access given to third parties to only the lower part of
-the DOM tree, (so that Jacob Rees-Mogg cannot access your bank
+the DOM tree (so that Jacob Rees-Mogg cannot access your bank
 account). We do this through a \prg{Wrapper}, which has
-a field \prg{node} pointing to a \prg{Node}, and a field \prg{height}.
+a field \prg{node} pointing to a \prg{Node} in the underlying DOM, and a field \prg{height}.
 \forget{
 which restricts the range of \prg{Node}s which may be modified through
 the use of the particular \prg{Wrapper}.Namely, }
@@ -28,7 +28,7 @@ a \prg{Wrapper}; a possible implementation appears in
 Figure \ref{fig:DOM} in appendix \ref{DOM:traditional}.}
 
 
-Figure \ref{fig:WrapperUse} shows
+Figure \ref{fig:WrapperUse} shows a
 \prg{Wrapper} object attenuating the use of 
 \prg{Node}s.
 The
@@ -88,7 +88,7 @@ func usingWrappers(unknwn){
 Even though we know nothing about the \prg{unknwn} object or
 its \prg{untrusted} function, and even though the call gives
 to \prg{unknwn} access to \prg{w}, which in turn has transitively
-access to all \prg{Node}-s in the tree, we know that %the call to
+access to the entire tree, we know that %the call to
 the \prg{untrusted} function will not
 affect the \prg{property} fields of the nodes \prg{n1}, \prg{n2},
 and \prg{n4}.  Thus, the assertion is guaranteed to
@@ -96,7 +96,7 @@ succeed.  The question is how do we specify \prg{Wrapper}, so as to be
 able to make such an argument. %prove this assertion.
 
 A specification of the class \prg{Wrapper} in the traditional
-style, \eg \cite{Leavens-etal07} \forget{\cf appendix \ref{DOM:traditional})}
+style, \cite{Leavens-etal07} \forget{\cf appendix \ref{DOM:traditional})}
 consists of pairs of PRE- and POST- conditions for each of the
 functions of that class. 
 \forget{Each such pair gives a {\em sufficient}
@@ -110,7 +110,7 @@ wrapper could accidentally permit access to nodes one or two levels
 above the expected height due to off-by one errors. More seriously,
 a malicious wrapper could offer a
 back-door public accessor method that leaks the underlying DOM
-object through the wrapper, return direct access to any of the
+object through the wrapper, returning direct access to any of the
 other nodes in the DOM, or even to queue a task to
 delete every property at midnight GMT on 29 March 2019. All of these errors are possible while
 preserving the PRE- and POST- conditions expected of a \prg{Wrapper}. 
@@ -138,11 +138,17 @@ I do not see where it is}
 %place over the sufficient conditions as in traditional
 %specifications. In our example:
 }
+%
+%%KJX things there needs to be someting linking this quote to the
+%%previous para...
+%
+An holistic specification can prevent these problems:
+%
 \begin{quote}
 The \emph{necessary} condition for the modification of \prg{nd.property} for some \prg{nd} of class \prg{Node}  is either access to some   \prg{Node} in the same tree, or  access to a \prg{w} of class \prg{Wrapper} where the \prg{w.height}-th parent of \prg{w} is an ancestor of \prg{nd}.
 \end{quote}
 
-Or in \Chainmail:
+\noindent Or in \Chainmail:
 
 %
 % Having justified the need for  necessary conditions in specifications, 
@@ -167,15 +173,10 @@ $ ]$
 % \end{quote}
 
 \vspace{.1cm}
-With such a specification we can prove that the assertion 
-will succeed ensuring that all future updates of
-the \prg{Wrapper} class must continue to meet that specification,
-guaranteeing the protection
-of the \prg{Node} data. 
-% \noindent
+\noindent
 That is, if the value of \prg{nd.property} is modified
-($\Changes{\_}$) at some future point ($\Future{\_}$) and if reaching
-that future point involves no more objects than those from set \prg{S}
+($\Changes{\_}$) at some future time ($\Future{\_}$) and if reaching
+that future time involves no more objects than those from set \prg{S}
 (\ie ${\Using{\_} {\prg{S}}}$), then at least one (\prg{o}) of the
 objects in \prg{S} is not a \prg{Node} nor a \prg{Wrapper},
 and \prg{o} has direct access to some node
@@ -183,7 +184,18 @@ and \prg{o} has direct access to some node
 the \prg{w.height}-th parent of \prg{w} is an ancestor of \prg{nd}
 (that is,
 $\prg{parnt}^k\!=\!\prg{w.node}.\prg{parnt}^{\prg{w.height}}$).
+%
 % It is important to clarify what we mean by ``access''. 
+%
+With this specification, we can ensure
+% prove that the assertion will succeed ensuring
+that all future updates of
+the \prg{Wrapper} class will continue to
+% meet that specification, guaranteeing the protection of
+protect the DOM.
+%\prg{Node} data. 
+
+
 \forget{
 Definitions of these concepts appear later
 (Definition \ref{def:valid:assertion}), but note that our ``access''
