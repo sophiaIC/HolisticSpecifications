@@ -1,6 +1,8 @@
 We now define the syntax and semantics of expressions and holistic assertions.
-\sd{Expressions appear in assertions and support conditional, comparisons, field read, as well as ghost field read.
-Through ghost fields we support recursive definitions.}
+\sd{Expressions appear in assertions and support conditional, comparisons, field read, as well as ghost field read.}
+\sd{Ghostfields allow us to define functions, including recursive ones, and use them in experresions, and thus also in
+assertions.}
+
 
  \subsection{Syntax of Assertions}
 
@@ -42,24 +44,22 @@ Def. \ref{def:valid:assertion:basic} % as we say Def. in other palces too
 Defs \ref{def:valid:assertion:space} and \ref{def:valid:assertion:using} 
 \sd{describe}  validity involving space and control, and Def. 
 \ref{def:valid:assertion:time} \sd{describes}  validity involving time.
-As has been discussed, validity of assertions has the format $\M\mkpair \M', \sigma \models \A$.
+% SD perhaps we do not need
+% As has been discussed, validity of assertions has the format $\M\mkpair \M', \sigma \models \A$.
 
 
-%% We break the definition of validity into four parts:
-%% In Figure \ref{fig:ValueSimpleExpressions}    we define the partial function $\hookrightarrow$ which returns the value of an expression.
-%%   In Definition  \ref{def:valid:assertion:basic} we define validity 
-%%  of basic assertions which reflect over the contents of the frame or the heap. 
-%%  In  Definition  \ref{def:valid:assertion:logical} we define validity 
-%%  of basic assertions which reflect over the contents of the frame or the heap. 
 
 \subsection{Values of Expressions}
 \label{sect:expressions}
 
-The value of an expression is described through the judgment $ \M,\, \sigma, \SE \ \hookrightarrow\  v$
+The value  of  an expression  is described through judgment $ \M,\, \sigma, \SE \ \hookrightarrow\  v$,
 defined in  Figure \ref{fig:ValueSimpleExpressions}.
-In this judgment, we use the configuration, $\sigma$, to read the value of variables defined in the stack frame
-(rule ${\sf {Var\_Val}}$), or to read the contents of the heap (rule
-${\sf {Field\_Heap\_Val}}$), and the module, \M, to find the corresponding ghost filed declaration. 
+We use the configuration, $\sigma$, to read the contents of the top stack frame
+% value of variables defined in the stack frame
+(rule ${\sf {Var\_Val}}$) or the contents of the heap (rule
+${\sf {Field\_Heap\_Val}}$). We use the module, \M, to find the  ghost filed declaration corresponding to the
+ghost field being used. 
+
 
 \sd{
 The treatment of fields and ghostfields is described in rules ${\sf {Field\_Heap\_Val}}$,  ${\sf {Field\_Ghost\_Val}}$ and 
@@ -74,23 +74,39 @@ evaluated in a configuration where the formal parameters have been substituted b
 parameters.
 }
 
-Notice that $ \hookrightarrow$ is partial. For example, assume a module $\M_0$ with
-a class \prg{Node} with a ghostfield \prg{acyclic}, 
-defined as 
-\ \ \ \prg{if}\ \ \prg{this.next}=\prg{null}\  \prg{then} \ \prg{true} \ \prg{else} \ \prg{this.next.acyclic}. Assume a configuration
-$\sigma_0$ where
-\prg{acyc} points to a \prg{Node} whose field \prg{next} with value \prg{null}, and   
-\prg{cyc} points to a \prg{Node} whose field \prg{next} has the same value as \prg{cyc}, then  
-$\M_0,\sigma_0,\,\prg{acyc.acyclic}  \ \hookrightarrow\  \kwN{true}$, but we would have no value for 
-$\M_0,\sigma_0,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$
+\sd{Thus, through the use if ghostfields we support recursive definitions. For example, imagine a class \prg{Node} 
+which has a field called \prg{next}, and which 
+had a ghostfield \prg{last}, 
+defined as \\
+$~ \strut \hspace{.1cm}$ \ \ \ \prg{if}\ \ \prg{this.next}=\prg{null}\  \prg{then} \ \prg{this} \ \prg{else} \ \prg{this.next.last},\\
+and another ghostfield \prg{acyclic}, 
+defined as \\
+$~ \strut \hspace{.1cm}$ \ \ \ \prg{if}\ \ \prg{this.next}=\prg{null}\  \prg{then} \ \prg{true} \ \prg{else} \ \prg{this.next.acyclic}.\\
+These are  recursive definitions, which allows us to find the last \prg{Node} in a sequence, or to express that
+a sequence has no cycle.
+}
 
-Notice that for an expression of the form  
+\sd{Notice that $ \hookrightarrow$ is partial. For example, assume a module $\M_0$ with
+a class \prg{Node} as described above, and  a configuration
+$\sigma_0$ where
+\prg{acyc} points to a \prg{Node} whose field \prg{next} has value \prg{null}, and   
+\prg{cyc} points to a \prg{Node} whose field \prg{next} has the same value as \prg{cyc}. Then,   
+$\M_0,\sigma_0,\,\prg{acyc.acyclic}  \ \hookrightarrow\  \prg{true}$, but we would have no value for 
+$\M_0,\sigma_0,\, \prg{cyc.last}  \ \hookrightarrow\  ...$, nor for
+$\M_0,\sigma_0,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$.
+}
+
+\sd{Notice that for an expression of the form  
 \prg{\e.\f}, both ${\sf {Field\_Heap\_Val}}$ and ${\sf {Field\_Ghost\_Val2}}$ could be applicable: rule ${\sf {Field\_Heap\_Val}}$
 will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf {Field\_Ghost\_Val}}$
 will be applied if \prg{f} is a ghost field of the object at \prg{e}. We expect the set of fields and ghostfields in a 
 given class to be disjoint.
- 
- 
+This allows a specification to be agnostic over whether a field is a physical field or just ghost information.
+For example, assertions (1) and (2) from section  \ref{sect:motivate:Bank} talk about the \prg{balance} of an \prg{account}. 
+In the first version of the implementation, where we keep the balances in the account objects, this is a physical field. 
+In the second version of the implementation, where we keep the balances in a ledger, this is ghost information. More details in
+section \ref{Bank:appendix}, in Appendix.
+} 
 
 
 \begin{figure*}
@@ -200,37 +216,20 @@ $}
 
 \subsection{SatIsfaction of Assertions - standard}
 
-% \subsubsection{Interpretations  and   Basic Assertions}
 
  \begin{definition}[Interpretations for simple expressions]
 
 For a runtime configuration, $\sigma$,   and a variable, $\x$, we define its interpretation as follows:
 
 \begin{itemize}
-   %  \item
-%  $\interp {\prg{true}}{\sigma}$ $ \triangleq$   \prg{true}, \ and \ \    $\interp {\prg{false}}{\sigma}$ $ \triangleq$ \prg{false}, \ and \ \
-%   $\interp {\prg{null}}{\sigma}$ $ \triangleq$  \prg{null}
   \item
   $\interp {\x}{\sigma}$ $ \triangleq$ $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
-% \item
-%  $\interp {\SE.\prg{f}}{\sigma}$ $ \triangleq$ $\chi({\interp {\SE}{\sigma}}, \prg{f})$  \ \ if \ \ $\sigma$=$(\_,\chi)$
    \end{itemize}
-\end{definition}
+\end{definition}   
 
-%\begin{lemma}[Interpretation corresponds to execution]
-%For any simple expression $\SE$, module $\M$,  runtime configuration $\sigma$, and value $v$:
-%\begin{itemize}
-%  \item
-%   $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M, \sigma[\prg{contn}\mapsto \SE] \leadsto v$ .
-%\end{itemize}
-%\end{lemma}
-%\begin{proof} by structural induction  over the definition of $\SE$.\end{proof}
-   
-
-\susan{consistency? the succeeding definitions start with for modules M, M' etc - I assume this should have the same start or should we remove the declarations at the top of each of the validity defs}
-\begin{definition}[ Basic Assertions] We define when a configuration satisfies basic assertions, consisting of %simple
-expressions.
- \label{def:valid:assertion:basic}
+ 
+\begin{definition}[ Basic Assertions] \sd{For modules $\M$, $\M'$,  configuration $\sigma$,  we define
+validity of basic assertions$:$} \label{def:valid:assertion:basic}
 \begin{itemize}
 \item
 $\M\mkpair \M', \sigma \models\SE$ \IFF   $ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}$ 
@@ -246,12 +245,13 @@ $\M\mkpair \M', \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ suc
 \end{itemize}
 \end{definition}
 
-Notice that satisfaction of assertions which contain expressions is predicated on termination of these expressions.
-Continuing our earlier example, we would have  for any $\M'$ that
-$\M_0\mkpair \M', \sigma_0 \models \prg{acyc.acyclic}$ holds, that $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}$
+\sd{Notice that satisfaction of assertions which contain expressions is predicated on termination of these expressions.
+Continuing our earlier example,  
+$\M_0\mkpair \M', \sigma_0 \models \prg{acyc.acyclic}$ holds for any $\M'$, while $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}$
 does not hold, and $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}=\prg{false}$ does not hold either.
-In general, if $\M\mkpair \M', \sigma  \models \prg{e}$ holds, then this implies that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too,
-but if $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
+In general, when $\M\mkpair \M', \sigma  \models \prg{e}$ holds,  this implies that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too.
+But when $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
+}
 
 % \subsubsection{Logical connectives, quantifiers, space and control} 
 We now define satisfaction of assertions which involve logical connectives and existential or universal quantifiers.
@@ -259,7 +259,7 @@ We now define satisfaction of assertions which involve logical connectives and e
 \begin{definition}[Assertions with logical connectives and quantifiers]  
 %We now consider 
 \label{def:valid:assertion:logical}
-For modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x}, \prg{y} and \prg{S},  configuration $\sigma$, we define$:$
+For modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x}, \prg{y},\prg{S},  and configuration $\sigma$, we define$:$
 \begin{itemize}
 \item
 $\M\mkpair \M', \sigma \models \exists \prg{x}.\A$ \IFF
