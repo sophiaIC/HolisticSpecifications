@@ -224,6 +224,8 @@ For a runtime configuration, $\sigma$,   and a variable, $\x$, we define its int
 \begin{itemize}
   \item
   $\interp {\x}{\sigma}$ $ \triangleq$ $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
+  \item
+   $\interp {\x.\f}{\sigma}$ $ \triangleq$ $\chi(\interp {\x}{\sigma},\f)$  \ \ if \ \ $\sigma$=$(\_,\chi)$
    \end{itemize}
 \end{definition}   
 
@@ -262,10 +264,6 @@ We now define satisfaction of assertions which involve logical connectives and e
 For modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x}, \prg{y},\prg{S},  and configuration $\sigma$, we define$:$
 \begin{itemize}
 \item
-$\M\mkpair \M', \sigma \models \exists \prg{x}.\A$ \IFF
-$\M\mkpair \M', \sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$\\
-$\strut ~ $ \hfill for some  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$.
-\item
 $\M\mkpair \M', \sigma \models \forall \prg{S}:\prg{SET}.\A$ \IFF  $\M\mkpair \M', \sigma[\prg{Q}\mapsto R] \models  \A[\prg{S}/\prg{Q}]$ \\
 $\strut ~ $ \hfill for all sets of addresses $R\subseteq dom(\sigma)$, and  all \prg{Q} free in $\sigma$ and $\A$.
 \item
@@ -274,6 +272,10 @@ $\M\mkpair \M', \sigma \models \exists \prg{S}:\prg{SET}\!.\,\A$ \IFF  $\M\mkpai
 \item
 $\M\mkpair \M', \sigma \models \forall \prg{x}.\A$ \IFF
 $\sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$ \ for all  $\alpha\in dom(\sigma)$, and  some \prg{z} free in $\sigma$ and $\A$.
+\item
+$\M\mkpair \M', \sigma \models \exists \prg{x}.\A$ \IFF
+$\M\mkpair \M', \sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$\\
+$\strut ~ $ \hfill for some  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$.
 \item
 $\M\mkpair \M', \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M', \sigma \models \A $ implies $\M\mkpair \M', \sigma \models \A' $
 \item
@@ -288,48 +290,40 @@ does not hold.
 \end{itemize}
 \end{definition}
 
-\sd{Again, with our earlier example,  both 
-$\M_0\mkpair \M', \sigma_0 \models \neg (\prg{cyc.acyclic}=\prg{true})$  s and  
-$\M_0\mkpair \M', \sigma_0 \models  \neg (\prg{cyc.acyclic}=\prg{false})$ hold.
-}\sophia{We need more interesting examples, which are not about ghost}
+\noindent
+\sd{Again, with our earlier example,  
+$\M_0\mkpair \M', \sigma_0 \models \neg (\prg{cyc.acyclic}=\prg{true})$    and  
+$\M_0\mkpair \M', \sigma_0 \models  \neg (\prg{cyc.acyclic}=\prg{false})$, 
+and also 
+$\M_0\mkpair \M', \sigma_0 \models  \neg (\prg{cyc.last}=\prg{cyc.last})$
+hold.
+}
 
 
-\subsection{Satisfaction of Assertions - Space}
+\subsection{Satisfaction of Assertions - Access, Control, Space, Viewpoint}
 %\subsubsection{Space and Contol} 
-And now, we consider the assertions which involve space and  control:
+We now consider the assertions which involve access:
 
-\begin{definition}[Satisfaction of  Assertions about Space-1]  \label{def:valid:assertion:space}
-For any modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x} and \prg{S}, we define
+\begin{definition}[%Satisfaction of  Assertions about 
+Access]  \label{def:valid:assertion:access}
+For any modules $\M$, $\M'$,  variables \prg{x} and \prg{y}, we define
 \begin{itemize}
 \item
 $\M\mkpair \M', \sigma \models  \CanAccess{\prg{x}}{\prg{y}}$   \IFF  \begin{itemize}
 \item
-$\interp {\x} {\sigma}$=$\interp {\y} {\sigma}$, or
+$\interp {\x} {\sigma}$=$\interp {\y} {\sigma}$, \ \ or
 \item
-$\interp {\x.\f} {\sigma}$=$\interp {\y} {\sigma}$  for some field \prg{f},  or
+$\interp {\x.\f} {\sigma}$=$\interp {\y} {\sigma}$, \  \ for some field \prg{f},  \ \ or
 \item
 $\interp {\x} {\sigma}$=$\interp {\this} {\sigma}$ and
-  $\interp {\y} {\sigma}$=$\interp {\z} {\sigma}$,\ 
-and \z\ appears in  $\sigma$.\prg{contn}.
+  $\interp {\y} {\sigma}$=$\interp {\z} {\sigma}$,\ \ \ 
+for some variable \z. where  \z\ appears in  $\sigma$.\prg{contn}.
  \end{itemize}
-   \item
-$\M\mkpair \M', \sigma \models  \Calls {\prg{x}} {\prg{y}}  {\prg{m}} {\prg{zS}}$ \IFF \
- $\sigma.\prg{contn}$=\prg{u.m(v);\_}\ \ for some variables \prg{u} and \prg{v},  \ and \
-\\ $\strut ~ \hspace{1.4in} $
-$\interp{\prg{this}}{\sigma}$=$\interp{\prg{x}}{\sigma}$, \ and\ $\interp{\prg{y}}{\sigma}$=$\interp{\prg{u}}{\sigma}$,
- \ and\ $\interp{\prg{z}}{\sigma}$=$\interp{\prg{v}}{\sigma}$.
- \item
- $\M\mkpair \M', \sigma \models \Using {\A} {\prg{S}}$
- \IFF
- $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
- \item
-  \sd{$\M\mkpair \M', \sigma \models \External {\prg{e}}$}
-  \IFF
-$\sd{ {\ClassOf {\interp{\SE}{\sigma}}{\sigma}}\notin dom(\M)}$
 \end{itemize}
 \end{definition}
+
 \noindent 
-$\CanAccess{\prg{x}}{\prg{y}}$ expresses that \x\, has a {\em direct} path to \y.
+Therefore, $\CanAccess{\prg{x}}{\prg{y}}$ expresses that \x\, has a {\em direct} path to \y.
 It says that in the current frame,
 either \x~and \y\ are  aliases, or \x~points to an object which has a field
 whose value is the same as that of \y, or \x\, is the currently executing object and \y\, is
@@ -337,36 +331,71 @@ whose value is the same as that of \y, or \x\, is the currently executing object
 The latter requirement ensures that variables which were introduced into the variable map,
 in order to give meaning to existentially quantified assertions, are not considered.
 
-On the other hand, an assertion of the form $\Using{A}{S}$ promises that $\A$ holds in a subconfiguration, whose heap is restricted to the objects from \prg{S}.
 
+\begin{definition}[%Satisfaction of  Assertions about 
+Control]  \label{def:valid:assertion:control}
+For any modules $\M$, $\M'$,  variables \prg{x} and  \y,  sequences of variables, $\prg{z}_1,...\prg{z}_n$, we define$:$
+\begin{itemize}
+   \item
+$\M\mkpair \M', \sigma \models  \Calls {\prg{x}}  {\prg{m}} {\prg{y}}  {\z_1,...\z_n}$ \IFF \
+ $\sigma.\prg{contn}$=${\uu.\m(\v_1,..\v_n);\_}$,\ \ \ for some  \uu\, and $\v_1$,... $\v_n$.
+\\ $\strut ~ \hspace{2.1in} $
+and $\interp{\prg{this}}{\sigma}$=$\interp{\prg{x}}{\sigma}$, \ and\ $\interp{\prg{y}}{\sigma}$=$\interp{\prg{u}}{\sigma}$,
+\\ $\strut ~ \hspace{2.1in} $
+and  $\interp{\z_i}{\sigma}$=$\interp{\prg{v}_i}){\sigma}$, for all \ $i$.
+ \end{itemize}
+\end{definition}
+\noindent 
+Thus,  $\Calls {\prg{x}}  {\prg{m}} {\prg{y}}  {{\z_1,...\z_n}}$ expresses that the next action will be the method call 
+$\y.\m(\z_1,...\z_n)$ and that the caller is \x. 
  
+ \begin{definition}[%Satisfaction of  Assertions about 
+Viewpoint]  \label{def:valid:assertion:space}
+For any modules $\M$, $\M'$, and variable\x, we define
+\begin{itemize}
+ \item
+$\M\mkpair \M', \sigma \models \External {\x}$ 
+  \IFF
+ $\ClassOf {\interp{\x}{\sigma}} {\sigma} \notin dom(\M)$
+\item
+$\M\mkpair \M', \sigma \models \Internal {\x}$ 
+  \IFF
+ $\ClassOf {\interp{\x}{\sigma}} {\sigma} \in dom(\M)$
+\end{itemize}
+\end{definition}
+\noindent 
+Whether a variable is external depends on the TODOD
  
-\begin{definition}[Restriction of Runtime Configurations]   \label{def:restrict}
-The restriction operator~$\;\restrct{} {} $ applied to a runtime configuration $\sigma$ and a set $R$ is defined as follows:
+ Finally, an assertion of the form $\Using{A}{S}$ promises that $\A$ holds in a subconfiguration, whose heap is restricted to the objects from \prg{S}.
+
+
+\begin{definition}[%Satisfaction of  Assertions about 
+Space and Restriction of Runtime Configurations]  \label{def:valid:assertion:space} \label{def:restrict}
+For any modules $\M$, $\M'$, assertions $\A$ and variable \prg{S}, we define$:$
+\begin{itemize}
+\item
+ $\M\mkpair \M', \sigma \models \Using {\A} {\prg{S}}$
+ \IFF
+ $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
+\end{itemize}
+The restriction operator~$\;\restrct{} {} $ applied to a runtime configuration $\sigma$ and a variable  \prg{S} is defined as follows:
  \label{def:config:restrct}
  $~ $
-
 \begin{itemize}
 \item
 $\restrct {\sigma}{\prg{S}} \ \triangleq \ (\sd{\psi}, \chi')$, \IFF  $\sigma$=$(\psi,\chi)$, \ and  \  $dom(\chi')=\interp {\prg{S}} {\sigma}$, and   
 % \\ $\ \strut \ \ \hspace{1.2in} $
  $\forall \alpha\!\in\!dom(\chi').\chi(\alpha)=\chi'(\alpha)$
- \sdcomment{I had written instead $[ \ClassOf {\alpha} {\chi'} =  \ClassOf {\alpha} {\chi}\ \wedge \ \forall \f.  \chi'(\alpha,\f)=\chi(\alpha,\f)\ ]$, but I do not see why}
 \end{itemize}
 \end{definition}
+\noindent 
+TODO explain 
 
-\begin{definition}[Satisfaction of  Assertions about Space-2]  \label{def:valid:assertion:using}
-For any modules $\M$, $\M'$, assertion  $\A$, set variable \prg{S},  and configuration $\sigma$, we define
-\begin{itemize}
- \item
- $\M\mkpair \M', \sigma \models \Using {\A} {\prg{S}}$
- \IFF
- $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
-\end{itemize}
-\end{definition}
-
-\susan{is this okay?}]\kjx{I Think so, would like more on why}
-Perhaps $\Using {\A} {\prg{S}}$ is the most intriguing of our holistic assertions. $\Using {\A} {\prg{S}}$ allows us to restrict the set of objects that need to be considered when testing an assertion.
+ 
+ 
+ 
+\susan{is this okay?}]\james{I Think so, would like more on why}\sophia{what are you talking abouy.}
+TO REVISIT Perhaps $\Using {\A} {\prg{S}}$ is the most intriguing of our holistic assertions. $\Using {\A} {\prg{S}}$ allows us to restrict the set of objects that need to be considered when testing an assertion.
 
 \subsection{Satisfaction of Assertions - Time}
  Finally, we  consider assertions involving time. 
