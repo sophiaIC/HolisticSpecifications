@@ -2,7 +2,7 @@
 
 As a motivating example, we consider a simplified banking application,
 with objects representing \prg{Account}s or \prg{Bank}s. 
-As in \cite{ELang},   \prg{Account}s belong to \prg{Bank}s and hold money (here \prg{balance}s);  
+As in \citet{ELang},   \prg{Account}s belong to \prg{Bank}s and hold money (here \prg{balance}s);  
 with access  to two \prg{Account}s of the same  \prg{Bank} one can  transfer any amount of money from
  one to the other.  We give a traditional specification in Figure \ref{fig:BankSpec}.
 
@@ -97,7 +97,7 @@ going to the bar, then the author
 %(actually everyone using the same bank)
 %would find an empty account (as would every other account holder other than the thief, of course).
 would find an empty account.
-\susan{I have removed the statements that implied people had accounts because we don't have that in the spec}
+%\susan{I have removed the statements that implied people had accounts because we don't have that in the spec}
 %
 
 %\vspace{-2in}
@@ -166,7 +166,7 @@ An account's
 \item An account's balance can be changed  only  if a client has
   access to that  particular account. % object.
   % I want the structure of (1) and (2) to be similar.
-\item The \prg{Bank}/\prg{Account} component cannot leak access to existing accounts or banks. 
+\item The \prg{Bank}/\prg{Account} component does not leak access to existing accounts or banks. 
 %SD I chnaged the belwo
 %Neither accounts nor banks can leak money.   \susan{ I changed what you had in point 3 because it didn't make sense in context. I don't think what I put is what you were saying is it? Did you want to say something like 'There is no way that references to either accounts or banks can be passed to third parties?}
 \end{enumerate}
@@ -200,8 +200,8 @@ modified without access to the particular \prg{Account}, and (3) to ensure that 
 We can  express these  requirements  %assumptions using 
 through \Chainmail assertions.  Rather than %specifying \prg{functions} to  describe
 specifying the behaviour of particular methods when they are called, we
-write  invariants   that range across the entire behaviour of the
-\prg{Bank}/\prg{Account}  module:
+write  assertions   that range across the entire behaviour of the
+\prg{Bank}/\prg{Account}  module: \james{note (1) and (2) use changes}
 \vspace{.2cm}
 
 %\begin{figure}[htbp]
@@ -243,9 +243,8 @@ that % in the past (${\Past{...}}$)
 called the \prg{deposit} method with \prg{a} as a receiver or as an argument 
 ($\Calls{\prg{o}} {\prg{deposit}} {\_} {\_}$).
 \sophia{ explain in some later section on that  this assertion
-implicilty gives   that \prg{o} is external \kjx{why: it explicitly says
-``external(o)''}}
-%bank and its associated accounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)" -- and I have chopped it from
+implicilty gives   that \prg{o} is external}
+%bank and its associated acc    ounts ($\prg{o} \notin\prg{Internal}(\prg{a})$)" -- and I have chopped it from
 %the spec. This is because of the visible states :-)}
  
 Assertion (2) similarly constrains any possible change to an 
@@ -263,7 +262,7 @@ latter passes (indirectly) a reference to \prg{a} to the former, which then   ma
 to \prg{deposit}.
 
 It remains to think about how access to a \prg{Account} may be obtained. This is the remit of assertion (3): 
-\sd{It} says that if at \sd{some time} in the future of the state restricted to \SF, 
+It says that if at some time in the future of the state restricted to \SF, 
 some object \prg{o} which is external has access to some account \prg{a}, and if \prg{a} exists in the 
 current state, then in the current state some object 
 from \SF~has access to \prg{a}. Note that \prg{o} and $\prg{o}'$ may but need not be the same object. Note also
@@ -275,7 +274,6 @@ that $\prg{o}'$ has to exist and have access to \prg{a} in the current state, bu
 A  holistic  specification for the bank account, then,
 would be our original sufficient functional specification from
 fig.~\ref{fig:BankSpec} plus the necessary
-%security policy
 specifications (1)-(3) from above. %in fig.~\ref{fig:necBank}.   
 This holistic specification
 permits an implementation of the bank that also provides  \prg{count}
@@ -284,14 +282,12 @@ Critically, though, the \Chainmail specification
 does not permit an
 %specification from fig.~\ref{fig:count},
 implementation that includes a \prg{steal} method.
-\sophia{We said this earlier, do we repeat? \kjx{no, cos this time we're
-saying it in chainmail..?}} 
 First, the \prg{steal} method clearly changes the balance of
-every account in the bank, but policy (1) requires that any method
+every account in the bank, but assertion (1) requires that any method
 that changes the balance of any account must be called \prg{deposit}.
 Second, the \prg{steal} method changes the balance of every account in
 the system, and will do so without the caller having a reference to
-most of those accounts, thus breaching policy (2).   
+most of those accounts, thus breaching assertion (2).   
 % SD chopped. unnecessary
 %Note that \prg{steal} putting all the funds into the thief's account
 %does not breach policy (2) with respect to the thief's own account,
@@ -303,7 +299,10 @@ Assertion (3) gives essential protection when dealing with foreign, untrusted co
 % \sophia{I like the story of this paragraph. Please make more eloquent.}
 \sophia{Assertion (3) is a corollary of (2), and thus actually superfluous -- do we say that?
 Do we say the story just using (2)?}
-\susan{I think having 1 and 2 would make it more complicated. You could have a footnote though that says actually you don't even need 3 as it is a corollary of 2}
+\susan{I think having 1 and 2 would make it more complicated. You
+could have a footnote though that says actually you don't even need 3
+as it is a corollary of 2}
+\james{they're examples. it's not a big thing}
 When an \prg{Account} is given out to untrusted third parties, assertion (3) guarantees that
 this \prg{Account} cannot be used to obtain access to further  \prg{Account}s. 
 The \prg{ACM} does not trust its authors, and certainly does not want
@@ -324,11 +323,11 @@ with traditional specifications we cannot.}}
  
 \vspace{.1cm} 
 
-In summary, our  necessary specifications are invariants that describe the
+In summary, our  necessary specifications are assertions that describe the
 behaviour of a module as observed by its clients. 
 \forget{in fact, in section XXX\sophia{TO ADD} we show two very different implementations
 of the \prg{Bank}/\prg{Account} specification which also satisfy (1)-(3).}
-Our invariants 
+These assertions
  can talk about space, time and control, and thus go beyond
 %can be defined and interpreted independently of any particular
 %implementation of a specification --- rather our policies constrain
