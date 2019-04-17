@@ -1,0 +1,187 @@
+%We will now discuss  an example demonstrating the need to describe attenuation in specifications.
+\emph{Attenuation} is ability to provide an untrusted client \emph{restricted}  access to an object's functionality. This is usually achieved through the introduction of an intermediate object. Such intermediate objects --- protection proxies \cite{gof} --- are a common design pattern, and their security properties and have been studied at length in the object capabilities literature \cite{millerPhD,murray10-infoflow}, and 
+Devrise et. al. proposed specifications for attenuation for the DOM \cite{dd}.
+
+In this section we revisit that example, and use it to motivate the
+need for holistic specifications, and to give an informal introduction
+to our for holistic  language Chainmail II. We also argue that
+compared with Devrise et al., our specifications xxxx.\sdcomment{TO COMPLETE}.
+
+This example deals with a tree of DOM nodes. Access to a DOM node
+gives access to all its parent and children nodes, and the ability to
+modify the properties of any accessible node. As the top nodes of the
+tree usually contain privileged information (such as web content
+showing your banking details), while the lower nodes contain less
+crucial information (such as advertisements for BREXIT), we want to be
+able to limit access given to third parties to only the lower part of
+the DOM tree, (so that Jacob Rees-Mogg cannot access your bank
+account). We do this via attenuation through a \prg{Wrapper}, which has
+a field \prg{node} pointing to a \prg{Node}, and a field \prg{height}
+which restricts the range of \prg{Node}s which may be modified through
+the use of the particular \prg{Wrapper}. Namely, when you hold
+a \prg{Wrapper} you can modify the \prg{property} of all the
+descendants of the \prg{height}-th ancestors of the \prg{node} of that
+particular \prg{Wrapper}.  It is not difficult to write such
+a \prg{Wrapper}; a possible implementation appears in
+Figure \ref{fig:DOM} in appendix \ref{DOM:traditional}.
+
+
+Figure \ref{fig:WrapperUse} shows  
+\prg{Wrapper} objects    attenuating the use of 
+\prg{Node}s.
+The
+function \prg{usingWrappers} has as parameter an object of unknown
+provenance, here called \prg{unknwn}. On lines 2-7 we create a tree
+consisting of nodes \prg{n1}, \prg{n2}, ... \prg{n6}, depicted as blue
+circles on the right-hand-side of the Figure. On line 8 we create a
+wrapper of \prg{n5} with height \prg{1}. This means that the
+wrapper \prg{w} may be used to modify \prg{n3}, \prg{n5} and \prg{n6}
+(\ie the objects in the green triangle), while it cannot be used to
+modify \prg{n1}, \prg{n2}, and \prg{4} (\ie the objects within the
+blue triangle).  On line 8 we call a function named \prg{untrusted} on
+the \prg{unknown} object, and pass \prg{w} as argument.
+
+\begin{figure}[htb]
+\begin{tabular}{llll}
+\ \ &
+\begin{minipage}{0.45\textwidth}
+\begin{lstlisting}
+func usingWrappers(unknwn){
+   n1=Node(null,"fixed"); 
+   n2=Node(n1,"robust"); 
+   n3=Node(n2,"volatile"); 
+   n4=Node(n2,"const");
+   n5=Node(n3,"variable");
+   n6=Node(n3,"ethereal");
+   w=Wrapper(n5,1);
+   
+   unknwn.untrusted(w);
+   
+   assert n2.property=="robust" 
+   ...
+}
+\end{lstlisting}
+\end{minipage}
+& & 
+\begin{minipage}{0.75\textwidth}
+\includegraphics[width=\linewidth, trim=145  320 60 105,clip]{diagrams/DOM.pdf}
+% x y z w
+% y seems to eat up the bollom
+% y=320 is good
+% x eats space from left, if you increase it the diagram decreases from left
+% w eats space from top, if you increase it the diagram decreases from top
+% w=100 is good
+%\includegraphics[page=3, width=\linewidth, trim=150  270 40 150, clip]{diagrams/snmalloc.pdf}\sdcomment{I think we need to change the diagram so that it says small slab.}
+\strut \\
+\strut \\
+
+\end{minipage}
+\end{tabular}
+ \vspace*{-4.5mm}
+\caption{\prg{Wrapper}s protecting \prg{Node}s }
+\label{fig:WrapperUse}
+\end{figure}
+
+Even though we know nothing about the \prg{unknown} object or
+its \prg{untrusted} function, and even though the call gives
+to \prg{unknown} access to \prg{w}, which in turn has transitively
+access to all \prg{Node}-s in the tree, we know that %the call to
+the \prg{untrusted} function is guaranteed not to line 10 will not
+affect the \prg{property} fields of the nodes \prg{n1}, \prg{n2},
+and \prg{n4}.  Thus, the assertion on line 12 is guaranteed to
+succeed.  The question is how do we specify \prg{Wrapper}, so as to be
+able to make such an argument. %prove this assertion.
+
+A specification of the class \prg{Wrapper} in the traditional
+style, \eg \cite{Leavens-etal07} (\cf appendix \ref{DOM:traditional})
+consists of pairs of pre- and post- conditions for each of the
+functions of that class. Each such pair gives a {\em sufficient}
+condition for some effect to take place: for example the
+call \prg{w.setProperty(i,prp)} where \prg{i} is smaller
+than \prg{w.height} is a sufficient condition to modify \prg{property}
+of the \prg{i}-th parent of \prg{w.node}. But we do not know what
+other ways there may be to modify a node's \prg{property}.  A broken
+wrapper could accidently permit access to nodes one or two levels
+about the expected height due to off-by one errors. More seriously,
+a malicious wrapper could offer a
+back-door public accessor method that leaks the underlying DOM
+object through the wrapper, return direct access to any of the
+other nodes in the DOM, or even to queue a task to
+delete every property at midnight GMT on 29 March 2019. All of these errors are possible while
+preserving the pre- and post- conditions expected of a \prg{Wrapper}. 
+What is needed here is some way to specify the \emph{necessary
+conditions}
+under which some change could be made: if some external client is to
+change a node's property, then  that client must have either direct
+access to a node in that DOM tree, or indirect access via a wrapper
+configured so that it can change the affected node.
+Thus,
+ \sdcomment{Shall we say the following, or does it break the flow?  
+"Moreover, on line 10 we do not know which functions are called
+on \prg{w}."
+\kjx{I put that in and expanded on it. We need to explain the issues I think}
+I do not see where it is}
+
+% I think the below should be clear by niw
+% In this work, we propose \emph{holistic specifications}, which
+%describe the behaviour of an abstract data type as a whole, taking all
+%possible method calls into account. Such holistic specifications
+%emphasize the \emph{necessary conditions} for some effect to take
+%place over the sufficient conditions as in traditional
+%specifications. In our example:
+
+\begin{quote}
+The \emph{necessary} condition for the modification of \prg{nd.property} for some \prg{nd} of class \prg{Node}  is either access to some   \prg{Node} in the same tree, or  access to a \prg{w} of class \prg{Wrapper} where the \prg{w.height}-th parent of \prg{w} is an ancestor of \prg{nd}.
+\end{quote}
+
+
+With such a specification we can prove that the assertion on line 12
+will succeed. Crucially, we can ensure that all future updates of
+the \prg{Wrapper} class must continue to meet that specification,
+guaranteeing the protection
+of the \prg{Node} data. 
+%
+% Having justified the need for  necessary conditions in specifications, 
+%
+To give a flavour of \Chainmail, we use it  express the requirement from above:
+%  This  gives us the opportunity to  demonstrate primitives for time ($\Future{\_}$) and authority ($\Changes{\_}$ and $\Using {\_} {\_}$).
+ % and   more traditional relations between objects ( $\prg{nd}.\prg{parnt}^k\!=\! ...$):
+% $\strut$ 
+\vspace{.1cm}
+
+\noindent
+% \begin{quote}
+$\forall \prg{S}:\prg{Set}.\forall \prg{nd}:\prg{Node}.$\\
+$[\ \ {\Using{\Future {\Changes {\prg{nd.property}}}}  {\prg{S}}}$ \\
+$\strut  \ \ \longrightarrow$\\
+$\strut \ \ \ \exists \prg{o}:\prg{Object}[\ \prg{o}\in\prg{S}\ \ \wedge\ \ \neg(\prg{o}:\prg{Node})\ \ \wedge\  \ \neg(\prg{o}:\prg{Wrapper})\ \ \ \wedge \  $\\
+$ \strut\ \ \  \ \ \ \ \ \ \ \ [\ \exists \prg{nd}':\prg{Node}. \CanAccess{\prg{o}}{\prg{nd}'}\  \ \ \  \vee$\\
+$ \strut\ \  \ \  \ \  \ \ \ \ \ \ \ \exists \prg{w}:\prg{Wrapper}.\exists k\!:\!\mathbb{N}.
+% $\\ $ \strut \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \
+  (\ \CanAccess{\prg{o}}{\prg{w}}  \ \wedge\ \prg{nd}.\prg{parnt}^k\!=\!\prg{w.node}.\prg{parnt}^{\prg{w.height}}) \ \ \ ]\ ]$\\
+$ ]$
+% \end{quote}
+
+\vspace{.1cm}
+
+% \noindent
+That is, if the value of \prg{nd.property} is modified
+($\Changes{\_}$) at some future point ($\Future{\_}$) and if reaching
+that future point involves no more objects than those from set \prg{S}
+(\ie ${\Using{\_} {\prg{S}}}$), then at least one (\prg{o}) of the
+objects in \prg{S} is not a \prg{Node} nor a \prg{Wrapper},
+and \prg{o} has direct access to some node
+($\CanAccess{\prg{o}}{\prg{nd}'}$), or to some wrapper \prg{w} and
+the \prg{w.height}-th parent of \prg{w} is an ancestor of \prg{nd}
+(that is,
+$\prg{parnt}^k\!=\!\prg{w.node}.\prg{parnt}^{\prg{w.height}}$).
+% It is important to clarify what we mean by ``access''. 
+Definitions of these concepts appear later
+(Definition \ref{def:valid:assertion}), but note that our ``access''
+is intransitive: $\CanAccess x y$ holds if either \prg{x} has a field
+pointing to \prg{y}, or \prg{x} is the receiver and \prg{y} is one of
+the arguments in the executing method call.
+ 
+In the next sections we proceed with a formal model of our model. In the appendix we discuss more -- and simpler -- examples.
+We chose the DOM for the introduction, in order to give a flavour of the \Chainmail features.
+ 

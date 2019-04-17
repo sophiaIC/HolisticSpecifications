@@ -1,0 +1,973 @@
+THIS IS THE VERSION WHERE WE HAVE INTERNAL STILL
+
+ \subsection*{LATEX mysteries and terminology}
+ \begin{enumerate}
+ \item
+ How can we make the references refer to the Definitions, Lemmas etc rather than the section where these appear?
+ \item
+ Need a nice metavariable for set of addresses, currently it is $R$. Perhaps instead use an enumeration, as eg $\{ \ \alpha_1,...\alpha_n\ \} $
+ or $\kappa$?
+\item
+Find a nice term  to refer to module pairs  (internal, external), and a term for 
+our version visible states semantics.
+\item
+Better symbols for module linking (currently a $\M\link\M'$), and 
+for module pairing (currently a $\M\mkpair \M'$) -- perhaps there should not be such an operator, as
+it does not create a new module, it is only used in execution ($\M\mkpair \M', \sigma \leadsto \sigma'$) and in validity of assertions ($\M\mkpair \M', \sigma\models \A$).
+ \end{enumerate} 
+
+
+\section{Overview of our approach}
+
+As we already stated, this work is devoted to the specification of code in the open world. For these we propose what we call {\em holistic specifications.}
+
+We claim that the most pertinent aspects of behaviour in the open world 
+are   in terms pf  {\em necessary} conditions (\eg what can cause -- what are necessary conditions for --
+ the balance of an account to decrease), rather than sufficient conditions (\eg the owner of an account may 
+ call the \prg{transfer} function, and as a result the balance decreases). 
+Such necessary conditions are not attached to particular function calls or porgram points; they apply
+throughout program execution. 
+Therefore, they are expressed through  {\em invariants} that can be observed throughout the lifetime of a program, rather than at specific points in program execution.
+
+In our approach we represent code through modules $\M$ which are repositories of class definitions (we suggest class definitions, because we concentrate on class-based, object-oriented programming; but we believe that the ideas are applicable also to other paradigms.) Thus we write invariants in the form of holistic assertions $\A$, and concentrate on what it means for a module to satisfy an assertion $\A$; we model this through the judgment $\M \models \A$.
+
+The judgment $\M \models \A$ holds if for all further modules $\M'$ and in  all runtime configurations $\sigma$ which may be obseved through execution of the code of $\M$ combined with that of $\M'$, the assertion $\A$ is satisfied. More formally, we define:\\
+$~ \strut  \hspace{.8in} \M \models \ \ \ \A \mbox{             if               }  \ \ \  \forall \sigma\in\Arising {\M \mkpair  {\M'}}. \ \M \mkpair  {\M''}, \sigma \models \A$.\\
+ In that sense, module {\M'}  represents all possible clients of {\M}; and as it is arbitrarily chosen, it reflects the open world nature of our specifications.
+
+Note that when we consider $\M \mkpair  {\M'}$, we distinguish between $\M$ the module whose code  is supposed to satisfy the assertion, and $\M'$, the module which exercises the functionality of $\M$. We call $\M$ the {\em internal} module, while {\em external} or {\em potentially adversarial} module. When examining program executions, we are interested in those runtime configurations which are {\em external} to module $\M$, \ie those where the executing object (\ie the current receiver) comes from module \M. In 
+that sense, our approach is similar to that of visible states semantics, whithout, however the need to consider issues
+around different objects of the same class or re-entrancy.\footnote{TODO: add references here.}
+
+The assertions expressed in $\A$  encompass concepts found in standard program specification languages, temporal and spacial operators, and operators which talk about the control structures. Thus we support assertions which reflect on the contents of local variables  and of objects  (\eg $\prg{x}.\f1 > \prg{this}.\f2$), assertions which talk about objects being accessible from other objects 
+(\eg $\CanAccess{\x}{\y}$), about the change of some property 
+(\eg $\Changes{\x.\f}$, about some property   holding in the future   or in the past
+(\eg $\Future \A$  or $\Past \A$), some property being observable within a subset of the current state
+( $\Using{\A}{S}$), and the next call in the control ($\Calls {\x} {\y} {\m} {\z}$). Note the parallels with 
+some concepts from object capabilities ($\CanAccess{\_}{\_}$  for  permission and $\Changes{\_}$ for authority)
+as well as temporal logic ($\Future \A$  and $\Past \A$), and the relation of
+our spatial connective ($\Using{\A}{S}$)  with effect systems.\footnote{TODO: add references here.}  Whilst   individual 
+features of our specification language can  be found also in other works, we claim that their  combination as well as
+their application in the specification of open systems are novel.
+
+ 
+The rest of the paper is organized as follows: Section defines \ref{sect:LangOO} gives a small oo language,  \LangOO. It 
+defines the syntax of modules, the structure of runtime configurations, and 
+the operational semantics of this language.}
+
+% Moreover, these invariants describe conditions on the use of the 
+
+ 
+
+\section{The language \LangOO}
+\label{sect:LangOO}
+
+\subsection{Modules}
+
+\LangOO programs are described in modules, which are repositories for definitions. Thus, modules are map  identifiers to such class definitions, and map the special identifier   \prg{Internal} to a basic assertion, which describes which runtime configurations are internak to the module, \ie are not visible fro the clients to the module. 
+
+\begin{definition}[Modules]
+We define $\syntax{Module}$-s  as  the set of mappings from identifiers to class descriptions or a basic assertion\\  % to force line break
+
+\begin{tabular}  {@{}l@{\,}c@{\,}ll}
+\syntax{Module} \ \  &  \   $\triangleq $  \ &  
+   $ \{ \ \ \M \ \ \mid \ \  \M: \ \prg{Identifier} \   \longrightarrow \
+  \ ( \  \syntax{ClassDescr}     \cup  \syntax{BasicAssertion} \ ) \ $ \\
+ & & $\strut \ \ \ \ \quad\quad$ such that
+ $\M(\prg{Internal})\in \syntax{basicAssertion}$, \\
+& & $\strut \ \ \ \ \quad\quad$  and \  $\forall \prg{C}\in dom(\M). \ [ \ \prg{C}\neq\prg{Internal}\ \rightarrow\ \M(\prg{C})\in \syntax{ClassDescr}\ ] $   \  $ \ \}$
+ \end{tabular}
+\end{definition}
+
+We describe \syntax{ClassDescr}-s in Definition \ref{def:syntax:classes}, and  \syntax{basicAssertion}-s in Definition 
+ \ref{def:syntax:classes}.
+
+
+
+\paragraph{Classes}
+
+Class definitions are described below. They consist of field and method definitions.
+Note that \LangOO is untyped. Method bodies consist of sequences of statements; 
+these can be field read or field assignments, object creation,   method calls, and return statements.
+All else, \eg booleans, loops,  can be encoded. 
+Note also that field read or write is only allowed if the target object is \prg{this} -- as, \eg, can
+  in Smalltalk -- this is encapsulation: the syntax allows an object to read/write its own fields, but
+   forbids it from reading/writing any other object's fields.
+ 
+
+
+ 
+ \begin{definition}[Classes]
+\label{def:syntax:classes}
+We define the syntax of class descriptions below.
+
+\begin{tabular}{lcll}
+ \syntax{ClassDescr}   &   \BBC  &     \kw{class}  \syntax{ClassId}    \lb\,  $($\ \kw{field} \f\ $)^*$ \    
+ $($  \kw{method}\ \syntax{MethBody}\ $)^*$   \ \rb
+\\
+\syntax{MethBody} &\BBC&
+       m\lp \x$^*$\rp     \lb\, \syntax{Stmts}  \,
+    \rb
+ \\
+ \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
+\syntax{Stmt}    &\BBC&   
+       \kw{this}.\f {\kw{:=}} \x   ~\SOR~  \x{\kw{:=}}  \kw{this}.\f    ~\SOR~        \x  {\kw{:=}} \x.\m\lp \x$^*$\rp    ~\SOR~  
+   \x  {\kw{:=}}     {\kw{new}} \c\lp \x$^*$\rp   ~\SOR~  
+   {\kw{return}}    \x   \\
+ \x, \f, \m &\BBC&  \prg{Identifier}
+ \end{tabular}
+ 
+  \vspace{.03in}
+  \noindent
+ where we use metavariables as follows: 
+ $\x \in  \syntax{VarId} \ \ \  \f \in  \syntax{FldId} \ \ \  \m \in  \syntax{MethId} \ \ \  \c \in  \syntax{ClassId}$
+\end{definition}
+
+     
+We define  method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class \c\ and a method identifier \m. We also define  the internal lookup function ${\mathcal{ I}}$ which returns the description of what is internal to the module.
+
+  
+ \begin{definition}[Lookup] For a class identifier \prg{C}  and a method identifier \prg{m} : $ ~ $ \\
+
+\noindent
+$
+\Meths {} {\prg{C}} {m}       \triangleq  \ \left\{  
+\begin{array}{l}
+                        \m\, \lp p_1, ... p_n \rp \lb stms   \rb\\
+\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kw{class}\, \prg{C}\, \  \lb ...   \kw{method}\ ...  m\, \lp p_1, ... p_n \rp \lb stms  \rb  ... \ \rb.  
+\\
+\mbox{undefined},  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.$
+ 
+${\mathcal{ I}} ( {\M} ) \     \triangleq  \     \M(\prg{Internal} )$
+  \end{definition}
+
+\subsection{The Operational Semantics of \LangOO}
+\label{formal:semantics}
+
+We will now define execution of \LangOO code. We start by  defining the  runtime entities, and runtime configurations, $\sigma$, which consist of stacks of frames and heaps. The frames are pairs of code stubs, and mapping from identifiers to values. We use the code stub to keep the code to be executed next. Code stubs are therefore are statements (as defined in \ref{def:syntax:classes}) potentially preceded by a marker for the place of a nested call of the from \x {\kw{:=}} $\bullet$.\footnote{Can we explain better?} 
+
+\begin{definition}[Runtime Entities]
+We define  addresses, values, frames, stacks, heaps and runtime configurations.
+
+\begin{itemize}
+\item 
+We take addresses to be an  enumerable set,  \prg{Addr}, and use the identifier $\alpha\in \prg{Addr}$ to indicate addresses.
+\item
+Values, $v$, are either addresses, or sets of addresses or null:\\
+ $~ ~ ~ \ v \in \{ \prg{null} \} \cup \prg{Addr}\cup {\mathcal P}( \prg{Addr})$.
+\item
+Code stubs are either   statements, or a marker for a nested call followed by   statements.
+
+\begin{tabular}{lcll}
+\syntax{CodeStub} &\BBC&   \syntax{Stmts} ~\SOR~   \x {\kw{:=}} $\bullet$ \semi\ \syntax{Stmts} \\
+ \end{tabular}
+
+\item
+Frames, $\phi$, consist of a call stub  and a  mapping from identifiers to values:\\  $~ ~ ~ \ \phi \ \in\ \syntax{CodeStub} \times \prg{Ident} \rightarrow Value$,
+\item
+Stacks,  $\psi$, are sequences of frames, $\psi\ ::= (\  \phi \ | \ \phi\cdot\psi $.
+\item
+Objects consist of a class identifier, and a partial mapping from field identifier to values: \\  \ $~ ~ ~ \ Object\ = \ \prg{ClassID} \times (\prg{FieldId} \rightarrow Value)$.
+\item
+Heaps, $\chi$, are mappings from addresses to objects:\  \  $\chi\ \in\ \prg{Addr} \rightarrow Object$.
+\item
+Runtime configurations, $\sigma$, are pairs of stacks and heaps, $\sigma\ ::=\ (\ \psi, \chi\ )$.
+\end{itemize}
+
+\end{definition}
+
+
+Note that values may be sets of addresses. Such values are never part of the execution of \LangOO, but are used to give semantics to assertions -- we shall see that in Definition \ref{def:valid:assertion}.
+
+
+
+Next, we define the interpretation of variables \x, and the field look up  \this.\f in the context of frames, 
+heaps and runtime configurations; these interpretations are used to define the operational semantics and   the 
+validity of assertions, later on:
+
+\begin{definition}[Interpretations]
+Interpretations are defined as follows:
+
+\begin{itemize}
+\item 
+$\interp {\x}{\phi} $ $\triangleq$ $\phi(\x)$  
+\item
+$\interp {\this.\f}{(\phi,\chi)} $ $\triangleq$ $v$, \ \ \ if \ \ $\chi(\phi(\this))=(\_, fldMap)$ and $fldMap(\f)$=$v$ 
+\item
+$\ClassOf {\alpha} {\chi} $ $\triangleq$ $\c$\  \ \ if \ \ $\chi(\alpha)=(\c,\_)$ 
+
+\end{itemize}
+
+\noindent
+For ease of notation, we also use
+\begin{itemize}
+\item
+$\interp {\x}{(\phi\cdot\psi,\chi)} $ $\triangleq$ $\interp {\x}{\phi} $
+\item
+$\interp {\this.\f}{(\phi\cdot\psi,\chi)} $ $\triangleq$ $\interp  {\this.\f}{(\phi,\chi)} $
+\item
+$\ClassOf {\alpha} {(\psi,\chi)} $ $\triangleq$ $\ClassOf {\alpha} {\chi} $ 
+\end{itemize}
+
+\end{definition}
+
+In the definition of the operational semantics of \LangOO we use the following notations for lookup and updates of runtime entities : 
+
+\begin{definition}[Lookup and update of runtime configurations]
+We define convenient shorthands for looking up in  runtime entities. 
+%We assume that
+% $\sigma$ consists of components so that $\sigma$ = $(\phi.\sigma', \chi, \prg{code} )$.
+\begin{itemize}
+\item
+Assuming that $\phi$ is the tuple  $(\prg{stub}, varMap)$, we use the notation  $\phi.\prg{code}$ to obtain \prg{stub}.
+\item
+Assuming a value v, and that $\phi$ is the tuple  $(\prg{stub}, varMap)$, we define $\phi[\prg{code}\mapsto\prg{stub'}]$ for updating the stub, \ie   
+$(\prg{stub'}, varMap)$.   We use  $\phi[\x \mapsto v]$  for updating the variable map, \ie  $\phi[\prg{stub}, varMap\mapsto v]$.
+\item
+Assuming a heap $\chi$, a value $v$, and   that $\chi(\alpha)=(\c, fieldMap)$,
+we use $\chi[\alpha,\f \mapsto v]$ as a shorthand for updating the object, \ie $\chi[\alpha \mapsto (\c, fieldMap[\f \mapsto v]]$.
+\end{itemize}
+
+\end{definition}
+
+
+
+
+
+
+\begin{figure*}
+$\begin{array}{l}
+\inferenceruleNN {methCall\_OS} { 
+%\sigma \ = \  (\ \phi\cdot\psi,\ \chi\ )
+\\
+\phi.\prg{code}\ =\ \x {\kw{:= }} \x_0.\m \lp \x_1, ... \x_n \rp \semi \prg{stms}
+\\ 
+\interp{\x_0}{\phi} = \alpha 
+\\
+\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp par_1, \ldots par_n \rp \lb \prg{stms}_1   \rb
+  \\
+ \phi''\ =\  (\  \prg{stmts}_1,\ \ (\ \this \mapsto \alpha, \caller \mapsto  \interp{\this}{\phi}, par_1 \mapsto  \interp{\x_1}{\phi}, \ldots par_n \mapsto  \interp{\x_n}{\phi}\ ) \ )
+}
+{
+ \M,\, (\ \phi\cdot\psi,\ \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot\phi[\prg{code}\mapsto\x  \kw{:=} \bullet \semi \prg{stms}] \cdot\psi,\ \chi\ ) 
+}
+
+\\ \\
+\inferenceruleNN {varAssgn\_OS} {
+ \phi.\prg{code} \ = \ \x  {\kw{:= }}   \this.\f \ \semi \prg{stms}
+}
+{
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[ \prg{code} \mapsto \prg{stms}, \x\mapsto \interp{\this.\f}{\phi,\chi}] \cdot\psi,\ \chi\  )
+}
+\\
+\\
+\inferenceruleNN{fieldAssgn\_OS} {
+ \phi.\prg{code}\ =\  \this.\f  \kw{:=} \x  \semi \prg{stms}
+}
+{
+ \M,\,  (\ \phi\cdot\psi, \chi\  )\ \ \leadsto\  \ (\ \phi[\prg{code}\mapsto  \prg{stms} ] \cdot\psi, \chi[\interp{\this}{\phi},\f \mapsto \interp{\x}{\phi,\chi}]\  ) 
+}
+\\
+\\
+\inferenceruleNN {objCreate\_OS} {
+ \phi.\prg{code}\ =\  \x  \kw{:=} \kw{new }\, \c \lp \x_1, ... \x_n \rp  \semi \prg{stms}
+ \\
+ \alpha\ \mbox{new in}\ \chi
+ \\
+\f_1, .. \f_n\ \mbox{are the fields declared in } \M(\c)
+}
+{
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[\prg{code}\mapsto  \prg{stms},\x \mapsto \alpha\ ] \cdot\psi, \ \chi[\alpha \mapsto (\c,\f_1 \mapsto \interp{\x_1}{\phi},  ... \f_n \mapsto \interp{\x_n}{\phi}  ) ]\ ) 
+}
+\\
+\\
+\inferenceruleNN {return\_OS} {
+ \phi.\prg{code}\ =\   {\kw {return }}\, \x  \semi \prg{stms}\ \  \ or\  \ \  \phi.\prg{code}\ =\   {\kw{return}}\, \x 
+ \\
+\phi.\prg{code}\ =\  \x' \kw{:=} \bullet  \semi \prg{stms}'
+}
+{
+ \M,\,  (\ \phi\cdot\phi'\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi'[\prg{code}\mapsto  \prg{stms'},\x' \mapsto \interp{\x}{\phi}] \cdot\psi, \ \chi \ ) 
+}
+\end{array}
+$
+\caption{Operational Semantics}
+\label{fig:Execution}
+\end{figure*}
+
+
+
+Execution of statement has   form $\M, \sigma \leadsto \sigma'$, it is defined in figure \ref{fig:Execution}.
+
+\begin{definition}[Execution] of one or more steps is defined as follows:
+
+\begin{itemize}
+     \item 
+   The relation $\M, \sigma \leadsto \sigma'$, it is defined in figure \ref{fig:Execution}.
+   \item
+   $\M, \sigma \leadsto^* \sigma'$ holds, if a) $\sigma$=$\sigma'$, or b) there exists a $\sigma''$ such that
+   $\M, \sigma \leadsto^* \sigma''$ and $\M, \sigma'' \leadsto \sigma'$.
+ \end{itemize}
+
+\end{definition}
+
+Note that interpretations and executions need not always be defined. For example, in a configuration whose top frame does not contain \x tin its domain, $\interp {\x}{\phi} $ is undefined. We define the relation $\sigma \subseteq \sigma'$ to express that   $\sigma$ has more information than $\sigma'$, and then prove that more defined configurations preserve interpretations:
+
+\begin{definition}[Extending runtime configurations]
+The relation $\subconf$   is defined on runtime configurations as follows. Take arbitrary 
+configurations $\sigma$, $\sigma'$, $\sigma''$, frame $\phi$, stacks $\psi$, $\psi'$,  heap $\chi$, address $\alpha$ free in $\chi$, value $v$ and object $o$, and define $\sigma  \subconf \sigma'$ as the smallest relation such that:
+
+\begin{itemize}
+\item 
+$\sigma  \subconf \sigma$
+\item
+$(\phi[\x \mapsto v]\cdot \psi, \chi) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$(\phi\cdot\psi\cdot\psi', \chi) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$(\phi, \chi[\alpha \mapsto o) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$(\phi, \chi[\alpha \mapsto o) \subconf  (\phi\cdot \psi, \chi)$ 
+\item
+$\sigma'  \subconf \sigma''$ and $\sigma''  \subconf \sigma$ imply $\sigma'  \subconf \sigma$
+\end{itemize}
+\end{definition}
+
+
+ 
+\begin{lemma}[Preservation of interpretations and executions]
+If $\sigma'  \subconf \sigma$, then
+
+\begin{itemize}
+\item
+If $\interp {\x}{\sigma}$ is defined, then $\interp {\x}{\sigma'}$=$\interp {\x}{\sigma}$.
+\item
+If $\interp {\this.\f}{\sigma}$ is defined, then $\interp {\this/f}{\sigma'}$=$\interp {\this.\f}{\sigma}$.
+\item
+$\ClassOf {\alpha} {\sigma} $  is defined, then  $\ClassOf {\alpha} {\sigma'} $  = $\ClassOf {\alpha} {\sigma} $. 
+\item
+$\M, \sigma \ \leadsto^*\ \sigma''$\ \ implies    \ \ there exists a $\sigma''$, so that $\M, \sigma'\ \leadsto^*\ \sigma'''$
+and $\sigma''' \subconf \sigma''$.
+\end{itemize}
+\end{lemma}
+
+
+%\begin{lemma}
+%Assume module $\M$, stacks $\psi$, $\psi'$ and $\psi''$,  object $o$, and address $\alpha$  free in $\chi$ and $\chi'$.
+%\begin{itemize}
+%     \item 
+%   $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi,\chi[\alpha\mapsto o])\ \leadsto^*\ (\psi',\chi'[\alpha\mapsto o])$
+%   \item
+%    $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$\ \ implies    \ \ $\M, (\psi\cdot\psi'',\chi)\ \leadsto^*\ (\psi'\cdot\psi'',\chi')$
+%    \end{itemize}
+%\end{lemma}
+%\begin{proof}
+%Both assertions by structural induction  over the derivation of  $\M, (\psi,\chi) \ \leadsto^*\ (\psi',\chi')$.
+%\end{proof}
+
+Where does execution start? We define initial configurations to be those which may contain arbitrary code stubs, but which contain no objects. Objects will be created, and further methods will be called through execution of the code in $\phi.\prg{code}$.
+
+\begin{definition}[Initial Configurations] are defined as follows \\
+
+\begin{itemize}
+     \item 
+   $\Initial {(\psi,\chi)}$, \ \ if \ \ $\psi$ consists of a single frame $\phi$ with $dom(\phi)=\{ \this, \caller \}$, and $\interp {\caller}{\phi}$= $\interp {\this}{\phi}$=\nullK, and $dom(\chi)$=$\emptyset$.
+ \end{itemize}
+
+\end{definition}
+
+\subsection{Module linking}
+
+In this work, we study validity of assertions in the open world, \ie   does a module 
+make a certain guarantee when executed in conjunction with other modules? To study this, we 
+ need the concept of linking external modules to the one  under consideration.
+ Linking is an operation that takes two modules, and creates a module which corresponds  to the union of the two. 
+ %We use the concept of module linking in order to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know. 
+We place some conditions for module linking to be defined: We require that the two modules do not contain implementations for the same class identifiers,  
+
+\begin{definition}[Module Linking]
+
+The linking operator\  \ $\link:\  \syntax{Module} \times  \syntax{Module} \longrightarrow \syntax{Module}$ is defined as follows:
+
+$
+\M \link \M{'}  \ \triangleq  \ \ \left\{
+\begin{array}{l}
+                        \M\ \link\!_{aux}\ \M{'},\ \ \   \hbox{if}\  \ dom(\M)\!\cap\!dom(\M')\!=\!\emptyset\\
+\mbox{undefined}  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.$
+                    
+and where,                  
+\begin{itemize}
+     \item 
+   For \prg{C}$\neq\prg{Internal}$, we have: \ \
+   $(\M\ \link\!_{aux}\ \M')(\prg{C})\  \triangleq  \ \M(\prg{C})$  if  $\prg{C}\in dom(\M)$, and  $\M'(\prg{C})$ otherwise.
+    \item  
+   $(\M\ \link\!_{aux}\ \M')(\prg{Internal}) \  \triangleq  \ \M(\prg{Internal}) \cup  \M'(\prg{Internal})$
+ \end{itemize}
+\end{definition}
+
+We can prove that inking is associative and commutative, and preserves execution.
+ 
+ \begin{lemma}[properties of linking]
+ For any modules $\M$,   $\M'$ and $\M''$, and runtime configurations $\sigma$, we have$:$
+ \label{lemma:linking:properties}
+ 
+ \begin{itemize}
+     \item 
+     $(\M \link \M')\link \M''$ = $\M \link (\M' \link \M'')$.
+    \item  
+      $\M \link \M'$  = $\M' \link\M$.
+      \item
+      $\M, \sigma \leadsto \sigma'$, and $\M\link \M'$ is defined, \  \  implies\ \   $\M\link \M', \sigma \leadsto \sigma'$
+   \end{itemize}
+ 
+ \end{lemma}
+ 
+\section{ Assertions}
+
+Assertions allow us to reflect over the current runtime configuration, but also over possible future and past configurations, over 
+the control ... TODO describe this
+A basic form of assertion only reflects over the current runtime configuration. These are described in Definition \ref{def:simple_assertion}.
+ 
+ \subsection{Basic Assertions}
+ \label{def:basic_assertion}
+ \begin{definition}[Basic Expressions and Basic Assertions] $ $ \\
+ 
+ $\begin{array}{lcl}
+ \SE & ::= &  \prg{true}  \ \mid\ \prg{false}  \    \mid\ \prg{null}  \ \mid \ \x  \ \mid \ \SE.\f    \ \mid \ \SE.\f^n \  \\
+ ~ \\
+  \SA\ &\ \  ::=\ \  & \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE \  \mid \   \SE:\prg{ClassId}    \\  
+& & \ \mid  \ \SA \rightarrow \SA \ \mid  \ \SA \wedge \SA  \ \mid  \ \SA \vee \SA  \ \mid  \ \neg \SA \\
+& & \ \mid \   \exists \prg{x}.\SA   % \exists \prg{S}:SET.\SA 
+  \ \mid \  \exists k:\mathbb{N}.\SA  
+  \ \mid \  \exists \prg{fs}:FLD^k.\SA \\
+& & \ \mid \   \forall \prg{x}.\SA   % \exists \prg{S}:SET.\SA 
+  \ \mid \  \forall k:\mathbb{N}.\SA  
+  \ \mid \  \forall \prg{fs}:FLD^k.\SA  
+\end{array}$
+
+
+\noindent
+In the above, \f\  is a field identifier , and  $n$ is a natural number.
+\end{definition} 
+
+Note that the operators $\wedge$, $\vee$, $\neg$ and $\forall$ can be encoded in terms of the other operators, but here we defined them explicitly.\footnote{Should we have just introduced them through the encodings} 
+
+Simple expressions have a value which can be determined with reference to a runtime configuration.
+
+\begin{definition}[Interpretations]
+
+For any runtime configuration, $\sigma$, and any simple expression, $\SE$, and any $k\in \mathbb{N}$ we define its interpretation as follows:
+
+\begin{itemize}
+     \item 
+  $\interp {\prg{true}}{\sigma}$ $ \triangleq$   \prg{true}, \ and \ \    $\interp {\prg{false}}{\sigma}$ $ \triangleq$ \prg{false}, \ and \ \ 
+   $\interp {\prg{null}}{\sigma}$ $ \triangleq$  \prg{null}
+  \item
+  $\interp {\x}{\sigma}$ $ \triangleq$ $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
+  \item
+  $\interp {\SE.\prg{f}}{\sigma}$ $ \triangleq$ $\chi({\interp {\SE}{\sigma}}, \prg{f})$  \ \ if \ \ $\sigma$=$(\_,\chi)$
+   \item
+     $\interp {\SE.\prg{f}^0}{\sigma}$ $ \triangleq$  $\interp {\SE}{\sigma}$, \ \ \ and \ \ \ $\interp {\SE.\prg{f}^{k+1}}{\sigma}$ $ \triangleq$  $\chi({\interp {\SE.\prg{f}^k}{\sigma}}, \prg{f})$, where $\sigma$=$(\_,\chi)$.
+   \end{itemize}
+\end{definition}
+
+\begin{lemma}[Interpretation corresponds to execution]
+For any simple expression $\SE$, runtime configuration $\sigma$, and value $v$:
+
+\begin{itemize}
+     \item 
+  $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M_\emptyset, \sigma[\prg{code}\mapsto \SE] \leadsto v$,\\
+  where $\M_\emptyset$ stands for the empty module.
+  \item
+   $\interp \SE {\sigma}$ = $v$\ \     if and only if \ \ $\M, \sigma[\prg{code}\mapsto \SE] \leadsto v$ \ \ \ for any module $\M$ .
+   \end{itemize}
+   \end{lemma}
+   
+   \begin{proof} The  first guarantee is proven structural induction  over the definition of $\SE$.
+   The second guarantee  is a corollary of the first guarantee  and of lemma \ref{lemma:linking:properties}.\end{proof}
+
+
+The validity of basic assertions is judged in the context of a runtime configuration
+
+ \begin{definition}[Validity of basic Assertions] is defined  as follows
+\label{def:valid"basic:assert}
+\begin{itemize}
+\item
+$\sigma \models \SE$ \IFF  $\interp{\SE}{\sigma}$ = \prg{true}.
+\item
+$\sigma \models \SE>\SEPrime$ \IFF $\interp{\SE}{\sigma}$ > $\interp{\SEPrime}{\sigma}$.
+\item
+$\sigma \models \SE=\SEPrime$ \IFF $\interp{\SE}{\sigma}$ = $\interp{\SEPrime}{\sigma}$.
+\item
+$\sigma \models \SE\equiv\SEPrime$ \IFF $\SE$ and $\SEPrime$ are textually identical.
+\item
+$\sigma \models  \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
+\item
+$\sigma \models \SA \rightarrow \A' $ \IFF $\sigma \models \SA$ implies $\sigma \models \A'$. 
+\item
+$\sigma \models \SA \wedge \A' $ \IFF $\sigma \models \SA$ and $\sigma \models \A'$. 
+\item
+$\sigma \models \SA \vee \A' $ \IFF $\sigma \models \SA$ or $\sigma \models \A'$. 
+\item
+$\sigma \models\neg  \SA $ \IFF $\sigma \not\models \SA$. 
+\item
+$\sigma \models  \exists \x.\SA$ \IFF $\sigma[\prg{z}\mapsto \alpha] \models  \SA[\prg{x}/\prg{z}]$, for some $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$.
+\item
+$\sigma \models  \exists \prg{k}:\prg{Nat}.\SA$ \IFF  there exists a $n\in\mathbb{N}$, so that   $\sigma \models    \SA[\prg{k}/n]$. 
+%\footnote{TO THINK Should we instead allow the frames to map variables to numbers as we do for sets?}
+\item
+$\sigma \models  \exists \prg{fs}:\prg{FLD}^k.\SA$ \IFF  there exist $k$ field identifiers $\prg{f}_1$, ... $\prg{f}_k$ so that 
+$\sigma \models  \SA[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k]$. 
+\item
+$\sigma \models  \forall \x.\SA$ \IFF $\sigma[\prg{z}\mapsto \alpha] \models  \SA[\prg{x}/\prg{z}]$, for all $\alpha\in dom(\sigma)$,  and  \prg{z} free in $\sigma$.
+\item
+$\sigma \models  \forall \prg{k}:\prg{Nat}.\SA$ \IFF for all $n\in\mathbb{N}$, we have   $\sigma \models    \SA[\prg{k}/n]$. 
+%\footnote{TO THINK Should we instead allow the frames to map variables to numbers as we do for sets?}
+\item
+$\sigma \models  \forall \prg{fs}:\prg{FLD}^k.\SA$ \IFF  for all   field identifiers $\prg{f}_1$, ... $\prg{f}_k$ we have
+$\sigma \models  \SA[\prg{fs}/\prg{f}_1.\,...\,\prg{f}_k]$. 
+\end{itemize}
+\end{definition}
+
+We define equivalence of basic assertions in the usual sense: two assertions are equivalent if they are valid in 
+the context of the same configurations.
+
+\begin{definition}[Equivalence of basic assertions] 
+$ ~ $ 
+
+\begin{itemize}
+\item
+$\SA \equiv \SAPrime  \IFF    \forall \sigma.\, [\sigma \models \SA \mbox{ if and only if } \sigma \models \SAPrime].$
+\end{itemize}
+\end{definition}
+
+Using this small language of basic assertions we can encode all the classical connectives, \ie $\wedge$, and $\vee$ and $\neg$, and we can also encode universal quantifiers. Basic assertions form a classical logic\footnote{TODO: check the term;}.
+
+\begin{lemma}[Basic Assertions are classical-1]
+For all runtime configurations $\sigma$, and basic assertions $\SA$ and $\SAPrime$, we have
+\begin{enumerate}
+\item 
+$\sigma \models \SA$ or $\sigma \models \neg\SA$
+\item
+$\sigma \models \SA \wedge \SAPrime$ \SP if and only if \SP $\sigma \models \SA$ and  $\sigma \models \SAPrime$ 
+\item
+$\sigma \models \SA \vee \SAPrime$ \SP if and only if \SP $\sigma \models \SA$ or  $\sigma \models \SAPrime$ 
+\item
+$\sigma \models \SA \wedge \neg\SA$ never holds.
+\end{enumerate}
+\end{lemma}
+\begin{proof} By application of the corresponding definitions from \ref{def:valid"basic:assert}.\end{proof}.
+
+\begin{lemma}[Basic Assertions are classical-2]
+For   basic assertions $\SA$, $\SAPrime$, and $\SA''$ the following equivalences hold
+\label{lemma:basic_assertions_classical}
+\begin{enumerate}
+\item
+$(\SA \wedge \SAPrime) \wedge \SA'' \ \equiv \  \SA \wedge (\SAPrime \wedge \SA'')$
+\item 
+$(\SA \vee \SAPrime) \vee \SA'' \ \equiv \  \SA \vee (\SAPrime \vee\SA'')$
+\item 
+$(\SA \vee \SAPrime) \wedge \SA'' \ \equiv \  (\SA \wedge \SAPrime)\, \vee\, (\SA \wedge \SA'')$
+\item 
+$(\SA \wedge \SAPrime) \vee \SA'' \ \equiv \  (\SA \vee \SAPrime)\, \wedge\, (\SA \vee \SA'')$
+\item 
+$\neg (\SA \wedge \SAPrime) \  \ \equiv \  \neg  \SA   \vee\, \neg \SAPrime'$
+\item 
+$\neg (\SA \vee \SAPrime) \  \ \equiv \  \neg  \SA   \wedge\, \neg \SAPrime'$
+\item
+$\neg (\exists \prg{x}.\SA )  \  \ \equiv \  \forall \prg{x}.(\neg  \SA)$
+\item
+$\neg (\exists k:\mathbb{N}.\SA )  \  \ \equiv \  \forall  k:\mathbb{N}.(\neg  \SA)$
+\item
+$\neg (\exists \prg{fs}:FLD^k.\SA )  \  \ \equiv \  \forall \prg{fs}:FLD^k.(\neg  \SA)$
+\item
+$\neg (\forall \prg{x}. \SA)  \  \ \equiv \  \  \exists \prg{x}.\neg(\SA )$
+\item
+$\neg (\forall k:\mathbb{N}.. \SA)  \  \ \equiv \  \  \exists k:\mathbb{N}..\neg(\SA )$
+\item
+$\neg (\forall \prg{fs}:FLD^k.. \SA)  \  \ \equiv \  \  \exists \prg{fs}:FLD^k..\neg(\SA )$
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+All points follow by application of the corresponding definitions from \ref{def:valid"basic:assert}.
+ \end{proof}
+
+Moreover, with growing configurations, validity is preserved, provided the assertion is well-defined in the smaller configuration
+
+\begin{definition}
+We say that $\sigma \vdash \SA$ if % all variables that appear free in $\SA$ are in the domain of the top frame in $\sigma$, and
+for any term $\x.\f_1...\f_n$ appearing in $\SA$ such that \x\, is free in $\SA$, the interpretation $\interp{\x.\f_1...\f_n} \sigma$ is defined.
+\end{definition}
+
+Note that if we take $n=0$ in the definition above we obtain as corollary that   all variables that appear free in $\SA$ they  are in the domain of the top frame in $\sigma$.
+
+\begin{lemma}[Preservation of validity] $ $
+\label{lemma:preserve:valid}
+\begin{itemize}
+\item
+If  $\sigma \vdash \SA$ and $\sigma \models \SA$ and $\sigma' \subconf \sigma$, \  then  \ $\sigma' \models \SA$.
+\end{itemize}
+\end{lemma}
+
+Nota that without the requirement  that $\sigma \vdash \SA$, the implication from lemma \ref{lemma:preserve:valid} does not hold. For example, in a $\sigma$ where \x\ is undefined, we have that $\sigma \neg\vdash \x = \prg{y}$ and 
+$\sigma \neg\models \x = \prg{y}$, but we can then construct a $\sigma'$ such that $\sigma' \subconf \sigma$,  and
+ \ $\sigma' \models \x = \prg{y}$.
+
+\subsection{Module pairs and visible states semantics}
+
+TODO: make the connection with classical visible state semantics, explain why ours is more flexible. why we use \prg{Internal} instead. We explain the internal-external part of the pair $\M\mkpair\M'$.
+
+ 
+\begin{definition}
+Given runtime configurations $\sigma$,  $\sigma'$,  and module $\M$ $\M'$ we define  
+\label{def:module_pair_execution} trough execution,
+\begin{itemize}
+\item
+$\M \mkpair \M', \sigma \leadsto \sigma'$ \IFF  
+there exists runtime configurations $\sigma_1$,  ...
+$\sigma_n$, such that 
+\begin{itemize}
+\item
+$\sigma$=$\sigma_1$,\ \  \ \ and\ \ \ \ $\sigma_n=\sigma'$.
+\item
+$\M \link \M', \sigma_i \leadsto \sigma_{i+1}'$,\  \  for $1\leq i \leq n\!-\!1$
+\item
+$\sigma \not\models {\mathcal I}({\M})$, \ \ \ \ and\ \ \ \  $\sigma' \not\models {\mathcal I}({\M})$, \ \ \ \ and\ \ \  \
+$\sigma_i \models {\mathcal I}({\M})$,\ \ for $2\leq i \leq n\!-\!2$
+\end{itemize}
+\end{itemize}
+
+\end{definition}
+
+And we can prove that ...
+
+\begin{lemma}[xxx]
+\label{lamma:module_pair_execution} 
+For any modules $\M$, $\M'$, and $\M''$, and runtime configurations $\sigma$, $\sigma'$, 
+
+\begin{itemize}
+\item
+ $\M \mkpair \M', \sigma \leadsto \sigma'$  implies $\M \mkpair (\M'\link\M') ,\sigma \leadsto \sigma'$.
+\end{itemize}
+\end{lemma} 
+
+But note that in general $\M \mkpair \M', \sigma \leadsto \sigma'$  does not imply
+$(\M\link\M'') \mkpair \M' , \sigma \leadsto \sigma'$.
+
+
+We also define 
+\begin{definition}
+$\Arising  {\M\mkpair\M'}) \ = \ \{ \ \sigma \ \mid \ \exists \sigma_0. \  \Initial{\sigma_0} \ \wedge  \M\mkpair\M', \sigma_0 \leadsto^* \sigma \ \} $
+\end{definition}
+ 
+ \subsection{Assertions}
+
+TODO explain at a high level what "full assertions" .are. Also, introduce the need  for spatial restriction. 
+
+We will define the OCAP assertions $\CanAccess{\_}{\_}$  (permission)
+and   $\Changes{\_}$ (authority). \footnote{Note that they are slightly different
+assertions to those we had in the past.}
+We also add temporal modifiers, where $\Future \A$ expresses that $\A$ will hold at some future point,
+$\Past \A$ expresses that $\A$ held at some point in the past.
+We also add a {\em spatial modifier}, $\Using{\A}{S}$, which expresses that assertion $\A$ holds in
+the sub-configurations determined by the witness \prg{S}.
+
+We extend the syntax for assertions as follows:\footnote{The symbols are not that good -- esp the symbols for future and past.}
+
+\begin{definition}[Assertions]The syntax of assertions ($\A$) is as per below:
+\label{def:assertions}
+
+$ ~ $ \\
+
+$\begin{array}{lcl}
+\A &\ ::=\  &   \SE  \ \mid \ \SE > \SE \ \mid \  \SE=\SE  \ \mid \ \SE \equiv \SE\ \mid \   \SE:\prg{ClassId}  \ \mid \   
+    \SE\in\prg{S}   \ \mid  \ \A \rightarrow \A  \\
+ &   &  \exists \x.\A  \ \mid \  \exists \prg{S}:SET.\A  \ \mid \  \exists fs:FLD^k.\A
+ \ \mid \  \exists k:\mathbb{N}.\A  
+\\
+ &    & \CanAccess x y \ \mid\  \ \Changes e \ \mid\  \Calls{\prg{x},\prg{y},\prg{m},\prg{z}} \ \mid\  \  \Future \A  \ \mid \  \Past \A \ \mid \ \Using \A \prg{S }
+ \\
+ \\
+  &   &  \A \wedge \A  \ \mid\  \ \A \vee \A  \ \mid\  \ \neg A   \ \mid\  \ \forall \x.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid \  \forall fs:FLD^k.\A
+ \ \mid \  \forall k:\mathbb{N}.\A  
+\\
+
+\end{array}$
+
+
+\end{definition} 
+
+Note that the operators $\wedge$, $\vee$,  $\neg$ and $\forall$  (\ie the syntactic form from the last line  in  \refDef{def:assertions}) could have been defined  through the usual shorthands, \eg, $\neg \A$ is short for 
+$\A \rightarrow \ff$ \etc, but here we give full definitions instead.
+ Validity of assertions has the format $\M\mkpair \M', \sigma \models \A$ - TODO justify why \M, and why we need an external/internal part.
+ 
+TODO Explain motivate $\adapt$ We have two states in the configurations -- but not pre/post kind.
+In order to define validity of assertions we need   the following auxiliary concepts
+
+The operator\  $\adapt$ \ \ combines runtime configurations: $\sigma \adapt \sigma'$ adapts the second configuration to the view of the former: it returns a new configuration consisting of the frame as taken from $\sigma$ while the heap is taken from $\sigma'$. This allows us to interpret expressions  in the newer configuration $\sigma'$ but with the variables bound according to the top frame from $\sigma$; \eg we can obtain that value of \prg{p}.\prg{balance} in configuration  $\sigma'$ even if \prg{p} was out of scope.
+ 
+
+ 
+
+ \begin{definition}[Adaptation on Runtime Configurations]  The operator $\adapt$\ \  is a binary operator on runtime configurations.
+ \label{def:config:adapt}
+ $~ $ 
+ 
+\begin{itemize}
+\item
+$\sigma \adapt \sigma' \triangleq (\phi''\cdot\psi',\chi')$  \IFF $\sigma=(\phi\cdot\_,\_)$, and $\sigma'= (\phi'\cdot\psi',\chi')$, and $\phi$=$(\prg{stub},varMap)$, and $\phi$=$(\prg{stub}',varMap')$
+\\ and  $\phi''$ such that 
+  $\phi''=(\, \prg{stub}'[\prg{zs}/\prg{zs}' ],\,varMap'[\prg{zs}'\mapsto varMap(\prg{zs})]\, ) $
+where \\
+\prg{zs}=$dom(varMap)$, and   $\prg{zs}'$ is a set  of variables which has  the  same cardinality as \prg{zs}, and where all variables in
+$\prg{zs}'$  are fresh in $varMap$ and in $varMap'$.
+
+
+\end{itemize}
+
+\end{definition}
+
+ 
+
+ \begin{definition}[Restriction on Runtime Configurations]  The restriction operator $\restrct{} {} $ applied to a runtime configuration $\sigma$ and a set $R$ is defined as follows:   
+ \label{def:config:restrct}
+ $~ $ 
+ 
+\begin{itemize}
+\item
+$\restrct {\sigma}{\prg{S}} \ \triangleq \ (\psi, \chi')$, \IFF  $\sigma$=$(\phi,\chi)$,  and, \  $dom(\chi')=\interp {\prg{S}} {\sigma}$, and  \\
+$\ \strut \ \ \hspace{1.2in} $  
+% THE BELOW IS WRONG! 
+% $\forall \x, \f_1, ... \f_n.$\ $\interp {\x.\f_1....\f_n}{\sigma} = \interp {\x.\f_1....\f_n}{\sigma_S}$.
+ $\forall \alpha\!\in\!dom(\chi').[ \ClassOf {\alpha} {\chi'} =  \ClassOf {\alpha} {\chi}\ \wedge \ \forall \f.  \chi'(\alpha,\f)=\chi(\alpha,\f)]$.
+\end{itemize}
+\end{definition} 
+
+cccc
+
+\begin{definition}[Validity of  Assertions] We define validity of assertions below.
+\label{def:valid:assertion}
+
+We fist consider simpler assertions wihch only involve expresssions:
+
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma \models\SE$ \IFF  $\interp{\SE}{\sigma}$ = \prg{true}.
+\item
+$\M\mkpair \M', \sigma \models\SE>\SEPrime$ \IFF $\interp{\SE}{\sigma}$ > $\interp{\SEPrime}{\sigma}$.
+\item
+$\M\mkpair \M', \sigma \models\SE=\SEPrime$ \IFF $\interp{\SE}{\sigma}$ = $\interp{\SEPrime}{\sigma}$.
+\item
+$\M\mkpair \M', \sigma \models\SE\equiv\SEPrime$ \IFF $\SE$ and $\SEPrime$ are textually identical.
+\item
+$\M\mkpair \M', \sigma \models \SE:\prg{ClassId}$ \IFF $\ClassOf {\interp{\SE}{\sigma}} {\sigma}$ = $\prg{ClassId}$.
+\item
+$\M\mkpair \M', \sigma \models \SE\in \prg{S}$ \IFF $\interp{\SE}{\sigma}\in \interp{\prg{S}}{\sigma}$.
+\end{itemize}
+
+Next, we consider assertions involve existential quantifiers over program variables, field sequences, sets and numbers.
+
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma \models \exists x.\A$ \IFF  
+$\sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$ \ for some  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$.\item
+$\M\mkpair \M', \sigma \models \exists \prg{S}:\prg{SET}.\A$ \IFF  $\M\mkpair \M', \sigma[\prg{Q}\mapsto R] \models  \A[\prg{S}/\prg{Q}]$ \\
+$\strut ~ \hspace{1.4in} $ for some set of addresses $R\subseteq dom(\sigma)$, and   \prg{Q} free in $\sigma$ and $\A$.
+ 
+\item
+$\M\mkpair \M', \sigma \models  \exists \prg{fs}:\prg{FLD}^k.\A$ \IFF  
+$\M\mkpair \M', \sigma \models  \A[\prg{fs}/\prg{f}_1.\f_2.\,...\,\prg{f}_k]$\  for  $k$ field identifiers $\prg{f}_1$,..,$\prg{f}_k$.
+\item
+$\M\mkpair \M', \sigma \models  \exists \prg{n}:\prg{Nat}.\A$ \IFF  $\M\mkpair \M', \sigma \A[\prg{n}/k]$\ \ for some $k\in\mathbb{N}$.
+\item
+$\M\mkpair \M', \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M', \sigma \models \A $ implies $\M\mkpair \M', \sigma \models \A' $
+\end{itemize}
+
+And now, we consider the assertions which involve space, time or control:
+
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma \models  \CanAccess{\prg{x}}{\prg{y}}$   \IFF  \begin{itemize}
+\item
+$\interp {\x} {\sigma}$=$\interp {\y} {\sigma}$, or
+\item
+$\interp {\x.\f} {\sigma}$=$\interp {\y} {\sigma}$  for some field \prg{f},  or
+\item
+$\interp {\x} {\sigma}$=$\interp {\this} {\sigma}$ and
+  $\interp {\y} {\sigma}$=$\interp {\z} {\sigma}$,
+\
+and \z\ appears in  $\sigma$.\prg{stub}.\footnote{That is, \z is a local variable or formla parameter; in particular, it was   not introduced as ghost state through the assertions. - TODO explain better.}
+ \end{itemize}
+ \item
+ $\M\mkpair \M', \sigma \models   \Changes{\prg{e}}$  \IFF 
+ $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto \sigma' \ \wedge \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$.
+ \\
+ $\strut ~ \hspace{1.4in} $ where $\phi$ is so that $\sigma$=$(\phi.\_,\_)$.\footnote{explain why we take $\phi$}
+ \item
+$\M\mkpair \M', \sigma \models  \Calls{\prg{x},\prg{y},\prg{m},\prg{z}}$ \IFF \
+ $\sigma.\prg{code}$=\prg{u.m(v);\_} for some variables \prg{u} and \prg{v},  \ and \  
+\\ $\strut ~ \hspace{1.4in} $ 
+$\interp{\prg{this}}{\sigma}$=$\interp{\prg{x}}{\sigma}$, \ and\ $\interp{\prg{y}}{\sigma}$=$\interp{\prg{u}}{\sigma}$,
+ \ and\ $\interp{\prg{z}}{\sigma}$=$\interp{\prg{v}}{\sigma}$.
+ \item
+  $\M\mkpair \M', \sigma \models  \Future \A $
+  \IFF
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\phi \leadsto^* \sigma' \ \wedge \M\mkpair \M',\sigma\adapt\sigma' \models \A \ \  ]$, 
+ \\
+$\strut ~ \hspace{1.4in} $  and where $\phi$ is so that $\sigma$=$(\phi\cdot\_,\_)$.
+ \item
+ $\M\mkpair \M', \sigma \models  \Past \A $ \IFF 
+ $\forall \sigma_1, ... \sigma_n. [\ \ \Initial{\sigma_1}\ \wedge \ 
+ \forall i\in[1..n). \M\mkpair \M', \sigma_{i} \leadsto  \sigma_{i+1} \ \wedge \ 
+ \sigma_n=\sigma$
+ \\
+$\strut ~ \hspace{1.9in} $  $ \longrightarrow \ \ \  \exists j\in [1..n-1).
+ \M\mkpair \M', \sigma\adapt\sigma_j  \models \A\ \ 
+ ]$\footnote{past includes the present, perhaps change this}
+ \item
+ $\M\mkpair \M', \sigma \models \Using \A \prg{S}$
+ \IFF
+ $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
+\end{itemize}
+
+The remaining assertions introduce the remaining logical operators (\ie $\wedge$, $\vee$, $\neg$ and the universal quantifiers). These could be encoded in terms of the preceding operators, but we nevertheless give their meaning explicitly here.
+
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma \models  \A \wedge \A'$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+and $\M\mkpair \M', \sigma \models  \A'$.
+\item
+$\M\mkpair \M', \sigma \models  \A \vee \A'$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+or $\M\mkpair \M', \sigma \models  \A'$.
+\item
+$\M\mkpair \M', \sigma \models  \neg\A$   \IFF  $\M\mkpair \M', \sigma \models  \A $
+does not hold.
+\item
+$\M\mkpair \M', \sigma \models \forall x.\A$ \IFF  
+$\sigma[\prg{z}\mapsto \alpha] \models  \A[\prg{x}/\prg{z}]$ \ for all  $\alpha\in dom(\sigma)$, and   all \prg{z} free in $\sigma$ and $\A$.\item
+$\M\mkpair \M', \sigma \models \forall \prg{S}:\prg{SET}.\A$ \IFF  $\M\mkpair \M', \sigma[\prg{Q}\mapsto R] \models  \A[\prg{S}/\prg{Q}]$ \\
+$\strut ~ \hspace{1.4in} $ for all sets of addresses $R\subseteq dom(\sigma)$, and  all \prg{Q} free in $\sigma$ and $\A$.
+ 
+\item
+$\M\mkpair \M', \sigma \models \forall \prg{fs}:\prg{FLD}^k.\A$ \IFF  
+$\M\mkpair \M', \sigma \models  \A[\prg{fs}/\prg{f}_1.\f_2.\,...\,\prg{f}_k]$\  for  all  field identifiers $\prg{f}_1$,..,$\prg{f}_k$.
+\item
+$\M\mkpair \M', \sigma \models  \forall \prg{n}:\prg{Nat}.\A$ \IFF  $\M\mkpair \M', \sigma \A[\prg{n}/k]$\ \ for all $k\in\mathbb{N}$.
+\end{itemize}\end{definition} 
+
+%\noindent
+%{\bf Question} SD wonders whether we should have taken the ${\mathcal I}(\M)$ aspect in some of
+%the definitions  earlier on. 
+%For example, should we have defined
+%\begin{enumerate}
+%\item 
+%$\M\mkpair \M', \sigma \models \exists x.\A$ \IFF  exist  $\alpha\in dom(\sigma)$, and   \prg{z} free in $\sigma$ and $\A$, \hl{and $\sigma[\prg{z}\mapsto \alpha] \not\models {\mathcal I}(\M)[\prg{this}/\prg{z}]$}  so that
+%$\sigma[\prg{z}\mapsto \alpha \models  \A[\prg{x}/\prg{z}]$ 
+%\item
+%$\M\mkpair \M', \sigma \models \exists \prg{S}:\prg{SET}.\A$ \IFF 
+% exists a set of addresses $R\subseteq dom(\sigma)$, and a \prg{Q} free in $\sigma$ and $\A$, so that
+%\hl{for all $\alpha\in R$,} for \prg{z}    free in $\sigma$ and $\A$, \hl{we have }
+%  \hl{$\sigma[\prg{z}\mapsto \alpha] \not\models {\mathcal I}(\M)[\prg{this}/\prg{z}]$}, and
+%$\M\mkpair \M', \sigma[\prg{Q}\mapsto R ]\models   \A[\prg{S}/\prg{Q}]$ 
+%\end{enumerate}
+%We will be able to decide this when we study the examples. But I think the answer will be no to both.
+
+\begin{lemma}[Preservation of validity of basic assertions]
+For any basic assertion $\SA$, runtime configurations $\sigma$,...
+\begin{itemize}
+\item $\sigma \models \SA$ \ \ if and only if \ \  for any $\M$, $\M'$. \, $\M\mkpair \M', \sigma \models\SA$.
+\end{itemize}
+
+\end{lemma}
+
+We define equivalence of basic assertions in the usual sense: two assertions are equivalent if they are valid in 
+the context of the same configurations.
+
+\begin{definition}[Equivalence and entailments of assertions] 
+$ ~ $ 
+
+\begin{itemize}
+\item
+$\A \equiv \A'\  \IFF\    \forall \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma \models \A\ \mbox{ if and only if }\ \M\mkpair \M', \sigma \models \A'\ \ ].$
+\item
+$\A \subseteqq \A'\  \IFF\    \forall \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma \models \A\ \mbox{ implies }\ \M\mkpair \M', \sigma \models \A'\ \ ].$
+\end{itemize}
+\end{definition}
+
+ 
+
+\begin{lemma}[Assertions are classical-1]
+For all runtime configurations $\sigma$,    assertions $\A$ and $\A'$, and modules $\M$  and $\M'$, we have
+\begin{enumerate}
+\item 
+$\M\mkpair \M', \sigma \models \A$\ or\ $\M\mkpair \M', \sigma \models \neg\A$
+\item
+$\M\mkpair \M', \sigma  \models \A \wedge \A'$ \SP if and only if \SP $\M\mkpair \M', \sigma \models \A$ and $\M\mkpair \M', \sigma  \models \A'$ 
+\item
+$\M\mkpair \M', \sigma  \models \A \vee \A'$ \SP if and only if \SP $\M\mkpair \M', \sigma  \models \A$ or  $\sigma \models \A'$ 
+\item
+$\M\mkpair \M', \sigma  \models \A \wedge \neg\A$ never holds.
+\end{enumerate}
+\end{lemma}
+\begin{proof} By application of the corresponding definitions from \ref{def:valid:assertion}.\end{proof}.
+
+\begin{lemma}[Assertions are classical-2]
+For     assertions $\A$, $\A'$, and $\A''$ the following equivalences hold
+\label{lemma:basic_assertions_classical}
+\begin{enumerate}
+\item
+$(\A \wedge \A') \wedge \A'' \ \equiv \  \A \wedge (\A' \wedge \A'')$
+\item 
+$(\A \vee \A') \vee \A'' \ \equiv \  \A \vee (\A' \vee\A'')$
+\item 
+$(\A \vee \A') \wedge \A'' \ \equiv \  (\A \wedge \A')\, \vee\, (\A \wedge \A'')$
+\item 
+$(\A \wedge \A') \vee \A'' \ \equiv \  (\A \vee \A')\, \wedge\, (\A \vee \A'')$
+\item 
+$\neg (\A \wedge \A') \  \ \equiv \  \neg  \A   \vee\, \neg \A''$
+\item 
+$\neg (\A \vee \A') \  \ \equiv \  \neg  \A   \wedge\, \neg \A''$
+\item
+$\neg (\exists \prg{x}.\A )  \  \ \equiv \  \forall \prg{x}.(\neg  \A)$
+\item
+$\neg (\exists k:\mathbb{N}.\A )  \  \ \equiv \  \forall  k:\mathbb{N}.(\neg  \A)$
+\item
+$\neg (\exists \prg{fs}:FLD^k.\A )  \  \ \equiv \  \forall \prg{fs}:FLD^k.(\neg  \A)$
+\item
+$\neg (\forall \prg{x}. \A)  \  \ \equiv \  \  \exists \prg{x}.\neg(\A )$
+\item
+$\neg (\forall k:\mathbb{N}.. \A)  \  \ \equiv \  \  \exists k:\mathbb{N}..\neg(\A )$
+\item
+$\neg (\forall \prg{fs}:FLD^k.. \A)  \  \ \equiv \  \  \exists \prg{fs}:FLD^k..\neg(\A )$
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+All points follow by application of the corresponding definitions from \ref{def:valid:assertion}.
+ \end{proof}
+
+Moreover, with growing configurations, validity is preserved, provided the assertion is well-defined in the smaller configuration
+ 
+
+\begin{lemma}[Preservation of validity] $ $
+\label{lemma:preserve:valid}
+\begin{itemize}
+\item
+If  $\sigma \vdash \A$ and $\M\mkpair \M',  \sigma \vdash \A$ and   $\sigma' \subconf \sigma$, \  then  \ $\M\mkpair \M',  \sigma' \models \SA$.
+\end{itemize}
+\end{lemma}
+
+A module $\M$ satisfies an assertion $\A$ if for all modules $\M'$, in all configurations arising from executions of $\M\mkpair\M'$, the asserttion $\A$ holds.
+
+\begin{definition}
+\label{def:module_satisfies}
+For any module $\M$, and  assertion $\A$, we define:
+\begin{itemize}
+\item
+$\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma\!\in\!\Arising{\M\mkpair\M'}.\   \M\mkpair\M', \sigma \models \A$
+\end{itemize}
+\end{definition}
+

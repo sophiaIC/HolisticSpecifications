@@ -1,0 +1,110 @@
+\section{DOM Wrappers -- code and traditional Specification}
+\label{DOM:traditional}
+
+\kjx{this stuff should go with the DOM example,
+  either in motivation, or as second example after formalism?}
+
+\kjx{merge in when we first talk about language:}
+We write our code in a small, fictitious, class-based, dynamically
+typed, imperative programming language. All functions are public, \ie
+may be called by any other object, and all fields are private, \ie may
+be read or written only by the object itself. 
+
+\begin{figure}[htb]
+\begin{tabular}{llll}
+&
+\begin{minipage}{0.45\textwidth}
+\begin{lstlisting}
+class Node(par,prop){
+
+  fld parnt = par;
+  fld property = prop;
+  fld children = new array[10];
+  fld maxChild=0;
+  children[maxChild++]=this
+  
+  func getParent(){
+       parnt 
+  }  
+  func getChild(i){
+       children[i] 
+  }
+  func setProperty(prp){
+       property = prp 
+  }  
+  func setChild(nd){
+       children[i] = nd
+  }  
+}
+\end{lstlisting}
+\end{minipage}
+& & 
+\begin{minipage}{0.40\textwidth}
+\begin{lstlisting}
+class Wrapper(nd,hgt){
+
+  fld node=nd;
+  fld height=hgt;
+
+  func setPropety(i,prp){
+    if (i>height){ 
+       return 
+    } 
+    else  
+    {  nd=node;  
+       while (i>0){
+          nd=nd.getParent();
+          i--;    };
+        nd.setProperty(prp); }
+  }    
+  func getChild(i){ 
+    Wrapper(node.getChild(i),
+                    height+1); 
+ }                           
+}
+\end{lstlisting}
+\end{minipage}
+\end{tabular}
+ \vspace*{-7mm}
+\caption{\prg{Node}  and \prg{Wrapper} }
+\label{fig:DOM}
+\end{figure}
+
+The figure needs some beautification
+
+\begin{figure}[htb]
+\begin{lstlisting}
+class Wrapper(nd,hgt){
+
+  fld node=nd;
+  fld height=hgt;
+
+  func setPropety(i,prp)
+  // PRE:  true
+  // POST:
+  //     (  i not a number or i>this.height ) --> modifies nothing  
+  //     &&
+  //     i<=this.height -->  (  modifies = { this.node.parnt^i.property }
+  //                          &&
+  //                          this.node,parnt^i.property == prp )
+  {
+    if (i>height){     return     } 
+    else  
+    {  nd=node;  
+       while (i>0){   nd=nd.getParent();  i--;    };
+        nd.setProperty(prp); }
+  }    
+  func getChild(i)
+  // PRE:  true
+  // POST:  modifies: nothing
+  // RETURNS: i-th child of this
+  
+  {    Wrapper(node.getChild(i),   height+1);   }                           
+}
+\end{lstlisting}
+ \vspace*{-7mm}
+\caption{\prg{Wrapper} specification}
+\label{fig:WrapperSpec}
+\end{figure}
+
+In Figure \ref{fig:WrapperSpec} we  outline a specification of the class \prg{Wrapper} in the ``traditional style''. Each function has a pore and a post conditon. Because the functions may be called by any, unchecked code, the preconditions are not stronger than \prg{true}. The functions need to behave correctly under all possible circumstances.  The post-condition of \prg{setPropery} guarnatees that if the argument is not a number or if it is larger than the \prg{height} of the wrapper, then nothing is modified. If on the other hand, the argument is smaller or equal to the \prg{height}, then the \prg{property} of the \prg{i}-th parent will be set to \prg{prp}, and nothing else will be modified.
