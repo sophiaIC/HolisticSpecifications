@@ -105,11 +105,12 @@ forall d : Dispenser, s : Boolean.  d.state = s && Will(d.state == ! s) --> Will
 ```
 
 The version below uses two extra random bits of notation:
- * `e @ t` - expression at time t
- * `Tony(t)` - assuming t is a call, the matching return is just done.
+
+*  `e @ t` - expression at time t
+* `Tony(t)` - assuming t is a call, the matching return is just done.
 
 ```
-(d.state == s) @ t && (d.state ==_t !s) @ Tony(t) --> exists t'' . t < t'' < Tony(t). exists o [o.calls d.switch] @ t''
+(d.state == s) @ t && (d.state ==! s) @ Tony(t) --> exists t'' . t < t'' < Tony(t) && exists o [o.calls d.switch] @ t''
 ```
 
 ## Two button operation
