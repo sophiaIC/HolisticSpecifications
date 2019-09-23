@@ -732,9 +732,9 @@ Instance substAssertionVar : Subst asrt nat :=
        (*permission*)
        | a_acc v1 v2       => a_acc (sbst v1 n (bind x)) (sbst v2 n (bind x))
        (*control*)
-       | a_call v1 v2 m v3 => a_call (sbst v1 n (bind x))
-                                    (sbst v2 n (bind x)) m
-                                    (sbst v3 n (bind x))
+       | a_call v1 v2 m v3 => a_call ([bind x /s n] v1)
+                                    ([bind x /s n] v2) m
+                                    ([bind x /s n] v3)
        (*time*)
        | a_next A'         => a_next (subst' A' n x)
        | a_will A'         => a_will (subst' A' n x)
@@ -785,7 +785,7 @@ Instance substAssertionVarSet : Subst asrt varSet :=
        | a_was A'          => a_was (subst' A' n Σ)
 
        (*space*)
-       | a_in A' Σ'         => a_in (subst' A' n Σ) (sbst Σ' n Σ)
+       | a_in A' Σ'         => a_in (subst' A' n Σ) ([Σ /s n] Σ')
 
        | _          => A
        end;
@@ -840,11 +840,24 @@ Inductive fresh_x : nat -> config -> asrt -> Prop :=
                   closed A x -> 
                   fresh_x x σ A.
 
+Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
+
+Inductive restrict : config -> list nat -> config -> Prop :=
+| rstrct : forall Σ σ As χ χ', ⌊ Σ ⌋ σ ≜′ As ->
+                          (forall α o, χ' α = Some o ->
+                                  χ α = Some o) ->
+                          (forall α o, χ' α = Some o ->
+                                  In α As) ->
+                          (forall α o, In α As ->
+                                  χ' α = Some o) ->
+                          σ ↓ Σ ≜ (χ', snd σ)
+where "σ1 '↓' Σ '≜' σ2" := (restrict σ1 Σ σ2).
+
 (*
   satisfaction only uses one module at the moment
   this needs to change once the time assetions are
   properly modeled
-*)
+ *)
 
 Inductive sat : mdl -> config -> asrt -> Prop :=
 (*simple*)
@@ -904,7 +917,11 @@ Inductive sat : mdl -> config -> asrt -> Prop :=
                              o.(cname) = C ->
                              (exists CDef, M C = Some CDef) ->
                              M en σ ⊨ a_intrn (bind x)
-                            
+
+| sat_in    : forall M σ A Σ σ', σ ↓ Σ ≜ σ' ->
+                            M en σ' ⊨ A ->
+                            M en σ ⊨ A
+
 where "M 'en' σ '⊨' A" := (sat M σ A)
 
 with
@@ -952,13 +969,13 @@ nsat : mdl -> config -> asrt -> Prop :=
                                M en σ ⊭ ([y /s 0] A)) ->
                        M en σ ⊭ (a_ex_x A)
 
-(*viewpoint*)
+(*viewpoint*) (* well-formeness? This is important!!!!*)
 (*| nsat_extrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
                          M en σ ⊭ a_extrn (bind x)
 
 | nsat_extrn2 : forall M σ x α, ⌊ x ⌋ σ ≜ α ->
                            map σ α = None ->
-                           M en σ ⊭ a_extrn (bind x)*)
+                           M en σ ⊭ a_extrn (bind x)*) 
 
 | nsat_extrn : forall M σ x α o C, ⌊ x ⌋ σ ≜ α ->
                               map σ α = Some o ->
@@ -978,6 +995,10 @@ nsat : mdl -> config -> asrt -> Prop :=
                               o.(cname) = C ->
                               M C = None ->
                               M en σ ⊭ a_intrn (bind x)
+
+| nsat_in    : forall M σ A Σ σ', σ ↓ Σ ≜ σ' ->
+                             M en σ' ⊭ A ->
+                             M en σ ⊭ A
 
 where "M 'en' σ '⊭' A" := (nsat M σ A).
 
