@@ -208,7 +208,7 @@ Class Subst (A B: Type) :=
                          forall b, sbst a n b = a
   }.
 
-Notation "'[' b '/t' n ']' a" := (sbst a n b)(at level 80).
+Notation "'[' b '/s' n ']' a" := (sbst a n b)(at level 80).
 
 Inductive closed_v : var -> nat -> Prop :=
 | cl_hole : forall n m, n <> m ->
@@ -743,8 +743,8 @@ Instance substAssertionVar : Subst asrt nat :=
        (*space*)
        | a_in A' Σ         => a_in (subst' A' n x) Σ
        (*viewpoint*)
-       | a_extrn v          => a_extrn ([(bind x) /t n] v)
-       | a_intrn v          => a_intrn ([(bind x) /t n] v)
+       | a_extrn v          => a_extrn ([(bind x) /s n] v)
+       | a_intrn v          => a_intrn ([(bind x) /s n] v)
        end;
 
    closed := closed_A
@@ -764,7 +764,7 @@ Instance substAssertionVarSet : Subst asrt varSet :=
      fix subst' A n Σ :=
        match A with
        (*simpl*)
-       | a_set e Σ'         => a_set e ([Σ /t n] Σ')
+       | a_set e Σ'         => a_set e ([Σ /s n] Σ')
 
        (*connectives*)
        | a_arr A1 A2       => a_arr (subst' A1 n Σ) (subst' A2 n Σ)
@@ -840,6 +840,12 @@ Inductive fresh_x : nat -> config -> asrt -> Prop :=
                   closed A x -> 
                   fresh_x x σ A.
 
+(*
+  satisfaction only uses one module at the moment
+  this needs to change once the time assetions are
+  properly modeled
+*)
+
 Inductive sat : mdl -> config -> asrt -> Prop :=
 (*simple*)
 | sat_exp   : forall M σ e, M en σ ⊢ e ↪ ev_true ->
@@ -876,15 +882,15 @@ Inductive sat : mdl -> config -> asrt -> Prop :=
                        M en σ ⊨ (a_neg A)
 
 (*quantifiers*)
-| sat_all_x : forall M σ A x, (forall α z, exists (o : obj),
-                               map σ α = Some o ->
-                               fresh_x z σ A ->
-                               M en (updateσ σ z α) ⊨ ([z /t 0]A)) ->
-                         M en σ ⊨ (a_all_x A)
+| sat_all_x : forall M σ A, (forall α z, exists (o : obj),
+                             map σ α = Some o ->
+                             fresh_x z σ A ->
+                             M en (updateσ σ z α) ⊨ ([z /s 0]A)) ->
+                       M en σ ⊨ (a_all_x A)
 
-| sat_ex_x  : forall M σ A x z α, (exists (o : obj), map σ α = Some o) ->
-                             M en (updateσ σ z α) ⊨ (subst z x A) ->
-                             M en σ ⊨ (a_all_x x A)
+| sat_ex_x  : forall M σ A z α, (exists (o : obj), map σ α = Some o) ->
+                           M en (updateσ σ z α) ⊨ ([z /s 0] A) ->
+                           M en σ ⊨ (a_all_x A)
 
 (*viewpoint*)
 | sat_extrn : forall M σ x α o C, ⌊ x ⌋ σ ≜ α ->
@@ -916,7 +922,7 @@ nsat : mdl -> config -> asrt -> Prop :=
 
 | nsat_set   : forall M σ e Σ As, ⌊ Σ ⌋ σ ≜′ As ->
                              (forall α, M en σ ⊢ e ↪ (ev_addr α) -> ~ In α As) ->
-                             M en σ ⊭ (a_set e (s_list Σ))
+                             M en σ ⊭ (a_set e (s_bind Σ))
 
 (*connectives*)
 | nsat_and1  : forall M σ A1 A2, M en σ ⊭ A1 ->
@@ -937,14 +943,14 @@ nsat : mdl -> config -> asrt -> Prop :=
                         M en σ ⊭ (a_neg A)
 
 (*quantifiers*)
-| nsat_all_x : forall M σ A x α , (exists y, map σ y = Some α) ->
-                              M en (fst σ, snd σ) ⊭ A ->
-                              M en σ ⊭ (a_all_x x A) (*this is wrong: it needs to be for all addresses, and 
+| nsat_all_x : forall M σ A α, (exists y, map σ y = Some α) ->
+                          M en (fst σ, snd σ) ⊭ A ->
+                          M en σ ⊭ (a_all_x A) (*this is wrong: it needs to be for all addresses, and 
                                                       some mapping for z needs to be added to the config: σ[z ↦ α]*)
 
-| nsat_ex_x : forall M σ A x, (forall y α, map σ y = Some α ->
-                                 M en σ ⊭ (subst y x A)) ->
-                         M en σ ⊭ (a_ex_x x A)
+| nsat_ex_x : forall M σ A, (forall y α, map σ y = Some α ->
+                               M en σ ⊭ ([y /s 0] A)) ->
+                       M en σ ⊭ (a_ex_x A)
 
 (*viewpoint*)
 (*| nsat_extrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
