@@ -356,8 +356,8 @@ Inductive fresh_x : nat -> config -> asrt -> Prop :=
                   closed A x -> 
                   fresh_x x σ A.
 
-Reserved Notation "M 'en' σ '⊨' A"(at level 40).
-Reserved Notation "M 'en' σ '⊭' A"(at level 40).
+Reserved Notation "M '∙' σ '⊨' A"(at level 40).
+Reserved Notation "M '∙' σ '⊭' A"(at level 40).
 
 (*
   satisfaction only uses one module at the moment
@@ -367,113 +367,116 @@ Reserved Notation "M 'en' σ '⊭' A"(at level 40).
 
 Inductive sat : mdl -> config -> asrt -> Prop :=
 (*simple*)
-| sat_exp   : forall M σ e, M en σ ⊢ e ↪ ev_true ->
-                       M en σ ⊨ a_exp e
+| sat_exp   : forall M σ e, M ∙ σ ⊢ e ↪ ev_true ->
+                       M ∙ σ ⊨ a_exp e
 
-| sat_class : forall M σ e C α o, M en σ ⊢ e ↪ (ev_addr α) ->
+| sat_class : forall M σ e C α o, M ∙ σ ⊢ e ↪ (ev_addr α) ->
                              map σ α = Some o -> 
                              o.(cname) = C ->
-                             M en σ ⊨ (a_class e C)
+                             M ∙ σ ⊨ (a_class e C)
 
-| sat_set   : forall M σ e Σ α As, M en σ ⊢ e ↪ (ev_addr α) ->
+| sat_set   : forall M σ e Σ α As, M ∙ σ ⊢ e ↪ (ev_addr α) ->
                               ⌊ Σ ⌋ σ ≜′ As ->
                               In α As ->
-                              M en σ ⊨ (a_set e (s_bind Σ))
+                              M ∙ σ ⊨ (a_set e (s_bind Σ))
 
 (*connectives*)
-| sat_and   : forall M σ A1 A2, M en σ ⊨ A1 ->
-                           M en σ ⊨ A2 ->
-                           M en σ ⊨ (a_and A1 A2)
+| sat_and   : forall M σ A1 A2, M ∙ σ ⊨ A1 ->
+                           M ∙ σ ⊨ A2 ->
+                           M ∙ σ ⊨ (a_and A1 A2)
                                
-| sat_or1   : forall M σ A1 A2, M en σ ⊨ A1 ->
-                           M en σ ⊨ (a_or A1 A2)
+| sat_or1   : forall M σ A1 A2, M ∙ σ ⊨ A1 ->
+                           M ∙ σ ⊨ (a_or A1 A2)
                                
-| sat_or2   : forall M σ A1 A2, M en σ ⊨ A2 ->
-                           M en σ ⊨ (a_or A1 A2)
+| sat_or2   : forall M σ A1 A2, M ∙ σ ⊨ A2 ->
+                           M ∙ σ ⊨ (a_or A1 A2)
 
-| sat_arr1  : forall M σ A1 A2, M en σ ⊨ A2 ->
-                           M en σ ⊨ (a_arr A1 A2)
+| sat_arr1  : forall M σ A1 A2, M ∙ σ ⊨ A2 ->
+                           M ∙ σ ⊨ (a_arr A1 A2)
 
-| sat_arr2  : forall M σ A1 A2, M en σ ⊭ A1 ->
-                           M en σ ⊨ (a_arr A1 A2)
+| sat_arr2  : forall M σ A1 A2, M ∙ σ ⊭ A1 ->
+                           M ∙ σ ⊨ (a_arr A1 A2)
                              
-| sat_not   : forall M σ A, M en σ ⊭ A ->
-                       M en σ ⊨ (a_neg A)
+| sat_not   : forall M σ A, M ∙ σ ⊭ A ->
+                       M ∙ σ ⊨ (a_neg A)
 
 (*quantifiers*)
 | sat_all_x : forall M σ A, (forall α z, exists (o : obj),
                              map σ α = Some o ->
                              fresh_x z σ A ->
-                             M en (updateσ σ z α) ⊨ ([z /s 0]A)) ->
-                       M en σ ⊨ (a_all_x A)
+                             M ∙ (update_σ_map σ z α) ⊨ ([z /s 0]A)) ->
+                       M ∙ σ ⊨ (a_all_x A)
 
 | sat_ex_x  : forall M σ A z α, (exists (o : obj), map σ α = Some o) ->
-                           M en (updateσ σ z α) ⊨ ([z /s 0] A) ->
-                           M en σ ⊨ (a_all_x A)
+                           M ∙ (update_σ_map σ z α) ⊨ ([z /s 0] A) ->
+                           M ∙ σ ⊨ (a_all_x A)
 
 (*viewpoint*)
 | sat_extrn : forall M σ x α o C, ⌊ x ⌋ σ ≜ α ->
                              map σ α = Some o ->
                              o.(cname) = C ->
                              M C = None ->
-                             M en σ ⊨ a_extrn (bind x)
+                             M ∙ σ ⊨ a_extrn (bind x)
 
 | sat_intrn : forall M σ x α o C, ⌊ x ⌋ σ ≜ α ->
                              map σ α = Some o ->
                              o.(cname) = C ->
                              (exists CDef, M C = Some CDef) ->
-                             M en σ ⊨ a_intrn (bind x)
+                             M ∙ σ ⊨ a_intrn (bind x)
 
+(*space*)
 | sat_in    : forall M σ A Σ σ', σ ↓ Σ ≜ σ' ->
-                            M en σ' ⊨ A ->
-                            M en σ ⊨ A
+                            M ∙ σ' ⊨ A ->
+                            M ∙ σ ⊨ A
 
-where "M 'en' σ '⊨' A" := (sat M σ A)
+(*time*)
+
+where "M '∙' σ '⊨' A" := (sat M σ A)
 
 with
 nsat : mdl -> config -> asrt -> Prop :=
 (*simple*)
-| nsat_exp : forall M σ e v, M en σ ⊢ e ↪ v ->
+| nsat_exp : forall M σ e v, M ∙ σ ⊢ e ↪ v ->
                         v <> ev_true ->
-                        M en σ ⊭ (a_exp e)
+                        M ∙ σ ⊭ (a_exp e)
 
-| nsat_class : forall M σ e C C' α o, M en σ ⊢ e ↪ (ev_addr α) ->
+| nsat_class : forall M σ e C C' α o, M ∙ σ ⊢ e ↪ (ev_addr α) ->
                                  map σ α = Some o -> 
                                  o.(cname) = C' ->
                                  C <> C' ->
-                                 M en σ ⊭ (a_class e C)
+                                 M ∙ σ ⊭ (a_class e C)
 
 | nsat_set   : forall M σ e Σ As, ⌊ Σ ⌋ σ ≜′ As ->
-                             (forall α, M en σ ⊢ e ↪ (ev_addr α) -> ~ In α As) ->
-                             M en σ ⊭ (a_set e (s_bind Σ))
+                             (forall α, M ∙ σ ⊢ e ↪ (ev_addr α) -> ~ In α As) ->
+                             M ∙ σ ⊭ (a_set e (s_bind Σ))
 
 (*connectives*)
-| nsat_and1  : forall M σ A1 A2, M en σ ⊭ A1 ->
-                            M en σ ⊭ (a_and A1 A2)
+| nsat_and1  : forall M σ A1 A2, M ∙ σ ⊭ A1 ->
+                            M ∙ σ ⊭ (a_and A1 A2)
                         
-| nsat_and2  : forall M σ A1 A2, M en σ ⊭ A2 ->
-                            M en σ ⊭ (a_and A1 A2)
+| nsat_and2  : forall M σ A1 A2, M ∙ σ ⊭ A2 ->
+                            M ∙ σ ⊭ (a_and A1 A2)
                         
-| nsat_or    : forall M σ A1 A2, M en σ ⊭ A1 ->
-                            M en σ ⊭ A2 ->
-                            M en σ ⊭ (a_or A1 A2)
+| nsat_or    : forall M σ A1 A2, M ∙ σ ⊭ A1 ->
+                            M ∙ σ ⊭ A2 ->
+                            M ∙ σ ⊭ (a_or A1 A2)
 
-| nsat_arr   : forall M σ A1 A2, M en σ ⊨ A1 ->
-                            M en σ ⊭ A2 ->
-                            M en σ ⊭ (a_arr A1 A2)
+| nsat_arr   : forall M σ A1 A2, M ∙ σ ⊨ A1 ->
+                            M ∙ σ ⊭ A2 ->
+                            M ∙ σ ⊭ (a_arr A1 A2)
                               
-| nsat_not   : forall M σ A, M en σ ⊨ A ->
-                        M en σ ⊭ (a_neg A)
+| nsat_not   : forall M σ A, M ∙ σ ⊨ A ->
+                        M ∙ σ ⊭ (a_neg A)
 
 (*quantifiers*)
 | nsat_all_x : forall M σ A α, (exists y, map σ y = Some α) ->
-                          M en (fst σ, snd σ) ⊭ A ->
-                          M en σ ⊭ (a_all_x A) (*this is wrong: it needs to be for all addresses, and 
+                          M ∙ (fst σ, snd σ) ⊭ A ->
+                          M ∙ σ ⊭ (a_all_x A) (*this is wrong: it needs to be for all addresses, and 
                                                       some mapping for z needs to be added to the config: σ[z ↦ α]*)
 
 | nsat_ex_x : forall M σ A, (forall y α, map σ y = Some α ->
-                               M en σ ⊭ ([y /s 0] A)) ->
-                       M en σ ⊭ (a_ex_x A)
+                               M ∙ σ ⊭ ([y /s 0] A)) ->
+                       M ∙ σ ⊭ (a_ex_x A)
 
 (*viewpoint*) (* well-formeness? This is important!!!!*)
 (*| nsat_extrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
@@ -487,7 +490,7 @@ nsat : mdl -> config -> asrt -> Prop :=
                               map σ α = Some o ->
                               o.(cname) = C ->
                               (exists CDef, M C = Some CDef) ->
-                              M en σ ⊭ a_extrn (bind x)
+                              M ∙ σ ⊭ a_extrn (bind x)
 
 (*| nsat_intrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
                          M en σ ⊭ a_intrn (bind x)
@@ -500,55 +503,11 @@ nsat : mdl -> config -> asrt -> Prop :=
                               map σ α = Some o ->
                               o.(cname) = C ->
                               M C = None ->
-                              M en σ ⊭ a_intrn (bind x)
+                              M ∙ σ ⊭ a_intrn (bind x)
 
+(*space*)
 | nsat_in    : forall M σ A Σ σ', σ ↓ Σ ≜ σ' ->
-                             M en σ' ⊭ A ->
-                             M en σ ⊭ A
+                             M ∙ σ' ⊭ A ->
+                             M ∙ σ ⊭ A
 
-where "M 'en' σ '⊭' A" := (nsat M σ A).
-
-
-
-(*
-  assertions:
-     expressions:
-        * e                      // what's going on here? is "x" a valid assertion?
-        * e = e
-        * e : ClassId
-        * e elem S               // could this be x elem S? can an unevaluated expression 
-                                 // really be in S?
-
-     references:
-        * forall x. A
-        * forall S. A
-        * exists x. A
-        * exists S. A
-        * x access y
-        * <x calls x.m(x, ...)>  // correction: these do not need to be the same 
-                                 // are these the same x's? the syntax does not seem consistent here
-                                 // x access y uses different metavariables for the variables used
-                                 // but A -> A uses the same metavariables ...?
-
-        * <S in A>               // space: should be <A in S>
-                                 // should this be A in S? x in S?
-                                 // usage ex.: <(exists o. <o access a4>) in S>
-                                 // ex. matches A in S, but surely the "in" refers to "o"
-                                 // other examples use "A in S"
-                                 // I understand this to mean something like A holds given the
-                                 // state S
-
-        * <external x>           // external refers implicitly to the module being specified
-        * <changes e>            // encoded using other assertions
-
-     operators:
-        * A -> A
-        * A /\ A
-        * A \/ A
-        * ~ A
-        * next<A>
-        * will<A>
-        * prev<A>
-        * was<A>
-
-*)
+where "M '∙' σ '⊭' A" := (nsat M σ A).
