@@ -238,51 +238,51 @@ Qed.
 
 Hint Rewrite closed_e_closed_val closed_val_closed_e : closed_db.
 
-Reserved Notation "M 'en' σ '⊢' e1 '↪' e2" (at level 40).
+Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
 Inductive val : mdl -> config -> exp -> e_value -> Prop :=
-| v_true     : forall M σ, M en σ ⊢ e_true ↪ ev_true
+| v_true     : forall M σ, M ∙ σ ⊢ e_true ↪ ev_true
 
-| v_false    : forall M σ, M en σ ⊢ e_false ↪ ev_false
+| v_false    : forall M σ, M ∙ σ ⊢ e_false ↪ ev_false
 
-| v_null     : forall M σ, M en σ ⊢ e_null ↪ ev_null
+| v_null     : forall M σ, M ∙ σ ⊢ e_null ↪ ev_null
 
-| v_addr     : forall M σ r, M en σ ⊢ e_addr r ↪ ev_addr r
+| v_addr     : forall M σ r, M ∙ σ ⊢ e_addr r ↪ ev_addr r
 
 | v_var      : forall M σ x α, map σ x = Some α ->
-                          M en σ ⊢ e_var (bind x) ↪ ev_addr α
+                          M ∙ σ ⊢ e_var (bind x) ↪ ev_addr α
 
-| v_f_heap   : forall M σ e f α o α', M en σ ⊢ e ↪ (ev_addr α) ->
+| v_f_heap   : forall M σ e f α o α', M ∙ σ ⊢ e ↪ (ev_addr α) ->
                                  map σ α = Some o ->
                                  o.(flds) f = Some α' ->
-                                 M en σ ⊢ e_acc_f e f ↪ (ev_addr α')
+                                 M ∙ σ ⊢ e_acc_f e f ↪ (ev_addr α')
 
-| v_f_ghost  : forall M σ e0 e f α o e' v v' C, M en σ ⊢ e0 ↪ (ev_addr α) ->
+| v_f_ghost  : forall M σ e0 e f α o e' v v' C, M ∙ σ ⊢ e0 ↪ (ev_addr α) ->
                                            map σ α = Some o ->
                                            M o.(cname) = Some C ->
                                            C.(c_g_fields) f = Some e' ->
-                                           M en σ ⊢ e ↪ v ->
-                                           M en σ ⊢ (sbst e' 0 v) ↪ v' ->
-                                           M en σ ⊢ e_acc_g e0 f e ↪ v'
+                                           M ∙ σ ⊢ e ↪ v ->
+                                           M ∙ σ ⊢ (sbst e' 0 v) ↪ v' ->
+                                           M ∙ σ ⊢ e_acc_g e0 f e ↪ v'
 
-| v_if_true  : forall M σ e e1 e2 v, M en σ ⊢ e ↪ ev_true ->
-                                M en σ ⊢ e1 ↪ v ->
-                                M en σ ⊢ (e_if e e1 e2) ↪ v
+| v_if_true  : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ ev_true ->
+                                M ∙ σ ⊢ e1 ↪ v ->
+                                M ∙ σ ⊢ (e_if e e1 e2) ↪ v
 
-| v_if_false : forall M σ e e1 e2 v, M en σ ⊢ e ↪ ev_false ->
-                                M en σ ⊢ e2 ↪ v ->
-                                M en σ ⊢ (e_if e e1 e2) ↪ v
+| v_if_false : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ ev_false -> 
+                                M ∙ σ ⊢ e2 ↪ v ->
+                                M ∙ σ ⊢ (e_if e e1 e2) ↪ v
 
-| v_equals   : forall M σ e1 e2 v, M en σ ⊢ e1 ↪ v ->
-                              M en σ ⊢ e2 ↪ v ->
-                              M en σ ⊢ (e_eq e1 e2) ↪ ev_true
+| v_equals   : forall M σ e1 e2 v, M ∙ σ ⊢ e1 ↪ v ->
+                              M ∙ σ ⊢ e2 ↪ v ->
+                              M ∙ σ ⊢ (e_eq e1 e2) ↪ ev_true
 
-| v_nequals  : forall M σ e1 e2 v1 v2, M en σ ⊢ e1 ↪ v1 ->
-                                  M en σ ⊢ e2 ↪ v2 ->
+| v_nequals  : forall M σ e1 e2 v1 v2, M ∙ σ ⊢ e1 ↪ v1 ->
+                                  M ∙ σ ⊢ e2 ↪ v2 ->
                                   v1 <> v2 ->
-                                  M en σ ⊢ (e_eq e1 e2) ↪ ev_false
+                                  M ∙ σ ⊢ (e_eq e1 e2) ↪ ev_false
 
-where "M 'en' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
+where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
 
 Ltac closed_unfold_e :=
   match goal with
@@ -305,9 +305,6 @@ Inductive interpret_Σ : list nat -> config -> list nat -> Prop :=
                            ⌊ Σ ⌋ σ ≜′ As ->
                            ⌊ x::Σ ⌋ σ ≜′ (α::As)
 where "'⌊' Σ '⌋' σ '≜′' As" := (interpret_Σ Σ σ As).
-
-Reserved Notation "M 'en' σ '⊨' A"(at level 40).
-Reserved Notation "M 'en' σ '⊭' A"(at level 40).
 
 Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
 
@@ -354,6 +351,8 @@ Inductive classOf : nat -> config -> cls -> Prop :=
                          cname o = C ->
                          classOf x σ C.
 
+Reserved Notation "M '∙' σ '⤳' σ'" (at level 40).
+
 Inductive reduction : mdl -> config -> config -> Prop :=
 | r_mth : forall M ϕ ψ ψ' χ x y ps σ m α o s s' C ϕ' ϕ'',
     σ = (χ, ψ) ->
@@ -366,7 +365,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     C.(c_meths) m = Some s ->    
     ϕ' =  frm (varMap ϕ) (c_hole x s') ->
     ϕ'' = frm (update this α (compose ps (varMap ϕ))) (c_stmt s) ->
-    reduction M σ (χ, scons ϕ'' (scons ϕ' (ψ')))
+    M ∙ σ ⤳ (χ, scons ϕ'' (scons ϕ' (ψ')))
 
 | r_vAssgn : forall M σ ϕ x y f s ψ χ α α' o σ' C,
     x <> this ->
@@ -379,7 +378,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     χ α = Some o ->
     (flds o) f = Some α' ->
     σ' = update_σ_map σ x α' ->
-    reduction M σ σ'
+    M ∙ σ ⤳ σ'
 
 | r_fAssgn : forall M σ ϕ ϕ' x y f s ψ ψ' χ α α' o σ' χ' o' C,
     σ = (χ, ψ) ->
@@ -395,7 +394,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ' = frm (varMap ϕ) (c_stmt s) ->
     pop ψ = Some ψ' ->
     σ' = (χ', scons ϕ' ψ') ->
-    reduction M σ σ'
+    M ∙ σ ⤳ σ'
 
 | r_new : forall M σ σ' χ ψ ψ' ϕ ϕ' α x C fMap s o CDef,
     σ = (χ, ψ) ->
@@ -411,7 +410,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ' = frm (update x α (varMap ϕ)) (c_stmt s) ->
     pop ψ = Some ψ' ->
     σ' = (update α o χ, scons ϕ' ψ') ->
-    reduction M σ σ'
+    M ∙ σ ⤳ σ'
     
 
 | r_ret1 : forall M ϕ ϕ' ψ χ y x α ϕ'' σ s,
@@ -420,7 +419,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'.(contn) = c_hole y s ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
-    reduction M σ (χ, scons ϕ'' ψ)
+    M ∙ σ ⤳ (χ, scons ϕ'' ψ)
 
 | r_ret2 : forall M ϕ ϕ' ψ ψ' ψ'' χ y x α ϕ'' σ s s',
     σ = (χ, ψ) ->
@@ -432,4 +431,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'.(contn) = c_hole y s ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
-    reduction M σ (χ, scons ϕ'' ψ).
+    M ∙ σ ⤳ (χ, scons ϕ'' ψ)
+
+where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
+                                               
