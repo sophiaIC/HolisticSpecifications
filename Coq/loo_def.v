@@ -434,4 +434,146 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     M ∙ σ ⤳ (χ, scons ϕ'' ψ)
 
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
+
+Reserved Notation "M1 '∘' M2 '≜' M" (at level 40).
+
+Inductive link : mdl -> mdl -> mdl -> Prop :=
+| m_link : forall M1 M2 M, (forall C def, M1 C = Some def ->
+                                M2 C = None) ->
+                      (forall C def, M2 C = Some def ->
+                                M1 C = None) ->
+                      (forall C def, M1 C = Some def ->
+                                M C = Some def) ->
+                      (forall C def, M2 C = Some def ->
+                                M C = Some def) ->
+                      (forall C, M C = None ->
+                            M1 C = None) ->
+                      (forall C, M C = None ->
+                            M2 C = None) ->
+                      M1 ∘ M2 ≜ M
+
+where "M1 '∘' M2 '≜' M" := (link M1 M2 M).
+
+(*
+  reductions: a helper definition that allows for the definition of pair
+  evaluation
+*)
+
+Reserved Notation "M1 '∩' M2 '⊢' σ '⤳⋆' σ'" (at level 40).
                                                
+Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
+| r_reduce : forall M1 M2 M σ σ', M1 ∘ M2 ≜ M ->
+                             M ∙ σ ⤳ σ' ->
+                             (forall C, classOf this σ' C ->
+                                   exists Cdef, M1 C = Some Cdef) ->
+                             M1 ∩ M2 ⊢ σ ⤳⋆ σ'
+
+| r_trans : forall M1 M2 M σ σ1 σ2, M1 ∘ M ≜ M ->
+                               M1 ∩ M2 ⊢ σ ⤳⋆ σ2 ->
+                               M ∙ σ1 ⤳ σ2 ->
+                               (forall C, classOf this σ2 C ->
+                                     exists Cdef, M1 C = Some Cdef) ->
+                               M1 ∩ M2 ⊢ σ ⤳⋆ σ2
+
+where "M1 '∩'  M2 '⊢' σ '⤳⋆' σ'" := (reductions M1 M2 σ σ').
+
+Reserved Notation "M1 '⦂' M2 '◎' σ '⤳' σ'" (at level 45).
+                                               
+Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
+| pr_single : forall M1 M2 M σ σ', M1 ∘ M2 ≜ M ->
+                              M ∙ σ ⤳ σ' ->
+                              (forall C, classOf this σ C ->
+                                    M1 C = None) ->
+                              (forall C, classOf this σ' C ->
+                                    M1 C = None) ->                             
+                              M1 ⦂ M2 ◎ σ ⤳ σ'
+
+| pr_trans : forall M1 M2 M σ1 σ σn, M1 ∩ M2 ⊢ σ1 ⤳⋆ σ ->
+                                M1 ∘ M2 ≜ M ->
+                                M ∙ σ ⤳ σn ->
+                                M1 ⦂ M2 ◎ σ1 ⤳ σn                            
+
+where "M1 '⦂' M2 '◎' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
+
+Class Rename (A : Type) :=
+  {rname : A -> nat -> nat -> A
+  }.
+
+Notation "'❲' n '↦' m '❳' a" := (rname a n m)(at level 40).
+
+Instance natRename : Rename nat :=
+  {
+    rname := fun x n m =>
+              if x =? n
+              then m
+              else x    
+  }.
+
+Instance refRename : Rename ref :=
+  {
+    rname := fun r n m =>
+              match r with
+              | r_var x => r_var (❲n ↦ m❳ x)
+              | r_fld x f => r_fld (❲n ↦ m❳ x) f
+              end
+  }.
+
+Definition remap {A B : Type} `{Eqb A} `{Eqb B}
+           (b1 b2 : B) (pmap : partial_map A B) : partial_map A B :=
+  fun a => match pmap a with
+        | Some b => if (eqb b b1)
+                   then Some b2
+                   else Some b
+        | _ => pmap a
+        end.
+
+Instance mapRename : Rename (partial_map nat nat) :=
+  {
+    rname map n m := remap n m map
+  }.
+
+(*this is not possible using remap, because it requires <> to be
+  extensional, but it is syntactically based in Coq*)
+(*Instance mapRename : Subst (partial_map nat nat) nat :=
+  {
+    sbst map x y := remap x y map;
+
+    closed map x := forall n y, map n = Some y ->
+                           y <> x
+  }.
+Proof.
+  intros.
+  
+  
+Qed.*)
+
+
+(*as a result of the extenstionality issue with maps,
+ this means that substitution of stmts does not observe the
+ closed property ...*)
+(*Instance stmtSubst : Subst stmt nat :=
+  {
+    sbst := fun s n m =>
+              match s with
+              | s_asgn r1 r2 => s_asgn ([m /s n] r1) ([m /s n] r2)
+              | s_meth x y m' pMap => s_meth ([m /s n] x)  ([m /s n] y) m' (pMap)
+              | s_new x C fMap => s_new ([m /s n] x) C fMap
+              | s_stmts s1 s2 => s_stmts s1 s2
+              | s_rtrn _ => s
+              end
+                
+  }.*)
+
+
+Instance stmtRename : Rename stmt :=
+  {
+    rname := fix rname' s n m :=
+             match s with
+             | s_asgn r1 r2 => s_asgn (❲m ↦ n❳ r1) (❲m ↦ n❳ r2)
+             | s_meth x y m' pMap => s_meth (❲m ↦ n❳ x)  (❲m ↦ n❳ y) m' (❲m ↦ n❳ pMap)
+             | s_new x C fMap => s_new (❲m ↦ n❳ x) C (❲m ↦ n❳ fMap)
+             | s_stmts s1 s2 => s_stmts (rname' s1 n m) (rname' s2 n m)
+             | s_rtrn _ => s
+             end
+  }.
+

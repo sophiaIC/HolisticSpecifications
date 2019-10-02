@@ -356,6 +356,33 @@ Inductive fresh_x : nat -> config -> asrt -> Prop :=
                   closed A x -> 
                   fresh_x x σ A.
 
+Reserved Notation "σ1 '◁' σ2 '≜' σ3" (at level 40).
+
+Fixpoint renames (s : stmt)(xs ys : list nat) : option stmt :=
+  match xs, ys with
+  | nil, nil => Some s
+  | x::xs', y::ys' => renames (❲x ↦ y❳ s) xs' ys'
+  | _, _ => None
+  end.
+
+Inductive adaptation : config -> config -> config -> Prop :=
+| a_adapt : forall σ σ' ϕ ϕ' ϕ'' contn contn' β β' β'' ψ' χ' zs zs',
+    peek (snd σ) = Some ϕ ->
+    σ' = (χ', (scons ϕ' ψ')) ->
+    ϕ = frm β contn ->
+    ϕ' = frm β' contn' ->
+    (forall z, In z zs' -> β z = None) ->
+    (forall z, In z zs' -> β' z = None) ->
+    (forall z, In z zs -> exists y, β z = Some y) ->
+    (forall z, ~In z zs -> β z = None) ->
+    β'' = β ->
+    ϕ'' = frm β'' contn' ->
+    σ ◁ σ' ≜ (χ', scons ϕ'' ψ')
+
+where "σ1 '◁' σ2 '≜' σ3" := (adaptation σ1 σ2 σ3).
+    
+
+
 Reserved Notation "M '∙' σ '⊨' A"(at level 40).
 Reserved Notation "M '∙' σ '⊭' A"(at level 40).
 
