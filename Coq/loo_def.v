@@ -458,7 +458,11 @@ where "M1 '∘' M2 '≜' M" := (link M1 M2 M).
   reductions: a helper definition that allows for the definition of pair
   evaluation
 *)
-
+(*
+  unfortunately there is some abiguity with notation, so I am 
+  having trouble maintaining consitent notation and using 
+  '∙' in the reductions and pair reductions definitions
+*)
 Reserved Notation "M1 '∩' M2 '⊢' σ '⤳⋆' σ'" (at level 40).
                                                
 Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
@@ -477,7 +481,7 @@ Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
 
 where "M1 '∩'  M2 '⊢' σ '⤳⋆' σ'" := (reductions M1 M2 σ σ').
 
-Reserved Notation "M1 '⦂' M2 '◎' σ '⤳' σ'" (at level 45).
+Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 45).
                                                
 Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
 | pr_single : forall M1 M2 M σ σ', M1 ∘ M2 ≜ M ->
@@ -486,14 +490,14 @@ Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
                                     M1 C = None) ->
                               (forall C, classOf this σ' C ->
                                     M1 C = None) ->                             
-                              M1 ⦂ M2 ◎ σ ⤳ σ'
+                              M1 ⦂ M2 ⦿ σ ⤳ σ'
 
 | pr_trans : forall M1 M2 M σ1 σ σn, M1 ∩ M2 ⊢ σ1 ⤳⋆ σ ->
                                 M1 ∘ M2 ≜ M ->
                                 M ∙ σ ⤳ σn ->
-                                M1 ⦂ M2 ◎ σ1 ⤳ σn                            
+                                M1 ⦂ M2 ⦿ σ1 ⤳ σn                            
 
-where "M1 '⦂' M2 '◎' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
+where "M1 '⦂' M2 '⦿' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
 
 Class Rename (A : Type) :=
   {rname : A -> nat -> nat -> A
