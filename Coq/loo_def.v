@@ -240,23 +240,48 @@ Hint Rewrite closed_e_closed_val closed_val_closed_e : closed_db.
 
 Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
+(** #<h3>#Expression evaluation (Fig 4, OOPSLA2019)#</h3>#  *)
+
 Inductive val : mdl -> config -> exp -> e_value -> Prop :=
+
+(** M, σ true ↪ true     (True_Val) *)
 | v_true     : forall M σ, M ∙ σ ⊢ e_true ↪ ev_true
 
+(** M, σ false ↪ false     (False_Val) *)
 | v_false    : forall M σ, M ∙ σ ⊢ e_false ↪ ev_false
 
+(** M, σ null ↪ null     (Null_Val) *)
 | v_null     : forall M σ, M ∙ σ ⊢ e_null ↪ ev_null
 
+(** This rule has been added on top of the original rules to *)
+(** allow evaluation to work correctly and stop when it hits an *)
+(** address *)
+(** M, σ α ↪ α     (Var_Addr) *)
 | v_addr     : forall M σ r, M ∙ σ ⊢ e_addr r ↪ ev_addr r
 
+(** M, σ x ↪ σ(x)     (Var_Val) *)
 | v_var      : forall M σ x α, map σ x = Some α ->
                           M ∙ σ ⊢ e_var (bind x) ↪ ev_addr α
 
+(** M, σ e.f() ↪ α *)
+(** σ(α, f) = v*)
+(** ---------------- (Field_Heap_Val) *)
+(** M, σ ⊢ e.f ↪ v      *)
 | v_f_heap   : forall M σ e f α o α', M ∙ σ ⊢ e ↪ (ev_addr α) ->
                                  map σ α = Some o ->
                                  o.(flds) f = Some α' ->
                                  M ∙ σ ⊢ e_acc_f e f ↪ (ev_addr α')
 
+
+(** M, σ e0 ↪ α *)
+(** M, σ e ↪ v *)
+(** σ(α) = o *)
+(** o has class C in M *)
+(** G(M, Class(α, σ), f) = f(x) { e' } (note: the x here corresponds with the 0 in the Coq) *)
+(** M, σ e ↪ v*)
+(** M, σ [v/x]e' ↪ v'*)
+(** ------------------------ (Field_Ghost_Val) *)
+(** M, σ ⊢ e0.f(e) ↪ v'      *)
 | v_f_ghost  : forall M σ e0 e f α o e' v v' C, M ∙ σ ⊢ e0 ↪ (ev_addr α) ->
                                            map σ α = Some o ->
                                            M o.(cname) = Some C ->
@@ -265,18 +290,35 @@ Inductive val : mdl -> config -> exp -> e_value -> Prop :=
                                            M ∙ σ ⊢ (sbst e' 0 v) ↪ v' ->
                                            M ∙ σ ⊢ e_acc_g e0 f e ↪ v'
 
+(** M, σ e ↪ true *)
+(** M, σ e1 ↪ v *)
+(** -------------------------------- (If_True_Val) *)
+(** M, σ ⊢ if e then e1 else e2 ↪ v  *)
 | v_if_true  : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ ev_true ->
                                 M ∙ σ ⊢ e1 ↪ v ->
                                 M ∙ σ ⊢ (e_if e e1 e2) ↪ v
 
+(** M, σ e ↪ false *)
+(** M, σ e2 ↪ v *)
+(** -------------------------------- (If_False_Val) *)
+(** M, σ ⊢ if e then e1 else e2 ↪ v  *)
 | v_if_false : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ ev_false -> 
                                 M ∙ σ ⊢ e2 ↪ v ->
                                 M ∙ σ ⊢ (e_if e e1 e2) ↪ v
 
+(** M, σ e1 ↪ v *)
+(** M, σ e2 ↪ v *)
+(** ------------------------- (Field_Heap_Val) *)
+(** M, σ ⊢ e1 = e2 ↪ true *)
 | v_equals   : forall M σ e1 e2 v, M ∙ σ ⊢ e1 ↪ v ->
                               M ∙ σ ⊢ e2 ↪ v ->
                               M ∙ σ ⊢ (e_eq e1 e2) ↪ ev_true
 
+(** M, σ e1 ↪ v1 *)
+(** M, σ e2 ↪ v2 *)
+(** v ≠ v' *)
+(** ------------------------ (Field_Heap_Val) *)
+(** M, σ ⊢ e1 = e2 ↪ false *)
 | v_nequals  : forall M σ e1 e2 v1 v2, M ∙ σ ⊢ e1 ↪ v1 ->
                                   M ∙ σ ⊢ e2 ↪ v2 ->
                                   v1 <> v2 ->
@@ -291,6 +333,8 @@ Ltac closed_unfold_e :=
 
 Reserved Notation "'⌊' x '⌋' σ '≜' α" (at level 40).
 Reserved Notation "'⌊' Σ '⌋' σ '≜′' As" (at level 40).
+
+(** Variable and Set Interpretation (Definition 4, OOPSLA2019): *)
 
 Inductive interpret_x : nat -> config -> nat -> Prop :=
 | int_x : forall x σ ψ ϕ α, snd σ = ψ ->

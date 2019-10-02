@@ -3,41 +3,44 @@ Require Import CpdtTactics.
 Require Import List.
 Require Import common.
 Require Import loo_def.
+
+(** Assertion syntax  *)
+
 Inductive asrt : Type :=
-(*simpl*)
+(** Simple: *)
 | a_exp   : exp -> asrt
 | a_eq    : exp -> exp -> asrt (* is this necessary? isn't it a redundant subcase of a_exp? *)
 | a_class : exp -> cls -> asrt
 | a_set   : exp -> varSet -> asrt
 
-(*connectives*)
+(** Connectives: *)
 | a_arr   : asrt -> asrt -> asrt
 | a_and   : asrt -> asrt -> asrt
 | a_or    : asrt -> asrt -> asrt
 | a_neg   : asrt -> asrt
 
-(*quantifiers*)
+(** Quantifiers: *)
 | a_all_x : asrt -> asrt
 | a_all_Σ : asrt -> asrt
 | a_ex_x  : asrt -> asrt
 | a_ex_Σ  : asrt -> asrt
 
-(*permission*)
+(** Permission: *)
 | a_acc   : var -> var -> asrt
 
-(*control*)
+(** Control: *)
 | a_call  : var -> var -> mth -> var -> asrt
 
-(*time*)
+(** Time: *)
 | a_next  : asrt -> asrt
 | a_will  : asrt -> asrt
 | a_prev  : asrt -> asrt
 | a_was   : asrt -> asrt
 
-(*space*)
+(** Space: *)
 | a_in    : asrt -> varSet -> asrt
 
-(*viewpoint*)
+(** Viewpoint: *)
 | a_extrn : var -> asrt
 | a_intrn : var -> asrt.
 
