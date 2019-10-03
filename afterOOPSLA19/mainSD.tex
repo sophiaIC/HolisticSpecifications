@@ -1,0 +1,391 @@
+\documentclass[acmsmall,screen]{acmart}
+\settopmatter{printfolios=true,printccs=false,printacmref=false}
+
+% Journal information
+% Supplied to authors by publisher for camera-ready submission;
+% use defaults for review submission.
+\acmJournal{PACMPL}
+\acmVolume{--}
+\acmNumber{--} % {CONF} % CONF = POPL or ICFP or OOPSLA
+\acmArticle{} % appears to the left of page number
+\acmYear{--}
+\acmMonth{13}
+\acmDOI{} % \acmDOI{10.1145/nnnnnnn.nnnnnnn}
+\startPage{1}
+
+\setcopyright{none}
+
+\bibliographystyle{ACM-Reference-Format}
+\citestyle{acmauthoryear}   %% For author/year citations
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%  \citestyle{acmauthoryear}
+\usepackage{ amssymb }
+\usepackage{stmaryrd}
+
+
+\usepackage{subcaption}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{xspace, listings, lstcustom, wrapfig, graphicx, enumerate}
+\usepackage{paralist}
+\usepackage{color,colortbl, relsize}
+\usepackage{rotating}
+\usepackage{pifont}
+\usepackage{multirow}
+\usepackage{soul}
+\usepackage{tcolorbox}
+\usepackage[scaled=.9, light]{zlmtt}
+\usepackage{siunitx}
+\usepackage{setspace}
+
+\include{macros}
+
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{listings}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{ %
+  language=Java,                % the language of the code
+  mathescape=true,
+  basicstyle=\footnotesize\tt,           % the size of the fonts that are used for the code
+%  numbers=left,                   % where to put the line-numbers
+%  numberstyle=\tiny\color{dkgreen},  % the style that is used for the line-numbers
+%  stepnumber=1,                   % the step between two line-numbers. If it's 1, each line
+                                  % will be numbered
+%  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},      % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+%  frame=single,                   % adds a frame around the code
+  rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+  tabsize=2,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+  title=\lstname,                   % show the filename of files included with \lstinputlisting;
+                                  % also try caption instead of title
+  keywordstyle=\color{blue},          % keyword style
+  commentstyle=\color{gray},       % comment style
+  stringstyle=\color{mauve},         % string literal style
+ % escapeinside={\%*}{*)},            % if you want to add LaTeX within your code
+  morekeywords={PRE,POST,result,assume,method,function,fresh,assert,private,then,elseif,public,final,this,throw,new,||,to,def,any,fun,fld,abstract,policy,specification,ghost,field,func}        }  
+         % if you want to add more keywords to the set
+ 
+
+
+\newcommand{\kjx}[1]{{\color{orange}{KJX: #1}}}
+\newcommand{\scd}[1]{{\color{dkgreen}{SD: #1}}}
+\newcommand{\sdcomment}[1]{{\ensuremath{\blacksquare}}\footnote{\color{dkgreen}{SD: #1}}}
+\newcommand{\secomment}[1]{{\ensuremath{\blacksquare}}\footnote{\se{#1}}}
+\newcommand{\jncomment}[1]{{\ensuremath{\blacksquare}}\footnote{\kjx{#1}}}
+
+ \newcommand{\sd}[1]{#1} % {{\color{dkgreen}{#1}}} % {#1} %
+\newcommand{\tobyM}[1]{#1} %[1]{{\color{purple}{Toby: #1}}}
+\newcommand{\se}[1]{#1} %{{\color{blue}{#1}}}
+
+
+\newcommand{\ponders}[3]{\marginpar{\tiny\itshape\raggedright\textcolor{#2}{\textbf{#1:} #3}}\ignorespaces}
+\marginparwidth=1.6cm \marginparsep=0cm
+\newcommand{\TODO}[1]{{\color{red}#1}}
+\newcommand{\sophia}[1]{} % {\ponders{Sophia}{dkgreen}{#1}}
+\newcommand{\toby}[1]{} % {\ponders{Toby}{purple}{#1}}
+\newcommand{\susan}[1]{} %{\ponders{Susan}{blue}{#1}}
+\newcommand{\james}[1]{} % {\ponders{James}{orange}{#1}}
+
+\begin{document}
+
+\author{Sophia Drossopoulou}\affiliation{Imperial College London}
+
+\author{James Noble}\affiliation{Victoria University of Wellington}
+
+\author{Susan Eisenbach}\affiliation{Imperial College London}
+
+
+\title{Holistic Specifications for Robust Programs}
+\subtitle{version of July 2019}
+
+
+\begin{abstract}
+Functional specifications of program components describe what
+%components 
+the code \emph{can} do --- the \emph{sufficient} conditions to
+invoke the component's operations: 
+ a client who supplies arguments
+meeting that operation's preconditions can invoke it, % that \sd{behaviour}.
+% \sophia{used to say  "invoke that operation" I think it is better to use one term.}
+  and obtain the associated effect.
+While specifications of sufficient conditions may be enough to reason about %the behaviour of
+complete, unchanging  programs, they cannot support reasoning about
+ components that interact with external components of possibly unknown provenance. 
+In this  \emph{open world} setting, ensuring that your component is robust even when executing 
+with buggy or malicious external code is critical.
+ \emph{Holistic specifications}
+--- as their name implies --- 
+are concerned  with the \emph{overall} behaviour of a component,  in all possible 
+interleavings of calls to the component's operations with those of the external code.
+Thus, holistic specifications are concerned with \emph{sufficient} conditions, \ie
+what is enough to \emph{cause} some effect, as well as with \emph{necessary} conditions, \ie
+what are the conditions without which an effect will not happen. 
+By adopting holistic specification techniques,
+programmers can explicitly define what their components should not do,
+making it easier to write
+%  \sd{code}
+% that support the construction of 
+robust and reliable programs.
+
+In this paper we argue for the need for such holistic specifications,
+ propose a %specification 
+ language \Chainmail for writing specifications, give a formal semantics, and discuss several
+examples from the literature.
+%Functional specifications of program components describe what
+%components \emph{can} do --- the \emph{sufficient} conditions to
+%invoke the component's behaviour: a client who supplies arguments
+%meeting an operation's preconditions can invoke that \sd{behaviour}\sophia{used to say 
+%"invoke that operation" I think it is better to use one term.}
+%  \sd{and obtain a certain effect.}
+%While specifications of sufficient conditions may be enough to reason about the behaviour of
+%complete, unchanging  programs, they cannot support reasoning about
+%individual components that interact with external components of possibly unknown provenance. 
+%In this  \emph{open world} \sd{setting,} ensuring that your component is robust even when executing 
+%with buggy or malicious external code is critical.
+% \emph{Holistic specifications}
+%--- as their name implies --- 
+%\sd{are concerned} with the \emph{overall behaviour of a component 
+%\sophia{used to say "describe a the \emph{necessary}
+%conditions under which a behaviour can take place"
+%But why does holistic specs imply necessary?}
+%conditions under which a behaviour can take place: constraining
+%components' behaviours and defining what they \emph{cannot} do.  By
+%adopting holistic specification techniques,
+%programmers can explicitly define what their programs should not do\sophia{Weneed to argue that it is important to know
+%what the program does not do}
+%making it easier to write components
+%that support the construction
+%of robust and reliable programs.\sophia{We need to make the case that with necessary conditions we support robust and reliable}
+
+
+
+%% We argue  that it is essential to specify policies which make a program robust,
+%% and that the specification of what such robustness policies goes beyond  traditional function pre- and post-conditions.
+%We propose new fundamental object-capability-inspired assertions
+%which describe access and change, and combine these with space and time considersations
+%(footprints temporal logic).
+%Thus we obtain a logic which reflects not only over the current state, but
+%also over the complete trace of an execution.
+\end{abstract}
+
+
+\maketitle
+
+\section{Introduction}
+\input{introduction}
+
+
+\section{Motivating Example: The Bank}
+\label{sect:motivate:Bank}
+\input{motivateBank}
+
+
+
+\section{\Chainmail\ Overview}
+\label{sect:chainmail}
+\input{overChainmail}
+
+
+\section{Overview of the Formal foundations}
+\label{sect:formal}
+We now give an overview of the formal model for \Chainmail. In section \ref{sect:overviewmodel} we 
+introduce  the shape of the judgments used to give semantics to \Chainmail, while in section \ref{sect:PL} 
+we describe the most salient aspects of an underlying programming language used in \Chainmail.
+
+\subsection{\Chainmail\ judgments}
+\label{sect:overviewmodel}
+\input{overModel}
+
+\subsection{An underlying programming language, \LangOO}
+\label{sect:PL}
+\input{summaryExecution}
+
+\section{Assertions}
+\label{sect:assertions}
+\input{assertions}
+
+\section{Examples}
+\label{sect:example}
+
+In this section we look at a couple of further examples from the
+literature where a holistic specification would provide obvious
+benefits in ensuring robustness.
+
+\subsection{Attenuating the DOM}
+\label{sect:example:DOM}
+\input{ExampleDOM}
+
+\subsection{Authorizing the ERC20}
+\label{sect:example:ERC20}
+\sd{\input{ERC20}}
+
+
+\subsection{Defending the DAO}
+
+\sd{We specidy the DAO in appendix \ref{Dao:appendix}}
+%\input{DAO}
+
+\section{Discussion}
+\label{sect:discussion} 
+\input{discussion}
+
+\section{Related Work}
+\label{sect:related}
+\input{related}
+
+\section{Conclusion}
+\label{sect:conclusion}
+\input{conclusion}
+
+\bibliography{Case,more}
+
+
+\appendix
+
+\section{The underlying programming language, \LangOO}
+\label{app:LangOO}
+\input{langOO}
+
+\section{The \prg{Bank}/\prg{Account} example -- full code}
+\label{Bank:appendix}
+\input{Bank.appendix}
+
+\section{Assertion Entailment and Assertions Classical}
+\label{app:assertions}
+\input{assertionsAppendix}
+
+\section{Example -- ERC20, the traditional specification }
+\label{ERC20:appendix}
+\input{ERC20.appendix.tex}
+
+\section{Defending the DAO}
+\label{Dao:appendix}
+\input{DAO}
+
+
+%% \newpage
+%% replaced for ACM-ization
+%% % \small{
+%%   \bibliographystyle{plain}
+%% \onecolumn{
+%%  \bibliography{Case,more}
+%% }
+
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\forget{
+\input{motivateDOM}
+
+\input{DOM.appendix}
+
+
+
+
+\section{Example -- DAO}
+\input{DAO}
+
+\section{Example -- Purse and Mint}
+take from our earlier works
+
+In two versions: one where there is a ledger inside the Mint, and one where the Mint has no path to the Purses. This will serve to demonstrate how \prg{internal} is supposed to work.
+
+\section{Example -- Membrane}
+
+TODO - take from ShuPeng's thesis
+}
+
+\include{rest}
+
+\subsection*{LATEX mysteries and terminology}
+ \begin{enumerate}
+ \item
+ How can we make the references refer to the Definitions, Lemmas etc
+ rather than the section where these appear?
+ \begin{quotation}
+   \color{orange} KJX:   Not sure what the problem is. I've put labels
+   in the definitions and I can use refs to get definition
+   numbers~\ref{defONE} and~\ref{def:syntax:classes} ---
+   not ~\ref{secONE} and ~\ref{sec:syntax:classes}, the section
+   numbers containing those definions.
+
+   Alternatively there is the ``cleveref'' package
+   \url{http://tug.ctan.org/tex-archive/macros/latex/contrib/cleveref/cleveref.pdf}
+   where a ``\verb+\cref{foo}+'' can generate both the type and the
+   numbner e.g.  ``Definition 3''.
+ \end{quotation}
+
+ \item
+ Need a nice metavariable for set of addresses, currently it is $R$. Perhaps instead use an enumeration, as eg $\{ \ \alpha_1,...\alpha_n\ \} $
+ or $\kappa$?
+
+ \begin{quotation}
+ \color{orange} KJX: Hmm, the enumeration is fine. Otherwise $A$?
+ $\mathcal{A}$?  Or we could call that set a ``footprint'' and so go
+ with $F$ or $\mathcal{F}$\ldots
+ \end{quotation}
+\item
+Find a nice term  to refer to module pairs  (internal, external), and a term for
+our version visible states semantics.
+ \begin{quotation}
+   \color{orange} KJX: ``modules'' and ``modular state semantics''.
+   Going to ``modules'' only makes sense with my answer below.
+   Other permutations of
+   ``visible module/modular state semantics'' work also work:
+     modular visible state; visible modular state; etc\ldots
+ \end{quotation}
+
+
+\item
+Better symbols for module linking (currently a $\M\link\M'$), and
+for module pairing (currently a $\M\mkpair \M'$) -- perhaps there should not be such an operator, as
+it does not create a new module, it is only used in execution ($\M\mkpair \M', \sigma \leadsto \sigma'$)
+and in satisfaction of assertions ($\M\mkpair \M', \sigma\models \A$).
+\footnote{\toby{TM: I like~$\M \mkpair \M'$ as it suggests the asymmetry of the visible
+    state semantics wrt~$\M$ and~$\M'$.}}
+
+ \begin{quotation}
+   \color{orange} KJX: I'm so used to $\M\link\M'$ that I can't think
+   of an alternative --- or do I recall we used $\M * \M'$ as a
+   separating conjunction?
+
+   So I really liked $\M\mkpair \M'$ --- except then I though that I
+   couldn't remember which was the module (inside) and which the
+   anti-module (the outside).  For some reason I thought outside would
+   go first.  Then I realised, it's easy, cos $\M$ is always the
+   module, and $\M'$ is the antimodule.
+
+   At which point I though: OK so let's just write $\M$ as the module,
+   and given any $\M$, then $\M'$ (or $\overline{\M}$ or I guess
+   \textbf{out}($\M$)) for the antimodule.
+
+   The only thing I think this loses is that the $\M\mkpair \M'$
+   syntax, also like a seperating conjunction, is sort of
+   self-framing: $\M\mkpair \M'$ encompasses the universe of modules.
+   Whereas the other way around, we'd need a (implicit) universe of
+   all modules $\mathcal{U}$, and then define $\M' \triangleq
+   \mathcal{U} - \M$  If we went with $\M'$ then Sophia couldn't use
+   $\M''$ and friends --- have to write \texttt{N} and \texttt{O} for other
+   modules?
+
+   I think the only change I could see in the whole document was that
+   lemma~\ref{lemma:module_pair_execution} is subsumed into
+   lemma~\ref{lemma:linking:properties}.
+ \end{quotation}
+
+
+ \end{enumerate}
