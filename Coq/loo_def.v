@@ -16,7 +16,7 @@ Definition state := partial_map nat nat.
 (*this is a bit of a hack*)
 Definition this := 0.
 
- (*fields are a mapping from field names to locations in the heap*)
+(*fields are a mapping from field names to locations in the heap*)
 Definition fields := partial_map fld nat.
 
 (*term is not used*)
@@ -334,7 +334,7 @@ Ltac closed_unfold_e :=
 Reserved Notation "'⌊' x '⌋' σ '≜' α" (at level 40).
 Reserved Notation "'⌊' Σ '⌋' σ '≜′' As" (at level 40).
 
-(** Variable and Set Interpretation (Definition 4, OOPSLA2019): *)
+(** #<h3># Variable and Set Interpretation (Definition 4, OOPSLA2019):#</h3># *)
 
 Inductive interpret_x : nat -> config -> nat -> Prop :=
 | int_x : forall x σ ψ ϕ α, snd σ = ψ ->
@@ -395,9 +395,18 @@ Inductive classOf : nat -> config -> cls -> Prop :=
                          cname o = C ->
                          classOf x σ C.
 
+(** #<h3># Loo Operational Semantics (Fig 6, App A.2, OOPSLA2019):#</h3># *)
+
 Reserved Notation "M '∙' σ '⤳' σ'" (at level 40).
 
 Inductive reduction : mdl -> config -> config -> Prop :=
+
+    (** ϕ.contn = x:=y.m(ps); s' *)
+    (** ⌊y⌋ϕ ≜ α*)
+    (** ϕ' = ϕ❲contn ↦ x:=∙; s'❳ *)
+    (** ϕ'' = (ps ∘ (ϕ.(varMap)), s) *)
+    (** ------------------------------------ (Meth_Call_OS) *)
+    (** M, σ ⤳ (χ, ϕ'' : ϕ' : ψ') *)
 | r_mth : forall M ϕ ψ ψ' χ x y ps σ m α o s s' C ϕ' ϕ'',
     σ = (χ, ψ) ->
     peek ψ = Some ϕ ->
@@ -406,11 +415,23 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ⌊ y ⌋ σ ≜ α ->
     χ α = Some o ->
     (M (o.(cname))) = Some C ->
-    C.(c_meths) m = Some s ->    
+    C.(c_meths) m = Some s ->
     ϕ' =  frm (varMap ϕ) (c_hole x s') ->
     ϕ'' = frm (update this α (compose ps (varMap ϕ))) (c_stmt s) ->
     M ∙ σ ⤳ (χ, scons ϕ'' (scons ϕ' (ψ')))
 
+    (** x ≠ this *)
+    (** σ = (χ, ψ)*)
+    (** ψ = ϕ : _ *)
+    (** ϕ.contn = x := y.f; s*)
+    (** ⌊y⌋ϕ ≜ α*)
+    (** Class(this) in σ = C *)
+    (** Class(y) in σ = C *)
+    (** χ(α) = o*)
+    (** o.f = α' *)
+    (** σ' = update σ with (x ↦ α) *)
+    (** ------------------------------------ (Var_Assgn_OS) *)
+    (** M, σ ⤳ σ' *)
 | r_vAssgn : forall M σ ϕ x y f s ψ χ α α' o σ' C,
     x <> this ->
     σ = (χ, ψ) ->
@@ -424,9 +445,19 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     σ' = update_σ_map σ x α' ->
     M ∙ σ ⤳ σ'
 
+    (** σ = (χ, ϕ : ψ') *)
+    (** ϕ.contn = y.f := x; s*)
+    (** χ(α) = C{ flds; mths } *)
+    (** o' = C{ flds❲f ↦ α❳; mths } *)
+    (** χ' = update χ with (α ↦ o') *)
+    (** ϕ' = update ϕ with (contn ↦ s) *)
+    (** σ' = (χ, ϕ' : ψ') *)
+    (** ---------------------------------------- (Field_Assgn_OS) *)
+    (** M, σ ⤳ σ' *)
 | r_fAssgn : forall M σ ϕ ϕ' x y f s ψ ψ' χ α α' o σ' χ' o' C,
     σ = (χ, ψ) ->
     peek ψ = Some ϕ ->
+    pop ψ = Some ψ' ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_fld y f) (r_var x)) s)) ->
     ⌊ y ⌋ σ ≜ α ->
     ⌊ x ⌋ σ ≜ α' ->
@@ -436,12 +467,20 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     o' = new (cname o) (update f α' (flds o)) (meths o) ->
     χ' = update α o' χ ->
     ϕ' = frm (varMap ϕ) (c_stmt s) ->
-    pop ψ = Some ψ' ->
     σ' = (χ', scons ϕ' ψ') ->
     M ∙ σ ⤳ σ'
 
+    (** ψ = ϕ : ψ' *)
+    (** ϕ.contn = x := new C(fMap); s *)
+    (** M C = CDef *)
+    (** dom(fMap) = flds of C *)
+    (** ϕ' = update ϕ with (x ↦ α) and (contn ↦ s)*)
+    (** σ' = (update χ with (α ↦ o), ϕ' : ψ') *)
+    (** ------------------------------------------------ (objCreate_OS) *)
+    (** M, σ ⤳ σ' *)
 | r_new : forall M σ σ' χ ψ ψ' ϕ ϕ' α x C fMap s o CDef,
     σ = (χ, ψ) ->
+    pop ψ = Some ψ' ->
     peek ψ = Some ϕ ->
     ϕ.(contn) = (c_stmt (s_stmts (s_new x C fMap) s)) ->
     χ α = None ->
@@ -452,11 +491,17 @@ Inductive reduction : mdl -> config -> config -> Prop :=
           ~ In f (c_flds CDef)) ->
     o = new C fMap (c_meths CDef) ->
     ϕ' = frm (update x α (varMap ϕ)) (c_stmt s) ->
-    pop ψ = Some ψ' ->
     σ' = (update α o χ, scons ϕ' ψ') ->
     M ∙ σ ⤳ σ'
     
 
+    (** σ = (χ, ϕ : ϕ' : ψ) *)
+    (** ϕ.contn = return x *)
+    (** ϕ'.contn = y := ∙; s *)
+    (** ⌊ x ⌋ σ ≜ α *)
+    (** ϕ'' = update (ϕ') with (y ↦ α) and (contn ↦ s) *)
+    (** ----------------------------------------------------- (Return_OS_1) *)
+    (** M, σ ⤳ (χ, ϕ'' : ψ *)
 | r_ret1 : forall M ϕ ϕ' ψ χ y x α ϕ'' σ s,
     σ = (χ, scons ϕ (scons ϕ' ψ)) ->
     ϕ.(contn) = c_stmt (s_rtrn x) ->
@@ -465,6 +510,13 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
     M ∙ σ ⤳ (χ, scons ϕ'' ψ)
 
+    (** σ = (χ, ϕ : ϕ' : ψ'') *)
+    (** ϕ.contn = return x; s' *)
+    (** ϕ'.contn = y := ∙; s *)
+    (** ⌊ x ⌋ σ ≜ α *)
+    (** ϕ'' = update (ϕ') with (y ↦ α) and (contn ↦ s) *)
+    (** --------------------------------------------------- (Return_OS_2) *)
+    (** M, σ ⤳ (χ, ϕ'', ψ) *)
 | r_ret2 : forall M ϕ ϕ' ψ ψ' ψ'' χ y x α ϕ'' σ s s',
     σ = (χ, ψ) ->
     peek ψ = Some ϕ ->
