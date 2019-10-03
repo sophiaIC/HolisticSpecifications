@@ -404,14 +404,30 @@ where "σ1 '◁' σ2 '≜' σ3" := (adaptation σ1 σ2 σ3).
 Reserved Notation "M1 '⦂' M2 '◎' σ '⊨' A"(at level 40).
 Reserved Notation "M1 '⦂' M2 '◎' σ '⊭' A"(at level 40).
 
-(*
-  satisfaction only uses one module at the moment
-  this needs to change once the time assetions are
-  properly modeled
- *)
+Inductive in_ref : nat -> ref -> Prop :=
+| in_r_var : forall n, in_ref n (r_var n)
+| in_r_fld : forall n f, in_ref n (r_fld n f).
+
+Inductive in_stmt : nat -> stmt -> Prop :=
+| in_asgn_1 : forall n x y, in_ref n x ->
+                       in_stmt n (s_asgn x y)
+| in_asgn_2 : forall n x y, in_ref n y ->
+                       in_stmt n (s_asgn x y)
+| in_meth_1 : forall x y m ps, in_stmt x (s_meth x y m ps)
+| in_meth_2 : forall x y m ps, in_stmt y (s_meth x y m ps)
+| in_meth_3 : forall x y z m ps, (exists x', ps x' = Some z) ->
+                            in_stmt z (s_meth x y m ps)
+| in_new_1 : forall x C ps, in_stmt x (s_new x C ps)
+| in_new_2 : forall x y C ps, (exists z, ps z = Some y) ->
+                         in_stmt y (s_new x C ps)
+| in_stmts_1 : forall x s1 s2, in_stmt x s1 ->
+                          in_stmt x (s_stmts s1 s2)
+| in_stmts_2 : forall x s1 s2, in_stmt x s2 ->
+                          in_stmt x (s_stmts s1 s2)
+| in_retrn : forall x, in_stmt x (s_rtrn x).
 
 Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
-(*simple*)
+(** Simple: *)
 | sat_exp   : forall M1 M2 σ e, M1 ∙ σ ⊢ e ↪ ev_true ->
                            M1 ⦂ M2 ◎ σ ⊨ a_exp e
 
@@ -425,7 +441,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                   In α As ->
                                   M1 ⦂ M2 ◎ σ ⊨ (a_set e (s_bind Σ))
 
-(*connectives*)
+(** Connectives: *)
 | sat_and   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A1 ->
                                M1 ⦂ M2 ◎ σ ⊨ A2 ->
                                M1 ⦂ M2 ◎ σ ⊨ (a_and A1 A2)
@@ -445,7 +461,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 | sat_not   : forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
                            M1 ⦂ M2 ◎ σ ⊨ (a_neg A)
 
-(*quantifiers*)
+(** Quantifiers: *)
 | sat_all_x : forall M1 M2 σ A, (forall α z, exists (o : obj),
                                  map σ α = Some o ->
                                  fresh_x z σ A ->
@@ -456,7 +472,27 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                M1 ⦂ M2 ◎ (update_σ_map σ z α) ⊨ ([z /s 0] A) ->
                                M1 ⦂ M2 ◎ σ ⊨ (a_all_x A)
 
-(*viewpoint*)
+(** Permission: *)
+| sat_access1 : forall M1 M2 σ x y, (exists α, ⌊x⌋ σ ≜ α ->
+                                     ⌊y⌋ σ ≜ α) ->
+                               M1 ⦂ M2 ◎ σ ⊨ (a_acc (bind x) (bind y))
+
+| sat_access2 : forall M1 M2 σ x y, (forall α' o, ⌊x⌋ σ ≜ α' ->
+                                        map σ α' = Some o ->
+                                        exists f α, (flds o) f = Some α /\
+                                               ⌊y⌋ σ ≜ α) ->
+                               M1 ⦂ M2 ◎ σ ⊨ (a_acc (bind x) (bind y))
+
+| sat_access3 : forall M1 M2 σ ψ ϕ χ x y z α1 α2 s, ⌊x⌋ σ ≜ α1 ->
+                                               ⌊this⌋ σ ≜ α1 ->
+                                               ⌊y⌋ σ ≜ α2 ->
+                                               ⌊z⌋ σ ≜ α2 ->
+                                               σ = (χ, scons ϕ ψ) ->
+                                               (contn ϕ) = c_stmt s ->
+                                               in_stmt z s ->
+                                               M1 ⦂ M2 ◎ σ ⊨ (a_acc (bind x) (bind y))
+
+(** Viewpoint: *)
 | sat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ α ->
                                  map σ α = Some o ->
                                  o.(cname) = C ->
@@ -469,12 +505,12 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                  (exists CDef, M1 C = Some CDef) ->
                                  M1 ⦂ M2 ◎ σ ⊨ a_intrn (bind x)
 
-(*space*)
+(** Space: *)
 | sat_in    : forall M1 M2 σ A Σ σ', σ ↓ Σ ≜ σ' ->
                                 M1 ⦂ M2 ◎ σ' ⊨ A ->
                                 M1 ⦂ M2 ◎ σ ⊨ A
 
-(*time*)
+(** Time: *)
 
 | sat_will : forall M1 M2 σ A, (exists σ' σ'', (pair_reduction M1 M2 σ σ') /\
                                      (σ ◁ σ' ≜ σ'') /\
@@ -528,6 +564,25 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                    M1 ⦂ M2 ◎ σ ⊭ ([y /s 0] A)) ->
                            M1 ⦂ M2 ◎ σ ⊭ (a_ex_x A)
 
+(** Permission: *)
+| nsat_access : forall M1 M2 σ x y, (forall α1 α2, ⌊x⌋ σ ≜ α1 ->
+                                         ⌊y⌋ σ ≜ α2 ->
+                                         α1 <> α2) ->
+                               (forall α1 α2 α3 f o, ⌊x⌋ σ ≜ α1 ->
+                                                map σ α1 = Some o ->
+                                                (flds o) f = Some α2 ->
+                                                ⌊y⌋ σ ≜ α3 ->
+                                                α1 <> α2) ->
+                               ((forall α1 α2, ⌊x⌋ σ ≜ α1 ->
+                                          ⌊this⌋ σ ≜ α2 ->
+                                          α1 <> α2) \/
+                                (forall z α, ⌊y⌋ σ ≜ α ->
+                                        ⌊z⌋ σ ≜ α ->
+                                        forall ψ ϕ χ s, σ = (χ, scons ϕ ψ) ->
+                                                   (contn ϕ) = c_stmt s ->
+                                                   ~ in_stmt z s))->
+                               M1 ⦂ M2 ◎ σ ⊭ (a_acc (bind x) (bind y))
+
 (*viewpoint*) (* well-formeness? This is important!!!!*)
 (*| nsat_extrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
                          M en σ ⊭ a_extrn (bind x)
@@ -568,3 +623,5 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                            M1 ⦂ M2 ◎ σ ⊭ (a_will A)
 
 where "M1 '⦂' M2 '◎' σ '⊭' A" := (nsat M1 M2 σ A).
+
+Hint Constructors sat nsat.
