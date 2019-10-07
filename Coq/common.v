@@ -3,7 +3,6 @@ Require Import CpdtTactics.
 Require Import List.
 
 Inductive var : Type :=
-| hole : nat -> var
 | bind : nat -> var.
 
 Class Eqb (A : Type) :=
@@ -16,8 +15,6 @@ Instance id_Eqb : Eqb var :=
   {eqb x y :=
      match x, y with
      | bind n, bind m => n =? m
-     | hole n, hole m => n =? m
-     | _, _ => false
      end}.
 
 Definition total_map (A B : Type) `{Eqb A} := A -> B.
@@ -54,39 +51,6 @@ Class PropFoldable (A B : Type) :=
     foldOr  : A -> (B -> nat -> Prop) -> nat -> Prop -> Prop
   }.
 
-Class Subst (A B: Type) :=
-  {sbst : A -> nat -> B -> A;
-   closed : A -> nat -> Prop;
-   closed_subst : forall a n, closed a n ->
-                         forall b, sbst a n b = a
-  }.
-
-Notation "'[' b '/s' n ']' a" := (sbst a n b)(at level 80).
-
-Inductive closed_v : var -> nat -> Prop :=
-| cl_hole : forall n m, n <> m ->
-                   closed_v (hole m) n
-| cl_bind : forall n m, closed_v (bind m) n.
-
-Instance substVar : Subst var var :=
-  {sbst x n y := match x with
-                  | hole m => if (m =? n)
-                             then y
-                             else x
-                  | _ => x
-                  end;
-   closed x n := forall m, x = hole m -> m <> n}.
-Proof.
-  intros;
-    destruct a;
-    auto;
-    assert (Hneq : n0 <> n);
-    [auto
-    |apply Nat.eqb_neq in Hneq;
-     rewrite Hneq];
-    auto.  
-Defined.
-
 Ltac andDestruct :=
   repeat match goal with
          | [H : ?P /\ ?Q |- _] => let Ha := fresh "Ha" in
@@ -108,38 +72,6 @@ Create HintDb closed_db.
 Inductive varSet : Type :=
 | s_hole : nat -> varSet
 | s_bind : list nat -> varSet.
-
-Instance varSetSubst : Subst varSet varSet :=
-  {
-    sbst :=
-      fun Σ1 n Σ2 =>
-          match Σ1 with
-          | s_hole m => if (m =? n)
-                       then Σ2
-                       else Σ1
-          | s_bind _ => Σ1
-          end;
-
-    closed := fun Σ n =>
-                match Σ with
-                | s_hole m => n <> m
-                | s_bind _ => True
-                end
-  }.
-Proof.
-  intros;
-    destruct a; auto;
-      eqbNatAuto; auto;
-        contradiction H; auto.
-Defined.
-
-Lemma closed_bind_Set :
-  forall l m (Σ : varSet), @sbst varSet varSet varSetSubst (s_bind l) m Σ = (s_bind l).
-Proof.
-  auto.
-Qed.
-
-Hint Rewrite closed_bind_Set : closed_db.
 
 Definition InΣ (n : nat)(Σ : varSet) :=
   match Σ with
