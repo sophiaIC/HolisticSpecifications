@@ -71,10 +71,10 @@ Create HintDb closed_db.
 
 Inductive varSet : Type :=
 | s_hole : nat -> varSet
-| s_bind : list nat -> varSet.
+| s_bind : list var -> varSet.
 
-Definition InΣ (n : nat)(Σ : varSet) :=
+Definition InΣ (x : var)(Σ : varSet) :=
   match Σ with
   | s_hole _ => False
-  | s_bind l => In n l
+  | s_bind l => In x l
   end.
