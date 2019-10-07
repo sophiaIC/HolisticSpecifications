@@ -4,6 +4,12 @@ Require Import List.
 Require Import common.
 Require Import loo_def.
 
+(** Assertion Variables *)
+
+Inductive a_var : Type :=
+| a_hole : nat -> a_var
+| a_bind : var -> a_var.
+
 (** Assertion syntax  *)
 
 Inductive asrt : Type :=
@@ -26,10 +32,10 @@ Inductive asrt : Type :=
 | a_ex_Σ  : asrt -> asrt
 
 (** Permission: *)
-| a_acc   : var -> var -> asrt
+| a_acc   : a_var -> a_var -> asrt
 
 (** Control: *)
-| a_call  : var -> var -> mth -> var -> asrt
+| a_call  : a_var -> a_var -> mth -> a_var -> asrt
 
 (** Time: *)
 | a_next  : asrt -> asrt
@@ -41,10 +47,10 @@ Inductive asrt : Type :=
 | a_in    : asrt -> varSet -> asrt
 
 (** Viewpoint: *)
-| a_extrn : var -> asrt
-| a_intrn : var -> asrt.
+| a_extrn : a_var -> asrt
+| a_intrn : a_var -> asrt.
 
-Instance asrtFoldableVar : PropFoldable asrt var :=
+(*Instance asrtFoldableVar : PropFoldable asrt nat :=
   {
     foldAnd :=
       fix foldA A f n P :=
@@ -200,8 +206,8 @@ Definition closed_A_set (A : asrt)(n : nat) :=
              | _ => True
              end)
           n
-          True.
-
+          True.*)
+          
 
 (*Inductive closed_A : asrt -> nat -> Prop :=
 | cla_exp : forall e n, closed e n ->
@@ -247,22 +253,56 @@ Definition closed_A_set (A : asrt)(n : nat) :=
 | cla_was : forall A n, closed_A A n ->
                    closed_A (a_was A) n.*)
 
-Ltac closed_unfold :=
+(*Ltac closed_unfold :=
   match goal with
   | [H : closed_e _ _ |- _] => unfold closed_e in H; try solve [crush]
   | [H : closed_A _ _ |- _] => unfold closed_A in H; try solve [crush]
   | [H : closed_A_set _ _ |- _] => unfold closed_A_set in H; try solve [crush]
-  end.
+  end.*)
 
-Instance substAssertionVar : Subst asrt nat :=
+Class Subst (A B C : Type) : Type :=
+  {
+    sbst : A -> B -> C -> A
+  }.
+
+Notation "'[' c '/s' b ']' a" := (sbst a b c)(at level 80).
+
+Instance substExp : Subst exp nat var :=
+  {
+    sbst :=
+      fix subst' e n x :=
+        match e with
+        | e_hole m => if m =? n
+                     then e_var x
+                     else e
+        | e_eq e1 e2 => e_eq (subst' e1 n x) (subst' e2 n x)
+        | e_if e1 e2 e3 => e_if (subst' e1 n x) (subst' e2 n x) (subst' e3 n x)
+        | e_acc_f e' f => e_acc_f (subst' e' n x) f
+        | e_acc_g e1 g e2 => e_acc_g (subst' e1 n x) g (subst' e2 n x)
+        | _ => e
+        end
+  }.
+
+Instance substAVar : Subst a_var nat var :=
+  {
+    sbst x n y :=
+      match x with
+      | a_hole m => if (m =? n)
+                   then a_bind y
+                   else x
+      | _ => x
+      end
+  }.
+
+Instance substAssertionVar : Subst asrt nat var :=
   {sbst :=
      fix subst' A n x :=
        match A with
-       | a_exp e           => a_exp (sbst e n (bind x))
-       | a_eq e1 e2        => a_eq (sbst e1 n (bind x))
-                                  (sbst e2 n (bind x))
-       | a_class e C       => a_class (sbst e n (bind x)) C
-       | a_set e Σ         => a_set (sbst e  n (bind x)) Σ
+       | a_exp e           => a_exp (sbst e n x)
+       | a_eq e1 e2        => a_eq (sbst e1 n x)
+                                  (sbst e2 n x)
+       | a_class e C       => a_class (sbst e n x) C
+       | a_set e Σ         => a_set (sbst e  n x) Σ
        (*connectives*)
        | a_arr A1 A2       => a_arr (subst' A1 n x) (subst' A2 n x)
        | a_and A1 A2       => a_and (subst' A1 n x) (subst' A2 n x)
@@ -274,11 +314,11 @@ Instance substAssertionVar : Subst asrt nat :=
        | a_ex_x A'       => a_ex_x (subst' A' (S n) x)
        | a_ex_Σ A'       => a_ex_Σ (subst' A' n x)
        (*permission*)
-       | a_acc v1 v2       => a_acc (sbst v1 n (bind x)) (sbst v2 n (bind x))
+       | a_acc v1 v2       => a_acc (sbst v1 n x) (sbst v2 n x)
        (*control*)
-       | a_call v1 v2 m v3 => a_call ([bind x /s n] v1)
-                                    ([bind x /s n] v2) m
-                                    ([bind x /s n] v3)
+       | a_call v1 v2 m v3 => a_call ([x /s n] v1)
+                                    ([x /s n] v2) m
+                                    ([x /s n] v3)
        (*time*)
        | a_next A'         => a_next (subst' A' n x)
        | a_will A'         => a_will (subst' A' n x)
@@ -287,77 +327,169 @@ Instance substAssertionVar : Subst asrt nat :=
        (*space*)
        | a_in A' Σ         => a_in (subst' A' n x) Σ
        (*viewpoint*)
-       | a_extrn v          => a_extrn ([(bind x) /s n] v)
-       | a_intrn v          => a_intrn ([(bind x) /s n] v)
-       end;
-
-   closed := closed_A
+       | a_extrn v          => a_extrn ([x /s n] v)
+       | a_intrn v          => a_intrn ([x /s n] v)
+       end
   }.
-Proof.
-  intros a;
-    induction a;
-    intros;
-    try solve [repeat rewrite closed_subst; auto];
-    auto;
-    try solve [repeat rewrite closed_subst; closed_unfold].
-Defined.
-        
-Instance substAssertionVarSet : Subst asrt varSet :=
+
+Instance varSetSubst : Subst varSet nat varSet :=
   {
     sbst :=
-     fix subst' A n Σ :=
-       match A with
-       (*simpl*)
-       | a_set e Σ'         => a_set e ([Σ /s n] Σ')
-
-       (*connectives*)
-       | a_arr A1 A2       => a_arr (subst' A1 n Σ) (subst' A2 n Σ)
-       | a_and A1 A2       => a_and (subst' A1 n Σ) (subst' A2 n Σ)
-       | a_or A1 A2        => a_or (subst' A1 n Σ) (subst' A2 n Σ)
-       | a_neg A'          => a_neg (subst' A' n Σ)
-
-       (*quantifiers*)      
-       | a_all_x A'      => a_all_x (subst' A' n Σ)
-       | a_all_Σ A'      => a_all_Σ (subst' A' (S n) Σ)
-       | a_ex_x A'       => a_ex_x (subst' A' (n) Σ)
-       | a_ex_Σ A'       => a_ex_Σ (subst' A' (S n) Σ)
-
-       (*time*)
-       | a_next A'         => a_next (subst' A' n Σ)
-       | a_will A'         => a_will (subst' A' n Σ)
-       | a_prev A'         => a_prev (subst' A' n Σ)
-       | a_was A'          => a_was (subst' A' n Σ)
-
-       (*space*)
-       | a_in A' Σ'         => a_in (subst' A' n Σ) ([Σ /s n] Σ')
-
-       | _          => A
-       end;
-
-    closed := closed_A_set
+      fix subst' Σ1 n Σ2 :=
+        match Σ1 with
+        | s_hole m => if (m =? n)
+                     then Σ2
+                     else Σ1
+        | _ => Σ1
+        end
   }.
-Proof.
-  intros a;
-    induction a;
-    intros;
-    try solve [repeat rewrite closed_subst; closed_unfold; auto];
-    auto.
-Defined.
+        
+Instance substAssertionVarSet : Subst asrt nat varSet :=
+  {
+    sbst :=
+      fix subst' A n Σ :=
+        match A with
+        (*simpl*)
+        | a_set e Σ'         => a_set e ([Σ /s n] Σ')
 
-(*
-implication cannot be directly used due to strict positivity requirement of Coq
-thus, satisfaction rules are in CNF
+        (*connectives*)
+        | a_arr A1 A2       => a_arr (subst' A1 n Σ) (subst' A2 n Σ)
+        | a_and A1 A2       => a_and (subst' A1 n Σ) (subst' A2 n Σ)
+        | a_or A1 A2        => a_or (subst' A1 n Σ) (subst' A2 n Σ)
+        | a_neg A'          => a_neg (subst' A' n Σ)
 
-Similarly, (¬ A) ≡ (A -> False) which also violates the strict positivity 
-requirement of Coq thus we define sat mutually with nsat, the negation of sat
+        (*quantifiers*)      
+        | a_all_x A'      => a_all_x (subst' A' n Σ)
+        | a_all_Σ A'      => a_all_Σ (subst' A' (S n) Σ)
+        | a_ex_x A'       => a_ex_x (subst' A' (n) Σ)
+        | a_ex_Σ A'       => a_ex_Σ (subst' A' (S n) Σ)
 
-For positivity discussion, see: http://adam.chlipala.net/cpdt/html/Cpdt.InductiveTypes.html#lab30
- *)
+        (*time*)
+        | a_next A'         => a_next (subst' A' n Σ)
+        | a_will A'         => a_will (subst' A' n Σ)
+        | a_prev A'         => a_prev (subst' A' n Σ)
+        | a_was A'          => a_was (subst' A' n Σ)
 
-Inductive fresh_x : nat -> config -> asrt -> Prop :=
+        (*space*)
+        | a_in A' Σ'         => a_in (subst' A' n Σ) ([Σ /s n] Σ')
+
+        | _          => A
+        end;
+  }.
+
+Inductive  closed_exp : exp -> nat -> Prop :=
+| cl_val   : forall v n, closed_exp (e_val v) n
+| cl_var   : forall x n, closed_exp (e_var x) n
+| cl_hole  : forall m n, n <> m ->
+                    closed_exp (e_hole m) n
+| cl_eq    : forall e1 e2 n, closed_exp e1 n ->
+                        closed_exp e2 n ->
+                        closed_exp (e_eq e1 e2) n
+| cl_if    : forall e1 e2 e3 n, closed_exp e1 n ->
+                           closed_exp e2 n ->
+                           closed_exp e3 n ->
+                           closed_exp (e_if e1 e2 e3) n
+| cl_acc_f : forall e f n, closed_exp e n ->
+                      closed_exp (e_acc_f e f) n
+| cl_acc_g : forall e f e' n, closed_exp e n ->
+                         closed_exp e' n ->
+                         closed_exp (e_acc_g e f e') n.
+
+Inductive  notin_exp : exp -> nat -> Prop :=
+| ni_val   : forall v n, notin_exp (e_val v) n
+| ni_var   : forall m n, m <> n ->
+                    notin_exp (e_var (bind m)) n
+| ni_hole  : forall m n, notin_exp (e_hole m) n
+| ni_eq    : forall e1 e2 n, notin_exp e1 n ->
+                        notin_exp e2 n ->
+                        notin_exp (e_eq e1 e2) n
+| ni_if    : forall e1 e2 e3 n, notin_exp e1 n ->
+                           notin_exp e2 n ->
+                           notin_exp e3 n ->
+                           notin_exp (e_if e1 e2 e3) n
+| ni_acc_f : forall e f n, notin_exp e n ->
+                      notin_exp (e_acc_f e f) n
+| ni_acc_g : forall e f e' n, notin_exp e n ->
+                         notin_exp e' n ->
+                         notin_exp (e_acc_g e f e') n.
+
+Definition notin_a_var (x : a_var)(n : nat) : Prop :=
+  match x with
+  | a_bind (bind m) => m <> n
+  | _ => False
+  end.
+
+Inductive notin_Ax  : asrt -> nat -> Prop :=
+
+(** Simple *)
+| ni_exp : forall e n, notin_exp e n ->
+                  notin_Ax (a_exp e) n
+| ni_aeq : forall e1 e2 n, notin_exp e1 n ->
+                      notin_exp e2 n ->
+                      notin_Ax (a_eq e1 e2) n
+| ni_class : forall e C n, notin_exp e n ->
+                      notin_Ax (a_class e C) n
+| ni_set   : forall e Σ n, notin_exp e n ->
+                      notin_Ax (a_set e Σ) n
+
+(** Connectives *)
+| ni_arr   : forall A1 A2 n, notin_Ax A1 n ->
+                        notin_Ax A2 n ->
+                        notin_Ax (a_arr A1 A2) n
+| ni_and   : forall A1 A2 n, notin_Ax A1 n ->
+                        notin_Ax A2 n ->
+                        notin_Ax (a_and A1 A2) n
+| ni_or    : forall A1 A2 n, notin_Ax A1 n ->
+                        notin_Ax A2 n ->
+                        notin_Ax (a_or A1 A2) n
+| ni_neg   : forall A n, notin_Ax A n ->
+                    notin_Ax (a_neg A) n
+
+(** Quantifiers *)
+| ni_all_x : forall A n, notin_Ax A (S n) ->
+                    notin_Ax (a_all_x A) n
+| ni_all_Σ : forall A n, notin_Ax A n ->
+                    notin_Ax (a_all_Σ A) n
+| ni_ex_x  : forall A n, notin_Ax A (S n) ->
+                    notin_Ax (a_ex_x A) n
+| ni_ex_Σ  : forall A n, notin_Ax A n ->
+                    notin_Ax (a_ex_Σ A) n
+
+(** Permission: *)
+| ni_acc   : forall x y n, notin_a_var x n ->
+                      notin_a_var y n ->
+                      notin_Ax (a_acc x y) n
+
+(** Control: *)
+| ni_call  : forall x y z m n, notin_a_var x n ->
+                          notin_a_var y n ->
+                          notin_a_var z n ->
+                          notin_Ax (a_call x y m z) n
+
+(** Time: *)
+| ni_next  : forall A n, notin_Ax A n ->
+                    notin_Ax (a_next A) n
+| ni_will  : forall A n, notin_Ax A n ->
+                    notin_Ax (a_will A) n
+| ni_prev  : forall A n, notin_Ax A n ->
+                    notin_Ax (a_prev A) n
+| ni_was   : forall A n, notin_Ax A n ->
+                    notin_Ax (a_was A) n
+
+(** Space: *)
+| ni_in    : forall A Σ n, notin_Ax A n ->
+                      notin_Ax (a_in A Σ) n
+
+(** Viewpoint: *)
+| ni_extrn : forall x n,  notin_a_var x n ->
+                     notin_Ax (a_extrn x) n
+| ni_intrn : forall x n, notin_a_var x n ->
+                    notin_Ax (a_intrn x) n.
+
+Inductive fresh_x : var -> config -> asrt -> Prop :=
 | frsh : forall x σ A, map (snd σ) x = None ->
-                  closed A x -> 
-                  fresh_x x σ A.
+                  notin_Ax A x ->
+                  fresh_x (bind x) σ A.
 
 Reserved Notation "σ1 '◁' σ2 '≜' σ3" (at level 40).
 
@@ -426,17 +558,27 @@ Inductive in_stmt : nat -> stmt -> Prop :=
                           in_stmt x (s_stmts s1 s2)
 | in_retrn : forall x, in_stmt x (s_rtrn x).
 
+(*
+implication cannot be directly used due to strict positivity requirement of Coq
+thus, satisfaction rules are in CNF
+
+Similarly, (¬ A) ≡ (A -> False) which also violates the strict positivity 
+requirement of Coq thus we define sat mutually with nsat, the negation of sat
+
+For positivity discussion, see: http://adam.chlipala.net/cpdt/html/Cpdt.InductiveTypes.html#lab30
+ *)
+
 Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 (** Simple: *)
-| sat_exp   : forall M1 M2 σ e, M1 ∙ σ ⊢ e ↪ ev_true ->
+| sat_exp   : forall M1 M2 σ e, M1 ∙ σ ⊢ e ↪ v_true ->
                            M1 ⦂ M2 ◎ σ ⊨ a_exp e
 
-| sat_class : forall M1 M2 σ e C α o, M1 ∙ σ ⊢ e ↪ (ev_addr α) ->
+| sat_class : forall M1 M2 σ e C α o, M1 ∙ σ ⊢ e ↪ (v_addr α) ->
                                  map σ α = Some o -> 
                                  o.(cname) = C ->
                                  M1 ⦂ M2 ◎ σ ⊨ (a_class e C)
 
-| sat_set   : forall M1 M2 σ e Σ α As, M1 ∙ σ ⊢ e ↪ (ev_addr α) ->
+| sat_set   : forall M1 M2 σ e Σ α As, M1 ∙ σ ⊢ e ↪ (v_addr α) ->
                                   ⌊ Σ ⌋ σ ≜′ As ->
                                   In α As ->
                                   M1 ⦂ M2 ◎ σ ⊨ (a_set e (s_bind Σ))
@@ -484,7 +626,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                M1 ⦂ M2 ◎ σ ⊨ (a_acc (bind x) (bind y))
 
 | sat_access3 : forall M1 M2 σ ψ ϕ χ x y z α1 α2 s, ⌊x⌋ σ ≜ α1 ->
-                                               ⌊this⌋ σ ≜ α1 ->
+                                               ⌊0⌋ σ ≜ α1 ->
                                                ⌊y⌋ σ ≜ α2 ->
                                                ⌊z⌋ σ ≜ α2 ->
                                                σ = (χ, scons ϕ ψ) ->
@@ -574,7 +716,7 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                                 ⌊y⌋ σ ≜ α3 ->
                                                 α1 <> α2) ->
                                ((forall α1 α2, ⌊x⌋ σ ≜ α1 ->
-                                          ⌊this⌋ σ ≜ α2 ->
+                                          ⌊0⌋ σ ≜ α2 ->
                                           α1 <> α2) \/
                                 (forall z α, ⌊y⌋ σ ≜ α ->
                                         ⌊z⌋ σ ≜ α ->

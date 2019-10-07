@@ -3,38 +3,78 @@ Require Import CpdtTactics.
 Require Import List.
 Require Import common.
 
-Definition fld := nat.
+Inductive fld : Type := fieldID : nat -> fld.
 
-Definition mth := nat.
+Inductive mth : Type := methID : nat -> mth.
 
-Definition gfld := nat.
+Inductive gfld : Type := gFieldID : nat -> gfld.
 
-Definition cls := nat.
+Inductive cls : Type := classID : nat -> cls.
 
-Definition state := partial_map nat nat.
+Inductive addr : Type := address : nat -> addr.
+
+Inductive value : Type :=
+| v_true  : value
+| v_false : value
+| v_null  : value
+| v_addr   : addr -> value.
+
+Definition state := partial_map nat value.
+
+Instance eqbFld : Eqb fld :=
+  {
+    eqb := fun f1 f2 =>
+             match f1, f2 with
+             | fieldID n1, fieldID n2 => n1 =? n2
+             end
+  }.
+
+Instance eqbMth : Eqb mth :=
+  {
+    eqb := fun m1 m2 =>
+             match m1, m2 with
+             | methID n1, methID n2 => n1 =? n2
+             end
+  }.
+
+Instance eqbGfld : Eqb gfld :=
+  {
+    eqb := fun g1 g2 =>
+             match g1, g2 with
+             | gFieldID n1, gFieldID n2 => n1 =? n2
+             end
+  }.
+
+Instance eqbCls : Eqb cls :=
+  {
+    eqb := fun C1 C2 =>
+             match C1, C2 with
+             | classID n1, classID n2 => n1 =? n2
+             end
+  }.
+
+Instance eqbAddr : Eqb addr :=
+  {
+    eqb := fun a1 a2 =>
+             match a1, a2 with
+             | address n1, address n2 => n1 =? n2
+             end
+  }.
 
 (*this is a bit of a hack*)
-Definition this := 0.
+Definition this := bind 0.
 
 (*fields are a mapping from field names to locations in the heap*)
-Definition fields := partial_map fld nat.
-
-(*term is not used*)
-Inductive term : Type :=
-| t_var  : var -> term
-| t_new  : cls -> list nat -> term
-| t_fld  : term -> fld -> term
-| t_mth  : term -> mth -> term -> term
-| t_hole : term.
+Definition fields := partial_map fld value.
 
 Inductive ref : Type :=
 | r_var : nat -> ref
-| r_fld : nat -> fld -> ref. (*should this be ref -> fld -> ref?*)
+| r_fld : nat -> fld -> ref.
 
 Inductive stmt : Type :=
 | s_asgn : ref -> ref -> stmt
-| s_meth : nat -> nat -> mth -> state -> stmt
-| s_new  : nat -> cls -> state -> stmt
+| s_meth : nat -> nat -> mth -> partial_map nat nat -> stmt
+| s_new  : nat -> cls -> partial_map fld nat -> stmt
 | s_stmts : stmt -> stmt -> stmt
 | s_rtrn : nat -> stmt.
 
@@ -42,30 +82,25 @@ Inductive continuation : Type :=
 | c_stmt : stmt -> continuation
 | c_hole : nat -> stmt -> continuation.
 
-Inductive e_value : Type :=
-| ev_true  : e_value
-| ev_false : e_value
-| ev_null  : e_value
-| ev_addr   : nat -> e_value.
-
 Inductive exp : Type :=
-| e_val   : e_value -> exp
+| e_val   : value -> exp
 | e_var   : var -> exp
+| e_hole  : nat -> exp
 | e_eq    : exp -> exp -> exp
 | e_if    : exp -> exp -> exp -> exp
 | e_acc_f : exp -> fld -> exp
 | e_acc_g : exp -> gfld -> exp -> exp.
 
-Notation "'e_true'" := (e_val ev_true)(at level 40).
-Notation "'e_false'" := (e_val ev_false)(at level 40).
-Notation "'e_null'" := (e_val ev_null)(at level 40).
-Notation "'e_addr' r" := (e_val (ev_addr r))(at level 40).
+Notation "'e_true'" := (e_val v_true)(at level 40).
+Notation "'e_false'" := (e_val v_false)(at level 40).
+Notation "'e_null'" := (e_val v_null)(at level 40).
+Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
 
 (*methods is a mapping from method names to statements*)
 Definition methods := partial_map mth stmt.
 
 (*ghost_fields is a mapping from ghost field names to expressions*)
-Definition ghost_fields := partial_map gfld exp.
+Definition ghost_fields := partial_map gfld (nat * exp).
 
 Record classDef := clazz{c_name : cls;
                          c_flds : list fld;
@@ -78,9 +113,9 @@ Record obj := new{cname : cls;
 
 Definition mdl := partial_map cls classDef.
 
-Definition heap := partial_map nat obj.
+Definition heap := partial_map addr obj.
 
-Record frame := frm{varMap : state;
+Record frame := frm{vMap : state;
                     contn : continuation}.
 
 Inductive stack :=
@@ -99,256 +134,66 @@ Definition pop (ψ : stack) : option stack :=
   | scons _ ψ => Some ψ
   end.
 
-
-Instance stackMap : Mappable stack nat (option nat) :=
+Instance stackMap : Mappable stack nat (option value) :=
   {map :=
      fix map S x :=
        match S with
        | base => None
-       | scons ϕ S' => ϕ.(varMap) x
+       | scons ϕ S' => ϕ.(vMap) x
        end
   }.
 
 Definition config : Type := (heap * stack).
 
-Instance configMapHeap : Mappable config nat (option obj) :=
+Instance configMapHeap : Mappable config addr (option obj) :=
   {map σ α := (fst σ) α}.
 
-Instance configMapStack : Mappable config nat (option nat) :=
+Instance configMapStack : Mappable config nat (option value) :=
   {map σ x := map (snd σ) x}.
 
-Instance expFoldable : PropFoldable exp var :=
+(*Instance expFoldable : PropFoldable exp var :=
   {
     foldAnd :=
       fix foldE e f n P :=
         match e with
-        | e_val _ => P
         | e_var x => f x n
         | e_eq e1 e2 => foldE e1 f n P /\ foldE e2 f n P
         | e_if e1 e2 e3 => foldE e1 f n P /\ foldE e2 f n P /\ foldE e3 f n P
         | e_acc_f e' f' => foldE e' f n P
         | e_acc_g e1 g e2 => foldE e1 f n P /\ foldE e2 f n P
+        | _ => P
         end;
 
     foldOr :=
       fix foldE e f n P :=
         match e with
-        | e_val _ => P
         | e_var x => f x n
         | e_eq e1 e2 => foldE e1 f n P \/ foldE e2 f n P
         | e_if e1 e2 e3 => foldE e1 f n P \/ foldE e2 f n P \/ foldE e3 f n P
         | e_acc_f e' f' => foldE e' f n P
         | e_acc_g e1 g e2 => foldE e1 f n P \/ foldE e2 f n P
+        | _ => P
         end
-  }.
-
-Definition closed_e (e : exp)(n : nat) :=
-  foldAnd e
-          (fun x n' =>
-             match x with
-             | hole m => n' <> m
-             | _ => True
-             end)
-          n
-          True.
-
-Instance substExp : Subst exp var :=
-  {sbst :=
-     fix subst' e n x :=
-       match e with
-       | e_var y => e_var (sbst y n x)
-       | e_eq e1 e2 => e_eq (subst' e1 n x) (subst' e2 n x)
-       | e_if e1 e2 e3 => e_if (subst' e1 n x) (subst' e2 n x) (subst' e3 n x)
-       | e_acc_f e' f => e_acc_f (subst' e' n x) f
-       | e_acc_g e1 g e2 => e_acc_g (subst' e1 n x) g (subst' e2 n x)
-       | _ => e
-       end;
-
-   closed := closed_e
-  }.
-Proof.
-  intros e b Hcl;
-    induction e;
-    intros;
-    auto;
-    try unfold closed_e in *;
-    andDestruct;
-    crush;
-    destruct v; auto; eqbNatAuto; crush.
-Defined.
-
-Lemma closed_e_closed_exp :
-  forall e n, closed e n ->
-         @closed exp var substExp e n.
-Proof.
-  auto.
-Qed.
-
-Lemma closed_exp_closed_e :
-  forall e n,  @closed exp var substExp e n ->
-          closed_e e n.
-Proof.
-  auto.
-Qed.
-
-Hint Rewrite closed_e_closed_exp closed_exp_closed_e : closed_db.
-
-Instance substValInExp : Subst exp e_value :=
-  {sbst :=
-     fix subst' e n v :=
-       match e with
-       | e_var y => match y with
-                   | hole m => if (n =? m)
-                              then e_val v
-                              else e
-                   | _ => e
-                   end
-       | e_eq e1 e2 => e_eq (subst' e1 n v) (subst' e2 n v)
-       | e_if e1 e2 e3 => e_if (subst' e1 n v) (subst' e2 n v) (subst' e3 n v)
-       | e_acc_f e' f => e_acc_f (subst' e' n v) f
-       | e_acc_g e1 g e2 => e_acc_g (subst' e1 n v) g (subst' e2 n v)
-       | _ => e
-       end;
-   closed := closed_e
-  }.
-Proof.
-  intros e b Hcl;
-    induction e;
-    intros;
-    auto;
-    try unfold closed_e in *;
-    andDestruct;
-    crush;
-    destruct v; auto; eqbNatAuto; crush.
-Defined.
-
-Lemma closed_e_closed_val :
-  forall e n, closed e n ->
-         @closed exp e_value substValInExp e n.
-Proof.
-  auto.
-Qed.
-
-Lemma closed_val_closed_e :
-  forall e n,  @closed exp e_value substValInExp e n ->
-          closed_e e n.
-Proof.
-  auto.
-Qed.
-
-Hint Rewrite closed_e_closed_val closed_val_closed_e : closed_db.
-
-Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
-
-(** #<h3>#Expression evaluation (Fig 4, OOPSLA2019)#</h3>#  *)
-
-Inductive val : mdl -> config -> exp -> e_value -> Prop :=
-
-(** M, σ true ↪ true     (True_Val) *)
-| v_true     : forall M σ, M ∙ σ ⊢ e_true ↪ ev_true
-
-(** M, σ false ↪ false     (False_Val) *)
-| v_false    : forall M σ, M ∙ σ ⊢ e_false ↪ ev_false
-
-(** M, σ null ↪ null     (Null_Val) *)
-| v_null     : forall M σ, M ∙ σ ⊢ e_null ↪ ev_null
-
-(** This rule has been added on top of the original rules to *)
-(** allow evaluation to work correctly and stop when it hits an *)
-(** address *)
-(** M, σ α ↪ α     (Var_Addr) *)
-| v_addr     : forall M σ r, M ∙ σ ⊢ e_addr r ↪ ev_addr r
-
-(** M, σ x ↪ σ(x)     (Var_Val) *)
-| v_var      : forall M σ x α, map σ x = Some α ->
-                          M ∙ σ ⊢ e_var (bind x) ↪ ev_addr α
-
-(** M, σ e.f() ↪ α *)
-(** σ(α, f) = v*)
-(** ---------------- (Field_Heap_Val) *)
-(** M, σ ⊢ e.f ↪ v      *)
-| v_f_heap   : forall M σ e f α o α', M ∙ σ ⊢ e ↪ (ev_addr α) ->
-                                 map σ α = Some o ->
-                                 o.(flds) f = Some α' ->
-                                 M ∙ σ ⊢ e_acc_f e f ↪ (ev_addr α')
-
-
-(** M, σ e0 ↪ α *)
-(** M, σ e ↪ v *)
-(** σ(α) = o *)
-(** o has class C in M *)
-(** G(M, Class(α, σ), f) = f(x) { e' } (note: the x here corresponds with the 0 in the Coq) *)
-(** M, σ e ↪ v*)
-(** M, σ [v/x]e' ↪ v'*)
-(** ------------------------ (Field_Ghost_Val) *)
-(** M, σ ⊢ e0.f(e) ↪ v'      *)
-| v_f_ghost  : forall M σ e0 e f α o e' v v' C, M ∙ σ ⊢ e0 ↪ (ev_addr α) ->
-                                           map σ α = Some o ->
-                                           M o.(cname) = Some C ->
-                                           C.(c_g_fields) f = Some e' ->
-                                           M ∙ σ ⊢ e ↪ v ->
-                                           M ∙ σ ⊢ (sbst e' 0 v) ↪ v' ->
-                                           M ∙ σ ⊢ e_acc_g e0 f e ↪ v'
-
-(** M, σ e ↪ true *)
-(** M, σ e1 ↪ v *)
-(** -------------------------------- (If_True_Val) *)
-(** M, σ ⊢ if e then e1 else e2 ↪ v  *)
-| v_if_true  : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ ev_true ->
-                                M ∙ σ ⊢ e1 ↪ v ->
-                                M ∙ σ ⊢ (e_if e e1 e2) ↪ v
-
-(** M, σ e ↪ false *)
-(** M, σ e2 ↪ v *)
-(** -------------------------------- (If_False_Val) *)
-(** M, σ ⊢ if e then e1 else e2 ↪ v  *)
-| v_if_false : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ ev_false -> 
-                                M ∙ σ ⊢ e2 ↪ v ->
-                                M ∙ σ ⊢ (e_if e e1 e2) ↪ v
-
-(** M, σ e1 ↪ v *)
-(** M, σ e2 ↪ v *)
-(** ------------------------- (Field_Heap_Val) *)
-(** M, σ ⊢ e1 = e2 ↪ true *)
-| v_equals   : forall M σ e1 e2 v, M ∙ σ ⊢ e1 ↪ v ->
-                              M ∙ σ ⊢ e2 ↪ v ->
-                              M ∙ σ ⊢ (e_eq e1 e2) ↪ ev_true
-
-(** M, σ e1 ↪ v1 *)
-(** M, σ e2 ↪ v2 *)
-(** v ≠ v' *)
-(** ------------------------ (Field_Heap_Val) *)
-(** M, σ ⊢ e1 = e2 ↪ false *)
-| v_nequals  : forall M σ e1 e2 v1 v2, M ∙ σ ⊢ e1 ↪ v1 ->
-                                  M ∙ σ ⊢ e2 ↪ v2 ->
-                                  v1 <> v2 ->
-                                  M ∙ σ ⊢ (e_eq e1 e2) ↪ ev_false
-
-where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
-
-Ltac closed_unfold_e :=
-  match goal with
-  | [H : closed_e _ _ |- _] => unfold closed_e in H; try solve [crush]
-  end.
+  }.*)
 
 Reserved Notation "'⌊' x '⌋' σ '≜' α" (at level 40).
 Reserved Notation "'⌊' Σ '⌋' σ '≜′' As" (at level 40).
 
 (** #<h3># Variable and Set Interpretation (Definition 4, OOPSLA2019):#</h3># *)
 
-Inductive interpret_x : nat -> config -> nat -> Prop :=
+Inductive interpret_x : nat -> config -> addr -> Prop :=
 | int_x : forall x σ ψ ϕ α, snd σ = ψ ->
                        peek ψ = Some ϕ ->
-                       (varMap ϕ) x = Some α -> 
+                       (vMap ϕ) x = Some (v_addr α) -> 
                        ⌊ x ⌋ σ ≜ α
 where "'⌊' x '⌋' σ '≜' α" := (interpret_x x σ α).
   
-Inductive interpret_Σ : list nat -> config -> list nat -> Prop :=
+Inductive interpret_Σ : list nat -> config -> list addr -> Prop :=
 | int_nil  : forall σ, ⌊ nil ⌋ σ ≜′ nil
-| int_cons : forall x Σ σ α As, ⌊ x ⌋ σ ≜ α ->
-                           ⌊ Σ ⌋ σ ≜′ As ->
-                           ⌊ x::Σ ⌋ σ ≜′ (α::As)
-where "'⌊' Σ '⌋' σ '≜′' As" := (interpret_Σ Σ σ As).
+| int_cons : forall x Σ σ α αs, ⌊ x ⌋ σ ≜ α ->
+                           ⌊ Σ ⌋ σ ≜′ αs ->
+                           ⌊ x::Σ ⌋ σ ≜′ (α::αs)
+where "'⌊' Σ '⌋' σ '≜′' αs" := (interpret_Σ Σ σ αs).
 
 Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
 
@@ -364,16 +209,16 @@ Inductive restrict : config -> list nat -> config -> Prop :=
 where "σ1 '↓' Σ '≜' σ2" := (restrict σ1 Σ σ2).
 
 
-Definition update_ϕ_map (ϕ : frame)(x α : nat) :=
-  frm (update x α ϕ.(varMap)) (ϕ.(contn)).
+Definition update_ϕ_map (ϕ : frame)(x : nat)(v : value) :=
+  frm (update x v ϕ.(vMap)) (ϕ.(contn)).
 
 Definition update_ϕ_contn (ϕ : frame)(c : continuation) :=
-  frm (ϕ.(varMap)) c.
+  frm (ϕ.(vMap)) c.
 
-Definition update_ψ_map (ψ : stack)(x α : nat) : stack :=
+Definition update_ψ_map (ψ : stack)(x : nat)(v : value) : stack :=
   match ψ with
   | base => base
-  | scons ϕ ψ' => scons (update_ϕ_map ϕ x α) ψ'
+  | scons ϕ ψ' => scons (update_ϕ_map ϕ x v) ψ'
   end.
 
 Definition update_ψ_contn (ψ : stack)(c : continuation) : stack :=
@@ -382,18 +227,106 @@ Definition update_ψ_contn (ψ : stack)(c : continuation) : stack :=
   | scons ϕ ψ' => scons (update_ϕ_contn ϕ c) ψ'
   end.
 
-Definition update_σ_map (σ : config)(x α : nat) :=
-  (fst σ, update_ψ_map (snd σ) x α).
+Definition update_σ_map (σ : config)(x : nat)(v : value) :=
+  (fst σ, update_ψ_map (snd σ) x v).
 
 Definition update_σ_contn (σ : config)(c : continuation) :=
   (fst σ, update_ψ_contn (snd σ) c).
 
-Inductive classOf : nat -> config -> cls -> Prop :=
+Inductive classOf : var -> config -> cls -> Prop :=
 |cls_of : forall x σ α χ o C, ⌊ x ⌋ σ ≜ α ->
                          fst σ = χ ->
                          χ α = Some o ->
                          cname o = C ->
-                         classOf x σ C.
+                         classOf (bind x) σ C.
+
+Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
+
+(** #<h3>#Expression evaluation (Fig 4, OOPSLA2019)#</h3>#  *)
+
+Inductive val : mdl -> config -> exp -> value -> Prop :=
+
+(** M, σ true ↪ true     (True_Val) *)
+(**| v_true     : forall M σ, M ∙ σ ⊢ e_true ↪ v_true*)
+
+(** M, σ false ↪ false     (False_Val) *)
+(**| v_false    : forall M σ, M ∙ σ ⊢ e_false ↪ v_false*)
+
+(** M, σ null ↪ null     (Null_Val) *)
+(**| v_null     : forall M σ, M ∙ σ ⊢ e_null ↪ v_null*)
+
+(** This rule has been added to replace the original rules for values *)
+(** i.e. Var_Value replaces Null_Val, False_Val, and True_Val, and *)
+(** further extends the val to include evaluation of addresses *)
+(** M, σ v ↪ v     (Var_Value) *)
+| v_value     : forall M σ v, M ∙ σ ⊢ e_val v ↪ v
+
+(** M, σ x ↪ σ(x)     (Var_Val) *)
+| v_var      : forall M σ x v, map σ x = Some v ->
+                          M ∙ σ ⊢ e_var (bind x) ↪ v
+
+(** M, σ e.f() ↪ α *)
+(** σ(α, f) = v*)
+(** ---------------- (Field_Heap_Val) *)
+(** M, σ ⊢ e.f ↪ v      *)
+| v_f_heap   : forall M σ e f α o v, M ∙ σ ⊢ e ↪ (v_addr α) ->
+                                map σ α = Some o ->
+                                o.(flds) f = Some v ->
+                                M ∙ σ ⊢ e_acc_f e f ↪ v
+
+
+(** M, σ e0 ↪ α *)
+(** M, σ e ↪ v *)
+(** σ(α) = o *)
+(** o has class C in M *)
+(** G(M, Class(α, σ), f) = f(x) { e' } (note: the x here corresponds with the 0 in the Coq) *)
+(** M, σ e ↪ v*)
+(** M, σ [v/x]e' ↪ v'*)
+(** ------------------------ (Field_Ghost_Val) *)
+(** M, σ ⊢ e0.f(e) ↪ v'      *)
+| v_f_ghost  : forall M σ e0 e f α o x e' v v' C, M ∙ σ ⊢ e0 ↪ (v_addr α) ->
+                                             map σ α = Some o ->
+                                             M o.(cname) = Some C ->
+                                             C.(c_g_fields) f = Some (x, e') ->
+                                             M ∙ σ ⊢ e ↪ v ->
+                                             M ∙ (update_σ_map σ x v) ⊢ e' ↪ v' ->
+                                             M ∙ σ ⊢ e_acc_g e0 f e ↪ v'
+
+(** M, σ e ↪ true *)
+(** M, σ e1 ↪ v *)
+(** -------------------------------- (If_True_Val) *)
+(** M, σ ⊢ if e then e1 else e2 ↪ v  *)
+| v_if_true  : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ v_true ->
+                                M ∙ σ ⊢ e1 ↪ v ->
+                                M ∙ σ ⊢ (e_if e e1 e2) ↪ v
+
+(** M, σ e ↪ false *)
+(** M, σ e2 ↪ v *)
+(** -------------------------------- (If_False_Val) *)
+(** M, σ ⊢ if e then e1 else e2 ↪ v  *)
+| v_if_false : forall M σ e e1 e2 v, M ∙ σ ⊢ e ↪ v_false -> 
+                                M ∙ σ ⊢ e2 ↪ v ->
+                                M ∙ σ ⊢ (e_if e e1 e2) ↪ v
+
+(** M, σ e1 ↪ v *)
+(** M, σ e2 ↪ v *)
+(** ------------------------- (Field_Heap_Val) *)
+(** M, σ ⊢ e1 = e2 ↪ true *)
+| v_equals   : forall M σ e1 e2 v, M ∙ σ ⊢ e1 ↪ v ->
+                              M ∙ σ ⊢ e2 ↪ v ->
+                              M ∙ σ ⊢ (e_eq e1 e2) ↪ v_true
+
+(** M, σ e1 ↪ v1 *)
+(** M, σ e2 ↪ v2 *)
+(** v ≠ v' *)
+(** ------------------------ (Field_Heap_Val) *)
+(** M, σ ⊢ e1 = e2 ↪ false *)
+| v_nequals  : forall M σ e1 e2 v1 v2, M ∙ σ ⊢ e1 ↪ v1 ->
+                                  M ∙ σ ⊢ e2 ↪ v2 ->
+                                  v1 <> v2 ->
+                                  M ∙ σ ⊢ (e_eq e1 e2) ↪ v_false
+
+where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
 
 (** #<h3># Loo Operational Semantics (Fig 6, App A.2, OOPSLA2019):#</h3># *)
 
@@ -416,8 +349,8 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     χ α = Some o ->
     (M (o.(cname))) = Some C ->
     C.(c_meths) m = Some s ->
-    ϕ' =  frm (varMap ϕ) (c_hole x s') ->
-    ϕ'' = frm (update this α (compose ps (varMap ϕ))) (c_stmt s) ->
+    ϕ' =  frm (vMap ϕ) (c_hole x s') ->
+    ϕ'' = frm (update 0 (v_addr α) (compose ps (vMap ϕ))) (c_stmt s) ->
     M ∙ σ ⤳ (χ, scons ϕ'' (scons ϕ' (ψ')))
 
     (** x ≠ this *)
@@ -432,17 +365,17 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** σ' = update σ with (x ↦ α) *)
     (** ------------------------------------ (Var_Assgn_OS) *)
     (** M, σ ⤳ σ' *)
-| r_vAssgn : forall M σ ϕ x y f s ψ χ α α' o σ' C,
-    x <> this ->
+| r_vAssgn : forall M σ ϕ x y f s ψ χ α v o σ' C,
+    bind x <> this ->
     σ = (χ, ψ) ->
     peek ψ = Some ϕ ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_var x) (r_fld y f)) s)) ->
     ⌊ y ⌋ σ ≜ α ->
     classOf this σ C ->
-    classOf y σ C ->
+    classOf (bind y) σ C ->
     χ α = Some o ->
-    (flds o) f = Some α' ->
-    σ' = update_σ_map σ x α' ->
+    (flds o) f = Some v ->
+    σ' = update_σ_map σ x v ->
     M ∙ σ ⤳ σ'
 
     (** σ = (χ, ϕ : ψ') *)
@@ -462,11 +395,11 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ⌊ y ⌋ σ ≜ α ->
     ⌊ x ⌋ σ ≜ α' ->
     classOf this σ C ->
-    classOf y σ C ->
+    classOf (bind y) σ C ->
     χ α = Some o ->
-    o' = new (cname o) (update f α' (flds o)) (meths o) ->
+    o' = new (cname o) (update f (v_addr α') (flds o)) (meths o) ->
     χ' = update α o' χ ->
-    ϕ' = frm (varMap ϕ) (c_stmt s) ->
+    ϕ' = frm (vMap ϕ) (c_stmt s) ->
     σ' = (χ', scons ϕ' ψ') ->
     M ∙ σ ⤳ σ'
 
@@ -489,8 +422,8 @@ Inductive reduction : mdl -> config -> config -> Prop :=
             In f (c_flds CDef)) ->
     (forall f, fMap f = None ->
           ~ In f (c_flds CDef)) ->
-    o = new C fMap (c_meths CDef) ->
-    ϕ' = frm (update x α (varMap ϕ)) (c_stmt s) ->
+    o = new C (compose fMap (vMap ϕ)) (c_meths CDef) ->
+    ϕ' = frm (update x (v_addr α) (vMap ϕ)) (c_stmt s) ->
     σ' = (update α o χ, scons ϕ' ψ') ->
     M ∙ σ ⤳ σ'
     
@@ -507,7 +440,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ.(contn) = c_stmt (s_rtrn x) ->
     ϕ'.(contn) = c_hole y s ->
     ⌊x⌋ σ ≜ α ->
-    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
+    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
     M ∙ σ ⤳ (χ, scons ϕ'' ψ)
 
     (** σ = (χ, ϕ : ϕ' : ψ'') *)
@@ -526,7 +459,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ.(contn) = c_stmt (s_stmts (s_rtrn x) s') ->
     ϕ'.(contn) = c_hole y s ->
     ⌊x⌋ σ ≜ α ->
-    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
+    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
     M ∙ σ ⤳ (χ, scons ϕ'' ψ)
 
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
@@ -627,7 +560,12 @@ Definition remap {A B : Type} `{Eqb A} `{Eqb B}
         | _ => pmap a
         end.
 
-Instance mapRename : Rename (partial_map nat nat) :=
+Instance fldMapRename : Rename (partial_map fld nat) :=
+  {
+    rname map n m := remap n m map
+  }.
+
+Instance natMapRename : Rename (partial_map nat nat) :=
   {
     rname map n m := remap n m map
   }.
