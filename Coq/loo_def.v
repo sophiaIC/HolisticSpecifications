@@ -19,7 +19,7 @@ Inductive value : Type :=
 | v_null  : value
 | v_addr   : addr -> value.
 
-Definition state := partial_map nat value.
+Definition state := partial_map var value.
 
 Instance eqbFld : Eqb fld :=
   {
@@ -68,19 +68,19 @@ Definition this := bind 0.
 Definition fields := partial_map fld value.
 
 Inductive ref : Type :=
-| r_var : nat -> ref
-| r_fld : nat -> fld -> ref.
+| r_var : var -> ref
+| r_fld : var -> fld -> ref.
 
 Inductive stmt : Type :=
 | s_asgn : ref -> ref -> stmt
-| s_meth : nat -> nat -> mth -> partial_map nat nat -> stmt
-| s_new  : nat -> cls -> partial_map fld nat -> stmt
+| s_meth : var -> var -> mth -> partial_map var var -> stmt
+| s_new  : var -> cls -> partial_map fld var -> stmt
 | s_stmts : stmt -> stmt -> stmt
-| s_rtrn : nat -> stmt.
+| s_rtrn : var -> stmt.
 
 Inductive continuation : Type :=
 | c_stmt : stmt -> continuation
-| c_hole : nat -> stmt -> continuation.
+| c_hole : var -> stmt -> continuation.
 
 Inductive exp : Type :=
 | e_val   : value -> exp
@@ -100,7 +100,7 @@ Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
 Definition methods := partial_map mth stmt.
 
 (*ghost_fields is a mapping from ghost field names to expressions*)
-Definition ghost_fields := partial_map gfld (nat * exp).
+Definition ghost_fields := partial_map gfld (var * exp).
 
 Record classDef := clazz{c_name : cls;
                          c_flds : list fld;
@@ -134,7 +134,7 @@ Definition pop (ψ : stack) : option stack :=
   | scons _ ψ => Some ψ
   end.
 
-Instance stackMap : Mappable stack nat (option value) :=
+Instance stackMap : Mappable stack var (option value) :=
   {map :=
      fix map S x :=
        match S with
@@ -148,7 +148,7 @@ Definition config : Type := (heap * stack).
 Instance configMapHeap : Mappable config addr (option obj) :=
   {map σ α := (fst σ) α}.
 
-Instance configMapStack : Mappable config nat (option value) :=
+Instance configMapStack : Mappable config var (option value) :=
   {map σ x := map (snd σ) x}.
 
 (*Instance expFoldable : PropFoldable exp var :=
@@ -181,14 +181,14 @@ Reserved Notation "'⌊' Σ '⌋' σ '≜′' As" (at level 40).
 
 (** #<h3># Variable and Set Interpretation (Definition 4, OOPSLA2019):#</h3># *)
 
-Inductive interpret_x : nat -> config -> addr -> Prop :=
+Inductive interpret_x : var -> config -> addr -> Prop :=
 | int_x : forall x σ ψ ϕ α, snd σ = ψ ->
                        peek ψ = Some ϕ ->
                        (vMap ϕ) x = Some (v_addr α) -> 
                        ⌊ x ⌋ σ ≜ α
 where "'⌊' x '⌋' σ '≜' α" := (interpret_x x σ α).
   
-Inductive interpret_Σ : list nat -> config -> list addr -> Prop :=
+Inductive interpret_Σ : list var -> config -> list addr -> Prop :=
 | int_nil  : forall σ, ⌊ nil ⌋ σ ≜′ nil
 | int_cons : forall x Σ σ α αs, ⌊ x ⌋ σ ≜ α ->
                            ⌊ Σ ⌋ σ ≜′ αs ->
@@ -197,7 +197,7 @@ where "'⌊' Σ '⌋' σ '≜′' αs" := (interpret_Σ Σ σ αs).
 
 Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
 
-Inductive restrict : config -> list nat -> config -> Prop :=
+Inductive restrict : config -> list var -> config -> Prop :=
 | rstrct : forall Σ σ As χ χ', ⌊ Σ ⌋ σ ≜′ As ->
                           (forall α o, χ' α = Some o ->
                                   χ α = Some o) ->
@@ -209,13 +209,13 @@ Inductive restrict : config -> list nat -> config -> Prop :=
 where "σ1 '↓' Σ '≜' σ2" := (restrict σ1 Σ σ2).
 
 
-Definition update_ϕ_map (ϕ : frame)(x : nat)(v : value) :=
+Definition update_ϕ_map (ϕ : frame)(x : var)(v : value) :=
   frm (update x v ϕ.(vMap)) (ϕ.(contn)).
 
 Definition update_ϕ_contn (ϕ : frame)(c : continuation) :=
   frm (ϕ.(vMap)) c.
 
-Definition update_ψ_map (ψ : stack)(x : nat)(v : value) : stack :=
+Definition update_ψ_map (ψ : stack)(x : var)(v : value) : stack :=
   match ψ with
   | base => base
   | scons ϕ ψ' => scons (update_ϕ_map ϕ x v) ψ'
@@ -227,7 +227,7 @@ Definition update_ψ_contn (ψ : stack)(c : continuation) : stack :=
   | scons ϕ ψ' => scons (update_ϕ_contn ϕ c) ψ'
   end.
 
-Definition update_σ_map (σ : config)(x : nat)(v : value) :=
+Definition update_σ_map (σ : config)(x : var)(v : value) :=
   (fst σ, update_ψ_map (snd σ) x v).
 
 Definition update_σ_contn (σ : config)(c : continuation) :=
@@ -238,7 +238,7 @@ Inductive classOf : var -> config -> cls -> Prop :=
                          fst σ = χ ->
                          χ α = Some o ->
                          cname o = C ->
-                         classOf (bind x) σ C.
+                         classOf x σ C.
 
 Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
@@ -263,7 +263,7 @@ Inductive val : mdl -> config -> exp -> value -> Prop :=
 
 (** M, σ x ↪ σ(x)     (Var_Val) *)
 | v_var      : forall M σ x v, map σ x = Some v ->
-                          M ∙ σ ⊢ e_var (bind x) ↪ v
+                          M ∙ σ ⊢ e_var x ↪ v
 
 (** M, σ e.f() ↪ α *)
 (** σ(α, f) = v*)
@@ -350,7 +350,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (M (o.(cname))) = Some C ->
     C.(c_meths) m = Some s ->
     ϕ' =  frm (vMap ϕ) (c_hole x s') ->
-    ϕ'' = frm (update 0 (v_addr α) (compose ps (vMap ϕ))) (c_stmt s) ->
+    ϕ'' = frm (update this (v_addr α) (compose ps (vMap ϕ))) (c_stmt s) ->
     M ∙ σ ⤳ (χ, scons ϕ'' (scons ϕ' (ψ')))
 
     (** x ≠ this *)
@@ -366,13 +366,13 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ------------------------------------ (Var_Assgn_OS) *)
     (** M, σ ⤳ σ' *)
 | r_vAssgn : forall M σ ϕ x y f s ψ χ α v o σ' C,
-    bind x <> this ->
+    x <> this ->
     σ = (χ, ψ) ->
     peek ψ = Some ϕ ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_var x) (r_fld y f)) s)) ->
     ⌊ y ⌋ σ ≜ α ->
     classOf this σ C ->
-    classOf (bind y) σ C ->
+    classOf y σ C ->
     χ α = Some o ->
     (flds o) f = Some v ->
     σ' = update_σ_map σ x v ->
@@ -395,7 +395,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ⌊ y ⌋ σ ≜ α ->
     ⌊ x ⌋ σ ≜ α' ->
     classOf this σ C ->
-    classOf (bind y) σ C ->
+    classOf y σ C ->
     χ α = Some o ->
     o' = new (cname o) (update f (v_addr α') (flds o)) (meths o) ->
     χ' = update α o' χ ->
@@ -529,16 +529,16 @@ Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
 where "M1 '⦂' M2 '⦿' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
 
 Class Rename (A : Type) :=
-  {rname : A -> nat -> nat -> A
+  {rname : A -> var -> var -> A
   }.
 
 Notation "'❲' n '↦' m '❳' a" := (rname a n m)(at level 40).
 
-Instance natRename : Rename nat :=
+Instance varRename : Rename var :=
   {
-    rname := fun x n m =>
-              if x =? n
-              then m
+    rname := fun x y z =>
+              if eqb x y
+              then z
               else x    
   }.
 
@@ -560,12 +560,12 @@ Definition remap {A B : Type} `{Eqb A} `{Eqb B}
         | _ => pmap a
         end.
 
-Instance fldMapRename : Rename (partial_map fld nat) :=
+Instance fldMapRename : Rename (partial_map fld var) :=
   {
     rname map n m := remap n m map
   }.
 
-Instance natMapRename : Rename (partial_map nat nat) :=
+Instance varMapRename : Rename (partial_map var var) :=
   {
     rname map n m := remap n m map
   }.
