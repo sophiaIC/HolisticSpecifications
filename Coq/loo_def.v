@@ -28,6 +28,26 @@ Instance eqbFld : Eqb fld :=
              | fieldID n1, fieldID n2 => n1 =? n2
              end
   }.
+Proof.
+  intros; destruct a; apply Nat.eqb_refl.
+  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros;
+    destruct a1;
+    destruct a2;
+    symmetry in H;
+    apply beq_nat_eq in H;
+    subst; auto.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq in H;
+    crush.
+Qed.
 
 Instance eqbMth : Eqb mth :=
   {
@@ -36,6 +56,25 @@ Instance eqbMth : Eqb mth :=
              | methID n1, methID n2 => n1 =? n2
              end
   }.
+  intros; destruct a; apply Nat.eqb_refl.
+  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros;
+    destruct a1;
+    destruct a2;
+    symmetry in H;
+    apply beq_nat_eq in H;
+    subst; auto.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq in H;
+    crush.
+Defined.
 
 Instance eqbGfld : Eqb gfld :=
   {
@@ -44,6 +83,25 @@ Instance eqbGfld : Eqb gfld :=
              | gFieldID n1, gFieldID n2 => n1 =? n2
              end
   }.
+  intros; destruct a; apply Nat.eqb_refl.
+  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros;
+    destruct a1;
+    destruct a2;
+    symmetry in H;
+    apply beq_nat_eq in H;
+    subst; auto.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq in H;
+    crush.
+Defined.
 
 Instance eqbCls : Eqb cls :=
   {
@@ -52,6 +110,25 @@ Instance eqbCls : Eqb cls :=
              | classID n1, classID n2 => n1 =? n2
              end
   }.
+  intros; destruct a; apply Nat.eqb_refl.
+  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros;
+    destruct a1;
+    destruct a2;
+    symmetry in H;
+    apply beq_nat_eq in H;
+    subst; auto.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq in H;
+    crush.
+Defined.
 
 Instance eqbAddr : Eqb addr :=
   {
@@ -60,6 +137,25 @@ Instance eqbAddr : Eqb addr :=
              | address n1, address n2 => n1 =? n2
              end
   }.
+  intros; destruct a; apply Nat.eqb_refl.
+  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros;
+    destruct a1;
+    destruct a2;
+    symmetry in H;
+    apply beq_nat_eq in H;
+    subst; auto.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq in H;
+    crush.
+Defined.
 
 (*this is a bit of a hack*)
 Definition this := bind 0.

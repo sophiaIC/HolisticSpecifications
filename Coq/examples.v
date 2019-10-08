@@ -135,12 +135,13 @@ Definition myMap : state := (update
                                   f vFalseLoc
                                   (update
                                      t vTrueLoc
-                                     (update z vZeroLoc
-                                             (update
-                                                client vClientLoc
-                                                (update
-                                                   this vClientLoc
-                                                   empty)))))).
+                                     (update
+                                        z vZeroLoc
+                                        (update
+                                           client vClientLoc
+                                           (update
+                                              this vClientLoc
+                                              empty)))))).
 
 Definition myϕ : frame := frm myMap (c_stmt (s_rtrn z)).
 
@@ -213,6 +214,19 @@ Proof.
     auto.
 Qed.
 
+Lemma eq_dec_var :
+  forall (x y : var), {x = y} + {x <> y}.
+Proof.
+  intros x y;
+    destruct x as [n];
+    destruct y as [m];
+    destruct (Nat.eq_dec n m) as [Heq|Hneq];
+    subst;
+    auto;
+    right;
+    crush.
+Qed.
+
 Theorem ArithMdlSatisfiesAccess :
   forall M, ArithMdl ⦂ M ◎ myσ ⊭ (a_acc (a_bind client) (a_bind t)).
 Proof.
@@ -245,9 +259,57 @@ Proof.
   right; intros.
   inversion H; inversion H0; subst; simpl in *.
   inversion H4; inversion H10; subst; simpl in *.
-  assert (Heq : z0 = z \/ z0 = client \/ z0 = s \/ z0 = t \/ z0 = f \/ z0 = this).
-  
-Abort.
+  assert (Heq : z0 = client \/ z0 = s \/ z0 = t \/ z0 = f \/ z0 = this).
+  unfold myMap, update, t_update in H11.
+  destruct (eq_dec_var z0 s) as [Heq|Hneqs];
+    [auto
+    |apply neq_eqb in Hneqs;
+     rewrite Hneqs in H11].
+  destruct (eq_dec_var z0 f) as [Heq|Hneqf];
+    [subst; crush
+    |apply neq_eqb in Hneqf;
+     rewrite Hneqf in H11].
+  destruct (eq_dec_var z0 t) as [Heq|Hneqt];
+    [subst; crush
+    |apply neq_eqb in Hneqt;
+     rewrite Hneqt in H11].
+  destruct (eq_dec_var z0 z) as [Heq|Hneqz];
+    [subst
+    |apply neq_eqb in Hneqz;
+     rewrite Hneqz in H11].
+  inversion H; inversion H0; subst.
+  unfold myσ, myψ, myϕ in H6, H14;
+    simpl in H6, H14;
+    inversion H6;
+    inversion H14;
+    subst;
+    simpl in H7, H15;
+    unfold myMap in H7, H15;
+    simpl in H7, H15.
+  unfold update, t_update, t, s in H7; crush.
+  destruct (eq_dec_var z0 client) as [Heq|Hneqcl];
+    [subst; crush
+    |apply neq_eqb in Hneqcl;
+     rewrite Hneqcl in H11].
+  destruct (eq_dec_var z0 this) as [Heq|Hneqthis];
+    [subst; crush
+    |apply neq_eqb in Hneqthis;
+     rewrite Hneqthis in H11].
+  unfold empty, t_empty in H11; inversion H11.
+  unfold myσ in H1.
+  inversion H1; subst.
+  unfold myϕ in H2; simpl in H2.
+  inversion H2; subst.
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  intros Hcontra; inversion Hcontra.
+Qed.
 
 (*Definition Int := 1.
 

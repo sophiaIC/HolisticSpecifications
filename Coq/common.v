@@ -6,16 +6,51 @@ Inductive var : Type :=
 | bind : nat -> var.
 
 Class Eqb (A : Type) :=
-  {eqb : A -> A -> bool}.
+  {eqb : A -> A -> bool;
+   eqb_refl : forall a, eqb a a = true;
+   eqb_sym : forall a1 a2, eqb a1 a2 = eqb a2 a1;
+   eqb_eq : forall a1 a2, eqb a1 a2 = true ->
+                     a1 = a2;
+   neq_eqb : forall a1 a2, a1 <> a2 ->
+                      eqb a1 a2 = false;
+   eqb_neq : forall a1 a2, eqb a1 a2 = false ->
+                      a1 <> a2}.
 
 Instance nat_Eqb : Eqb nat :=
-  {eqb n m := n =? m}.
+  {eqb n m := n =? m;
+   eqb_refl := Nat.eqb_refl;
+   eqb_sym := Nat.eqb_sym}.
+Proof.
+  intros; apply beq_nat_eq; auto.
+  apply Nat.eqb_neq.
+  apply Nat.eqb_neq.
+Defined.
 
-Instance id_Eqb : Eqb var :=
+Instance var_Eqb : Eqb var :=
   {eqb x y :=
      match x, y with
      | bind n, bind m => n =? m
      end}.
+Proof.
+  intros; destruct a; apply Nat.eqb_refl.
+  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros;
+    destruct a1;
+    destruct a2;
+    symmetry in H;
+    apply beq_nat_eq in H;
+    subst; auto.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq in H;
+    crush.
+Defined.
 
 Definition total_map (A B : Type) `{Eqb A} := A -> B.
 
