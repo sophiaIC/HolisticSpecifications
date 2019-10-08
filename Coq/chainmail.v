@@ -581,6 +581,8 @@ requirement of Coq thus we define sat mutually with nsat, the negation of sat
 For positivity discussion, see: http://adam.chlipala.net/cpdt/html/Cpdt.InductiveTypes.html#lab30
  *)
 
+Definition v_to_av : var -> option a_var := fun x => Some (a_bind x).
+
 Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 (** Simple: *)
 | sat_exp   : forall M1 M2 σ e, M1 ∙ σ ⊢ e ↪ v_true ->
@@ -647,6 +649,27 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                                in_stmt z s ->
                                                M1 ⦂ M2 ◎ σ ⊨ (a_acc (a_bind x) (a_bind y))
 
+(** Control: *)
+(** Julian: I should probably clean up the interpretation equivalence between parameter maps *)
+| sat_call : forall M1 M2 σ ϕ ψ x y m vMap vMap' α, ⌊ x ⌋ σ ≜ α ->
+                                                 ⌊ this ⌋ σ ≜ α ->
+                                                 snd σ = ϕ :: ψ ->
+                                                 (exists v u s,
+                                                     ((contn ϕ) =
+                                                      (c_stmt (s_stmts (s_meth v u m vMap') s))) /\
+                                                     (forall v', ⌊ u ⌋ σ ≜ v' ->
+                                                            ⌊ y ⌋ σ ≜ v') /\
+                                                     (forall x' v1, vMap x' = Some v1 ->
+                                                               exists v2, (vMap' x' = Some v2 /\
+                                                                      (forall v', ⌊ v1 ⌋ σ ≜ v' ->
+                                                                             ⌊ v2 ⌋ σ ≜ v'))) /\
+                                                     (forall x' v1, vMap' x' = Some v1 ->
+                                                               exists v2, vMap x' = Some v2)) ->
+                                                 M1 ⦂ M2 ◎ σ ⊨ (a_call (a_bind x)
+                                                                       (a_bind y)
+                                                                       m
+                                                                       (compose vMap v_to_av))
+
 (** Viewpoint: *)
 | sat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ α ->
                                  map σ α = Some o ->
@@ -660,23 +683,6 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                  (exists CDef, M1 C = Some CDef) ->
                                  M1 ⦂ M2 ◎ σ ⊨ a_intrn (a_bind x)
 
-(** Control: *)
-| sat_access : forall M1 M2 σ ϕ ψ x y m u vMap vMap' α, ⌊ x ⌋ σ ≜ α ->
-                                                   ⌊ this ⌋ σ ≜ α ->
-                                                   snd σ = ϕ :: ψ ->
-                                                   (exists v u s,
-                                                       ((contn ϕ) =
-                                                        (c_stmt (s_stmts (s_meth v u m vMap') s))) /\
-                                                       (forall v', ⌊ u ⌋ σ ≜ v' ->
-                                                              ⌊ y ⌋ σ ≜ v') /\
-                                                       (forall x' v1, vMap x' = Some v1 ->
-                                                                 exists v2, (vMap' x' = Some v2 /\
-                                                                        (forall v', ⌊ v1 ⌋ σ ≜ v' ->
-                                                                               ⌊ v2 ⌋ σ ≜ v'))) /\
-                                                       (forall x' v1, vMap' x' = Some v1 ->
-                                                                 exists v2, vMap x' = Some v2)) ->
-                                                   M1 ⦂ M2 ◎ σ ⊨ (a_call (a_bind x) (a_bind y) m vMap)
-
 (** Space: *)
 | sat_in    : forall M1 M2 σ A Σ σ', σ ↓ Σ ≜ σ' ->
                                 M1 ⦂ M2 ◎ σ' ⊨ A ->
@@ -684,14 +690,14 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (** Time: *)
 
-| sat_next : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
-                                (exists σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳ σ') /\
+| sat_next : forall M1 M2 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
+                                (exists σ' σ'', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ') /\
                                            (σ ◁ σ' ≜ σ'') /\
                                            M1 ⦂ M2 ◎ σ'' ⊨ A) ->
                                 M1 ⦂ M2 ◎ σ ⊨ (a_will A)
 
-| sat_will : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
-                                (exists σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳⋆ σ') /\
+| sat_will : forall M1 M2 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
+                                (exists σ' σ'', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') /\
                                            (σ ◁ σ' ≜ σ'') /\
                                            M1 ⦂ M2 ◎ σ'' ⊨ A) ->
                                 M1 ⦂ M2 ◎ σ ⊨ (a_will A)
@@ -757,10 +763,44 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                           α1 <> α2) \/
                                 (forall z α, ⌊y⌋ σ ≜ α ->
                                         ⌊z⌋ σ ≜ α ->
-                                        forall ψ ϕ χ s, σ = (χ, scons ϕ ψ) ->
+                                        forall ψ ϕ χ s, σ = (χ, ϕ :: ψ) ->
                                                    (contn ϕ) = c_stmt s ->
                                                    ~ in_stmt z s))->
                                M1 ⦂ M2 ◎ σ ⊭ (a_acc (a_bind x) (a_bind y))
+
+(** Control: *)
+| nsat_call1 : forall M1 M2 σ x y m vMap α1 α2, ⌊ x ⌋ σ ≜ α1 ->
+                                           ⌊ this ⌋ σ ≜ α2 ->
+                                           α1 <> α2 ->
+                                           M1 ⦂ M2 ◎ σ ⊭ (a_call (a_bind x)
+                                                                 (a_bind y)
+                                                                 m
+                                                                 vMap)
+                                              
+| nsat_call2 : forall M1 M2 σ ϕ ψ x y m vMap vMap', snd σ = ϕ :: ψ ->
+                                               (forall v u s,
+                                                   ((contn ϕ) =
+                                                    (c_stmt (s_stmts (s_meth v u m vMap') s))) /\
+                                                   (forall v1 v2, ⌊ u ⌋ σ ≜ v1 ->
+                                                             ⌊ y ⌋ σ ≜ v2 ->
+                                                             v1 <> v2)) ->
+                                               M1 ⦂ M2 ◎ σ ⊭ (a_call (a_bind x)
+                                                                     (a_bind y)
+                                                                     m
+                                                                     vMap)
+| nsat_call3 : forall M1 M2 σ ϕ ψ x y m vMap vMap', snd σ = ϕ :: ψ ->
+                                               (forall v u s,
+                                                   ((contn ϕ) =
+                                                    (c_stmt (s_stmts (s_meth v u m vMap') s))) /\
+                                                   (exists x' v1 v2, vMap x' = Some v1 /\
+                                                                vMap' x' = Some v2 /\
+                                                                (forall α1 α2, ⌊ v1 ⌋ σ ≜ α1 ->
+                                                                          ⌊ v2 ⌋ σ ≜ α2 ->
+                                                                          α1 <> α2))) ->
+                                               M1 ⦂ M2 ◎ σ ⊭ (a_call (a_bind x)
+                                                                     (a_bind y)
+                                                                     m
+                                                                     (compose vMap v_to_av))
 
 (*viewpoint*) (* well-formeness? This is important!!!!*)
 (*| nsat_extrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
@@ -796,14 +836,14 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (*time*)
 
-| nsat_next : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
-                                 (forall σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳ σ') /\
+| nsat_next : forall M1 M2 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
+                                 (forall σ' σ'', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ') /\
                                             (σ ◁ σ' ≜ σ'') /\
                                             M1 ⦂ M2 ◎ σ'' ⊭ A) ->
                                  M1 ⦂ M2 ◎ σ ⊭ (a_will A)
 
-| nsat_will : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
-                                 (forall σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳⋆ σ') /\
+| nsat_will : forall M1 M2 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
+                                 (forall σ' σ'', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') /\
                                             (σ ◁ σ' ≜ σ'') /\
                                             M1 ⦂ M2 ◎ σ'' ⊭ A) ->
                                  M1 ⦂ M2 ◎ σ ⊭ (a_will A)
