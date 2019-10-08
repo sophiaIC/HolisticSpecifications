@@ -118,28 +118,30 @@ Definition heap := partial_map addr obj.
 Record frame := frm{vMap : state;
                     contn : continuation}.
 
-Inductive stack :=
+Definition stack := list frame.
+
+(*Inductive stack :=
 | base : stack
-| scons : frame -> stack -> stack.
+| scons : frame -> stack -> stack.*)
 
 Definition peek (ψ : stack) : option frame :=
   match ψ with
-  | base => None
-  | scons ϕ _ => Some ϕ
+  | nil => None
+  | ϕ :: _ => Some ϕ
   end.
 
 Definition pop (ψ : stack) : option stack :=
   match ψ with
-  | base => None
-  | scons _ ψ => Some ψ
+  | nil => None
+  | _ :: ψ => Some ψ
   end.
 
 Instance stackMap : Mappable stack var (option value) :=
   {map :=
      fix map S x :=
        match S with
-       | base => None
-       | scons ϕ S' => ϕ.(vMap) x
+       | nil => None
+       | ϕ :: S' => ϕ.(vMap) x
        end
   }.
 
@@ -217,14 +219,14 @@ Definition update_ϕ_contn (ϕ : frame)(c : continuation) :=
 
 Definition update_ψ_map (ψ : stack)(x : var)(v : value) : stack :=
   match ψ with
-  | base => base
-  | scons ϕ ψ' => scons (update_ϕ_map ϕ x v) ψ'
+  | nil => nil
+  | ϕ :: ψ' => (update_ϕ_map ϕ x v) :: ψ'
   end.
 
 Definition update_ψ_contn (ψ : stack)(c : continuation) : stack :=
   match ψ with
-  | base => base
-  | scons ϕ ψ' => scons (update_ϕ_contn ϕ c) ψ'
+  | nil => nil
+  | ϕ :: ψ' => (update_ϕ_contn ϕ c) :: ψ'
   end.
 
 Definition update_σ_map (σ : config)(x : var)(v : value) :=
@@ -351,7 +353,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     C.(c_meths) m = Some s ->
     ϕ' =  frm (vMap ϕ) (c_hole x s') ->
     ϕ'' = frm (update this (v_addr α) (compose ps (vMap ϕ))) (c_stmt s) ->
-    M ∙ σ ⤳ (χ, scons ϕ'' (scons ϕ' (ψ')))
+    M ∙ σ ⤳ (χ, ϕ'' :: (ϕ' :: (ψ')))
 
     (** x ≠ this *)
     (** σ = (χ, ψ)*)
@@ -400,7 +402,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     o' = new (cname o) (update f (v_addr α') (flds o)) (meths o) ->
     χ' = update α o' χ ->
     ϕ' = frm (vMap ϕ) (c_stmt s) ->
-    σ' = (χ', scons ϕ' ψ') ->
+    σ' = (χ', ϕ' :: ψ') ->
     M ∙ σ ⤳ σ'
 
     (** ψ = ϕ : ψ' *)
@@ -424,7 +426,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
           ~ In f (c_flds CDef)) ->
     o = new C (compose fMap (vMap ϕ)) (c_meths CDef) ->
     ϕ' = frm (update x (v_addr α) (vMap ϕ)) (c_stmt s) ->
-    σ' = (update α o χ, scons ϕ' ψ') ->
+    σ' = (update α o χ, ϕ' :: ψ') ->
     M ∙ σ ⤳ σ'
     
 
@@ -436,12 +438,12 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ----------------------------------------------------- (Return_OS_1) *)
     (** M, σ ⤳ (χ, ϕ'' : ψ *)
 | r_ret1 : forall M ϕ ϕ' ψ χ y x α ϕ'' σ s,
-    σ = (χ, scons ϕ (scons ϕ' ψ)) ->
+    σ = (χ, ϕ :: (ϕ' :: ψ)) ->
     ϕ.(contn) = c_stmt (s_rtrn x) ->
     ϕ'.(contn) = c_hole y s ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
-    M ∙ σ ⤳ (χ, scons ϕ'' ψ)
+    M ∙ σ ⤳ (χ, ϕ'' :: ψ)
 
     (** σ = (χ, ϕ : ϕ' : ψ'') *)
     (** ϕ.contn = return x; s' *)
@@ -460,7 +462,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'.(contn) = c_hole y s ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
-    M ∙ σ ⤳ (χ, scons ϕ'' ψ)
+    M ∙ σ ⤳ (χ, ϕ'' :: ψ)
 
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
 
@@ -510,7 +512,7 @@ Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
 
 where "M1 '∩'  M2 '⊢' σ '⤳⋆' σ'" := (reductions M1 M2 σ σ').
 
-Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 45).
+Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 40).
                                                
 Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
 | pr_single : forall M1 M2 M σ σ', M1 ∘ M2 ≜ M ->
@@ -527,6 +529,18 @@ Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
                                 M1 ⦂ M2 ⦿ σ1 ⤳ σn                            
 
 where "M1 '⦂' M2 '⦿' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
+
+Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" (at level 40).
+                                               
+Inductive pair_reductions : mdl -> mdl -> config -> config -> Prop :=
+| prs_single : forall M1 M2 σ σ', M1 ⦂ M2 ⦿ σ ⤳ σ' ->
+                             M1 ⦂ M2 ⦿ σ ⤳⋆ σ'
+
+| prs_trans : forall M1 M2 σ1 σ σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ ->
+                               M1 ⦂ M2 ⦿ σ ⤳ σ2 ->
+                               M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
+
+where "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" := (pair_reductions M1 M2 σ σ').
 
 Class Rename (A : Type) :=
   {rname : A -> var -> var -> A

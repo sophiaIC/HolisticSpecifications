@@ -35,7 +35,7 @@ Inductive asrt : Type :=
 | a_acc   : a_var -> a_var -> asrt
 
 (** Control: *)
-| a_call  : a_var -> a_var -> mth -> a_var -> asrt
+| a_call  : a_var -> a_var -> mth -> partial_map var a_var  -> asrt
 
 (** Time: *)
 | a_next  : asrt -> asrt
@@ -294,6 +294,15 @@ Instance substAVar : Subst a_var nat var :=
       end
   }.
 
+Instance substAVarMap : Subst (partial_map var a_var) nat var :=
+  {
+    sbst avMap n x := fun (y : var) =>
+                        match avMap y with
+                        | Some z => Some ([x /s n] z)
+                        | None => None
+                        end
+  }.
+
 Instance substAssertionVar : Subst asrt nat var :=
   {sbst :=
      fix subst' A n x :=
@@ -316,9 +325,9 @@ Instance substAssertionVar : Subst asrt nat var :=
        (*permission*)
        | a_acc v1 v2       => a_acc (sbst v1 n x) (sbst v2 n x)
        (*control*)
-       | a_call v1 v2 m v3 => a_call ([x /s n] v1)
-                                    ([x /s n] v2) m
-                                    ([x /s n] v3)
+       | a_call v1 v2 m avMap => a_call ([x /s n] v1)
+                                       ([x /s n] v2) m
+                                       ([x /s n] avMap)
        (*time*)
        | a_next A'         => a_next (subst' A' n x)
        | a_will A'         => a_will (subst' A' n x)
@@ -419,6 +428,10 @@ Definition notin_a_var (x : a_var)(y : var) : Prop :=
   | _ => False
   end.
 
+Definition notin_av_map (avMap : partial_map var a_var)(x : var) : Prop :=
+  forall y z, avMap y = Some z ->
+         notin_a_var z x.
+
 Inductive notin_Ax  : asrt -> var -> Prop :=
 
 (** Simple *)
@@ -461,10 +474,10 @@ Inductive notin_Ax  : asrt -> var -> Prop :=
                       notin_Ax (a_acc x y) x'
 
 (** Control: *)
-| ni_call  : forall x y z m x', notin_a_var x x' ->
-                          notin_a_var y x' ->
-                          notin_a_var z x' ->
-                          notin_Ax (a_call x y m z) x'
+| ni_call  : forall x y z avMap m, notin_a_var y x ->
+                              notin_a_var z x ->
+                              notin_av_map avMap x ->
+                              notin_Ax (a_call y z m avMap) x
 
 (** Time: *)
 | ni_next  : forall A x, notin_Ax A x ->
@@ -518,7 +531,7 @@ Inductive zip {A : Type} : list A -> list A -> list (A * A) -> Prop :=
 Inductive adaptation : config -> config -> config -> Prop :=
 | a_adapt : forall σ σ' ϕ ϕ' ϕ'' contn β β' β'' ψ' χ' zs zs' s s' Zs,
     peek (snd σ) = Some ϕ ->
-    σ' = (χ', (scons ϕ' ψ')) ->
+    σ' = (χ', (ϕ' :: ψ')) ->
     ϕ = frm β contn ->
     ϕ' = frm β' (c_stmt s) ->
     (forall z, In z zs' -> β z = None) ->
@@ -529,7 +542,7 @@ Inductive adaptation : config -> config -> config -> Prop :=
     zip zs' zs Zs ->
     β'' = updates Zs β β' ->
     ϕ'' = frm β'' (c_stmt s') ->
-    σ ◁ σ' ≜ (χ', scons ϕ'' ψ')
+    σ ◁ σ' ≜ (χ', ϕ'' :: ψ')
 
 where "σ1 '◁' σ2 '≜' σ3" := (adaptation σ1 σ2 σ3).
 
@@ -629,7 +642,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                                ⌊this⌋ σ ≜ α1 ->
                                                ⌊y⌋ σ ≜ α2 ->
                                                ⌊z⌋ σ ≜ α2 ->
-                                               σ = (χ, scons ϕ ψ) ->
+                                               σ = (χ, ϕ :: ψ) ->
                                                (contn ϕ) = c_stmt s ->
                                                in_stmt z s ->
                                                M1 ⦂ M2 ◎ σ ⊨ (a_acc (a_bind x) (a_bind y))
@@ -647,6 +660,23 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                  (exists CDef, M1 C = Some CDef) ->
                                  M1 ⦂ M2 ◎ σ ⊨ a_intrn (a_bind x)
 
+(** Control: *)
+| sat_access : forall M1 M2 σ ϕ ψ x y m u vMap vMap' α, ⌊ x ⌋ σ ≜ α ->
+                                                   ⌊ this ⌋ σ ≜ α ->
+                                                   snd σ = ϕ :: ψ ->
+                                                   (exists v u s,
+                                                       ((contn ϕ) =
+                                                        (c_stmt (s_stmts (s_meth v u m vMap') s))) /\
+                                                       (forall v', ⌊ u ⌋ σ ≜ v' ->
+                                                              ⌊ y ⌋ σ ≜ v') /\
+                                                       (forall x' v1, vMap x' = Some v1 ->
+                                                                 exists v2, (vMap' x' = Some v2 /\
+                                                                        (forall v', ⌊ v1 ⌋ σ ≜ v' ->
+                                                                               ⌊ v2 ⌋ σ ≜ v'))) /\
+                                                       (forall x' v1, vMap' x' = Some v1 ->
+                                                                 exists v2, vMap x' = Some v2)) ->
+                                                   M1 ⦂ M2 ◎ σ ⊨ (a_call (a_bind x) (a_bind y) m vMap)
+
 (** Space: *)
 | sat_in    : forall M1 M2 σ A Σ σ', σ ↓ Σ ≜ σ' ->
                                 M1 ⦂ M2 ◎ σ' ⊨ A ->
@@ -654,10 +684,17 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (** Time: *)
 
-| sat_will : forall M1 M2 σ A, (exists σ' σ'', (pair_reduction M1 M2 σ σ') /\
-                                     (σ ◁ σ' ≜ σ'') /\
-                                     M1 ⦂ M2 ◎ σ'' ⊨ A) ->
-                          M1 ⦂ M2 ◎ σ ⊨ (a_will A)
+| sat_next : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
+                                (exists σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳ σ') /\
+                                           (σ ◁ σ' ≜ σ'') /\
+                                           M1 ⦂ M2 ◎ σ'' ⊨ A) ->
+                                M1 ⦂ M2 ◎ σ ⊨ (a_will A)
+
+| sat_will : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
+                                (exists σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳⋆ σ') /\
+                                           (σ ◁ σ' ≜ σ'') /\
+                                           M1 ⦂ M2 ◎ σ'' ⊨ A) ->
+                                M1 ⦂ M2 ◎ σ ⊨ (a_will A)
 
 where "M1 '⦂' M2 '◎' σ '⊨' A" := (sat M1 M2 σ A)
 
@@ -759,10 +796,17 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (*time*)
 
-| nsat_will : forall M1 M2 σ A, (forall σ' σ'', (pair_reduction M1 M2 σ σ') /\
-                                      (σ ◁ σ' ≜ σ'') /\
-                                      M1 ⦂ M2 ◎ σ'' ⊭ A) ->
-                           M1 ⦂ M2 ◎ σ ⊭ (a_will A)
+| nsat_next : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
+                                 (forall σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳ σ') /\
+                                            (σ ◁ σ' ≜ σ'') /\
+                                            M1 ⦂ M2 ◎ σ'' ⊭ A) ->
+                                 M1 ⦂ M2 ◎ σ ⊭ (a_will A)
+
+| nsat_will : forall M1 M2 σ A ϕ ψ χ, σ = (χ, scons ϕ ψ) ->
+                                 (forall σ' σ'', (M1 ⦂ M2 ⦿ (χ, scons ϕ base) ⤳⋆ σ') /\
+                                            (σ ◁ σ' ≜ σ'') /\
+                                            M1 ⦂ M2 ◎ σ'' ⊭ A) ->
+                                 M1 ⦂ M2 ◎ σ ⊭ (a_will A)
 
 where "M1 '⦂' M2 '◎' σ '⊭' A" := (nsat M1 M2 σ A).
 
