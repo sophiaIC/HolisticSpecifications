@@ -14,57 +14,69 @@ Require Import CpdtTactics.
 (** Heap Locations : 250 -> 399*)
 
 (** #<h3># Class Identifiers: #</h3># *)
-Definition Zero := 0.
+Definition Zero := classID 0.
 
-Definition True_ := 1.
+Definition True_ := classID 1.
 
-Definition False_ := 2.
+Definition False_ := classID 2.
 
-Definition String_ := 3.
+Definition String_ := classID 3.
 
-Definition Client := 4.
+Definition Client := classID 4.
 
 (** #<h3># Field Identifiers:#</h3>#  *)
 
-Definition isEven := 50.
+Definition isEven := fieldID 50.
 
 (** #<h3># Ghost Field Identifiers:#</h3>#  *)
 
-Definition isEvenG := 100.
+Definition isEvenG := gFieldID 100.
 
-(** #<h3># Ghost Field Identifiers:#</h3>#  *)
+(** #<h3># Addresses:#</h3>#  *)
 
-Definition TrueLoc := 250.
+Definition TrueLoc := address 250.
 
-Definition FalseLoc := 251.
+Definition vTrueLoc := v_addr TrueLoc.
 
-Definition ZeroLoc := 252.
+Definition FalseLoc := address 251.
 
-Definition StringLoc := 253.
+Definition vFalseLoc := v_addr FalseLoc.
 
-Definition ClientLoc := 254.
+Definition ZeroLoc := address 252.
+
+Definition vZeroLoc := v_addr ZeroLoc.
+
+Definition StringLoc := address 253.
+
+Definition vStringLoc := v_addr StringLoc.
+
+Definition ClientLoc := address 254.
+
+Definition vClientLoc := v_addr ClientLoc.
 
 (** #<h3># Variable Identifiers:#</h3>#  *)
 
-Definition z := 200.
+Definition z := bind 200.
 
 Definition z_ := r_var z.
 
-Definition t := 201.
+Definition t := bind 201.
 
 Definition t_ := r_var t.
 
-Definition f := 202.
+Definition f := bind 202.
 
 Definition f_ := r_var f.
 
-Definition s := 203.
+Definition s := bind 203.
 
 Definition s_ := r_var s.
 
-Definition client := 204.
+Definition client := bind 204.
 
 Definition client_ := r_var client.
+
+Definition isEvenX := bind 205.
 
 (** #<h3># Class Definitions:#</h3># *)
 
@@ -76,7 +88,7 @@ Definition ZeroDef := clazz Zero
                             (isEven::nil)
                             empty
                             (update
-                               isEvenG (e_acc_f (e_var (bind this)) isEven)
+                               isEvenG (isEvenX, (e_acc_f (e_var this) isEven))
                                empty).
 
 Definition StringDef := clazz String_ nil empty empty.
@@ -100,7 +112,7 @@ Definition TrueObj := new True_ empty empty.
 
 Definition FalseObj := new False_ empty empty.
 
-Definition ZeroObj := new Zero (update isEven TrueLoc empty) empty.
+Definition ZeroObj := new Zero (update isEven vTrueLoc empty) empty.
 
 Definition StringObj := new String_ empty empty.
 
@@ -118,21 +130,22 @@ Definition myχ : heap := (update
                                                        empty))))).
 
 Definition myMap : state := (update
-                               s StringLoc
+                               s vStringLoc
                                (update
-                                  f FalseLoc
+                                  f vFalseLoc
                                   (update
-                                     t TrueLoc
-                                     (update z ZeroLoc
-                                             (update
-                                                client ClientLoc
-                                                (update
-                                                   this ClientLoc
-                                                   empty)))))).
+                                     t vTrueLoc
+                                     (update
+                                        z vZeroLoc
+                                        (update
+                                           client vClientLoc
+                                           (update
+                                              this vClientLoc
+                                              empty)))))).
 
 Definition myϕ : frame := frm myMap (c_stmt (s_rtrn z)).
 
-Definition myψ : stack := scons myϕ base.
+Definition myψ : stack := myϕ :: nil.
 
 Definition myσ : config := (myχ, myψ).
 
@@ -142,12 +155,12 @@ Theorem ArithMdlSatisfiesTrue :
 Proof.
   intros.
   apply sat_exp.
-  apply v_true.
+  apply v_value.
 Qed.
 
 (** ArithMdl ⦂ M ◎ myσ ⊨ t:True_ *)
 Theorem ArithMdlSatisfiesClass :
-  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_class (e_var (bind t)) True_).
+  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_class (e_var t) True_).
 Proof.
   intros.
   apply sat_class with (α:=TrueLoc)(o:=TrueObj); auto.
@@ -156,7 +169,7 @@ Qed.
 
 (** ArithMdl ⦂ M ◎ myσ ⊨ internal⟨t⟩, where t is the variable in σ pointing to TrueObj *)
 Theorem ArithMdlSatisfiesInternal :
-  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_intrn (bind t)).
+  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_intrn (a_bind t)).
 Proof.
   intros.
   apply sat_intrn with (α:=TrueLoc)(o:=TrueObj)(C:=True_);
@@ -168,7 +181,7 @@ Qed.
 
 (** ArithMdl ⦂ M ◎ myσ ⊨ external⟨s⟩, where s is the variable in σ pointing to StringObj *)
 Theorem ArithMdlSatisfiesExternal :
-  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_extrn (bind s)).
+  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_extrn (a_bind s)).
 Proof.
   intros.
   apply sat_extrn with (α:=StringLoc)(o:=StringObj)(C:=String_);
@@ -192,7 +205,7 @@ Proof.
 Abort.
 
 Theorem ClientExternalToArithMdl :
-  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_extrn (bind client)).
+  forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_extrn (a_bind client)).
 Proof.
   intros.
   apply sat_extrn with (α:=ClientLoc)(o:=ClientObj)(C:=Client);
@@ -201,8 +214,21 @@ Proof.
     auto.
 Qed.
 
+Lemma eq_dec_var :
+  forall (x y : var), {x = y} + {x <> y}.
+Proof.
+  intros x y;
+    destruct x as [n];
+    destruct y as [m];
+    destruct (Nat.eq_dec n m) as [Heq|Hneq];
+    subst;
+    auto;
+    right;
+    crush.
+Qed.
+
 Theorem ArithMdlSatisfiesAccess :
-  forall M, ArithMdl ⦂ M ◎ myσ ⊭ (a_acc (bind client) (bind t)).
+  forall M, ArithMdl ⦂ M ◎ myσ ⊭ (a_acc (a_bind client) (a_bind t)).
 Proof.
   intros.
   apply nsat_access; intros.
@@ -233,9 +259,57 @@ Proof.
   right; intros.
   inversion H; inversion H0; subst; simpl in *.
   inversion H4; inversion H10; subst; simpl in *.
-  assert (Heq : z0 = z \/ z0 = client \/ z0 = s \/ z0 = t \/ z0 = f \/ z0 = this).
-  
-Abort.
+  assert (Heq : z0 = client \/ z0 = s \/ z0 = t \/ z0 = f \/ z0 = this).
+  unfold myMap, update, t_update in H11.
+  destruct (eq_dec_var z0 s) as [Heq|Hneqs];
+    [auto
+    |apply neq_eqb in Hneqs;
+     rewrite Hneqs in H11].
+  destruct (eq_dec_var z0 f) as [Heq|Hneqf];
+    [subst; crush
+    |apply neq_eqb in Hneqf;
+     rewrite Hneqf in H11].
+  destruct (eq_dec_var z0 t) as [Heq|Hneqt];
+    [subst; crush
+    |apply neq_eqb in Hneqt;
+     rewrite Hneqt in H11].
+  destruct (eq_dec_var z0 z) as [Heq|Hneqz];
+    [subst
+    |apply neq_eqb in Hneqz;
+     rewrite Hneqz in H11].
+  inversion H; inversion H0; subst.
+  unfold myσ, myψ, myϕ in H6, H14;
+    simpl in H6, H14;
+    inversion H6;
+    inversion H14;
+    subst;
+    simpl in H7, H15;
+    unfold myMap in H7, H15;
+    simpl in H7, H15.
+  unfold update, t_update, t, s in H7; crush.
+  destruct (eq_dec_var z0 client) as [Heq|Hneqcl];
+    [subst; crush
+    |apply neq_eqb in Hneqcl;
+     rewrite Hneqcl in H11].
+  destruct (eq_dec_var z0 this) as [Heq|Hneqthis];
+    [subst; crush
+    |apply neq_eqb in Hneqthis;
+     rewrite Hneqthis in H11].
+  unfold empty, t_empty in H11; inversion H11.
+  unfold myσ in H1.
+  inversion H1; subst.
+  unfold myϕ in H2; simpl in H2.
+  inversion H2; subst.
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  destruct Heq as [|Heq]; subst;
+    [intros Hcontra; inversion Hcontra|].
+  intros Hcontra; inversion Hcontra.
+Qed.
 
 (*Definition Int := 1.
 
