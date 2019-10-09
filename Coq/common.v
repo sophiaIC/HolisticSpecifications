@@ -3,22 +3,54 @@ Require Import CpdtTactics.
 Require Import List.
 
 Inductive var : Type :=
-| hole : nat -> var
 | bind : nat -> var.
 
 Class Eqb (A : Type) :=
-  {eqb : A -> A -> bool}.
+  {eqb : A -> A -> bool;
+   eqb_refl : forall a, eqb a a = true;
+   eqb_sym : forall a1 a2, eqb a1 a2 = eqb a2 a1;
+   eqb_eq : forall a1 a2, eqb a1 a2 = true ->
+                     a1 = a2;
+   neq_eqb : forall a1 a2, a1 <> a2 ->
+                      eqb a1 a2 = false;
+   eqb_neq : forall a1 a2, eqb a1 a2 = false ->
+                      a1 <> a2}.
 
 Instance nat_Eqb : Eqb nat :=
-  {eqb n m := n =? m}.
+  {eqb n m := n =? m;
+   eqb_refl := Nat.eqb_refl;
+   eqb_sym := Nat.eqb_sym}.
+Proof.
+  intros; apply beq_nat_eq; auto.
+  apply Nat.eqb_neq.
+  apply Nat.eqb_neq.
+Defined.
 
-Instance id_Eqb : Eqb var :=
+Instance var_Eqb : Eqb var :=
   {eqb x y :=
      match x, y with
      | bind n, bind m => n =? m
-     | hole n, hole m => n =? m
-     | _, _ => false
      end}.
+Proof.
+  intros; destruct a; apply Nat.eqb_refl.
+  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros;
+    destruct a1;
+    destruct a2;
+    symmetry in H;
+    apply beq_nat_eq in H;
+    subst; auto.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros;
+    destruct a1;
+    destruct a2;
+    rewrite Nat.eqb_neq in H;
+    crush.
+Defined.
 
 Definition total_map (A B : Type) `{Eqb A} := A -> B.
 
@@ -54,39 +86,6 @@ Class PropFoldable (A B : Type) :=
     foldOr  : A -> (B -> nat -> Prop) -> nat -> Prop -> Prop
   }.
 
-Class Subst (A B: Type) :=
-  {sbst : A -> nat -> B -> A;
-   closed : A -> nat -> Prop;
-   closed_subst : forall a n, closed a n ->
-                         forall b, sbst a n b = a
-  }.
-
-Notation "'[' b '/s' n ']' a" := (sbst a n b)(at level 80).
-
-Inductive closed_v : var -> nat -> Prop :=
-| cl_hole : forall n m, n <> m ->
-                   closed_v (hole m) n
-| cl_bind : forall n m, closed_v (bind m) n.
-
-Instance substVar : Subst var var :=
-  {sbst x n y := match x with
-                  | hole m => if (m =? n)
-                             then y
-                             else x
-                  | _ => x
-                  end;
-   closed x n := forall m, x = hole m -> m <> n}.
-Proof.
-  intros;
-    destruct a;
-    auto;
-    assert (Hneq : n0 <> n);
-    [auto
-    |apply Nat.eqb_neq in Hneq;
-     rewrite Hneq];
-    auto.  
-Defined.
-
 Ltac andDestruct :=
   repeat match goal with
          | [H : ?P /\ ?Q |- _] => let Ha := fresh "Ha" in
@@ -107,42 +106,10 @@ Create HintDb closed_db.
 
 Inductive varSet : Type :=
 | s_hole : nat -> varSet
-| s_bind : list nat -> varSet.
+| s_bind : list var -> varSet.
 
-Instance varSetSubst : Subst varSet varSet :=
-  {
-    sbst :=
-      fun Σ1 n Σ2 =>
-          match Σ1 with
-          | s_hole m => if (m =? n)
-                       then Σ2
-                       else Σ1
-          | s_bind _ => Σ1
-          end;
-
-    closed := fun Σ n =>
-                match Σ with
-                | s_hole m => n <> m
-                | s_bind _ => True
-                end
-  }.
-Proof.
-  intros;
-    destruct a; auto;
-      eqbNatAuto; auto;
-        contradiction H; auto.
-Defined.
-
-Lemma closed_bind_Set :
-  forall l m (Σ : varSet), @sbst varSet varSet varSetSubst (s_bind l) m Σ = (s_bind l).
-Proof.
-  auto.
-Qed.
-
-Hint Rewrite closed_bind_Set : closed_db.
-
-Definition InΣ (n : nat)(Σ : varSet) :=
+Definition InΣ (x : var)(Σ : varSet) :=
   match Σ with
   | s_hole _ => False
-  | s_bind l => In n l
+  | s_bind l => In x l
   end.
