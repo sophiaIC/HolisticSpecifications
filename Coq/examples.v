@@ -378,42 +378,42 @@ Qed.
 (** #<h3># Expose example: #</h3># *)
 (** ---------------------------------------------------- *)
 (** #<code># >MyModule = { #</code># *)
-(** #<code># >  Internal = {} #</code># *)
+(** #<code># >  Inside = {} #</code># *)
 (** #<code># >  Boundary = { #</code># *)
-(** #<code># >    field internal : Internal #</code># *)
-(** #<code># >    meth expose() = {return this.internal} #</code># *)
+(** #<code># >    field inside : Inside #</code># *)
+(** #<code># >    meth expose() = {return this.inside} #</code># *)
 (** #<code># >  } #</code># *)
 (** #<code># >} #</code># *)
 (** --------------------------------------------------- *)
 (** #<code># we want to prove: #</code># *)
 (**  *)
 (** #<code># >MyModule ⊨  #</code># *)
-(** #<code># >(∀ b, b : Boundary, ∀ i, (b.internal = i ∧ (∀ x, x access i ⇒ x = b)) #</code># *)
+(** #<code># >(∀ b, b : Boundary, ∀ i, (b.inside = i ∧ (∀ x, x access i ⇒ x = b)) #</code># *)
 (** #<code># >             ⇒ (∀ p, will⟨ p access i ⟩ #</code># *)
 (** #<code># >               ⇒ (∃ o, will⟨ o calls b.expose() ⟩))) #</code># *)
 (**  *)
 (**  *)
 
-Definition InternalID := classID 6.
+Definition InsideID := classID 6.
 
 Definition BoundaryID := classID 7.
 
-Definition InternalDef := clazz InternalID
-                                nil
-                                empty
-                                empty.
+Definition InsideDef := clazz InsideID
+                              nil
+                              empty
+                              empty.
 
-Definition internal := fieldID 0.
+Definition inside := fieldID 0.
 
 Definition exposeID := methID 0.
 
 Definition x := bind 10.
 
-Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this internal))
+Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this inside))
                                  (s_rtrn x).
 
 Definition BoundaryDef := clazz BoundaryID
-                                (internal :: nil)
+                                (inside :: nil)
                                 (update
                                    exposeID exposeBody
                                    empty)
@@ -422,7 +422,7 @@ Definition BoundaryDef := clazz BoundaryID
 Definition MyModule := (update
                           BoundaryID BoundaryDef
                           (update
-                             InternalID InternalDef
+                             InsideID InsideDef
                              empty)).
 
 (** Note: variables introduced by quantifiers in assertions are modelled using *)
@@ -430,12 +430,67 @@ Definition MyModule := (update
 (** the quantifier depth of the assertion *)
 
 Theorem expose_example :
+  MyModule ⊨m (∀x∙((a_class (e_hole 0) BoundaryID)
+                   
+                   ⇒ (∀x∙((a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
+                            
+                            ⇒ ((∀x∙(((a_hole 0) access (a_hole 1)) ⇒ (a_class (e_hole 0) BoundaryID)))
+                                 
+                                 ⇒ ((a_will(∃x∙(((a_hole 0) access (a_hole 1)) ∧ (¬ (a_class (e_hole 0) BoundaryID)))))
+                                      
+                                      ⇒ (a_will(∃x∙ (a_call (a_hole 0) (a_hole 2) exposeID empty))))
+                                 
+                              )
+                         )
+                     )
+                )
+              ).
+Proof.
+  unfold mdl_sat; intros.
+  apply sat_all_x;
+    intros αb b ob; intros; simpl.
+
+  destruct (sat_excluded_middle MyModule M' (update_σ_map σ z0 b) (a_class (e_var z0) BoundaryID));
+    [apply sat_arr1
+    |apply sat_arr2; auto].
+
+  apply sat_all_x;
+    intros αi i oi; intros; simpl.
+    
+  destruct (sat_excluded_middle MyModule M'
+                                (update_σ_map (update_σ_map σ z0 b) z1 i)
+                                (a_eq (e_acc_f (e_var z0) inside) (e_var z1)));
+    [apply sat_arr1
+    |apply sat_arr2; auto].
+
+  destruct (sat_excluded_middle
+              MyModule M'
+              (update_σ_map (update_σ_map σ z0 b) z1 i)
+              (a_all_x (a_arr (a_acc (a_hole 0) (a_bind z1)) (a_class (e_hole 0) BoundaryID))));
+    [apply sat_arr1
+    |apply sat_arr2; auto].
+
+  destruct (sat_excluded_middle
+              MyModule M'
+              (update_σ_map (update_σ_map σ z0 b) z1 i)
+              (a_will (a_ex_x (a_and (a_acc (a_hole 0) (a_bind z1)) (a_neg (a_class (e_hole 0) BoundaryID))))));
+    [apply sat_arr1
+    |apply sat_arr2; auto].
+
+  
+  
+Admitted.
+
+(*
+
+
+Theorem expose_example :
   MyModule ⊨m (a_all_x
                  (a_arr
                     (a_class (e_hole 0) BoundaryID)
                     (a_all_x
                        (a_arr
-                          (a_eq (e_acc_f (e_hole 1) internal) (e_hole 0))
+                          (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
                           
                           (a_arr
                              
@@ -471,37 +526,4 @@ Theorem expose_example :
                  )
               ).
 Proof.
-  unfold mdl_sat; intros.
-  apply sat_all_x;
-    intros αb b ob; intros; simpl.
-
-  destruct (sat_excluded_middle MyModule M' (update_σ_map σ z0 b) (a_class (e_var z0) BoundaryID));
-    [apply sat_arr1
-    |apply sat_arr2; auto].
-
-  apply sat_all_x;
-    intros αi i oi; intros; simpl.
-    
-  destruct (sat_excluded_middle MyModule M'
-                                (update_σ_map (update_σ_map σ z0 b) z1 i)
-                                (a_eq (e_acc_f (e_var z0) internal) (e_var z1)));
-    [apply sat_arr1
-    |apply sat_arr2; auto].
-
-  destruct (sat_excluded_middle
-              MyModule M'
-              (update_σ_map (update_σ_map σ z0 b) z1 i)
-              (a_all_x (a_arr (a_acc (a_hole 0) (a_bind z1)) (a_class (e_hole 0) BoundaryID))));
-    [apply sat_arr1
-    |apply sat_arr2; auto].
-
-  destruct (sat_excluded_middle
-              MyModule M'
-              (update_σ_map (update_σ_map σ z0 b) z1 i)
-              (a_will (a_ex_x (a_and (a_acc (a_hole 0) (a_bind z1)) (a_neg (a_class (e_hole 0) BoundaryID))))));
-    [apply sat_arr1
-    |apply sat_arr2; auto].
-
-  
-  
-Admitted.
+*)

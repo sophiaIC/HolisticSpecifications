@@ -50,6 +50,19 @@ Inductive asrt : Type :=
 | a_extrn : a_var -> asrt
 | a_intrn : a_var -> asrt.
 
+Notation "A1 '⇒' A2" := (a_arr A1 A2)(at level 40).
+Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 40).
+Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 40).
+Notation "'¬' A" :=(a_neg A)(at level 40).
+Notation "'∀x∙' A" :=(a_all_x A)(at level 40).
+Notation "'∀S∙' A" :=(a_all_Σ A)(at level 40).
+Notation "'∃x∙' A" :=(a_ex_x A)(at level 40).
+Notation "'∃S∙' A" :=(a_ex_Σ A)(at level 40).
+Notation "x 'internal'" :=(a_intrn x)(at level 40).
+Notation "x 'external'" :=(a_intrn x)(at level 40).
+Notation "x 'access' y" :=(a_acc x y)(at level 40).
+
+
 (*Instance asrtFoldableVar : PropFoldable asrt nat :=
   {
     foldAnd :=
@@ -635,44 +648,44 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 (** Connectives: *)
 | sat_and   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A1 ->
                                M1 ⦂ M2 ◎ σ ⊨ A2 ->
-                               M1 ⦂ M2 ◎ σ ⊨ (a_and A1 A2)
+                               M1 ⦂ M2 ◎ σ ⊨ (A1 ∧ A2)
                                   
 | sat_or1   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A1 ->
-                               M1 ⦂ M2 ◎ σ ⊨ (a_or A1 A2)
+                               M1 ⦂ M2 ◎ σ ⊨ (A1 ∨ A2)
                                   
 | sat_or2   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A2 ->
-                               M1 ⦂ M2 ◎ σ ⊨ (a_or A1 A2)
+                               M1 ⦂ M2 ◎ σ ⊨ (A1 ∨ A2)
 
 | sat_arr1  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A2 ->
-                               M1 ⦂ M2 ◎ σ ⊨ (a_arr A1 A2)
+                               M1 ⦂ M2 ◎ σ ⊨ (A1 ⇒ A2)
 
 | sat_arr2  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A1 ->
-                               M1 ⦂ M2 ◎ σ ⊨ (a_arr A1 A2)
+                               M1 ⦂ M2 ◎ σ ⊨ (A1 ⇒ A2)
                                   
 | sat_not   : forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
-                           M1 ⦂ M2 ◎ σ ⊨ (a_neg A)
+                           M1 ⦂ M2 ◎ σ ⊨ (¬ A)
 
 (** Quantifiers: *)
 | sat_all_x : forall M1 M2 σ A, (forall y v, map σ y = Some v ->
                                    forall z, fresh_x z σ A ->
                                         M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0]A)) ->
-                           M1 ⦂ M2 ◎ σ ⊨ (a_all_x A)
+                           M1 ⦂ M2 ◎ σ ⊨ (∀x∙ A)
 
 | sat_ex_x  : forall M1 M2 σ A z y v, map σ y = Some v ->
                                  fresh_x z σ A ->
                                  M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0] A) ->
-                                 M1 ⦂ M2 ◎ σ ⊨ (a_ex_x A)
+                                 M1 ⦂ M2 ◎ σ ⊨ (∃x∙ A)
 
 (** Permission: *)
 | sat_access1 : forall M1 M2 σ x y α, ⌊x⌋ σ ≜ α ->
                                  ⌊y⌋ σ ≜ α ->
-                                 M1 ⦂ M2 ◎ σ ⊨ (a_acc (a_bind x) (a_bind y))
+                                 M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) access (a_bind y))
 
 | sat_access2 : forall M1 M2 σ x y α α' o f, ⌊x⌋ σ ≜ α' ->
                                         map σ α' = Some o ->
                                         (flds o) f = Some (v_addr α) ->
                                         ⌊y⌋ σ ≜ α ->
-                                        M1 ⦂ M2 ◎ σ ⊨ (a_acc (a_bind x) (a_bind y))
+                                        M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) access (a_bind y))
 
 | sat_access3 : forall M1 M2 σ ψ ϕ χ x y z α1 α2 s, ⌊x⌋ σ ≜ α1 ->
                                                ⌊this⌋ σ ≜ α1 ->
@@ -681,7 +694,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                                σ = (χ, ϕ :: ψ) ->
                                                (contn ϕ) = c_stmt s ->
                                                in_stmt z s ->
-                                               M1 ⦂ M2 ◎ σ ⊨ (a_acc (a_bind x) (a_bind y))
+                                               M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) access (a_bind y))
 
 (** Control: *)
 (** Julian: I should probably clean up the interpretation equivalence between parameter maps *)
@@ -784,32 +797,32 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (*connectives*)
 | nsat_and1  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A1 ->
-                                M1 ⦂ M2 ◎ σ ⊭ (a_and A1 A2)
+                                M1 ⦂ M2 ◎ σ ⊭ (A1 ∧ A2)
                                    
 | nsat_and2  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A2 ->
-                                M1 ⦂ M2 ◎ σ ⊭ (a_and A1 A2)
+                                M1 ⦂ M2 ◎ σ ⊭ (A1 ∧ A2)
                                    
 | nsat_or    : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A1 ->
                                 M1 ⦂ M2 ◎ σ ⊭ A2 ->
-                                M1 ⦂ M2 ◎ σ ⊭ (a_or A1 A2)
+                                M1 ⦂ M2 ◎ σ ⊭ (A1 ∨ A2)
 
 | nsat_arr   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A1 ->
                                 M1 ⦂ M2 ◎ σ ⊭ A2 ->
-                                M1 ⦂ M2 ◎ σ ⊭ (a_arr A1 A2)
+                                M1 ⦂ M2 ◎ σ ⊭ (A1 ⇒ A2)
                                    
 | nsat_not   : forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
-                            M1 ⦂ M2 ◎ σ ⊭ (a_neg A)
+                            M1 ⦂ M2 ◎ σ ⊭ (¬ A)
 
 (*quantifiers*)
 | nsat_all_x : forall M1 M2 σ A y z v, map σ y = Some v ->
                                   fresh_x z σ A ->
                                   M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊭ ([z /s 0]A) ->
-                                  M1 ⦂ M2 ◎ σ ⊭ (a_all_x A) 
+                                  M1 ⦂ M2 ◎ σ ⊭ (∀x∙ A) 
 
 | nsat_ex_x : forall M1 M2 σ A, (forall y v z, map σ y = Some v ->
                                      fresh_x z σ A ->
                                      M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊭ ([z /s 0]A)) ->
-                           M1 ⦂ M2 ◎ σ ⊭ (a_ex_x A)
+                           M1 ⦂ M2 ◎ σ ⊭ (∃x∙ A)
 
 (** Permission: *)
 | nsat_access : forall M1 M2 σ x y, (forall α1 α2, ⌊x⌋ σ ≜ α1 ->
