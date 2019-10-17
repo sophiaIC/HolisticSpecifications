@@ -21,7 +21,7 @@ Inductive value : Type :=
 
 Definition state := partial_map var value.
 
-Instance eqbFld : Eqb fld :=
+Instance eqbFld : Eq fld :=
   {
     eqb := fun f1 f2 =>
              match f1, f2 with
@@ -40,22 +40,31 @@ Proof.
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq;
+    rewrite Nat.eqb_neq in H;
     crush.
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq in H;
+    rewrite Nat.eqb_neq;
     crush.
-Qed.
+  intros x y;
+    destruct x as [n];
+    destruct y as [m];
+    destruct (Nat.eq_dec n m) as [Heq|Hneq];
+    subst;
+    auto;
+    right;
+    crush.
+Defined.
 
-Instance eqbMth : Eqb mth :=
+Instance eqbMth : Eq mth :=
   {
     eqb := fun m1 m2 =>
              match m1, m2 with
              | methID n1, methID n2 => n1 =? n2
              end
   }.
+Proof.
   intros; destruct a; apply Nat.eqb_refl.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
   intros;
@@ -67,16 +76,24 @@ Instance eqbMth : Eqb mth :=
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq;
+    rewrite Nat.eqb_neq in H;
     crush.
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq in H;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros x y;
+    destruct x as [n];
+    destruct y as [m];
+    destruct (Nat.eq_dec n m) as [Heq|Hneq];
+    subst;
+    auto;
+    right;
     crush.
 Defined.
 
-Instance eqbGfld : Eqb gfld :=
+Instance eqbGfld : Eq gfld :=
   {
     eqb := fun g1 g2 =>
              match g1, g2 with
@@ -94,22 +111,31 @@ Instance eqbGfld : Eqb gfld :=
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq;
+    rewrite Nat.eqb_neq in H;
     crush.
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq in H;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros x y;
+    destruct x as [n];
+    destruct y as [m];
+    destruct (Nat.eq_dec n m) as [Heq|Hneq];
+    subst;
+    auto;
+    right;
     crush.
 Defined.
 
-Instance eqbCls : Eqb cls :=
+Instance eqbCls : Eq cls :=
   {
     eqb := fun C1 C2 =>
              match C1, C2 with
              | classID n1, classID n2 => n1 =? n2
              end
   }.
+Proof.
   intros; destruct a; apply Nat.eqb_refl.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
   intros;
@@ -121,16 +147,24 @@ Instance eqbCls : Eqb cls :=
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq;
+    rewrite Nat.eqb_neq in H;
     crush.
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq in H;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros x y;
+    destruct x as [n];
+    destruct y as [m];
+    destruct (Nat.eq_dec n m) as [Heq|Hneq];
+    subst;
+    auto;
+    right;
     crush.
 Defined.
 
-Instance eqbAddr : Eqb addr :=
+Instance eqbAddr : Eq addr :=
   {
     eqb := fun a1 a2 =>
              match a1, a2 with
@@ -148,16 +182,24 @@ Instance eqbAddr : Eqb addr :=
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq;
+    rewrite Nat.eqb_neq in H;
     crush.
   intros;
     destruct a1;
     destruct a2;
-    rewrite Nat.eqb_neq in H;
+    rewrite Nat.eqb_neq;
+    crush.
+  intros x y;
+    destruct x as [n];
+    destruct y as [m];
+    destruct (Nat.eq_dec n m) as [Heq|Hneq];
+    subst;
+    auto;
+    right;
     crush.
 Defined.
 
-(*this is a bit of a hack*)
+
 Definition this := bind 0.
 
 (*fields are a mapping from field names to locations in the heap*)
@@ -206,6 +248,17 @@ Record classDef := clazz{c_name : cls;
 Record obj := new{cname : cls;
                   flds : fields;
                   meths : methods}.
+
+Definition ObjectName := classID 0.
+
+Definition ObjectDefn := clazz ObjectName
+                               nil
+                               empty
+                               empty.
+
+Definition ObjectInstance := new ObjectName
+                                 empty
+                                 empty.
 
 Definition mdl := partial_map cls classDef.
 
@@ -338,6 +391,78 @@ Inductive classOf : var -> config -> cls -> Prop :=
                          cname o = C ->
                          classOf x σ C.
 
+Definition finite_ϕ (ϕ : frame) : Prop :=
+  finite (vMap ϕ).
+
+Definition finite_ψ (ψ : stack) : Prop :=
+  forall ϕ, In ϕ ψ -> finite_ϕ ϕ.
+
+Definition finite_σ (σ : config) : Prop :=
+  finite_ψ (snd σ).
+
+Inductive not_stuck : continuation -> Prop :=
+| ns_stmt : forall s, not_stuck (c_stmt s).
+
+Hint Constructors not_stuck.
+
+Definition not_stuck_ϕ (ϕ : frame) : Prop :=
+  not_stuck (contn ϕ).
+
+Definition not_stuck_σ (σ : config) : Prop :=
+  exists ϕ ψ, snd σ = ϕ::ψ /\ not_stuck_ϕ ϕ.
+
+Inductive waiting : continuation -> Prop :=
+| w_hole : forall x s, waiting (c_hole x s).
+
+Hint Constructors waiting.
+
+Definition waiting_ϕ (ϕ : frame) : Prop :=
+  waiting (contn ϕ).
+
+Definition waiting_ψ (ψ: stack) : Prop :=
+  forall ϕ, In ϕ ψ ->
+       waiting_ϕ ϕ.
+
+Definition waiting_σ (σ : config) : Prop :=
+  exists ϕ ψ, snd σ = ϕ :: ψ /\
+         waiting_ψ ψ.
+
+Inductive val_wf : heap -> value -> Prop :=
+| true_wf : forall χ, val_wf χ v_true
+| false_wf : forall χ, val_wf χ v_false
+| null_wf : forall χ, val_wf χ v_null
+| addr_wf : forall χ α o, χ α = Some o ->
+                     val_wf χ (v_addr α).
+
+Hint Constructors val_wf.
+
+Inductive state_wf : heap -> state -> Prop :=
+| st_wf : forall χ m, (forall x v, m x = Some v ->
+                         val_wf χ v) ->
+                 state_wf χ m.
+
+Hint Constructors state_wf.
+
+Inductive σ_wf : config -> Prop :=
+| config_wf : forall σ, finite_σ σ ->
+                   not_stuck_σ σ ->
+                   waiting_σ σ ->
+                   σ_wf σ.
+
+Hint Constructors σ_wf.
+
+Inductive χ_wf : mdl -> heap -> Prop :=
+| heap_wf :  forall M χ, (forall α o C, χ α = Some o ->
+                              cname o = C ->
+                              exists CDef,
+                                M C = Some CDef /\
+                                (forall f, In f (c_flds CDef) ->
+                                      exists v, (flds o) f = Some v) /\
+                                (meths o) = (c_meths CDef)) ->
+                    χ_wf M χ.
+
+Hint Constructors χ_wf.
+
 Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
 (** #<h3>#Expression evaluation (Fig 4, OOPSLA2019)#</h3>#  *)
@@ -426,6 +551,8 @@ Inductive val : mdl -> config -> exp -> value -> Prop :=
 
 where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
 
+Hint Constructors val.
+
 (** #<h3># Loo Operational Semantics (Fig 6, App A.2, OOPSLA2019):#</h3># *)
 
 Reserved Notation "M '∙' σ '⤳' σ'" (at level 40).
@@ -443,6 +570,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     peek ψ = Some ϕ ->
     pop ψ = Some ψ' ->
     ϕ.(contn) = c_stmt (s_stmts (s_meth x y m ps) s') ->
+    finite ps ->
     ⌊ y ⌋ σ ≜ α ->
     χ α = Some o ->
     (M (o.(cname))) = Some C ->
@@ -485,20 +613,19 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** σ' = (χ, ϕ' : ψ') *)
     (** ---------------------------------------- (Field_Assgn_OS) *)
     (** M, σ ⤳ σ' *)
-| r_fAssgn : forall M σ ϕ ϕ' x y f s ψ ψ' χ α α' o σ' χ' o' C,
-    σ = (χ, ψ) ->
-    peek ψ = Some ϕ ->
-    pop ψ = Some ψ' ->
+| r_fAssgn : forall M σ ϕ ϕ' x y f s ψ χ α α' o σ' χ' o' C,
+    σ = (χ, ϕ :: ψ) ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_fld y f) (r_var x)) s)) ->
     ⌊ y ⌋ σ ≜ α ->
     ⌊ x ⌋ σ ≜ α' ->
     classOf this σ C ->
     classOf y σ C ->
     χ α = Some o ->
+    (exists v, (flds o) f = Some v) ->
     o' = new (cname o) (update f (v_addr α') (flds o)) (meths o) ->
     χ' = update α o' χ ->
     ϕ' = frm (vMap ϕ) (c_stmt s) ->
-    σ' = (χ', ϕ' :: ψ') ->
+    σ' = (χ', ϕ' :: ψ) ->
     M ∙ σ ⤳ σ'
 
     (** ψ = ϕ : ψ' *)
@@ -520,6 +647,8 @@ Inductive reduction : mdl -> config -> config -> Prop :=
             In f (c_flds CDef)) ->
     (forall f, fMap f = None ->
           ~ In f (c_flds CDef)) ->
+    (forall f x, fMap f = Some x ->
+            exists v, (vMap ϕ) x = Some v) ->
     o = new C (compose fMap (vMap ϕ)) (c_meths CDef) ->
     ϕ' = frm (update x (v_addr α) (vMap ϕ)) (c_stmt s) ->
     σ' = (update α o χ, ϕ' :: ψ') ->
@@ -558,26 +687,29 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'.(contn) = c_hole y s ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
-    M ∙ σ ⤳ (χ, ϕ'' :: ψ)
+    M ∙ σ ⤳ (χ, ϕ'' :: ψ'')
 
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
+
+Hint Constructors reduction.
+
+Inductive M_wf : mdl -> Prop :=
+| module_wf : forall M,  M ObjectName = Some ObjectDefn ->
+                    (forall C CDef, M C = Some CDef ->
+                               c_name CDef = C) ->
+                    M_wf M.
+  
 
 Reserved Notation "M1 '∘' M2 '≜' M" (at level 40).
 
 Inductive link : mdl -> mdl -> mdl -> Prop :=
-| m_link : forall M1 M2 M, (forall C def, M1 C = Some def ->
-                                M2 C = None) ->
-                      (forall C def, M2 C = Some def ->
-                                M1 C = None) ->
-                      (forall C def, M1 C = Some def ->
-                                M C = Some def) ->
-                      (forall C def, M2 C = Some def ->
-                                M C = Some def) ->
-                      (forall C, M C = None ->
-                            M1 C = None) ->
-                      (forall C, M C = None ->
-                            M2 C = None) ->
-                      M1 ∘ M2 ≜ M
+| m_link : forall M1 M2, (forall C def, C <> ObjectName ->
+                              M1 C = Some def ->
+                              M2 C = None) ->
+                    (forall C def, C <> ObjectName ->
+                              M2 C = Some def ->
+                              M1 C = None) ->
+                    M1 ∘ M2 ≜ (extend M1 M2)
 
 where "M1 '∘' M2 '≜' M" := (link M1 M2 M).
 
@@ -590,7 +722,7 @@ where "M1 '∘' M2 '≜' M" := (link M1 M2 M).
   having trouble maintaining consitent notation and using 
   '∙' in the reductions and pair reductions definitions
 *)
-Reserved Notation "M1 '∩' M2 '⊢' σ '⤳⋆' σ'" (at level 40).
+(*Reserved Notation "M1 '∩' M2 '⊢' σ '⤳⋆' σ'" (at level 40).
                                                
 Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
 | r_reduce : forall M1 M2 M σ σ', M1 ∘ M2 ≜ M ->
@@ -607,36 +739,57 @@ Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
                                M1 ∩ M2 ⊢ σ ⤳⋆ σ2
 
 where "M1 '∩'  M2 '⊢' σ '⤳⋆' σ'" := (reductions M1 M2 σ σ').
-
-Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 40).
+*)
+Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳…' σ'" (at level 40).
                                                
-Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
+Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
 | pr_single : forall M1 M2 M σ σ', M1 ∘ M2 ≜ M ->
                               M ∙ σ ⤳ σ' ->
                               (forall C, classOf this σ C ->
                                     M1 C = None) ->
                               (forall C, classOf this σ' C ->
-                                    M1 C = None) ->                             
-                              M1 ⦂ M2 ⦿ σ ⤳ σ'
+                                    exists CDef, M1 C = Some CDef) ->
+                              M1 ⦂ M2 ⦿ σ ⤳… σ'
 
-| pr_trans : forall M1 M2 M σ1 σ σn, M1 ∩ M2 ⊢ σ1 ⤳⋆ σ ->
+| pr_trans : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
                                 M1 ∘ M2 ≜ M ->
                                 M ∙ σ ⤳ σn ->
+                                (forall C, classOf this σn C ->
+                                      exists CDef, M1 C = Some CDef) ->
+                                M1 ⦂ M2 ⦿ σ1 ⤳… σn                            
+
+where "M1 '⦂' M2 '⦿' σ '⤳…' σ'" := (reductions M1 M2 σ σ').
+
+Hint Constructors reductions.
+
+Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 40).
+                                               
+Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
+
+| p_reduce : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
+                                M1 ∘ M2 ≜ M ->
+                                M ∙ σ ⤳ σn ->
+                                (forall C, classOf this σn C ->
+                                      exists CDef, M1 C = Some CDef) ->
                                 M1 ⦂ M2 ⦿ σ1 ⤳ σn                            
 
 where "M1 '⦂' M2 '⦿' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
 
+Hint Constructors pair_reduction.
+
 Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" (at level 40).
                                                
 Inductive pair_reductions : mdl -> mdl -> config -> config -> Prop :=
-| prs_single : forall M1 M2 σ σ', M1 ⦂ M2 ⦿ σ ⤳ σ' ->
-                             M1 ⦂ M2 ⦿ σ ⤳⋆ σ'
-
-| prs_trans : forall M1 M2 σ1 σ σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ ->
-                               M1 ⦂ M2 ⦿ σ ⤳ σ2 ->
+| prs_single : forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                                  M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
+                                   
+| prs_trans : forall M1 M2 σ1 σ σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ ->
+                               M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
                                M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
 
 where "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" := (pair_reductions M1 M2 σ σ').
+
+Hint Constructors pair_reductions.
 
 Class Rename (A : Type) :=
   {rname : A -> var -> var -> A
@@ -661,7 +814,7 @@ Instance refRename : Rename ref :=
               end
   }.
 
-Definition remap {A B : Type} `{Eqb A} `{Eqb B}
+Definition remap {A B : Type} `{Eq A} `{Eq B}
            (b1 b2 : B) (pmap : partial_map A B) : partial_map A B :=
   fun a => match pmap a with
         | Some b => if (eqb b b1)
@@ -724,4 +877,3 @@ Instance stmtRename : Rename stmt :=
              | s_rtrn _ => s
              end
   }.
-
