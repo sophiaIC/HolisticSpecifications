@@ -1,199 +1,253 @@
-Software guards our secrets, our money, our intellectual property,
+ Software guards our secrets, our money, our intellectual property,
 our reputation \cite{covern}.  We entrust personal and
 corporate information to software which works in an \emph{open} world, 
 where  it interacts with 
 third party software of unknown provenance, possibly buggy and potentially malicious.
 
-This means we need our software to be \emph{robust}.
-We expect software to behave correctly even if  used 
+This means we need our software to be \emph{robust}:
+to behave correctly even if  used 
 by erroneous or malicious third parties.
- We expect that our bank will only make payments 
+We expect that our bank will only make payments 
 from our account if instructed by us, or by somebody we have authorised, 
 that space on a web given to an advertiser will not be used
-to obtain access to our bank details \cite{cwe}, or that an
-airline will not sell more tickets than the number of seats.
-The importance of robustness has led to the design of many programming
-language mechanisms to help developers write robust programs:
-constant fields, private methods, ownership \cite{ownalias}
-as well as the object capability paradigm \cite{MillerPhD},
-and its adoption in  web systems
-\cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14}, and programming languages such as Newspeak
-\cite{newspeak17}, Dart \cite{dart15},
-Grace \cite{grace,graceClasses}, and Wyvern \cite{wyverncapabilities}.
+to obtain access to our bank details \cite{cwe}, or that a
+concert hall will not book the same seat more than once.
 
-While such programming language mechanisms make it \textit{possible} to write robust
+
+%% The importance of robustness has led to the design of many programming
+%% language mechanisms to help developers write robust programs:
+%% constant fields, private methods, ownership \cite{ownalias}
+%% as well as the object capability paradigm \cite{MillerPhD},
+%% and its adoption in  web systems
+%% \cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14}, and programming languages such as Newspeak
+%% \cite{newspeak17}, Dart \cite{dart15},
+%% Grace \cite{grace,graceClasses}, and Wyvern \cite{wyverncapabilities}.
+
+%% While such programming language mechanisms
+While language mechanisms such as constants, invariants, 
+object capabilities \cite{MillerPhD}, and 
+ownership \cite{ownalias} 
+make it \textit{possible} to write robust
 programs, they cannot \textit{ensure} that programs are robust.
 Ensuring robustness is difficult because it means 
 different things for different systems: perhaps
 that critical operations should only be invoked with the requisite authority;
 perhaps that sensitive personal information should not be leaked; 
-or perhaps that resource belonging to one user should not be consumed by another.
+or perhaps that resource belonging to one user should not be consumed by another.g
 %
-To be able to ensure robustness, we need ways to specify what robustness means for a 
+To ensure robustness, we need ways to specify what robustness means for a 
 particular program, and ways to demonstrate that the particular program 
 adheres to its specific robustness requirements.
 
-There has been a plethora of work on the specification and verification of the
-functional correctness of programs. Such specifications describe what are
-essentially \emph{sufficient} conditions for some
-effect to happen. For example, if you have enough funds and make a payment request to your bank, money will be transferred
-and as a result your balance funds will be reduced: enough funds and the payment request is a sufficient condition for the
-reduction of funds.
-Often, however, we are also interested in \emph{necessary conditions}:
-guarantees about things that will  \emph{not} happen.
-%
-For example, you  probably 
-want to be assured that no reduction in your bank balance will take place unless you have
-explicitly requested it. Similarly, medical patients want  to be assured  that   their health data will not be sent to  their employer  
-unless they authorised the release:
-the patient's explicit authorisation is the
-necessary condition for the communication of health data --- under no
-other circumstances should the data be communicated.
+%    $\mathit{... more\ methods ...}$  
 
-Fig. \ref{fig:NecessaryAndSuff} shows
-the difference between sufficient and necessary conditions. 
-We
-represent  all possible states through black dots, and place all  initial states in the grey box.
-Sufficient conditions are described on a per-function basis: 
-a function call in a certain state leads to another state
--- in part (a) we indicate different functions through different shades of blue and green. 
-Necessary conditions, on the other hand, are about the behaviour of a component
-as a whole, 
-and describe what is guaranteed not to happen;
-in part (b) we place  states that are guaranteed not to be reached in yellow boxes
-with dotted outlines,
-and indicate transitions that are guaranteed not to happen through
-yellow, dotted arrows.
+Consider the three code snippets shown in Figure \ref{fig:Example}.
+Each snippet implements a 
+\prg{Wallet} class, which holds a \prg{balance} and a \prg{secret},
+where the secret authorises the wallet to
+ make payments. 
+% -- for the sake of simplicity, we allow   balances to grow negative.
+ We show three versions of the code, each with the same method \prg{pay}; the two last versions
+ have an additional method \prg{sendSecret}.
 
 
-%With the old diagrams
-% \begin{tabular}{ccccc}
-%\begin{minipage}{0.25\textwidth}
-% \includegraphics[width=\linewidth, trim=250  320 260 60,clip]{diagrams/neccSuff_yellow_A.pdf}
-%\end{minipage}
-% & \ \ \ & 
-%\begin{minipage}{0.25\textwidth}
-% \includegraphics[width=\linewidth, trim=250  320 260 60,clip]{diagrams/neccSuff_yellow_B.pdf}
-%\end{minipage}
-% & \ \ \ &
-%\begin{minipage}{0.25\textwidth}
-% \includegraphics[width=\linewidth, trim=250  320 260 60,clip]{diagrams/neccSuffYellowAll.pdf}
-% \end{minipage}
+\begin{figure}[htb]
+\begin{tabular}{lll}
+\begin{minipage}{0.37\textwidth}
+\vspace*{-0.5cm}
+\begin{lstlisting}
+class Wallet{
+ fld balance 
+ fld secret 
+ mthd pay(who,amt,scr){
+  if ((secret==scr) & amnt>0) {
+      balance-=amnt
+      who.balance+=amt}
+}
+\end{lstlisting}
+\end{minipage}
+  & 
+\begin{minipage}{0.29\textwidth}
+\vspace*{-0.5cm}
+\begin{lstlisting}
+class Wallet{
+ fld balance  
+ fld secret  
+ mthd pay(...){
+  $\mathit{... as\, version\,1 ...}$ }
+ mthd setSecret(secr){
+   secret=secr }
+}
+
+\end{lstlisting}
+\end{minipage} &  
+\begin{minipage}{0.34\textwidth}
+\vspace*{-0.5cm}
+\begin{lstlisting}
+class Wallet{
+ fld balance  
+ fld secret  
+ fld owner  
+ mthd pay(...){
+  $\mathit{... as\, version\,1 ...}$ }
+ mthd sendSecret( ){
+  owner.take(secret)}  
+}
+\end{lstlisting}
+  \end{minipage}
+ \end{tabular}
+  \vspace*{-0.95cm}
+  \caption{Three Versions of the class \prg{Wallet}}
+ \label{fig:Example}
+ \end{figure}
+
+
+\noindent We can describe the behaviour of \prg{pay} with 
+a classical Hoare triple:
+ 
+% \begin{figure}[htbp] 
+\begin{lstlisting}
+   method pay(who,amt,scr)
+   PRE:  this,who:Wallet $\wedge$  this$\neq$who $\wedge$ amt:$\mathbb{N}$  $\wedge$  scr=secret   
+   POST: this.balance=this.balance$\pre$-amt $\wedge$ who.balance=who.balance$\pre$+amt 
+ \end{lstlisting}
+%^\end{figure} 
+\vspace{-.2in}
+This specification shows that knowledge of the \prg{secret} is a \emph{sufficient} condition to make payments. 
+But it does not show that it is a \emph{necessary} condition. To make the specification  
+  more ``robust'' we can also describe the behaviour of the \prg{pay}
+  method when the pre-condition is not satisfied:
+
+%\begin{figure}[htbp] 
+\begin{lstlisting}
+   method pay(who,amt,scr)
+   PRE:  this:Wallet $\wedge$  $\neg$ (this$\neq$who $\wedge$ amt:$\mathbb{N}$  $\wedge$  this.scr=secret  )
+   POST: $\forall$w: Wallet.$ \,$w.balance=w.balance$\pre$-amt 
+ \end{lstlisting}
+%\end{figure} 
+\vspace{-.2in}
+
+This mandates that the \prg{pay} method cannot make a payment unless the secret is
+provided. But it cannot preclude that \prg{Wallet} -- or some other class, for that matter -- contains more methods 
+which  make it possible to reduce the balance  without knowning the
+secret.
+
+We introduce \emph{holistic specifications} to avoid these problems. A
+holistic specification can require that if, in the future, the balance
+of any wallet \prg{w} decreases, at least one external object \prg{o}
+had direct access to the secret (Spec1).  The external object need not
+have caused the change in $\prg{w.balance}$ but it must have leaked
+the secret to an object which did:
+
+\vspace{.2in}
+(Spec1)\ \  $\triangleq$\ \ $\forall \prg{w},\prg{m}.[\ \ \prg{w}:\prg{Wallet} \wedge \prg{w.balance}=m\ \wedge$ \\
+$\ \ \ \ \ \ \ \ \ \ \Future{\prg{w.balance}<m} \ \ 
+    \longrightarrow$\\
+$\ \ \   \exists \prg{o}. [\  \External{\prg{o}} \wedge  \CanAccess{\prg{o}}{\prg{w.secret}}\ ]  \  \ ] \hfill $
+\vspace{.2in}
+
+%% (Spec1) mandates that for any wallet \prg{w} defined in the current configuration, if some time in the future the balance of
+%% \prg{w} were to decrease, then at least one external object (\ie an object whose class is not \prg{Wallet}) in the current configuration
+%% has direct access to the secret. This external object need not have caused the change in $\prg{w.balance}$ but it would  have (transitively) passed access to the secret which ultimately did cause the change in the balance.
+
+The class \prg{Wallet} from Figure \ref{fig:Example}.version 1, satisfies (Spec1), but \prg{Wallet} from Figure \ref{fig:Example}.version 2, does not.
+It is possible to overwrite the \prg{secret} of the \prg{Wallet} and then to effect a \prg{pay}ment. Neither does \prg{Wallet} from Figure \ref{fig:Example}.version 3,  satisfy (Spec1), since it is possible for the \prg{owner} not to know the \prg{secret} and the secret to be 
+communicated to them. Insteed, the class saisfies (Spec2) from below
  
 
-
-%  THE DIAGRAM WITH MIORE LINES IN C
-%\begin{figure}[htb]
-% \begin{tabular}{clclc}
-%\begin{minipage}{0.29\textwidth}
-% \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuff_yellow_A.pdf}
-%\end{minipage}
-% & \ \ \ & 
-%\begin{minipage}{0.29\textwidth}
-% \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuff_yellow_B.pdf}
-%\end{minipage}
-% & \ \ \ &
-%\begin{minipage}{0.29\textwidth}
-% \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuffYellowAll.pdf}
-% \end{minipage}
-%\\
-%(a) sufficient  spec.& & (b) necessary spec. & & (c) full, holistic spec.
-%%\begin{minipage}{0.75\textwidth}
-%%\includegraphics[width=\linewidth, trim=145  320 60 105,clip]{diagrams/NecAndSuff.pdf}
-%%\end{minipage}
-%%% y seems to eat up the bollom
-%%% x eats space from left, if you increase it the diagram decreases from left
-%%% w eats space from top, if you increase it the diagram decreases from top
-%%%\includegraphics[page=3, width=\linewidth, trim=150  270 40 150, clip]{diagrams/snmallocf.pdf}
-%%\sdcomment\sophia{I think we need to change the diagram so that it says small slab.}
-%%\end{minipage}
-% \end{tabular}
-%  \vspace*{-2.5mm}
-%  \caption{Sufficient Conditions, Necessary Conditions, and Full Specifications}
-% \label{fig:NecessaryAndSuff}
-% \end{figure}
- 
- 
+\vspace{.2in}
+(Spec2)\ \  $\triangleq$\ \ $\forall \prg{w},\prg{m}.[\ \ \prg{w}:\prg{Wallet} \wedge \prg{w.balance}=m\ \wedge \Future{\prg{w.balance}<m} \ \    
+    \longrightarrow \ \    \hfill$ \\
+  $\strut \hspace{4.3cm} 
+  \exists \prg{o}. [\  \External{\prg{o}}\,  \wedge\, (\,  \CanAccess{\prg{o}}{\prg{w.secret}}\ \vee \prg{o}=\prg{w}.\prg{owner}\, )   \ \ ] \hfill $
+\vspace{.2in}
 
  
- 
- We propose that  necessary conditions should be stated
- explicitly. Specifications should be \emph{holistic}, in the sense
- that they describe the  overall behaviour of a component: not only the
- behaviour of each individual function, but also limitations on the
- behaviour that emerges from combinations of functions.
-%
-%Holistic specifications must therefore address sufficient as well as necessary conditions, as  
-%depicted in part (c)    in Fig. \ref{fig:NecessaryAndSuff}.
-%When a component \sd{satisfies its holistic specification},
-%% used to say "has been specified holistically" but this is not sufficient
-%then \sd{the states  in the yellow boxes and the 
-%behaviours
-%represented  by the yellow arrows} cannot occur, even when the
-%component interacts with other software of unknown provenance.
-%(In Section \ref{sect:discussion} we argue why necessary conditions are more than the complement of
-%sufficient conditions.)
-%
+ (Spec2) mandates that for any wallet \prg{w} defined in the current configuration, if some time in the future the balance of
+\prg{w} were to decrease, then at least one external object   in the current configuration
+has direct access to the secret, or is the \prg{owner} of the \prg{Wallet}. 
+The class \prg{Wallet} from Figure \ref{fig:Example}.version 1 and version 3 satisfy (Spec2), but \prg{Wallet} from Figure \ref{fig:Example}.version 2, does not.
+
+%%     HERE
+
+
+%% We propose that  necessary conditions should be stated
+%%  explicitly. Specifications should be \emph{holistic}, in the sense
+%%  that they describe the  overall behaviour of a component: not only the
+%%  behaviour of each individual function, but also limitations on the
+%%  behaviour that emerges from combinations of functions.
 %% %
-%%  \begin{figure}[htb]
-%%  \begin{tabular}{clclc}
-%% \begin{minipage}{0.29\textwidth}
-%%  \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuff_yellow_A.pdf}
-%% \end{minipage}
-%%  & \ \ \ & 
-%% \begin{minipage}{0.29\textwidth}
-%%  \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuff_yellow_B.pdf}
-%% \end{minipage}
-%%  & \ \ \ &
-%% \begin{minipage}{0.29\textwidth}
-%%  \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuffYellowAllExtended.pdf}
-%%  \end{minipage}
-%% \\
-%% (a) sufficient  spec.& & (b) necessary spec. & & (c) full, holistic spec.
-%% %\begin{minipage}{0.75\textwidth}
-%% %\includegraphics[width=\linewidth, trim=145  320 60 105,clip]{diagrams/NecAndSuff.pdf}
-%% %\end{minipage}
-%% %% y seems to eat up the bollom
-%% %% x eats space from left, if you increase it the diagram decreases from left
-%% %% w eats space from top, if you increase it the diagram decreases from top
-%% %%\includegraphics[page=3, width=\linewidth, trim=150  270 40 150, clip]{diagrams/snmallocf.pdf}
-%% %\sdcomment\sophia{I think we need to change the diagram so that it says small slab.}
-%% %\end{minipage}
-%%  \end{tabular}
-%%   \vspace*{-2.5mm}
-%%   \caption{Sufficient Conditions, Necessary Conditions, and Full Specifications}
-%%  \label{fig:NecessaryAndSuff}
-%%  \end{figure}
+%% %Holistic specifications must therefore address sufficient as well as necessary conditions, as  
+%% %depicted in part (c)    in Fig. \ref{fig:NecessaryAndSuff}.
+%% %When a component \sd{satisfies its holistic specification},
+%% %% used to say "has been specified holistically" but this is not sufficient
+%% %then \sd{the states  in the yellow boxes and the 
+%% %behaviours
+%% %represented  by the yellow arrows} cannot occur, even when the
+%% %component interacts with other software of unknown provenance.
+%% %(In Section \ref{sect:discussion} we argue why necessary conditions are more than the complement of
+%% %sufficient conditions.)
+%% %
+%% %% %
+%% %%  \begin{figure}[htb]
+%% %%  \begin{tabular}{clclc}
+%% %% \begin{minipage}{0.29\textwidth}
+%% %%  \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuff_yellow_A.pdf}
+%% %% \end{minipage}
+%% %%  & \ \ \ & 
+%% %% \begin{minipage}{0.29\textwidth}
+%% %%  \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuff_yellow_B.pdf}
+%% %% \end{minipage}
+%% %%  & \ \ \ &
+%% %% \begin{minipage}{0.29\textwidth}
+%% %%  \includegraphics[width=\linewidth, trim=100  120 130 60,clip]{diagrams/neccSuffYellowAllExtended.pdf}
+%% %%  \end{minipage}
+%% %% \\
+%% %% (a) sufficient  spec.& & (b) necessary spec. & & (c) full, holistic spec.
+%% %% %\begin{minipage}{0.75\textwidth}
+%% %% %\includegraphics[width=\linewidth, trim=145  320 60 105,clip]{diagrams/NecAndSuff.pdf}
+%% %% %\end{minipage}
+%% %% %% y seems to eat up the bollom
+%% %% %% x eats space from left, if you increase it the diagram decreases from left
+%% %% %% w eats space from top, if you increase it the diagram decreases from top
+%% %% %%\includegraphics[page=3, width=\linewidth, trim=150  270 40 150, clip]{diagrams/snmallocf.pdf}
+%% %% %\sdcomment\sophia{I think we need to change the diagram so that it says small slab.}
+%% %% %\end{minipage}
+%% %%  \end{tabular}
+%% %%   \vspace*{-2.5mm}
+%% %%   \caption{Sufficient Conditions, Necessary Conditions, and Full Specifications}
+%% %%  \label{fig:NecessaryAndSuff}
+%% %%  \end{figure}
  
- We propose that  necessary conditions should be stated
- explicitly. Specifications should be \emph{holistic}, in the sense
- that they describe the  overall behaviour of a component: not only the
- behaviour of each individual function, but also limitations on the
- behaviour that emerges through combinations of functions.
-%
-Holistic specifications must therefore address sufficient as well as necessary conditions.
-In   part (c)    in Fig. \ref{fig:NecessaryAndSuff} we show the 
-immediate consequence of putting together assertions from necessary and sufficient conditions: 
-there are no transitions from or to yellow boxes.
+%%  We propose that  necessary conditions should be stated
+%%  explicitly. Specifications should be \emph{holistic}, in the sense
+%%  that they describe the  overall behaviour of a component: not only the
+%%  behaviour of each individual function, but also limitations on the
+%%  behaviour that emerges through combinations of functions.
+%% %
+%% Holistic specifications must therefore address sufficient as well as necessary conditions.
+%% In   part (c)    in Fig. \ref{fig:NecessaryAndSuff} we show the 
+%% immediate consequence of putting together assertions from necessary and sufficient conditions: 
+%% there are no transitions from or to yellow boxes.
 
-When a component satisfies its holistic specification,
-% used to say "has been specified holistically" but this is not sufficient
-then the states  in the yellow boxes and the 
-behaviours
-represented  by the yellow arrows cannot occur, even when the
-component interacts with other software of unknown provenance.
-(In Section \ref{sect:discussion} we argue why necessary conditions are more than the complement of
-sufficient conditions.
+%% When a component satisfies its holistic specification,
+%% % used to say "has been specified holistically" but this is not sufficient
+%% then the states  in the yellow boxes and the 
+%% behaviours
+%% represented  by the yellow arrows cannot occur, even when the
+%% component interacts with other software of unknown provenance.
+%% (In Section \ref{sect:discussion} we argue why necessary conditions are more than the complement of
+%% sufficient conditions.
 
  
-Necessary conditions are guarantees upheld throughout program execution.
-Therefore, they are close to monitor or object
-invariants \cite{Hoare74,Meyer97}. The difference between 
-classical invariants and our holistic specifications is that classical invariants  reflect  on
-the current program state (\ie the contents of the
-stack frame and the heap for an individual program component) while
-holistic specifications reflect on all aspects of a program's
-execution, potentially across all the components making up that program.
+%% Necessary conditions are guarantees upheld throughout program execution.
+%% Therefore, they are close to monitor or object
+%% invariants \cite{Hoare74,Meyer97}. The difference between 
+%% classical invariants and our holistic specifications is that classical invariants  reflect  on
+%% the current program state (\ie the contents of the
+%% stack frame and the heap for an individual program component) while
+%% holistic specifications reflect on all aspects of a program's
+%% execution, potentially across all the components making up that program.
 
 
 In this paper we propose \Chainmail, a specification language to
@@ -205,8 +259,6 @@ ERC20 \cite{ERC20}.  As we worked through the
 examples, we found a small set of language constructs that let us
 write holistic specifications across a range of different contexts.
 %
-While many individual features of \Chainmail can be found in other work, 
-their power and novelty for specifying open systems lies in their careful combination.
 In particular, \Chainmail extends 
 traditional program specification languages \cite{Leavens-etal07,Meyer92} with features which talk about:
 %
@@ -240,28 +292,29 @@ external to it;
 a concept related to the open world setting.
 \end{description}
 
-Holistic assertions usually employ several of these features. They often have the form  of a guarantee
-that only if some property holds now will a certain effect occur in the future, or that
-certain effects can only be caused if another property held earlier.
-For example, if within a certain heap (space) some change is possible in the future (time), then this particular heap 
-(space again) contains 
-at least one object which has access (permission) to a specific other, privileged object.
-%\james{moved around --- not sure we need this para}
-%\susan{I think we don't so there is a paragraph I have commented out.}
-\forget{Often, holistic assertions typically have the form of a guarantee
-that if some property ever holds in the future, then some other property holds now.
-For example, if within a certain heap some change is possible in the future, then this particular heap contains 
-at least one object which has access to a specific other, privileged object.}
-A module satisfies a holistic assertion if  
- the assertion is satisfied  in all runtime configurations reachable through execution of the combined code of our module and any other module.
-  This reflects the open-world view.
+%% Holistic assertions usually employ several of these features. They often have the form  of a guarantee
+%% that only if some property holds now will a certain effect occur in the future, or that
+%% certain effects can only be caused if another property held earlier.
+%% For example, if within a certain heap (space) some change is possible in the future (time), then this particular heap 
+%% (space again) contains 
+%% at least one object which has access (permission) to a specific other, privileged object.
+%% %\james{moved around --- not sure we need this para}
+%% %\susan{I think we don't so there is a paragraph I have commented out.}
+%% \forget{Often, holistic assertions typically have the form of a guarantee
+%% that if some property ever holds in the future, then some other property holds now.
+%% For example, if within a certain heap some change is possible in the future, then this particular heap contains 
+%% at least one object which has access to a specific other, privileged object.}
+%% A module satisfies a holistic assertion if  
+%%  the assertion is satisfied  in all runtime configurations reachable through execution of the combined code of our module and any other module.
+%%   This reflects the open-world view.
 
-
+While many individual features of \Chainmail can be found in other work, 
+their power and novelty for specifying open systems lies in their careful combination.
 The contributions of this paper are:
 \begin{itemize}
 \item the design of the holistic specification language \Chainmail,
-\item the semantics of \Chainmail,
-\item a validation of \Chainmail through its application to a sequence of examples.
+\item the semantics of \Chainmail, and a Coq mechanisation of its core,
+\item the application of \Chainmail  to a sequence of examples.
 %\item a further validation of \Chainmail through informal proofs of adherence of code to some of these specifications.
 \end{itemize}  
   
