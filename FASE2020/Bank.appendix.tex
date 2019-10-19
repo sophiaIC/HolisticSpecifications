@@ -1,0 +1,154 @@
+\begin{figure}[thb]
+\begin{lstlisting}
+class Bank{
+
+   method newAccount(amt){
+        if (amt>=0) then{
+            return new Account(this,amt)
+   }   }
+}
+
+class Account{
+
+    field balance
+    field myBank
+    
+    method deposit(src,amt){
+       if (amt>=0 && src.myBank=this.myBank && src.balance>=amt) then{
+           this.balance = this.balance+amt
+           src.balance = src.balance-amt
+   }   }
+   method makeNewAccount(amt){
+       if (amt>=0 && this.balance>=amt) then{
+           this.balance = this.balance - amt;
+           return new Account(this.myBank,amt)
+   }    }
+}
+\end{lstlisting}
+ \vspace*{-7mm}
+\caption{$M_{BA1}$: Implementation of \prg{Bank} and \prg{Account} -- version 1}
+\label{fig:BanAccImplV1}
+\end{figure}
+
+In this section we revisit the \prg{Bank}/\prg{Account} example from
+ section  \ref{sect:motivate:Bank}, and show two different
+ implementations, derived from \citet{arnd18} . Both implementations  satisfy the three functional specifications and the holistic assertions
+ (1), (2) and (3)  shown in section \ref{sect:motivate:Bank}.
+ The first version gives rise to runtime configurations as $\sigma_1$, 
+ shown on the left side of Fig. \ref{fig:BakAccountDiagrams}, while the
+ second version gives rise to runtime configurations as $\sigma_2$,
+ shown on the right side of Fig. \ref{fig:BakAccountDiagrams}. 
+
+ In this code, we use more syntax than the minimal syntax defined for \LangOO in Def. \ref{defONE}, as we use conditionals, and we allow nesting of expressions, e.g.\ a field read to be the receiver of a method call. Such extension can easily be encoded in the base syntax.
+
+$\M_{BA1}$, the fist version is shown Fig. \ref{fig:BanAccImplV1}. It keeps all the information in the \prg{Account} object: namely,
+the \prg{Account} contains the pointer to the bank, and the balance, while the \prg{Bank} is a pure capability, which contains
+no state but is necessary for the creation of new \prg{Account}s.
+%\sophia{James, you have a nice, high level description of that.\kjx{somewhere}}
+In this version we have no ghost fields.
+
+\begin{figure}[htb]
+\begin{lstlisting}
+class Bank{
+   field ledger // a Node
+   
+    method deposit(dest,src,amt){
+       destNd = this.ledger.find(dest)
+       srcNd = this.ledger.find(src)
+       srcBalance = srcNd.getBalance()
+       if ( destNd =/=null && srcNd=/=null && srcBalance>=amt && amt >=0 ) then
+           destNd.addToBalance(amt)
+           srcNc.addToBalance(-amt)           
+    }  }     
+    method newAccount(amt){
+      if (amt>=0)  then{
+           newAcc = new Account(this);
+           this.ledger = new Node(amt,this.ledger,newAcc)
+           return newAcc 
+    } }
+   
+   ghost  balance(acc){ this.ledger.balance(acc)  } 
+}
+\end{lstlisting}
+ \vspace*{-7mm}
+\caption{$M_{BA2}$: Implementation of \prg{Bank}   -- version 2}
+\label{fig:BanAccImplV2a}
+\end{figure}
+
+ 
+\begin{figure}[htb]
+\begin{lstlisting}
+class Node{
+   field balance
+   field next   
+   field myAccount
+   
+   method addToBalance(amt){
+       this.balance = this.balance + amt
+   }   
+   method find(acc){
+      if this.myAccount == acc then{
+          return this
+     } else { 
+          if this.next==null then{
+              return null
+          } else {
+              return this.next.find(acc)
+    }  } } 
+    method getBalance(){ return balance }
+    
+    ghost balance(acc){
+        if (this.myAccount == acc)  then  this.balance
+                                                    else  ( if this.next==null then -1 else this.next.find(acc) )
+    }
+}          
+\end{lstlisting}
+ \vspace*{-7mm}
+\caption{$M_{BA2}$: Implementation of \prg{Node}   -- version 2}
+\label{fig:BanAccImplV2a}
+\end{figure}
+
+\begin{figure}[htb]
+\begin{lstlisting}
+class Account{
+
+    field myBank
+    
+    method deposit{src,amt){
+             this.myBank.deposit(this,src,amt)
+    }   }    
+    method makeNewAccount(amt){
+      if (amt>=0 && this.balance>=amt) then{
+           newAcc = this.myBank.makeNewAccount(0)
+           newAcc.deposit(this,amt)
+           return newAcc
+    }    }     
+
+   ghost balance(){ this.myBank.balance(this) }   
+}
+\end{lstlisting}
+ \vspace*{-7mm}
+\caption{$M_{BA2}$: Implementation of  \prg{Account} -- version 2}
+\label{fig:BanAccImplV2b}
+\end{figure}
+ 
+
+
+% Notice that even though anybody can create a new Account, by calling the constructor from the class \prg{Account} 
+$\M_{BA1}$, the second version is shown Fig. \ref{fig:BanAccImplV2a} and \ref{fig:BanAccImplV2b}. It keeps all the information 
+in the \prg{ledger}: each \prg{Node} points to an \prg{Account} 
+and contains the balance for this particular \prg{Account}. Here \prg{balance} is a
+ghost field of \prg{Account}; the body of that declaration calls the ghost field function \prg{balanceOf} of the \prg{Bank} which in its
+turn calls the ghost field function \prg{balanceOf} of the \prg{Node}. Note that the latter is recursively defined.
+
+Note also that \prg{Node} exposes the function \prg{addToBalance(...)}; a call to this function   modifies the \prg{balance} of an \prg{Account} without requiring that the caller has access to the \prg{Account}. This might look as if it contradicted assertions (1) and  (2)
+  from section \ref{sect:motivate:Bank}. However, upon closer inspection, we see that the assertion is satisfied. Remember that we employ a two-module semantics, where any change in the balance of an account is observed from one external state, to another external state. By definition, a configuration is external if its receiver is external.  However, no external object will ever have access to a \prg{Node}, and therefore no external object will ever be able to call the method \prg{addToBalance(...)}. In fact, we can add another assertion, (4), which promises that any internal object which is externally accessible is either a \prg{Bank} or an \prg{Account}.
+
+(4)\ \  $\triangleq$\ \ $\forall \prg{o},\forall \prg{o}'.[\ \ \External{ \prg{o}}\  \wedge\ \neg (\External{ \prg{o}'}) \ \wedge\  \CanAccess{\prg{o}}{\prg{o}'}     
+    \longrightarrow \ \    \hfill$ \\
+  $\strut \hspace{8.3cm} 
+% TODO explain:
+% we no longer need Past here, as we are ion visible states 
+  [\    \prg{o}:\prg{Account}\ \vee \ \prg{o}':\prg{Bank}\  \ ]\ \ \  \ \ \ \ ] \hfill $
+
+
