@@ -5,7 +5,9 @@ taken from the object capabilities literature \cite{ELang}:
 % with objects representing \prg{Account}s or \prg{Bank}s. 
  \prg{Account}s belong to \prg{Bank}s and hold money (\prg{balance}s);  
 with access  to two \prg{Account}s of the same  \prg{Bank} one can  transfer any amount of money from
- one to the other.  We give a traditional specification in Figure \ref{fig:BankSpec}.
+ one to the other.  %We give a traditional specification in Figure \ref{fig:BankSpec}.
+\sdN{This example has the advantage that it requires several objects, and 
+uses two, or even three different classes.}
 
 %%SD changed function to method, to fir what comes later.
 %\begin{figure}[htbp] 
@@ -32,7 +34,7 @@ with access  to two \prg{Account}s of the same  \prg{Bank} one can  transfer any
 %\label{fig:BankSpec}
 %\end{figure} 
 
-\sd{We do not show the code  here, but suffice it to say} that class 
+\sd{We will not show the code  here, but suffice it to say} that class 
 \prg{Accunt} has  methods \prg{deposit(src, amt)} and 
 \prg{makeAccount(amt)}  (\ie a method called \prg{deposit}
 with two arguments, and a method called \prg{makeAccount}
@@ -128,7 +130,8 @@ and still allow the clients' money to be stolen.
 %\prg{makeNewAccount}, and \prg{newAccount}    meet
 %their specification.
 
-One obvious solution would be to return to a closed-world
+One obvious solution would be to \sdN{adopt} %return to 
+a closed-world
 interpretation of specifications: we interpret \sd{functional} specifications  
 % as fig.~\ref{fig:BankSpec} 
 as \emph{exact} in the sense that only
@@ -288,12 +291,30 @@ current state, then in the current state some object
 from \SF~has access to \prg{a}. Where \prg{o} and $\prg{o}'$ may, but need not, be the same object. And where
  $\prg{o}'$ has to exist and have access to \prg{a} in the \emph{current} state, but 
 \prg{o} need not exist in the current state -- it may be allocated later.
+Assertion (3) thus gives essential protection when dealing with foreign, untrusted code.
+% \sophia{I like the story of this paragraph. Please make more eloquent.}
+%\sophia{Assertion (3) is a corollary of (2), and thus actually superfluous -- do we say that? Do we say the story just using (2)?}
+%\susan{I think having 1 and 2 would make it more complicated. You could have a footnote though that says actually you don't even need 3 as it is a corollary of 2}
+%\james{they're examples. it's not a big thing}
+When an \prg{Account} is given out to untrusted third parties, assertion (3) guarantees that
+this \prg{Account} cannot be used to obtain access to further  \prg{Account}s. 
+%The \prg{ACM} does not trust its authors, and certainly does not want
+%to give them access to \prg{acm\_acc}, which contains all of
+%the \prg{ACM}'s money. Instead, in order to receive money, it will
+%pass a secondary account used for incoming funds, \prg{acm\_incoming},
+%into which an \prg{author}  will pay the fee, and from which the \prg{ACM} will transfer the money
+%back into the main \prg{acm\_acc}. 
+%Assertion (3) is crucial, because it guarantees that even 
+%malicious authors  could not use knowledge of  \prg{acm\_incoming} to obtain access to
+%the main \prg{acm\_acc} or any other account. %, to which she did not have access.
+
 
 \vspace{.1cm}
 
 A  holistic  specification for the bank account, then,
-would be our original sufficient functional specification from
-fig.~\ref{fig:BankSpec} plus the necessary
+would be a sufficient functional specification
+%  from fig.~\ref{fig:BankSpec} 
+plus the necessary
 specifications (1)-(3) from above. %in fig.~\ref{fig:necBank}.   
 This holistic specification
 permits an implementation of the bank that also provides  \prg{count}
@@ -301,35 +322,21 @@ and \prg{notify} methods, even though the specification does not mention either 
 Critically, though, the \Chainmail specification
 does not permit an
 %specification from fig.~\ref{fig:count},
-implementation that includes a \prg{steal} method.
-First, the \prg{steal} method clearly changes the balance of
-every account in the bank, but assertion (1) requires that any method
-that changes the balance of any account must be called \prg{deposit}.
-Second, the \prg{steal} method changes the balance of every account in
-the system, and will do so without the caller having a reference to
-most of those accounts, thus breaching assertion (2).   
+implementation that includes a \prg{steal} \sdN{method.}
+% SD chopped the below, as it already appears in prev page
+%First, the \prg{steal} method clearly changes the balance of
+%every account in the bank, but assertion (1) requires that any method
+%that changes the balance of any account must be called \prg{deposit}.
+%Second, the \prg{steal} method changes the balance of every account in
+%the system, and will do so without the caller having a reference to
+%most of those accounts, thus breaching assertion (2).   
 % SD chopped. unnecessary
 %Note that \prg{steal} putting all the funds into the thief's account
 %does not breach policy (2) with respect to the thief's own account,
 %because that account is passed in as a parameter to the \prg{steal}
 %method, and so the called of the \prg{steal} must have access to that
 %account.
- 
-Assertion (3) gives essential protection when dealing with foreign, untrusted code.
-% \sophia{I like the story of this paragraph. Please make more eloquent.}
-%\sophia{Assertion (3) is a corollary of (2), and thus actually superfluous -- do we say that? Do we say the story just using (2)?}
-%\susan{I think having 1 and 2 would make it more complicated. You could have a footnote though that says actually you don't even need 3 as it is a corollary of 2}
-%\james{they're examples. it's not a big thing}
-When an \prg{Account} is given out to untrusted third parties, assertion (3) guarantees that
-this \prg{Account} cannot be used to obtain access to further  \prg{Account}s. 
-The \prg{ACM} does not trust its authors, and certainly does not want
-to give them access to \prg{acm\_acc}, which contains all of
-the \prg{ACM}'s money. Instead, in order to receive money, it will
-pass a secondary account used for incoming funds, \prg{acm\_incoming},
-into which an \prg{author}  will pay the fee, and from which the \prg{ACM} will transfer the money
-back into the main \prg{acm\_acc}. Assertion (3) is crucial, because it guarantees that even 
-malicious authors  could not use knowledge of  \prg{acm\_incoming} to obtain access to
-the main \prg{acm\_acc} or any other account. %, to which she did not have access.
+ %
 
 \forget{
 \sd{Thus, we need to be able to argue, that  passing the \prg{acm\_incoming to some unknown object \prg{u},
