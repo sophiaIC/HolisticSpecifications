@@ -463,7 +463,7 @@ Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this inside))
 Definition BoundaryDef := clazz Boundary
                                 (inside :: nil)
                                 (update
-                                   expose exposeBody
+                                   expose (nil, exposeBody)
                                    empty)
                                 empty.
 
@@ -639,8 +639,28 @@ Proof.
     |apply sat_or2].
 
   (* now *)
-  inversion H7;
+  destruct (pair_reduction_implies_method_call MyModule M' (χ, ϕ::nil) σ') as [χ' Ha];
+    auto.
+  apply limited_config_wf with (ψ:=ψ).
+  rewrite <- H8;
+    eapply wf_update_σ_map;
+    eauto;
+    eapply wf_update_σ_map;
+    eauto.
+  destruct Ha as [ϕ' Ha];
+    destruct Ha as [ψ' Ha];
+    andDestruct.
+  inversion Ha0;
     subst.
+  destruct Hb as [Hcall|Hret];
+    [destruct Hcall as [x Htmp];
+     destruct Htmp as [y Htmp];
+     destruct Htmp as [m Htmp];
+     destruct Htmp as [ps Htmp]
+    |destruct Hret as [x Htmp]].
+  admit.
+  
+  
   
   (* will *)
   

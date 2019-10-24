@@ -86,7 +86,7 @@ Proof.
      |inversion H; subst; auto]].
   inversion H; subst; simpl.
   destruct (eq_dec f0 f) as [Heq|Hneq];
-    [destruct f0; subst; rewrite <- beq_nat_refl; exists (v_addr α'); auto
+    [destruct f0; subst; rewrite <- beq_nat_refl; exists v; auto
     |destruct f0, f;
      assert (Hneq' : n <> n0);
      [intros Hcontra; subst; crush| apply Nat.eqb_neq in Hneq'; rewrite Hneq'; auto]].
@@ -1035,6 +1035,26 @@ Proof.
   apply finite_normal_form_implies_finite; auto.
 Qed.
 
+Lemma compose_v_to_av_equality :
+  forall {A : Type} `{Eq A} m1 m2,
+    compose m1 v_to_av = compose m2 v_to_av ->
+    m1 = m2.
+Proof.
+  intros.
+  apply functional_extensionality;
+    intros a.
+
+  assert (Heq : compose m1 v_to_av a = compose m2 v_to_av a);
+    [crush
+    |].
+  unfold compose in Heq.
+  destruct (m1 a) as [x|];
+    destruct (m2 a) as [y|];
+    auto;
+    inversion Heq;
+    auto.
+Qed.
+
 Ltac peek_pop_simpl :=
   match goal with
   | [H : peek ?ψ = Some ?ϕ |- _] => let ϕ' := fresh "ϕ'" in
@@ -1450,7 +1470,7 @@ Proof.
     intros.
   inversion H;
     subst;
-    remember {| cname := cname o; flds := update f (v_addr α') (flds o); meths := meths o |} as o'.
+    remember {| cname := cname o; flds := update f v (flds o); meths := meths o |} as o'.
   assert (Hin : In ϕ (ϕ::ψ));
     [apply in_eq|apply H11 in Hin].
   destruct Hin.
@@ -1732,6 +1752,258 @@ Proof.
   exists (fst σ), ϕ, ψ; destruct σ; crush.
 Qed.
 
+Lemma initial_wf :
+  forall σ, initial σ ->
+       σ_wf σ.
+Proof.
+  intros σ Hinit;
+    inversion Hinit.
+  destruct H as [ϕ];
+    andDestruct;
+    subst.
+  apply config_wf;
+    auto.
+  
+  apply self_config;
+    intros.
+  inversion H;
+    [subst|crush].
+  apply self_frm.
+  exists x, ObjectInstance;
+    split;
+    auto.
+  unfold update, t_update;
+    rewrite eqb_refl;
+    auto.
+  
+  waiting_auto.
+  exists ϕ, nil;
+    simpl;
+    split;
+    intros;
+    crush.
+Qed.
+
+Hint Resolve initial_wf.
+
+Lemma arising_wf :
+  forall M1 M2 σ, arising M1 M2 σ ->
+             σ_wf σ.
+Proof.
+  intros M1 M2 σ Harise.
+  inversion Harise;
+    subst.
+  eapply pair_reductions_preserves_config_wf; eauto.
+Qed.
+
+Hint Resolve arising_wf.
+
+Lemma limited_config_wf :
+  forall χ ϕ ψ, σ_wf (χ, ϕ::ψ) ->
+           σ_wf (χ, ϕ::nil).
+Proof.
+  intros.
+  inversion H;
+    subst.
+  apply config_wf.
+  
+  apply self_config;
+    intros.
+  inversion H0;
+    subst.
+  inversion H4;
+    subst;
+    [|crush].
+  apply H6, in_eq.
+
+  finite_auto;
+    simpl;
+    intros.
+  inversion H4;
+    subst;
+    [|crush].
+  apply H1;
+    simpl;
+    auto.
+
+  not_stuck_auto.
+  destruct H2 as [ϕ' Ha];
+    destruct Ha as [ψ'];
+    andDestruct;
+    simpl in *.
+  inversion Ha;
+    subst.
+  exists ϕ', nil;
+    split;
+    auto.
+  
+  waiting_auto.
+  destruct H3 as [ϕ' Ha];
+    destruct Ha as [ψ'];
+    andDestruct;
+    simpl in *;
+    inversion Ha;
+    subst.
+  repeat eexists; eauto; intros.
+  crush.
+
+Qed.
+
+Hint Resolve limited_config_wf.
+
+Lemma waiting_update_σ_map :
+  forall σ, waiting_σ σ ->
+       forall x v, waiting_σ (update_σ_map σ x v).
+Proof.
+  intros.
+  waiting_auto;
+    simpl in *.
+  destruct H as [ϕ Ha];
+    destruct Ha as [ψ];
+    andDestruct.
+  rewrite Ha.
+  exists (update_ϕ_map ϕ x v), ψ;
+    split;
+    unfold update_ψ_map; simpl;
+    auto.
+Qed.
+
+Hint Resolve waiting_update_σ_map.
+
+Lemma not_stuck_update_σ_map :
+  forall σ, not_stuck_σ σ ->
+       forall x v, not_stuck_σ (update_σ_map σ x v).
+Proof.
+  intros.
+  not_stuck_auto;
+    simpl in *.
+  destruct H as [ϕ Ha];
+    destruct Ha as [ψ];
+    andDestruct.
+  rewrite Ha.
+  exists (update_ϕ_map ϕ x v), ψ;
+    split;
+    unfold update_ψ_map; simpl;
+    auto.
+Qed.
+
+Hint Resolve not_stuck_update_σ_map.
+
+Lemma finite_update_ϕ_map :
+  forall ϕ, finite_ϕ ϕ ->
+       forall x v, finite_ϕ (update_ϕ_map ϕ x v).
+Proof.
+  intros.
+  finite_auto.
+
+  apply fin_update;
+    auto.
+  
+Qed.
+
+Hint Resolve finite_update_ϕ_map.
+
+Lemma finite_update_σ_map :
+  forall σ, finite_σ σ ->
+       forall x v, finite_σ (update_σ_map σ x v).
+Proof.
+  intros.
+  destruct σ as [χ ψ].
+  unfold finite_σ, finite_ψ.
+  simpl.
+  unfold update_ψ_map.
+  destruct ψ as [|ϕ ψ'];
+    intros;
+    [crush|].
+  inversion H0;
+    subst.
+  apply finite_update_ϕ_map.
+  finite_auto.
+  apply H;
+    simpl;
+    auto.
+
+  finite_auto.
+  apply H;
+    simpl;
+    auto.
+Qed.
+
+Hint Resolve finite_update_σ_map.
+
+Lemma has_self_update_ϕ_map :
+  forall χ ϕ, has_self_ϕ χ ϕ ->
+         forall x v ψ A, fresh_x x (χ, ϕ::ψ) A ->
+                    has_self_ϕ χ (update_ϕ_map ϕ x v).
+Proof.
+  intros.
+
+  inversion H;
+    subst.
+  apply self_frm.
+  destruct H1 as [α Htmp];
+    destruct Htmp as [o];
+    andDestruct.
+  exists α, o;
+    split;
+    auto.
+  unfold update_ϕ_map, update, t_update;
+    simpl.
+  destruct x as [n];
+    destruct n as [|n'];
+    auto.
+  inversion H0;
+    subst;
+    simpl in *.
+  unfold common.map, stackMap, common.map in H1;
+    unfold this in Ha; rewrite Ha in H1;
+      crush.
+Qed.
+
+Hint Resolve has_self_update_ϕ_map.
+
+Lemma has_self_update_σ_map :
+  forall σ, has_self_σ σ ->
+       forall x v A, fresh_x x σ A ->
+                has_self_σ (update_σ_map σ x v).
+Proof.
+  intros σ;
+    intros.
+  destruct σ as [χ ψ].
+  
+  apply self_config;
+    intros;
+    simpl in *.
+  destruct ψ as [|ϕ' ψ'];
+    [crush|simpl in *].
+  destruct H1; subst.
+
+  apply has_self_update_ϕ_map with (ψ:=ψ')(A:=A);
+    auto.
+  inversion H;
+    subst.
+  apply H2, in_eq.
+  
+  inversion H;
+    subst.
+  apply H3, in_cons; auto.
+  
+Qed.
+
+Hint Resolve has_self_update_σ_map.
+
+Lemma wf_update_σ_map :
+  forall σ, σ_wf σ ->
+       forall x α A, fresh_x x σ A ->
+                σ_wf (update_σ_map σ x α).
+Proof.
+  intros σ Hwf; intros.
+  inversion Hwf;
+    subst.
+  apply config_wf;
+    eauto.
+Qed.
+
 Theorem eval_unique :
   forall M σ e v1, M ∙ σ ⊢ e ↪ v1 ->
               forall v2, M ∙ σ ⊢ e ↪ v2 ->
@@ -1824,6 +2096,20 @@ Ltac interpretation_rewrite :=
            subst
          | [H1 : ⌊ ?Σ ⌋ ?σ ≜′ ?αs1, H2 : ⌊ ?Σ ⌋ ?σ ≜′ ?αs2 |- _] =>
            eapply (unique_interpretation_Σ Σ σ αs1 H1) in H2;
+           eauto;
+           subst
+         end.
+
+(* need to change definition of restriction *)
+Parameter unique_restriction :
+  forall σ Σ σ1, σ ↓ Σ ≜ σ1 ->
+            forall σ2, σ ↓ Σ ≜ σ2 ->
+                  σ2 = σ1.
+
+Ltac restriction_rewrite :=
+  repeat match goal with
+         | [H1 : ?σ ↓ ?Σ ≜ ?σ1, H2 : ?σ ↓ ?Σ ≜ ?σ2 |- _] =>
+           eapply (unique_restriction σ Σ σ1 H1) in H2;
            eauto;
            subst
          end.
@@ -2148,7 +2434,7 @@ Proof.
 
   destruct (eq_dec α0 α) as [|Hneq];
     [subst|].
-  exists {| cname := cname o; flds := update f (v_addr α') (flds o); meths := meths o |};
+  exists {| cname := cname o; flds := update f v (flds o); meths := meths o |};
     simpl;
     unfold update, t_update;
     rewrite eqb_refl;
@@ -2253,10 +2539,12 @@ Lemma reductions_implies_method_call :
     σ_wf σ1 ->
     exists χ ϕ ψ,
       σ1 = (χ, ϕ::ψ) /\
-      ((exists x y m ps, contn ϕ = c_stmt (s_meth x y m ps) \/
-                    exists s, contn ϕ = c_stmt (s_stmts (s_meth x y m ps) s)) \/
-       (exists x, contn ϕ = c_stmt (s_rtrn x) \/
-                    exists s, contn ϕ = c_stmt (s_stmts (s_rtrn x) s))).
+      ((exists x y m ps, (exists C CDef, classOf y σ1 C /\ M1 C = Some CDef) /\
+                    (contn ϕ = c_stmt (s_meth x y m ps) \/
+                     exists s, contn ϕ = c_stmt (s_stmts (s_meth x y m ps) s))) \/
+       (exists x, (exists C, classOf this σ1 C /\ M1 C = None) /\
+             (contn ϕ = c_stmt (s_rtrn x) \/
+              exists s, contn ϕ = c_stmt (s_stmts (s_rtrn x) s)))).
 Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
@@ -2274,7 +2562,32 @@ Proof.
     inversion H5;
     subst;
     auto.
-
+  split;
+    eauto.
+  exists (cname o), C;
+    split;
+    auto.
+  apply (cls_of) with (α:=α)(χ:=χ)(o:=o);
+    auto.
+  inversion H;
+    subst.
+  unfold extend in H10.
+  remember (M1 (cname o)) as M1Lookup.
+  destruct M1Lookup as [CDef|];
+    auto.
+  destruct (H2 (cname o)) as [CDef HCDef]; [|crush].
+  apply cls_of with (α:=α)(χ:=χ)(o:=o);
+    auto.
+  remember {| vMap := update this (v_addr α) (compose ps (vMap ϕ)); contn := c_stmt s |} as ϕ'.
+  remember {| vMap := vMap ϕ; contn := c_hole x s' |} as ϕ''.
+  apply int_x with (ϕ:=ϕ')(ψ:=ϕ'::ϕ''::ψ');
+    auto.
+  subst ϕ';
+    simpl.
+  unfold update, t_update;
+    rewrite eqb_refl;
+    auto.
+  
   (* var asgn *)
   inversion H8;
     subst.
@@ -2307,7 +2620,7 @@ Proof.
     simpl in *.
   remember (cname o0) as C.
   destruct H2 with (C:=C) as [CDef].
-  remember ({| cname := cname o; flds := update f (v_addr α') (flds o); meths := meths o |})
+  remember ({| cname := cname o; flds := update f v (flds o); meths := meths o |})
     as o'.
   destruct (eq_dec α0 α) as [|Hneq];
     [subst α0;
@@ -2439,7 +2752,23 @@ Proof.
     subst.
   exists χ, ϕ, (ϕ'::ψ);
     split;
-    [auto|eauto].
+    [auto|right; eauto].
+  exists x; split; auto.
+  inversion H3;
+    subst.
+  assert (Hin : In ϕ (ϕ :: ϕ' :: ψ));
+    [apply in_eq|apply H12 in Hin].
+  inversion Hin;
+    subst.
+  destruct H11 as [α' Htmp];
+    destruct Htmp as [o];
+    andDestruct.
+  assert (classOf this (χ, ϕ::ϕ'::ψ) (cname o)).
+  apply cls_of with (α:=α')(χ:=χ)(o:=o);
+    auto.
+  apply int_x with (ψ:=ϕ :: ϕ' :: ψ)(ϕ:=ϕ);
+    auto.
+  eauto.
 
   (* ret 1 *)
   intros Hwf;
@@ -2449,5 +2778,46 @@ Proof.
     simpl in *.
   exists χ, ϕ, ψ';
     split;
-    [auto|eauto].
+    [auto|right; eauto].
+  exists x; split; auto.
+  inversion H3;
+    subst.
+  assert (Hin : In ϕ (ϕ :: ψ'));
+    [apply in_eq|apply H16 in Hin].
+  inversion Hin;
+    subst.
+  destruct H15 as [α' Htmp];
+    destruct Htmp as [o];
+    andDestruct.
+  assert (classOf this (χ, ϕ::ψ') (cname o)).
+  apply cls_of with (α:=α')(χ:=χ)(o:=o);
+    auto.
+  apply int_x with (ψ:=ϕ :: ψ')(ϕ:=ϕ);
+    auto.
+  eauto.
+  eauto.
 Qed.
+
+Hint Resolve reductions_implies_method_call.
+
+Lemma pair_reduction_implies_method_call :
+  forall M1 M2 σ1 σ2,
+    M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+    σ_wf σ1 ->
+    exists χ ϕ ψ,
+      σ1 = (χ, ϕ::ψ) /\
+      ((exists x y m ps, (exists C CDef, classOf y σ1 C /\ M1 C = Some CDef) /\
+                    (contn ϕ = c_stmt (s_meth x y m ps) \/
+                     exists s, contn ϕ = c_stmt (s_stmts (s_meth x y m ps) s))) \/
+       (exists x, (exists C, classOf this σ1 C /\ M1 C = None) /\
+             (contn ϕ = c_stmt (s_rtrn x) \/
+              exists s, contn ϕ = c_stmt (s_stmts (s_rtrn x) s)))).
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto.
+Qed.
+
+Hint Resolve pair_reduction_implies_method_call.
+
