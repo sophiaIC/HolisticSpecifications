@@ -1,6 +1,7 @@
 Require Export Arith.
-Require Import CpdtTactics.
 Require Import List.
+
+Require Import com.chainmail.CpdtTactics.
 
 Inductive var : Type :=
 | bind : nat -> var.

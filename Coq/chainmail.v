@@ -61,6 +61,7 @@ Notation "'∃S∙' A" :=(a_ex_Σ A)(at level 40).
 Notation "x 'internal'" :=(a_intrn x)(at level 40).
 Notation "x 'external'" :=(a_intrn x)(at level 40).
 Notation "x 'access' y" :=(a_acc x y)(at level 40).
+Notation "x 'call' y '⋄' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
 
 
 (*Instance asrtFoldableVar : PropFoldable asrt nat :=
@@ -435,10 +436,12 @@ Inductive  notin_exp : exp -> var -> Prop :=
                          notin_exp e' x ->
                          notin_exp (e_acc_g e f e') x.
 
+Hint Constructors notin_exp.
+
 Definition notin_a_var (x : a_var)(y : var) : Prop :=
   match x with
   | a_bind z => z <> y
-  | _ => False
+  | _ => True
   end.
 
 Definition notin_av_map (avMap : partial_map var a_var)(x : var) : Prop :=
@@ -512,10 +515,13 @@ Inductive notin_Ax  : asrt -> var -> Prop :=
 | ni_intrn : forall x y, notin_a_var x y ->
                     notin_Ax (a_intrn x) y.
 
+Hint Constructors notin_Ax notin_exp.
+
 Inductive fresh_x : var -> config -> asrt -> Prop :=
 | frsh : forall x σ A, map (snd σ) x = None ->
                   notin_Ax A x ->
                   fresh_x x σ A.
+Hint Constructors fresh_x.
 
 Fixpoint rename_s (s : stmt)(xs : list (var*var)) : stmt :=
   match xs with
@@ -536,7 +542,8 @@ Fixpoint updates {B C : Type} `{Eq B}
 
 Inductive zip {A B : Type} : list A -> list B -> list (A * B) -> Prop :=
 | z_nil : zip nil nil nil
-| z_cons : forall a b l1 l2 l, zip (a::l1) (b::l2) ((a, b)::l).
+| z_cons : forall a b l1 l2 l, zip l1 l2 l ->
+                          zip (a::l1) (b::l2) ((a, b)::l).
 
 Hint Constructors zip.
 
@@ -547,17 +554,6 @@ Inductive unique {A : Type} `{Eq A} : list A -> Prop :=
                  unique (a :: l).
 
 Hint Constructors unique.
-
-Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=
-| d_empty : dom empty nil
-| d_update1 : forall m a b d, dom m d ->
-                         In a d ->
-                         dom (update a b m) d
-| d_update2 : forall m a b d, dom m d ->
-                         ~ In a d ->
-                         dom (update a b m) (a::d).
-
-Hint Constructors dom.
 
 Definition fresh_in_map {A : Type} (x : var) (m : partial_map var A) : Prop :=
   forall y a, m y = Some a -> x <> y.
@@ -712,7 +708,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
               exists v2, (vMap' x' = Some v2 /\
                      (forall v', ⌊ v1 ⌋ σ ≜ v' ->
                             ⌊ v2 ⌋ σ ≜ v'))) ->
-    M1 ⦂ M2 ◎ σ ⊨ (a_call (a_bind x) (a_bind y) m (compose vMap v_to_av))
+    M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) call (a_bind y) ⋄ m ⟨ (compose vMap v_to_av) ⟩ )
 
 (** Viewpoint: *)
 | sat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ α ->

@@ -235,7 +235,7 @@ Notation "'e_null'" := (e_val v_null)(at level 40).
 Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
 
 (*methods is a mapping from method names to statements*)
-Definition methods := partial_map mth stmt.
+Definition methods := partial_map mth ((list var) * stmt).
 
 (*ghost_fields is a mapping from ghost field names to expressions*)
 Definition ghost_fields := partial_map gfld (var * exp).
@@ -443,8 +443,23 @@ Inductive state_wf : heap -> state -> Prop :=
 
 Hint Constructors state_wf.
 
+Inductive has_self_ϕ : heap -> frame -> Prop :=
+| self_frm : forall χ ϕ, (exists α o, ϕ.(vMap) this = Some (v_addr α) /\
+                            χ α = Some o) ->
+                    has_self_ϕ χ ϕ.
+
+Hint Constructors has_self_ϕ.
+
+Inductive has_self_σ : config -> Prop :=
+| self_config : forall χ ψ, (forall ϕ, In ϕ ψ ->
+                             has_self_ϕ χ ϕ) ->
+                       has_self_σ (χ, ψ).
+
+Hint Constructors has_self_σ.
+
 Inductive σ_wf : config -> Prop :=
-| config_wf : forall σ, finite_σ σ ->
+| config_wf : forall σ, has_self_σ σ ->
+                   finite_σ σ ->
                    not_stuck_σ σ ->
                    waiting_σ σ ->
                    σ_wf σ.
@@ -553,6 +568,18 @@ where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
 
 Hint Constructors val.
 
+
+Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=
+| d_empty : dom empty nil
+| d_update1 : forall m a b d, dom m d ->
+                         In a d ->
+                         dom (update a b m) d
+| d_update2 : forall m a b d, dom m d ->
+                         ~ In a d ->
+                         dom (update a b m) (a::d).
+
+Hint Constructors dom.
+
 (** #<h3># Loo Operational Semantics (Fig 6, App A.2, OOPSLA2019):#</h3># *)
 
 Reserved Notation "M '∙' σ '⤳' σ'" (at level 40).
@@ -565,7 +592,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ϕ'' = (ps ∘ (ϕ.(varMap)), s) *)
     (** ------------------------------------ (Meth_Call_OS) *)
     (** M, σ ⤳ (χ, ϕ'' : ϕ' : ψ') *)
-| r_mth : forall M ϕ ψ ψ' χ x y ps σ m α o s s' C ϕ' ϕ'',
+| r_mth : forall M ϕ ψ ψ' χ x y ps σ m zs α o s s' C ϕ' ϕ'',
     σ = (χ, ψ) ->
     peek ψ = Some ϕ ->
     pop ψ = Some ψ' ->
@@ -574,7 +601,8 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ⌊ y ⌋ σ ≜ α ->
     χ α = Some o ->
     (M (o.(cname))) = Some C ->
-    C.(c_meths) m = Some s ->
+    C.(c_meths) m = Some (zs, s) ->
+    dom ps zs ->
     ϕ' =  frm (vMap ϕ) (c_hole x s') ->
     ϕ'' = frm (update this (v_addr α) (compose ps (vMap ϕ))) (c_stmt s) ->
     M ∙ σ ⤳ (χ, ϕ'' :: (ϕ' :: (ψ')))
@@ -637,6 +665,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ------------------------------------------------ (objCreate_OS) *)
     (** M, σ ⤳ σ' *)
 | r_new : forall M σ σ' χ ψ ψ' ϕ ϕ' α x C fMap s o CDef,
+    x <> this ->
     σ = (χ, ψ) ->
     pop ψ = Some ψ' ->
     peek ψ = Some ϕ ->
@@ -666,6 +695,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     σ = (χ, ϕ :: (ϕ' :: ψ)) ->
     ϕ.(contn) = c_stmt (s_rtrn x) ->
     ϕ'.(contn) = c_hole y s ->
+    y <> this ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
     M ∙ σ ⤳ (χ, ϕ'' :: ψ)
@@ -685,6 +715,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     pop ψ' = Some ψ'' ->
     ϕ.(contn) = c_stmt (s_stmts (s_rtrn x) s') ->
     ϕ'.(contn) = c_hole y s ->
+    y <> this ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
     M ∙ σ ⤳ (χ, ϕ'' :: ψ'')
