@@ -53,7 +53,7 @@ Proof.
 
   (** Case 4: sat_set *)
   inversion Hcontra; subst;
-    interpretation_rewrite; crush; eauto.
+    interpretation_rewrite;  crush; eauto.
 
   (** Case 5: sat_and *)  
   try solve [inversion Hcontra; crush].
@@ -105,7 +105,7 @@ Proof.
     inversion H4;
     subst.
   destruct (H7 x' y' s) as [Ha Hb].
-  contradiction (Hb v v); auto.
+  contradiction (Hb (v_addr αy) (v_addr αy)); auto.
   destruct (H7 x' y' s) as [Ha Hb];
     destruct Hb as [x'' Hb];
     destruct Hb as [v1 Hb];
@@ -118,7 +118,44 @@ Proof.
   rewrite Ha in e0;
     inversion e0;
     subst.
+  apply compose_v_to_av_equality in H6;
+    subst.
+  destruct (e1 x'' v1) as [v2'];
+    auto;
+    andDestruct.
+  destruct Hb0 as [v'];
+    andDestruct.
+  rewrite Ha2 in Ha1;
+    inversion Ha1;
+    subst.
+  contradiction (Hb v' v');
+    auto.
 
+  (* external *)
+  inversion Hcontra;
+    interpretation_rewrite;
+    subst;
+    crush.
+  contradiction (H3 α).
+
+  (* internal *)
+  inversion Hcontra;
+    interpretation_rewrite;
+    subst;
+    crush.
+  contradiction (H3 α).
+
+  (* in *)
+  inversion Hcontra;
+    subst.
+  restriction_rewrite;
+    crush.
+
+  (* next *)
+  inversion Hcontra;
+    subst.
+  inversion H1; subst.
+  
   
 Admitted.
 

@@ -620,7 +620,9 @@ Definition initial (σ : config) : Prop :=
   exists α ϕ, σ = ((update α ObjectInstance empty), ϕ :: nil) /\
          (vMap ϕ) this = Some (v_addr α) /\
          (forall x, x <> this ->
-               (vMap ϕ) x = None).
+               (vMap ϕ) x = None) /\
+         finite_σ σ /\
+         not_stuck_σ σ.
 
 Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 (** Simple: *)
@@ -636,7 +638,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                  o.(cname) = C ->
                                  M1 ⦂ M2 ◎ σ ⊨ (a_class e C)
 
-| sat_set   : forall M1 M2 σ e Σ α As, M1 ∙ σ ⊢ e ↪ (v_addr α) ->
+| sat_set   : forall M1 M2 σ e Σ α As, M1 ∙ σ ⊢ e ↪ α ->
                                   ⌊ Σ ⌋ σ ≜′ As ->
                                   In α As ->
                                   M1 ⦂ M2 ◎ σ ⊨ (a_set e (s_bind Σ))
@@ -673,20 +675,20 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                  M1 ⦂ M2 ◎ σ ⊨ (∃x∙ A)
 
 (** Permission: *)
-| sat_access1 : forall M1 M2 σ x y α, ⌊x⌋ σ ≜ α ->
-                                 ⌊y⌋ σ ≜ α ->
+| sat_access1 : forall M1 M2 σ x y α, ⌊x⌋ σ ≜ (v_addr α) ->
+                                 ⌊y⌋ σ ≜ (v_addr α) ->
                                  M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) access (a_bind y))
 
-| sat_access2 : forall M1 M2 σ x y α α' o f, ⌊x⌋ σ ≜ α' ->
+| sat_access2 : forall M1 M2 σ x y α α' o f, ⌊x⌋ σ ≜ (v_addr α') ->
                                         map σ α' = Some o ->
                                         (flds o) f = Some (v_addr α) ->
-                                        ⌊y⌋ σ ≜ α ->
+                                        ⌊y⌋ σ ≜ (v_addr α) ->
                                         M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) access (a_bind y))
 
-| sat_access3 : forall M1 M2 σ ψ ϕ χ x y z α1 α2 s, ⌊x⌋ σ ≜ α1 ->
-                                               ⌊this⌋ σ ≜ α1 ->
-                                               ⌊y⌋ σ ≜ α2 ->
-                                               ⌊z⌋ σ ≜ α2 ->
+| sat_access3 : forall M1 M2 σ ψ ϕ χ x y z α1 α2 s, ⌊x⌋ σ ≜ (v_addr α1) ->
+                                               ⌊this⌋ σ ≜ (v_addr α1) ->
+                                               ⌊y⌋ σ ≜ (v_addr α2) ->
+                                               ⌊z⌋ σ ≜ (v_addr α2) ->
                                                σ = (χ, ϕ :: ψ) ->
                                                (contn ϕ) = c_stmt s ->
                                                in_stmt z s ->
@@ -694,30 +696,30 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (** Control: *)
 (** Julian: I should probably clean up the interpretation equivalence between parameter maps *)
-| sat_call : forall M1 M2 σ χ ϕ ψ x x' y y' m vMap vMap' α s v d,
-    ⌊ x ⌋ σ ≜ α ->
-    ⌊ this ⌋ σ ≜ α ->
+| sat_call : forall M1 M2 σ χ ϕ ψ x x' y y' m vMap vMap' α s αy d,
+    ⌊ x ⌋ σ ≜ (v_addr α) ->
+    ⌊ this ⌋ σ ≜ (v_addr α) ->
     σ = (χ, ϕ :: ψ) ->
     (contn ϕ) =
     (c_stmt (s_stmts (s_meth x' y' m vMap') s)) ->
-    ⌊ y ⌋ σ ≜ v ->
-    ⌊ y'⌋ σ ≜ v ->
+    ⌊ y ⌋ σ ≜ (v_addr αy) ->
+    ⌊ y'⌋ σ ≜ (v_addr αy) ->
     dom vMap d ->
     dom vMap' d ->
     (forall x' v1, vMap x' = Some v1 ->
               exists v2, (vMap' x' = Some v2 /\
-                     (forall v', ⌊ v1 ⌋ σ ≜ v' ->
+                     (exists v', ⌊ v1 ⌋ σ ≜ v' /\
                             ⌊ v2 ⌋ σ ≜ v'))) ->
     M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) call (a_bind y) ⋄ m ⟨ (compose vMap v_to_av) ⟩ )
 
 (** Viewpoint: *)
-| sat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ α ->
+| sat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
                                  map σ α = Some o ->
                                  o.(cname) = C ->
                                  M1 C = None ->
                                  M1 ⦂ M2 ◎ σ ⊨ a_extrn (a_bind x)
 
-| sat_intrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ α ->
+| sat_intrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
                                  map σ α = Some o ->
                                  o.(cname) = C ->
                                  (exists CDef, M1 C = Some CDef) ->
@@ -781,14 +783,14 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                       C <> C' ->
                                       M1 ⦂ M2 ◎ σ ⊭ (a_class e C)
 
-| nsat_class2 : forall M1 M2 σ e C, (forall α, ~ M1 ∙ σ ⊢ e ↪ (v_addr α)) ->
+| nsat_class2 : forall M1 M2 σ e C, (forall α, ~ M1 ∙ σ ⊢ e ↪ α) ->
                                M1 ⦂ M2 ◎ σ ⊭ (a_class e C)
 
 | nsat_set1   : forall M1 M2 σ e Σ As, ⌊ Σ ⌋ σ ≜′ As ->
-                                  (forall α, M1 ∙ σ ⊢ e ↪ (v_addr α) -> ~ In α As) ->
+                                  (forall α, M1 ∙ σ ⊢ e ↪ α -> ~ In α As) ->
                                   M1 ⦂ M2 ◎ σ ⊭ (a_set e (s_bind Σ))
 
-| nsat_set2   : forall M1 M2 σ e Σ, (forall α, ~ M1 ∙ σ ⊢ e ↪ (v_addr α)) ->
+| nsat_set2   : forall M1 M2 σ e Σ, (forall α, ~ M1 ∙ σ ⊢ e ↪ α) ->
                                M1 ⦂ M2 ◎ σ ⊭ (a_set e (s_bind Σ))
 
 (*connectives*)
@@ -821,19 +823,19 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                            M1 ⦂ M2 ◎ σ ⊭ (∃x∙ A)
 
 (** Permission: *)
-| nsat_access : forall M1 M2 σ x y, (forall α1 α2, ⌊x⌋ σ ≜ α1 ->
-                                         ⌊y⌋ σ ≜ α2 ->
+| nsat_access : forall M1 M2 σ x y, (forall α1 α2, ⌊x⌋ σ ≜ (v_addr α1) ->
+                                         ⌊y⌋ σ ≜ (v_addr α2) ->
                                          α1 <> α2) ->
-                               (forall α1 α2 α3 f o, ⌊x⌋ σ ≜ α1 ->
+                               (forall α1 α2 α3 f o, ⌊x⌋ σ ≜ (v_addr α1) ->
                                                 map σ α1 = Some o ->
                                                 (flds o) f = Some (v_addr α2) ->
-                                                ⌊y⌋ σ ≜ α3 ->
+                                                ⌊y⌋ σ ≜ (v_addr α3) ->
                                                 α2 <> α3) ->
-                               ((forall α1 α2, ⌊x⌋ σ ≜ α1 ->
-                                          ⌊this⌋ σ ≜ α2 ->
+                               ((forall α1 α2, ⌊x⌋ σ ≜ (v_addr α1) ->
+                                          ⌊this⌋ σ ≜ (v_addr α2) ->
                                           α1 <> α2) \/
-                                (forall z α, ⌊y⌋ σ ≜ α ->
-                                        ⌊z⌋ σ ≜ α ->
+                                (forall z α, ⌊y⌋ σ ≜ (v_addr α) ->
+                                        ⌊z⌋ σ ≜ (v_addr α) ->
                                         forall ψ ϕ χ s, σ = (χ, ϕ :: ψ) ->
                                                    (contn ϕ) = c_stmt s ->
                                                    ~ in_stmt z s))->
@@ -874,27 +876,27 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                                                      (compose vMap v_to_av))
 
 (*viewpoint*) (* well-formeness? This is important!!!!*)
-(*| nsat_extrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
-                         M en σ ⊭ a_extrn (bind x)
+| nsat_extrn1 : forall M1 M2 σ x, (forall α, ~ ⌊ x ⌋ σ ≜ (v_addr α)) ->
+                             M1 ⦂ M2 ◎ σ ⊭ a_extrn (a_bind x)
 
-| nsat_extrn2 : forall M σ x α, ⌊ x ⌋ σ ≜ α ->
-                           map σ α = None ->
-                           M en σ ⊭ a_extrn (bind x)*) 
+| nsat_extrn2 : forall M1 M2 σ x α, ⌊ x ⌋ σ ≜ (v_addr α) ->
+                               map σ α = None ->
+                               M1 ⦂ M2 ◎ σ ⊭ a_extrn (a_bind x)
 
-| nsat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ α ->
+| nsat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
                                   map σ α = Some o ->
                                   o.(cname) = C ->
                                   (exists CDef, M1 C = Some CDef) ->
                                   M1 ⦂ M2 ◎ σ ⊭ a_extrn (a_bind x)
 
-(*| nsat_intrn1 : forall M σ x, (forall α, ~ ⌊ x ⌋ σ ≜ α) ->
-                         M en σ ⊭ a_intrn (bind x)
+| nsat_intrn1 : forall M1 M2 σ x, (forall α, ~ ⌊ x ⌋ σ ≜ (v_addr α)) ->
+                             M1 ⦂ M2 ◎ σ ⊭ a_intrn (a_bind x)
 
-| nsat_intrn2 : forall M σ x α, ⌊ x ⌋ σ ≜ α ->
-                           map σ α = None ->
-                           M en σ ⊭ a_intrn (bind x)*) (*not needed. In the case where x or α are not defined, then we can't satisfy A*)
+| nsat_intrn2 : forall M1 M2 σ x α, ⌊ x ⌋ σ ≜ (v_addr α) ->
+                               map σ α = None ->
+                               M1 ⦂ M2 ◎ σ ⊭ a_intrn (a_bind x)
 
-| nsat_intrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ α ->
+| nsat_intrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
                                   map σ α = Some o ->
                                   o.(cname) = C ->
                                   M1 C = None ->
