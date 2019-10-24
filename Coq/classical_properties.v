@@ -26,13 +26,11 @@ Proof.
     auto.
 Qed.
 
-Theorem sat_nsat_not_mutind :
+Theorem sat_implies_not_nsat_mutind :
   (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
-(*                σ_wf σ ->*)
                 ~ M1 ⦂ M2 ◎ σ ⊭ A) /\
 
   (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
-(*                σ_wf σ ->*)
                 ~ M1 ⦂ M2 ◎ σ ⊨ A).
 Proof.
   apply sat_mutind;
@@ -124,7 +122,152 @@ Proof.
   
 Admitted.
 
+Theorem sat_implies_not_nsat :
+  (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
+(*                σ_wf σ ->*)
+                ~ M1 ⦂ M2 ◎ σ ⊭ A).
+Proof.
+  destruct sat_implies_not_nsat_mutind; crush.
+Qed.
+
+Theorem nsat_implies_not_sat :
+  (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
+(*                σ_wf σ ->*)
+                ~ M1 ⦂ M2 ◎ σ ⊨ A).
+Proof.
+  destruct sat_implies_not_nsat_mutind; crush.
+Qed.
+
 Lemma sat_excluded_middle :
   forall M1 M2 σ A, (M1 ⦂ M2 ◎ σ ⊨ A) \/ (M1 ⦂ M2 ◎ σ ⊭ A).
 Proof.
 Admitted.
+
+Lemma arr_true :
+  forall M1 M2 σ A1 A2,
+    M1 ⦂ M2 ◎ σ ⊨ (A1 ⇒ A2) ->
+    M1 ⦂ M2 ◎ σ ⊨ A1 ->
+    M1 ⦂ M2 ◎ σ ⊨ A2.
+Proof.
+  intros M1 M2 σ A1 A2 Hsat;
+    inversion Hsat;
+    subst;
+    intros;
+    auto.
+
+  apply sat_implies_not_nsat_mutind in H3;
+    crush.
+Qed.
+
+Lemma arr_false :
+  forall M1 M2 σ A1 A2,
+    M1 ⦂ M2 ◎ σ ⊨ (A1 ⇒ A2) ->
+    M1 ⦂ M2 ◎ σ ⊭ A2 ->
+    M1 ⦂ M2 ◎ σ ⊭ A1.
+Proof.
+  intros M1 M2 σ A1 A2 Hsat;
+    inversion Hsat;
+    subst;
+    intros;
+    auto.
+
+  apply sat_implies_not_nsat_mutind in H3;
+    crush.
+Qed.
+
+Lemma and_iff :
+  forall M1 M2 σ A1 A2, (M1 ⦂ M2 ◎ σ ⊨ (A1 ∧ A2)) <->
+                   (M1 ⦂ M2 ◎ σ ⊨ A1 /\ M1 ⦂ M2 ◎ σ ⊨ A2).
+Proof.
+  intros;
+    split;
+    intros Ha;
+    inversion Ha;
+    eauto.
+Qed.
+
+Lemma or_iff :
+  forall M1 M2 σ A1 A2, (M1 ⦂ M2 ◎ σ ⊨ (A1 ∨ A2)) <->
+                   (M1 ⦂ M2 ◎ σ ⊨ A1 \/ M1 ⦂ M2 ◎ σ ⊨ A2).
+Proof.
+  intros;
+    split;
+    intros Ha;
+    inversion Ha;
+    eauto.
+Qed.
+
+(*Lemma universal_arr_true :
+  (forall M1 M2 σ A,
+      arising M1 M2 σ ->
+      M_wf M1 ->
+      M1 ⦂ M2 ◎ σ ⊨ A ->
+      forall A', M1 ⦂ M2 ◎ σ ⊨ A ->
+            M1 ⊨m (A ⇒ A') ->
+            M1 ⦂ M2 ◎ σ ⊨ A').
+Proof.
+  intros.
+  unfold mdl_sat in H3.
+  apply H3 in H;
+    auto.
+  eapply arr_true; eauto.
+  inversion H;
+    subst.
+  SearchAbout config_wf.
+  eapply initial_heap_wf in H4;
+    eauto.
+  apply 
+  inversion H3;
+    subst.
+  
+  
+
+  apply sat_arr1.
+  
+  intros M1 M2 σ A Hsat;
+    induction Hsat;
+    intros;
+    eauto.
+
+  
+Qed.*)
+
+Lemma negate_elim_sat :
+  (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨ (¬ ¬ A) ->
+                M1 ⦂ M2 ◎ σ ⊨ A).
+Proof.
+  intros;
+    auto.
+  inversion H;
+    subst.
+  inversion H4;
+    auto.
+Qed.
+
+Lemma negate_elim_nsat :
+  (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊭ (¬ ¬ A) ->
+                M1 ⦂ M2 ◎ σ ⊭ A).
+Proof.
+  intros;
+    auto.
+  inversion H;
+    subst.
+  inversion H4;
+    auto.
+Qed.
+
+Lemma negate_intro_sat :
+  (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨ A ->
+                M1 ⦂ M2 ◎ σ ⊨ (¬ ¬ A)).
+Proof.
+  intros;
+    auto.
+Qed.
+
+Lemma negate_intro_nsat :
+  (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊭ A ->
+                M1 ⦂ M2 ◎ σ ⊭ (¬ ¬ A)).
+Proof.
+  intros;
+    auto.
+Qed.

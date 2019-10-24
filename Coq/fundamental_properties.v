@@ -93,24 +93,24 @@ Proof.
 
   (*new object initialization*)
   simpl in *.
-  unfold update, t_update in H.
+  unfold update, t_update in H0.
   destruct (eq_dec α0 α) as [Heq|Hneq];
-    [subst; rewrite eqb_refl in H
-    |apply neq_eqb in Hneq; rewrite Hneq in H;
-     inversion H11; subst; apply (H8 α0); auto].
+    [subst; rewrite eqb_refl in H0
+    |apply neq_eqb in Hneq; rewrite Hneq in H0;
+     inversion H12; subst; apply (H9 α0); auto].
   exists CDef;
-    split; [inversion H; subst; auto
+    split; [inversion H0; subst; auto
            |split;
             [intros
-            |inversion H; subst; auto]].
-  inversion H; subst; simpl.
+            |inversion H0; subst; auto]].
+  inversion H0; subst; simpl.
   assert (Hin : fMap f = None -> ~ In f (c_flds CDef));
     [auto|].
   remember (fMap f) as res.
   destruct res as [y|];
     [
     |contradiction Hin; auto].
-  destruct (H7 f y) as [v];
+  destruct (H8 f y) as [v];
     auto.
   exists v; unfold compose; rewrite <- Heqres; auto.
 Qed.
@@ -1086,7 +1086,7 @@ Proof.
   destruct H; [subst; simpl|]; eauto.
 
   peek_pop_simpl.
-  destruct H; crush.
+  destruct H0; crush.
 
   unfold update_ϕ_contn, update_ϕ_map in H; simpl in H;
     destruct H; crush.
@@ -1100,7 +1100,7 @@ Proof.
     inversion H1; subst; crush.
 
   peek_pop_simpl.
-  apply H8; crush.
+  apply H9; crush.
 Qed.
 
 Hint Resolve reduction_preserves_config_finiteness.
@@ -1322,13 +1322,333 @@ Qed.
 
 Hint Resolve pair_reductions_preserves_config_waiting.
 
+Lemma has_self_update_ϕ :
+  forall χ ϕ, has_self_ϕ χ ϕ ->
+       forall x v, x <> this ->
+              has_self_ϕ χ (update_ϕ_map ϕ x v).
+Proof.
+  intros χ ϕ Hself;
+    inversion Hself;
+    intros;
+    subst.
+  destruct H as [α Ha];
+    destruct Ha as [o Ha];
+    andDestruct.
+  apply self_frm.
+  exists α, o; simpl;
+    unfold update, t_update;
+    rewrite neq_eqb;
+    auto.
+Qed.
+
+Lemma has_self_update_σ :
+  forall σ, has_self_σ σ ->
+       forall x v, x <> this ->
+              has_self_σ (update_σ_map σ x v).
+Proof.
+  intros σ Hself;
+    inversion Hself;
+    intros;
+    subst.
+  apply self_config;
+    intros;
+    simpl in *.
+  unfold update_ψ_map in H0;
+    destruct ψ as [|ϕ' ψ'];
+    [crush|inversion H0; subst].
+  apply has_self_update_ϕ;
+    auto.
+  apply H, in_eq.
+
+  apply H, in_cons; auto.
+Qed.
+
+Lemma has_self_update_ϕ_contn :
+  forall χ ϕ, has_self_ϕ χ ϕ ->
+       forall c, has_self_ϕ χ (update_ϕ_contn ϕ c).
+Proof.
+  intros.
+  inversion H;
+    subst.
+  destruct H0 as [α Ha];
+    destruct Ha as [o];
+    andDestruct.
+  apply self_frm;
+  exists α, o; simpl; auto.
+Qed.
+
+Lemma has_self_update_σ_contn :
+  forall σ, has_self_σ σ ->
+       forall c, has_self_σ (update_σ_contn σ c).
+Proof.
+  intros σ Hself;
+    inversion Hself;
+    intros;
+    subst.
+  apply self_config;
+    intros;
+    simpl in *.
+  
+  unfold update_ψ_contn in H0;
+    destruct ψ as [|ϕ' ψ'];
+    [crush|inversion H0; subst].
+  apply has_self_update_ϕ_contn.
+  apply H, in_eq.
+  apply H, in_cons;
+    auto.
+Qed.
+
+Lemma reduction_preserves_config_has_self :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             has_self_σ σ1 ->
+             has_self_σ σ2.
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred;
+    intros Hself;
+    inversion Hself;
+    subst;
+    eauto.
+
+  inversion H12; subst.
+
+  (* s_meth *)
+  apply self_config;
+    intros ϕ' Hin;
+    inversion Hin;
+    auto;
+    [subst|].
+  apply self_frm;
+    exists α, o;
+    split;
+    auto.
+  inversion H;
+    subst.
+  peek_pop_simpl;
+    simpl in H1;
+    inversion H1;
+    subst.
+  assert (Hinϕ : In ϕ (ϕ::ψ'));
+    [apply in_eq|apply H11 in Hinϕ].
+  apply self_frm;
+    inversion Hinϕ;
+    auto.
+  apply H11;
+    peek_pop_simpl;
+    simpl in *;
+    inversion H1;
+    auto.
+
+  (* var asgn *)
+  apply has_self_update_σ;
+    auto.
+
+  (* field asgn*)
+  inversion H12;
+    subst.
+  apply self_config;
+    intros.
+  inversion H;
+    subst;
+    remember {| cname := cname o; flds := update f (v_addr α') (flds o); meths := meths o |} as o'.
+  assert (Hin : In ϕ (ϕ::ψ));
+    [apply in_eq|apply H11 in Hin].
+  destruct Hin.
+  destruct H7 as [α0 Ha];
+    destruct Ha as [o0];
+    andDestruct.
+  apply self_frm.
+  exists α0.
+  destruct (eq_dec α0 α) as [|Hneq];
+    [subst α0;
+     exists o'
+    |simpl;
+     exists o0];
+     split;
+     simpl;
+     auto;
+     unfold update, t_update;
+     [rewrite eqb_refl; auto
+     |rewrite neq_eqb; auto].  
+  assert (Hin : In ϕ0 (ϕ::ψ));
+    [apply in_cons; auto|apply H11 in Hin].
+  destruct Hin.
+  destruct H8 as [α0 Ha];
+    destruct Ha as [o0];
+    andDestruct.
+  apply self_frm.
+  exists α0.
+  destruct (eq_dec α0 α) as [|Hneq];
+    [subst α0;
+     exists o'
+    |simpl;
+     exists o0];
+     split;
+     simpl;
+     auto;
+     unfold update, t_update;
+     [rewrite eqb_refl; auto
+     |rewrite neq_eqb; auto].
+
+  (* new *)
+  inversion H13;
+    subst.
+  apply self_config;
+    intros.
+  inversion H0;
+    subst;
+    remember {| cname := C; flds := compose fMap (vMap ϕ); meths := c_meths CDef |} as o'.
+  apply self_frm; simpl.
+  assert (Hin : In ϕ ψ);
+    [peek_pop_simpl;
+     simpl in *;
+     inversion H1;
+     subst;
+     crush|
+     apply H12 in Hin].
+  destruct Hin as [χ ϕ Ha];
+    destruct Ha as [α0 Ha];
+    destruct Ha as [o0];
+    andDestruct.
+  exists α0.
+  destruct (eq_dec α0 α) as [|Hneq];
+    [subst α0;
+     exists o'
+    |simpl;
+     exists o0];
+     simpl;
+     auto;
+     unfold update, t_update;
+     [rewrite neq_eqb; auto
+     |rewrite neq_eqb; auto];
+     split;
+     auto;
+     [rewrite eqb_refl
+     |rewrite neq_eqb; auto];
+     auto.
+
+  apply self_frm.
+  unfold update, t_update.
+  peek_pop_simpl;
+    simpl in H1;
+    inversion H1;
+    subst.
+  assert (Hin : In ϕ0 (ϕ::ψ'));
+    [apply in_cons; auto
+    |apply H12 in Hin;
+     destruct Hin as [χ ϕ' Ha];
+     destruct Ha as [α0 Ha];
+     destruct Ha as [o0];
+     andDestruct].
+  exists α0.
+  remember {| cname := C; flds := compose fMap (vMap ϕ); meths := c_meths CDef |} as o'.
+  destruct (eq_dec α0 α) as [|Hneq];
+    [subst α0;
+     exists o'
+    |exists o0];
+     [rewrite eqb_refl; auto
+     |rewrite neq_eqb; auto];
+     auto.
+
+  (* ret 1 *)
+  apply self_config;
+    intros.
+  inversion H6;
+    subst.
+  inversion H;
+    subst.
+  apply has_self_update_ϕ_contn, has_self_update_ϕ;
+    auto.
+  apply H5, in_cons, in_eq.
+  apply H5, in_cons, in_cons;
+    auto.
+
+  (* ret 2*)
+  apply self_config;
+    intros.
+  peek_pop_simpl;
+    simpl in *;
+    inversion H0;
+    inversion H1;
+    inversion H2;
+    inversion H3;
+    subst.
+  inversion H10;
+    subst.
+  inversion H;
+    subst.
+  apply has_self_update_ϕ_contn, has_self_update_ϕ;
+    auto.
+  apply H9.
+  peek_pop_simpl.
+  simpl in H1;
+    inversion H1;
+    subst.
+  apply in_cons, in_eq.
+  peek_pop_simpl;
+    inversion H12;
+    subst.
+  apply H9, in_cons, in_cons;
+    auto.
+Qed.
+
+Hint Resolve reduction_preserves_config_has_self.
+
+Lemma reductions_preserves_config_has_self :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                 has_self_σ σ1 ->
+                 has_self_σ σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto.
+Qed.
+
+Hint Resolve reduction_preserves_config_has_self.
+
+Lemma pair_reduction_preserves_config_has_self :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 has_self_σ σ1 ->
+                 has_self_σ σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto.
+  eapply reduction_preserves_config_has_self;
+    eauto.
+  eapply reductions_preserves_config_has_self;
+    eauto.
+Qed.
+
+Hint Resolve pair_reduction_preserves_config_has_self.
+
+Lemma pair_reductions_preserves_config_has_self :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 has_self_σ σ1 ->
+                 has_self_σ σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto.
+Qed.
+
+Hint Resolve pair_reductions_preserves_config_has_self.
+
 Lemma reduction_preserves_config_wf :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
              σ_wf σ1 ->
              σ_wf σ2.
 Proof.
   intros M σ1 σ2 Hred Hwf;
-    inversion Hwf; eauto.
+    inversion Hred;
+    subst;
+    apply config_wf;
+    inversion Hwf;
+    eauto;
+    subst.
 Qed.
 
 Hint Resolve reduction_preserves_config_wf.
@@ -1338,8 +1658,9 @@ Lemma reductions_preserves_config_wf :
              σ_wf σ1 ->
              σ_wf σ2.
 Proof.
-  intros M1 M2 σ1 σ2 Hred Hwf;
-    inversion Hwf;
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
     subst;
     eauto.
 Qed.
@@ -1352,7 +1673,7 @@ Lemma pair_reduction_preserves_config_wf :
                  σ_wf σ2.
 Proof.
   intros M1 M2 σ1 σ2 Hred Hwf;
-    inversion Hwf;
+    induction Hred;
     eauto.
 Qed.
 
@@ -1364,7 +1685,7 @@ Lemma pair_reductions_preserves_config_wf :
                  σ_wf σ2.
 Proof.
   intros M1 M2 σ1 σ2 Hred Hwf;
-    inversion Hwf;
+    induction Hred;
     eauto.
 Qed.
 
@@ -1382,6 +1703,15 @@ Proof.
     apply config_wf;
     finite_auto; not_stuck_auto; waiting_auto;
       try solve [crush].
+  apply self_config;
+    intros ϕ' Hin;
+    inversion Hin;
+    subst;
+    inversion H0;
+    subst.
+  apply H5, in_eq.
+  inversion H4.
+  
   exists ϕ, nil; split; auto; crush.
   exists ϕ, nil; split; auto; crush.
 Qed.
@@ -1396,7 +1726,7 @@ Proof.
     inversion Hwf;
     subst;
     not_stuck_auto.
-  destruct H0 as [ϕ Hns];
+  destruct H1 as [ϕ Hns];
     destruct Hns as [ψ];
     andDestruct.
   exists (fst σ), ϕ, ψ; destruct σ; crush.
@@ -1627,4 +1957,497 @@ Proof.
     induction Hred;
     intros;
     eauto.
+Qed.
+
+Lemma notin_updates :
+  forall {A B : Type} `{Eq A} zs zs' (Zs : list (A * A)),
+    zip zs zs' Zs ->
+    forall z, ~ In z zs ->
+         forall (β β' : partial_map A B), updates Zs β β' z = β z.
+Proof.
+  intros A B HeqClass zs;
+    induction zs;
+    intros zs' Zs Hzip;
+    inversion Hzip;
+    subst;
+    intros;
+    simpl;
+    auto.
+
+  destruct (eq_dec z a) as [Heq|Hneq];
+    [subst; contradiction H; apply in_eq
+    |rewrite neq_eqb; auto;
+     eapply IHzs; auto;
+     [inversion Hzip; eauto
+     |intro Hcontra; contradiction H; apply in_cons; auto]].
+Qed.
+
+Lemma adaptation_preserves_mapping :
+  forall σ1 σ2 σ, σ1 ◁ σ2 ≜ σ ->
+             forall z (v : value), common.map σ1 z = Some v ->
+                              common.map σ z = Some v.
+Proof.
+  intros.
+  inversion H;
+    subst.
+
+  unfold common.map, configMapStack, common.map in *; simpl.
+  destruct σ1 as [χ ψ]; simpl in H0.
+  destruct ψ as [|ϕ ψ]; simpl in H0;
+    [inversion H0| ].
+  simpl in *.
+  inversion H1; subst; simpl in *.
+  destruct (in_dec (eq_dec) z zs').
+  apply H5 in i.
+  unfold fresh_in_map in i.
+  apply i in  H0; crush.
+  erewrite notin_updates; eauto.
+Qed.
+
+(* fresh  *)
+
+Lemma update_fresh_preserves_map :
+  forall x σ A, fresh_x x σ A ->
+           forall z v v', common.map σ z = Some v ->
+                     common.map (update_σ_map σ x v') z = Some v.
+Proof.
+  intros x σ A Hfrsh;
+    inversion Hfrsh;
+    subst;
+    intros.
+
+  destruct σ as [χ ψ];
+    destruct ψ as [|ϕ ψ].
+
+  unfold common.map, configMapStack, common.map, stackMap in *;
+    simpl in *;
+    crush.
+
+  unfold common.map, configMapStack, common.map, stackMap in *;
+    simpl in *.
+  unfold update, t_update;
+    destruct (eq_dec z x) as [|Hneq];
+    [subst; crush
+    |rewrite neq_eqb; auto].
+Qed.
+
+Lemma fresh_and_elim :
+  forall x σ A1 A2,
+    fresh_x x σ (A1 ∧ A2) ->
+    fresh_x x σ A1 /\ fresh_x x σ A2.
+Proof.
+  intros.
+  inversion H;
+    subst.
+
+  inversion H1;
+    subst;
+    auto.
+Qed.
+
+Lemma fresh_and_intro :
+  forall x σ A1 A2,
+    fresh_x x σ A1 /\ fresh_x x σ A2 ->
+    fresh_x x σ (A1 ∧ A2).
+Proof.
+  intros.
+  andDestruct.
+  inversion Ha; inversion Hb; subst.
+  apply frsh; auto.
+Qed.
+
+Lemma fresh_arr_elim :
+  forall x σ A1 A2,
+    fresh_x x σ (A1 ⇒ A2) ->
+    fresh_x x σ A1 /\ fresh_x x σ A2.
+Proof.
+  intros.
+  inversion H;
+    subst.
+
+  inversion H1;
+    subst;
+    auto.
+Qed.
+
+Lemma fresh_arr_intro :
+  forall x σ A1 A2,
+    fresh_x x σ A1 /\ fresh_x x σ A2 ->
+    fresh_x x σ (A1 ⇒ A2).
+Proof.
+  intros.
+  andDestruct.
+  inversion Ha; inversion Hb; subst.
+  apply frsh; auto.
+Qed.
+
+Lemma fresh_all_elim :
+  forall x σ A,
+    fresh_x x σ (∀x∙A) ->
+    fresh_x x σ A.
+Proof.
+  intros.
+  inversion H;
+    subst;
+    inversion H1;
+    auto.
+Qed.
+
+Lemma fresh_all_intro :
+  forall x σ A,
+    fresh_x x σ A ->
+    fresh_x x σ (∀x∙A).
+Proof.
+  intros.
+  inversion H; subst; auto.
+Qed.
+
+Lemma fresh_notin :
+  forall x σ A1 A2,
+    fresh_x x σ A1 ->
+    notin_Ax A2 x ->
+    fresh_x x σ A2.
+Proof.
+  intros x σ A1 A2 Hfrsh Hnotin.
+  inversion Hfrsh; auto.
+Qed.
+
+(* update map *)
+
+Lemma map_update_σ :
+  forall σ z v, (exists ϕ ψ, snd σ = ϕ :: ψ) ->
+           common.map (update_σ_map σ z v) z = Some v.
+Proof.
+  intros.
+  unfold common.map, configMapStack, common.map, stackMap.
+  destruct σ as [χ ψ];
+    destruct ψ as [|ϕ ψ];
+    simpl.
+  destruct H as [ϕ Ha];
+    destruct Ha as [ψ Ha];
+    crush.
+  unfold update, t_update;
+    rewrite eqb_refl;
+    auto.
+Qed.
+
+Lemma reduction_preserves_addr_classes :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             forall (α : addr) o1,
+               common.map σ1 α = Some o1 ->
+               exists o2, common.map σ2 α = Some o2 /\
+                     cname o2 = cname o1.
+Proof.
+  intros M σ1 σ2 Hred;
+    destruct Hred;
+    intros;
+    subst;
+    eauto;
+    unfold common.map, configMapHeap in *;
+    simpl in *.
+
+  destruct (eq_dec α0 α) as [|Hneq];
+    [subst|].
+  exists {| cname := cname o; flds := update f (v_addr α') (flds o); meths := meths o |};
+    simpl;
+    unfold update, t_update;
+    rewrite eqb_refl;
+    split;
+    simpl;
+    crush.
+
+  exists o1;
+    unfold update, t_update;
+    rewrite neq_eqb;
+    auto.
+
+  destruct (eq_dec α0 α) as [|Hneq];
+    [subst; crush|].
+
+  exists o1;
+    unfold update, t_update;
+    rewrite neq_eqb;
+    auto.
+  
+Qed.
+
+Hint Resolve reduction_preserves_addr_classes.
+Hint Rewrite reduction_preserves_addr_classes.
+
+Lemma reductions_preserves_addr_classes :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                 forall (α : addr) o1,
+                   common.map σ1 α = Some o1 ->
+                   exists o2, common.map σ2 α = Some o2 /\
+                   cname o2 = cname o1.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto.
+
+  destruct IHHred with (α:=α)(o1:=o1) as [o Hclass];
+    eauto; auto;
+      andDestruct.
+
+  edestruct reduction_preserves_addr_classes as [o' Hclass1];
+    eauto.
+
+  andDestruct.
+
+  eexists; split; eauto; crush.
+Qed.
+
+Hint Resolve reductions_preserves_addr_classes.
+Hint Rewrite reductions_preserves_addr_classes.
+
+Lemma pair_reduction_preserves_addr_classes :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 forall (α : addr) o1,
+                   common.map σ1 α = Some o1 ->
+                   exists o2, common.map σ2 α = Some o2 /\
+                         cname o2 = cname o1.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto.
+Qed.
+
+Hint Resolve pair_reduction_preserves_addr_classes.
+Hint Rewrite pair_reduction_preserves_addr_classes.
+
+Lemma pair_reductions_preserves_addr_classes :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall (α : addr) o1,
+                   common.map σ1 α = Some o1 ->
+                   exists o2, common.map σ2 α = Some o2 /\
+                         cname o2 = cname o1.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto.
+
+  destruct (pair_reduction_preserves_addr_classes M1 M2 σ1 σ)
+    with
+      (α:=α)(o1:=o1)
+    as [o Hclass1];
+    auto;
+    andDestruct.
+
+  edestruct IHHred as [o' Hclass2];
+    eauto;
+    andDestruct.
+
+  eexists; split; eauto; crush.
+  
+Qed.
+
+Hint Resolve pair_reductions_preserves_addr_classes.
+Hint Rewrite pair_reductions_preserves_addr_classes.
+
+Lemma reductions_implies_method_call :
+  forall M1 M2 σ1 σ2,
+    M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+    σ_wf σ1 ->
+    exists χ ϕ ψ,
+      σ1 = (χ, ϕ::ψ) /\
+      ((exists x y m ps, contn ϕ = c_stmt (s_meth x y m ps) \/
+                    exists s, contn ϕ = c_stmt (s_stmts (s_meth x y m ps) s)) \/
+       (exists x, contn ϕ = c_stmt (s_rtrn x) \/
+                    exists s, contn ϕ = c_stmt (s_stmts (s_rtrn x) s))).
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    auto.
+  inversion H0;
+    subst.
+
+  (*meth call*)
+  exists χ, ϕ, ψ';
+    split;
+    [|left;
+      exists x, y, m, ps; eauto].
+  peek_pop_simpl;
+    simpl in H5;
+    inversion H5;
+    subst;
+    auto.
+
+  (* var asgn *)
+  inversion H8;
+    subst.
+  remember (cname o0) as C.
+  destruct H2 with (C:=C) as [CDef].
+  apply cls_of with (α:=α0)(χ:=χ)(o:=o0);
+    auto.
+  peek_pop_simpl.
+  apply int_x with (ψ:=update_ϕ_map ϕ x v :: ψ')
+                   (ϕ:=update_ϕ_map ϕ x v);
+    auto.
+  unfold update_ϕ_map, update, t_update; simpl.
+  destruct x as [n];
+    destruct n as [|n'];
+    [crush|].
+  inversion H4;
+    subst;
+    auto.
+  simpl in *;
+    inversion H14;
+    subst;
+    auto.
+  rewrite H1 in H12;
+    auto;
+    crush.
+
+  (* f asgn *)
+  inversion H7;
+    subst;
+    simpl in *.
+  remember (cname o0) as C.
+  destruct H2 with (C:=C) as [CDef].
+  remember ({| cname := cname o; flds := update f (v_addr α') (flds o); meths := meths o |})
+    as o'.
+  destruct (eq_dec α0 α) as [|Hneq];
+    [subst α0;
+     apply cls_of
+       with
+         (α:=α)
+         (χ:=update α o' χ)
+         (o:=o');
+     auto
+    |apply cls_of
+       with
+         (α:=α0)
+         (χ:=update α o' χ)
+         (o:=o0);
+     auto].
+  apply int_x with (ψ:={| vMap := vMap ϕ; contn := c_stmt s |} :: ψ)
+                   (ϕ:={| vMap := vMap ϕ; contn := c_stmt s |});
+    auto;
+    simpl.
+  inversion H3;
+    subst;
+    simpl in *.
+  inversion H13;
+    subst;
+    auto.
+  unfold update, t_update;
+    rewrite eqb_refl;
+    auto.
+  subst;
+    simpl;
+    crush.
+
+  apply int_x with (ψ:={| vMap := vMap ϕ; contn := c_stmt s |} :: ψ)
+                   (ϕ:={| vMap := vMap ϕ; contn := c_stmt s |});
+    auto;
+    simpl.
+  inversion H3;
+    subst;
+    simpl in *.
+  inversion H13;
+    subst;
+    auto.
+  unfold update, t_update;
+    rewrite neq_eqb;
+    auto.
+
+  rewrite H1 in H11;
+    crush.
+  
+  (* new *)
+  intros.
+  remember (update α {| cname := C; flds := compose fMap (vMap ϕ); meths := c_meths CDef |} χ,
+            {| vMap := update x (v_addr α) (vMap ϕ); contn := c_stmt s |} :: ψ') as σ'.
+  assert (Hthis : has_self_σ σ');
+    [eapply reduction_preserves_config_has_self;
+     inversion H4;
+     subst;
+     eauto|].
+  subst;
+    inversion Hthis;
+    subst.
+  remember {| vMap := update x (v_addr α) (vMap ϕ); contn := c_stmt s |} as σ'.
+  assert (Hin : In σ' (σ'::ψ'));
+    [apply in_eq|apply H14 in Hin].
+  inversion Hin;
+    subst;
+    simpl in *.
+  destruct H13 as [α' Ha];
+    destruct Ha as [o'];
+    andDestruct.
+  unfold update, t_update in Ha;
+    rewrite neq_eqb in Ha;
+    auto.
+  peek_pop_simpl.
+  destruct (eq_dec α' α) as [|Hneq];
+    [subst
+    |].
+  inversion H4;
+    subst.
+  inversion H13;
+    subst.
+  assert (Hin' : In ϕ (ϕ::ψ'0));
+    [apply in_eq|apply H19 in Hin'].
+  inversion Hin';
+    subst.
+  destruct H18 as [α0 Hx];
+    destruct Hx as [o0];
+    andDestruct.
+  rewrite Ha0 in Ha;
+    inversion Ha;
+    subst.
+  crush.
+
+  unfold update, t_update in Hb;
+    rewrite neq_eqb in Hb;
+    auto.
+  remember {| cname := C; flds := compose fMap (vMap ϕ); meths := c_meths CDef |} as oα.
+  destruct o' as [C' fs ms].
+  destruct (H2 C') as [CDef'].
+  remember {| cname := C'; flds := fs; meths := ms |} as o'.
+  apply cls_of with (α:=α')(χ:=update α oα χ)(o:=o');
+    auto.
+  remember {| vMap := update x (v_addr α) (vMap ϕ); contn := c_stmt s |} as ϕ'.
+  apply int_x with (ψ:=ϕ'::ψ')(ϕ:=ϕ');
+    auto.
+  subst; simpl;
+    unfold update, t_update;
+    rewrite neq_eqb;
+    auto.
+  subst; simpl;
+    unfold update, t_update;
+    rewrite neq_eqb;
+    auto.
+  crush.
+  rewrite H1 in H13;
+    auto;
+    [crush|].
+  
+  remember {| cname := C'; flds := fs; meths := ms |} as o'.
+  apply cls_of with (α:=α')(χ:=χ)(o:=o');
+    auto;
+    [|crush].
+  apply int_x with (ϕ:=ϕ)(ψ:=ϕ::ψ'0);
+    auto.
+
+  (* ret 1 *)
+  intros Hwf;
+    inversion Hwf;
+    subst.
+  exists χ, ϕ, (ϕ'::ψ);
+    split;
+    [auto|eauto].
+
+  (* ret 1 *)
+  intros Hwf;
+    inversion Hwf;
+    subst.
+  repeat peek_pop_simpl;
+    simpl in *.
+  exists χ, ϕ, ψ';
+    split;
+    [auto|eauto].
 Qed.

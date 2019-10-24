@@ -375,6 +375,54 @@ Proof.
     auto.
 Qed.
 
+(*Lemma will_arr :
+  forall A M1 M2 σ A',
+    M1 ⦂ M2 ◎ σ ⊨ A ->
+    M1 ⦂ M2 ◎ σ ⊨ (A ⇒ A') ->
+    M1 ⦂ M2 ◎ σ ⊨ A'.
+Proof.
+
+  
+
+Qed.*)
+         
+(*           σ ◁ σ2 ≜ σ2' ->
+           M1 ⦂ M2 ◎ σ1' ⊨ A ->
+           M1 ⦂ M2 ◎ σ2' ⊭ A ->
+           exists σi σj,
+           forall σi' σj', σ ◁ σi ≜ σi' ->
+                      σ ◁ σj ≜ σj' ->
+                      ((M1 ⦂ M2 ◎ σi' ⊨ A) /\
+                       (M1 ⦂ M2 ◎ σj' ⊭ A) /\
+                       (M1 ⦂ M2 ⦿ σi ⤳ σj) /\
+                       ((σi = σ1) \/
+                        (M1 ⦂ M2 ⦿ σ1 ⤳⋆ σi /\
+                         M1 ⦂ M2 ⦿ σi ⤳⋆ σ2))).*)
+
+(*Lemma will_not :
+  forall M1 M2 σ A,
+    M1 ⦂ M2 ◎ σ ⊨ a_will(A) ->
+    forall A', M1 ⊨m (A ⇒ A') ->
+          M1 ⦂ M2 ◎ σ ⊨ a_will(A').
+Proof.
+  intros
+Qed.    
+    M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+           forall σ, σ1 ◁ σ1 ≜ σ ->
+                M1 ⦂ M2 ◎ σ ⊨ A ->
+                M1 ⦂ M2 ◎ σ2' ⊭ A ->
+           exists σi σj,
+           forall σi' σj', σ ◁ σi ≜ σi' ->
+                      σ ◁ σj ≜ σj' ->
+                      ((M1 ⦂ M2 ◎ σi' ⊨ A) /\
+                       (M1 ⦂ M2 ◎ σj' ⊭ A) /\
+                       (M1 ⦂ M2 ⦿ σi ⤳ σj) /\
+                       ((σi = σ1) \/
+                        (M1 ⦂ M2 ⦿ σ1 ⤳⋆ σi /\
+                         M1 ⦂ M2 ⦿ σi ⤳⋆ σ2))).*)
+
+  
+
 (** #<h3># Expose example: #</h3># *)
 (** ---------------------------------------------------- *)
 (** #<code># >MyModule = { #</code># *)
@@ -396,7 +444,7 @@ Qed.
 
 Definition InsideID := classID 6.
 
-Definition BoundaryID := classID 7.
+Definition Boundary := classID 7.
 
 Definition InsideDef := clazz InsideID
                               nil
@@ -405,22 +453,22 @@ Definition InsideDef := clazz InsideID
 
 Definition inside := fieldID 0.
 
-Definition exposeID := methID 0.
+Definition expose := methID 0.
 
 Definition x := bind 10.
 
 Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this inside))
                                  (s_rtrn x).
 
-Definition BoundaryDef := clazz BoundaryID
+Definition BoundaryDef := clazz Boundary
                                 (inside :: nil)
                                 (update
-                                   exposeID exposeBody
+                                   expose exposeBody
                                    empty)
                                 empty.
 
 Definition MyModule := (update
-                          BoundaryID BoundaryDef
+                          Boundary BoundaryDef
                           (update
                              InsideID InsideDef
                              empty)).
@@ -429,21 +477,244 @@ Definition MyModule := (update
 (** de Bruijn indeces, thus the name of the relevant variable changes depending *)
 (** the quantifier depth of the assertion *)
 
+Ltac sat_destruct :=
+  match goal with
+  | [Hand : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply and_iff in Hand;
+                                       destruct Hand
+  end.
+
+Ltac frsh_auto :=
+  match goal with
+  | [Hfrsh : fresh_x _ _ (_ ∧ _) |- _] => apply fresh_and_elim in Hfrsh; andDestruct
+  | [Hfrsh : fresh_x _ _ (_ ⇒ _) |- _] => apply fresh_arr_elim in Hfrsh; andDestruct
+  | [Hfrsh : fresh_x _ _ (∀x∙ _) |- _] => apply fresh_all_elim in Hfrsh
+  | [ |- fresh_x _ _ (_ ∧ _)] => apply fresh_and_intro
+  | [ |- fresh_x _ _ (_ ⇒ _)] => apply fresh_arr_intro
+  | [ |- fresh_x _ _ (∀x∙_)] => apply fresh_all_intro
+  | [ Hfrsh : fresh_x ?x ?σ _ |- fresh_x ?x ?σ _] => auto; try (eapply fresh_notin; eauto)
+  end.
+
+Theorem expose_example :
+  MyModule ⊨m (∀x∙∀x∙
+                (
+                  ((a_class (e_hole 1) Boundary)
+                   ∧
+                   (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+                  ∧
+                  ((∀x∙((a_hole 0) access (a_hole 1) ⇒ (a_eq (e_hole 0) (e_hole 2))))
+                   ∧
+                   (a_will(∃x∙(((a_hole 0) access (a_hole 1)) ∧ ¬(a_class (e_hole 0) Boundary)))))
+                    ⇒
+                    ((∃x∙((a_hole 0) call (a_hole 1) ⋄ expose ⟨ empty ⟩)) ∨
+                     a_will(∃x∙((a_hole 0) call (a_hole 1) ⋄ expose ⟨ empty ⟩)))
+                )
+              ).
+Proof.
+  unfold mdl_sat; intros.
+  apply sat_all_x.
+    intros b αb ob; intros; simpl.
+  apply sat_all_x;
+    intros i αi oi; intros; simpl.
+
+  destruct (sat_excluded_middle
+              MyModule
+              M'
+              (update_σ_map (update_σ_map σ z0 αb) z1 αi)
+              ((a_class (e_var z0) Boundary ∧ a_eq (e_acc_f (e_var z0) inside) (e_var z1))
+               ∧ ((∀x∙ ((a_hole 0 access a_bind z1) ⇒ a_eq (e_hole 0) (e_var z0)))
+                  ∧ a_will (∃x∙ ((a_hole 0 access a_bind z1) ∧ (¬ a_class (e_hole 0) Boundary))))))
+    as [Hsat|];
+    [apply sat_arr1; simpl
+    |apply sat_arr2; auto].
+
+  repeat sat_destruct.
+
+  assert (Hneg : MyModule ⦂ M' ◎ update_σ_map (update_σ_map σ z0 αb) z1 αi
+                          ⊨ (a_will (¬ ∀x∙ ((a_hole 0 access a_bind z1) ⇒ a_eq (e_hole 0) (e_var z0))))).
+  inversion H5;
+    subst.
+  apply sat_will with (ϕ:=ϕ)(ψ:=ψ)(χ:=χ)(σ':=σ')(σ'':=σ'');
+    auto.
+  inversion H14;
+    subst.
+  apply sat_not.
+  apply nsat_all_x with (y:=y)(z:=z2)(v:=v);
+    auto; [|simpl in *].
+
+  repeat frsh_auto; split; auto.
+  frsh_auto.
+    
+  apply ni_aeq;
+    auto.
+  apply ni_var;
+    intro Hcontra;
+    subst.
+  apply adaptation_preserves_mapping
+    with
+      (z:=z2)(v:=αb)
+    in H10.
+  inversion Ha;
+    subst.
+  unfold common.map, configMapStack in H10.
+    rewrite H10 in H1;
+    inversion H1.
+  unfold common.map, configMapStack, common.map, stackMap; simpl.
+  destruct H0 as [ϕ0 Htmp];
+    destruct Htmp as [ψ0];
+    subst.
+  rewrite H0; simpl.
+  unfold update, t_update;
+    rewrite eqb_refl;
+    auto.
+  destruct (eq_dec z2 z1) as [|Hneq];
+    [subst
+    |rewrite neq_eqb; auto].
+  inversion Ha; subst.
+  inversion H2; subst. simpl in *; crush.
+
+  sat_destruct.
+  apply nsat_arr; auto.
+  apply nsat_eq1 with (v1:=v)(v2:=αb);
+    [apply v_var
+    |apply v_var
+    |].
+  inversion H10; subst; simpl.
+  unfold common.map, configMapStack, common.map, stackMap; simpl.
+  unfold update, t_update;
+    rewrite eqb_refl; auto.
+
+  eapply update_fresh_preserves_map;
+    eauto.
+  eapply adaptation_preserves_mapping;
+    eauto.
+  eapply update_fresh_preserves_map;
+    eauto.
+  apply map_update_σ;
+    auto.
+  intro Hcontra;
+    subst.
+  inversion H13;
+    subst.
+  apply nsat_implies_not_sat in H19.
+  contradiction H19.
+  
+  inversion H3;
+    subst.
+  inversion H17;
+    subst.
+  erewrite update_fresh_preserves_map with (v:=αb) in H20;
+    eauto; [inversion H20; subst|apply map_update_σ; auto].
+
+  destruct (pair_reductions_preserves_addr_classes MyModule M' (χ, ϕ::nil) σ')
+    with (α:=α)(o1:=o) as [o' Hclass];
+    auto;
+    [|andDestruct].
+
+  unfold common.map, configMapStack, configMapHeap in *;
+    simpl in *.
+  unfold update_σ_map in H8;
+    simpl in H8.
+  inversion H8;
+    subst;
+    auto.
+
+  apply sat_class with (α:=α)(o:=o');
+    auto;
+    [apply v_var, map_update_σ;
+     inversion H10;
+     subst;
+     eexists;
+     eexists;
+     simpl;
+     eauto
+    |inversion H10; subst
+    |crush].
+  unfold common.map, configMapHeap in *; simpl in *;
+    auto.
+  
+  inversion Hneg; subst.
+  inversion H9;
+    subst;
+    [apply sat_or1
+    |apply sat_or2].
+
+  (* now *)
+  inversion H7;
+    subst.
+  
+  (* will *)
+  
+  
+  
+
+  destruct (will_next MyModule M' (χ, ϕ::nil) σ') as [σi Hwill].
+
+  
+  
+  apply sat_class with (α:=α2)(o:=).
+
+
+  
+  apply sat_class with (α:=α)(o:=o); eauto.
+  apply v_var.
+  apply map_update_σ; auto.
+  inversion H10; subst; simpl; repeat (eexists; eauto).
+  
+  
+  
+  
+
+    
+
+  apply and_iff in Hsat;
+    destruct Hsat as [Hsat1 Hsat2].
+  
+
+  inversion Hsat; subst.
+  inversion H10; subst.
+
+  destruct (sat_excluded_middle
+              MyModule
+              M'
+              (update_σ_map (update_σ_map σ z0 b) z1 i)
+              (a_next(∃x∙ ((a_hole 0 access a_bind z1) ∧ (¬ a_class (e_hole 0) Boundary))))).
+
+  inversion H4;
+    subst.
+  inversion H16;
+    subst.
+  inversion H19;
+    subst.
+  
+  
+
+  apply sat_will.
+
+  assert (will_)
+
+  destruct (will_next MyModule M').
+
+Qed.
+
 Theorem expose_example :
   MyModule ⊨m (∀x∙((a_class (e_hole 0) BoundaryID)
-                   
-                   ⇒ (∀x∙((a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
-                            
-                            ⇒ ((∀x∙(((a_hole 0) access (a_hole 1)) ⇒ (a_class (e_hole 0) BoundaryID)))
-                                 
-                                 ⇒ ((a_will(∃x∙(((a_hole 0) access (a_hole 1)) ∧ (¬ (a_class (e_hole 0) BoundaryID)))))
-                                      
-                                      ⇒ (a_will(∃x∙ (a_call (a_hole 0) (a_hole 2) exposeID empty))))
-                                 
-                              )
-                         )
-                     )
-                )
+                     
+                   ∧
+
+                   (∀x∙((a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
+                          
+                        ∧
+
+                        ((∀x∙(((a_hole 0) access (a_hole 1)) ⇒ (a_eq (e_hole 0) (e_hole 2))))
+                           
+                           ⇒ ((a_will(∃x∙(((a_hole 0) access (a_hole 1)) ∧ (¬ (a_class (e_hole 0) BoundaryID)))))
+                                
+                                ⇒ (a_will(∃x∙ (a_call (a_hole 0) (a_hole 2) exposeID empty))))
+                           
+                        )
+                       )
+                   )
+                  )
               ).
 Proof.
   unfold mdl_sat; intros.
@@ -479,7 +750,7 @@ Proof.
 
   
   
-Admitted.
+Qed.
 
 (*
 
