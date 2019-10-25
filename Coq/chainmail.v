@@ -746,7 +746,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                    exists v, ⌊x⌋ σ ≜ v) ->
                              M1 ⦂ M2 ◎ σ ⊨ ([(s_bind Σ) /s 0] A) ->
                              M1 ⦂ M2 ◎ σ ⊨ (∃S∙ A)
-
+                                
 (** Permission: *)
 | sat_access1 : forall M1 M2 σ x y α, ⌊x⌋ σ ≜ (v_addr α) ->
                                  ⌊y⌋ σ ≜ (v_addr α) ->
