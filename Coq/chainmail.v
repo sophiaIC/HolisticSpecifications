@@ -523,6 +523,69 @@ Inductive fresh_x : var -> config -> asrt -> Prop :=
                   fresh_x x σ A.
 Hint Constructors fresh_x.
 
+Inductive notin_AΣ  : asrt -> varSet -> Prop :=
+
+(** Simple *)
+| niΣ_exp : forall e Σ, notin_AΣ (a_exp e) Σ
+| niΣ_aeq : forall e1 e2 Σ, notin_AΣ (a_eq e1 e2) Σ
+| niΣ_class : forall e C Σ, notin_AΣ (a_class e C) Σ
+| niΣ_set   : forall e Σ Σ', notin_AΣ (a_set e Σ) Σ'
+
+(** Connectives *)
+| niΣ_arr   : forall A1 A2 Σ, notin_AΣ A1 Σ ->
+                         notin_AΣ A2 Σ ->
+                         notin_AΣ (a_arr A1 A2) Σ
+| niΣ_and   : forall A1 A2 Σ, notin_AΣ A1 Σ ->
+                         notin_AΣ A2 Σ ->
+                         notin_AΣ (a_and A1 A2) Σ
+| niΣ_or    : forall A1 A2 Σ, notin_AΣ A1 Σ ->
+                         notin_AΣ A2 Σ ->
+                         notin_AΣ (a_or A1 A2) Σ
+| niΣ_neg   : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_neg A) Σ
+
+(** Quantifiers *)
+| niΣ_all_x : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_all_x A) Σ
+| niΣ_all_Σ : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_all_Σ A) Σ
+| niΣ_ex_x  : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_ex_x A) Σ
+| niΣ_ex_Σ  : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_ex_Σ A) Σ
+
+(** Permission: *)
+| niΣ_acc   : forall x y Σ, notin_AΣ (a_acc x y) Σ
+
+(** Control: *)
+| niΣ_call  : forall y z avMap m Σ, notin_AΣ (a_call y z m avMap) Σ
+
+(** Time: *)
+| niΣ_next  : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_next A) Σ
+| niΣ_will  : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_will A) Σ
+| niΣ_prev  : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_prev A) Σ
+| niΣ_was   : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_was A) Σ
+
+(** Space: *)
+| niΣ_in    : forall A Σ, notin_AΣ A Σ ->
+                     notin_AΣ (a_in A Σ) Σ
+
+(** Viewpoint: *)
+| niΣ_extrn : forall x Σ,  notin_AΣ (a_extrn x) Σ
+| niΣ_intrn : forall x Σ,  notin_AΣ (a_intrn x) Σ.
+
+Hint Constructors notin_AΣ.
+
+Inductive fresh_Σ : varSet -> asrt -> Prop :=
+| frshΣ : forall x A, notin_AΣ A x ->
+                fresh_Σ x A.
+
+Hint Constructors fresh_Σ.
+
 Fixpoint rename_s (s : stmt)(xs : list (var*var)) : stmt :=
   match xs with
   | nil => s
@@ -674,6 +737,16 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                  M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0] A) ->
                                  M1 ⦂ M2 ◎ σ ⊨ (∃x∙ A)
 
+| sat_all_Σ : forall M1 M2 σ A, (forall Σ, (forall x, In x Σ ->
+                                       exists v, ⌊x⌋ σ ≜ v) ->
+                                 (M1 ⦂ M2 ◎ σ ⊨ ([(s_bind Σ) /s 0] A))) ->
+                           M1 ⦂ M2 ◎ σ ⊨ (∀S∙ A)
+
+| sat_ex_Σ  : forall M1 M2 σ A Σ, (forall x, In x Σ ->
+                                   exists v, ⌊x⌋ σ ≜ v) ->
+                             M1 ⦂ M2 ◎ σ ⊨ ([(s_bind Σ) /s 0] A) ->
+                             M1 ⦂ M2 ◎ σ ⊨ (∃S∙ A)
+
 (** Permission: *)
 | sat_access1 : forall M1 M2 σ x y α, ⌊x⌋ σ ≜ (v_addr α) ->
                                  ⌊y⌋ σ ≜ (v_addr α) ->
@@ -821,6 +894,16 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                      fresh_x z σ A ->
                                      M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊭ ([z /s 0]A)) ->
                            M1 ⦂ M2 ◎ σ ⊭ (∃x∙ A)
+
+| nsat_ex_Σ  : forall M1 M2 σ A, (forall Σ, (forall x, In x Σ ->
+                                        exists v, ⌊x⌋ σ ≜ v) ->
+                                  (M1 ⦂ M2 ◎ σ ⊭ ([(s_bind Σ) /s 0] A))) ->
+                            M1 ⦂ M2 ◎ σ ⊭ (∃S∙ A)
+
+| nsat_all_Σ : forall M1 M2 σ A Σ, (forall x, In x Σ ->
+                                    exists v, ⌊x⌋ σ ≜ v) ->
+                              M1 ⦂ M2 ◎ σ ⊭ ([(s_bind Σ) /s 0] A) ->
+                              M1 ⦂ M2 ◎ σ ⊭ (∀S∙ A)
 
 (** Permission: *)
 | nsat_access : forall M1 M2 σ x y, (forall α1 α2, ⌊x⌋ σ ≜ (v_addr α1) ->

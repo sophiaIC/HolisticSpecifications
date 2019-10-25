@@ -652,13 +652,59 @@ Proof.
     andDestruct.
   inversion Ha0;
     subst.
+  
   destruct Hb as [Hcall|Hret];
     [destruct Hcall as [x Htmp];
      destruct Htmp as [y Htmp];
      destruct Htmp as [m Htmp];
-     destruct Htmp as [ps Htmp]
-    |destruct Hret as [x Htmp]].
-  admit.
+     destruct Htmp as [ps Htmp];
+     andDestruct
+    |destruct Hret as [x Htmp];
+     andDestruct].
+  destruct Ha as [C Htmp];
+    destruct Htmp as [CDef];
+    andDestruct.
+  destruct Hb1 as [zs Htmp];
+    destruct Htmp as [s Hb1].
+
+  unfold MyModule, update, t_update in Ha1.
+  destruct (eq_dec C Boundary) as [|Hneq1];
+    [subst;
+     rewrite eqb_refl in Ha1;
+     inversion Ha1;
+     subst;
+     simpl in Hb1
+    |rewrite neq_eqb in Ha1].
+  
+  unfold update, t_update in Hb1.
+  destruct (eq_dec m expose) as [|Hneqm];
+    [subst;
+     rewrite eqb_refl in Hb1
+    |].
+
+  remember (update_σ_map (update_σ_map σ z0 αb) z1 αi) as σ'''.
+  assert (σ_wf σ''');
+    [subst|].
+  
+  edestruct (fresh_x_exists_for_finite_config σ''')  as [x'];
+    [|].
+
+  apply sat_ex_x with (z:=).
+  
+  
+  destruct (eq_dec C InsideID) as [|Hneq2];
+    [subst;
+     rewrite eqb_refl in Ha1;
+     inversion Ha1;
+     subst;
+     simpl in Hb1;
+     inversion Hb1
+    |rewrite neq_eqb in Ha1;
+     inversion Ha1;
+     auto].
+  
+  
+  apply sat_ex_x with (z:=).
   
   
   
