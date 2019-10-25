@@ -966,7 +966,7 @@ Proof.
     auto.
 Qed.
 
-Lemma linking_preserves_reductions :
+(*Lemma linking_preserves_reductions :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
                  forall M3 M', M1 ∘ M3 ≜ M' ->
                           forall M4 M'', M2 ∘ M4 ≜ M'' ->
@@ -1096,4 +1096,4 @@ Proof.
     subst.
   
   
-Qed.
+Abort.*)
