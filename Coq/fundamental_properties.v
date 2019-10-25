@@ -2539,7 +2539,8 @@ Lemma reductions_implies_method_call :
     σ_wf σ1 ->
     exists χ ϕ ψ,
       σ1 = (χ, ϕ::ψ) /\
-      ((exists x y m ps, (exists C CDef, classOf y σ1 C /\ M1 C = Some CDef) /\
+      ((exists x y m ps, (exists C CDef, classOf y σ1 C /\ M1 C = Some CDef /\
+                    (exists zs s, CDef.(c_meths) m = Some (zs, s))) /\
                     (contn ϕ = c_stmt (s_meth x y m ps) \/
                      exists s, contn ϕ = c_stmt (s_stmts (s_meth x y m ps) s))) \/
        (exists x, (exists C, classOf this σ1 C /\ M1 C = None) /\
@@ -2569,6 +2570,7 @@ Proof.
     auto.
   apply (cls_of) with (α:=α)(χ:=χ)(o:=o);
     auto.
+  split; [|eauto].
   inversion H;
     subst.
   unfold extend in H10.
@@ -2587,7 +2589,7 @@ Proof.
   unfold update, t_update;
     rewrite eqb_refl;
     auto.
-  
+    
   (* var asgn *)
   inversion H8;
     subst.
@@ -2806,7 +2808,8 @@ Lemma pair_reduction_implies_method_call :
     σ_wf σ1 ->
     exists χ ϕ ψ,
       σ1 = (χ, ϕ::ψ) /\
-      ((exists x y m ps, (exists C CDef, classOf y σ1 C /\ M1 C = Some CDef) /\
+      ((exists x y m ps, (exists C CDef, classOf y σ1 C /\ M1 C = Some CDef /\
+                    (exists zs s, CDef.(c_meths) m = Some (zs, s))) /\
                     (contn ϕ = c_stmt (s_meth x y m ps) \/
                      exists s, contn ϕ = c_stmt (s_stmts (s_meth x y m ps) s))) \/
        (exists x, (exists C, classOf this σ1 C /\ M1 C = None) /\
@@ -2821,3 +2824,161 @@ Qed.
 
 Hint Resolve pair_reduction_implies_method_call.
 
+Parameter fresh_exists_for_expression :
+  forall e, exists x, notin_exp e x.
+
+Parameter fresh_exists_for_assertion :
+  forall A, exists x, notin_Ax A x.
+
+
+Parameter fresh_x_exists_for_finite_config :
+  forall σ, finite_σ σ ->
+       forall A, exists x, fresh_x x σ A.
+
+Parameter fresh_address_rename_equality_heap :
+  forall α1 α2 (χ : heap),  χ α1 = None ->
+                       χ α2 = None ->
+                       forall o, update α1 o χ = update α2 o χ.
+
+Parameter fresh_address_rename_equality_state :
+  forall α1 α2 (χ : heap),  χ α1 = None ->
+                       χ α2 = None ->
+                       forall m (x:var), update x (v_addr α1) m = update x (v_addr α2) m.
+              
+                
+               
+
+Lemma reduction_unique :
+  forall M σ σ1, M ∙ σ ⤳ σ1 ->
+            forall σ2, M ∙ σ ⤳ σ2 ->
+                  σ2 = σ1.
+Proof.
+  intros M σ σ1 Hred;
+    induction Hred;
+    intros.
+
+  repeat peek_pop_simpl.
+  simpl in *.
+  inversion H1;
+    subst.
+  inversion H11;
+    subst;
+    crush.
+  rewrite H12 in H2;
+    inversion H2;
+    subst.
+  interpretation_rewrite.
+  crush.
+
+  repeat peek_pop_simpl.
+  inversion H9;
+    subst.
+  rewrite H2 in H13;
+    crush.
+
+  repeat peek_pop_simpl.
+  simpl in *.
+  inversion H9;
+    subst;
+    crush.
+  rewrite H11 in H2;
+    inversion H2;
+    subst.
+  interpretation_rewrite.
+  inversion H12;
+    subst.
+  crush.
+
+  repeat peek_pop_simpl.
+  inversion H8;
+    subst.
+  rewrite H2 in H12;
+    crush.
+
+  repeat peek_pop_simpl.
+  simpl in *.
+  inversion H11;
+    subst;
+    crush.
+  inversion H12;
+    subst.
+  crush.
+  inversion H13;
+    crush.
+  inversion H12;
+    subst.
+  rewrite H13 in H0;
+    inversion H0;
+    subst.
+  interpretation_rewrite.
+  crush.
+  inversion H13;
+    subst.
+  crush.
+  inversion H12;
+    subst.
+  crush.
+
+  repeat peek_pop_simpl.
+  crush.
+  inversion H12;
+    subst;
+    crush.
+  repeat peek_pop_simpl;
+    crush.
+  repeat peek_pop_simpl;
+    crush.
+  rewrite H11 in H3;
+    inversion H3;
+    subst.
+  rewrite H14 in H5;
+    inversion H5;
+    subst.
+  (* equality down to rewrites *)
+  rewrite fresh_address_rename_equality_state with (α2:=α)(χ:=χ0); auto.
+  rewrite fresh_address_rename_equality_heap with (α2:=α)(χ:=χ0); auto.
+  repeat peek_pop_simpl;
+    crush.
+
+  inversion H5;
+    subst;
+    repeat peek_pop_simpl;
+    crush.
+  inversion H6;
+    subst.
+  rewrite H0 in H7;
+    inversion H7;
+    subst.
+  interpretation_rewrite.
+  crush.
+
+  inversion H9;
+    subst;
+    repeat peek_pop_simpl;
+    crush.
+  inversion H10;
+    subst.
+  rewrite H4 in H15;
+    inversion H15;
+    subst.
+  interpretation_rewrite.
+  crush.
+Qed.
+
+Hint Resolve reduction_unique.
+
+Inductive reductions' : 
+
+Lemma pair_reduction_unique :
+  forall M1 M2 σ σ1, M1 ⦂ M2 ⦿ σ ⤳… σ' ->
+                forall σ1, M1 ⦂ M2 ⦿ σ
+                forall σ2, M1 ⦂ M2 ⦿ σ ⤳ σ2 ->
+                      σ2 = σ1.
+Proof.
+  intros M1 M2 σ σ1 Hred;
+    induction Hred;
+    intros;
+    eauto.
+  inversion H3;
+    subst.
+Qed.
