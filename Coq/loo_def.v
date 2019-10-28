@@ -332,14 +332,14 @@ Reserved Notation "'⌊' Σ '⌋' σ '≜′' As" (at level 40).
 
 (** #<h3># Variable and Set Interpretation (Definition 4, OOPSLA2019):#</h3># *)
 
-Inductive interpret_x : var -> config -> addr -> Prop :=
-| int_x : forall x σ ψ ϕ α, snd σ = ψ ->
+Inductive interpret_x : var -> config -> value -> Prop :=
+| int_x : forall x σ ψ ϕ v, snd σ = ψ ->
                        peek ψ = Some ϕ ->
-                       (vMap ϕ) x = Some (v_addr α) -> 
-                       ⌊ x ⌋ σ ≜ α
-where "'⌊' x '⌋' σ '≜' α" := (interpret_x x σ α).
+                       (vMap ϕ) x = Some v -> 
+                       ⌊ x ⌋ σ ≜ v
+where "'⌊' x '⌋' σ '≜' v" := (interpret_x x σ v).
   
-Inductive interpret_Σ : list var -> config -> list addr -> Prop :=
+Inductive interpret_Σ : list var -> config -> list value -> Prop :=
 | int_nil  : forall σ, ⌊ nil ⌋ σ ≜′ nil
 | int_cons : forall x Σ σ α αs, ⌊ x ⌋ σ ≜ α ->
                            ⌊ Σ ⌋ σ ≜′ αs ->
@@ -353,8 +353,8 @@ Inductive restrict : config -> list var -> config -> Prop :=
                           (forall α o, χ' α = Some o ->
                                   χ α = Some o) ->
                           (forall α o, χ' α = Some o ->
-                                  In α As) ->
-                          (forall α o, In α As ->
+                                  In (v_addr α) As) ->
+                          (forall α o, In (v_addr α) As ->
                                   χ' α = Some o) ->
                           σ ↓ Σ ≜ (χ', snd σ)
 where "σ1 '↓' Σ '≜' σ2" := (restrict σ1 Σ σ2).
@@ -385,7 +385,7 @@ Definition update_σ_contn (σ : config)(c : continuation) :=
   (fst σ, update_ψ_contn (snd σ) c).
 
 Inductive classOf : var -> config -> cls -> Prop :=
-|cls_of : forall x σ α χ o C, ⌊ x ⌋ σ ≜ α ->
+|cls_of : forall x σ α χ o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
                          fst σ = χ ->
                          χ α = Some o ->
                          cname o = C ->
@@ -598,7 +598,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     pop ψ = Some ψ' ->
     ϕ.(contn) = c_stmt (s_stmts (s_meth x y m ps) s') ->
     finite ps ->
-    ⌊ y ⌋ σ ≜ α ->
+    ⌊ y ⌋ σ ≜ (v_addr α) ->
     χ α = Some o ->
     (M (o.(cname))) = Some C ->
     C.(c_meths) m = Some (zs, s) ->
@@ -624,7 +624,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     σ = (χ, ψ) ->
     peek ψ = Some ϕ ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_var x) (r_fld y f)) s)) ->
-    ⌊ y ⌋ σ ≜ α ->
+    ⌊ y ⌋ σ ≜ (v_addr α) ->
     classOf this σ C ->
     classOf y σ C ->
     χ α = Some o ->
@@ -641,16 +641,16 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** σ' = (χ, ϕ' : ψ') *)
     (** ---------------------------------------- (Field_Assgn_OS) *)
     (** M, σ ⤳ σ' *)
-| r_fAssgn : forall M σ ϕ ϕ' x y f s ψ χ α α' o σ' χ' o' C,
+| r_fAssgn : forall M σ ϕ ϕ' x y f s ψ χ α v o σ' χ' o' C,
     σ = (χ, ϕ :: ψ) ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_fld y f) (r_var x)) s)) ->
-    ⌊ y ⌋ σ ≜ α ->
-    ⌊ x ⌋ σ ≜ α' ->
+    ⌊ y ⌋ σ ≜ (v_addr α) ->
+    ⌊ x ⌋ σ ≜ v ->
     classOf this σ C ->
     classOf y σ C ->
     χ α = Some o ->
     (exists v, (flds o) f = Some v) ->
-    o' = new (cname o) (update f (v_addr α') (flds o)) (meths o) ->
+    o' = new (cname o) (update f v (flds o)) (meths o) ->
     χ' = update α o' χ ->
     ϕ' = frm (vMap ϕ) (c_stmt s) ->
     σ' = (χ', ϕ' :: ψ) ->
@@ -697,7 +697,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'.(contn) = c_hole y s ->
     y <> this ->
     ⌊x⌋ σ ≜ α ->
-    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
+    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
     M ∙ σ ⤳ (χ, ϕ'' :: ψ)
 
     (** σ = (χ, ϕ : ϕ' : ψ'') *)
@@ -717,7 +717,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'.(contn) = c_hole y s ->
     y <> this ->
     ⌊x⌋ σ ≜ α ->
-    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y (v_addr α)) (c_stmt s)->
+    ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
     M ∙ σ ⤳ (χ, ϕ'' :: ψ'')
 
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').

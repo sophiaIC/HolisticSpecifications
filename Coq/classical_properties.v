@@ -168,8 +168,7 @@ Proof.
   inversion Hcontra;
     subst.
   inversion H1; subst.
-  admit.
-
+  
   (* will *)
   
   
@@ -255,41 +254,6 @@ Proof.
     inversion Ha;
     eauto.
 Qed.
-
-(*Lemma universal_arr_true :
-  (forall M1 M2 σ A,
-      arising M1 M2 σ ->
-      M_wf M1 ->
-      M1 ⦂ M2 ◎ σ ⊨ A ->
-      forall A', M1 ⦂ M2 ◎ σ ⊨ A ->
-            M1 ⊨m (A ⇒ A') ->
-            M1 ⦂ M2 ◎ σ ⊨ A').
-Proof.
-  intros.
-  unfold mdl_sat in H3.
-  apply H3 in H;
-    auto.
-  eapply arr_true; eauto.
-  inversion H;
-    subst.
-  SearchAbout config_wf.
-  eapply initial_heap_wf in H4;
-    eauto.
-  apply 
-  inversion H3;
-    subst.
-  
-  
-
-  apply sat_arr1.
-  
-  intros M1 M2 σ A Hsat;
-    induction Hsat;
-    intros;
-    eauto.
-
-  
-Qed.*)
 
 Lemma negate_elim_sat :
   (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨ (¬ ¬ A) ->
