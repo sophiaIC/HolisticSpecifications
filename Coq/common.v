@@ -4,7 +4,7 @@ Require Import List.
 Require Import com.chainmail.CpdtTactics.
 
 Inductive var : Type :=
-| bind : nat -> var.
+| bnd : nat -> var.
 
 Class Eq (A : Type) :=
   {eqb : A -> A -> bool;
@@ -17,6 +17,8 @@ Class Eq (A : Type) :=
    neq_eqb : forall a1 a2, a1 <> a2 ->
                       eqb a1 a2 = false;
    eq_dec : forall (a1 a2 : A), {a1 = a2} + {a1 <> a2}}.
+
+Hint Resolve eqb_refl eqb_sym eqb_eqp eqb_neq neq_eqb eq_dec.
 
 Instance nat_Eq : Eq nat :=
   {eqb n m := n =? m;
@@ -32,7 +34,7 @@ Defined.
 Instance var_Eq : Eq var :=
   {eqb x y :=
      match x, y with
-     | bind n, bind m => n =? m
+     | bnd n, bnd m => n =? m
      end}.
 Proof.
   intros; destruct a; apply Nat.eqb_refl.
@@ -63,27 +65,6 @@ Proof.
     crush.
 Defined.
 
-(*Section partial_maps.
-
-  Set Implicit Arguments.
-
-  Variables A B : Set.
-           
-  Inductive partial_map : Set :=
-  | empty : partial_map
-  | update : A -> B -> partial_map -> partial_map.
-
-  Fixpoint pmap `{Eq A} (m : partial_map)(a : A) : option B :=
-    match m with
-    | empty => None
-    | update a' b m' => if (eqb a a')
-                       then Some b
-                       else pmap m' a
-    end.
-  Unset Implicit Arguments.
-
-End partial_maps.*)
-
 Definition total_map (A B : Type) `{Eq A} := A -> B.
 
 Definition t_empty {A B : Type} `{Eq A} (b : B) : total_map A B := (fun _ => b).
@@ -91,9 +72,7 @@ Definition t_empty {A B : Type} `{Eq A} (b : B) : total_map A B := (fun _ => b).
 Definition t_update {A B : Type} `{Eq A} (map : total_map A B) (a : A)(b : B) :=
   fun x => if (eqb x a) then b else map x.
 
-(*Definition t_compose {A B C : Type} `{Eq A} (map1 map2 : total_map)*)
-
-Definition partial_map (A B : Type) `{Eq A} := total_map A (option B).
+Definition partial_map (A : Type)`{Eq A}(B : Type) := total_map A (option B).
 
 Definition empty {A B : Type} `{Eq A} : partial_map A B := t_empty None.
 
@@ -135,7 +114,7 @@ Inductive finite {A B : Type}`{Eq A} : partial_map A B -> Prop :=
 Hint Constructors finite.
 
 Class Mappable (A B C : Type) :=
-  map : A -> B -> C.
+  mapp : A -> B -> C.
 
 Class PropFoldable (A B : Type) :=
   {
@@ -170,3 +149,34 @@ Definition InΣ (x : var)(Σ : varSet) :=
   | s_hole _ => False
   | s_bind l => In x l
   end.
+
+
+
+Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
+  {
+    ret : forall {t : Type@{d}}, t -> m t;
+    bind : forall {t u : Type@{d}}, m t -> (t -> m u) -> m u
+  }.
+
+Instance optionMonad : Monad option :=
+  {
+    ret T x :=
+      Some x ;
+    bind :=
+      fun T U m f =>
+            match m with
+            | None => None
+            | Some x => f x
+            end
+
+  }.
+
+(*
+This feels monadish
+Would be nice to do top level binds
+Not actually possible because we only 
+
+Instance partial_map_Monad {A : Type}`{Eq A} : Monad (partial_map A) :=
+  {
+    ret T x := ???
+  }.*)
