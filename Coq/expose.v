@@ -101,7 +101,8 @@ Lemma expose_example :
             ((a_class (e_hole 1) Boundary)
              ∧
              (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
-            ∧(∀x∙((a_hole 0) access (a_hole 1) ⇒ (a_eq (e_hole 0) (e_hole 2)))))
+            ∧
+            (∀x∙((a_hole 0) access (a_hole 1) ⇒ (a_eq (e_hole 0) (e_hole 2)))))
           (∀x∙∀x∙
             ((a_class (e_hole 1) Boundary)
              ∧
@@ -116,6 +117,9 @@ Proof.
           a_intros;
           auto).
 
-  - 
+  - unfold mapp, configMapStack in *;
+      simpl in *.
+    unfold mapp in *.
+    apply sat_class with (α:=).
 
 Qed.

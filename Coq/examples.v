@@ -52,27 +52,27 @@ Definition vClientLoc := v_addr ClientLoc.
 
 (** #<h3># Variable Identifiers:#</h3>#  *)
 
-Definition z := bind 200.
+Definition zed := bnd 200.
 
-Definition z_ := r_var z.
+Definition zed_ := r_var zed.
 
-Definition t := bind 201.
+Definition t := bnd 201.
 
 Definition t_ := r_var t.
 
-Definition f := bind 202.
+Definition f := bnd 202.
 
 Definition f_ := r_var f.
 
-Definition s := bind 203.
+Definition s := bnd 203.
 
 Definition s_ := r_var s.
 
-Definition client := bind 204.
+Definition client := bnd 204.
 
 Definition client_ := r_var client.
 
-Definition isEvenX := bind 205.
+Definition isEvenX := bnd 205.
 
 (** #<h3># Class Definitions:#</h3># *)
 
@@ -132,14 +132,14 @@ Definition myMap : state := (update
                                   (update
                                      t vTrueLoc
                                      (update
-                                        z vZeroLoc
+                                        zed vZeroLoc
                                         (update
                                            client vClientLoc
                                            (update
                                               this vClientLoc
                                               empty)))))).
 
-Definition myϕ : frame := frm myMap (c_stmt (s_rtrn z)).
+Definition myϕ : frame := frm myMap (c_stmt (s_rtrn zed)).
 
 Definition myψ : stack := myϕ :: nil.
 
@@ -169,7 +169,7 @@ Proof.
   intros.
   apply sat_intrn with (α:=TrueLoc)(o:=TrueObj)(C:=True_);
     auto.
-  apply int_x with (ψ:=myψ)(ϕ:=myϕ);
+  apply int_x with (ψ:=nil)(ϕ:=myϕ);
     auto.
   exists TrueDef; auto.
 Qed.
@@ -181,7 +181,7 @@ Proof.
   intros.
   apply sat_extrn with (α:=StringLoc)(o:=StringObj)(C:=String_);
     auto.
-  apply int_x with (ψ:=myψ)(ϕ:=myϕ);
+  apply int_x with (ψ:=nil)(ϕ:=myϕ);
     auto.
 Qed.
 
@@ -205,11 +205,11 @@ Proof.
   intros.
   apply sat_extrn with (α:=ClientLoc)(o:=ClientObj)(C:=Client);
     auto.
-  apply int_x with (ψ:=myψ)(ϕ:=myϕ);
+  apply int_x with (ψ:=nil)(ϕ:=myϕ);
     auto.
 Qed.
 
-Theorem ArithMdlSatisfiesAccess :
+(*Theorem ArithMdlSatisfiesAccess :
   forall M, ArithMdl ⦂ M ◎ myσ ⊭ (a_acc (a_bind client) (a_bind t)).
 Proof.
   intros.
@@ -231,7 +231,7 @@ Proof.
   inversion H; subst; simpl in *.
   inversion H4; subst; simpl in *.
   inversion H5; subst.
-  unfold common.map, configMapHeap in H0; simpl in *.
+  unfold mapp, configMapHeap in H0; simpl in *.
   unfold myχ, update, t_update in H0; simpl in *.
   inversion H0; subst.
   simpl in H1.
@@ -241,21 +241,21 @@ Proof.
   right; intros.
   inversion H; inversion H0; subst; simpl in *.
   inversion H4; inversion H10; subst; simpl in *.
-  assert (Heq : z0 = client \/ z0 = s \/ z0 = t \/ z0 = f \/ z0 = this).
+  assert (Heq : z = client \/ z = s \/ z = t \/ z = f \/ z = this).
   unfold myMap, update, t_update in H11.
-  destruct (eq_dec z0 s) as [Heq|Hneqs];
+  destruct (eq_dec z s) as [Heq|Hneqs];
     [auto
     |apply neq_eqb in Hneqs;
      rewrite Hneqs in H11].
-  destruct (eq_dec z0 f) as [Heq|Hneqf];
+  destruct (eq_dec z f) as [Heq|Hneqf];
     [subst; crush
     |apply neq_eqb in Hneqf;
      rewrite Hneqf in H11].
-  destruct (eq_dec z0 t) as [Heq|Hneqt];
+  destruct (eq_dec z t) as [Heq|Hneqt];
     [subst; crush
     |apply neq_eqb in Hneqt;
      rewrite Hneqt in H11].
-  destruct (eq_dec z0 z) as [Heq|Hneqz];
+  destruct (eq_dec z zed) as [Heq|Hneqz];
     [subst
     |apply neq_eqb in Hneqz;
      rewrite Hneqz in H11].
@@ -269,11 +269,11 @@ Proof.
     unfold myMap in H7, H15;
     simpl in H7, H15.
   unfold update, t_update, t, s in H7; crush.
-  destruct (eq_dec z0 client) as [Heq|Hneqcl];
+  destruct (eq_dec z client) as [Heq|Hneqcl];
     [subst; crush
     |apply neq_eqb in Hneqcl;
      rewrite Hneqcl in H11].
-  destruct (eq_dec z0 this) as [Heq|Hneqthis];
+  destruct (eq_dec z this) as [Heq|Hneqthis];
     [subst; crush
     |apply neq_eqb in Hneqthis;
      rewrite Hneqthis in H11].
@@ -291,9 +291,9 @@ Proof.
   destruct Heq as [|Heq]; subst;
     [intros Hcontra; inversion Hcontra|].
   intros Hcontra; inversion Hcontra.
-Qed.
+Qed.*)
 
-Lemma will_next :
+(*Lemma will_next :
   forall M1 M2 σ1 σ2,
     M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
     forall σ, M1 ⦂ M2 ⦿ σ ⤳⋆ σ1 ->
@@ -334,16 +334,16 @@ Proof.
      destruct Hσ as [ψ' Hσ]];
     subst.
   
-  destruct (adaptation_exists (χ, ϕ::ψ) (χ', ϕ'::ψ'))
+  destruct (adaptation_exists χ ϕ ψ χ' ϕ' ψ')
     with
-      (χ1:=χ)(ϕ1:=ϕ)(ψ1:=ψ)
-      (χ2:=χ')(ϕ2:=ϕ')(ψ2:=ψ')
+      (σ1:=(χ,ϕ::ψ))
+      (σ2:=(χ',ϕ'::ψ'))
     as [σ'];
     eauto;
     try solve [inversion Hwf; auto];
     try solve [inversion H1; auto].
 
-  destruct (sat_excluded_middle M1 M2 σ' A).
+  destruct (sat_excluded_middle M1 M2 (χ, ϕ'::ψ') A).
 
   destruct (IHHred (χ, ϕ::ψ))
     with (σ1':=σ')(σ2':=σ2')(A:=A)
@@ -373,7 +373,7 @@ Proof.
     intros;
     adapt_rewrite;
     auto.
-Qed.
+Qed.*)
 
 (*Lemma will_arr :
   forall A M1 M2 σ A',
@@ -455,7 +455,7 @@ Definition inside := fieldID 0.
 
 Definition expose := methID 0.
 
-Definition x := bind 10.
+Definition x := bnd 10.
 
 Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this inside))
                                  (s_rtrn x).
@@ -477,6 +477,29 @@ Definition MyModule := (update
 (** de Bruijn indeces, thus the name of the relevant variable changes depending *)
 (** the quantifier depth of the assertion *)
 
+Lemma fresh_implies_sat :
+  (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
+                forall σ' A' x v, fresh_x x σ' A' ->
+                             σ = (update_σ_map σ' x v) ->
+                             A = ([x /s 0]A') ->
+                             forall y, fresh_x y σ' A' ->
+                                  M1 ⦂ M2 ◎ (update_σ_map σ' y v) ⊨ ([y /s 0]A')) /\
+  (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
+                forall σ' A' x v, fresh_x x σ' A' ->
+                             σ = (update_σ_map σ' x v) ->
+                             A = ([x /s 0]A') ->
+                             forall y, fresh_x y σ' A' ->
+                                  M1 ⦂ M2 ◎ (update_σ_map σ' y v) ⊭ ([y /s 0]A')).
+Proof.
+  apply sat_mutind;
+    intros.
+
+  destruct A';
+    try solve [inversion H1]. ;
+    simpl in H1.
+
+Qed.
+
 Ltac sat_destruct :=
   match goal with
   | [Hand : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply and_iff in Hand;
@@ -494,6 +517,62 @@ Ltac frsh_auto :=
   | [ Hfrsh : fresh_x ?x ?σ _ |- fresh_x ?x ?σ _] => auto; try (eapply fresh_notin; eauto)
   end.
 
+Ltac a_intro :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ ⊨ (∀x∙ _)] => apply sat_all_x; intros; simpl
+  | [|- _ ⦂ _ ◎ _ ⊨ (_ ⇒ _)] => apply arr_prop1; intros; simpl
+  end.
+
+Ltac a_intros :=
+  repeat a_intro.
+
+Ltac a_prop :=
+  repeat match goal with
+         | [H : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply -> and_iff in H;
+                                           destruct H
+         | [H : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply -> or_iff in H
+         | [H : _ ⦂ _ ◎ _ ⊨ (_ ⇒ _) |- _] => rewrite -> arr_prop in H
+         | [H : context[_ ⦂ _ ◎ _ ⊨ (_ ⇒ _)] |- _] => rewrite -> arr_prop in H
+         | [H : _ ⦂ _ ◎ _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; simpl in H
+         | [|- _ ⦂ _ ◎ _ ⊨ (_ ∧ _)] => apply sat_and
+         | [|- _ ⦂ _ ◎ _ ⊨ (_ ∨ _)] => apply <- or_iff
+         end.
+
+Lemma thing :
+  entails (∀x∙∀x∙
+            ((a_class (e_hole 1) Boundary)
+             ∧
+             (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+            ∧(∀x∙((a_hole 0) access (a_hole 1) ⇒ (a_eq (e_hole 0) (e_hole 2)))))
+          (∀x∙∀x∙
+            ((a_class (e_hole 1) Boundary)
+             ∧
+             (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+            ∧(¬ ∃x∙(((a_hole 0) access (a_hole 1)) ∧ ¬(a_class (e_hole 0) Boundary)))).
+Proof.
+  auto.
+  apply ent;
+    intros.
+  a_intros.
+  repeat (a_prop;
+          a_intros;
+          auto).
+  destruct fresh_intro
+    with (σ1:=σ)(σ2:=σ)
+         (A1:=(∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+              ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))
+         (A2:=((∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+               ∧ (¬ (∃x∙ ((a_hole 0 access a_hole 1) ∧ (¬ a_class (e_hole 0) Boundary))))))
+    as [x Hfrsh];
+    andDestruct.
+  eapply H with (y:=y)(v:=v) in Ha;
+    auto.
+  a_prop.
+  
+  apply H in H1.
+  auto.
+Qed.
+
 Theorem expose_example :
   MyModule ⊨m (∀x∙∀x∙
                 (
@@ -505,12 +584,35 @@ Theorem expose_example :
                    ∧
                    (a_will(∃x∙(((a_hole 0) access (a_hole 1)) ∧ ¬(a_class (e_hole 0) Boundary)))))
                     ⇒
-                    ((∃x∙((a_hole 0) call (a_hole 1) ⋄ expose ⟨ empty ⟩)) ∨
-                     a_will(∃x∙((a_hole 0) call (a_hole 1) ⋄ expose ⟨ empty ⟩)))
+                    ((∃x∙((a_hole 0) call (a_hole 2) ⋄ expose ⟨ empty ⟩)) ∨
+                     a_will(∃x∙((a_hole 0) call (a_hole 2) ⋄ expose ⟨ empty ⟩)))
                 )
               ).
 Proof.
   unfold mdl_sat; intros.
+  a_intros.
+  a_prop.
+
+  
+
+  inversion H7; subst.
+  inversion H16;
+    subst;
+    simpl in *.
+  a_prop.
+  inversion H15;
+    subst.
+  inversion H21;
+    subst.
+  
+
+  
+  Check sat_ex_x.
+  a_prop.
+  a_prop.
+  rewrite arr_prop in H6.
+  apply arr_prop2 in H2.
+  
   apply sat_all_x.
     intros b αb ob; intros; simpl.
   apply sat_all_x;
@@ -555,10 +657,10 @@ Proof.
     in H10.
   inversion Ha;
     subst.
-  unfold common.map, configMapStack in H10.
+  unfold mapp, configMapStack in H10.
     rewrite H10 in H1;
     inversion H1.
-  unfold common.map, configMapStack, common.map, stackMap; simpl.
+  unfold mapp, configMapStack, mapp, stackMap; simpl.
   destruct H0 as [ϕ0 Htmp];
     destruct Htmp as [ψ0];
     subst.
@@ -579,7 +681,7 @@ Proof.
     |apply v_var
     |].
   inversion H10; subst; simpl.
-  unfold common.map, configMapStack, common.map, stackMap; simpl.
+  unfold mapp, configMapStack, mapp, stackMap; simpl.
   unfold update, t_update;
     rewrite eqb_refl; auto.
 
@@ -610,7 +712,7 @@ Proof.
     auto;
     [|andDestruct].
 
-  unfold common.map, configMapStack, configMapHeap in *;
+  unfold mapp, configMapStack, configMapHeap in *;
     simpl in *.
   unfold update_σ_map in H8;
     simpl in H8.
@@ -629,7 +731,7 @@ Proof.
      eauto
     |inversion H10; subst
     |crush].
-  unfold common.map, configMapHeap in *; simpl in *;
+  unfold mapp, configMapHeap in *; simpl in *;
     auto.
   
   inversion Hneg; subst.

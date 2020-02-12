@@ -59,7 +59,7 @@ Notation "'∀S∙' A" :=(a_all_Σ A)(at level 40).
 Notation "'∃x∙' A" :=(a_ex_x A)(at level 40).
 Notation "'∃S∙' A" :=(a_ex_Σ A)(at level 40).
 Notation "x 'internal'" :=(a_intrn x)(at level 40).
-Notation "x 'external'" :=(a_intrn x)(at level 40).
+Notation "x 'external'" :=(a_extrn x)(at level 40).
 Notation "x 'access' y" :=(a_acc x y)(at level 40).
 Notation "x 'call' y '⋄' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
 
@@ -418,26 +418,6 @@ Inductive  closed_exp : exp -> nat -> Prop :=
                          closed_exp e' n ->
                          closed_exp (e_acc_g e f e') n.
 
-Inductive  notin_exp : exp -> var -> Prop :=
-| ni_val   : forall v x, notin_exp (e_val v) x
-| ni_var   : forall x y, x <> y ->
-                    notin_exp (e_var x) y
-| ni_hole  : forall m x, notin_exp (e_hole m) x
-| ni_eq    : forall e1 e2 x, notin_exp e1 x ->
-                        notin_exp e2 x ->
-                        notin_exp (e_eq e1 e2) x
-| ni_if    : forall e1 e2 e3 x, notin_exp e1 x ->
-                           notin_exp e2 x ->
-                           notin_exp e3 x ->
-                           notin_exp (e_if e1 e2 e3) x
-| ni_acc_f : forall e f x, notin_exp e x ->
-                      notin_exp (e_acc_f e f) x
-| ni_acc_g : forall e f e' x, notin_exp e x ->
-                         notin_exp e' x ->
-                         notin_exp (e_acc_g e f e') x.
-
-Hint Constructors notin_exp.
-
 Definition notin_a_var (x : a_var)(y : var) : Prop :=
   match x with
   | a_bind z => z <> y
@@ -518,7 +498,7 @@ Inductive notin_Ax  : asrt -> var -> Prop :=
 Hint Constructors notin_Ax notin_exp.
 
 Inductive fresh_x : var -> config -> asrt -> Prop :=
-| frsh : forall x σ A, map (snd σ) x = None ->
+| frsh : forall x σ A, mapp (snd σ) x = None ->
                   notin_Ax A x ->
                   fresh_x x σ A.
 Hint Constructors fresh_x.
@@ -586,12 +566,6 @@ Inductive fresh_Σ : varSet -> asrt -> Prop :=
 
 Hint Constructors fresh_Σ.
 
-Fixpoint rename_s (s : stmt)(xs : list (var*var)) : stmt :=
-  match xs with
-  | nil => s
-  | (x,y)::zs => rename_s (❲x ↦ y❳ s) zs
-  end.
-
 Fixpoint updates {B C : Type} `{Eq B}
          (bs : list (B * B))
          (map1 : partial_map B C)
@@ -610,16 +584,8 @@ Inductive zip {A B : Type} : list A -> list B -> list (A * B) -> Prop :=
 
 Hint Constructors zip.
 
-Inductive unique {A : Type} `{Eq A} : list A -> Prop :=
-| u_nil : unique nil
-| u_con : forall a l, ~ In a l ->
-                 unique l ->
-                 unique (a :: l).
-
-Hint Constructors unique.
-
 Definition fresh_in_map {A : Type} (x : var) (m : partial_map var A) : Prop :=
-  forall y a, m y = Some a -> x <> y.
+  m x = None.
 
 Inductive in_ref : var -> ref -> Prop :=
 | in_r_var : forall x, in_ref x (r_var x)
@@ -646,20 +612,19 @@ Inductive in_stmt : var -> stmt -> Prop :=
 Reserved Notation "σ1 '◁' σ2 '≜' σ3" (at level 40).
 
 Inductive adaptation : config -> config -> config -> Prop :=
-| a_adapt : forall σ σ' ϕ ϕ' ϕ'' contn β β' β'' ψ' χ' zs zs' s s' Zs,
-    peek (snd σ) = Some ϕ ->
-    σ' = (χ', (ϕ' :: ψ')) ->
-    ϕ = frm β contn ->
+| a_adapt : forall σ χ ϕ ψ σ' χ' ϕ' ϕ'' c β β' β'' ψ' zs s f,
+    σ = (χ, ϕ::ψ) ->
+    σ' = (χ', ϕ' :: ψ') ->
+    ϕ = frm β c ->
     ϕ' = frm β' (c_stmt s) ->
-    (forall z, In z zs' -> fresh_in_map z β) ->
-    (forall z, In z zs' -> fresh_in_map z β') ->
-    (forall z, In z zs' -> ~ in_stmt z s) ->
-    unique zs ->
+    (forall z z', f z = Some z' -> fresh_in_map z β) ->
+    (forall z z', f z = Some z' -> fresh_in_map z β') ->
+    (forall z z', f z = Some z' -> ~ in_stmt z s) ->
     dom β zs ->
-    rename_s s Zs = s' ->
-    zip zs' zs Zs ->
-    β'' = updates Zs β β' ->
-    ϕ'' = frm β'' (c_stmt s') ->
+    (forall x z, f x = Some z -> In z zs) ->
+    (forall z, In z zs -> exists x, f x = Some z) ->
+    β'' = extend (fun x => bind (f x) β') β ->
+    ϕ'' = frm β'' (c_stmt (❲f ↦ s❳)) ->
     σ ◁ σ' ≜ (χ', ϕ'' :: ψ')
 
 where "σ1 '◁' σ2 '≜' σ3" := (adaptation σ1 σ2 σ3).
@@ -697,7 +662,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                 M1 ⦂ M2 ◎ σ ⊨ a_eq e1 e2
 
 | sat_class : forall M1 M2 σ e C α o, M1 ∙ σ ⊢ e ↪ (v_addr α) ->
-                                 map σ α = Some o -> 
+                                 mapp σ α = Some o -> 
                                  o.(cname) = C ->
                                  M1 ⦂ M2 ◎ σ ⊨ (a_class e C)
 
@@ -727,12 +692,12 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                            M1 ⦂ M2 ◎ σ ⊨ (¬ A)
 
 (** Quantifiers: *)
-| sat_all_x : forall M1 M2 σ A, (forall y v, map σ y = Some v ->
+| sat_all_x : forall M1 M2 σ A, (forall y v, mapp σ y = Some v ->
                                    forall z, fresh_x z σ A ->
                                         M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0]A)) ->
                            M1 ⦂ M2 ◎ σ ⊨ (∀x∙ A)
 
-| sat_ex_x  : forall M1 M2 σ A z y v, map σ y = Some v ->
+| sat_ex_x  : forall M1 M2 σ A z y v, mapp σ y = Some v ->
                                  fresh_x z σ A ->
                                  M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0] A) ->
                                  M1 ⦂ M2 ◎ σ ⊨ (∃x∙ A)
@@ -753,7 +718,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                                  M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) access (a_bind y))
 
 | sat_access2 : forall M1 M2 σ x y α α' o f, ⌊x⌋ σ ≜ (v_addr α') ->
-                                        map σ α' = Some o ->
+                                        mapp σ α' = Some o ->
                                         (flds o) f = Some (v_addr α) ->
                                         ⌊y⌋ σ ≜ (v_addr α) ->
                                         M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) access (a_bind y))
@@ -787,13 +752,13 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (** Viewpoint: *)
 | sat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
-                                 map σ α = Some o ->
+                                 mapp σ α = Some o ->
                                  o.(cname) = C ->
                                  M1 C = None ->
                                  M1 ⦂ M2 ◎ σ ⊨ a_extrn (a_bind x)
 
 | sat_intrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
-                                 map σ α = Some o ->
+                                 mapp σ α = Some o ->
                                  o.(cname) = C ->
                                  (exists CDef, M1 C = Some CDef) ->
                                  M1 ⦂ M2 ◎ σ ⊨ a_intrn (a_bind x)
@@ -851,7 +816,7 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                               M1 ⦂ M2 ◎ σ ⊭ (a_eq e1 e2)
 
 | nsat_class1 : forall M1 M2 σ e C C' α o, M1 ∙ σ ⊢ e ↪ (v_addr α) ->
-                                      map σ α = Some o -> 
+                                      mapp σ α = Some o -> 
                                       o.(cname) = C' ->
                                       C <> C' ->
                                       M1 ⦂ M2 ◎ σ ⊭ (a_class e C)
@@ -885,12 +850,12 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                             M1 ⦂ M2 ◎ σ ⊭ (¬ A)
 
 (*quantifiers*)
-| nsat_all_x : forall M1 M2 σ A y z v, map σ y = Some v ->
+| nsat_all_x : forall M1 M2 σ A y z v, mapp σ y = Some v ->
                                   fresh_x z σ A ->
                                   M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊭ ([z /s 0]A) ->
                                   M1 ⦂ M2 ◎ σ ⊭ (∀x∙ A) 
 
-| nsat_ex_x : forall M1 M2 σ A, (forall y v z, map σ y = Some v ->
+| nsat_ex_x : forall M1 M2 σ A, (forall y v z, mapp σ y = Some v ->
                                      fresh_x z σ A ->
                                      M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊭ ([z /s 0]A)) ->
                            M1 ⦂ M2 ◎ σ ⊭ (∃x∙ A)
@@ -910,7 +875,7 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                          ⌊y⌋ σ ≜ (v_addr α2) ->
                                          α1 <> α2) ->
                                (forall α1 α2 α3 f o, ⌊x⌋ σ ≜ (v_addr α1) ->
-                                                map σ α1 = Some o ->
+                                                mapp σ α1 = Some o ->
                                                 (flds o) f = Some (v_addr α2) ->
                                                 ⌊y⌋ σ ≜ (v_addr α3) ->
                                                 α2 <> α3) ->
@@ -963,11 +928,11 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                              M1 ⦂ M2 ◎ σ ⊭ a_extrn (a_bind x)
 
 | nsat_extrn2 : forall M1 M2 σ x α, ⌊ x ⌋ σ ≜ (v_addr α) ->
-                               map σ α = None ->
+                               mapp σ α = None ->
                                M1 ⦂ M2 ◎ σ ⊭ a_extrn (a_bind x)
 
 | nsat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
-                                  map σ α = Some o ->
+                                  mapp σ α = Some o ->
                                   o.(cname) = C ->
                                   (exists CDef, M1 C = Some CDef) ->
                                   M1 ⦂ M2 ◎ σ ⊭ a_extrn (a_bind x)
@@ -976,11 +941,11 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                              M1 ⦂ M2 ◎ σ ⊭ a_intrn (a_bind x)
 
 | nsat_intrn2 : forall M1 M2 σ x α, ⌊ x ⌋ σ ≜ (v_addr α) ->
-                               map σ α = None ->
+                               mapp σ α = None ->
                                M1 ⦂ M2 ◎ σ ⊭ a_intrn (a_bind x)
 
 | nsat_intrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
-                                  map σ α = Some o ->
+                                  mapp σ α = Some o ->
                                   o.(cname) = C ->
                                   M1 C = None ->
                                   M1 ⦂ M2 ◎ σ ⊭ a_intrn (a_bind x)
@@ -1041,7 +1006,7 @@ Notation "M '⊨m' A" := (mdl_sat M A)(at level 40).
 
 Inductive valid_avar : config -> a_var -> Prop :=
 | valid_hole : forall σ n, valid_avar σ (a_hole n)
-| valid_bind : forall σ x α, map σ x = Some α ->
+| valid_bind : forall σ x α, mapp σ x = Some α ->
                         valid_avar σ (a_bind x).
 
 Hint Constructors valid_avar.
