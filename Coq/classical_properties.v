@@ -231,6 +231,53 @@ Proof.
     crush.
 Qed.
 
+Lemma arr_prop1 :
+  forall M1 M2 σ A1 A2,
+    (M1 ⦂ M2 ◎ σ ⊨ A1 ->
+     M1 ⦂ M2 ◎ σ ⊨ A2) ->
+    M1 ⦂ M2 ◎ σ ⊨ (A1 ⇒ A2).
+Proof.
+  intros.
+  destruct sat_excluded_middle
+    with (M1:=M1)(M2:=M2)
+         (σ:=σ)(A:=A1);
+    auto.
+Qed.
+
+Lemma arr_prop2 :
+  forall M1 M2 σ A1 A2,
+    M1 ⦂ M2 ◎ σ ⊨ (A1 ⇒ A2) ->
+    (M1 ⦂ M2 ◎ σ ⊨ A1 ->
+     M1 ⦂ M2 ◎ σ ⊨ A2).
+Proof.
+  intros.
+  eapply arr_true; eauto.
+Qed.
+
+Lemma arr_prop :
+  forall M1 M2 σ A1 A2,
+    M1 ⦂ M2 ◎ σ ⊨ (A1 ⇒ A2) <->
+    (M1 ⦂ M2 ◎ σ ⊨ A1 ->
+     M1 ⦂ M2 ◎ σ ⊨ A2).
+Proof.
+  intros;
+    split;
+    [apply arr_prop2|apply arr_prop1].
+Qed.
+
+Lemma all_x_prop :
+  forall M1 M2 σ A,
+    M1 ⦂ M2 ◎ σ ⊨ (∀x∙A) <->
+    (forall y v, mapp σ y = Some v ->
+            forall z, fresh_x z σ A ->
+                 M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0]A)).
+Proof.
+  intros; split; eauto; intros.
+  inversion H;
+    subst;
+    eauto.
+Qed.
+
 (** Lemma 5: Classical (2) *)
 Lemma and_iff :
   forall M1 M2 σ A1 A2, (M1 ⦂ M2 ◎ σ ⊨ (A1 ∧ A2)) <->
@@ -293,6 +340,24 @@ Lemma negate_intro_nsat :
 Proof.
   intros;
     auto.
+Qed.
+
+Lemma will_arr :
+  forall M1 M2 σ A1 A2,
+    M1 ⦂ M2 ◎ σ ⊨ a_will(A1 ⇒ A2 ∧ A1) ->
+    M1 ⦂ M2 ◎ σ ⊨ a_will(A2).
+Proof.
+  intros.
+  inversion H;
+    subst.
+  inversion H7;
+    subst;
+    eauto.
+  apply sat_will
+    with (ϕ:=ϕ)(ψ:=ψ)(χ:=χ)(σ':=σ')(σ'':=σ'');
+    auto.
+  eapply arr_true;
+    eauto.
 Qed.
 
 Inductive entails : asrt -> asrt -> Prop :=
@@ -621,6 +686,12 @@ Proof.
   auto.
 Qed.
 
+Lemma subst_arr :
+  forall x n A1 A2, ([x /s n] (A1 ⇒ A2)) = (([x /s n]A1) ⇒ ([x /s n]A2)).
+Proof.
+  auto.
+Qed.
+
 Lemma fresh_not_1 :
   forall x σ A, fresh_x x σ A ->
            fresh_x x σ (¬ A).
@@ -888,9 +959,9 @@ Proof.
     inversion H2;
     subst.
   rewrite <- Heqres1 in H5;
-    rewrite <- Heqres2 in H10.
+    rewrite <- Heqres2 in H11.
   inversion H5;
-    inversion H10;
+    inversion H11;
     auto.
   symmetry in Heqres1;
     apply H9 in Heqres1.
@@ -911,23 +982,23 @@ Proof.
     subst;
     eauto.
 
-  eapply r_mth;
-    eauto.
-  inversion H11;
-    subst;
-    unfold extend in *;
-    eauto.
-  rewrite H6;
-    auto.
+  - eapply r_mth;
+      eauto.
+    inversion H9;
+      subst;
+      unfold extend in *;
+      eauto.
+    rewrite H4;
+      auto.
 
-  eapply r_new;
-    eauto.
-  inversion H12;
-    unfold extend in *;
-    subst;
-    eauto.
-  rewrite H5;
-    auto.
+  - eapply r_new;
+      eauto.
+    inversion H9;
+      unfold extend in *;
+      subst;
+      eauto.
+    rewrite H3;
+      auto.
 Qed.
 
 (*Lemma linking_preserves_reductions :
