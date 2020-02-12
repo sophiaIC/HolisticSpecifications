@@ -2,6 +2,7 @@ Require Export Arith.
 Require Import CpdtTactics.
 Require Import List.
 Require Import common.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Inductive fld : Type := fieldID : nat -> fld.
 
@@ -200,7 +201,7 @@ Instance eqbAddr : Eq addr :=
 Defined.
 
 
-Definition this := bind 0.
+Definition this := bnd 0.
 
 (*fields are a mapping from field names to locations in the heap*)
 Definition fields := partial_map fld value.
@@ -286,8 +287,8 @@ Definition pop (ψ : stack) : option stack :=
   end.
 
 Instance stackMap : Mappable stack var (option value) :=
-  {map :=
-     fix map S x :=
+  {mapp :=
+     fix mapp S x :=
        match S with
        | nil => None
        | ϕ :: S' => ϕ.(vMap) x
@@ -297,10 +298,10 @@ Instance stackMap : Mappable stack var (option value) :=
 Definition config : Type := (heap * stack).
 
 Instance configMapHeap : Mappable config addr (option obj) :=
-  {map σ α := (fst σ) α}.
+  {mapp σ α := (fst σ) α}.
 
 Instance configMapStack : Mappable config var (option value) :=
-  {map σ x := map (snd σ) x}.
+  {mapp σ x := mapp (snd σ) x}.
 
 (*Instance expFoldable : PropFoldable exp var :=
   {
@@ -333,11 +334,12 @@ Reserved Notation "'⌊' Σ '⌋' σ '≜′' As" (at level 40).
 (** #<h3># Variable and Set Interpretation (Definition 4, OOPSLA2019):#</h3># *)
 
 Inductive interpret_x : var -> config -> value -> Prop :=
-| int_x : forall x σ ψ ϕ v, snd σ = ψ ->
-                       peek ψ = Some ϕ ->
+| int_x : forall x σ ψ ϕ v, snd σ = ϕ :: ψ ->
                        (vMap ϕ) x = Some v -> 
                        ⌊ x ⌋ σ ≜ v
 where "'⌊' x '⌋' σ '≜' v" := (interpret_x x σ v).
+
+Hint Constructors interpret_x.
   
 Inductive interpret_Σ : list var -> config -> list value -> Prop :=
 | int_nil  : forall σ, ⌊ nil ⌋ σ ≜′ nil
@@ -345,6 +347,8 @@ Inductive interpret_Σ : list var -> config -> list value -> Prop :=
                            ⌊ Σ ⌋ σ ≜′ αs ->
                            ⌊ x::Σ ⌋ σ ≜′ (α::αs)
 where "'⌊' Σ '⌋' σ '≜′' αs" := (interpret_Σ Σ σ αs).
+
+Hint Constructors interpret_Σ.
 
 Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
 
@@ -478,6 +482,81 @@ Inductive χ_wf : mdl -> heap -> Prop :=
 
 Hint Constructors χ_wf.
 
+Inductive notin_exp : exp -> var -> Prop :=
+| ni_val   : forall v x, notin_exp (e_val v) x
+| ni_var   : forall x y, x <> y ->
+                    notin_exp (e_var x) y
+| ni_hole  : forall m x, notin_exp (e_hole m) x
+| ni_eq    : forall e1 e2 x, notin_exp e1 x ->
+                        notin_exp e2 x ->
+                        notin_exp (e_eq e1 e2) x
+| ni_if    : forall e1 e2 e3 x, notin_exp e1 x ->
+                           notin_exp e2 x ->
+                           notin_exp e3 x ->
+                           notin_exp (e_if e1 e2 e3) x
+| ni_acc_f : forall e f x, notin_exp e x ->
+                      notin_exp (e_acc_f e f) x
+| ni_acc_g : forall e f e' x, notin_exp e x ->
+                         notin_exp e' x ->
+                         notin_exp (e_acc_g e f e') x.
+
+Hint Constructors notin_exp.
+
+Inductive notin_ref : ref -> var -> Prop :=
+| ni_ref_var : forall x y, x <> y ->
+                      notin_ref (r_var x) y
+| ni_ref_fld : forall x y f, x <> y ->
+                        notin_ref (r_fld x f) y.
+
+Inductive notin_stmt : stmt -> var -> Prop :=
+| ni_asgn : forall r1 r2 x, notin_ref r1 x ->
+                       notin_ref r2 x ->
+                       notin_stmt (s_asgn r1 r2) x
+| ni_meth : forall x y m ps z, x <> z ->
+                          y <> z ->
+                          (forall x1 x2, ps x1 = Some x2 ->
+                                    x2 <> z) ->
+                          notin_stmt (s_meth x y m ps) z
+| ni_new : forall x C fs y, x <> y ->
+                       (forall f z, fs f = Some z ->
+                               z <> y) ->
+                       notin_stmt (s_new x C fs) y
+| ni_stmts : forall s1 s2 x, notin_stmt s1 x ->
+                        notin_stmt s2 x ->
+                        notin_stmt (s_stmts s1 s2) x
+| ni_rtrn : forall x y, x <> y ->
+                   notin_stmt (s_rtrn x) y.
+
+Hint Constructors notin_ref notin_stmt.
+
+Inductive meths_wf : methods -> Prop :=
+| mths_wf : forall mths, (forall m xs s, mths m = Some (xs, s) ->
+                               (forall x, ~ In x xs ->
+                                     notin_stmt s x)) ->
+                    meths_wf mths.
+
+Inductive gFields_wf : ghost_fields -> Prop :=
+| g_wf : forall gs, (forall g x e, gs g = Some (x, e) ->
+                         (forall y, y <> x ->
+                               y <> this ->
+                               notin_exp e y)) ->
+               gFields_wf gs.
+
+Inductive cls_wf : classDef -> Prop :=
+| cdef_wf : forall CDef, meths_wf (c_meths CDef) ->
+                    gFields_wf (c_g_fields CDef) ->
+                    cls_wf CDef.
+
+Inductive M_wf : mdl -> Prop :=
+| module_wf : forall M,  M ObjectName = Some ObjectDefn ->
+                    (forall C CDef, M C = Some CDef ->
+                               c_name CDef = C) ->
+                    (forall C CDef, M C = Some CDef ->
+                               cls_wf CDef) ->
+                    M_wf M.
+
+Hint Constructors M_wf.
+
 Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
 (** #<h3>#Expression evaluation (Fig 4, OOPSLA2019)#</h3>#  *)
@@ -500,7 +579,7 @@ Inductive val : mdl -> config -> exp -> value -> Prop :=
 | v_value     : forall M σ v, M ∙ σ ⊢ e_val v ↪ v
 
 (** M, σ x ↪ σ(x)     (Var_Val) *)
-| v_var      : forall M σ x v, map σ x = Some v ->
+| v_var      : forall M σ x v, mapp σ x = Some v ->
                           M ∙ σ ⊢ e_var x ↪ v
 
 (** M, σ e.f() ↪ α *)
@@ -508,7 +587,7 @@ Inductive val : mdl -> config -> exp -> value -> Prop :=
 (** ---------------- (Field_Heap_Val) *)
 (** M, σ ⊢ e.f ↪ v      *)
 | v_f_heap   : forall M σ e f α o v, M ∙ σ ⊢ e ↪ (v_addr α) ->
-                                map σ α = Some o ->
+                                mapp σ α = Some o ->
                                 o.(flds) f = Some v ->
                                 M ∙ σ ⊢ e_acc_f e f ↪ v
 
@@ -522,13 +601,14 @@ Inductive val : mdl -> config -> exp -> value -> Prop :=
 (** M, σ [v/x]e' ↪ v'*)
 (** ------------------------ (Field_Ghost_Val) *)
 (** M, σ ⊢ e0.f(e) ↪ v'      *)
-| v_f_ghost  : forall M σ e0 e f α o x e' v v' C, M ∙ σ ⊢ e0 ↪ (v_addr α) ->
-                                             map σ α = Some o ->
-                                             M o.(cname) = Some C ->
-                                             C.(c_g_fields) f = Some (x, e') ->
-                                             M ∙ σ ⊢ e ↪ v ->
-                                             M ∙ (update_σ_map σ x v) ⊢ e' ↪ v' ->
-                                             M ∙ σ ⊢ e_acc_g e0 f e ↪ v'
+| v_f_ghost  : forall M σ e0 e f α o x e' v v' C,
+    M ∙ σ ⊢ e0 ↪ (v_addr α) ->
+    mapp σ α = Some o ->
+    M o.(cname) = Some C ->
+    C.(c_g_fields) f = Some (x, e') ->
+    M ∙ σ ⊢ e ↪ v ->
+    M ∙ (update_σ_map (update_σ_map σ x v) this (v_addr α)) ⊢ e' ↪ v' ->
+    M ∙ σ ⊢ e_acc_g e0 f e ↪ v'
 
 (** M, σ e ↪ true *)
 (** M, σ e1 ↪ v *)
@@ -569,7 +649,7 @@ where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
 Hint Constructors val.
 
 
-Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=
+(*Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=
 | d_empty : dom empty nil
 | d_update1 : forall m a b d, dom m d ->
                          In a d ->
@@ -578,11 +658,59 @@ Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=
                          ~ In a d ->
                          dom (update a b m) (a::d).
 
-Hint Constructors dom.
+Hint Constructors dom.*)
+
+Inductive unique {A : Type} `{Eq A} : list A -> Prop :=
+| u_nil : unique nil
+| u_con : forall a l, ~ In a l ->
+                 unique l ->
+                 unique (a :: l).
+
+Hint Constructors unique.
+
+Definition dom {A B : Type}`{Eq A} (m : partial_map A B)(d : list A) : Prop :=
+  (forall a b, m a = Some b ->
+          In a d) /\
+  (forall a, In a d ->
+        exists b, m a = Some b) /\
+  unique d.
+
+(*Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=
+| d_dom : forall m d, (forall a b, m a = Some b ->
+                         In a d) ->
+                 (forall a, In a d ->
+                       exists b, m a = Some b) ->
+                 unique d ->
+                 dom m d.*)
 
 (** #<h3># Loo Operational Semantics (Fig 6, App A.2, OOPSLA2019):#</h3># *)
 
 Reserved Notation "M '∙' σ '⤳' σ'" (at level 40).
+
+Inductive le_α : addr -> addr -> Prop :=
+| le_addr : forall n m, n <= m ->
+                   le_α (address n) (address m).
+
+Hint Constructors le_α.
+
+Definition S_α (α : addr) : addr :=
+  match α with
+  | address n => address (S n)
+  end.
+
+Inductive max_χ {B : Type} : partial_map addr B -> addr -> Prop :=
+| max_heap : forall χ α, (exists b, χ α = Some b) ->
+                    (forall α' b, χ α' = Some b ->
+                             le_α α' α) ->
+                    max_χ χ α.
+
+Hint Constructors max_χ.
+
+Inductive fresh_χ : heap -> addr -> Prop :=
+| frsh_heap : forall χ α, max_χ χ α ->
+                     fresh_χ χ (S_α α).
+
+Hint Constructors fresh_χ.
 
 Inductive reduction : mdl -> config -> config -> Prop :=
 
@@ -592,12 +720,11 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ϕ'' = (ps ∘ (ϕ.(varMap)), s) *)
     (** ------------------------------------ (Meth_Call_OS) *)
     (** M, σ ⤳ (χ, ϕ'' : ϕ' : ψ') *)
-| r_mth : forall M ϕ ψ ψ' χ x y ps σ m zs α o s s' C ϕ' ϕ'',
-    σ = (χ, ψ) ->
-    peek ψ = Some ϕ ->
-    pop ψ = Some ψ' ->
+| r_mth : forall M ϕ ψ χ x y ps σ m zs α o s s' C ϕ' ϕ'',
+    x <> this ->
+    σ = (χ, ϕ :: ψ) ->
     ϕ.(contn) = c_stmt (s_stmts (s_meth x y m ps) s') ->
-    finite ps ->
+    (*finite ps ->*)
     ⌊ y ⌋ σ ≜ (v_addr α) ->
     χ α = Some o ->
     (M (o.(cname))) = Some C ->
@@ -605,7 +732,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     dom ps zs ->
     ϕ' =  frm (vMap ϕ) (c_hole x s') ->
     ϕ'' = frm (update this (v_addr α) (compose ps (vMap ϕ))) (c_stmt s) ->
-    M ∙ σ ⤳ (χ, ϕ'' :: (ϕ' :: (ψ')))
+    M ∙ σ ⤳ (χ, ϕ'' :: (ϕ' :: ψ))
 
     (** x ≠ this *)
     (** σ = (χ, ψ)*)
@@ -621,8 +748,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** M, σ ⤳ σ' *)
 | r_vAssgn : forall M σ ϕ x y f s ψ χ α v o σ' C,
     x <> this ->
-    σ = (χ, ψ) ->
-    peek ψ = Some ϕ ->
+    σ = (χ, ϕ :: ψ) ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_var x) (r_fld y f)) s)) ->
     ⌊ y ⌋ σ ≜ (v_addr α) ->
     classOf this σ C ->
@@ -664,23 +790,18 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** σ' = (update χ with (α ↦ o), ϕ' : ψ') *)
     (** ------------------------------------------------ (objCreate_OS) *)
     (** M, σ ⤳ σ' *)
-| r_new : forall M σ σ' χ ψ ψ' ϕ ϕ' α x C fMap s o CDef,
+| r_new : forall M σ σ' χ ψ ϕ ϕ' α x C fMap s o CDef,
     x <> this ->
-    σ = (χ, ψ) ->
-    pop ψ = Some ψ' ->
-    peek ψ = Some ϕ ->
+    σ = (χ, ϕ :: ψ) ->
     ϕ.(contn) = (c_stmt (s_stmts (s_new x C fMap) s)) ->
-    χ α = None ->
+    fresh_χ χ α ->
     M C = Some CDef ->
-    (forall f y, fMap f = Some y ->
-            In f (c_flds CDef)) ->
-    (forall f, fMap f = None ->
-          ~ In f (c_flds CDef)) ->
+    dom fMap (c_flds CDef) ->
     (forall f x, fMap f = Some x ->
             exists v, (vMap ϕ) x = Some v) ->
     o = new C (compose fMap (vMap ϕ)) (c_meths CDef) ->
     ϕ' = frm (update x (v_addr α) (vMap ϕ)) (c_stmt s) ->
-    σ' = (update α o χ, ϕ' :: ψ') ->
+    σ' = (update α o χ, ϕ' :: ψ) ->
     M ∙ σ ⤳ σ'
     
 
@@ -707,28 +828,18 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ϕ'' = update (ϕ') with (y ↦ α) and (contn ↦ s) *)
     (** --------------------------------------------------- (Return_OS_2) *)
     (** M, σ ⤳ (χ, ϕ'', ψ) *)
-| r_ret2 : forall M ϕ ϕ' ψ ψ' ψ'' χ y x α ϕ'' σ s s',
-    σ = (χ, ψ) ->
-    peek ψ = Some ϕ ->
-    pop ψ = Some ψ' ->
-    peek ψ' = Some ϕ' ->
-    pop ψ' = Some ψ'' ->
+| r_ret2 : forall M ϕ ϕ' ψ χ y x α ϕ'' σ s s',
+    σ = (χ, ϕ :: ϕ' :: ψ) ->
     ϕ.(contn) = c_stmt (s_stmts (s_rtrn x) s') ->
     ϕ'.(contn) = c_hole y s ->
     y <> this ->
     ⌊x⌋ σ ≜ α ->
     ϕ'' = update_ϕ_contn (update_ϕ_map ϕ' y α) (c_stmt s)->
-    M ∙ σ ⤳ (χ, ϕ'' :: ψ'')
+    M ∙ σ ⤳ (χ, ϕ'' :: ψ)
 
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
 
 Hint Constructors reduction.
-
-Inductive M_wf : mdl -> Prop :=
-| module_wf : forall M,  M ObjectName = Some ObjectDefn ->
-                    (forall C CDef, M C = Some CDef ->
-                               c_name CDef = C) ->
-                    M_wf M.
   
 
 Reserved Notation "M1 '∘' M2 '≜' M" (at level 40).
@@ -823,88 +934,94 @@ where "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" := (pair_reductions M1 M2 σ σ').
 Hint Constructors pair_reductions.
 
 Class Rename (A : Type) :=
-  {rname : A -> var -> var -> A
+  {rname : (partial_map var var) -> A -> A;
+   empty_rename : forall a, rname empty a = a
   }.
 
-Notation "'❲' n '↦' m '❳' a" := (rname a n m)(at level 40).
+Notation "'❲' f '↦' a '❳'" := (rname f a)(at level 40).
 
 Instance varRename : Rename var :=
   {
-    rname := fun x y z =>
-              if eqb x y
-              then z
-              else x    
+    rname f x := match (f x) with
+                 | Some y => y
+                 | _ => x
+                 end;
   }.
+Proof.
+  auto.
+Defined.
+
+Hint Rewrite (@empty_rename var).
+Hint Resolve (@empty_rename var).
 
 Instance refRename : Rename ref :=
   {
-    rname := fun r n m =>
-              match r with
-              | r_var x => r_var (❲n ↦ m❳ x)
-              | r_fld x f => r_fld (❲n ↦ m❳ x) f
-              end
-  }.
-
-Definition remap {A B : Type} `{Eq A} `{Eq B}
-           (b1 b2 : B) (pmap : partial_map A B) : partial_map A B :=
-  fun a => match pmap a with
-        | Some b => if (eqb b b1)
-                   then Some b2
-                   else Some b
-        | _ => pmap a
-        end.
-
-Instance fldMapRename : Rename (partial_map fld var) :=
-  {
-    rname map n m := remap n m map
-  }.
-
-Instance varMapRename : Rename (partial_map var var) :=
-  {
-    rname map n m := remap n m map
-  }.
-
-(*this is not possible using remap, because it requires <> to be
-  extensional, but it is syntactically based in Coq*)
-(*Instance mapRename : Subst (partial_map nat nat) nat :=
-  {
-    sbst map x y := remap x y map;
-
-    closed map x := forall n y, map n = Some y ->
-                           y <> x
+    rname f r := match r with
+                 | r_var x => r_var (❲f ↦ x❳)
+                 | r_fld x f' => r_fld (❲f ↦ x❳) f'
+                 end
   }.
 Proof.
   intros.
-  
-  
-Qed.*)
+  destruct a as [x|x f];
+    auto.
+Defined.
 
+Hint Rewrite (@empty_rename ref).
+Hint Resolve (@empty_rename ref).
 
-(*as a result of the extenstionality issue with maps,
- this means that substitution of stmts does not observe the
- closed property ...*)
-(*Instance stmtSubst : Subst stmt nat :=
+Instance fldMapRename : Rename (partial_map fld var) :=
   {
-    sbst := fun s n m =>
-              match s with
-              | s_asgn r1 r2 => s_asgn ([m /s n] r1) ([m /s n] r2)
-              | s_meth x y m' pMap => s_meth ([m /s n] x)  ([m /s n] y) m' (pMap)
-              | s_new x C fMap => s_new ([m /s n] x) C fMap
-              | s_stmts s1 s2 => s_stmts s1 s2
-              | s_rtrn _ => s
-              end
-                
-  }.*)
+    rname f m := (fun f' => bind (m f') (fun x => Some (❲ f ↦ x ❳)))
+  }.
+Proof.
+  intros.
+  apply functional_extensionality;
+    intros f.
+  unfold bind; simpl; auto.
+  destruct (a f); auto.
+Qed.
 
+Hint Rewrite (@empty_rename (partial_map fld var)).
+Hint Resolve (@empty_rename (partial_map fld var)).
+
+Instance varMapRename : Rename (partial_map var var) :=
+  {
+    rname f m := (fun x => bind (m x) (fun x => Some (❲ f ↦ x ❳)))
+  }.
+Proof.
+  intros.
+  apply functional_extensionality;
+    intros x.
+  unfold bind; simpl.
+  destruct (a x); auto.
+Qed.
+
+Hint Rewrite (@empty_rename (partial_map var var)).
+Hint Resolve (@empty_rename (partial_map var var)).
 
 Instance stmtRename : Rename stmt :=
   {
-    rname := fix rname' s n m :=
-             match s with
-             | s_asgn r1 r2 => s_asgn (❲m ↦ n❳ r1) (❲m ↦ n❳ r2)
-             | s_meth x y m' pMap => s_meth (❲m ↦ n❳ x)  (❲m ↦ n❳ y) m' (❲m ↦ n❳ pMap)
-             | s_new x C fMap => s_new (❲m ↦ n❳ x) C (❲m ↦ n❳ fMap)
-             | s_stmts s1 s2 => s_stmts (rname' s1 n m) (rname' s2 n m)
-             | s_rtrn _ => s
-             end
+    rname :=
+      fix rname' f s :=
+        match s with
+        | s_asgn r1 r2 => s_asgn (❲f ↦ r1❳) (❲f ↦ r2❳)
+        | s_meth x y m' pMap => s_meth (❲f ↦ x❳)  (❲f ↦ y❳) m' (❲f ↦ pMap❳)
+        | s_new x C fMap => s_new (❲f ↦ x❳) C (❲f ↦ fMap❳)
+        | s_stmts s1 s2 => s_stmts (rname' f s1) (rname' f s2)
+        | s_rtrn _ => s
+        end
   }.
+Proof.
+  intros s;
+    induction s;
+    auto;
+    try solve [repeat rewrite empty_rename; auto].
+  crush.
+Qed.
+
+Hint Rewrite (@empty_rename stmt).
+Hint Resolve (@empty_rename stmt).
+
+Hint Rewrite empty_rename.
+Hint Resolve empty_rename.
