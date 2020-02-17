@@ -10,13 +10,6 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Export MonadNotation.
 Open Scope monad_scope.*)
 
-Definition id : partial_map var var := Some.
-
-Definition one_to_one {A B : Type} `{Eq A} (f : partial_map A B) :=
-  forall a1 a2 b, f a1 = Some b ->
-             f a2 = Some b ->
-             a1 = a2.
-
 Inductive exp_equiv : partial_map var var -> exp -> exp -> Prop :=
 | eq_val : forall f v, exp_equiv f (e_val v) (e_val v)
 | eq_var : forall f x1 x2, f x1 = Some x2 ->
@@ -50,13 +43,13 @@ Inductive stmt_equiv : (partial_map var var) -> stmt -> stmt -> Prop :=
     f y1 = Some y2 ->
     (forall p x, ps1 p = Some x ->
             exists y, f x = Some y) ->
-    ps2 = (fun x => bind (ps1 x) f) ->
+    ps2 = ps1 ∘ f ->
     stmt_equiv f (s_meth x1 y1 m ps1) (s_meth x2 y2 m ps2)
 | eq_new : forall f x1 x2 C ps1 ps2,
     f x1 = Some x2 ->
     (forall p x, ps1 p = Some x ->
             exists y, f x = Some y) ->
-    ps2 = (fun x => bind (ps1 x) f) ->
+    ps2 = ps1 ∘ f ->
     stmt_equiv f (s_new x1 C ps1) (s_new x2 C ps2)
 | eq_stmts : forall f s1 s2 s1' s2',
     stmt_equiv f s1 s2 ->
@@ -79,7 +72,7 @@ Definition wf_rename (f : partial_map var var) :=
   f this = Some this.
 
 Inductive map_equiv : partial_map var var -> partial_map var value -> partial_map var value -> Prop :=
-| eq_map : forall f m1 m2, m1 = (fun x => bind (f x) m2) ->
+| eq_map : forall f m1 m2, m1 = f ∘ m2 ->
                       (forall x α, m1 x = Some α ->
                               exists y, f x = Some y) ->
                       (forall x α, m2 x = Some α ->
@@ -133,16 +126,6 @@ Hint Constructors map_equiv.
 Hint Constructors frame_equiv.
 Hint Constructors stack_equiv.
 Hint Constructors config_equiv.
-
-Ltac notHyp P :=
-  match goal with
-    | [ _ : P |- _ ] => fail 1
-    | _ =>
-      match P with
-        | ?P1 /\ ?P2 => first [ notHyp P1 | notHyp P2 | fail 2 ]
-        | _ => idtac
-      end
-  end.
 
 Ltac equiv_unfold :=
   match goal with
@@ -211,7 +194,7 @@ Qed.
 Hint Resolve id_equiv_reflexive_ref.
 
 Lemma bind_right_id :
-  forall (A : Type)(m : A -> (option var)) , (fun x => bind (m x) id) = m.
+  forall (A : Type)(m : A -> (option var)) , m ∘ id = m.
 Proof.
   intros.
   apply functional_extensionality;
@@ -228,7 +211,7 @@ Hint Rewrite (bind_right_id fld).
 Hint Resolve bind_right_id.
 
 Lemma bind_left_id :
-  forall (A : Type)(m : var -> (option A)) , (fun x => bind (id x) m) = m.
+  forall (A : Type)(m : var -> (option A)) , id ∘ m = m.
 Proof.
   intros.
   apply functional_extensionality;
@@ -531,7 +514,7 @@ Proof.
     match goal with
     | [Hm1 : ?m1 ?x1 = Some ?v,
              Hf : ?f ?x1 = Some ?x2,
-                  Hmeq : ?m1 = (fun y => bind (?f y) ?m2)|- ?m2 ?x2 = Some ?v] =>
+                  Hmeq : ?m1 = ?f ∘ ?m2|- ?m2 ?x2 = Some ?v] =>
       apply equal_f with (x0:=x1) in Hmeq
     (* figure out a better way to do this. 
        x0 is confusing and potentially fragile, 
@@ -631,7 +614,7 @@ Proof.
   | [|- ⌊ _ ⌋ (_, ?ϕ' :: ?ψ') ≜ _] => apply int_x with (ϕ:=ϕ')(ψ:=ψ'); auto
   end.
   match goal with
-  | [Hmap : ?m1 = (fun x => bind (?f x) ?m2),
+  | [Hmap : ?m1 = ?f ∘ ?m2,
             Hm1 : ?m1 ?x = ?o,
                   Hf : ?f ?x = Some ?x'
      |- ?m2 ?x' = ?o] => apply equal_f with (x0:=x) in Hmap;
@@ -757,7 +740,7 @@ Hint Resolve equivalent_class_of_this.
 
 Lemma equivalent_frames_with_equivalent_maps :
   forall f ϕ1 ϕ2, frame_equiv f ϕ1 ϕ2 ->
-             (vMap ϕ1) = (fun x => bind (f x) (vMap ϕ2)).
+             (vMap ϕ1) = f ∘ (vMap ϕ2).
 Proof.
   intros;
     repeat equiv_unfold; auto.
@@ -767,7 +750,7 @@ Lemma bind_dom :
   forall {A : Type}`{Eq A}(m1 : partial_map A var)(m2 : partial_map var var),
     (forall a x, m1 a = Some x -> exists y, m2 x = Some y) ->
     forall d, dom m1 d ->
-         dom (fun x => bind (m1 x) m2) d.
+         dom (m1 ∘ m2) d.
 Proof.
   intros A HeqA m1 m2;
     intros.
@@ -807,7 +790,7 @@ Proof.
     end;
       repeat equiv_unfold.
     remember (frm (vMap ϕ2) (c_hole x2 s2')) as ϕ2'.
-    remember (frm (update this (v_addr α) (compose (fun x => bind (ps x) f) (vMap ϕ2))) (c_stmt s)) as ϕ'.
+    remember (frm (update this (v_addr α) (compose (ps ∘ f) (vMap ϕ2))) (c_stmt s)) as ϕ'.
     exists (χ, ϕ' :: ϕ2' :: ψ0).
     eapply r_mth
       with
@@ -1404,37 +1387,6 @@ Qed.
 
 Hint Resolve equivalent_reduction.
 
-Definition inv {A B : Type}`{Eq A}`{Eq B}(f : partial_map A B)(f' : partial_map B A) :=
-  (forall a b, f a = Some b ->
-          f' b = Some a) /\
-  (forall a b, f' b = Some a ->
-          f a = Some b).
-
-Lemma inv_empty :
-  forall{A B : Type}{HeqA : Eq A}{HeqB : Eq B},
-    @inv A B HeqA HeqB empty empty.
-Proof.
-  intros;
-    unfold inv;
-    split;
-    intros;
-    repeat map_rewrite;
-    crush.
-Qed.
-
-Hint Resolve inv_empty.
-
-Parameter inv_one_to_one :
-  forall {A B : Type}`{Eq A}`{Eq B}
-    (f : partial_map A B) (f' : partial_map B A),
-    inv f f' ->
-    one_to_one f'.
-
-Parameter one_to_one_exists_inv :
-  forall (A B : Type)`{Eq A}`{Eq B} (f : partial_map A B),
-    one_to_one f ->
-    exists f', inv f f'.
-
 Lemma ref_equiv_sym :
   forall f r1 r2, ref_equiv f r1 r2 ->
              forall f', inv f f' ->
@@ -1502,102 +1454,6 @@ Proof.
     andDestruct.
   crush.
 Qed.*)
-
-Lemma bind_inverse_right :
-  forall {A B C : Type}`{Eq A}`{Eq B}`{Eq C}
-    (f : partial_map B C)(f' : partial_map C B),
-    inv f f' ->
-    forall (m : partial_map A B),
-      (forall a b, m a = Some b -> exists c, f b = Some c) ->
-      (fun x => bind (bind (m x) f) f') = m.
-Proof.
-  intros.
-  unfold bind; simpl.
-  apply functional_extensionality;
-    intros a.
-  match goal with
-  | [|- _ = ?m ?a] =>
-    destruct (partial_map_dec a m) as [Hsome|Hnone];
-      [destruct_exists|rewrite Hnone; auto]
-  end.
-  match goal with
-  | [H : ?m ?a = Some ?b,
-         Hmap : forall a' b', ?m a' = Some b' -> _ |- _ = ?m ?a] =>
-    rewrite H; apply Hmap in H;
-      destruct_exists
-  end.
-  unfold inv in *;
-    andDestruct.
-  crush.
-Qed.
-
-Lemma inv_symmetry :
-  forall {A B : Type}`{Eq A}`{Eq B}
-    (f : partial_map A B)(f' : partial_map B A),
-    inv f f' ->
-    inv f' f.
-Proof.
-  intros;
-    unfold inv in *;
-    andDestruct;
-    split;
-    intros;
-    auto.
-Qed.
-
-Lemma bind_inverse_left :
-  forall {A B C : Type}`{Eq A}`{Eq B}
-    (f : partial_map A B)(f' : partial_map B A),
-    inv f f' ->
-    forall (m : partial_map B C),
-      (forall a b, f a = Some b -> exists c, m b = Some c) ->
-      (forall b c, m b = Some c -> exists a, f a = Some b) ->
-      (fun x  => bind (f' x) (fun y => bind (f y) m)) = m.
-Proof.
-  intros.
-  unfold bind; simpl.
-  apply functional_extensionality;
-    intros b.
-  match goal with
-  | [_ : inv ?f ?f' |- context[?f' ?b]] =>
-    destruct (partial_map_dec b f') as [Hsome|Hnone];
-      [destruct_exists|rewrite Hnone; auto]
-  end.
-
-  - match goal with
-    | [H : ?f' ?b = Some ?a |- context[?f' ?b]] =>
-      rewrite H
-    end.
-    unfold inv in *;
-      andDestruct.
-    match goal with
-    | [Hmap : ?f' ?b = Some ?a,
-              Ha : forall a' b', ?f' b' = Some a' -> _ |- _ ] =>
-      apply Ha in Hmap
-    end.
-    crush.
-
-  - match goal with
-    | [|- None = ?m ?b] =>
-      destruct (partial_map_dec b m) as [Hsome'|Hnone'];
-        auto
-    end.
-    destruct_exists.
-    match goal with
-    | [H : ?m ?b = Some _,
-           Ha : forall b' c', ?m b' = Some c' -> _ |- _ = ?m ?b] =>
-      apply Ha in H; destruct_exists
-    end.
-    unfold inv in *;
-      andDestruct.
-    match goal with
-    | [H : ?f ?a = Some ?b,
-           Ha : ?f' ?b = None,
-           Hb : forall a' b', ?f a' = Some b' -> ?f' b' = Some a' |- _] =>
-      apply Hb in H
-    end.
-    crush.
-Qed.
 
 Lemma stmt_equiv_sym :
   forall f s1 s2, stmt_equiv f s1 s2 ->
@@ -2331,9 +2187,9 @@ Proof.
     eauto.
 Qed.
 
-Lemma adaptation_implies_finite_1 :
+Lemma adaptation_implies_finite_2 :
   forall σ1 σ2 σ, σ1 ◁ σ2 ≜ σ ->
-             forall χ ϕ ψ, σ1 = (χ, ϕ::ψ) ->
+             forall χ ϕ ψ, σ2 = (χ, ϕ::ψ) ->
                       finite_ϕ ϕ.
 Proof.
   intros σ1 σ2 σ Hadapt;
@@ -2449,6 +2305,11 @@ Lemma equivalent_adaptation_exists :
                                                 frame_equiv f' ϕ2' ϕ' /\
                                                 frame_equiv (fun x => bind ((fun y => bind (f y) f2) x) f') ϕ ϕ'.
 Proof.
+  intros σ1 σ2 σ Hadapt;
+    inversion Hadapt;
+    subst;
+    intros.
+  
 (*  intros σ1 σ2 σ Hadapt;
     inversion Hadapt;
     subst;
@@ -2606,7 +2467,7 @@ Proof.
            | [H : (_, _) = (_, _) |- _] => inversion H; subst; clear H
            end.
     simpl in *.
-    (*let someσ:= fresh "σ" in
+    let someσ:= fresh "σ" in
     destruct equivalent_adaptation_exists
       with
         (σ1:=(χ0, ϕ1::nil))(σ2:=σ')(σ:=σ'')(σ1':=(χ0, ϕ2::nil))(σ2':=σ2')
@@ -2643,7 +2504,7 @@ Proof.
         assert (f4 = f1);
           [admit|subst f4].
         admit. (* all  *)
-    *)
+    
 
 Admitted.
 

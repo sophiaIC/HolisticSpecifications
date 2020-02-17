@@ -3,6 +3,8 @@ Require Import CpdtTactics.
 Require Import List.
 Require Import common.
 Require Import loo_def.
+Require Import function_operations.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 (** Assertion Variables *)
 
@@ -61,7 +63,7 @@ Notation "'∃S∙' A" :=(a_ex_Σ A)(at level 40).
 Notation "x 'internal'" :=(a_intrn x)(at level 40).
 Notation "x 'external'" :=(a_extrn x)(at level 40).
 Notation "x 'access' y" :=(a_acc x y)(at level 40).
-Notation "x 'call' y '⋄' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
+Notation "x 'calls' y '∎' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
 
 
 (*Instance asrtFoldableVar : PropFoldable asrt nat :=
@@ -612,18 +614,16 @@ Inductive in_stmt : var -> stmt -> Prop :=
 Reserved Notation "σ1 '◁' σ2 '≜' σ3" (at level 40).
 
 Inductive adaptation : config -> config -> config -> Prop :=
-| a_adapt : forall σ χ ϕ ψ σ' χ' ϕ' ϕ'' c β β' β'' ψ' zs s f,
+| a_adapt : forall σ χ ϕ ψ σ' χ' ϕ' ϕ'' c β β' β'' ψ' s f,
     σ = (χ, ϕ::ψ) ->
     σ' = (χ', ϕ' :: ψ') ->
     ϕ = frm β c ->
     ϕ' = frm β' (c_stmt s) ->
+    onto f β ->
     (forall z z', f z = Some z' -> fresh_in_map z β) ->
     (forall z z', f z = Some z' -> fresh_in_map z β') ->
     (forall z z', f z = Some z' -> ~ in_stmt z s) ->
-    dom β zs ->
-    (forall x z, f x = Some z -> In z zs) ->
-    (forall z, In z zs -> exists x, f x = Some z) ->
-    β'' = extend (fun x => bind (f x) β') β ->
+    β'' = (f ∘ β') ∪ β ->
     ϕ'' = frm β'' (c_stmt (❲f ↦ s❳)) ->
     σ ◁ σ' ≜ (χ', ϕ'' :: ψ')
 
@@ -643,6 +643,40 @@ For positivity discussion, see: http://adam.chlipala.net/cpdt/html/Cpdt.Inductiv
  *)
 
 Definition v_to_av : var -> option a_var := fun x => Some (a_bind x).
+
+Lemma one_to_one_v_to_av :
+  one_to_one v_to_av.
+Proof.
+  unfold one_to_one, v_to_av; intros; crush.
+Qed.
+
+Lemma into_v_to_av :
+  forall {A : Type}`{Eq A}(m : partial_map A var),
+    maps_into m v_to_av.
+Proof.
+  intros;
+    unfold maps_into, v_to_av in *;
+    intros;
+    eexists;
+    eauto.
+Qed.
+
+Hint Resolve into_v_to_av.
+Hint Resolve one_to_one_v_to_av.
+
+Lemma compose_v_to_av_equality :
+  forall {A : Type} `{Eq A} (m1 m2 : partial_map A var),
+    m1 ∘ v_to_av = m2 ∘ v_to_av ->
+    m1 = m2.
+Proof.
+  intros.
+  apply functional_extensionality;
+    intros a.
+
+  apply compose_one_to_one_eq in H0; auto; crush.
+Qed.
+
+Hint Resolve compose_v_to_av_equality.
 
 Definition initial (σ : config) : Prop :=
   exists α ϕ, σ = ((update α ObjectInstance empty), ϕ :: nil) /\
@@ -748,7 +782,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
               exists v2, (vMap' x' = Some v2 /\
                      (exists v', ⌊ v1 ⌋ σ ≜ v' /\
                             ⌊ v2 ⌋ σ ≜ v'))) ->
-    M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) call (a_bind y) ⋄ m ⟨ (compose vMap v_to_av) ⟩ )
+    M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) calls (a_bind y) ∎ m ⟨ (vMap ∘ v_to_av) ⟩ )
 
 (** Viewpoint: *)
 | sat_extrn : forall M1 M2 σ x α o C, ⌊ x ⌋ σ ≜ (v_addr α) ->
@@ -921,7 +955,7 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                                M1 ⦂ M2 ◎ σ ⊭ (a_call (a_bind x)
                                                                      (a_bind y)
                                                                      m
-                                                                     (compose vMap v_to_av))
+                                                                     (vMap ∘ v_to_av))
 
 (*viewpoint*) (* well-formeness? This is important!!!!*)
 | nsat_extrn1 : forall M1 M2 σ x, (forall α, ~ ⌊ x ⌋ σ ≜ (v_addr α)) ->

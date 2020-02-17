@@ -1,54 +1,12 @@
 Require Import common.
 Require Import loo_def.
 Require Import chainmail.
+Require Import function_operations.
 Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 (** #<h1># Basic Arithmetic Assertions: #</h1># *)
-
-(** Law of the Excluded Middle: *)
-Parameter excluded_middle : forall P, {P} + {~P}.
-
-Ltac destruct_exists :=
-  match goal with
-  | [H : exists _, _ |- _] => destruct H
-  end.
-
-Ltac map_rewrite :=
-  match goal with
-  | [H : context[mapp _ _] |-_] => unfold mapp in H
-  | [|- context[mapp _ _]] => unfold mapp
-  | [H : context[update_σ_map _ _] |-_] => unfold update_σ_map in H
-  | [|- context[update_σ_map _ _]] => unfold update_σ_map
-  | [H : context[update_ψ_map _ _] |-_] => unfold update_ψ_map in H
-  | [|- context[update_ψ_map _ _]] => unfold update_ψ_map
-  | [H : context[configMapStack _ _] |-_] => unfold configMapStack in H
-  | [|- context[configMapStack _ _]] => unfold configMapStack
-  | [H : context[stackMap _ _] |-_] => unfold stackMap in H
-  | [|- context[stackMap _ _]] => unfold stackMap
-  | [H : context[update _ _] |-_] => unfold update in H
-  | [|- context[update _ _]] => unfold update
-  | [H : context[t_update _ _] |-_] => unfold t_update in H
-  | [|- context[t_update _ _]] => unfold t_update
-  | [H : context[empty] |-_] => unfold empty in H
-  | [|- context[empty]] => unfold empty
-  | [H : context[t_empty] |-_] => unfold t_empty in H
-  | [|- context[t_empty]] => unfold t_empty
-  end.
-
-Ltac eq_auto :=
-  match goal with
-  | [Heq : ?a1 <> ?a2, Heqb : context[eqb ?a1 ?a2]|- _] => rewrite neq_eqb in Heqb; auto
-  | [Heq : ?a1 <> ?a2, Heqb : context[eqb ?a2 ?a1]|- _] => rewrite eqb_sym in Heqb;
-                                                        rewrite neq_eqb in Heqb; auto
-  | [Heq : ?a1 <> ?a2 |- context[eqb ?a1 ?a2]] => rewrite neq_eqb; auto
-  | [Heq : ?a1 <> ?a2 |- context[eqb ?a2 ?a1]] => rewrite eqb_sym;
-                                               rewrite neq_eqb; auto
-
-  | [Heqb : context[eqb ?a ?a]|- _] => rewrite eqb_refl in Heqb; auto
-  | [|- context[eqb ?a ?a]] => rewrite eqb_refl; auto
-  end.
 
 Lemma prop_not_and_distr :
   forall A B, ~(A /\ B) -> ~A \/ ~B.
@@ -92,165 +50,6 @@ Proof.
   intros; intros Hcontra.
   contradiction H.
   exists a; auto.
-Qed.
-
-
-Ltac empty_auto :=
-  match goal with
-  | [H : context [empty _] |- _] => unfold empty, t_empty in H; crush
-  | [|- context [empty _]] => unfold empty, t_empty; crush
-  end.
-
-Ltac update_auto :=
-  match goal with
-  | [H : (update ?a _ _) ?a = Some ?b' |- _] => unfold update, t_update in H;
-                                              subst; rewrite eqb_refl in H;
-                                              inversion H; subst
-  | [Hneq : ?a <> ?a', H : (update ?a _ _) ?a' = Some _ |- _] => unfold update, t_update in H;
-                                                              apply neq_eqb in Hneq;
-                                                              rewrite Hneq in H
-  | [Hneq : ?a' <> ?a, H : (update ?a _ _) ?a' = Some _ |- _] => unfold update, t_update in H;
-                                                              apply neq_eqb in Hneq;
-                                                              rewrite Hneq in H
-  | [H : (update ?a _ _) ?a' = Some ?b' |- _] => unfold update, t_update in H;
-                                               let Heq := fresh "Heq" in
-                                               let Hneq := fresh "Hneq" in
-                                               destruct (eq_dec a' a) as [Heq|Hneq];
-                                               [subst; rewrite eqb_refl in H;
-                                                inversion H; subst
-                                               |apply neq_eqb in Hneq;
-                                                rewrite Hneq in H]
-
-  | [H : context[(update ?a _ _) ?a]  |- _] => unfold update, t_update in H;
-                                             subst; rewrite eqb_refl in H
-  | [Hneq : ?a <> ?a', H : context[(update ?a _ _) ?a']  |- _] => unfold update, t_update in H;
-                                                               apply neq_eqb in Hneq;
-                                                               rewrite Hneq in H
-  | [Hneq : ?a' <> ?a, H : context[(update ?a _ _) ?a']  |- _] => unfold update, t_update in H;
-                                                               apply neq_eqb in Hneq;
-                                                               rewrite Hneq in H
-  | [H : context[(update ?a _ _) ?a']  |- _] => unfold update, t_update in H;
-                                              let Heq := fresh "Heq" in
-                                              let Hneq := fresh "Hneq" in
-                                              destruct (eq_dec a' a) as [Heq|Hneq];
-                                              [subst; rewrite eqb_refl in H
-                                              |apply neq_eqb in Hneq;
-                                               rewrite Hneq in H]
-                                                     
-  | [|- (update ?a _ _) ?a = Some _] => unfold update, t_update;
-                                      subst; rewrite eqb_refl
-  | [Hneq : ?a <> ?a' |- (update ?a _ _) ?a' = Some _] => unfold update, t_update;
-                                                       apply neq_eqb in Hneq;
-                                                       rewrite Hneq
-  | [Hneq : ?a' <> ?a |- (update ?a _ _) ?a' = Some _] => unfold update, t_update;
-                                                       apply neq_eqb in Hneq;
-                                                       rewrite Hneq
-  | [|- (update ?a _ _) ?a' = Some ?b'] => unfold update, t_update;
-                                         let Heq := fresh "Heq" in
-                                         let Hneq := fresh "Hneq" in
-                                         destruct (eq_dec a' a) as [Heq|Hneq];
-                                         [subst; rewrite eqb_refl
-                                         |apply neq_eqb in Hneq;
-                                          rewrite Hneq]
-                                                
-  | [|- context[(update ?a _ _) ?a]] => unfold update, t_update;
-                                      subst; rewrite eqb_refl
-  | [Hneq : ?a <> ?a' |- context[(update ?a _ _) ?a']] => unfold update, t_update;
-                                                       apply neq_eqb in Hneq;
-                                                       rewrite Hneq
-  | [Hneq : ?a' <> ?a |- context[(update ?a _ _) ?a']] => unfold update, t_update;
-                                                       apply neq_eqb in Hneq;
-                                                       rewrite Hneq
-  | [|- context[(update ?a _ _) ?a']] => unfold update, t_update;
-                                       let Heq := fresh "Heq" in
-                                       let Hneq := fresh "Hneq" in
-                                       destruct (eq_dec a' a) as [Heq|Hneq];
-                                       [subst; rewrite eqb_refl
-                                       |apply neq_eqb in Hneq;
-                                        rewrite Hneq]
-
-  | [H : context[empty _]|-_] => unfold empty, t_empty in H
-  | [|- context[empty _]] => unfold empty, t_empty
-  end;
-  auto.
-
-Ltac pmap_simpl :=
-  repeat (try empty_auto;
-          try update_auto).
-
-Lemma partial_map_dec :
-  forall {A B : Type} `{Eq A} a (m : partial_map A B), {exists b, m a = Some b} + {m a = None}.
-Proof.
-  intros.
-  destruct (m a) as [b|]; [left; exists b|]; crush.
-Qed.
-
-Lemma not_some_implies_none :
-  forall {A B : Type} `{Eq A} (f : partial_map A B) a,
-    (forall b, ~ f a = Some b) ->
-    f a = None.
-Proof.
-  intros.
-  destruct (partial_map_dec a f); auto.
-  destruct_exists.
-  crush.
-Qed.
-
-Lemma in_map_implies_in_dom :
-  forall {A B : Type} `{Eq A} (m : partial_map A B) d,
-    dom m d ->
-    forall a b, m a = Some b ->
-           In a d.
-Proof.
-  intros A B HeqClass m d Hdom;
-    induction Hdom;
-    intros;
-    try solve [pmap_simpl; crush; eauto].
-Qed.
-
-Lemma in_dom_implies_in_map :
-  forall {A B : Type} `{Eq A} (m : partial_map A B) d,
-    dom m d ->
-    forall a, In a d ->
-    exists b, m a = Some b.
-Proof.
-  intros.
-  unfold dom in *.
-  andDestruct.
-  auto.
-Qed.
-
-Lemma not_in_map_implies_not_in_dom :
-  forall {A B : Type} `{Eq A} (m : partial_map A B) d,
-    dom m d ->
-    forall a, m a = None ->
-           ~ In a d.
-Proof.
-  intros;
-    intros Hcontra.
-  unfold dom in *;
-    andDestruct.
-  match goal with
-  | [Hin : In ?a ?d,
-           Hmap : ?m ?a = None,
-                  H : forall a', In a' ?d -> exists b, ?m a' = Some b |- _] =>
-    apply H in Hin;
-      destruct_exists;
-      crush
-  end.
-Qed.
-
-Lemma not_in_dom_implies_not_in_map :
-  forall {A B : Type} `{Eq A} (m : partial_map A B) d,
-    dom m d ->
-    forall a, ~ In a d ->
-         m a = None.
-Proof.
-  intros.
-  apply not_some_implies_none;
-    intros;
-    intro Hcontra.
-  eapply in_map_implies_in_dom in Hcontra; eauto.
 Qed.
 
 Lemma reduction_preserves_well_formed_heap :
@@ -313,12 +112,12 @@ Proof.
       |contradiction Hin; auto].
     destruct (H5 f y) as [v];
       auto.
-    exists v; unfold compose; rewrite <- Heqres; auto.
+    exists v; auto.
 Qed.
 
 Lemma linking_unique :
-  forall M1 M2 M, M1 ∘ M2 ≜ M ->
-             forall M', M1 ∘ M2 ≜ M' ->
+  forall M1 M2 M, M1 ⋄ M2 ≜ M ->
+             forall M', M1 ⋄ M2 ≜ M' ->
                    M' = M.
 Proof.
   intros M1 M2 M Hlink1 M' Hlink2;
@@ -329,7 +128,7 @@ Qed.
 
 Ltac link_unique_auto :=
   match goal with
-  | [H1 : ?M1 ∘ ?M2 ≜ ?M, H2 : ?M1 ∘ ?M2 ≜ ?M' |-_] =>
+  | [H1 : ?M1 ⋄ ?M2 ≜ ?M, H2 : ?M1 ⋄ ?M2 ≜ ?M' |-_] =>
     assert (M' = M);
     [eapply linking_unique;
      eauto|subst M']
@@ -343,7 +142,7 @@ Ltac reduce_heap_wf_auto :=
 
 Lemma reductions_preserves_heap_wf :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
-                 forall M, M1 ∘ M2 ≜ M ->
+                 forall M, M1 ⋄ M2 ≜ M ->
                       χ_wf M (fst σ1) ->
                       χ_wf M (fst σ2).
 Proof.
@@ -363,7 +162,7 @@ Ltac reduces_heap_wf_auto :=
 
 Lemma pair_reduction_preserves_heap_wf :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                 forall M, M1 ∘ M2 ≜ M ->
+                 forall M, M1 ⋄ M2 ≜ M ->
                       χ_wf M (fst σ1) ->
                       χ_wf M (fst σ2).
 Proof.
@@ -383,7 +182,7 @@ Ltac pair_reduce_heap_wf_auto :=
 
 Lemma pair_reductions_preserves_heap_wf :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
-                 forall M, M1 ∘ M2 ≜ M ->
+                 forall M, M1 ⋄ M2 ≜ M ->
                       χ_wf M (fst σ1) ->
                       χ_wf M (fst σ2).
 Proof.
@@ -442,7 +241,7 @@ Ltac initial_heap_wf_auto :=
   end.
 
 Lemma linked_wf :
-  forall M1 M2 M, M1 ∘ M2 ≜ M ->
+  forall M1 M2 M, M1 ⋄ M2 ≜ M ->
              M_wf M1 ->
              M_wf M2 ->
              M_wf M.
@@ -465,14 +264,14 @@ Qed.
 
 Ltac linking_wf :=
   match goal with
-  | [H1 : M_wf ?M1, H2 : M_wf ?M2, Hlink : ?M1 ∘ ?M2 ≜ ?M |- M_wf ?M] => eapply linked_wf; eauto
+  | [H1 : M_wf ?M1, H2 : M_wf ?M2, Hlink : ?M1 ⋄ ?M2 ≜ ?M |- M_wf ?M] => eapply linked_wf; eauto
   end.
 
 Lemma arising_heap_wf :
   forall M1 M2 σ, arising M1 M2 σ ->
              M_wf M1 ->
              M_wf M2 ->
-             forall M, M1 ∘ M2 ≜ M ->
+             forall M, M1 ⋄ M2 ≜ M ->
                   χ_wf M (fst σ).
 Proof.
   intros.
@@ -481,169 +280,6 @@ Proof.
   initial_heap_wf_auto.
   linking_wf.
 Qed.
-
-Lemma exists_dom_finite :
-  forall {A B : Type} `{Eq A} (m : partial_map A B),
-    finite m ->
-    exists d, dom m d.
-Proof.
-  intros A B HeqClass m Hfinite;
-    induction Hfinite;
-    [exists nil;
-       unfold dom;
-       split;
-       [|split];
-       intros;
-       auto;
-       repeat map_rewrite;
-       crush
-      |].
-
-  destruct IHHfinite as [d Hdom].
-  destruct (excluded_middle (In a d)) as [Hin|Hnin];
-    [exists d|exists (a::d)];
-    auto;
-    unfold dom;
-    split;
-    try split;
-    intros;
-    repeat map_rewrite;
-    auto;
-    try solve [destruct (eq_dec a0 a);
-               subst;
-               eq_auto;
-               unfold dom in *;
-               andDestruct;
-               eauto];
-    try solve [unfold dom in *;
-               andDestruct;
-               auto].
-  destruct (eq_dec a0 a) as [|Hneq];
-    subst;
-    eq_auto;
-    [apply in_eq|apply in_cons].
-  unfold dom in *;
-    andDestruct;
-    eauto.
-  match goal with
-  | [H1 : In ?a0 (?a::?d),
-          H2 : ~ In ?a ?d |- _] => inversion H1; subst
-  end.
-  eq_auto; eexists; eauto.
-  destruct (eq_dec a0 a) as [|Hneq];
-    subst;
-    eq_auto; [crush|].
-  unfold dom in *;
-    andDestruct;
-    eauto.
-Qed.
-
-Lemma update_neq_empty :
-  forall {A B : Type}`{Eq A} (a : A)(b : B) m,
-    update a b m <> empty.
-Proof.
-  intros; intros Hcontra.
-  assert (Heq : update a b m a = None);
-    [rewrite Hcontra; pmap_simpl|pmap_simpl].
-  crush.
-Qed.
-
-Ltac update_empty_contra :=
-  match goal with
-  | [H : update ?a ?b ?m = empty |- _] => contradiction (update_neq_empty a b m)
-  | [H : empty = update ?a ?b ?m |- _] => symmetry in H; contradiction (update_neq_empty a b m)
-  end.
-
-Lemma dom_empty_is_nil :
-  forall {A B : Type}`{Eq A} (m : partial_map A B) d,
-    dom m d ->
-    m = empty ->
-    d = nil.
-Proof.
-  intros A B HeqClass m d H;
-    intros;
-    subst;
-    unfold dom in *;
-    andDestruct.
-  destruct d as [|a d'];
-    auto.
-  assert (exists b : B, empty a = Some b);
-    [apply Ha0, in_eq|].
-  destruct_exists.
-  repeat map_rewrite; crush.
-Qed.
-
-(*Lemma update_dom :
-  forall {A B : Type}`{Eq A} (m : partial_map A B) d,
-    dom m d ->
-    forall a b, (dom (update a b m) d) \/ (dom (update a b m) (a::d)).
-Proof.
-  intros A B HeqCl m d Hdom;
-    induction Hdom;
-    intros.
-  destruct (partial_map_dec a m) as [Hsome|Hnone];
-    [left|right].
-  apply d_map; intros; auto; [|pmap_simpl; try solve [crush]].
-  pmap_simpl;
-    [destruct Hsome as [b']
-    |pmap_simpl]; eauto.
-  exists b; auto.
-
-  apply d_map;
-    intros.
-  pmap_simpl; crush;
-    right; eapply H; eauto.
-  pmap_simpl; [exists b; auto|].
-  inversion H2; subst;
-    [apply eqb_neq in Hneq; crush
-    |crush].
-
-  apply u_con;
-    auto.
-  intro Hcontra.
-  apply H0 in Hcontra; crush.
-Qed.*)
-
-(*Lemma dom_update :
-  forall {A B : Type} `{Eq A} (m : partial_map A B) a b d,
-    dom (update a b m) d ->
-    (dom m d) \/ (exists d', dom m d' /\ (d = a :: d')).
-Proof.
-  intros;
-    inversion H0;
-    subst.
-
-  destruct (partial_map_dec a m);
-    [left|right].
-
-  apply d_map; intros; auto.
-  destruct (eq_dec a0 a) as [Heq|Hneq];
-    [subst; apply (H1 a b);
-     pmap_simpl;
-     auto
-    |eapply H1; pmap_simpl; eauto].
-  destruct (eq_dec a0 a) as [Heq|Hneq];
-    [subst;
-     pmap_simpl;
-     auto
-    |eapply H2 in H4; pmap_simpl; auto].
-
-  destruct d as [|a' d'];
-    [assert (Hin : In a nil);
-     [apply (H1 a b); eauto; pmap_simpl; auto|crush]
-    |exists d'; split].
-  apply d_map;
-    intros;
-    auto.
-
-  destruct (eq_dec a a0) as [Heq|Hneq];
-    [subst; crush|].
-  assert (Hin : In a0 (a'::d'));
-    [apply H1 with (b0:=b0);
-     pmap_simpl; crush
-    |inversion Hin; subst; auto].
-
-Qed.*)
 
 Lemma le_le_addr :
   forall α1 α2, le_α α1 α2 ->
@@ -994,55 +630,15 @@ Qed.*)
 
 (** TODO: *)
 Parameter fresh_var_map :
-  forall {A : Type} (m1 : partial_map var A) (d : list var),
-    dom m1 d ->
-    forall (m2 : partial_map var A) s,
-      finite m2 ->
-      exists f,
-        (forall z z', f z = Some z' -> fresh_in_map z m1) /\
-        (forall z z', f z = Some z' -> fresh_in_map z m2) /\
-        (forall z z', f z = Some z' -> ~ in_stmt z s) /\
-        (forall x z, f x = Some z -> In z d) /\
-        (forall z, In z d -> exists x, f x = Some z).
-
-Ltac finite_auto :=
-  repeat match goal with
-         | [H : context[finite_σ _] |- _] => unfold finite_σ in H
-         | [H : context[finite_ψ _] |- _] => unfold finite_ψ in H
-         | [H : context[finite_ϕ _] |- _] => unfold finite_ϕ in H
-         | [|- context[finite_σ _]] => unfold finite_σ
-         | [|- context[finite_ψ _]] => unfold finite_ψ
-         | [|- context[finite_ϕ _]] => unfold finite_ϕ
-         end.
-
-Ltac not_stuck_auto :=
-  repeat match goal with
-         | [H : context[not_stuck_σ _] |- _] => unfold not_stuck_σ in H
-         | [H : context[not_stuck_ϕ _] |- _] => unfold not_stuck_ϕ in H
-         | [|- context[not_stuck_σ _]] => unfold not_stuck_σ
-         | [|- context[not_stuck_ϕ _]] => unfold not_stuck_ϕ
-         end.
-
-Ltac waiting_auto :=
-  repeat match goal with
-         | [H : context[waiting_σ _] |- _] => unfold waiting_σ in H
-         | [H : context[waiting_ψ _] |- _] => unfold waiting_ψ in H
-         | [H : context[waiting_ϕ _] |- _] => unfold waiting_ϕ in H
-         | [|- context[waiting_σ _]] => unfold waiting_σ
-         | [|- context[waiting_ψ _]] => unfold waiting_ψ
-         | [|- context[waiting_ϕ _]] => unfold waiting_ϕ
-         end.
-
-Lemma dom_unique :
-  forall {A B : Type} `{Eq A} (m : partial_map A B) d,
-    dom m d ->
-    unique d.
-Proof.
-  intros A B HeqClass m d Hdom;
-    unfold dom in *;
-    andDestruct;
-    auto.
-Qed.
+  forall {A : Type} (m1 m2 : partial_map var A) (d : list var) s,
+    dom m2 d ->
+    finite m2 ->
+    exists f,
+      (forall z z', f z = Some z' -> fresh_in_map z m1) /\
+      (forall z z', f z = Some z' -> fresh_in_map z m2) /\
+      (forall z z', f z = Some z' -> ~ in_stmt z s) /\
+      (forall x z, f x = Some z -> In z d) /\
+      (forall z, In z d -> exists x, f x = Some z).
 
 Lemma adaptation_exists :
   forall χ1 ϕ1 ψ1
@@ -1066,13 +662,13 @@ Proof.
 
   inversion H1; subst.
   
-  remember (vMap ϕ1) as β1.
-  destruct (exists_dom_finite β1) as [zs]; auto;
-    [subst; finite_auto; 
-     apply H; crush|].
   remember (vMap ϕ2) as β2.
-  
-  destruct (fresh_var_map β1 zs H2 β2 s) as [f Hfresh];
+  destruct (exists_dom_finite β2) as [zs]; auto;
+    [subst; finite_auto; 
+     apply H0; crush|].
+  remember (vMap ϕ1) as β1.
+
+  destruct (fresh_var_map β2 zs H2 β1 s) as [f Hfresh];
     [finite_auto; crush| andDestruct].
 
   (exists (χ2, (frm (extend (fun x => bind (f x) β2) β1) (c_stmt (❲ f ↦ s❳)))::ψ2)).
@@ -1090,157 +686,6 @@ Proof.
     auto.
   destruct ϕ2;
     f_equal;
-    auto.
-Qed.
-
-Inductive finite_normal_form {A B : Type} `{Eq A} : partial_map A B -> Prop :=
-| norm_empty : finite_normal_form empty
-| norm_update : forall a b m, finite_normal_form m ->
-                         m a = None ->
-                         finite_normal_form (update a b m).
-
-Hint Constructors finite_normal_form.
-
-Lemma compose_normal_form :
-  forall {A B : Type}`{Eq A}`{Eq B} (m1 : partial_map A B),
-    finite_normal_form m1 ->
-    forall {C : Type} (m2 : partial_map B C),
-    exists m3, finite_normal_form m3 /\ m3 = compose m1 m2.
-Proof.
-  intros A B HeqClassA HeqClassB m1 Hnorm;
-    induction Hnorm;
-    intros;
-    auto.
-
-  exists empty; auto.
-
-  destruct (IHHnorm C m2) as [m3 IH];
-    destruct IH as [IH1 IH2].
-  destruct (partial_map_dec b m2)
-    as [HSome|HNone];
-    [destruct HSome as [c HSome]|].
-  unfold compose;
-    exists (update a c m3);
-    split;
-    [apply norm_update;
-     subst m3;
-     unfold compose; [auto|crush]|].
-    apply functional_extensionality;
-    intros a';
-    pmap_simpl;
-    crush.
-  exists m3;
-    split;
-    auto.
-  subst; unfold compose; auto.
-  apply functional_extensionality;
-    intros c;
-    pmap_simpl;
-    crush.
-Qed.
-
-Lemma update_finite_normal_form :
-  forall {A B : Type} `{Eq A} (m : partial_map A B),
-    finite_normal_form m ->
-    forall a b, exists m', finite_normal_form m' /\ m' = (update a b m).
-Proof.
-  intros A B HeqClass m Hfinite;
-    induction Hfinite;
-    intros;
-    [exists (update a b empty); auto|].
-
-  destruct (IHHfinite a0 b0) as [m' Hnorm];
-    destruct Hnorm as [Hnorm Heqm'].
-
-  destruct (eq_dec a0 a) as [Heq|Hneq];
-    [subst a0
-    |].
-
-  exists m'; split; auto;
-    apply functional_extensionality;
-    intros a';
-    subst;
-    pmap_simpl.
-
-  exists (update a b m');
-    split.
-
-  destruct (partial_map_dec a m') as [HSome|HNone];
-    [destruct HSome as [b' HSome]; subst; pmap_simpl; crush
-    |apply norm_update; auto].
-
-  apply functional_extensionality; intros a'; pmap_simpl; subst.
-  rewrite neq_eqb; auto.
-  destruct (eq_dec a' a0) as [Heqa'|Hneqa'];
-    [subst; pmap_simpl|pmap_simpl].
-Qed.
-
-Lemma finite_exists_normal_form :
-  forall {A B : Type} `{Eq A} (m : partial_map A B),
-    finite m ->
-    exists m', finite_normal_form m' /\ m' = m.
-Proof.
-  intros A B HeqClass m Hfinite;
-    induction Hfinite;
-    [exists empty; auto|].
-
-  apply update_finite_normal_form; crush.
-Qed.
-
-Lemma finite_normal_form_implies_finite :
-  forall {A B : Type} `{Eq A} (m : partial_map A B),
-    finite_normal_form m ->
-    finite m.
-Proof.
-  intros A B HeqClass m Hnorm;
-    induction Hnorm;
-    auto.
-Qed.
-
-Lemma finite_implies_normal_form :
-  forall {A B : Type} `{Eq A} (m : partial_map A B),
-    finite m ->
-    finite_normal_form m.
-Proof.
-  intros.
-  destruct (finite_exists_normal_form m);
-    andDestruct;
-    subst;
-    auto.
-Qed.
-
-Hint Resolve finite_implies_normal_form finite_exists_normal_form finite_normal_form_implies_finite
-     compose_normal_form.
-
-Lemma finite_map_composition :
-  forall {A B : Type}`{Eq A}`{Eq B} (m1 : partial_map A B),
-    finite m1 ->
-    forall {C : Type} (m2 : partial_map B C),
-      finite (compose m1 m2).
-Proof.
-  intros.
-  destruct (compose_normal_form m1 (finite_implies_normal_form m1 H1) m2); eauto.
-  andDestruct; subst.
-  apply finite_normal_form_implies_finite; auto.
-Qed.
-
-Lemma compose_v_to_av_equality :
-  forall {A : Type} `{Eq A} m1 m2,
-    compose m1 v_to_av = compose m2 v_to_av ->
-    m1 = m2.
-Proof.
-  intros.
-  apply functional_extensionality;
-    intros a.
-
-  assert (Heq : compose m1 v_to_av a = compose m2 v_to_av a);
-    [crush
-    |].
-  unfold compose in Heq.
-  destruct (m1 a) as [x|];
-    destruct (m2 a) as [y|];
-    auto;
-    inversion Heq;
     auto.
 Qed.
 
@@ -2388,11 +1833,6 @@ Ltac config_wf_destruct :=
     destruct Hwf as [Hnot_stuck Hwaiting];
     subst σ
   end.
-
-Definition one_to_one {A B : Type} `{Eq A} (m : partial_map A B) : Prop :=
-  forall a1 a2 b, m a1 = Some b ->
-             m a2 = Some b ->
-             a1 = a2.
 
 (** TODO: *)
 Parameter function_neq_exists_neq_mapping  :
