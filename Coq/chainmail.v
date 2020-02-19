@@ -597,6 +597,7 @@ Inductive adaptation : config -> config -> config -> Prop :=
     σ' = (χ', ϕ' :: ψ') ->
     ϕ = frm β c ->
     ϕ' = frm β' (c_stmt s) ->
+    one_to_one f ->
     onto f β' ->
     disjoint_dom f β ->
     disjoint_dom f β' ->
