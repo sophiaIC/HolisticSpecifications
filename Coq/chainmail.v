@@ -592,18 +592,18 @@ Definition fresh_in_map {A : Type} (x : var) (m : partial_map var A) : Prop :=
 Reserved Notation "σ1 '◁' σ2 '≜' σ3" (at level 40).
 
 Inductive adaptation : config -> config -> config -> Prop :=
-| a_adapt : forall σ χ ϕ ψ σ' χ' ϕ' ϕ'' c β β' β'' ψ' s f,
+| a_adapt : forall σ χ ϕ ψ σ' χ' ϕ' ϕ'' c β β' ψ' s f f',
     σ = (χ, ϕ::ψ) ->
     σ' = (χ', ϕ' :: ψ') ->
     ϕ = frm β c ->
     ϕ' = frm β' (c_stmt s) ->
     one_to_one f ->
     onto f β' ->
+    inv f f' ->
     disjoint_dom f β ->
     disjoint_dom f β' ->
     (forall z z', f z = Some z' -> ~ in_stmt z s) ->
-    β'' = (f ∘ β') ∪ β ->
-    ϕ'' = frm β'' (c_stmt (❲f ↦ s❳)) ->
+    ϕ'' = frm ((f ∘ β') ∪ β) (c_stmt (❲f' ↦ s❳)) ->
     σ ◁ σ' ≜ (χ', ϕ'' :: ψ')
 
 where "σ1 '◁' σ2 '≜' σ3" := (adaptation σ1 σ2 σ3).
