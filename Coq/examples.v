@@ -531,6 +531,40 @@ Ltac a_prop :=
          | [|- _ ⦂ _ ◎ _ ⊨ (_ ∨ _)] => apply <- or_iff
          end.
 
+Lemma entails_implies :
+  forall A1 A2, entails A1 A2 ->
+           forall M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨ A1 ->
+                      M1 ⦂ M2 ◎ σ ⊨ A2.
+Proof.
+  intros A1 A2 Hent;
+    inversion Hent;
+    auto.
+Qed.
+
+Ltac ent_not_all_not_ex_x :=
+  match goal with
+  | [|- ?M1 ⦂ ?M2 ◎ ?σ ⊨ (¬ ∃x∙ ?A) ] =>
+    let H := fresh in
+    assert (H : (M1 ⦂ M2 ◎ σ ⊨ ∀x∙ ¬ A) ->
+                (M1 ⦂ M2 ◎ σ ⊨ ¬ ∃x∙ A));
+    [let H' := fresh in
+     assert (H' : entails (∀x∙ ¬ A) (¬ ∃x∙ A));
+     [apply not_ex_x_all_not_2|];
+     inversion H'; subst; auto|];
+    apply H;
+    clear H
+(*    assert (M1 ⦂ M2 ◎ σ ⊨ ∀x∙ ¬ A)*)
+  end.
+
+SearchAbout entails.
+Ltac neg_distr_and :=
+  match goal with
+  | [|- ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ (?Aa ∧ ?Ab) ] =>
+    apply entails_implies with (A1:=(¬Aa) ∨ (¬Ab));
+    [auto|]
+(*    assert (M1 ⦂ M2 ◎ σ ⊨ ∀x∙ ¬ A)*)
+  end.
+
 Lemma thing :
   entails (∀x∙∀x∙
             ((a_class (e_hole 1) Boundary)
@@ -546,27 +580,52 @@ Proof.
   auto.
   apply ent;
     intros.
-  a_intros.
   repeat (a_prop;
           a_intros;
           auto).
 
-  specialize (H y v H0 z H1). H1).
-  
-  destruct fresh_intro
-    with (σ1:=σ)(σ2:=σ)
-         (A1:=(∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
-              ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))
-         (A2:=((∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
-               ∧ (¬ (∃x∙ ((a_hole 0 access a_hole 1) ∧ (¬ a_class (e_hole 0) Boundary))))))
-    as [x Hfrsh];
-    andDestruct.
-  eapply H with (y:=y)(v:=v) in Ha;
-    auto.
-  a_prop.
-  
-  apply H in H1.
-  auto.
+  - assert (Hfrsh : notin_Ax ((∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+                              ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))
+                             z).
+    +  apply ni_and; auto.
+       apply ni_all_x; auto.
+       apply ni_arr; eauto.
+       apply ni_acc; simpl; auto.
+
+    + apply frsh with (σ:=σ) in Hfrsh;
+        [|inversion H1; auto].
+      apply H with (y:=y)(v:=v) in Hfrsh; auto.
+      repeat (a_prop;
+              a_intros;
+              auto).
+      admit.
+      
+  - admit.
+
+  - ent_not_all_not_ex_x.
+    repeat (a_prop;
+            a_intros;
+            auto).
+    SearchAbout a_neg.
+    neg_distr_and.
+
+    assert (Hfrsh : notin_Ax ((∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+                              ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))
+                             z).
+    +  apply ni_and; auto.
+       apply ni_all_x; auto.
+       apply ni_arr; eauto.
+       apply ni_acc; simpl; auto.
+
+    + apply frsh with (σ:=σ) in Hfrsh;
+        [|inversion H1; auto].
+      apply H with (y:=y)(v:=v) in Hfrsh; auto.
+      repeat (a_prop;
+              a_intros;
+              auto).
+    
+    
+
 Qed.
 
 Theorem expose_example :
