@@ -627,18 +627,20 @@ Proof.
     induction Hdom;
     crush.
 Qed.*)
-
-(** TODO: *)
-Parameter fresh_var_map :
-  forall {A : Type} (m1 m2 : partial_map var A) (d : list var) s,
-    dom m2 d ->
-    finite m2 ->
-    exists f,
-      (forall z z', f z = Some z' -> fresh_in_map z m1) /\
-      (forall z z', f z = Some z' -> fresh_in_map z m2) /\
-      (forall z z', f z = Some z' -> ~ in_stmt z s) /\
-      (forall x z, f x = Some z -> In z d) /\
-      (forall z, In z d -> exists x, f x = Some z).
+      
+(*Lemma fresh_var_map :
+  forall {A : Type} (β1 β2 : partial_map var A),
+    finite_normal_form β1 ->
+    finite_normal_form β2 ->
+    forall s, exists f,
+        disjoint_dom f β1 /\
+        disjoint_dom f β2 /\
+        (forall z z', f z = Some z' -> ~ in_stmt z s) /\
+        onto f β2.
+Proof.
+  intros A β1 β2 Hfin;
+    induction Hfin
+Qed.*)
 
 Lemma adaptation_exists :
   forall χ1 ϕ1 ψ1
@@ -651,45 +653,29 @@ Lemma adaptation_exists :
 Proof.
   intros; subst.
 
-  (*unfold not_stuck_ϕ in H1.
-  
-  inversion H1; subst; simpl in *.
-    inversion
-  destruct H1 as [ϕ'];
-    andDestruct.
-  inversion Hb; subst; simpl in *;
-    inversion Ha; subst.*)
-
   inversion H1; subst.
-  
-  remember (vMap ϕ2) as β2.
-  destruct (exists_dom_finite β2) as [zs]; auto;
-    [subst; finite_auto; 
-     apply H0; crush|].
+
   remember (vMap ϕ1) as β1.
+  remember (vMap ϕ2) as β2.
+  destruct (@disjointedness_for_finite_variable_maps value value β1)
+    with (g:=β2)(s:=s)
+    as [f];
+    try solve [finite_auto; subst; eauto];
+    andDestruct.
 
-  destruct (fresh_var_map β2 zs H2 β1 s) as [f Hfresh];
-    [finite_auto; crush| andDestruct].
-
-  (exists (χ2, (frm (extend (fun x => bind (f x) β2) β1) (c_stmt (❲ f ↦ s❳)))::ψ2)).
+  exists (χ2, (frm (f ∘ β2 ∪ β1) (c_stmt (❲ f ↦ s ❳))::ψ2)).
   apply a_adapt
     with
       (χ:=χ1)(ψ:=ψ1)(ϕ:=ϕ1)(ϕ':=ϕ2)(c:=contn ϕ1)
-      (β:=β1)(β':=β2)(β'':=extend (fun x => bind (f x) β2) β1)
-      (zs:=zs)(s:=s)
-      (*(s':=s)*)
+      (β:=β1)(β':=β2)(β'':=f ∘ β2 ∪ β1)
+      (s:=s)
       (f:=f);
-    auto;
-    try solve [crush].
-  destruct ϕ1;
-    f_equal;
     auto.
-  destruct ϕ2;
-    f_equal;
-    auto.
+  - destruct ϕ1; crush.
+  - destruct ϕ2; crush.
 Qed.
 
-Ltac peek_pop_simpl :=
+(*Ltac peek_pop_simpl :=
   match goal with
   | [H : peek ?ψ = Some ?ϕ |- _] => let ϕ' := fresh "ϕ'" in
                                   let ψ' := fresh "ψ'" in
@@ -703,7 +689,7 @@ Ltac peek_pop_simpl :=
                                   simpl in H;
                                   inversion H;
                                   subst
-  end.
+  end.*)
 
 Lemma dom_finite :
   forall {A B : Type} `{Eq A} D (ps : partial_map A B),
@@ -1210,7 +1196,7 @@ Proof.
       intros.
     inversion H0;
       subst;
-      remember {| cname := C; flds := compose fMap (vMap ϕ); meths := c_meths CDef |} as o'.
+      remember {| cname := C; flds := fMap ∘ (vMap ϕ); meths := c_meths CDef |} as o'.
     + apply self_frm; simpl.
       assert (Hin : In ϕ (ϕ::ψ));
         [apply in_eq
@@ -1934,20 +1920,9 @@ Proof.
     subst.
 
   repeat map_rewrite; simpl.
-  simpl in H0.
-
-  destruct (partial_map_dec z f) as [z'|];
-    [destruct_exists|].
-  - match goal with
-    | [Ha : forall _ _, ?f _ = Some _ -> fresh_in_map _ ?β,
-         Hb : ?f ?z = Some _ |- extend _ ?β ?z = Some ?v] =>
-      apply Ha in Hb
-    end.
-    unfold fresh_in_map in *; crush.
-
-  - unfold extend.
-    rewrite e.
-    auto.
+  apply extend_some_2; auto.
+  apply disjoint_dom_symmetry.
+  eapply disjoint_composition; auto.
 Qed.
 
 (* fresh  *)
@@ -2237,7 +2212,7 @@ Proof.
     destruct (H2 (cname o)) as [CDef HCDef]; [|crush].
     apply cls_of with (α:=α)(χ:=χ)(o:=o);
       auto.
-    remember {| vMap := update this (v_addr α) (compose ps (vMap ϕ)); contn := c_stmt s |} as ϕ'.
+    remember {| vMap := update this (v_addr α) (ps ∘ (vMap ϕ)); contn := c_stmt s |} as ϕ'.
     remember {| vMap := vMap ϕ; contn := c_hole x s' |} as ϕ''.
     apply int_x with (ϕ:=ϕ')(ψ:=ϕ''::ψ);
       simpl;
@@ -2319,7 +2294,7 @@ Proof.
     
   - (* new *)
     intros.
-    remember (update α {| cname := C; flds := compose fMap (vMap ϕ); meths := c_meths CDef |} χ,
+    remember (update α {| cname := C; flds := fMap ∘ (vMap ϕ); meths := c_meths CDef |} χ,
               {| vMap := update x (v_addr α) (vMap ϕ); contn := c_stmt s |} :: ψ) as σ'.
     assert (Hthis : has_self_σ σ');
       [eapply reduction_preserves_config_has_self;
@@ -2363,34 +2338,35 @@ Proof.
     + unfold update, t_update in Hb;
         rewrite neq_eqb in Hb;
         auto.
-      remember {| cname := C; flds := compose fMap (vMap ϕ); meths := c_meths CDef |} as oα.
+      remember {| cname := C; flds := fMap ∘ (vMap ϕ); meths := c_meths CDef |} as oα.
       destruct o' as [C' fs ms].
       destruct (H2 C') as [CDef'].
-      remember {| cname := C'; flds := fs; meths := ms |} as o'.
-      apply cls_of with (α:=α')(χ:=update α oα χ)(o:=o');
-        auto.
-      remember {| vMap := update x (v_addr α) (vMap ϕ); contn := c_stmt s |} as ϕ'.
-      apply int_x with (ψ:=ψ)(ϕ:=ϕ');
-        auto.
-      subst; simpl;
-        unfold update, t_update;
-        rewrite neq_eqb;
-        auto.
-      subst; simpl;
-        unfold update, t_update;
-        rewrite neq_eqb;
-        auto.
-      crush.
-      rewrite H1 in H10;
-        auto;
-        [crush|].
-    
-    remember {| cname := C'; flds := fs; meths := ms |} as o'.
-    apply cls_of with (α:=α')(χ:=χ)(o:=o');
-      auto;
-      [|crush].
-    apply int_x with (ϕ:=ϕ)(ψ:=ψ);
-      auto.
+      * remember {| cname := C'; flds := fs; meths := ms |} as o'.
+        apply cls_of with (α:=α')(χ:=update α oα χ)(o:=o');
+          auto.
+        -- remember {| vMap := update x (v_addr α) (vMap ϕ); contn := c_stmt s |} as ϕ'.
+           apply int_x with (ψ:=ψ)(ϕ:=ϕ');
+             auto.
+           subst; simpl;
+             unfold update, t_update;
+             rewrite neq_eqb;
+             auto.
+        -- subst; simpl;
+             unfold update, t_update;
+             auto.
+        -- repeat map_rewrite.
+           eq_auto.
+        -- crush.
+      * rewrite H1 in H10;
+          auto;
+          [crush|].
+        
+        remember {| cname := C'; flds := fs; meths := ms |} as o'.
+        apply cls_of with (α:=α')(χ:=χ)(o:=o');
+          auto;
+          [|crush].
+        apply int_x with (ϕ:=ϕ)(ψ:=ψ);
+          auto.
 
   - (* ret 1 *)
     rename H3 into Hwf;
@@ -2420,8 +2396,6 @@ Proof.
     rename H3 into Hwf;
       inversion Hwf;
       subst.
-    repeat peek_pop_simpl;
-      simpl in *.
     exists χ, ϕ, (ϕ'::ψ);
       split;
       [auto|right; eauto].

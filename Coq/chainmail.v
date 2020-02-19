@@ -589,28 +589,6 @@ Hint Constructors zip.
 Definition fresh_in_map {A : Type} (x : var) (m : partial_map var A) : Prop :=
   m x = None.
 
-Inductive in_ref : var -> ref -> Prop :=
-| in_r_var : forall x, in_ref x (r_var x)
-| in_r_fld : forall x f, in_ref x (r_fld x f).
-
-Inductive in_stmt : var -> stmt -> Prop :=
-| in_asgn_1 : forall x y z, in_ref x y ->
-                       in_stmt x (s_asgn y z)
-| in_asgn_2 : forall x y z, in_ref x z ->
-                       in_stmt x (s_asgn y z)
-| in_meth_1 : forall x y m ps, in_stmt x (s_meth x y m ps)
-| in_meth_2 : forall x y m ps, in_stmt y (s_meth x y m ps)
-| in_meth_3 : forall x y z m ps, (exists x', ps x' = Some z) ->
-                            in_stmt z (s_meth x y m ps)
-| in_new_1 : forall x C ps, in_stmt x (s_new x C ps)
-| in_new_2 : forall x y C ps, (exists z, ps z = Some y) ->
-                         in_stmt y (s_new x C ps)
-| in_stmts_1 : forall x s1 s2, in_stmt x s1 ->
-                          in_stmt x (s_stmts s1 s2)
-| in_stmts_2 : forall x s1 s2, in_stmt x s2 ->
-                          in_stmt x (s_stmts s1 s2)
-| in_retrn : forall x, in_stmt x (s_rtrn x).
-
 Reserved Notation "σ1 '◁' σ2 '≜' σ3" (at level 40).
 
 Inductive adaptation : config -> config -> config -> Prop :=
@@ -619,9 +597,9 @@ Inductive adaptation : config -> config -> config -> Prop :=
     σ' = (χ', ϕ' :: ψ') ->
     ϕ = frm β c ->
     ϕ' = frm β' (c_stmt s) ->
-    onto f β ->
-    (forall z z', f z = Some z' -> fresh_in_map z β) ->
-    (forall z z', f z = Some z' -> fresh_in_map z β') ->
+    onto f β' ->
+    disjoint_dom f β ->
+    disjoint_dom f β' ->
     (forall z z', f z = Some z' -> ~ in_stmt z s) ->
     β'' = (f ∘ β') ∪ β ->
     ϕ'' = frm β'' (c_stmt (❲f ↦ s❳)) ->

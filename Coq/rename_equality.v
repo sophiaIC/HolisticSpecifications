@@ -1,5 +1,6 @@
 Require Import common.
 Require Import loo_def.
+Require Import function_operations.
 Require Import chainmail.
 Require Import fundamental_properties.
 Require Import List.
@@ -89,7 +90,7 @@ Qed.
 Hint Resolve wf_one_to_one.
 
 Lemma wf_id :
-  wf_rename id.
+  wf_rename Some.
 Proof.
   unfold wf_rename;
     split;
@@ -184,7 +185,7 @@ Ltac equiv_auto :=
   end.
 
 Lemma id_equiv_reflexive_ref :
-  forall r, ref_equiv id r r.
+  forall r, ref_equiv Some r r.
 Proof.
   intro r;
     destruct r;
@@ -194,7 +195,7 @@ Qed.
 Hint Resolve id_equiv_reflexive_ref.
 
 Lemma bind_right_id :
-  forall (A : Type)(m : A -> (option var)) , m ∘ id = m.
+  forall (A : Type)(m : A -> (option var)) , m ∘ Some = m.
 Proof.
   intros.
   apply functional_extensionality;
@@ -211,7 +212,7 @@ Hint Rewrite (bind_right_id fld).
 Hint Resolve bind_right_id.
 
 Lemma bind_left_id :
-  forall (A : Type)(m : var -> (option A)) , id ∘ m = m.
+  forall (A : Type)(m : var -> (option A)) , Some ∘ m = m.
 Proof.
   intros.
   apply functional_extensionality;
@@ -225,7 +226,7 @@ Hint Rewrite bind_left_id.
 Hint Resolve bind_left_id.
 
 Lemma id_equiv_reflexive_stmt :
-  forall s, stmt_equiv id s s.
+  forall s, stmt_equiv Some s s.
 Proof.
   intro s;
     induction s;
@@ -241,7 +242,7 @@ Qed.
 Hint Resolve id_equiv_reflexive_stmt.
 
 Lemma id_equiv_reflexive_contn :
-  forall c, contn_equiv id c c.
+  forall c, contn_equiv Some c c.
 Proof.
   intros c;
     destruct c; auto.
@@ -250,7 +251,7 @@ Qed.
 Hint Resolve id_equiv_reflexive_contn.
 
 Lemma id_equiv_reflexive_map :
-  forall m, map_equiv id m m.
+  forall m, map_equiv Some m m.
 Proof.
   intros;
     eauto.
@@ -259,7 +260,7 @@ Qed.
 Hint Resolve id_equiv_reflexive_map.
 
 Lemma id_equiv_reflexive_frame :
-  forall ϕ, frame_equiv id ϕ ϕ.
+  forall ϕ, frame_equiv Some ϕ ϕ.
 Proof.
   intros; auto.
 Qed.
@@ -790,7 +791,7 @@ Proof.
     end;
       repeat equiv_unfold.
     remember (frm (vMap ϕ2) (c_hole x2 s2')) as ϕ2'.
-    remember (frm (update this (v_addr α) (compose (ps ∘ f) (vMap ϕ2))) (c_stmt s)) as ϕ'.
+    remember (frm (update this (v_addr α) ((ps ∘ f) ∘ (vMap ϕ2))) (c_stmt s)) as ϕ'.
     exists (χ, ϕ' :: ϕ2' :: ψ0).
     eapply r_mth
       with
@@ -875,7 +876,7 @@ Proof.
     | [H : c_stmt _ = contn _ |-_] => rewrite <- H in *
     end;
       repeat equiv_unfold.
-    remember (new C (compose (fun x : fld => bind (fMap x) f) (vMap ϕ2)) (c_meths CDef)) as o.
+    remember (new C ((fMap ∘ f) ∘ (vMap ϕ2)) (c_meths CDef)) as o.
     remember (frm (update x2 (v_addr α) (vMap ϕ2)) (c_stmt s2')) as ϕ'.
     remember (update α o χ, ϕ'::ψ0) as σ'.
     exists σ'.
@@ -976,7 +977,7 @@ Qed.
 Lemma compose_is_bind :
   forall {A B C : Type}`{Eq A}`{Eq B}
     (m1 : partial_map A B)
-    (m2 : partial_map B C), compose m1 m2 = (fun x => bind (m1 x) m2).
+    (m2 : partial_map B C), m1 ∘ m2 = (fun x => bind (m1 x) m2).
 Proof.
   intros; auto.
 Qed.
@@ -1027,6 +1028,29 @@ Proof.
     rewrite Hneq; auto.
 Qed.
 
+Lemma fold_bind :
+  forall {A B C : Type}`{Eq A}`{Eq B}(f : partial_map A B)(g : partial_map B C),
+    (fun a => match (f a) with
+           | Some b => g b
+           | None => None
+           end) = f ∘ g.
+Proof.
+
+Admitted.
+
+Lemma fold_bind' :
+  forall {A B C D : Type}`{Eq A}`{Eq B}`{Eq C}
+    (f : partial_map A B)
+    (g : partial_map B C)
+    (h : partial_map C D),
+    (fun a => bind match (f a) with
+                | Some b => g b
+                | None => None
+                end h) = f ∘ g ∘ h.
+Proof.
+
+Admitted.
+
 Lemma equivalent_reduction :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
              M_wf M ->
@@ -1075,15 +1099,14 @@ Proof.
                    H2 : ?χ ?α = _ |- _] => rewrite H1 in H2; inversion H2; subst
            end.
 
-    apply eq_cons with (f:=id); simpl.
+    apply eq_cons with (f:=Some).
     
-    + apply eq_frm; simpl; auto.
-      repeat rewrite compose_is_bind.
-      match goal with
-      | [H : ?m = _ |- context[bind (_ _) ?m]] => rewrite H
-      end.
-      rewrite <- bind_assoc;
-        unfold bind; simpl; auto.
+    + rewrite fold_bind in H27.
+      rewrite fold_bind in H17.
+      rewrite fold_bind' in *.
+      apply eq_frm; auto.
+      rewrite compose_assoc.
+      crush.
 
     + apply eq_cons with (f:=f); simpl; auto.
       repeat equiv_auto; simpl; auto.
@@ -1486,7 +1509,7 @@ Proof.
       | [Hmap : ?f ?x1 = Some ?x2  |- exists y, ?f' ?x2 = Some y] =>
         exists x1; auto
       end.
-    + symmetry; eapply bind_inverse_right; intros; eauto.
+    + rewrite inverse_compose_right; auto.
 
   - repeat equiv_auto;
       intros;
@@ -1508,7 +1531,7 @@ Proof.
       | [Hmap : ?f ?x1 = Some ?x2  |- exists y, ?f' ?x2 = Some y] =>
         exists x1; auto
       end.
-    + symmetry; eapply bind_inverse_right; intros; eauto.
+    + rewrite inverse_compose_right; auto.
 
   - repeat equiv_auto;
       intros;
@@ -1600,7 +1623,7 @@ Proof.
 
   - unfold wf_rename in *; andDestruct;
       split.
-    + eapply inv_one_to_one; eauto.
+    + eapply inv_one_to_one_2; eauto.
     + unfold inv in *; andDestruct.
       auto.
 Qed.
@@ -1633,7 +1656,7 @@ Lemma wf_rename_inv :
 Proof.
   intros.
   unfold wf_rename in *; andDestruct; split.
-  - eapply inv_one_to_one; eauto.
+  - eapply inv_one_to_one_2; eauto.
   - unfold inv in *;
       andDestruct;
       auto.
@@ -1662,7 +1685,7 @@ Proof.
     induction Heq;
     intros;
     auto.
-  equiv_unfold.
+  repeat equiv_unfold.
   edestruct (one_to_one_exists_inv) with (f:=f) as [f']; auto.
   apply eq_cons with (f:=f'); eauto.
 Qed.
@@ -1681,7 +1704,7 @@ Hint Resolve config_equiv_sym.
 
 Lemma equivalent_reductions :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
-                 forall M, M1 ∘ M2 ≜ M ->
+                 forall M, M1 ⋄ M2 ≜ M ->
                       M_wf M ->
                       forall σ1', config_equiv σ1 σ1' ->
                              exists σ2', M1 ⦂ M2 ⦿ σ1' ⤳… σ2' /\
@@ -1713,8 +1736,8 @@ Proof.
 
   - link_unique_auto.
     match goal with
-    | [IH : forall M, _ ∘ _ ≜ _ -> _ -> forall σ1', _ -> exists _, _ /\ _,
-         Hlink : _ ∘ _ ≜ ?M',
+    | [IH : forall M, _ ⋄ _ ≜ _ -> _ -> forall σ1', _ -> exists _, _ /\ _,
+         Hlink : _ ⋄ _ ≜ ?M',
          Hconf : config_equiv _ ?σ |- _] =>
       let σ2 := fresh "σ" in 
       destruct IH with (M:=M')(σ1':=σ) as [σ2];
@@ -1776,7 +1799,7 @@ Ltac equiv_reductions_auto :=
   match goal with
   | [Hred : ?M1 ⦂ ?M2 ⦿ ?σa ⤳… ?σb,
             Hconf : config_equiv ?σa ?σa',
-                    Hlink : ?M1 ∘ ?M2 ≜ ?M |- _] =>
+                    Hlink : ?M1 ⋄ ?M2 ≜ ?M |- _] =>
     match goal with
     | [Hred' :  M1 ⦂ M2 ⦿ σa' ⤳… ?σb',
                 Hconf' : config_equiv σb ?σb' |- _] =>
@@ -1793,7 +1816,7 @@ Ltac equiv_reductions_auto :=
 
 Lemma equivalent_pair_reduction_exists :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                 forall M, M1 ∘ M2 ≜ M ->
+                 forall M, M1 ⋄ M2 ≜ M ->
                       M_wf M ->
                       forall σ1', config_equiv σ1 σ1' ->
                              exists σ2', M1 ⦂ M2 ⦿ σ1' ⤳ σ2' /\
@@ -1815,7 +1838,7 @@ Inductive reductions' : mdl -> mdl -> config -> config -> Prop :=
           exists CDef : classDef, M1 C = Some CDef) ->
     reductions' M1 M2 σ σ
 | reds_trans : forall M1 M2 M σ1 σ2 σ3,
-    M1 ∘ M2 ≜ M ->
+    M1 ⋄ M2 ≜ M ->
     reductions' M1 M2 σ1 σ2 ->
     M ∙ σ2 ⤳ σ3 ->
     (forall C, classOf this σ3 C ->
@@ -1826,7 +1849,7 @@ Hint Constructors reductions'.
 
 Lemma reductions_alt_1 :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
-                 forall M, (exists σ, M1 ∘ M2 ≜ M ->
+                 forall M, (exists σ, M1 ⋄ M2 ≜ M ->
                             M ∙ σ1 ⤳ σ /\
                             (forall C, classOf this σ1 C ->
                                   M1 C = None) /\
@@ -1841,12 +1864,12 @@ Proof.
   - exists σ'; repeat split; intros; link_unique_auto; auto.
 
   - match goal with
-    | [IH : forall M, exists σ', ?M1 ∘ ?M2 ≜ M ->
+    | [IH : forall M, exists σ', ?M1 ⋄ ?M2 ≜ M ->
                        M ∙ ?σ1 ⤳ σ' /\
                        (forall C', classOf this ?σ1 C' -> ?M1 C' = None) /\
                        (forall C, classOf this σ' C -> exists CDef, ?M1 C = Some CDef) /\
                        reductions' ?M1 ?M2 σ' ?σ,
-         Hlink : ?M1 ∘ ?M2 ≜ ?M |- _] =>
+         Hlink : ?M1 ⋄ ?M2 ≜ ?M |- _] =>
       let σ0 := fresh "σ" in
       let H := fresh in
       destruct (IH M) as [σ0 H];
@@ -1859,7 +1882,7 @@ Proof.
 Qed.
 
 Lemma reductions_alt_2 :
-  forall M1 M2 M σ1 σ2 σ, M1 ∘ M2 ≜ M /\
+  forall M1 M2 M σ1 σ2 σ, M1 ⋄ M2 ≜ M /\
                      M ∙ σ1 ⤳ σ /\
                      (forall C, classOf this σ1 C ->
                            M1 C = None) /\
@@ -1939,7 +1962,7 @@ Ltac equiv_pair_reduction_auto :=
   match goal with
   | [Hred : ?M1 ⦂ ?M2 ⦿ ?σa ⤳ ?σb,
             Hconf : config_equiv ?σa ?σa',
-                    Hlink : ?M1 ∘ ?M2 ≜ ?M |- _] =>
+                    Hlink : ?M1 ⋄ ?M2 ≜ ?M |- _] =>
     match goal with
     | [Hred' :  M1 ⦂ M2 ⦿ σa' ⤳ ?σb',
                 Hconf' : config_equiv σb ?σb' |- _] =>
@@ -1976,7 +1999,7 @@ Ltac reduction_auto :=
 
 Lemma equivalent_pair_reduction :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                 forall M, M1 ∘ M2 ≜ M ->
+                 forall M, M1 ⋄ M2 ≜ M ->
                       M_wf M ->
                       forall σ1', config_equiv σ1 σ1' ->
                              forall σ2', M1 ⦂ M2 ⦿ σ1' ⤳ σ2' ->
@@ -2179,7 +2202,7 @@ Qed.
 
 Lemma link_exists :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                 exists M, M1 ∘ M2 ≜ M.
+                 exists M, M1 ⋄ M2 ≜ M.
 Proof.
   intros M1 M2 σ1 σ2 Hred;
     inversion Hred;
@@ -2187,7 +2210,7 @@ Proof.
     eauto.
 Qed.
 
-Lemma adaptation_implies_finite_2 :
+(*Lemma adaptation_implies_finite_2 :
   forall σ1 σ2 σ, σ1 ◁ σ2 ≜ σ ->
              forall χ ϕ ψ, σ2 = (χ, ϕ::ψ) ->
                       finite_ϕ ϕ.
@@ -2202,7 +2225,7 @@ Proof.
   end.
   simpl.
   eapply dom_finite; eauto.
-Qed.
+Qed.*)
 
 Lemma bind_empty :
   forall A B `{Eq A} (m : partial_map A B), (fun x => bind (empty x) m) = empty.
@@ -2358,7 +2381,7 @@ Admitted.
 Lemma equivalent_satisfaction :
   (forall M1 M2 σ1 A1,  M1 ⦂ M2 ◎ σ1 ⊨ A1 ->
                    M_wf M1 ->
-                   forall M, M1 ∘ M2 ≜ M ->
+                   forall M, M1 ⋄ M2 ≜ M ->
                         M_wf M ->
                         forall χ ϕ1 ψ1,
                           σ1 = (χ, ϕ1::ψ1) ->
@@ -2369,7 +2392,7 @@ Lemma equivalent_satisfaction :
                             M1 ⦂ M2 ◎ (χ, ϕ2::ψ2) ⊨ A2) /\
   (forall M1 M2 σ1 A1,  M1 ⦂ M2 ◎ σ1 ⊭ A1 ->
                    M_wf M1 ->
-                   forall M, M1 ∘ M2 ≜ M ->
+                   forall M, M1 ⋄ M2 ≜ M ->
                         M_wf M ->
                         forall χ ϕ1 ψ1,
                           σ1 = (χ, ϕ1::ψ1) ->
@@ -2466,11 +2489,11 @@ Proof.
     repeat match goal with
            | [H : (_, _) = (_, _) |- _] => inversion H; subst; clear H
            end.
-    simpl in *.
+    (*simpl in *.
     let someσ:= fresh "σ" in
     destruct equivalent_adaptation_exists
       with
-        (σ1:=(χ0, ϕ1::nil))(σ2:=σ')(σ:=σ'')(σ1':=(χ0, ϕ2::nil))(σ2':=σ2')
+        (σ1:=(χ, {| vMap := β; contn := c |}::nil))(σ2:=σ')(σ:=σ'')(σ1':=(χ0, ϕ2::nil))(σ2':=σ2')
       as
         [someσ];
       auto;
@@ -2503,7 +2526,7 @@ Proof.
           [admit|subst f3].
         assert (f4 = f1);
           [admit|subst f4].
-        admit. (* all  *)
+        admit. (* all  *)*)
     
 
 Admitted.
