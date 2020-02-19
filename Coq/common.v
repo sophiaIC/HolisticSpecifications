@@ -79,14 +79,46 @@ Definition empty {A B : Type} `{Eq A} : partial_map A B := t_empty None.
 Definition update {A B : Type} `{Eq A} (a : A) (b : B) (map : partial_map A B) :=
   t_update map a (Some b).
 
-Definition compose
+
+Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
+  {
+    ret : forall {t : Type@{d}}, t -> m t;
+    bind : forall {t u : Type@{d}}, m t -> (t -> m u) -> m u
+  }.
+
+Instance optionMonad : Monad option :=
+  {
+    ret T x :=
+      Some x ;
+    bind :=
+      fun T U m f =>
+            match m with
+            | None => None
+            | Some x => f x
+            end
+
+  }.
+
+(*
+This feels monadish
+Would be nice to do top level binds
+Not actually possible because we only 
+
+Instance partial_map_Monad {A : Type}`{Eq A} : Monad (partial_map A) :=
+  {
+    ret T x := ???
+  }.*)
+
+Notation "f1 '∘' f2" := (fun x => bind (f1 x) f2)(at level 40).
+
+(*Definition compose
            {A B C : Type} `{Eq A} `{Eq B}
            (map1 : partial_map A B)
            (map2 : partial_map B C) : partial_map A C :=
   fun a => match map1 a with
         | None => None
         | Some b => map2 b
-        end.
+        end.*)
 
 (*Fixpoint compose
          {A B C : Set} `{Eq A} `{Eq B}
@@ -99,12 +131,15 @@ Definition compose
                    end
   end.*)
 
+
 Definition extend {A B : Type} `{Eq A} (M1 M2 : partial_map A B) : partial_map A B :=
   fun a =>
     match M1 a with
     | None => M2 a
     | _ => M1 a
     end.
+
+Notation "f1 '∪' f2" := (extend f1 f2)(at level 40).
 
 Inductive finite {A B : Type}`{Eq A} : partial_map A B -> Prop :=
 | fin_empty : finite empty
@@ -152,31 +187,17 @@ Definition InΣ (x : var)(Σ : varSet) :=
 
 
 
-Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
-  {
-    ret : forall {t : Type@{d}}, t -> m t;
-    bind : forall {t u : Type@{d}}, m t -> (t -> m u) -> m u
-  }.
+(** Law of the Excluded Middle: *)
+Parameter excluded_middle : forall P, {P} + {~P}.
 
-Instance optionMonad : Monad option :=
-  {
-    ret T x :=
-      Some x ;
-    bind :=
-      fun T U m f =>
-            match m with
-            | None => None
-            | Some x => f x
-            end
+Definition maps_into {A B C : Type}`{Eq A}`{Eq B}(f : partial_map A B)(g : partial_map B C) :=
+  (forall a b, f a = Some b -> exists c, g b = Some c).
 
-  }.
+Definition maps_from {A B C : Type}`{Eq A}`{Eq B}(g : partial_map B C)(f : partial_map A B) :=
+  (forall b c, g b = Some c -> exists a, f a = Some b).
 
-(*
-This feels monadish
-Would be nice to do top level binds
-Not actually possible because we only 
+Definition onto {A B C : Type}`{Eq A}`{Eq B}(f : partial_map A B)(g : partial_map B C) :=
+  (maps_into f g) /\ (maps_from g f).
 
-Instance partial_map_Monad {A : Type}`{Eq A} : Monad (partial_map A) :=
-  {
-    ret T x := ???
-  }.*)
+Definition disjoint_dom {A B C : Type}`{Eq A}(f : partial_map A B)(g : partial_map A C) :=
+  (forall a b, f a = Some b -> g a = None).
