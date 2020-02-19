@@ -876,7 +876,7 @@ Proof.
     option_crush.
 Qed.
 
-Lemma one_to_one_exists_inv :
+Lemma one_to_one_exists_inv_fin :
   forall (A B : Type)`{Eq A}`{Eq B} (f : partial_map A B),
     finite f ->
     one_to_one f ->
@@ -884,6 +884,11 @@ Lemma one_to_one_exists_inv :
 Proof.
   intros; apply one_to_one_exists_inv_fnf; auto.
 Qed.
+
+Parameter one_to_one_exists_inv:
+  forall (A B : Type)`{Eq A}`{Eq B} (f : partial_map A B),
+    one_to_one f ->
+    exists f', inv f f'.
 
 Lemma inv_symmetry :
   forall {A B : Type}`{Eq A}`{Eq B}
@@ -1185,7 +1190,7 @@ Ltac broken :=
     end.
 
 Lemma disjoint_dom_symmetry :
-  forall {A B : Type}`{Eq A}(f g : partial_map A B),
+  forall {A B C : Type}`{Eq A}(f : partial_map A B)(g : partial_map A C),
     disjoint_dom f g ->
     disjoint_dom g f.
 Proof.
@@ -1198,6 +1203,8 @@ Proof.
     auto_specialize;
     crush.
 Qed.
+
+Hint Resolve disjoint_dom_symmetry.
 
 Ltac disjoint_dom_sym_auto :=
   match goal with
@@ -1297,3 +1304,107 @@ Proof.
   maps_into_from_auto.
   crush.
 Qed.
+
+Lemma empty_maps_into :
+  forall {A B C : Type}{HeqA : Eq A}{HeqB : Eq B} (f : partial_map B C),
+    maps_into (@empty A B HeqA) f.
+Proof.
+  intros;
+    unfold maps_into;
+    intros;
+    repeat map_rewrite;
+    crush.
+Qed.
+
+Hint Resolve empty_maps_into.
+
+Lemma empty_maps_from :
+  forall {A B C : Type}`{Eq A}{HeqB : Eq B} (f : partial_map A B),
+    maps_from (@empty B C HeqB) f.
+Proof.
+  intros;
+    unfold maps_from;
+    intros;
+    repeat map_rewrite;
+    crush.
+Qed.
+
+Hint Resolve empty_maps_from.
+
+Lemma empty_onto_empty :
+  forall {A B C : Type}{HeqA : Eq A}{HeqB : Eq B},
+    onto (@empty A B HeqA) (@empty B C HeqB).
+Proof.
+  intros.
+  split;
+    auto.
+Qed.
+
+Hint Resolve empty_onto_empty.
+
+(* Disjointedness *)
+
+Lemma empty_disjoint_1 :
+  forall {A B C : Type}{HeqA : Eq A}(f : partial_map A B),
+    disjoint_dom f (@empty A C HeqA).
+Proof.
+  intros.
+  unfold disjoint_dom; intros; auto.
+Qed.
+
+Hint Resolve empty_disjoint_1.
+
+Lemma empty_disjoint_2 :
+  forall {A B C : Type}{HeqA : Eq A}(f : partial_map A B),
+    disjoint_dom (@empty A C HeqA) f.
+Proof.
+  intros.  eapply disjoint_dom_symmetry; eauto.
+Qed.
+
+Hint Resolve empty_disjoint_2.
+      
+Lemma disjointedness_for_finite_variable_maps :
+  forall {A B : Type}(f : partial_map var A),
+    finite_normal_form f ->
+    forall (g : partial_map var B),
+      finite_normal_form g ->
+      forall s, exists (h : partial_map var var),
+          disjoint_dom f h /\
+          disjoint_dom g h /\
+          onto h g /\
+          (forall x y, h x = Some y -> ~ in_stmt x s).
+Proof.
+  intros A B f Hfin1;
+    induction Hfin1;
+    intros g Hfin2;
+    induction Hfin2;
+    intros s.
+
+  - exists empty;
+      repeat split;
+      auto;
+      intros;
+      repeat map_rewrite;
+      crush.
+
+  - induction s.
+    
+Admitted.
+
+Lemma disjoint_composition :
+  forall {A B C : Type}`{Eq A}`{Eq C}(f : partial_map A B)(g : partial_map A C),
+    disjoint_dom f g ->
+    forall {D : Type} (h : partial_map C D),
+      disjoint_dom f (g ∘ h).
+Proof.
+  intros.
+  unfold disjoint_dom in *; intros.
+  unfold bind; crush.
+  match goal with
+  | [Ha : forall a' b', ?f a' = Some b' -> _,
+       Hb : ?f ?a = Some ?b |- _] => specialize (Ha a b Hb)
+  end.
+  crush.
+Qed.
+
+Hint Resolve disjoint_composition.

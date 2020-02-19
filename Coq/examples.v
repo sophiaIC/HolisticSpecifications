@@ -491,14 +491,7 @@ Lemma fresh_implies_sat :
                              forall y, fresh_x y σ' A' ->
                                   M1 ⦂ M2 ◎ (update_σ_map σ' y v) ⊭ ([y /s 0]A')).
 Proof.
-  apply sat_mutind;
-    intros.
-
-  destruct A';
-    try solve [inversion H1]. ;
-    simpl in H1.
-
-Qed.
+Admitted.
 
 Ltac sat_destruct :=
   match goal with
@@ -557,6 +550,9 @@ Proof.
   repeat (a_prop;
           a_intros;
           auto).
+
+  specialize (H y v H0 z H1). H1).
+  
   destruct fresh_intro
     with (σ1:=σ)(σ2:=σ)
          (A1:=(∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
