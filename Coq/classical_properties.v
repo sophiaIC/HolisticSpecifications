@@ -875,10 +875,10 @@ Hint Resolve not_all_Σ_ex_not.
 
 (** Properties of Linking *)
 Lemma moduleLinking_associative :
-  forall M1 M2 M12, M1 ∘ M2 ≜ M12 ->
-               forall M3 M23, M2 ∘ M3 ≜ M23 ->
-                         forall M M', M12 ∘ M3 ≜ M ->
-                                 M1 ∘ M23 ≜ M' ->
+  forall M1 M2 M12, M1 ⋄ M2 ≜ M12 ->
+               forall M3 M23, M2 ⋄ M3 ≜ M23 ->
+                         forall M M', M12 ⋄ M3 ≜ M ->
+                                 M1 ⋄ M23 ≜ M' ->
                                  M = M'.
 Proof.
   intros.
@@ -902,10 +902,10 @@ Proof.
 Qed.
 
 Lemma moduleLinking_commutative_1 :
-  forall M1 M2 M, M1 ∘ M2 ≜ M ->
+  forall M1 M2 M, M1 ⋄ M2 ≜ M ->
              M_wf M1 ->
              M_wf M2 ->
-             M2 ∘ M1 ≜ M.
+             M2 ⋄ M1 ≜ M.
 Proof.
   intros.
   inversion H;
@@ -934,8 +934,8 @@ Proof.
 Qed.
 
 Lemma moduleLinking_commutative_2 :
-  forall M1 M2 M, M1 ∘ M2 ≜ M ->
-             forall M', M2 ∘ M1 ≜ M' ->
+  forall M1 M2 M, M1 ⋄ M2 ≜ M ->
+             forall M', M2 ⋄ M1 ≜ M' ->
                    M_wf M1 ->
                    M_wf M2 ->
                    M = M'.
@@ -973,7 +973,7 @@ Qed.
 
 Lemma linking_preserves_reduction :
   forall M1 σ1 σ2, M1 ∙ σ1 ⤳ σ2 ->
-              forall M2 M, M1 ∘ M2 ≜ M ->
+              forall M2 M, M1 ⋄ M2 ≜ M ->
                       M ∙ σ1 ⤳ σ2.
 Proof.
   intros M1 σ1 σ2 Hred;

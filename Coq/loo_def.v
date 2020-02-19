@@ -274,17 +274,17 @@ Definition stack := list frame.
 | base : stack
 | scons : frame -> stack -> stack.*)
 
-Definition peek (ψ : stack) : option frame :=
+(*Definition peek (ψ : stack) : option frame :=
   match ψ with
   | nil => None
   | ϕ :: _ => Some ϕ
-  end.
+  end.*)
 
-Definition pop (ψ : stack) : option stack :=
+(*Definition pop (ψ : stack) : option stack :=
   match ψ with
   | nil => None
   | _ :: ψ => Some ψ
-  end.
+  end.*)
 
 Instance stackMap : Mappable stack var (option value) :=
   {mapp :=
@@ -731,7 +731,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     C.(c_meths) m = Some (zs, s) ->
     dom ps zs ->
     ϕ' =  frm (vMap ϕ) (c_hole x s') ->
-    ϕ'' = frm (update this (v_addr α) (compose ps (vMap ϕ))) (c_stmt s) ->
+    ϕ'' = frm (update this (v_addr α) (ps ∘ (vMap ϕ))) (c_stmt s) ->
     M ∙ σ ⤳ (χ, ϕ'' :: (ϕ' :: ψ))
 
     (** x ≠ this *)
@@ -799,7 +799,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     dom fMap (c_flds CDef) ->
     (forall f x, fMap f = Some x ->
             exists v, (vMap ϕ) x = Some v) ->
-    o = new C (compose fMap (vMap ϕ)) (c_meths CDef) ->
+    o = new C (fMap ∘ (vMap ϕ)) (c_meths CDef) ->
     ϕ' = frm (update x (v_addr α) (vMap ϕ)) (c_stmt s) ->
     σ' = (update α o χ, ϕ' :: ψ) ->
     M ∙ σ ⤳ σ'
@@ -840,9 +840,8 @@ Inductive reduction : mdl -> config -> config -> Prop :=
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
 
 Hint Constructors reduction.
-  
 
-Reserved Notation "M1 '∘' M2 '≜' M" (at level 40).
+Reserved Notation "M1 '⋄' M2 '≜' M" (at level 40).
 
 Inductive link : mdl -> mdl -> mdl -> Prop :=
 | m_link : forall M1 M2, (forall C def, C <> ObjectName ->
@@ -851,9 +850,9 @@ Inductive link : mdl -> mdl -> mdl -> Prop :=
                     (forall C def, C <> ObjectName ->
                               M2 C = Some def ->
                               M1 C = None) ->
-                    M1 ∘ M2 ≜ (extend M1 M2)
+                    M1 ⋄ M2 ≜ (M1 ∪ M2)
 
-where "M1 '∘' M2 '≜' M" := (link M1 M2 M).
+where "M1 '⋄' M2 '≜' M" := (link M1 M2 M).
 
 (*
   reductions: a helper definition that allows for the definition of pair
@@ -885,7 +884,7 @@ where "M1 '∩'  M2 '⊢' σ '⤳⋆' σ'" := (reductions M1 M2 σ σ').
 Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳…' σ'" (at level 40).
                                                
 Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
-| pr_single : forall M1 M2 M σ σ', M1 ∘ M2 ≜ M ->
+| pr_single : forall M1 M2 M σ σ', M1 ⋄ M2 ≜ M ->
                               M ∙ σ ⤳ σ' ->
                               (forall C, classOf this σ C ->
                                     M1 C = None) ->
@@ -894,7 +893,7 @@ Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
                               M1 ⦂ M2 ⦿ σ ⤳… σ'
 
 | pr_trans : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
-                                M1 ∘ M2 ≜ M ->
+                                M1 ⋄ M2 ≜ M ->
                                 M ∙ σ ⤳ σn ->
                                 (forall C, classOf this σn C ->
                                       exists CDef, M1 C = Some CDef) ->
@@ -909,7 +908,7 @@ Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 40).
 Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
 
 | p_reduce : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
-                                M1 ∘ M2 ≜ M ->
+                                M1 ⋄ M2 ≜ M ->
                                 M ∙ σ ⤳ σn ->
                                 (forall C, classOf this σn C ->
                                       exists CDef, M1 C = Some CDef) ->
@@ -1025,3 +1024,25 @@ Hint Resolve (@empty_rename stmt).
 
 Hint Rewrite empty_rename.
 Hint Resolve empty_rename.
+
+Inductive in_ref : var -> ref -> Prop :=
+| in_r_var : forall x, in_ref x (r_var x)
+| in_r_fld : forall x f, in_ref x (r_fld x f).
+
+Inductive in_stmt : var -> stmt -> Prop :=
+| in_asgn_1 : forall x y z, in_ref x y ->
+                       in_stmt x (s_asgn y z)
+| in_asgn_2 : forall x y z, in_ref x z ->
+                       in_stmt x (s_asgn y z)
+| in_meth_1 : forall x y m ps, in_stmt x (s_meth x y m ps)
+| in_meth_2 : forall x y m ps, in_stmt y (s_meth x y m ps)
+| in_meth_3 : forall x y z m ps, (exists x', ps x' = Some z) ->
+                            in_stmt z (s_meth x y m ps)
+| in_new_1 : forall x C ps, in_stmt x (s_new x C ps)
+| in_new_2 : forall x y C ps, (exists z, ps z = Some y) ->
+                         in_stmt y (s_new x C ps)
+| in_stmts_1 : forall x s1 s2, in_stmt x s1 ->
+                          in_stmt x (s_stmts s1 s2)
+| in_stmts_2 : forall x s1 s2, in_stmt x s2 ->
+                          in_stmt x (s_stmts s1 s2)
+| in_retrn : forall x, in_stmt x (s_rtrn x).
