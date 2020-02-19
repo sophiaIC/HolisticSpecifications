@@ -1372,6 +1372,7 @@ Lemma disjointedness_for_finite_variable_maps :
           disjoint_dom f h /\
           disjoint_dom g h /\
           onto h g /\
+          one_to_one h /\
           (forall x y, h x = Some y -> ~ in_stmt x s).
 Proof.
   intros A B f Hfin1;
