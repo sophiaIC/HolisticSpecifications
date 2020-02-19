@@ -657,17 +657,19 @@ Proof.
 
   remember (vMap ϕ1) as β1.
   remember (vMap ϕ2) as β2.
-  destruct (@disjointedness_for_finite_variable_maps value value β1)
-    with (g:=β2)(s:=s)
-    as [f];
-    try solve [finite_auto; subst; eauto];
-    andDestruct.
+  let H := fresh in
+  (destruct (@disjointedness_for_finite_variable_maps value value β1)
+     with (g:=β2)(s:=s)
+    as [f H];
+   try solve [finite_auto; subst; eauto];
+   destruct H as [f'];
+   andDestruct).
 
-  exists (χ2, (frm (f ∘ β2 ∪ β1) (c_stmt (❲ f ↦ s ❳))::ψ2)).
+  exists (χ2, (frm (f ∘ β2 ∪ β1) (c_stmt (❲ f' ↦ s ❳))::ψ2)).
   apply a_adapt
     with
       (χ:=χ1)(ψ:=ψ1)(ϕ:=ϕ1)(ϕ':=ϕ2)(c:=contn ϕ1)
-      (β:=β1)(β':=β2)(β'':=f ∘ β2 ∪ β1)
+      (β:=β1)(β':=β2)(f':=f')
       (s:=s)
       (f:=f);
     auto.
