@@ -497,13 +497,13 @@ Inductive notin_Ax  : asrt -> var -> Prop :=
 | ni_intrn : forall x y, notin_a_var x y ->
                     notin_Ax (a_intrn x) y.
 
-Hint Constructors notin_Ax notin_exp.
+Hint Constructors notin_Ax notin_exp : chainmail_db.
 
 Inductive fresh_x : var -> config -> asrt -> Prop :=
 | frsh : forall x σ A, mapp (snd σ) x = None ->
                   notin_Ax A x ->
                   fresh_x x σ A.
-Hint Constructors fresh_x.
+Hint Constructors fresh_x : chainmail_db.
 
 Inductive notin_AΣ  : asrt -> varSet -> Prop :=
 
@@ -560,13 +560,13 @@ Inductive notin_AΣ  : asrt -> varSet -> Prop :=
 | niΣ_extrn : forall x Σ,  notin_AΣ (a_extrn x) Σ
 | niΣ_intrn : forall x Σ,  notin_AΣ (a_intrn x) Σ.
 
-Hint Constructors notin_AΣ.
+Hint Constructors notin_AΣ : chainmail_db.
 
 Inductive fresh_Σ : varSet -> asrt -> Prop :=
 | frshΣ : forall x A, notin_AΣ A x ->
                 fresh_Σ x A.
 
-Hint Constructors fresh_Σ.
+Hint Constructors fresh_Σ : chainmail_db.
 
 Fixpoint updates {B C : Type} `{Eq B}
          (bs : list (B * B))
@@ -578,13 +578,6 @@ Fixpoint updates {B C : Type} `{Eq B}
                           then map2 b2
                           else (updates bs' map1 map2) b
   end.
-
-Inductive zip {A B : Type} : list A -> list B -> list (A * B) -> Prop :=
-| z_nil : zip nil nil nil
-| z_cons : forall a b l1 l2 l, zip l1 l2 l ->
-                          zip (a::l1) (b::l2) ((a, b)::l).
-
-Hint Constructors zip.
 
 Definition fresh_in_map {A : Type} (x : var) (m : partial_map var A) : Prop :=
   m x = None.
@@ -640,8 +633,8 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve into_v_to_av.
-Hint Resolve one_to_one_v_to_av.
+Hint Resolve into_v_to_av : chainmail_db.
+Hint Resolve one_to_one_v_to_av : chainmail_db.
 
 Lemma compose_v_to_av_equality :
   forall {A : Type} `{Eq A} (m1 m2 : partial_map A var),
@@ -655,7 +648,7 @@ Proof.
   apply compose_one_to_one_eq in H0; auto; crush.
 Qed.
 
-Hint Resolve compose_v_to_av_equality.
+Hint Resolve compose_v_to_av_equality : chainmail_db.
 
 Definition initial (σ : config) : Prop :=
   exists α ϕ, σ = ((update α ObjectInstance empty), ϕ :: nil) /\
@@ -1003,7 +996,7 @@ Scheme sat_mut_ind := Induction for sat Sort Prop
 
 Combined Scheme sat_mutind from sat_mut_ind, nsat_mut_ind.
 
-Hint Constructors sat nsat.
+Hint Constructors sat nsat : chainmail_db.
 
 Inductive arising : mdl -> mdl -> config -> Prop :=
 | arise : forall M1 M2 σ σ0, initial σ0 ->
@@ -1022,7 +1015,7 @@ Inductive valid_avar : config -> a_var -> Prop :=
 | valid_bind : forall σ x α, mapp σ x = Some α ->
                         valid_avar σ (a_bind x).
 
-Hint Constructors valid_avar.
+Hint Constructors valid_avar : chainmail_db.
 
 (*Inductive valid_A : mdl -> mdl -> config -> nat -> asrt -> Prop :=
 (** Simple: *)

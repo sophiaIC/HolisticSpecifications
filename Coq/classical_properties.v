@@ -241,7 +241,7 @@ Proof.
   destruct sat_excluded_middle
     with (M1:=M1)(M2:=M2)
          (σ:=σ)(A:=A1);
-    auto.
+    auto with chainmail_db.
 Qed.
 
 Lemma arr_prop2 :
@@ -272,7 +272,7 @@ Lemma all_x_prop :
             forall z, fresh_x z σ A ->
                  M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0]A)).
 Proof.
-  intros; split; eauto; intros.
+  intros; split; eauto with chainmail_db; intros.
   inversion H;
     subst;
     eauto.
@@ -287,7 +287,7 @@ Proof.
     split;
     intros Ha;
     inversion Ha;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
 (** Lemma 5: Classical (3) *)
@@ -299,7 +299,7 @@ Proof.
     split;
     intros Ha;
     inversion Ha;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
 Lemma negate_elim_sat :
@@ -331,7 +331,7 @@ Lemma negate_intro_sat :
                 M1 ⦂ M2 ◎ σ ⊨ (¬ ¬ A)).
 Proof.
   intros;
-    auto.
+    auto with chainmail_db.
 Qed.
 
 Lemma negate_intro_nsat :
@@ -339,7 +339,7 @@ Lemma negate_intro_nsat :
                 M1 ⦂ M2 ◎ σ ⊭ (¬ ¬ A)).
 Proof.
   intros;
-    auto.
+    auto with chainmail_db.
 Qed.
 
 Lemma will_arr :
@@ -384,7 +384,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve sat_and_nsat_entails_false.
+Hint Resolve sat_and_nsat_entails_false : chainmail_db.
 
 Lemma false_entails_sat_and_nsat :
   forall A, entails (a_exp (e_false)) (A ∧ ¬ A).
@@ -398,7 +398,7 @@ Proof.
   inversion H4.
 Qed.
 
-Hint Resolve false_entails_sat_and_nsat.
+Hint Resolve false_entails_sat_and_nsat : chainmail_db.
 
 (** Lemma 6: (1) *)
 Lemma sat_and_nsat_equiv_false :
@@ -408,7 +408,7 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
 Lemma or_commutative' :
@@ -419,10 +419,10 @@ Proof.
     intros.
 
   inversion H;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_commutative'.
+Hint Resolve or_commutative' : chainmail_db.
 
 (** Lemma 6: (4) *)
 Lemma or_commutative :
@@ -432,10 +432,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_commutative.
+Hint Resolve or_commutative : chainmail_db.
 
 Lemma and_commutative' :
   forall A1 A2, entails (A1 ∧ A2) (A2 ∧ A1).
@@ -445,10 +445,10 @@ Proof.
     intros;
     eauto.
   inversion H;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve and_commutative'.
+Hint Resolve and_commutative' : chainmail_db.
 
 (** Lemma 6: (3) *)
 Lemma and_commutative :
@@ -458,10 +458,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve and_commutative.
+Hint Resolve and_commutative : chainmail_db.
 
 Lemma or_associative_1:
   forall A1 A2 A3, entails ((A1 ∨ A2) ∨ A3) (A1 ∨ (A2 ∨ A3)).
@@ -473,10 +473,10 @@ Proof.
     subst;
     eauto;
     inversion H4;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_associative_1.
+Hint Resolve or_associative_1 : chainmail_db.
 
 Lemma or_associative_2:
   forall A1 A2 A3, entails (A1 ∨ (A2 ∨ A3)) ((A1 ∨ A2) ∨ A3).
@@ -488,10 +488,10 @@ Proof.
     subst;
     eauto;
     inversion H4;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_associative_2.
+Hint Resolve or_associative_2 : chainmail_db.
 
 (** Lemma 6: (5) *)
 Lemma or_associative:
@@ -501,10 +501,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_associative.
+Hint Resolve or_associative : chainmail_db.
 
 Lemma and_distributive_1:
   forall A1 A2 A3, entails ((A1 ∨ A2) ∧ A3) ((A1 ∧ A3) ∨ (A2 ∧ A3)).
@@ -516,10 +516,10 @@ Proof.
     subst;
     eauto;
     inversion H5;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve and_distributive_1.
+Hint Resolve and_distributive_1 : chainmail_db.
 
 Lemma and_distributive_2:
   forall A1 A2 A3, entails ((A1 ∧ A3) ∨ (A2 ∧ A3)) ((A1 ∨ A2) ∧ A3).
@@ -531,10 +531,10 @@ Proof.
     subst;
     eauto;
     inversion H4;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve and_distributive_2.
+Hint Resolve and_distributive_2 : chainmail_db.
 
 (** Lemma 6: (6) *)
 Lemma and_distributive:
@@ -544,10 +544,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve and_distributive.
+Hint Resolve and_distributive : chainmail_db.
 
 Lemma or_distributive_1:
   forall A1 A2 A3, entails ((A1 ∧ A2) ∨ A3) ((A1 ∨ A3) ∧ (A2 ∨ A3)).
@@ -557,12 +557,12 @@ Proof.
     intros;
     inversion H;
     subst;
-    eauto;
+    eauto with chainmail_db;
     inversion H4;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_distributive_1.
+Hint Resolve or_distributive_1 : chainmail_db.
 
 Lemma or_distributive_2:
   forall A1 A2 A3, entails ((A1 ∨ A3) ∧ (A2 ∨ A3)) ((A1 ∧ A2) ∨ A3).
@@ -575,10 +575,10 @@ Proof.
     eauto;
     inversion H5;
     inversion H6;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_distributive_2.
+Hint Resolve or_distributive_2 : chainmail_db.
 
 (** Lemma 6: (7) *)
 Lemma or_distributive:
@@ -588,10 +588,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve or_distributive.
+Hint Resolve or_distributive : chainmail_db.
 
 Lemma neg_distributive_and_1:
   forall A1 A2, entails (¬(A1 ∧ A2))  (¬A1 ∨ ¬A2).
@@ -603,10 +603,10 @@ Proof.
     subst;
     eauto;
     inversion H4;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve neg_distributive_and_1.
+Hint Resolve neg_distributive_and_1 : chainmail_db.
 
 Lemma neg_distributive_and_2:
   forall A1 A2, entails (¬A1 ∨ ¬A2) (¬(A1 ∧ A2)).
@@ -618,10 +618,10 @@ Proof.
     subst;
     eauto;
     inversion H4;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve neg_distributive_and_2.
+Hint Resolve neg_distributive_and_2 : chainmail_db.
 
 (** Lemma 6: (8) *)
 Lemma neg_distributive_and:
@@ -631,10 +631,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve neg_distributive_and.
+Hint Resolve neg_distributive_and : chainmail_db.
 
 Lemma neg_distributive_or_1:
   forall A1 A2, entails (¬(A1 ∨ A2)) (¬A1 ∧ ¬A2).
@@ -646,10 +646,10 @@ Proof.
     subst;
     eauto;
     inversion H4;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve neg_distributive_or_1.
+Hint Resolve neg_distributive_or_1 : chainmail_db.
 
 Lemma neg_distributive_or_2:
   forall A1 A2, entails (¬A1 ∧ ¬A2) (¬(A1 ∨ A2)).
@@ -662,10 +662,10 @@ Proof.
     eauto;
     inversion H5;
     inversion H6;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve neg_distributive_or_2.
+Hint Resolve neg_distributive_or_2 : chainmail_db.
 
 (** Lemma 6: (9) *)
 Lemma neg_distributive_or:
@@ -675,10 +675,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve neg_distributive_or.
+Hint Resolve neg_distributive_or : chainmail_db.
 
 Lemma subst_neg :
   forall x n A, ([x /s n] ¬A) = (¬ ([x /s n]A)).
@@ -700,10 +700,10 @@ Proof.
   inversion H;
     subst.
   apply frsh;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve fresh_not_1.
+Hint Resolve fresh_not_1 : chainmail_db.
 
 Lemma fresh_not_2 :
   forall x σ A, fresh_x x σ (¬ A) ->
@@ -718,7 +718,7 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve fresh_not_2.
+Hint Resolve fresh_not_2 : chainmail_db.
 
 Lemma not_ex_x_all_not_1 : 
   forall A, entails (¬(∃x∙A)) (∀x∙¬A).
@@ -735,10 +735,10 @@ Proof.
   apply sat_all_x;
     intros.
   apply sat_not.
-  eapply H5; eauto.
+  eapply H5; eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_ex_x_all_not_1.
+Hint Resolve not_ex_x_all_not_1 : chainmail_db.
 
 Lemma not_ex_x_all_not_2 : 
   forall A, entails (∀x∙¬A) (¬(∃x∙A)).
@@ -754,13 +754,13 @@ Proof.
   apply nsat_ex_x;
     intros.
   eapply H4 in H0;
-    eauto.
+    eauto with chainmail_db.
 
   inversion H0;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_ex_x_all_not_2.
+Hint Resolve not_ex_x_all_not_2 : chainmail_db.
 
 (** Lemma 6: (10) *)
 Lemma not_ex_x_all_not : 
@@ -770,10 +770,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_ex_x_all_not.
+Hint Resolve not_ex_x_all_not : chainmail_db.
 
 Lemma not_ex_Σ_all_not_1 : 
   forall A, entails (¬(∃S∙A)) (∀S∙¬A).
@@ -792,7 +792,7 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve not_ex_Σ_all_not_1.
+Hint Resolve not_ex_Σ_all_not_1 : chainmail_db.
 
 Lemma not_ex_Σ_all_not_2 : 
   forall A, entails (∀S∙¬A) (¬(∃S∙A)).
@@ -810,7 +810,7 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve not_ex_Σ_all_not_2.
+Hint Resolve not_ex_Σ_all_not_2 : chainmail_db.
 
 (** Lemma 6: (11) *)
 Lemma not_ex_Σ_all_not : 
@@ -820,10 +820,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_ex_Σ_all_not.
+Hint Resolve not_ex_Σ_all_not : chainmail_db.
 
 Lemma not_all_Σ_ex_not_1 : 
   forall A, entails (¬(∀S∙A)) (∃S∙¬A).
@@ -842,7 +842,7 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve not_all_Σ_ex_not_1.
+Hint Resolve not_all_Σ_ex_not_1 : chainmail_db.
 
 Lemma not_all_Σ_ex_not_2 : 
   forall A, entails (∃S∙¬A) (¬(∀S∙A)).
@@ -858,7 +858,7 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve not_all_Σ_ex_not_2.
+Hint Resolve not_all_Σ_ex_not_2 : chainmail_db.
 
 (** Lemma 6: (13) *)
 Lemma not_all_Σ_ex_not : 
@@ -868,10 +868,10 @@ Proof.
     unfold equiv_a;
     intros;
     split;
-    eauto.
+    eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_all_Σ_ex_not.
+Hint Resolve not_all_Σ_ex_not : chainmail_db.
 
 (** Properties of Linking *)
 Lemma moduleLinking_associative :
@@ -980,7 +980,7 @@ Proof.
     induction Hred;
     intros;
     subst;
-    eauto.
+    eauto with loo_db.
 
   - eapply r_mth;
       eauto.

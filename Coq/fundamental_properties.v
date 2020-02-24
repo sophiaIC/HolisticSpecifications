@@ -292,8 +292,8 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve le_le_addr.
-Hint Rewrite le_le_addr.
+Hint Resolve le_le_addr : loo_db.
+Hint Rewrite le_le_addr : loo_db.
 
 Lemma heap_max_unique :
   forall (χ : heap) α, max_χ χ α ->
@@ -304,13 +304,11 @@ Proof.
   inversion Hmax1; inversion Hmax2;
     subst.
   crush.
-  eauto.
+  eauto with loo_db.
 Qed.
 
-Create HintDb fresh_heap_DB.
-
-Hint Resolve heap_max_unique : fresh_heap_DB.
-Hint Rewrite heap_max_unique : fresh_heap_DB.
+Hint Resolve heap_max_unique : loo_db.
+Hint Rewrite heap_max_unique : loo_db.
 
 Lemma fresh_heap_unique :
   forall χ α1 α2, fresh_χ χ α1 ->
@@ -327,8 +325,8 @@ Proof.
   end.
 Qed.
 
-Hint Resolve fresh_heap_unique : fresh_heap_DB.
-Hint Rewrite fresh_heap_unique : fresh_heap_DB.
+Hint Resolve fresh_heap_unique : loo_db.
+Hint Rewrite fresh_heap_unique : loo_db.
 
 Lemma fresh_heap_none :
   forall χ α, fresh_χ χ α ->
@@ -346,8 +344,8 @@ Proof.
   crush.
 Qed.
 
-Hint Resolve fresh_heap_none : fresh_heap_DB.
-Hint Rewrite fresh_heap_none : fresh_heap_DB.
+Hint Resolve fresh_heap_none : loo_db.
+Hint Rewrite fresh_heap_none : loo_db.
 
 Lemma fresh_heap_some_contradict :
   forall χ α, fresh_χ χ α ->
@@ -357,7 +355,7 @@ Proof.
   apply fresh_heap_none in Hfrsh; crush.  
 Qed.
 
-Hint Resolve fresh_heap_some_contradict.
+Hint Resolve fresh_heap_some_contradict : loo_db.
 
 Lemma fresh_heap_some_contradiction :
   forall χ α, fresh_χ χ α ->
@@ -369,7 +367,7 @@ Proof.
     crush.
 Qed.
 
-Lemma zip_length_exists :
+(*Lemma zip_length_exists :
   forall {A B : Type} (l1 : list A) (l2 : list B),
     length l1 = length l2 ->
     exists z, zip l1 l2 z.
@@ -386,7 +384,7 @@ Proof.
      destruct (IHl l') as [z Hzip];
      auto].
   exists ((a,b)::z); auto.
-Qed.
+Qed.*)
 
 Lemma fresh_in_empty :
   forall {A : Type} x, @fresh_in_map A x empty.
@@ -396,7 +394,7 @@ Proof.
   pmap_simpl.
 Qed.
 
-Hint Resolve fresh_in_empty.
+Hint Resolve fresh_in_empty : loo_db.
 
 Lemma fresh_in_map_not_in_dom :
   forall {A : Type} (m : partial_map var A) d,
@@ -421,7 +419,7 @@ Inductive lt_map {A : Type} : nat -> partial_map var A -> Prop :=
                            n' <= n ->
                            lt_map (S n) (update (bnd n) b m).
 
-Hint Constructors lt_map.
+Hint Constructors lt_map : loo_db.
 
 Lemma exists_limit_for_finite_map :
   forall {A : Type} (m : partial_map var A),
@@ -430,7 +428,7 @@ Lemma exists_limit_for_finite_map :
 Proof.
   intros A m Hfinite;
     induction Hfinite;
-    [exists 0; auto|destruct IHHfinite as [n]].
+    [exists 0; auto with loo_db|destruct IHHfinite as [n]].
   
   destruct a as [n'].
   destruct (le_lt_dec n n') as [Hle|Hlt];
@@ -466,7 +464,7 @@ Lemma lt_fresh_in_map :
 Proof.
   intros A n m Hlt;
     induction Hlt;
-    auto;
+    auto with loo_db;
     unfold fresh_in_map in *;    
     intros.
 
@@ -531,7 +529,7 @@ Inductive lt_var : nat -> var -> Prop :=
 | lt_bind : forall n n', n' < n ->
                     lt_var n (bnd n').
 
-Hint Constructors lt_var.
+Hint Constructors lt_var : loo_db.
 
 Lemma exists_limit_var :
   forall x, exists n, lt_var n x.
@@ -661,7 +659,7 @@ Proof.
   (destruct (@disjointedness_for_finite_variable_maps value value β1)
      with (g:=β2)(s:=s)
     as [f H];
-   try solve [finite_auto; subst; eauto];
+   try solve [finite_auto; subst; eauto with map_db];
    destruct H as [f'];
    andDestruct).
 
@@ -672,7 +670,7 @@ Proof.
       (β:=β1)(β':=β2)(f':=f')
       (s:=s)
       (f:=f);
-    auto.
+    auto with map_db.
   - destruct ϕ1; crush.
   - destruct ϕ2; crush.
 Qed.
@@ -706,7 +704,7 @@ Proof.
     |].
 
   assert (ps = empty);
-    [|subst; auto].
+    [|subst; auto with map_db].
   apply functional_extensionality;
     intros a;
     repeat map_rewrite.
@@ -734,7 +732,7 @@ Proof.
   apply IHD'; unfold dom;
     repeat split; intros;
       try solve [match goal with
-                 | [Huniq : unique (_::?D) |- unique ?D] => inversion Huniq; auto
+                 | [Huniq : unique (_::?D) |- unique ?D] => inversion Huniq; auto with map_db
                  end];
       repeat map_rewrite.
   destruct (eq_dec a0 a) as [|Hneq];
@@ -762,7 +760,7 @@ Proof.
   end.
 Qed.
 
-Hint Resolve dom_finite.
+Hint Resolve dom_finite : loo_db.
 
 Lemma reduction_preserves_config_finiteness :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
@@ -788,7 +786,7 @@ Proof.
       | |];
       try solve [crush;
                  eauto];
-      eauto.
+      eauto with loo_db.
 
   - unfold update_ψ_map, update_ϕ_map in H0;
       inversion H0;
@@ -807,7 +805,7 @@ Proof.
       destruct H; crush.
 Qed.
 
-Hint Resolve reduction_preserves_config_finiteness.
+Hint Resolve reduction_preserves_config_finiteness : loo_db.
 
 Lemma reductions_preserves_config_finiteness :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -818,10 +816,10 @@ Proof.
     induction Hred;
     intros;
     crush;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve reductions_preserves_config_finiteness.
+Hint Resolve reductions_preserves_config_finiteness : loo_db.
 
 Lemma pair_reduction_preserves_config_finiteness :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -833,10 +831,10 @@ Proof.
     subst;
     intros;
     crush;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reduction_preserves_config_finiteness.
+Hint Resolve pair_reduction_preserves_config_finiteness : loo_db.
 
 Lemma pair_reductions_preserves_config_finiteness :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
@@ -847,10 +845,10 @@ Proof.
     induction Hred;
     subst;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reductions_preserves_config_finiteness.
+Hint Resolve pair_reductions_preserves_config_finiteness : loo_db.
 
 Lemma reduction_preserves_config_not_stuck :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
@@ -868,7 +866,7 @@ Proof.
       unfold not_stuck_ϕ;
       subst;
       simpl in *;
-      eauto.
+      eauto with loo_db.
 
   - exists ϕ', ψ;
       subst;
@@ -877,7 +875,7 @@ Proof.
       auto;
       unfold not_stuck_ϕ;
       simpl in *;
-      auto.
+      auto with loo_db.
 
   - subst σ'; simpl;
       exists ϕ', ψ;
@@ -886,7 +884,7 @@ Proof.
       subst ϕ';
       unfold not_stuck_ϕ;
       simpl;
-      auto.
+      auto with loo_db.
 
   - exists ϕ'', ψ;
       split;
@@ -894,7 +892,7 @@ Proof.
       subst;
       unfold not_stuck_ϕ;
       simpl;
-      auto;
+      auto with loo_db;
       crush.
 
   - exists ϕ'', ψ;
@@ -903,10 +901,10 @@ Proof.
       subst ϕ'';
       unfold not_stuck_ϕ;
       simpl;
-      auto.
+      auto with loo_db.
 Qed.
 
-Hint Resolve reduction_preserves_config_not_stuck.
+Hint Resolve reduction_preserves_config_not_stuck : loo_db.
 
 Lemma reductions_preserves_config_not_stuck :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -916,10 +914,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve reductions_preserves_config_not_stuck.
+Hint Resolve reductions_preserves_config_not_stuck : loo_db.
 
 Lemma pair_reduction_preserves_config_not_stuck :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -929,10 +927,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reduction_preserves_config_not_stuck.
+Hint Resolve pair_reduction_preserves_config_not_stuck : loo_db.
 
 Lemma pair_reductions_preserves_config_not_stuck :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
@@ -942,10 +940,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reductions_preserves_config_not_stuck.
+Hint Resolve pair_reductions_preserves_config_not_stuck : loo_db.
 
 Lemma reduction_preserves_config_waiting :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
@@ -988,7 +986,7 @@ Proof.
 
 Qed.
 
-Hint Resolve reduction_preserves_config_waiting.
+Hint Resolve reduction_preserves_config_waiting : loo_db.
 
 Lemma reductions_preserves_config_waiting :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -998,10 +996,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve reductions_preserves_config_waiting.
+Hint Resolve reductions_preserves_config_waiting : loo_db.
 
 Lemma pair_reduction_preserves_config_waiting :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -1011,10 +1009,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reduction_preserves_config_waiting.
+Hint Resolve pair_reduction_preserves_config_waiting : loo_db.
 
 Lemma pair_reductions_preserves_config_waiting :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
@@ -1024,10 +1022,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reductions_preserves_config_waiting.
+Hint Resolve pair_reductions_preserves_config_waiting : loo_db.
 
 Lemma has_self_update_ϕ :
   forall χ ϕ, has_self_ϕ χ ϕ ->
@@ -1270,7 +1268,7 @@ Proof.
       auto.
 Qed.
 
-Hint Resolve reduction_preserves_config_has_self.
+Hint Resolve reduction_preserves_config_has_self : loo_db.
 
 Lemma reductions_preserves_config_has_self :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -1280,10 +1278,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve reduction_preserves_config_has_self.
+Hint Resolve reduction_preserves_config_has_self : loo_db.
 
 Lemma pair_reduction_preserves_config_has_self :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -1300,7 +1298,7 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve pair_reduction_preserves_config_has_self.
+Hint Resolve pair_reduction_preserves_config_has_self : loo_db.
 
 Lemma pair_reductions_preserves_config_has_self :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
@@ -1310,10 +1308,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reductions_preserves_config_has_self.
+Hint Resolve pair_reductions_preserves_config_has_self : loo_db.
 
 Lemma reduction_preserves_config_wf :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
@@ -1325,11 +1323,11 @@ Proof.
     subst;
     apply config_wf;
     inversion Hwf;
-    eauto;
+    eauto with loo_db;
     subst.
 Qed.
 
-Hint Resolve reduction_preserves_config_wf.
+Hint Resolve reduction_preserves_config_wf : loo_db.
 
 Lemma reductions_preserves_config_wf :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -1340,10 +1338,10 @@ Proof.
     induction Hred;
     intros;
     subst;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve reductions_preserves_config_wf.
+Hint Resolve reductions_preserves_config_wf : loo_db.
 
 Lemma pair_reduction_preserves_config_wf :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -1352,10 +1350,10 @@ Lemma pair_reduction_preserves_config_wf :
 Proof.
   intros M1 M2 σ1 σ2 Hred Hwf;
     induction Hred;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reduction_preserves_config_wf.
+Hint Resolve pair_reduction_preserves_config_wf : loo_db.
 
 Lemma pair_reductions_preserves_config_wf :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
@@ -1364,10 +1362,10 @@ Lemma pair_reductions_preserves_config_wf :
 Proof.
   intros M1 M2 σ1 σ2 Hred Hwf;
     induction Hred;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reductions_preserves_config_wf.
+Hint Resolve pair_reductions_preserves_config_wf : loo_db.
 
 Lemma config_head_wf :
   forall σ, σ_wf σ ->
@@ -1394,7 +1392,7 @@ Proof.
   exists ϕ, nil; split; auto; crush.
 Qed.
 
-Hint Resolve config_head_wf.
+Hint Resolve config_head_wf : loo_db.
 
 Lemma config_wf_decompose :
   forall σ, σ_wf σ ->
@@ -1442,7 +1440,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve initial_wf.
+Hint Resolve initial_wf : loo_db.
 
 Lemma arising_wf :
   forall M1 M2 σ, arising M1 M2 σ ->
@@ -1451,10 +1449,10 @@ Proof.
   intros M1 M2 σ Harise.
   inversion Harise;
     subst.
-  eapply pair_reductions_preserves_config_wf; eauto.
+  eapply pair_reductions_preserves_config_wf; eauto with loo_db.
 Qed.
 
-Hint Resolve arising_wf.
+Hint Resolve arising_wf : loo_db.
 
 Lemma limited_config_wf :
   forall χ ϕ ψ, σ_wf (χ, ϕ::ψ) ->
@@ -1507,7 +1505,7 @@ Proof.
 
 Qed.
 
-Hint Resolve limited_config_wf.
+Hint Resolve limited_config_wf : loo_db.
 
 Lemma waiting_update_σ_map :
   forall σ, waiting_σ σ ->
@@ -1526,7 +1524,7 @@ Proof.
     auto.
 Qed.
 
-Hint Resolve waiting_update_σ_map.
+Hint Resolve waiting_update_σ_map : loo_db.
 
 Lemma not_stuck_update_σ_map :
   forall σ, not_stuck_σ σ ->
@@ -1545,7 +1543,7 @@ Proof.
     auto.
 Qed.
 
-Hint Resolve not_stuck_update_σ_map.
+Hint Resolve not_stuck_update_σ_map : loo_db.
 
 Lemma finite_update_ϕ_map :
   forall ϕ, finite_ϕ ϕ ->
@@ -1559,7 +1557,7 @@ Proof.
   
 Qed.
 
-Hint Resolve finite_update_ϕ_map.
+Hint Resolve finite_update_ϕ_map : loo_db.
 
 Lemma finite_update_σ_map :
   forall σ, finite_σ σ ->
@@ -1587,7 +1585,7 @@ Proof.
     auto.
 Qed.
 
-Hint Resolve finite_update_σ_map.
+Hint Resolve finite_update_σ_map : loo_db.
 
 Lemma has_self_update_ϕ_map :
   forall χ ϕ, has_self_ϕ χ ϕ ->
@@ -1618,7 +1616,7 @@ Proof.
       crush.
 Qed.
 
-Hint Resolve has_self_update_ϕ_map.
+Hint Resolve has_self_update_ϕ_map : loo_db.
 
 Lemma has_self_update_σ_map :
   forall σ, has_self_σ σ ->
@@ -1648,7 +1646,7 @@ Proof.
   
 Qed.
 
-Hint Resolve has_self_update_σ_map.
+Hint Resolve has_self_update_σ_map : loo_db.
 
 Lemma wf_update_σ_map :
   forall σ, σ_wf σ ->
@@ -1659,7 +1657,7 @@ Proof.
   inversion Hwf;
     subst.
   apply config_wf;
-    eauto.
+    eauto with loo_db.
 Qed.
 
 Theorem eval_unique :
@@ -1701,7 +1699,7 @@ Proof.
   apply IHHeval1 in H5; apply IHHeval2 in H7; subst; crush.
 Qed.
 
-Hint Rewrite eval_unique.
+Hint Rewrite eval_unique : loo_db.
 
 Ltac eval_rewrite :=
   repeat match goal with
@@ -1886,10 +1884,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Lemma notin_updates :
+(*Lemma notin_updates :
   forall {A B : Type} `{Eq A} zs zs' (Zs : list (A * A)),
     zip zs zs' Zs ->
     forall z, ~ In z zs ->
@@ -1910,7 +1908,7 @@ Proof.
      eapply IHzs; auto;
      [inversion Hzip; eauto
      |intro Hcontra; contradiction H; apply in_cons; auto]].
-Qed.
+Qed.*)
 
 Lemma adaptation_preserves_mapping :
   forall σ1 σ2 σ, σ1 ◁ σ2 ≜ σ ->
@@ -1924,7 +1922,7 @@ Proof.
   repeat map_rewrite; simpl.
   apply extend_some_2; auto.
   apply disjoint_dom_symmetry.
-  eapply disjoint_composition; auto.
+  eapply disjoint_composition; auto with map_db.
 Qed.
 
 (* fresh  *)
@@ -1965,7 +1963,7 @@ Proof.
 
   inversion H1;
     subst;
-    auto.
+    auto with chainmail_db.
 Qed.
 
 Lemma fresh_and_intro :
@@ -1976,7 +1974,7 @@ Proof.
   intros.
   andDestruct.
   inversion Ha; inversion Hb; subst.
-  apply frsh; auto.
+  apply frsh; auto with chainmail_db.
 Qed.
 
 Lemma fresh_arr_elim :
@@ -1990,7 +1988,7 @@ Proof.
 
   inversion H1;
     subst;
-    auto.
+    auto with chainmail_db.
 Qed.
 
 Lemma fresh_arr_intro :
@@ -2001,7 +1999,7 @@ Proof.
   intros.
   andDestruct.
   inversion Ha; inversion Hb; subst.
-  apply frsh; auto.
+  apply frsh; auto with chainmail_db.
 Qed.
 
 Lemma fresh_all_elim :
@@ -2013,7 +2011,7 @@ Proof.
   inversion H;
     subst;
     inversion H1;
-    auto.
+    auto with chainmail_db.
 Qed.
 
 Lemma fresh_all_intro :
@@ -2022,7 +2020,7 @@ Lemma fresh_all_intro :
     fresh_x x σ (∀x∙A).
 Proof.
   intros.
-  inversion H; subst; auto.
+  inversion H; subst; auto with chainmail_db.
 Qed.
 
 Lemma fresh_notin :
@@ -2032,7 +2030,7 @@ Lemma fresh_notin :
     fresh_x x σ A2.
 Proof.
   intros x σ A1 A2 Hfrsh Hnotin.
-  inversion Hfrsh; auto.
+  inversion Hfrsh; auto with chainmail_db.
 Qed.
 
 (* update map *)
@@ -2095,8 +2093,8 @@ Proof.
   
 Qed.
 
-Hint Resolve reduction_preserves_addr_classes.
-Hint Rewrite reduction_preserves_addr_classes.
+Hint Resolve reduction_preserves_addr_classes : loo_db.
+Hint Rewrite reduction_preserves_addr_classes : loo_db.
 
 Lemma reductions_preserves_addr_classes :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -2108,7 +2106,7 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 
   destruct IHHred with (α:=α)(o1:=o1) as [o Hclass];
     eauto; auto;
@@ -2122,8 +2120,8 @@ Proof.
   eexists; split; eauto; crush.
 Qed.
 
-Hint Resolve reductions_preserves_addr_classes.
-Hint Rewrite reductions_preserves_addr_classes.
+Hint Resolve reductions_preserves_addr_classes : loo_db.
+Hint Rewrite reductions_preserves_addr_classes : loo_db.
 
 Lemma pair_reduction_preserves_addr_classes :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -2135,11 +2133,11 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reduction_preserves_addr_classes.
-Hint Rewrite pair_reduction_preserves_addr_classes.
+Hint Resolve pair_reduction_preserves_addr_classes : loo_db.
+Hint Rewrite pair_reduction_preserves_addr_classes : loo_db.
 
 Lemma pair_reductions_preserves_addr_classes :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
@@ -2151,7 +2149,7 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 
   destruct (pair_reduction_preserves_addr_classes M1 M2 σ1 σ)
     with
@@ -2168,8 +2166,8 @@ Proof.
   
 Qed.
 
-Hint Resolve pair_reductions_preserves_addr_classes.
-Hint Rewrite pair_reductions_preserves_addr_classes.
+Hint Resolve pair_reductions_preserves_addr_classes : loo_db.
+Hint Rewrite pair_reductions_preserves_addr_classes : loo_db.
 
 Lemma reductions_implies_method_call :
   forall M1 M2 σ1 σ2,
@@ -2420,7 +2418,7 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve reductions_implies_method_call.
+Hint Resolve reductions_implies_method_call : loo_db.
 
 Lemma pair_reduction_implies_method_call :
   forall M1 M2 σ1 σ2,
@@ -2439,10 +2437,10 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    eauto.
+    eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reduction_implies_method_call.
+Hint Resolve pair_reduction_implies_method_call : loo_db.
 
 Parameter fresh_exists_for_expression :
   forall e, exists x, notin_exp e x.
@@ -2560,7 +2558,7 @@ Proof.
 
 Qed.
 
-Hint Resolve reduction_unique.
+Hint Resolve reduction_unique : loo_db.
 
 (*
 Lemma pair_reduction_unique :

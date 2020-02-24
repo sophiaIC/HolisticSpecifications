@@ -18,52 +18,66 @@ Class Eq (A : Type) :=
                       eqb a1 a2 = false;
    eq_dec : forall (a1 a2 : A), {a1 = a2} + {a1 <> a2}}.
 
-Hint Resolve eqb_refl eqb_sym eqb_eqp eqb_neq neq_eqb eq_dec.
+Hint Resolve eqb_refl eqb_sym eqb_eqp eqb_neq neq_eqb eq_dec : eq_db.
 
-Instance nat_Eq : Eq nat :=
+Program Instance nat_Eq : Eq nat :=
   {eqb n m := n =? m;
    eqb_refl := Nat.eqb_refl;
    eqb_sym := Nat.eqb_sym;
    eq_dec := Nat.eq_dec}.
-Proof.
-  intros; apply beq_nat_eq; auto.
-  apply Nat.eqb_neq.
-  apply Nat.eqb_neq.
+Next Obligation.
+  auto using beq_nat_eq.
+Defined.
+Next Obligation.
+  apply Nat.eqb_neq; auto.
+Defined.
+Next Obligation.
+  apply Nat.eqb_neq; auto.
 Defined.
 
-Instance var_Eq : Eq var :=
+Program Instance var_Eq : Eq var :=
   {eqb x y :=
      match x, y with
      | bnd n, bnd m => n =? m
      end}.
-Proof.
+Next Obligation.
   intros; destruct a; apply Nat.eqb_refl.
+Defined.
+Next Obligation.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     symmetry in H;
     apply beq_nat_eq in H;
     subst; auto.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq in H;
     crush.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq;
     crush.
-  intros x y;
-    destruct x as [n];
-    destruct y as [m];
+Defined.
+Next Obligation.
+  destruct a1 as [n];
+    destruct a2 as [m];
     destruct (Nat.eq_dec n m) as [Heq|Hneq];
     subst;
     auto;
     right;
     crush.
 Defined.
+
 
 Definition total_map (A B : Type) `{Eq A} := A -> B.
 
@@ -146,7 +160,7 @@ Inductive finite {A B : Type}`{Eq A} : partial_map A B -> Prop :=
 | fin_update : forall a b m, finite m ->
                         finite (update a b m).
 
-Hint Constructors finite.
+Hint Constructors finite : map_db.
 
 Class Mappable (A B C : Type) :=
   mapp : A -> B -> C.

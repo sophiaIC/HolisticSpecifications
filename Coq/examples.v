@@ -1,5 +1,6 @@
 Require Import common.
 Require Import loo_def.
+Require Import function_operations.
 Require Import chainmail.
 Require Import fundamental_properties.
 Require Import classical_properties.
@@ -567,15 +568,15 @@ Ltac neg_distr_and :=
 
 Lemma thing :
   entails (∀x∙∀x∙
-            ((a_class (e_hole 1) Boundary)
-             ∧
-             (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
-            ∧(∀x∙((a_hole 0) access (a_hole 1) ⇒ (a_eq (e_hole 0) (e_hole 2)))))
+            (((a_class (e_hole 1) Boundary)
+              ∧
+              (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+             ∧(∀x∙((a_hole 0) access (a_hole 1) ⇒ (a_eq (e_hole 0) (e_hole 2))))))
           (∀x∙∀x∙
-            ((a_class (e_hole 1) Boundary)
-             ∧
-             (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
-            ∧(¬ ∃x∙(((a_hole 0) access (a_hole 1)) ∧ ¬(a_class (e_hole 0) Boundary)))).
+            (((a_class (e_hole 1) Boundary)
+              ∧
+              (a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
+             ∧(¬ ∃x∙(((a_hole 0) access (a_hole 1)) ∧ ¬(a_class (e_hole 0) Boundary))))).
 Proof.
   auto.
   apply ent;
@@ -584,10 +585,10 @@ Proof.
           a_intros;
           auto).
 
-  - assert (Hfrsh : notin_Ax ((∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
-                              ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))
-                             z).
-    +  apply ni_and; auto.
+  - assert (Hfrsh : notin_Ax (∀x∙ ((a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
+                                   ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))) z).
+    +  apply ni_all_x; auto.
+       apply ni_and; auto.
        apply ni_all_x; auto.
        apply ni_arr; eauto.
        apply ni_acc; simpl; auto.
@@ -606,13 +607,12 @@ Proof.
     repeat (a_prop;
             a_intros;
             auto).
-    SearchAbout a_neg.
     neg_distr_and.
 
-    assert (Hfrsh : notin_Ax ((∀x∙ (a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0)))
-                              ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))
-                             z).
-    +  apply ni_and; auto.
+    assert (Hfrsh : notin_Ax (∀x∙ ((a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
+                                   ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))) z).
+    +  apply ni_all_x; auto.
+       apply ni_and; auto.
        apply ni_all_x; auto.
        apply ni_arr; eauto.
        apply ni_acc; simpl; auto.
@@ -623,8 +623,43 @@ Proof.
       repeat (a_prop;
               a_intros;
               auto).
-    
-    
+      assert (Hfrsh2 : notin_Ax ((a_class (e_var z) Boundary ∧ a_eq (e_acc_f (e_var z) inside) (e_hole 0))
+                                 ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_var z)))) z0).
+      * assert (z <> z0);
+          [intros Hcontra; subst|].
+        ** inversion H3; subst.
+           destruct σ as [χ ψ].
+           simpl in *.
+           destruct ψ as [|ϕ ψ'];
+             simpl in H6.
+           admit.
+           repeat map_rewrite; simpl in *.
+           repeat map_rewrite; simpl in *.
+           destruct z0; simpl in H6.
+           rewrite Nat.eqb_refl in H6;
+             crush.
+        ** apply ni_and; simpl; auto.
+           apply ni_all_x; auto.
+           apply ni_arr; auto.
+           apply ni_acc; simpl; auto.
+
+      * apply frsh with (σ:=update_σ_map σ z v) in Hfrsh2;
+          auto.
+        apply Hfrsh with (y:=y0)(v0:=v0) in Hfrsh2;
+          auto.
+        repeat (a_prop;
+                a_intros;
+                auto).
+        destruct (sat_excluded_middle)
+          with
+            (M1:=M1)(M2:=M2)
+            (σ:=update_σ_map (update_σ_map σ z v) z0 v0)
+            (A:=a_bind z0 access a_bind z) as [Ha|];
+          [specialize (Hfrsh2 Ha)|auto].
+        right; apply negate_intro_sat.
+        SearchAbout a_neg.
+                     
+        
 
 Qed.
 
