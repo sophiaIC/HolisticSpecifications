@@ -87,7 +87,7 @@ Proof.
   intros; unfold wf_rename in *; andDestruct; auto.
 Qed.
 
-Hint Resolve wf_one_to_one.
+Hint Resolve wf_one_to_one : eq_db.
 
 Lemma wf_id :
   wf_rename Some.
@@ -101,7 +101,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve wf_id.
+Hint Resolve wf_id : eq_db.
 
 Inductive frame_equiv : partial_map var var -> frame -> frame -> Prop :=
 | eq_frm : forall f ϕ1 ϕ2, contn_equiv f (contn ϕ1) (contn ϕ2) ->
@@ -119,14 +119,14 @@ Inductive config_equiv : config -> config -> Prop :=
 | eq_conf : forall χ ψ1 ψ2, stack_equiv ψ1 ψ2 ->
                        config_equiv (χ, ψ1) (χ, ψ2).
 
-Hint Constructors exp_equiv.
-Hint Constructors ref_equiv.
-Hint Constructors stmt_equiv.
-Hint Constructors contn_equiv.
-Hint Constructors map_equiv.
-Hint Constructors frame_equiv.
-Hint Constructors stack_equiv.
-Hint Constructors config_equiv.
+Hint Constructors exp_equiv : eq_db.
+Hint Constructors ref_equiv : eq_db.
+Hint Constructors stmt_equiv : eq_db.
+Hint Constructors contn_equiv : eq_db.
+Hint Constructors map_equiv : eq_db.
+Hint Constructors frame_equiv : eq_db.
+Hint Constructors stack_equiv : eq_db.
+Hint Constructors config_equiv : eq_db.
 
 Ltac equiv_unfold :=
   match goal with
@@ -189,10 +189,10 @@ Lemma id_equiv_reflexive_ref :
 Proof.
   intro r;
     destruct r;
-    auto.
+    auto with eq_db.
 Qed.
 
-Hint Resolve id_equiv_reflexive_ref.
+Hint Resolve id_equiv_reflexive_ref : eq_db.
 
 Lemma bind_right_id :
   forall (A : Type)(m : A -> (option var)) , m ∘ Some = m.
@@ -207,9 +207,9 @@ Proof.
   end.
 Qed.
 
-Hint Rewrite (bind_right_id var).
-Hint Rewrite (bind_right_id fld).
-Hint Resolve bind_right_id.
+Hint Rewrite (bind_right_id var) : eq_db.
+Hint Rewrite (bind_right_id fld) : eq_db.
+Hint Resolve bind_right_id : eq_db.
 
 Lemma bind_left_id :
   forall (A : Type)(m : var -> (option A)) , Some ∘ m = m.
@@ -222,8 +222,8 @@ Proof.
     auto.
 Qed.
 
-Hint Rewrite bind_left_id.
-Hint Resolve bind_left_id.
+Hint Rewrite bind_left_id : eq_db.
+Hint Resolve bind_left_id : eq_db.
 
 Lemma id_equiv_reflexive_stmt :
   forall s, stmt_equiv Some s s.
@@ -231,59 +231,59 @@ Proof.
   intro s;
     induction s;
     simpl in *;
-    auto.
+    auto with eq_db.
 
-  - apply eq_meth; intros; auto.
+  - apply eq_meth; intros; auto with eq_db.
     eexists; eauto.
-  - apply eq_new; intros; auto.
+  - apply eq_new; intros; auto with eq_db.
     eexists; eauto.
 Qed.
 
-Hint Resolve id_equiv_reflexive_stmt.
+Hint Resolve id_equiv_reflexive_stmt : eq_db.
 
 Lemma id_equiv_reflexive_contn :
   forall c, contn_equiv Some c c.
 Proof.
   intros c;
-    destruct c; auto.
+    destruct c; auto with eq_db.
 Qed.
 
-Hint Resolve id_equiv_reflexive_contn.
+Hint Resolve id_equiv_reflexive_contn : eq_db.
 
 Lemma id_equiv_reflexive_map :
   forall m, map_equiv Some m m.
 Proof.
   intros;
-    eauto.
+    eauto with eq_db.
 Qed.
 
-Hint Resolve id_equiv_reflexive_map.
+Hint Resolve id_equiv_reflexive_map : eq_db.
 
 Lemma id_equiv_reflexive_frame :
   forall ϕ, frame_equiv Some ϕ ϕ.
 Proof.
-  intros; auto.
+  intros; auto with eq_db.
 Qed.
 
-Hint Resolve id_equiv_reflexive_frame.
+Hint Resolve id_equiv_reflexive_frame : eq_db.
 
 Lemma equiv_reflexive_stack :
   forall ψ, stack_equiv ψ ψ.
 Proof.
   intros ψ;
     induction ψ as [|ϕ ψ'];
-    eauto.
+    eauto with eq_db.
 Qed.
 
-Hint Resolve equiv_reflexive_stack.
+Hint Resolve equiv_reflexive_stack : eq_db.
 
 Lemma equiv_reflexive_config :
   forall σ, config_equiv σ σ.
 Proof.
-  intros; destruct σ; auto.
+  intros; destruct σ; auto with eq_db.
 Qed.
 
-Hint Resolve equiv_reflexive_config.
+Hint Resolve equiv_reflexive_config : eq_db.
 
 Ltac notin_unfold :=
   match goal with
@@ -318,7 +318,7 @@ Proof.
   intros M σ e v Heval;
     induction Heval;
     intros;
-    auto.
+    auto with loo_db.
 
   - match goal with
     | [H : mapp ?σ ?x = Some ?v,
@@ -327,7 +327,7 @@ Proof.
     end;
       [match goal with
        | [Ha : mapp ?σa ?x = Some ?v,
-               Hb : mapp ?σa ?x = mapp ?σb ?x  |- _] => rewrite Hb in Ha; auto
+               Hb : mapp ?σa ?x = mapp ?σb ?x  |- _] => rewrite Hb in Ha; auto with loo_db
        end
       |notin_auto].
 
@@ -509,7 +509,7 @@ Proof.
     intros;
     auto;
     repeat equiv_unfold;
-    eauto.
+    eauto with loo_db.
 
   - apply v_var; repeat map_rewrite; simpl.
     match goal with
@@ -737,7 +737,7 @@ Proof.
   unfold wf_rename in *; andDestruct; auto.
 Qed.
 
-Hint Resolve equivalent_class_of_this.
+Hint Resolve equivalent_class_of_this : eq_db.
 
 Lemma equivalent_frames_with_equivalent_maps :
   forall f ϕ1 ϕ2, frame_equiv f ϕ1 ϕ2 ->
@@ -834,11 +834,15 @@ Proof.
       end.
       unfold wf_rename in *;
         andDestruct; auto.
-      repeat equiv_auto; auto.
+      repeat equiv_auto; auto with eq_db.
     + match goal with
       | [_ : wf_rename ?f',
          _ : ?f' ?x' = Some ?y  |- classOf ?y _ _] =>
-        eapply equivalent_class_of with (x:=x')(f:=f'); [eauto|auto|repeat equiv_auto; auto]
+        eapply equivalent_class_of with (x:=x')(f:=f');
+          [eauto
+          |auto
+          |repeat equiv_auto;
+           auto with eq_db]
       end.
 
   - match goal with
@@ -864,11 +868,14 @@ Proof.
       end.
       unfold wf_rename in *;
         andDestruct; auto.
-      repeat equiv_auto; auto.
+      repeat equiv_auto; auto with eq_db.
     + match goal with
       | [_ : wf_rename ?f',
          _ : ?f' ?x' = Some ?y  |- classOf ?y _ _] =>
-        eapply equivalent_class_of with (x:=x')(f:=f'); [eauto|auto|repeat equiv_auto; auto]
+        eapply equivalent_class_of with (x:=x')(f:=f');
+          [eauto
+          |auto
+          |repeat equiv_auto; auto with eq_db]
       end.
 
   - match goal with
@@ -997,7 +1004,7 @@ Proof.
   end.
 Qed.
 
-Hint Resolve bind_assoc.
+Hint Resolve bind_assoc : map_db.
 
 Lemma bind_update :
   forall {A B C : Type}`{Eq A}`{Eq B}
@@ -1104,12 +1111,12 @@ Proof.
     + rewrite fold_bind in H27.
       rewrite fold_bind in H17.
       rewrite fold_bind' in *.
-      apply eq_frm; auto.
+      apply eq_frm; auto with eq_db.
       rewrite compose_assoc.
       crush.
 
     + apply eq_cons with (f:=f); simpl; auto.
-      repeat equiv_auto; simpl; auto.
+      repeat equiv_auto; simpl; auto with eq_db.
 
   - match goal with
     | [Hred : _ ∙ _ ⤳ _ |- _] => inversion Hred; subst; try solve [crush]
@@ -1146,7 +1153,7 @@ Proof.
     end.
     repeat equiv_auto; auto.
     + simpl in *.
-      repeat equiv_auto; auto.
+      repeat equiv_auto; auto with eq_db.
     + simpl in *.
       apply eq_map; auto.
       * match goal with
@@ -1155,7 +1162,7 @@ Proof.
         end.
         match goal with
         | [H : ?f ?x = Some ?x' |- context[(fun a' => bind (?f a') (update ?x' _ _))]] =>
-          rewrite <- bind_update with (a:=x); auto
+          rewrite <- bind_update with (a:=x); auto with eq_db
         end.
       * intros.
         repeat map_rewrite.
@@ -1220,9 +1227,9 @@ Proof.
     match goal with
     | [_ : wf_rename ?f' |- stack_equiv _ _] => apply eq_cons with (f:=f'); auto
     end.
-    repeat equiv_auto; auto.
+    repeat equiv_auto; auto with eq_db.
     + simpl in *.
-      repeat equiv_auto; auto.
+      repeat equiv_auto; auto with eq_db.
 
   - match goal with
     | [Hred : _ ∙ _ ⤳ _ |- _] => inversion Hred; subst; try solve [crush]
@@ -1264,7 +1271,7 @@ Proof.
       repeat equiv_auto;
       auto.
     apply eq_map; auto.
-    * rewrite <- bind_update with (a:=x); auto. 
+    * rewrite <- bind_update with (a:=x); auto with eq_db. 
     * intros.
       repeat map_rewrite.
       match goal with
@@ -1314,7 +1321,7 @@ Proof.
     | [H : c_hole _ _ = c_hole _ _ |- _] => inversion H; subst
     end.
     apply eq_cons with (f:=f0); auto.
-    repeat equiv_auto; simpl; auto.
+    repeat equiv_auto; simpl; auto with eq_db.
     apply eq_map; auto.
     * match goal with
       | [Hmap : ?m = (fun _ => bind _ _) |- context[?m]] => rewrite Hmap
@@ -1326,7 +1333,7 @@ Proof.
         apply (equivalent_interpretation_equal x1  χ ϕ1 ψ1 v1 H1 f) in H2; auto;
           inversion H2; subst
       end.
-      apply bind_update; auto.
+      apply bind_update; auto with eq_db.
     * intros.
       repeat map_rewrite.
       match goal with
@@ -1371,7 +1378,7 @@ Proof.
     | [H : c_hole _ _ = c_hole _ _ |- _] => inversion H; subst
     end.
     apply eq_cons with (f:=f0); auto.
-    repeat equiv_auto; simpl; auto.
+    repeat equiv_auto; simpl; auto with eq_db.
     apply eq_map; auto.
     * match goal with
       | [Hmap : ?m = (fun _ => bind _ _) |- context[?m]] => rewrite Hmap
@@ -1383,7 +1390,7 @@ Proof.
         apply (equivalent_interpretation_equal x1  χ ϕ1 ψ1 v1 H1 f) in H2; auto;
           inversion H2; subst
       end.
-      apply bind_update; auto.
+      apply bind_update; auto with eq_db.
     * intros.
       repeat map_rewrite.
       match goal with
@@ -1408,7 +1415,7 @@ Proof.
       end.    
 Qed.
 
-Hint Resolve equivalent_reduction.
+Hint Resolve equivalent_reduction : eq_db.
 
 Lemma ref_equiv_sym :
   forall f r1 r2, ref_equiv f r1 r2 ->
@@ -1422,14 +1429,14 @@ Proof.
 
   - unfold inv in *;
       andDestruct;
-      eauto.
+      eauto with eq_db.
 
   - unfold inv in *;
       andDestruct;
-      eauto.
+      eauto with eq_db.
 Qed.
 
-Hint Resolve ref_equiv_sym.
+Hint Resolve ref_equiv_sym : eq_db.
 
 Lemma exp_equiv_sym :
   forall f e1 e2, exp_equiv f e1 e2 ->
@@ -1440,15 +1447,15 @@ Proof.
     induction Heq;
     intros;
     subst;
-    auto.
+    auto with eq_db.
 
   unfold inv in *;
     andDestruct;
-    eauto.
+    eauto with eq_db.
 
 Qed.
 
-Hint Resolve exp_equiv_sym.
+Hint Resolve exp_equiv_sym : eq_db.
 
 (*Lemma bind_inverse :
   forall {A B C : Type}`{Eq A}`{Eq B}`{Eq C}
@@ -1487,14 +1494,14 @@ Proof.
     induction Heq;
     intros;
     subst;
-    eauto.
+    eauto with eq_db.
 
   - repeat equiv_auto;
       intros;
       try solve [unfold inv in *;
                  andDestruct;
                  intros;
-                 eauto].
+                 eauto with eq_db].
     + unfold inv in *; andDestruct.
       match goal with
       | [H : bind (?m ?p) ?f = Some ?x |- _] =>
@@ -1542,7 +1549,7 @@ Proof.
 
 Qed.
 
-Hint Resolve stmt_equiv_sym.
+Hint Resolve stmt_equiv_sym : eq_db.
 
 Lemma map_equiv_sym :
   forall f m1 m2, map_equiv f m1 m2 ->
@@ -1628,7 +1635,7 @@ Proof.
       auto.
 Qed.
 
-Hint Resolve map_equiv_sym.
+Hint Resolve map_equiv_sym : eq_db.
 
 Lemma contn_equiv_sym :
   forall f c1 c2, contn_equiv f c1 c2 ->
@@ -1641,13 +1648,13 @@ Proof.
   end.
 
   - equiv_unfold;
-      equiv_auto; eauto.
-    unfold inv in *; andDestruct; auto.
+      equiv_auto; eauto with eq_db.
+    unfold inv in *; andDestruct; auto with eq_db.
   - equiv_unfold;
-      equiv_auto; eauto.
+      equiv_auto; eauto with eq_db.
 Qed.
 
-Hint Resolve contn_equiv_sym.
+Hint Resolve contn_equiv_sym : eq_db.
 
 Lemma wf_rename_inv :
   forall f, wf_rename f ->
@@ -1662,7 +1669,7 @@ Proof.
       auto.
 Qed.
 
-Hint Resolve wf_rename_inv.
+Hint Resolve wf_rename_inv : eq_db.
 
 Lemma frame_equiv_sym :
   forall f ϕ1 ϕ2, frame_equiv f ϕ1 ϕ2 ->
@@ -1672,10 +1679,10 @@ Proof.
   intros.
   equiv_unfold.
   apply eq_frm;
-    eauto.
+    eauto with eq_db.
 Qed.
 
-Hint Resolve frame_equiv_sym.
+Hint Resolve frame_equiv_sym : eq_db.
 
 Lemma stack_equiv_sym :
   forall ψ1 ψ2, stack_equiv ψ1 ψ2 ->
@@ -1684,23 +1691,23 @@ Proof.
   intros ψ1 ψ2 Heq;
     induction Heq;
     intros;
-    auto.
+    auto with eq_db.
   repeat equiv_unfold.
-  edestruct (one_to_one_exists_inv) with (f:=f) as [f']; auto.
-  apply eq_cons with (f:=f'); eauto.
+  edestruct (one_to_one_exists_inv) with (f:=f) as [f']; auto with eq_db.
+  apply eq_cons with (f:=f'); eauto with eq_db.
 Qed.
 
-Hint Resolve stack_equiv_sym.
+Hint Resolve stack_equiv_sym : eq_db.
 
 Lemma config_equiv_sym :
   forall σ1 σ2, config_equiv σ1 σ2 ->
            config_equiv σ2 σ1.
 Proof.
   intros;
-    equiv_unfold; eauto.
+    equiv_unfold; eauto with eq_db.
 Qed.
 
-Hint Resolve config_equiv_sym.
+Hint Resolve config_equiv_sym : eq_db.
 
 Lemma equivalent_reductions :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -1732,7 +1739,7 @@ Proof.
         [eapply equivalent_reduction; eauto|]
     end.
     eexists; split; eauto.
-    eapply pr_single; intros; eauto.
+    eapply pr_single; intros; eauto with eq_db.
 
   - link_unique_auto.
     match goal with
@@ -1770,7 +1777,7 @@ Proof.
            _ : _ ∙ ?σ2 ⤳ ?σ3,
                _ : _ ⦂ _ ⦿ ?σ1' ⤳… ?σ2',
                    _ : _ ∙ ?σ2' ⤳ ?σ3' |- exists _ : config, _ /\ _] =>
-      exists σ3'; split; eauto
+      exists σ3'; split; eauto with loo_db eq_db
     end.
 
 Qed.
@@ -1829,7 +1836,7 @@ Proof.
   link_unique_auto.
   repeat equiv_reductions_auto.
   repeat equiv_reduction_auto.
-  eexists; split; eauto.
+  eexists; split; eauto with loo_db eq_db.
 Qed.
 
 Inductive reductions' : mdl -> mdl -> config -> config -> Prop :=
@@ -1845,7 +1852,7 @@ Inductive reductions' : mdl -> mdl -> config -> config -> Prop :=
           exists CDef : classDef, M1 C = Some CDef) ->
     reductions' M1 M2 σ1 σ3.
 
-Hint Constructors reductions'.
+Hint Constructors reductions' : eq_db.
 
 Lemma reductions_alt_1 :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -1861,7 +1868,7 @@ Proof.
     induction Hred;
     intro.
 
-  - exists σ'; repeat split; intros; link_unique_auto; auto.
+  - exists σ'; repeat split; intros; link_unique_auto; auto with eq_db.
 
   - match goal with
     | [IH : forall M, exists σ', ?M1 ⋄ ?M2 ≜ M ->
@@ -1878,7 +1885,7 @@ Proof.
     end.
     eexists; intros.
     link_unique_auto.
-    eauto.
+    eauto with eq_db.
 Qed.
 
 Lemma reductions_alt_2 :
@@ -1897,7 +1904,7 @@ Proof.
   | [Hred : reductions' M1 M2 ?σa ?σb |- _] =>
     induction Hred
   end;
-    eauto.
+    eauto with loo_db eq_db.
 Qed.
 
 (*Lemma reductions'_thing :
@@ -2101,7 +2108,7 @@ Inductive asrt_equiv : partial_map var var -> asrt -> asrt -> Prop :=
 | eqa_intrn : forall f x1 x2, avar_equiv f x1 x2 ->
                          asrt_equiv f (a_intrn x1) (a_intrn x2).
 
-Hint Constructors asrt_equiv.
+Hint Constructors asrt_equiv : eq_db.
 
 Ltac asrt_equiv_unfold :=
   match goal with
@@ -2173,7 +2180,7 @@ Ltac eval_equiv_auto :=
     eapply equivalent_evaluation
       with (σ:=(χ, ϕ::ψ))
            (e:=e1);
-    eauto
+    eauto with eq_db loo_db map_db
   end.
 
 Lemma equivalent_interpretation_Σ :
@@ -2193,7 +2200,7 @@ Proof.
     subst;
     intros.
 
-  - varSet_equiv_auto; auto.
+  - varSet_equiv_auto; auto with loo_db.
 
   - repeat varSet_equiv_auto;
       apply int_cons; eauto.
@@ -2235,8 +2242,8 @@ Proof.
     intros a; auto.
 Qed.
 
-Hint Rewrite bind_empty.
-Hint Resolve bind_empty.
+Hint Rewrite bind_empty : map_db.
+Hint Resolve bind_empty : map_db.
 
 Lemma extend_empty :
   forall A B `{Eq A} (m : partial_map A B), extend empty m = m.
@@ -2247,8 +2254,8 @@ Proof.
     intros a; auto.
 Qed.
 
-Hint Rewrite extend_empty.
-Hint Resolve extend_empty.
+Hint Rewrite extend_empty : map_db.
+Hint Resolve extend_empty : map_db.
 
 Lemma partial_map_dec_alt :
   forall A B `{Eq A} (m : partial_map A B),
@@ -2308,7 +2315,7 @@ Proof.
   intros f c1 c2 Heq Hns.
   destruct c1;
     equiv_unfold;
-    auto.
+    auto with loo_db.
   inversion Hns.
 Qed.
 
@@ -2402,11 +2409,11 @@ Lemma equivalent_satisfaction :
                             stack_equiv ψ1 ψ2 ->
                             M1 ⦂ M2 ◎ (χ, ϕ2::ψ2) ⊭ A2).
 Proof.
-  apply sat_mutind; intros; subst;
+  (*apply sat_mutind; intros; subst;
     repeat equiv_unfold;
     repeat asrt_equiv_unfold;
     try sat_auto;
-    eauto;
+    eauto with eq_db loo_db map_db;
     try solve [eval_equiv_auto].
 
   - varSet_equiv_auto.
@@ -2526,7 +2533,7 @@ Proof.
           [admit|subst f3].
         assert (f4 = f1);
           [admit|subst f4].
-        admit. (* all  *)*)
+        admit. (* all  *)*)*)
     
 
 Admitted.

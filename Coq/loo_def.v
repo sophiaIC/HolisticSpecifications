@@ -22,35 +22,44 @@ Inductive value : Type :=
 
 Definition state := partial_map var value.
 
-Instance eqbFld : Eq fld :=
+Program Instance eqbFld : Eq fld :=
   {
     eqb := fun f1 f2 =>
              match f1, f2 with
              | fieldID n1, fieldID n2 => n1 =? n2
              end
   }.
-Proof.
+Next Obligation.
   intros; destruct a; apply Nat.eqb_refl.
+Defined.
+Next Obligation.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     symmetry in H;
     apply beq_nat_eq in H;
     subst; auto.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq in H;
     crush.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq;
     crush.
-  intros x y;
-    destruct x as [n];
-    destruct y as [m];
+Defined.
+Next Obligation.
+    destruct a1 as [n];
+    destruct a2 as [m];
     destruct (Nat.eq_dec n m) as [Heq|Hneq];
     subst;
     auto;
@@ -58,35 +67,44 @@ Proof.
     crush.
 Defined.
 
-Instance eqbMth : Eq mth :=
+Program Instance eqbMth : Eq mth :=
   {
     eqb := fun m1 m2 =>
              match m1, m2 with
              | methID n1, methID n2 => n1 =? n2
              end
   }.
-Proof.
+Next Obligation.
   intros; destruct a; apply Nat.eqb_refl.
+Defined.
+Next Obligation.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     symmetry in H;
     apply beq_nat_eq in H;
     subst; auto.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq in H;
     crush.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq;
     crush.
-  intros x y;
-    destruct x as [n];
-    destruct y as [m];
+Defined.
+Next Obligation.
+  destruct a1 as [n];
+    destruct a2 as [m];
     destruct (Nat.eq_dec n m) as [Heq|Hneq];
     subst;
     auto;
@@ -94,34 +112,44 @@ Proof.
     crush.
 Defined.
 
-Instance eqbGfld : Eq gfld :=
+Program Instance eqbGfld : Eq gfld :=
   {
     eqb := fun g1 g2 =>
              match g1, g2 with
              | gFieldID n1, gFieldID n2 => n1 =? n2
              end
   }.
+Next Obligation.
   intros; destruct a; apply Nat.eqb_refl.
+Defined.
+Next Obligation.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     symmetry in H;
     apply beq_nat_eq in H;
     subst; auto.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq in H;
     crush.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq;
     crush.
-  intros x y;
-    destruct x as [n];
-    destruct y as [m];
+Defined.
+Next Obligation.
+  destruct a1 as [n];
+    destruct a2 as [m];
     destruct (Nat.eq_dec n m) as [Heq|Hneq];
     subst;
     auto;
@@ -129,35 +157,44 @@ Instance eqbGfld : Eq gfld :=
     crush.
 Defined.
 
-Instance eqbCls : Eq cls :=
+Program Instance eqbCls : Eq cls :=
   {
     eqb := fun C1 C2 =>
              match C1, C2 with
              | classID n1, classID n2 => n1 =? n2
              end
   }.
-Proof.
+Next Obligation.
   intros; destruct a; apply Nat.eqb_refl.
+Defined.
+Next Obligation.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     symmetry in H;
     apply beq_nat_eq in H;
     subst; auto.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq in H;
     crush.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq;
     crush.
-  intros x y;
-    destruct x as [n];
-    destruct y as [m];
+Defined.
+Next Obligation.
+  destruct a1 as [n];
+    destruct a2 as [m];
     destruct (Nat.eq_dec n m) as [Heq|Hneq];
     subst;
     auto;
@@ -165,34 +202,44 @@ Proof.
     crush.
 Defined.
 
-Instance eqbAddr : Eq addr :=
+Program Instance eqbAddr : Eq addr :=
   {
     eqb := fun a1 a2 =>
              match a1, a2 with
              | address n1, address n2 => n1 =? n2
              end
   }.
+Next Obligation.
   intros; destruct a; apply Nat.eqb_refl.
+Defined.
+Next Obligation.
   intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     symmetry in H;
     apply beq_nat_eq in H;
     subst; auto.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq in H;
     crush.
+Defined.
+Next Obligation.
   intros;
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq;
     crush.
-  intros x y;
-    destruct x as [n];
-    destruct y as [m];
+Defined.
+Next Obligation.
+  destruct a1 as [n];
+    destruct a2 as [m];
     destruct (Nat.eq_dec n m) as [Heq|Hneq];
     subst;
     auto;
@@ -210,6 +257,8 @@ Inductive ref : Type :=
 | r_var : var -> ref
 | r_fld : var -> fld -> ref.
 
+Hint Constructors ref : loo_db.
+
 Inductive stmt : Type :=
 | s_asgn : ref -> ref -> stmt
 | s_meth : var -> var -> mth -> partial_map var var -> stmt
@@ -217,9 +266,13 @@ Inductive stmt : Type :=
 | s_stmts : stmt -> stmt -> stmt
 | s_rtrn : var -> stmt.
 
+Hint Constructors stmt : loo_db.
+
 Inductive continuation : Type :=
 | c_stmt : stmt -> continuation
 | c_hole : var -> stmt -> continuation.
+
+Hint Constructors continuation : loo_db.
 
 Inductive exp : Type :=
 | e_val   : value -> exp
@@ -229,6 +282,8 @@ Inductive exp : Type :=
 | e_if    : exp -> exp -> exp -> exp
 | e_acc_f : exp -> fld -> exp
 | e_acc_g : exp -> gfld -> exp -> exp.
+
+Hint Constructors exp : loo_db.
 
 Notation "'e_true'" := (e_val v_true)(at level 40).
 Notation "'e_false'" := (e_val v_false)(at level 40).
@@ -339,7 +394,7 @@ Inductive interpret_x : var -> config -> value -> Prop :=
                        ⌊ x ⌋ σ ≜ v
 where "'⌊' x '⌋' σ '≜' v" := (interpret_x x σ v).
 
-Hint Constructors interpret_x.
+Hint Constructors interpret_x : loo_db.
   
 Inductive interpret_Σ : list var -> config -> list value -> Prop :=
 | int_nil  : forall σ, ⌊ nil ⌋ σ ≜′ nil
@@ -348,7 +403,7 @@ Inductive interpret_Σ : list var -> config -> list value -> Prop :=
                            ⌊ x::Σ ⌋ σ ≜′ (α::αs)
 where "'⌊' Σ '⌋' σ '≜′' αs" := (interpret_Σ Σ σ αs).
 
-Hint Constructors interpret_Σ.
+Hint Constructors interpret_Σ : loo_db.
 
 Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
 
@@ -407,7 +462,7 @@ Definition finite_σ (σ : config) : Prop :=
 Inductive not_stuck : continuation -> Prop :=
 | ns_stmt : forall s, not_stuck (c_stmt s).
 
-Hint Constructors not_stuck.
+Hint Constructors not_stuck : loo_db.
 
 Definition not_stuck_ϕ (ϕ : frame) : Prop :=
   not_stuck (contn ϕ).
@@ -418,7 +473,7 @@ Definition not_stuck_σ (σ : config) : Prop :=
 Inductive waiting : continuation -> Prop :=
 | w_hole : forall x s, waiting (c_hole x s).
 
-Hint Constructors waiting.
+Hint Constructors waiting : loo_db.
 
 Definition waiting_ϕ (ϕ : frame) : Prop :=
   waiting (contn ϕ).
@@ -438,28 +493,28 @@ Inductive val_wf : heap -> value -> Prop :=
 | addr_wf : forall χ α o, χ α = Some o ->
                      val_wf χ (v_addr α).
 
-Hint Constructors val_wf.
+Hint Constructors val_wf : loo_db.
 
 Inductive state_wf : heap -> state -> Prop :=
 | st_wf : forall χ m, (forall x v, m x = Some v ->
                          val_wf χ v) ->
                  state_wf χ m.
 
-Hint Constructors state_wf.
+Hint Constructors state_wf : loo_db.
 
 Inductive has_self_ϕ : heap -> frame -> Prop :=
 | self_frm : forall χ ϕ, (exists α o, ϕ.(vMap) this = Some (v_addr α) /\
                             χ α = Some o) ->
                     has_self_ϕ χ ϕ.
 
-Hint Constructors has_self_ϕ.
+Hint Constructors has_self_ϕ : loo_db.
 
 Inductive has_self_σ : config -> Prop :=
 | self_config : forall χ ψ, (forall ϕ, In ϕ ψ ->
                              has_self_ϕ χ ϕ) ->
                        has_self_σ (χ, ψ).
 
-Hint Constructors has_self_σ.
+Hint Constructors has_self_σ : loo_db.
 
 Inductive σ_wf : config -> Prop :=
 | config_wf : forall σ, has_self_σ σ ->
@@ -468,7 +523,7 @@ Inductive σ_wf : config -> Prop :=
                    waiting_σ σ ->
                    σ_wf σ.
 
-Hint Constructors σ_wf.
+Hint Constructors σ_wf : loo_db.
 
 Inductive χ_wf : mdl -> heap -> Prop :=
 | heap_wf :  forall M χ, (forall α o C, χ α = Some o ->
@@ -480,7 +535,7 @@ Inductive χ_wf : mdl -> heap -> Prop :=
                                 (meths o) = (c_meths CDef)) ->
                     χ_wf M χ.
 
-Hint Constructors χ_wf.
+Hint Constructors χ_wf : loo_db.
 
 Inductive notin_exp : exp -> var -> Prop :=
 | ni_val   : forall v x, notin_exp (e_val v) x
@@ -500,13 +555,15 @@ Inductive notin_exp : exp -> var -> Prop :=
                          notin_exp e' x ->
                          notin_exp (e_acc_g e f e') x.
 
-Hint Constructors notin_exp.
+Hint Constructors notin_exp : loo_db.
 
 Inductive notin_ref : ref -> var -> Prop :=
 | ni_ref_var : forall x y, x <> y ->
                       notin_ref (r_var x) y
 | ni_ref_fld : forall x y f, x <> y ->
                         notin_ref (r_fld x f) y.
+
+Hint Constructors notin_ref : loo_db.
 
 Inductive notin_stmt : stmt -> var -> Prop :=
 | ni_asgn : forall r1 r2 x, notin_ref r1 x ->
@@ -527,7 +584,7 @@ Inductive notin_stmt : stmt -> var -> Prop :=
 | ni_rtrn : forall x y, x <> y ->
                    notin_stmt (s_rtrn x) y.
 
-Hint Constructors notin_ref notin_stmt.
+Hint Constructors notin_ref notin_stmt : loo_db.
 
 Inductive meths_wf : methods -> Prop :=
 | mths_wf : forall mths, (forall m xs s, mths m = Some (xs, s) ->
@@ -555,7 +612,7 @@ Inductive M_wf : mdl -> Prop :=
                                cls_wf CDef) ->
                     M_wf M.
 
-Hint Constructors M_wf.
+Hint Constructors M_wf : loo_db.
 
 Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
@@ -646,7 +703,7 @@ Inductive val : mdl -> config -> exp -> value -> Prop :=
 
 where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
 
-Hint Constructors val.
+Hint Constructors val : loo_db.
 
 
 (*Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=
@@ -666,7 +723,7 @@ Inductive unique {A : Type} `{Eq A} : list A -> Prop :=
                  unique l ->
                  unique (a :: l).
 
-Hint Constructors unique.
+Hint Constructors unique : loo_db.
 
 Definition dom {A B : Type}`{Eq A} (m : partial_map A B)(d : list A) : Prop :=
   (forall a b, m a = Some b ->
@@ -691,7 +748,7 @@ Inductive le_α : addr -> addr -> Prop :=
 | le_addr : forall n m, n <= m ->
                    le_α (address n) (address m).
 
-Hint Constructors le_α.
+Hint Constructors le_α : loo_db.
 
 Definition S_α (α : addr) : addr :=
   match α with
@@ -704,13 +761,13 @@ Inductive max_χ {B : Type} : partial_map addr B -> addr -> Prop :=
                              le_α α' α) ->
                     max_χ χ α.
 
-Hint Constructors max_χ.
+Hint Constructors max_χ : loo_db.
 
 Inductive fresh_χ : heap -> addr -> Prop :=
 | frsh_heap : forall χ α, max_χ χ α ->
                      fresh_χ χ (S_α α).
 
-Hint Constructors fresh_χ.
+Hint Constructors fresh_χ : loo_db.
 
 Inductive reduction : mdl -> config -> config -> Prop :=
 
@@ -839,7 +896,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
 
 where "M '∙' σ '⤳' σ'" := (reduction M σ σ').
 
-Hint Constructors reduction.
+Hint Constructors reduction : loo_db.
 
 Reserved Notation "M1 '⋄' M2 '≜' M" (at level 40).
 
@@ -901,7 +958,7 @@ Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
 
 where "M1 '⦂' M2 '⦿' σ '⤳…' σ'" := (reductions M1 M2 σ σ').
 
-Hint Constructors reductions.
+Hint Constructors reductions : loo_db.
 
 Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 40).
                                                
@@ -916,7 +973,7 @@ Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
 
 where "M1 '⦂' M2 '⦿' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
 
-Hint Constructors pair_reduction.
+Hint Constructors pair_reduction : loo_db.
 
 Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" (at level 40).
                                                
@@ -930,7 +987,7 @@ Inductive pair_reductions : mdl -> mdl -> config -> config -> Prop :=
 
 where "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" := (pair_reductions M1 M2 σ σ').
 
-Hint Constructors pair_reductions.
+Hint Constructors pair_reductions : loo_db.
 
 Class Rename (A : Type) :=
   {rname : (partial_map var var) -> A -> A;
@@ -939,41 +996,38 @@ Class Rename (A : Type) :=
 
 Notation "'❲' f '↦' a '❳'" := (rname f a)(at level 40).
 
-Instance varRename : Rename var :=
+Program Instance varRename : Rename var :=
   {
     rname f x := match (f x) with
                  | Some y => y
                  | _ => x
                  end;
   }.
-Proof.
-  auto.
-Defined.
 
-Hint Rewrite (@empty_rename var).
-Hint Resolve (@empty_rename var).
+Hint Rewrite (@empty_rename var) : map_db.
+Hint Resolve (@empty_rename var) : map_db.
 
-Instance refRename : Rename ref :=
+Program Instance refRename : Rename ref :=
   {
     rname f r := match r with
                  | r_var x => r_var (❲f ↦ x❳)
                  | r_fld x f' => r_fld (❲f ↦ x❳) f'
                  end
   }.
-Proof.
+Next Obligation.
   intros.
   destruct a as [x|x f];
     auto.
 Defined.
 
-Hint Rewrite (@empty_rename ref).
-Hint Resolve (@empty_rename ref).
+Hint Rewrite (@empty_rename ref) : map_db.
+Hint Resolve (@empty_rename ref) : map_db.
 
-Instance fldMapRename : Rename (partial_map fld var) :=
+Program Instance fldMapRename : Rename (partial_map fld var) :=
   {
     rname f m := (fun f' => bind (m f') (fun x => Some (❲ f ↦ x ❳)))
   }.
-Proof.
+Next Obligation.
   intros.
   apply functional_extensionality;
     intros f.
@@ -981,14 +1035,14 @@ Proof.
   destruct (a f); auto.
 Qed.
 
-Hint Rewrite (@empty_rename (partial_map fld var)).
-Hint Resolve (@empty_rename (partial_map fld var)).
+Hint Rewrite (@empty_rename (partial_map fld var)) : map_db.
+Hint Resolve (@empty_rename (partial_map fld var)) : map_db.
 
-Instance varMapRename : Rename (partial_map var var) :=
+Program Instance varMapRename : Rename (partial_map var var) :=
   {
     rname f m := (fun x => bind (m x) (fun x => Some (❲ f ↦ x ❳)))
   }.
-Proof.
+Next Obligation.
   intros.
   apply functional_extensionality;
     intros x.
@@ -996,10 +1050,24 @@ Proof.
   destruct (a x); auto.
 Qed.
 
-Hint Rewrite (@empty_rename (partial_map var var)).
-Hint Resolve (@empty_rename (partial_map var var)).
+Hint Rewrite (@empty_rename (partial_map var var)) : map_db.
+Hint Resolve (@empty_rename (partial_map var var)) : map_db.
 
-Instance stmtRename : Rename stmt :=
+Lemma map_wrap_id :
+  forall {A B : Type}`{Eq A}(f : partial_map A B),
+    (fun x => match f x with
+           | Some y => Some y
+           | None => None end) = f.
+Proof.
+  intros A B Heq f;
+    apply functional_extensionality;
+    intros a.
+  destruct (f a); auto.
+Qed.
+
+Hint Rewrite (@map_wrap_id var var) : map_db.
+
+Program Instance stmtRename : Rename stmt :=
   {
     rname :=
       fix rname' f s :=
@@ -1011,19 +1079,24 @@ Instance stmtRename : Rename stmt :=
         | s_rtrn _ => s
         end
   }.
-Proof.
-  intros s;
-    induction s;
-    auto;
-    try solve [repeat rewrite empty_rename; auto].
-  crush.
-Qed.
+Next Obligation.
+  induction a;
+    auto.
 
-Hint Rewrite (@empty_rename stmt).
-Hint Resolve (@empty_rename stmt).
+  - destruct r, r0; simpl in *; auto.
+  - destruct v, v0; simpl in *; eauto.
+    rewrite map_wrap_id; auto.
+  - destruct v; simpl in *; eauto.
+    rewrite map_wrap_id; auto.
+  - destruct a1, a2;
+      simpl in *;
+      crush.
+Defined.
+Hint Rewrite (@empty_rename stmt) : map_db.
+Hint Resolve (@empty_rename stmt) : map_db.
 
-Hint Rewrite empty_rename.
-Hint Resolve empty_rename.
+Hint Rewrite empty_rename : map_db.
+Hint Resolve empty_rename : map_db.
 
 Inductive in_ref : var -> ref -> Prop :=
 | in_r_var : forall x, in_ref x (r_var x)
@@ -1046,3 +1119,5 @@ Inductive in_stmt : var -> stmt -> Prop :=
 | in_stmts_2 : forall x s1 s2, in_stmt x s2 ->
                           in_stmt x (s_stmts s1 s2)
 | in_retrn : forall x, in_stmt x (s_rtrn x).
+
+Hint Constructors in_ref in_stmt : loo_db.

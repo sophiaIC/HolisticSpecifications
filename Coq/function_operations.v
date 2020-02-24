@@ -155,7 +155,7 @@ Definition one_to_one {A B : Type} `{Eq A} (f : partial_map A B) :=
              f a2 = Some b ->
              a1 = a2.
 
-Instance optionEq {A : Type}`{Eq A} : Eq (option A) :=
+Program Instance optionEq {A : Type}`{Eq A} : Eq (option A) :=
   {
     eqb o1 o2 := match o1, o2 with
                  | Some b1, Some b2 => eqb b1 b2
@@ -163,56 +163,78 @@ Instance optionEq {A : Type}`{Eq A} : Eq (option A) :=
                  | _, _ => false
                  end
   }.
-Proof.
-  - intros.
-    match goal with
-    | [A : Type,
-           a : option A |- _] => destruct a; eauto
-    end.
-
-  - intros.
-    match goal with
-    | [A : Type,
-           a1 : option A,
-                a2 : option A |- _] => destruct a1; destruct a2; eauto
-    end.
-
-  - intros;
-      match goal with
-      | [A : Type,
-             a1 : option A,
-                  a2 : option A |- _] => destruct a1; destruct a2; auto
-      end;
-      try solve [eq_auto];
-      try solve [crush].
-
-  - intros;
-      match goal with
-      | [A : Type,
-             a1 : option A,
-                  a2 : option A |- _] => destruct a1; destruct a2; auto
-      end;
-      try eq_auto;
-      try solve [crush].
-
-  - intros;
-      match goal with
-      | [A : Type,
-             a1 : option A,
-                  a2 : option A |- _] => destruct a1; destruct a2; auto
-      end;
-      try solve [eq_auto];
-      try solve [crush].
-
-  - intros;
-      match goal with
-      | [A : Type,
-             a1 : option A,
-                  a2 : option A |- _] => destruct a1; destruct a2; auto
-      end;
-      try solve [right; crush].
-    destruct (eq_dec a a0);
-      [subst; auto|right]; crush.
+Next Obligation.
+  intros.
+  match goal with
+  | [A : Type,
+         a : option A |- _] => destruct a; eauto
+  end;
+    split; intros; intros Hcontra; crush.
+Defined.
+Next Obligation.
+  match goal with
+  | [A : Type,
+         a1 : option A,
+              a2 : option A |- _] => destruct a1; destruct a2
+  end;
+    split; intros; intros Hcontra; crush.
+Defined.
+Next Obligation.
+  match goal with
+  | [A : Type,
+         a : option A |- _] => destruct a; auto
+  end; eauto with eq_db.
+Defined.
+Next Obligation.
+  match goal with
+  | [A : Type,
+         a1 : option A,
+              a2 : option A |- _] => destruct a1; destruct a2; auto
+  end;
+    try eq_auto;
+    try solve [crush].
+Defined.
+Next Obligation.
+  match goal with
+  | [A : Type,
+         a1 : option A,
+              a2 : option A |- _] => destruct a1; destruct a2; auto
+  end;
+    try solve [eq_auto];
+    try solve [crush].
+Defined.
+Next Obligation.
+  match goal with
+  | [A : Type,
+         a1 : option A,
+              a2 : option A |- _] => destruct a1; destruct a2; repeat eq_auto
+  end;
+    try solve [crush].
+Defined.
+Next Obligation.
+  match goal with
+  | [A : Type,
+         a1 : option A,
+              a2 : option A |- _] => destruct a1; destruct a2; repeat eq_auto
+  end;
+    try solve [crush].
+Defined.
+Next Obligation.
+  match goal with
+  | [A : Type,
+         a1 : option A,
+              a2 : option A |- _] => destruct a1; destruct a2; repeat eq_auto
+  end;
+    try solve [match goal with
+               | [A : Type,
+                      a1 : A,
+                           a2 : A,
+                                Heq : Eq A |- _] =>
+                 destruct (eq_dec a1 a2);
+                 [left; subst; auto|right; crush]
+               end];
+    auto;
+    try solve [right; crush].
 Defined.
 
 Lemma partial_map_dec :
@@ -242,8 +264,8 @@ Proof.
   destruct (partial_map_dec a f); auto; crush.
 Qed.
 
-Hint Rewrite not_none_implies_some.
-Hint Resolve not_none_implies_some.
+Hint Rewrite not_none_implies_some : map_db.
+Hint Resolve not_none_implies_some : map_db.
 
 Lemma in_map_implies_in_dom :
   forall {A B : Type} `{Eq A} (m : partial_map A B) d,
@@ -337,7 +359,7 @@ Proof.
                eauto];
     try solve [unfold dom in *;
                andDestruct;
-               auto].
+               auto with loo_db].
   destruct (eq_dec a0 a) as [|Hneq];
     subst;
     eq_auto;
@@ -355,7 +377,7 @@ Proof.
     eq_auto; [crush|].
   unfold dom in *;
     andDestruct;
-    eauto.
+    eauto with loo_db.
 Qed.
 
 Lemma update_neq_empty :
@@ -438,7 +460,7 @@ Inductive finite_normal_form {A B : Type} `{Eq A} : partial_map A B -> Prop :=
                          m a = None ->
                          finite_normal_form (update a b m).
 
-Hint Constructors finite_normal_form.
+Hint Constructors finite_normal_form : map_db.
 
 Lemma compose_normal_form :
   forall {A B : Type}`{Eq A}`{Eq B} (m1 : partial_map A B),
@@ -451,7 +473,7 @@ Proof.
     intros;
     auto.
 
-  exists empty; auto.
+  exists empty; auto with map_db.
 
   destruct (IHHnorm C m2) as [m3 IH];
     destruct IH as [IH1 IH2].
@@ -484,7 +506,7 @@ Proof.
   intros A B HeqClass m Hfinite;
     induction Hfinite;
     intros;
-    [exists (update a b empty); auto|].
+    [exists (update a b empty); auto with map_db|].
 
   destruct (IHHfinite a0 b0) as [m' Hnorm];
     destruct Hnorm as [Hnorm Heqm'].
@@ -519,7 +541,7 @@ Lemma finite_exists_normal_form :
 Proof.
   intros A B HeqClass m Hfinite;
     induction Hfinite;
-    [exists empty; auto|].
+    [exists empty; auto with map_db|].
 
   apply update_finite_normal_form; crush.
 Qed.
@@ -531,7 +553,7 @@ Lemma finite_normal_form_implies_finite :
 Proof.
   intros A B HeqClass m Hnorm;
     induction Hnorm;
-    auto.
+    auto with map_db.
 Qed.
 
 Lemma finite_implies_normal_form :
@@ -547,7 +569,7 @@ Proof.
 Qed.
 
 Hint Resolve finite_implies_normal_form finite_exists_normal_form finite_normal_form_implies_finite
-     compose_normal_form.
+     compose_normal_form : map_db.
 
 Lemma finite_map_composition :
   forall {A B : Type}`{Eq A}`{Eq B} (m1 : partial_map A B),
@@ -598,8 +620,8 @@ Proof.
   - apply functional_extensionality; auto.
 Qed.
 
-Hint Resolve bind_compose_application.
-Hint Rewrite bind_compose_application.
+Hint Resolve bind_compose_application : map_db.
+Hint Rewrite bind_compose_application : map_db.
 
 Lemma one_to_one_bind_f_nequal :
   forall {A B : Type}`{Eq A} (f : partial_map A B),
@@ -690,7 +712,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve inv_empty.
+Hint Resolve inv_empty : map_db.
 
 Ltac inv_auto :=
   match goal with
@@ -752,7 +774,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve one_to_one_empty.
+Hint Resolve one_to_one_empty : map_db.
 
 Lemma one_to_one_fnf_update :
   forall {A B : Type}`{Eq A} (f : partial_map A B),
@@ -764,13 +786,13 @@ Proof.
   intros A B HeqA f Hfin;
     induction Hfin;
     intros;
-    auto.
+    auto with map_db.
   unfold one_to_one;
     intros.
   repeat map_rewrite.
   repeat eq_explode;
     repeat eq_auto;
-    auto;
+    auto with map_db;
     repeat option_crush.
 
   - match goal with
@@ -855,7 +877,7 @@ Proof.
     induction Hfin;
     intros.
 
-  - exists empty; auto.
+  - exists empty; auto with map_db.
 
   - one_to_one_auto.
     auto_specialize.
@@ -882,7 +904,7 @@ Lemma one_to_one_exists_inv_fin :
     one_to_one f ->
     exists f', inv f f'.
 Proof.
-  intros; apply one_to_one_exists_inv_fnf; auto.
+  intros; apply one_to_one_exists_inv_fnf; auto with map_db.
 Qed.
 
 Parameter one_to_one_exists_inv:
@@ -942,7 +964,7 @@ Proof.
   end.
 Qed.
 
-Hint Resolve inverse_maps_from inverse_maps_into.
+Hint Resolve inverse_maps_from inverse_maps_into : map_db.
 
 Lemma inverse_compose_right :
   forall {A B C : Type}`{Eq A}`{Eq B}`{Eq C}(m : partial_map A B)(f : partial_map B C)(f' : partial_map C B),
@@ -1104,8 +1126,9 @@ Proof.
       [destruct (f1 a);
        destruct (f2 a);
        simpl in *;
-       eauto|]
+       eauto with eq_db|]
   end.
+
   
   destruct (partial_map_dec a f1) as [Hsome1|Hnone1];
     [destruct_exists|rewrite Hnone1 in *].
@@ -1204,7 +1227,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve disjoint_dom_symmetry.
+Hint Resolve disjoint_dom_symmetry : map_db.
 
 Ltac disjoint_dom_sym_auto :=
   match goal with
@@ -1244,7 +1267,7 @@ Proof.
   end.
 Qed.
 
-Hint Resolve extend_into.
+Hint Resolve extend_into : map_db.
 
 Lemma extend_into_disjoint :
   forall {A B C : Type}`{Eq A}`{Eq B}(f g : partial_map A B)(h : partial_map B C),
@@ -1252,7 +1275,7 @@ Lemma extend_into_disjoint :
     disjoint_dom f g ->
     maps_into f h /\ maps_into g h.
 Proof.
-  intros; split; eauto.
+  intros; split; eauto with map_db.
   disjoint_dom_sym_auto.
   unfold maps_into in *; intros.
   unfold disjoint_dom in *.
@@ -1260,7 +1283,7 @@ Proof.
   | [Ha : forall a' b', _ -> exists c', ?h b' = Some c',
        Hb : ?g ?a = Some ?b |- exists c, ?h ?b = Some c] => eapply (Ha a)
   end.
-  apply extend_some_2; auto.
+  apply extend_some_2; auto with map_db.
 Qed.
   
 
@@ -1316,7 +1339,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve empty_maps_into.
+Hint Resolve empty_maps_into : map_db.
 
 Lemma empty_maps_from :
   forall {A B C : Type}`{Eq A}{HeqB : Eq B} (f : partial_map A B),
@@ -1329,7 +1352,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve empty_maps_from.
+Hint Resolve empty_maps_from : map_db.
 
 Lemma empty_onto_empty :
   forall {A B C : Type}{HeqA : Eq A}{HeqB : Eq B},
@@ -1337,10 +1360,10 @@ Lemma empty_onto_empty :
 Proof.
   intros.
   split;
-    auto.
+    auto with map_db.
 Qed.
 
-Hint Resolve empty_onto_empty.
+Hint Resolve empty_onto_empty : map_db.
 
 (* Disjointedness *)
 
@@ -1352,16 +1375,16 @@ Proof.
   unfold disjoint_dom; intros; auto.
 Qed.
 
-Hint Resolve empty_disjoint_1.
+Hint Resolve empty_disjoint_1 : map_db.
 
 Lemma empty_disjoint_2 :
   forall {A B C : Type}{HeqA : Eq A}(f : partial_map A B),
     disjoint_dom (@empty A C HeqA) f.
 Proof.
-  intros.  eapply disjoint_dom_symmetry; eauto.
+  intros.  eapply disjoint_dom_symmetry; eauto with map_db.
 Qed.
 
-Hint Resolve empty_disjoint_2.
+Hint Resolve empty_disjoint_2 : map_db.
       
 Lemma disjointedness_for_finite_variable_maps :
   forall {A B : Type}(f : partial_map var A),
@@ -1409,4 +1432,4 @@ Proof.
   crush.
 Qed.
 
-Hint Resolve disjoint_composition.
+Hint Resolve disjoint_composition : map_db.
