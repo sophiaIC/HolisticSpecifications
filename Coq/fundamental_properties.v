@@ -1587,10 +1587,40 @@ Qed.
 
 Hint Resolve finite_update_σ_map : loo_db.
 
+Lemma fresh_x_ϕ_implies_σ :
+  forall x ϕ A, fresh_x x ϕ A ->
+           forall χ ψ, fresh_x_σ x (χ, ϕ::ψ) A.
+Proof.
+  intros x ϕ A Hfresh χ ψ;
+    unfold fresh_x_σ;
+    exists χ, ϕ, ψ;
+    split;
+    auto.
+Qed.
+
+Hint Resolve fresh_x_ϕ_implies_σ : loo_db.
+
+Lemma fresh_x_σ_implies_ϕ :
+  forall x χ ϕ ψ A, fresh_x_σ x (χ, ϕ::ψ) A ->
+               fresh_x x ϕ A.
+Proof.
+  intros x χ ϕ ψ A Hfresh;
+    unfold fresh_x_σ in *;
+    repeat destruct_exists;
+    andDestruct;
+    match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst; clear H
+    end;
+    auto.
+Qed.
+
+Hint Resolve fresh_x_σ_implies_ϕ : loo_db.
+  
 Lemma has_self_update_ϕ_map :
   forall χ ϕ, has_self_ϕ χ ϕ ->
-         forall x v ψ A, fresh_x x (χ, ϕ::ψ) A ->
-                    has_self_ϕ χ (update_ϕ_map ϕ x v).
+         forall x v A, fresh_x x ϕ A ->
+                  has_self_ϕ χ (update_ϕ_map ϕ x v).
 Proof.
   intros.
 
@@ -1618,39 +1648,57 @@ Qed.
 
 Hint Resolve has_self_update_ϕ_map : loo_db.
 
+Lemma has_self_update_ϕ_map_σ :
+  forall χ ϕ, has_self_ϕ χ ϕ ->
+         forall x v ψ A, fresh_x_σ x (χ, ϕ::ψ) A ->
+                    has_self_ϕ χ (update_ϕ_map ϕ x v).
+Proof.
+  intros.
+
+  match goal with
+  | [H : fresh_x_σ _ _ _ |- _] =>
+    inversion H; subst; repeat destruct_exists; andDestruct
+  end.
+  match goal with
+  | [H : (_, _) = (_, _) |- _] => inversion H; subst; clear H
+  end.
+  eauto with loo_db.
+
+Qed.
+
+Hint Resolve has_self_update_ϕ_map_σ : loo_db.
+
 Lemma has_self_update_σ_map :
   forall σ, has_self_σ σ ->
-       forall x v A, fresh_x x σ A ->
+       forall x v A, fresh_x_σ x σ A ->
                 has_self_σ (update_σ_map σ x v).
 Proof.
   intros σ;
     intros.
-  destruct σ as [χ ψ].
-  
-  apply self_config;
-    intros;
+  inversion H0; subst;
+    repeat destruct_exists;
+    andDestruct;
+    subst.
+  auto.
+
+  apply self_config; intros;
     simpl in *.
-  destruct ψ as [|ϕ' ψ'];
-    [crush|simpl in *].
+
   destruct H1; subst.
 
-  apply has_self_update_ϕ_map with (ψ:=ψ')(A:=A);
-    auto.
-  inversion H;
-    subst.
-  apply H2, in_eq.
-  
-  inversion H;
-    subst.
-  apply H3, in_cons; auto.
-  
+  - apply has_self_update_ϕ_map with (A:=A); auto.
+    inversion H; subst.
+    apply H2, in_eq.
+
+  - inversion H; subst.
+    apply H3, in_cons; auto.
 Qed.
 
 Hint Resolve has_self_update_σ_map : loo_db.
 
 Lemma wf_update_σ_map :
   forall σ, σ_wf σ ->
-       forall x α A, fresh_x x σ A ->
+       forall x α A, fresh_x_σ x σ A ->
                 σ_wf (update_σ_map σ x α).
 Proof.
   intros σ Hwf; intros.
@@ -1928,7 +1976,7 @@ Qed.
 (* fresh  *)
 
 Lemma update_fresh_preserves_map :
-  forall x σ A, fresh_x x σ A ->
+  forall x σ A, fresh_x_σ x σ A ->
            forall z v v', mapp σ z = Some v ->
                      mapp (update_σ_map σ x v') z = Some v.
 Proof.
@@ -1937,19 +1985,22 @@ Proof.
     subst;
     intros.
 
-  destruct σ as [χ ψ];
-    destruct ψ as [|ϕ ψ].
-
-  unfold mapp, configMapStack, mapp, stackMap in *;
+  unfold fresh_x_σ in *;
+    repeat destruct_exists;
+    andDestruct;
+    subst.
+  match goal with
+  | [H : (_, _) = (_, _) |- _] =>
+    inversion H; subst
+  end.
+  repeat map_rewrite;
     simpl in *;
+    repeat map_rewrite.
+  inversion Hb; subst.
+  destruct (eq_dec x z);
+    subst;
+    eq_auto;
     crush.
-
-  unfold mapp, configMapStack, mapp, stackMap in *;
-    simpl in *.
-  unfold update, t_update;
-    destruct (eq_dec z x) as [|Hneq];
-    [subst; crush
-    |rewrite neq_eqb; auto].
 Qed.
 
 Lemma fresh_and_elim :
@@ -2451,7 +2502,7 @@ Parameter fresh_exists_for_assertion :
 
 Parameter fresh_x_exists_for_finite_config :
   forall σ, finite_σ σ ->
-       forall A, exists x, fresh_x x σ A.
+       forall A, exists x, fresh_x_σ x σ A.
 
 Parameter fresh_address_rename_equality_heap :
   forall α1 α2 (χ : heap),  χ α1 = None ->
