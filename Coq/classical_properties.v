@@ -1184,6 +1184,9 @@ Proof.
     auto.
 Qed.
 
+Hint Resolve entails_implies : chainmail_db.
+Hint Rewrite entails_implies : chainmail_db.
+
 Class Raiseable (A : Type) :=
   {
     raise : A -> nat -> A
@@ -1509,6 +1512,12 @@ Ltac a_prop :=
          | [H : _ ⦂ _ ◎ _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; repeat sbst_simpl
          | [|- _ ⦂ _ ◎ _ ⊨ (_ ∧ _)] => apply sat_and
          | [|- _ ⦂ _ ◎ _ ⊨ (_ ∨ _)] => apply <- or_iff
+         | [H : entails ?A1 ?A2,
+                Ha : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ?A1 |- _] =>
+           notHyp (M1 ⦂ M2 ◎ σ ⊨ A2);
+           let H' := fresh in 
+           assert (H' : M1 ⦂ M2 ◎ σ ⊨ A2);
+           [apply (entails_implies A1 A2 H); eauto|]
          end.
 
 Lemma and_forall_x_entails_1 :
@@ -1729,6 +1738,51 @@ Proof.
 Qed.
 
 Hint Resolve arr_cnf_equiv : chainmail_db.
+
+Lemma and_entails :
+  forall A1 A2, entails A1 A2 ->
+           forall A, entails (A1 ∧ A) (A2 ∧ A).
+Proof.
+  intros.
+  apply ent; intros;
+    repeat a_prop;
+    auto with chainmail_db.
+Qed.
+
+Lemma or_entails :
+  forall A1 A2, entails A1 A2 ->
+           forall A, entails (A1 ∨ A) (A2 ∨ A).
+Proof.
+  intros.
+  apply ent; intros;
+    repeat a_prop;
+    match goal with
+    | [H : _ \/ _ |- _] => destruct H
+    end;
+    repeat a_prop;
+    auto with chainmail_db.
+Qed.
+
+
+
+Inductive asrt : Type :=
+  | a_arr : asrt -> asrt -> asrt
+  | a_and : asrt -> asrt -> asrt
+  | a_or : asrt -> asrt -> asrt
+  | a_neg : asrt -> asrt
+  | a_all_x : asrt -> asrt
+  | a_all_Σ : asrt -> asrt
+  | a_ex_x : asrt -> asrt
+  | a_ex_Σ : asrt -> asrt
+  | a_acc : a_var -> a_var -> asrt
+  | a_call : a_var -> a_var -> mth -> partial_map var a_var -> asrt
+  | a_next : asrt -> asrt
+  | a_will : asrt -> asrt
+  | a_prev : asrt -> asrt
+  | a_was : asrt -> asrt
+  | a_in : asrt -> varSet -> asrt
+  | a_extrn : a_var -> asrt
+  | a_intrn : a_var -> asrt
 
 Ltac cnf_auto :=
   match goal with
