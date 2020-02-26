@@ -312,11 +312,11 @@ Instance substAVar : Subst a_var nat var :=
 
 Instance substAVarMap : Subst (partial_map var a_var) nat var :=
   {
-    sbst avMap n x := fun (y : var) =>
-                        match avMap y with
+    sbst avMap n x := fun y => bind (avMap y) (fun z => Some ([x /s n] z))
+(*                        match avMap y with
                         | Some z => Some ([x /s n] z)
                         | None => None
-                        end
+                        end*)
   }.
 
 Instance substAssertionVar : Subst asrt nat var :=
@@ -499,11 +499,15 @@ Inductive notin_Ax  : asrt -> var -> Prop :=
 
 Hint Constructors notin_Ax notin_exp : chainmail_db.
 
-Inductive fresh_x : var -> config -> asrt -> Prop :=
-| frsh : forall x σ A, mapp (snd σ) x = None ->
+Inductive fresh_x : var -> frame -> asrt -> Prop :=
+| frsh : forall x ϕ A, (vMap ϕ) x = None ->
                   notin_Ax A x ->
-                  fresh_x x σ A.
+                  fresh_x x ϕ A.
 Hint Constructors fresh_x : chainmail_db.
+
+Definition fresh_x_σ (x : var)(σ : config)(A : asrt) :=
+  exists χ ϕ ψ, σ = (χ, ϕ::ψ) /\
+           fresh_x x ϕ A.
 
 Inductive notin_AΣ  : asrt -> varSet -> Prop :=
 
@@ -699,12 +703,12 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (** Quantifiers: *)
 | sat_all_x : forall M1 M2 σ A, (forall y v, mapp σ y = Some v ->
-                                   forall z, fresh_x z σ A ->
+                                   forall z, fresh_x_σ z σ A ->
                                         M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0]A)) ->
                            M1 ⦂ M2 ◎ σ ⊨ (∀x∙ A)
 
 | sat_ex_x  : forall M1 M2 σ A z y v, mapp σ y = Some v ->
-                                 fresh_x z σ A ->
+                                 fresh_x_σ z σ A ->
                                  M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊨ ([z /s 0] A) ->
                                  M1 ⦂ M2 ◎ σ ⊨ (∃x∙ A)
 
@@ -857,12 +861,12 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (*quantifiers*)
 | nsat_all_x : forall M1 M2 σ A y z v, mapp σ y = Some v ->
-                                  fresh_x z σ A ->
+                                  fresh_x_σ z σ A ->
                                   M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊭ ([z /s 0]A) ->
                                   M1 ⦂ M2 ◎ σ ⊭ (∀x∙ A) 
 
 | nsat_ex_x : forall M1 M2 σ A, (forall y v z, mapp σ y = Some v ->
-                                     fresh_x z σ A ->
+                                     fresh_x_σ z σ A ->
                                      M1 ⦂ M2 ◎ (update_σ_map σ z v) ⊭ ([z /s 0]A)) ->
                            M1 ⦂ M2 ◎ σ ⊭ (∃x∙ A)
 

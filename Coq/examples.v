@@ -160,7 +160,7 @@ Theorem ArithMdlSatisfiesClass :
   forall M, ArithMdl ⦂ M ◎ myσ ⊨ (a_class (e_var t) True_).
 Proof.
   intros.
-  apply sat_class with (α:=TrueLoc)(o:=TrueObj); auto.
+  apply sat_class with (α:=TrueLoc)(o:=TrueObj); auto with loo_db.
 Qed.
 
 (** ArithMdl ⦂ M ◎ myσ ⊨ internal⟨t⟩, where t is the variable in σ pointing to TrueObj *)
@@ -480,67 +480,19 @@ Definition MyModule := (update
 
 Lemma fresh_implies_sat :
   (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
-                forall σ' A' x v, fresh_x x σ' A' ->
+                forall σ' A' x v, fresh_x_σ x σ' A' ->
                              σ = (update_σ_map σ' x v) ->
                              A = ([x /s 0]A') ->
-                             forall y, fresh_x y σ' A' ->
+                             forall y, fresh_x_σ y σ' A' ->
                                   M1 ⦂ M2 ◎ (update_σ_map σ' y v) ⊨ ([y /s 0]A')) /\
   (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
-                forall σ' A' x v, fresh_x x σ' A' ->
+                forall σ' A' x v, fresh_x_σ x σ' A' ->
                              σ = (update_σ_map σ' x v) ->
                              A = ([x /s 0]A') ->
-                             forall y, fresh_x y σ' A' ->
+                             forall y, fresh_x_σ y σ' A' ->
                                   M1 ⦂ M2 ◎ (update_σ_map σ' y v) ⊭ ([y /s 0]A')).
 Proof.
 Admitted.
-
-Ltac sat_destruct :=
-  match goal with
-  | [Hand : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply and_iff in Hand;
-                                       destruct Hand
-  end.
-
-Ltac frsh_auto :=
-  match goal with
-  | [Hfrsh : fresh_x _ _ (_ ∧ _) |- _] => apply fresh_and_elim in Hfrsh; andDestruct
-  | [Hfrsh : fresh_x _ _ (_ ⇒ _) |- _] => apply fresh_arr_elim in Hfrsh; andDestruct
-  | [Hfrsh : fresh_x _ _ (∀x∙ _) |- _] => apply fresh_all_elim in Hfrsh
-  | [ |- fresh_x _ _ (_ ∧ _)] => apply fresh_and_intro
-  | [ |- fresh_x _ _ (_ ⇒ _)] => apply fresh_arr_intro
-  | [ |- fresh_x _ _ (∀x∙_)] => apply fresh_all_intro
-  | [ Hfrsh : fresh_x ?x ?σ _ |- fresh_x ?x ?σ _] => auto; try (eapply fresh_notin; eauto)
-  end.
-
-Ltac a_intro :=
-  match goal with
-  | [|- _ ⦂ _ ◎ _ ⊨ (∀x∙ _)] => apply sat_all_x; intros; simpl
-  | [|- _ ⦂ _ ◎ _ ⊨ (_ ⇒ _)] => apply arr_prop1; intros; simpl
-  end.
-
-Ltac a_intros :=
-  repeat a_intro.
-
-Ltac a_prop :=
-  repeat match goal with
-         | [H : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply -> and_iff in H;
-                                           destruct H
-         | [H : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply -> or_iff in H
-         | [H : _ ⦂ _ ◎ _ ⊨ (_ ⇒ _) |- _] => rewrite -> arr_prop in H
-         | [H : context[_ ⦂ _ ◎ _ ⊨ (_ ⇒ _)] |- _] => rewrite -> arr_prop in H
-         | [H : _ ⦂ _ ◎ _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; simpl in H
-         | [|- _ ⦂ _ ◎ _ ⊨ (_ ∧ _)] => apply sat_and
-         | [|- _ ⦂ _ ◎ _ ⊨ (_ ∨ _)] => apply <- or_iff
-         end.
-
-Lemma entails_implies :
-  forall A1 A2, entails A1 A2 ->
-           forall M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨ A1 ->
-                      M1 ⦂ M2 ◎ σ ⊨ A2.
-Proof.
-  intros A1 A2 Hent;
-    inversion Hent;
-    auto.
-Qed.
 
 Ltac ent_not_all_not_ex_x :=
   match goal with
@@ -557,13 +509,61 @@ Ltac ent_not_all_not_ex_x :=
 (*    assert (M1 ⦂ M2 ◎ σ ⊨ ∀x∙ ¬ A)*)
   end.
 
-SearchAbout entails.
 Ltac neg_distr_and :=
   match goal with
   | [|- ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ (?Aa ∧ ?Ab) ] =>
     apply entails_implies with (A1:=(¬Aa) ∨ (¬Ab));
     [auto|]
 (*    assert (M1 ⦂ M2 ◎ σ ⊨ ∀x∙ ¬ A)*)
+  end.
+
+Lemma fresh_x_not_in_map :
+  forall x ϕ A, fresh_x x ϕ A ->
+           (vMap ϕ) x = None.
+Proof.
+  intros.
+  inversion H; subst; auto.
+Qed.
+
+Hint Resolve fresh_x_not_in_map.
+
+Ltac update_map_simpl :=
+  match goal with
+  | [H : context[update_σ_map ?σ ?x ?v] |- _] =>
+    unfold update_σ_map in H; simpl in H
+  | [|- context[update_σ_map ?σ ?x ?v]] =>
+    unfold update_σ_map; simpl
+  end.
+Print notin_Ax.
+Ltac ni_auto :=
+  match goal with
+  | [|- notin_Ax (a_exp _) _] => apply ni_exp
+  | [|- notin_Ax (a_eq _ _) _] => apply ni_aeq
+  | [|- notin_Ax (a_class _ _) _] => apply ni_class
+  | [|- notin_Ax (a_set _ _) _] => apply ni_set
+
+  | [|- notin_Ax (a_arr _ _) _] => apply ni_arr
+  | [|- notin_Ax (a_and _ _) _] => apply ni_and
+  | [|- notin_Ax (a_or _ _) _] => apply ni_or
+  | [|- notin_Ax (a_neg _) _] => apply ni_neg
+
+  | [|- notin_Ax (∀x∙ _) _] => apply ni_all_x
+  | [|- notin_Ax (∃x∙ _) _] => apply ni_ex_x
+  | [|- notin_Ax (∀S∙ _) _] => apply ni_all_Σ
+  | [|- notin_Ax (∃S∙ _) _] => apply ni_ex_Σ
+
+  | [|- notin_Ax (_ access _) _] => apply ni_acc
+  | [|- notin_Ax (_ calls _ ∎ _ ⟨ _ ⟩)] => apply ni_call
+
+  | [|- notin_Ax (a_next _) _] => apply ni_next
+  | [|- notin_Ax (a_will _) _] => apply ni_will
+  | [|- notin_Ax (a_prev _) _] => apply ni_prev
+  | [|- notin_Ax (a_was _) _] => apply ni_was
+
+  | [|- notin_Ax (a_in _ _) _] => apply ni_in
+
+  | [|- notin_Ax (a_extrn _) _] => apply ni_extrn
+  | [|- notin_Ax (a_intrn _) _] => apply ni_intrn
   end.
 
 Lemma thing :
@@ -583,84 +583,113 @@ Proof.
     intros.
   repeat (a_prop;
           a_intros;
-          auto).
+          auto);
+    repeat update_map_simpl.
 
   - assert (Hfrsh : notin_Ax (∀x∙ ((a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
                                    ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))) z).
-    +  apply ni_all_x; auto.
-       apply ni_and; auto.
-       apply ni_all_x; auto.
-       apply ni_arr; eauto.
-       apply ni_acc; simpl; auto.
+    + repeat ni_auto; simpl; auto with chainmail_db.
 
-    + apply frsh with (σ:=σ) in Hfrsh;
-        [|inversion H1; auto].
+    + apply frsh with (ϕ:=ϕ) in Hfrsh;
+        [|eapply fresh_x_not_in_map, fresh_x_σ_implies_ϕ; eauto].
+      apply fresh_x_ϕ_implies_σ with (χ:=χ)(ψ:=ψ) in Hfrsh.
       apply H with (y:=y)(v:=v) in Hfrsh; auto.
       repeat (a_prop;
               a_intros;
               auto).
-      admit.
-      
-  - admit.
+      assert (Hfrsh' : notin_Ax ((a_class (e_var z) Boundary ∧ a_eq (e_acc_f (e_var z) inside) (e_hole 0))
+                                 ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_var z)))) z0).
+      assert (z <> z0).
+      * intros Hcontra; subst.
+        repeat map_rewrite;
+          simpl in *.
+        apply fresh_x_σ_implies_ϕ in H3.
+        inversion H3; subst.
+        unfold update_ϕ_map in *; simpl in *.
+        unfold update, t_update in H4.
+        eq_auto; crush.
+      * repeat ni_auto; simpl; auto with chainmail_db.
+
+      * apply frsh with (ϕ:=update_ϕ_map ϕ z v) in Hfrsh';
+          [|eapply fresh_x_not_in_map, fresh_x_σ_implies_ϕ; eauto].
+        apply fresh_x_ϕ_implies_σ with (χ:=χ)(ψ:=ψ) in Hfrsh'.
+        apply Hfrsh with (y:=y0)(v0:=v0) in Hfrsh';
+          auto.
+        repeat (a_prop;
+                a_intros;
+                auto).
+
+  - assert (Hfrsh : notin_Ax (∀x∙ ((a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
+                                   ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))) z).
+    + repeat ni_auto; simpl; auto with chainmail_db.
+
+    + apply frsh with (ϕ:=ϕ) in Hfrsh;
+        [|eapply fresh_x_not_in_map, fresh_x_σ_implies_ϕ; eauto].
+      eapply fresh_x_ϕ_implies_σ, H in Hfrsh; eauto;
+        repeat update_map_simpl.
+      inversion Hfrsh; subst; simpl in *.
+      assert (Hfrsh' : notin_Ax ((a_class (e_var z) Boundary ∧ a_eq (e_acc_f (e_var z) inside) (e_hole 0))
+                                 ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_var z)))) z0).
+      assert (z <> z0).
+      * intros Hcontra; subst.
+        repeat map_rewrite;
+          simpl in *.
+        apply fresh_x_σ_implies_ϕ in H3.
+        inversion H3; subst.
+        unfold update_ϕ_map in *; simpl in *.
+        unfold update, t_update in H4.
+        eq_auto; crush.
+      * repeat ni_auto; simpl; auto with chainmail_db.
+      * apply frsh with (ϕ:=update_ϕ_map ϕ z v) in Hfrsh';
+          [|eapply fresh_x_not_in_map, fresh_x_σ_implies_ϕ; eauto].
+        eapply fresh_x_ϕ_implies_σ in Hfrsh'; eauto.
+        specialize (H8 y0 v0 H2 z0 Hfrsh').
+        repeat (a_prop;
+                a_intros;
+                auto).
 
   - ent_not_all_not_ex_x.
     repeat (a_prop;
             a_intros;
-            auto).
-    neg_distr_and.
+            auto with chainmail_db).
+    neg_distr_and; auto with chainmail_db.
 
     assert (Hfrsh : notin_Ax (∀x∙ ((a_class (e_hole 1) Boundary ∧ a_eq (e_acc_f (e_hole 1) inside) (e_hole 0))
                                    ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_hole 2))))) z).
-    +  apply ni_all_x; auto.
-       apply ni_and; auto.
-       apply ni_all_x; auto.
-       apply ni_arr; eauto.
-       apply ni_acc; simpl; auto.
+    +  repeat ni_auto; simpl; auto with chainmail_db.
 
-    + apply frsh with (σ:=σ) in Hfrsh;
-        [|inversion H1; auto].
-      apply H with (y:=y)(v:=v) in Hfrsh; auto.
+    + apply frsh with (ϕ:=ϕ) in Hfrsh;
+        [|eapply fresh_x_not_in_map, fresh_x_σ_implies_ϕ; eauto].
+      apply fresh_x_ϕ_implies_σ with (χ:=χ)(ψ:=ψ) in Hfrsh.
+      specialize (H y v H0 z Hfrsh).
       repeat (a_prop;
               a_intros;
               auto).
       assert (Hfrsh2 : notin_Ax ((a_class (e_var z) Boundary ∧ a_eq (e_acc_f (e_var z) inside) (e_hole 0))
                                  ∧ (∀x∙ ((a_hole 0 access a_hole 1) ⇒ a_eq (e_hole 0) (e_var z)))) z0).
-      * assert (z <> z0);
-          [intros Hcontra; subst|].
-        ** inversion H3; subst.
-           destruct σ as [χ ψ].
-           simpl in *.
-           destruct ψ as [|ϕ ψ'];
-             simpl in H6.
-           admit.
-           repeat map_rewrite; simpl in *.
-           repeat map_rewrite; simpl in *.
-           destruct z0; simpl in H6.
-           rewrite Nat.eqb_refl in H6;
-             crush.
-        ** apply ni_and; simpl; auto.
-           apply ni_all_x; auto.
-           apply ni_arr; auto.
-           apply ni_acc; simpl; auto.
+      * assert (z <> z0).
+        ** intros Hcontra; subst.
+           repeat map_rewrite;
+             simpl in *.
+           apply fresh_x_σ_implies_ϕ in H3.
+           inversion H3; subst.
+           unfold update_ϕ_map in *; simpl in *.
+           unfold update, t_update in H6.
+           eq_auto; crush.
+        ** repeat ni_auto; simpl; auto with chainmail_db.
 
-      * apply frsh with (σ:=update_σ_map σ z v) in Hfrsh2;
-          auto.
-        apply Hfrsh with (y:=y0)(v0:=v0) in Hfrsh2;
-          auto.
-        repeat (a_prop;
-                a_intros;
-                auto).
+      * apply frsh with (ϕ:=update_ϕ_map ϕ z v) in Hfrsh2;
+          [|eapply fresh_x_not_in_map, fresh_x_σ_implies_ϕ; eauto].
         destruct (sat_excluded_middle)
           with
             (M1:=M1)(M2:=M2)
-            (σ:=update_σ_map (update_σ_map σ z v) z0 v0)
-            (A:=a_bind z0 access a_bind z) as [Ha|];
-          [specialize (Hfrsh2 Ha)|auto].
-        right; apply negate_intro_sat.
-        SearchAbout a_neg.
-                     
-        
-
+            (σ:=update_σ_map (update_σ_map (update_σ_map (χ, ϕ::ψ) z v) z0 v0) z1 v1)
+            (A:=a_bind z1 access a_bind z0) as [Ha|].
+           ** right; apply negate_intro_sat; simpl.
+              admit. (* substitution lemma for a_eq x y *)
+           ** left.
+              apply sat_not; auto.
+              SearchAbout entails.
 Qed.
 
 Theorem expose_example :
