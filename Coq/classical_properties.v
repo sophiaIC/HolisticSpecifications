@@ -1763,13 +1763,53 @@ Proof.
     auto with chainmail_db.
 Qed.
 
+Lemma neg_entails :
+  forall A1 A2, equiv_a A1 A2 ->
+           entails (¬ A1) (¬ A2).
+Proof.
+  intros.
+  apply ent; intros;
+    repeat a_prop;
+    auto with chainmail_db.
+  destruct (sat_excluded_middle M1 M2 (χ, ϕ::ψ) A2);
+    auto with chainmail_db.
 
+  - unfold equiv_a in *;
+      andDestruct.
+    match goal with
+    | [Ha : entails _ _,
+            Hb : entails _ _ |- _] => inversion Ha; inversion Hb; subst
+    end.
+    apply H4 in H1.
+    apply sat_implies_not_nsat in H1.
+    inversion H0; crush.
+Qed.
+
+Lemma substitution_entails :
+  forall A1 A2, entails A1 A2 ->
+           forall z, notin_Ax A1 z ->
+                notin_Ax A2 z ->
+                entails ([z /s 0] A1) ([z /s 0] A1).
+Proof.
+
+Qed.
+
+Lemma exists_entails :
+  forall A1 A2, entails A1 A2 ->
+           entails (∀x∙A1) (∀x∙A2).
+Proof.
+  intros A1 A2 Hent;
+    apply ent;
+    intros.
+
+  inversion H; subst.
+  apply sat_all_x; intros.
+  
+  
+  
+Qed.
 
 Inductive asrt : Type :=
-  | a_arr : asrt -> asrt -> asrt
-  | a_and : asrt -> asrt -> asrt
-  | a_or : asrt -> asrt -> asrt
-  | a_neg : asrt -> asrt
   | a_all_x : asrt -> asrt
   | a_all_Σ : asrt -> asrt
   | a_ex_x : asrt -> asrt
