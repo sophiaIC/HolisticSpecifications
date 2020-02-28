@@ -1785,13 +1785,2926 @@ Proof.
     inversion H0; crush.
 Qed.
 
+Print asrt.
+      
+Fixpoint syntactic_depth (A : asrt) : nat :=
+  match A with
+  | A1 ⇒ A2 => 1 + (syntactic_depth A1) + (syntactic_depth A2)
+  | A1 ∨ A2 => 1 + (syntactic_depth A1) + (syntactic_depth A2)
+  | A1 ∧ A2 => 1 + (syntactic_depth A1) + (syntactic_depth A2)
+  | ¬ A => 1 + (syntactic_depth A)
+  | (∀x∙ A) => 1 + (syntactic_depth A)
+  | (∀S∙ A) => 1 + (syntactic_depth A)
+  | (∃x∙ A) => 1 + (syntactic_depth A)
+  | (∃S∙ A) => 1 + (syntactic_depth A)
+  | a_next A => 1 + (syntactic_depth A)
+  | a_will A => 1 + (syntactic_depth A)
+  | a_prev A => 1 + (syntactic_depth A)
+  | a_was A => 1 + (syntactic_depth A)
+  | a_in A _ => 1 + (syntactic_depth A)
+  | _ => 0
+  end.
+
+Lemma syntactic_depth_eq_raise :
+  forall A n, syntactic_depth A = (syntactic_depth (A ↑ n)).
+Proof.
+  intros A;
+    induction A;
+    intros;
+    simpl;
+    auto.
+Qed.
+
+Require Import Coq.Program.Wf.
+
+Program Fixpoint merge (A1 A2 : asrt)(f : asrt -> asrt -> asrt){measure (syntactic_depth A1 + syntactic_depth A2)} : asrt :=
+  match A1, A2 with
+  | (∀x∙ A1'), _ => (∀x∙ (merge A1' (A2 ↑ 0) f))
+  | _, (∀x∙ A2') => (∀x∙ (merge (A1 ↑ 0) A2' f))
+  | _, _ => f A1 A2
+  end.
+Next Obligation.
+  rewrite <- syntactic_depth_eq_raise;
+    simpl;
+    crush.
+Defined.
+Next Obligation.
+  rewrite <- syntactic_depth_eq_raise;
+    simpl;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+Next Obligation.
+  split; intros;
+    intro Hcontra;
+    andDestruct;
+    subst;
+    crush.
+Defined.
+
+Fixpoint normalize (A : asrt) : asrt :=
+  match A with
+  | (∀x∙ A') => (∀x∙ (normalize A'))
+  | A1 ∧ A2 => merge (normalize A1) (normalize A2) a_and
+  | A1 ∨ A2 => merge (normalize A1) (normalize A2) a_or
+  | _ => A
+  end.
+
+Inductive nf : asrt -> asrt -> Prop :=
+| nf_exp : forall e, nf (a_exp e) (a_exp e)
+| nf_eq : forall e1 e2, nf (a_eq e1 e2) (a_eq e1 e2)
+| nf_class : forall e C, nf (a_class e C) (a_class e C)
+| nf_set : forall e Σ, nf (a_set e Σ) (a_set e Σ)
+| nf_arr : forall A1 A2 A1' A2', nf A1 A1' ->
+                            nf A2 A2' ->
+                            nf (A1 ⇒ A2) (A2' ∨ ¬ A1')
+| nf_and : forall A1 A2 A1' A2', nf A1 A1' ->
+                            nf A2 A2' ->
+                            nf (A1 ∧ A2) (A1' ∧ A2')
+| nf_or1 : forall A1 A2 A1', nf A1 A1' ->
+                        (forall A A', A1' <> A ∧ A') ->
+                        (forall A A', A1' <> A ∧ A') ->
+                        nf (A1 ∨ A2) (A1' ∨ A2).
+
+(* normal form *)
+Inductive nf : asrt -> asrt -> Prop :=
+| nf_exp : forall e, nf (a_exp e) (a_exp e)
+| nf_eq : forall e1 e2, nf (a_eq e1 e2) (a_eq e1 e2)
+| nf_class : forall e C, nf (a_class e C) (a_class e C)
+| nf_set : forall e Σ, nf (a_set e Σ) (a_set e Σ)
+| nf_arr : forall A1 A2 A1' A2', nf A1 A1' ->
+                            nf A2 A2' ->
+                            nf (A1 ⇒ A2) (¬ A1' ∨ A2')
+| nf_and : forall A1 A2 A1' A2', nf A1 A1' ->
+                            nf A2 A2' ->
+                            nf (A1 ∧ A2) (A1' ∧ A2')
+| nf_or : forall A1 A2 A1' A2', nf A1 A1' ->
+                           nf A2 A2' ->
+                           nf (A1 ∨ A2) (A1' ∨ A2')
+| nf_neg : forall A A', nf A A' ->
+                   nf (¬ A) (¬ A')
+| nf_all_x : forall A A', nf A A' ->
+                     nf (∀x∙ A) (∀x∙ A')
+| nf_all_Σ : forall A A', nf A A' ->
+                     nf (∀S∙ A) (∀S∙ A')
+| nf_ex_x : forall A A', nf A A' ->
+                    nf (∃x∙ A) (∃x∙ A')
+| nf_ex_Σ : forall A A', nf A A' ->
+                    nf (∃S∙ A) (∃S∙ A')
+| nf_acc : forall x y, nf (x access y) (x access y)
+| nf_call : forall x y m vMap, nf (x calls y ∎ m ⟨ vMap ⟩) (x calls y ∎ m ⟨ vMap ⟩)
+| nf_next : forall A A', nf A A' ->
+                    nf (a_next A) (a_next A')
+| nf_will : forall A A', nf A A' ->
+                    nf (a_will A) (a_will A')
+| nf_prev : forall A A', nf A A' ->
+                    nf (a_prev A) (a_prev A')
+| nf_was : forall A A', nf A A' ->
+                   nf (a_was A) (a_was A')
+| nf_in : forall A A' Σ, nf A A' ->
+                    nf (a_in A Σ) (a_in A' Σ)
+| nf_extrn : forall x, nf (x external) (x external)
+| nf_intrn : forall x, nf (x internal) (x internal).
+
 Lemma substitution_entails :
   forall A1 A2, entails A1 A2 ->
            forall z, notin_Ax A1 z ->
                 notin_Ax A2 z ->
-                entails ([z /s 0] A1) ([z /s 0] A1).
+                entails ([z /s 0] A1) ([z /s 0] A2).
 Proof.
-
+  intros
 Qed.
 
 Lemma exists_entails :
