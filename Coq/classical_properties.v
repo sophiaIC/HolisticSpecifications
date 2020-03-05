@@ -3,7 +3,10 @@ Require Import loo_def.
 Require Import chainmail.
 Require Import fundamental_properties.
 Require Import function_operations.
+Require Import sbst.
 Require Import List.
+Require Import String.
+Open Scope string_scope.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
@@ -816,6 +819,58 @@ Qed.
 
 Hint Resolve not_ex_x_all_not : chainmail_db.
 
+Lemma not_all_x_ex_not_1 : 
+  forall A, entails (¬(∀x∙A)) (∃x∙¬A).
+Proof.
+  intros;
+    apply ent;
+    intros.
+
+  inversion H;
+    subst.
+  inversion H4;
+    subst.
+
+  apply sat_ex_x with (z:=z)(y:=y)(v:=v);
+    auto with chainmail_db;
+    sbst_simpl.
+  
+  apply sat_not; auto.
+Qed.
+
+Hint Resolve not_all_x_ex_not_1 : chainmail_db.
+
+Lemma not_all_x_ex_not_2 : 
+  forall A, entails (∃x∙¬A) (¬(∀x∙A)).
+Proof.
+  intros;
+    apply ent;
+    intros.
+
+  inversion H;
+    subst.
+
+  apply sat_not.
+  apply nsat_all_x with (y:=y)(z:=z)(v:=v);
+    auto with chainmail_db;
+    sbst_simpl.
+  inversion H6; subst; auto.
+Qed.
+
+Hint Resolve not_all_x_ex_not_2 : chainmail_db.
+
+Lemma not_all_x_ex_not : 
+  forall A, equiv_a (¬(∀x∙A)) (∃x∙¬A).
+Proof.
+  intros;
+    unfold equiv_a;
+    intros;
+    split;
+    eauto with chainmail_db.
+Qed.
+
+Hint Resolve not_all_x_ex_not : chainmail_db.
+
 Lemma not_ex_Σ_all_not_1 : 
   forall A, entails (¬(∃S∙A)) (∀S∙¬A).
 Proof.
@@ -1175,306 +1230,17 @@ Proof.
 Abort.*)
 
 Lemma entails_implies :
-  forall A1 A2, entails A1 A2 ->
-           forall M1 M2 χ ϕ ψ, M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A1 ->
+  forall M1 M2 χ ϕ ψ A1, M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A1 ->
+                    forall A2, entails A1 A2 ->
                           M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A2.
 Proof.
-  intros A1 A2 Hent;
-    inversion Hent;
+  intros.
+  inversion H0;
     auto.
 Qed.
 
 Hint Resolve entails_implies : chainmail_db.
 Hint Rewrite entails_implies : chainmail_db.
-
-Class Raiseable (A : Type) :=
-  {
-    raise : A -> nat -> A
-  }.
-
-Notation "a '↑' n" := (raise a n)(at level 40).
-
-Instance raiseNat : Raiseable nat :=
-  {
-    raise n m := if leb m n
-                 then (S n)
-                 else n
-  }.
-
-Instance raiseExp : Raiseable exp :=
-  {
-    raise :=
-      fix raise' e n :=
-        match e with
-        | e_hole m => e_hole (m ↑ n)
-        | e_eq e1 e2 => e_eq (raise' e1 n) (raise' e2 n)
-        | e_if e1 e2 e3 => e_if (raise' e1 n) (raise' e2 n) (raise' e3 n)
-        | e_acc_f e' f => e_acc_f (raise' e' n) f
-        | e_acc_g e1 g e2 => e_acc_g (raise' e1 n) g (raise' e2 n)
-        | _ => e
-        end
-  }.
-
-Instance raiseAVar : Raiseable a_var :=
-  {
-    raise x n := match x with
-                 | a_hole m => a_hole (m ↑ n)
-                 | _ => x
-                 end
-  }.
-
-Instance raiseFn {A B : Type}`{Eq A}`{Raiseable B} : Raiseable (partial_map A B) :=
-  {
-    raise f n := fun x => bind (f x) (fun y => Some (y ↑ n))
-  }.
-
-Instance raiseAsrt : Raiseable asrt :=
-  {
-    raise :=
-      fix raise' A n :=
-        match A with
-        | a_exp e => a_exp (e ↑ n)
-        | a_eq e1 e2 => a_eq (e1 ↑ n) (e2 ↑ n)
-        | a_class e C => a_class (e ↑ n) C
-        | a_set e Σ => a_set (e ↑ n) Σ
-
-        | A1 ⇒ A2 => (raise' A1 n) ⇒ (raise' A2 n)
-        | A1 ∧ A2 => (raise' A1 n) ∧ (raise' A2 n)
-        | A1 ∨ A2 => (raise' A1 n) ∨ (raise' A2 n)
-        | ¬ A' => ¬ (raise' A' n)
-
-        | ∀x∙ A' => ∀x∙ (raise' A' (S n))
-        | ∃x∙ A' => ∃x∙ (raise' A' (S n))
-        | ∀S∙ A' => ∀S∙ (raise' A' (S n))
-        | ∃S∙ A' => ∃S∙ (raise' A' (S n))
-
-        | x access y => (x ↑ n) access (y ↑ n)
-        | x calls y ∎ m ⟨ vMap ⟩ => (x ↑ n) calls (y ↑ n) ∎ m ⟨ vMap ↑ n ⟩
-
-        | a_next A' => a_next (raise' A' n)
-        | a_will A' => a_will (raise' A' n)
-        | a_prev A' => a_prev (raise' A' n)
-        | a_was A' => a_was (raise' A' n)
-
-        | a_in A' Σ => a_in (raise' A' n) Σ
-
-        | x external => (x ↑ n) external
-        | x internal => (x ↑ n) internal
-        end
-  }.
-
-Lemma sbst_x_neg :
-  forall (x : var) n A, ([x /s n] ¬A) = (¬ ([x /s n]A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_arr :
-  forall (x : var) n A1 A2, ([x /s n] (A1 ⇒ A2)) = (([x /s n]A1) ⇒ ([x /s n]A2)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_and :
-  forall (x : var) n A1 A2, ([x /s n] (A1 ∧ A2)) = (([x /s n]A1) ∧ ([x /s n]A2)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_exp :
-  forall (x : var) n e, ([x /s n] (a_exp e)) = (a_exp ([x /s n] e)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_aeq :
-  forall (x : var) n e1 e2, ([x /s n] (a_eq e1 e2)) = (a_eq ([x /s n] e1) ([x /s n] e2)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_class :
-  forall (x : var) n e C, ([x /s n] (a_class e C)) = (a_class ([x /s n] e) C).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_set :
-  forall (x : var) n e Σ, ([x /s n] (a_set e Σ)) = (a_set ([x /s n] e) Σ).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_or :
-  forall (x : var) n A1 A2, ([x /s n] (A1 ∨ A2)) = (([x /s n]A1) ∨ ([x /s n]A2)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_all_x :
-  forall (x : var) n A, ([x /s n] (∀x∙A)) = ((∀x∙[x /s S n] A)).
-Proof.
-  auto.
-Qed.
-          
-Lemma sbst_x_all_Σ :
-  forall (x : var) n A, ([x /s n] (∀S∙A)) = ((∀S∙[x /s n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_ex_x :
-  forall (x : var) n A, ([x /s n] (∃x∙A)) = ((∃x∙[x /s S n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_ex_Σ :
-  forall (x : var) n A, ([x /s n] (∃S∙A)) = ((∃S∙[x /s n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_Σ_all_x :
-  forall (x : varSet) n A, ([x /s n] (∀x∙A)) = ((∀x∙[x /s n] A)).
-Proof.
-  auto.
-Qed.
-          
-Lemma sbst_Σ_all_Σ :
-  forall (x : varSet) n A, ([x /s n] (∀S∙A)) = ((∀S∙[x /s S n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_Σ_ex_x :
-  forall (x : varSet) n A, ([x /s n] (∃x∙A)) = ((∃x∙[x /s n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_Σ_ex_Σ :
-  forall (x : varSet) n A, ([x /s n] (∃S∙A)) = ((∃S∙[x /s S n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_next :
-  forall (x : var) n A, ([x /s n] (a_next A)) = (a_next ([x /s n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_will :
-  forall (x : var) n A, ([x /s n] (a_will A)) = (a_will ([x /s n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_prev :
-  forall (x : var) n A, ([x /s n] (a_prev A)) = (a_prev ([x /s n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_was :
-  forall (x : var) n A, ([x /s n] (a_was A)) = (a_was ([x /s n] A)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_acc :
-  forall (x : var) n y z, ([x /s n] (y access z)) = (([x /s n] y) access ([x /s n] z)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_call :
-  forall (x : var) n y z m vMap, ([x /s n] (y calls z ∎ m ⟨ vMap ⟩)) = (([x /s n] y) calls ([x /s n] z) ∎ m ⟨ ([x /s n] vMap) ⟩).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_in :
-  forall (x : var) n A Σ, ([x /s n] (a_in A Σ)) = (a_in ([x /s n] A) Σ).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_Σ_in :
-  forall (x : varSet) n A Σ, ([x /s n] (a_in A Σ)) = (a_in ([x /s n] A) ([x /s n] Σ)).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_extrn :
-  forall (x : var) n y, ([x /s n] (y external)) = (([x /s n] y) external).
-Proof.
-  auto.
-Qed.
-
-Lemma sbst_x_intrn :
-  forall (x : var) n y, ([x /s n] (y internal)) = (([x /s n] y) internal).
-Proof.
-  auto.
-Qed.
-
-Ltac sbst_simpl :=
-  match goal with
-  | [H : context[[_ /s _] (a_exp _)] |- _] => rewrite sbst_x_exp in H
-  | [H : context[[_ /s _] (a_eq _ _)] |- _] => rewrite sbst_x_aeq in H
-  | [H : context[[_ /s _] (a_class _ _)] |- _] => rewrite sbst_x_class in H
-  | [H : context[[_ /s _] (a_set _ _)] |- _] => rewrite sbst_x_set in H
-
-  | [H : context[[_ /s _] (¬ _)] |- _] => rewrite sbst_x_neg in H
-  | [H : context[[_ /s _] (_ ∨ _)] |- _] => rewrite sbst_x_or in H
-  | [H : context[[_ /s _] (_ ∧ _)] |- _] => rewrite sbst_x_and in H
-  | [H : context[[_ /s _] (_ ⇒ _)] |- _] => rewrite sbst_x_arr in H
-
-  | [H : context[[_ /s _] (a_next _)] |- _] => rewrite sbst_x_next in H
-  | [H : context[[_ /s _] (a_will _)] |- _] => rewrite sbst_x_will in H
-  | [H : context[[_ /s _] (a_prev _)] |- _] => rewrite sbst_x_prev in H
-  | [H : context[[_ /s _] (a_was _)] |- _] => rewrite sbst_x_was in H
-
-  | [H : context[[_ /s _] (∀x∙_)] |- _] => rewrite sbst_x_all_x in H
-  | [H : context[[_ /s _] (∀S∙_)] |- _] => rewrite sbst_x_all_Σ in H
-  | [H : context[[_ /s _] (∃x∙_)] |- _] => rewrite sbst_x_ex_x in H
-  | [H : context[[_ /s _] (∃S∙_)] |- _] => rewrite sbst_x_ex_Σ in H
-
-  | [H : context[[_ /s _] (_ access _)] |- _] => rewrite sbst_x_acc in H
-  | [H : context[[_ /s _] (_ calls _ ∎ _ ⟨ _ ⟩)] |- _] => rewrite sbst_x_call in H
-
-  | [H : context[[_ /s _] (a_in _ _)] |- _] => rewrite sbst_x_in in H
-  | [H : context[[_ /s _] (_ external)] |- _] => rewrite sbst_x_extrn in H
-  | [H : context[[_ /s _] (_ internal)] |- _] => rewrite sbst_x_intrn in H
-
-  | [|- context[[_ /s _] (a_exp _)]] => rewrite sbst_x_exp
-  | [|- context[[_ /s _] (a_eq _ _)]] => rewrite sbst_x_aeq
-  | [|- context[[_ /s _] (a_class _ _)]] => rewrite sbst_x_class
-  | [|- context[[_ /s _] (a_set _ _)]] => rewrite sbst_x_set
-
-  | [|- context[[_ /s _] (¬ _)]] => rewrite sbst_x_neg
-  | [|- context[[_ /s _] (_ ∨ _)]] => rewrite sbst_x_or
-  | [|- context[[_ /s _] (_ ∧ _)]] => rewrite sbst_x_and
-  | [|- context[[_ /s _] (_ ⇒ _)]] => rewrite sbst_x_arr
-
-  | [|- context[[_ /s _] (a_next _)]] => rewrite sbst_x_next
-  | [|- context[[_ /s _] (a_will _)]] => rewrite sbst_x_will
-  | [|- context[[_ /s _] (a_prev _)]] => rewrite sbst_x_prev
-  | [|- context[[_ /s _] (a_was _)]] => rewrite sbst_x_was
-
-  | [|- context[[_ /s _] (∀x∙_)]] => rewrite sbst_x_all_x
-  | [|- context[[_ /s _] (∀S∙_)]] => rewrite sbst_x_all_Σ
-  | [|- context[[_ /s _] (∃x∙_)]] => rewrite sbst_x_ex_x
-  | [|- context[[_ /s _] (∃S∙_)]] => rewrite sbst_x_ex_Σ
-
-  | [|- context[[_ /s _] (_ access _)]] => rewrite sbst_x_acc
-  | [|- context[[_ /s _] (_ calls _ ∎ _ ⟨ _ ⟩)]] => rewrite sbst_x_call
-
-  | [|- context[[_ /s _] (a_in _ _)]] => rewrite sbst_x_in
-  | [|- context[[_ /s _] (_ external)]] => rewrite sbst_x_extrn
-  | [|- context[[_ /s _] (_ internal)]] => rewrite sbst_x_intrn
-  end.
 
 Ltac sat_destruct :=
   match goal with
@@ -1509,15 +1275,21 @@ Ltac a_prop :=
          | [H : _ ⦂ _ ◎ _ ⊨ (_ ∨ _) |- _] => apply -> or_iff in H
          | [H : _ ⦂ _ ◎ _ ⊨ (_ ⇒ _) |- _] => rewrite -> arr_prop in H
          | [H : context[_ ⦂ _ ◎ _ ⊨ (_ ⇒ _)] |- _] => rewrite -> arr_prop in H
-         | [H : _ ⦂ _ ◎ _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; repeat sbst_simpl
+         | [H : _ ⦂ _ ◎ _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; sbst_simpl
          | [|- _ ⦂ _ ◎ _ ⊨ (_ ∧ _)] => apply sat_and
          | [|- _ ⦂ _ ◎ _ ⊨ (_ ∨ _)] => apply <- or_iff
          | [H : entails ?A1 ?A2,
-                Ha : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ?A1 |- _] =>
-           notHyp (M1 ⦂ M2 ◎ σ ⊨ A2);
+                Ha : ?M1 ⦂ ?M2 ◎ (?χ, ?ϕ::?ψ) ⊨ ?A1 |- _] =>
+           notHyp (M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A2);
            let H' := fresh in 
-           assert (H' : M1 ⦂ M2 ◎ σ ⊨ A2);
-           [apply (entails_implies A1 A2 H); eauto|]
+           assert (H' : M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A2);
+           [apply (entails_implies M1 M2 χ ϕ ψ A1 Ha A2 H); eauto|]
+         | [Ha : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ?A,
+                 Hb : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ ?A |- _] =>
+           apply sat_implies_not_nsat in Ha
+         | [Ha : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ ?A,
+                 Hb : ~ ?M1 ⦂ ?M2 ◎ ?σ ⊭ ?A |- _] =>
+           inversion Ha; subst; crush
          end.
 
 Lemma and_forall_x_entails_1 :
@@ -1724,8 +1496,7 @@ Proof.
   intros.
   apply ent; intros.
   repeat (a_intros; a_prop).
-  destruct H; a_prop; eauto with chainmail_db.
-  inversion H; eauto with chainmail_db.
+  destruct H; repeat a_prop; auto.
 Qed.
 
 Hint Resolve arr_cnf_1 arr_cnf_2 : chainmail_db.
@@ -1783,6 +1554,1158 @@ Proof.
     apply H4 in H1.
     apply sat_implies_not_nsat in H1.
     inversion H0; crush.
+Qed.
+
+(*Ltac a_exists y' v' :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ ⊨ (∃x∙_)] => eapply sat_ex_x with (y:=y')(v:=v')
+  end.*)
+
+Inductive ltac_No_arg : Set :=
+  | ltac_no_arg : ltac_No_arg.
+
+Ltac a_exists_base y' v' z' :=
+  match type of z' with
+  | ltac_No_arg =>
+    match type of v' with
+    | ltac_No_arg =>
+      match goal with
+      | [|- _ ⦂ _ ◎ _ ⊨ (∃x∙_)] => eapply sat_ex_x with (y:=y')
+      end
+    | _ => match goal with
+          | [|- _ ⦂ _ ◎ _ ⊨ (∃x∙_)] => eapply sat_ex_x with (y:=y')(v:=v')
+          end
+    end
+  | _ => match goal with
+        | [|- _ ⦂ _ ◎ _ ⊨ (∃x∙_)] => eapply sat_ex_x with (y:=y')(v:=v')(z:=z')
+        end
+  end.
+
+Tactic Notation "a_exists" constr(x) :=
+  a_exists_base x ltac_no_arg ltac_no_arg.
+Tactic Notation "a_exists" constr(x) constr(y) :=
+  a_exists_base x y ltac_no_arg.
+Tactic Notation "a_exists" constr(x) constr(y) constr(z) :=
+  a_exists_base x y z.
+
+Lemma a_contradiction_1 :
+  forall M1 M2 σ A, (M1 ⦂ M2 ◎ σ ⊨ A -> False) ->
+               (M1 ⦂ M2 ◎ σ ⊨ ¬ A).
+Proof.
+  intros.
+  destruct (sat_excluded_middle M1 M2 σ A);
+    auto with chainmail_db;
+    crush.
+Qed.
+
+Lemma a_contradiction_2 :
+  forall M1 M2 σ A, (M1 ⦂ M2 ◎ σ ⊨ A -> False) ->
+               (M1 ⦂ M2 ◎ σ ⊭ A).
+Proof.
+  intros.
+  destruct (sat_excluded_middle M1 M2 σ A);
+    auto with chainmail_db;
+    crush.
+Qed.
+
+Lemma a_contradiction_3 :
+  forall M1 M2 σ A, (M1 ⦂ M2 ◎ σ ⊨ (¬ A) -> False) ->
+               (M1 ⦂ M2 ◎ σ ⊨ A).
+Proof.
+  intros.
+  destruct (sat_excluded_middle M1 M2 σ A);
+    auto with chainmail_db;
+    crush.
+Qed.
+
+Lemma not_implies_nsat :
+  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ (¬ A) ->
+               M1 ⦂ M2 ◎ σ ⊭ A.
+Proof.
+  intros.
+  inversion H;
+    subst;
+    auto.
+Qed.
+
+Ltac a_contra_base H :=
+  match type of H with
+  | ltac_No_arg => match goal with
+                  | [|- _ ⦂ _ ◎ _ ⊨ ¬ _] => apply a_contradiction_1; intros
+                  | [|- _ ⦂ _ ◎ _ ⊭ _] => apply a_contradiction_2; intros
+                  | [|- _ ⦂ _ ◎ _ ⊨ _] => apply a_contradiction_3; intros
+                  end
+  | _ => match goal with
+        | [H : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ ?A |- _] =>
+          apply not_implies_nsat, nsat_implies_not_sat in H;
+          contradiction H
+        | [H : ?M1 ⦂ ?M2 ◎ ?σ ⊭ ?A |- _] =>
+          apply nsat_implies_not_sat in H;
+          contradiction H
+        end
+  end.
+
+Tactic Notation "a_contra" :=
+  a_contra_base ltac_no_arg.
+Tactic Notation "a_contra" constr(H) :=
+  a_contra_base H.
+
+Lemma next_neg :
+  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ (¬ a_next A) ->
+               forall χ ϕ ψ, σ = (χ, ϕ::ψ) ->
+                        (forall σ' σ'', M1 ⦂ M2 ⦿ (χ, ϕ::nil) ⤳ σ' ->
+                                   σ ◁ σ' ≜ σ'' ->
+                                   M1 ⦂ M2 ◎ σ'' ⊨ (¬ A)).
+Proof.
+  intros.
+  a_contra.
+  a_contra H; eauto with chainmail_db.
+Qed.
+
+Lemma will_neg :
+  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ (¬ a_will A) ->
+               forall χ ϕ ψ, σ = (χ, ϕ::ψ) ->
+                        (forall σ' σ'', M1 ⦂ M2 ⦿ (χ, ϕ::nil) ⤳⋆ σ' ->
+                                   σ ◁ σ' ≜ σ'' ->
+                                   M1 ⦂ M2 ◎ σ'' ⊨ (¬ A)).
+Proof.
+  intros.
+  a_contra.
+  match goal with
+  | [H : _ ⦂ _ ◎ _ ⊨ (¬ a_will _) |- _] => inversion H; subst
+  end.
+  a_contra H; eauto with chainmail_db.
+Qed.
+
+Lemma next_disj_1 :
+  forall A1 A2, entails (a_next (A1 ∨ A2))
+                   ((a_next A1) ∨ (a_next A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  destruct (sat_excluded_middle M1 M2 (χ, ϕ::ψ) (a_next A1));
+    auto with chainmail_db.
+  inversion H; inversion H0; subst.
+  repeat match goal with
+         | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+         end.
+  apply pair_reduction_unique with (σ1:=σ'0) in H3; auto; subst.
+  a_prop.
+  destruct H8.
+
+  - left; eauto with chainmail_db.
+  - right; eauto with chainmail_db.
+
+Qed.
+
+Lemma next_disj_2 :
+  forall A1 A2, entails ((a_next A1) ∨ (a_next A2))
+                   (a_next (A1 ∨ A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  a_prop.
+  destruct H.
+  - inversion H; subst.
+    match goal with
+    | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+    end.
+    apply sat_next with (ϕ:=ϕ0)(ψ:=ψ0)(χ:=χ0)(σ':=σ')(σ'':=σ''); auto with chainmail_db.
+  - inversion H; subst.
+    match goal with
+    | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+    end.
+    apply sat_next with (ϕ:=ϕ0)(ψ:=ψ0)(χ:=χ0)(σ':=σ')(σ'':=σ''); auto with chainmail_db.
+Qed.
+
+Hint Resolve next_disj_1 next_disj_2 : chainmail_db.
+
+Lemma next_disj_equiv :
+  forall A1 A2, equiv_a ((a_next A1) ∨ (a_next A2))
+                   (a_next (A1 ∨ A2)).
+Proof.
+  intros; split; auto with chainmail_db.
+Qed.
+
+Hint Resolve next_disj_equiv : chainmail_db.
+
+Lemma will_not_disj :
+  forall A1 A2, entails (a_will (A1 ∨ A2) ∧ (¬ (a_will A1)))
+                   (a_will A2).
+Proof.
+  intros;
+    apply ent;
+    intros.
+
+  a_prop.
+  inversion H; subst.
+  match goal with
+  | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+  end.
+  a_prop.
+  destruct H8; eauto with chainmail_db.
+  a_contra H0; eauto with chainmail_db.
+Qed.
+
+Hint Resolve will_not_disj : chainmail_db.
+
+Lemma will_disj_1 :
+  forall A1 A2, entails (a_will (A1 ∨ A2))
+                   ((a_will A1) ∨ (a_will A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  destruct (sat_excluded_middle M1 M2 (χ, ϕ::ψ) (a_will A1));
+    auto with chainmail_db.
+  repeat a_prop.
+  assert (Hasrt : M1 ⦂ M2 ◎ (χ, ϕ :: ψ) ⊨ a_will A2);
+    [apply (entails_implies) with (A1:=(a_will (A1 ∨ A2) ∧ (¬ a_will A1)));
+     eauto with chainmail_db|].
+  a_prop; auto.
+Qed.
+
+Lemma will_disj_2 :
+  forall A1 A2, entails ((a_will A1) ∨ (a_will A2))
+                   (a_will (A1 ∨ A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  a_prop.
+  destruct H.
+  - inversion H; subst.
+    match goal with
+    | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+    end.
+    apply sat_will with (ϕ:=ϕ0)(ψ:=ψ0)(χ:=χ0)(σ':=σ')(σ'':=σ''); auto with chainmail_db.
+  - inversion H; subst.
+    match goal with
+    | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+    end.
+    apply sat_will with (ϕ:=ϕ0)(ψ:=ψ0)(χ:=χ0)(σ':=σ')(σ'':=σ''); auto with chainmail_db.
+Qed.
+
+Hint Resolve will_disj_1 will_disj_2 : chainmail_db.
+
+Lemma will_disj_equiv :
+  forall A1 A2, equiv_a ((a_will A1) ∨ (a_will A2))
+                   (a_will (A1 ∨ A2)).
+Proof.
+  intros; split; auto with chainmail_db.
+Qed.
+
+Hint Resolve will_disj_equiv : chainmail_db.
+
+Lemma prev_neg :
+  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ (¬ a_prev A) ->
+               (exists σ0 σ' σ'', initial σ0 ->
+                             M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                             M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                             σ ◁ σ' ≜ σ'' ->
+                             M1 ⦂ M2 ◎ σ'' ⊨ (¬ A)).
+Proof.
+  intros.
+Admitted.
+
+Lemma was_neg :
+  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ (¬ a_was A) ->
+               (exists σ0 σ' σ'', initial σ0 ->
+                             M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                             M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
+                             σ ◁ σ' ≜ σ'' ->
+                             M1 ⦂ M2 ◎ σ'' ⊨ (¬ A)).
+Proof.
+Admitted.
+
+Lemma prev_not_disj :
+  forall A1 A2, entails (a_prev (A1 ∨ A2) ∧ (a_prev (¬ A1)))
+                   (a_prev A2).
+Proof.
+  intros;
+    apply ent;
+    intros;
+    a_prop.
+
+  inversion H; subst.
+  apply sat_prev; intros.
+  specialize (H5 σ0 σ' σ'' H1 H2 H3 H4);
+    a_prop.
+  destruct H5; auto.
+  inversion H0; subst.
+  specialize (H10 σ0 σ' σ'' H1 H2 H3 H4);
+    a_prop.
+Qed.
+
+(*Lemma prev_disj_1 :
+  forall A1 A2, entails (a_prev (A1 ∨ A2))
+                   ((a_prev A1) ∨ (a_prev A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  destruct (sat_excluded_middle M1 M2 (χ, ϕ::ψ) (a_prev A1));
+    auto with chainmail_db.
+  inversion H; inversion H0; subst.
+  repeat match goal with
+         | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+         end.
+  apply pair_reduction_unique with (σ1:=σ'0) in H3; auto; subst.
+  a_prop.
+  destruct H8.
+
+  - left; eauto with chainmail_db.
+  - right; eauto with chainmail_db.
+
+Qed.*)
+
+Lemma prev_disj :
+  forall A1 A2, entails ((a_prev A1) ∨ (a_prev A2))
+                   (a_prev (A1 ∨ A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  a_prop.
+  destruct H.
+  - apply sat_prev; intros.
+    inversion H; subst.
+    specialize (H8 σ0 σ' σ'' H0 H1 H2 H3);
+      a_prop; auto.
+  - apply sat_prev; intros.
+    inversion H; subst.
+    specialize (H8 σ0 σ' σ'' H0 H1 H2 H3);
+      a_prop; auto.
+Qed.
+
+Hint Resolve prev_disj : chainmail_db.
+
+(*Lemma was_not_disj :
+  forall A1 A2, entails (a_was (A1 ∨ A2) ∧ (a_was (¬ A1)))
+                   (a_was A2).
+Proof.
+  intros;
+    apply ent;
+    intros.
+
+  a_prop.
+  apply sat_was;
+    intros.
+  inversion H; subst.
+  specialize (H6 σ0 H1).
+  destruct H6 as [σ'];
+    exists σ';
+    intros.
+  specialize (H2 H3 H4 σ'' H5);
+    a_prop.
+  destruct H2; auto.
+  inversion H0; subst.
+  specialize 
+Qed.
+
+Hint Resolve will_not_disj : chainmail_db.
+
+Lemma will_disj_1 :
+  forall A1 A2, entails (a_will (A1 ∨ A2))
+                   ((a_will A1) ∨ (a_will A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  destruct (sat_excluded_middle M1 M2 (χ, ϕ::ψ) (a_will A1));
+    auto with chainmail_db.
+  assert (Hasrt : M1 ⦂ M2 ◎ (χ, ϕ :: ψ) ⊨ a_will A2);
+    [apply (entails_implies (a_will (A1 ∨ A2) ∧ (¬ a_will A1)) (a_will A2));
+     eauto with chainmail_db|].
+  a_prop; auto.
+Qed.
+
+Lemma will_disj_2 :
+  forall A1 A2, entails ((a_will A1) ∨ (a_will A2))
+                   (a_will (A1 ∨ A2)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  a_prop.
+  destruct H.
+  - inversion H; subst.
+    match goal with
+    | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+    end.
+    apply sat_will with (ϕ:=ϕ0)(ψ:=ψ0)(χ:=χ0)(σ':=σ')(σ'':=σ''); auto with chainmail_db.
+  - inversion H; subst.
+    match goal with
+    | [H : (_, _) = (_, _)|- _] => inversion H; subst; clear H
+    end.
+    apply sat_will with (ϕ:=ϕ0)(ψ:=ψ0)(χ:=χ0)(σ':=σ')(σ'':=σ''); auto with chainmail_db.
+Qed.
+
+Hint Resolve will_disj_1 will_disj_2 : chainmail_db.
+
+Lemma will_disj_equiv :
+  forall A1 A2, equiv_a ((a_will A1) ∨ (a_will A2))
+                   (a_will (A1 ∨ A2)).
+Proof.
+  intros; split; auto with chainmail_db.
+Qed.
+
+Hint Resolve will_disj_equiv : chainmail_db.*)
+
+Lemma will_was_1 :
+  forall A, entails (a_will (a_was A))
+               ((a_was A) ∨ A ∨ (a_will A)).
+Proof.
+Admitted. (* is this even true? future is deterministic, past is non-deterministic *)
+
+Lemma will_was_2 :
+  forall A, entails ((a_was A) ∨ A ∨ (a_will A))
+               (a_will (a_was A)).
+Proof.
+Admitted.
+
+Lemma was_will :
+  forall A, entails (a_was (a_will A))
+               (a_will (a_was A)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  
+Admitted.
+
+Lemma exists_adaptation :
+  forall σ1 σ2, σ_wf σ1 ->
+           σ_wf σ2 ->
+           exists σ, σ1 ◁ σ2 ≜ σ.
+Proof.
+  
+Admitted.
+                
+
+Lemma was_change_pair_reduction :
+  forall M1 M2 σ' σ, M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
+                σ_wf σ' ->
+                forall A, M1 ⦂ M2 ◎ σ ⊨ A ->
+                     forall σ'', σ ◁ σ' ≜ σ'' ->
+                            M1 ⦂ M2 ◎ σ'' ⊨ (¬ A) ->
+                            (exists σ1 σ1' σ2 σ2', M1 ⦂ M2 ⦿ σ' ⤳⋆ σ1 /\
+                                              M1 ⦂ M2 ⦿ σ1 ⤳ σ2 /\
+                                              M1 ⦂ M2 ⦿ σ2 ⤳⋆ σ /\
+                                              σ ◁ σ1 ≜ σ1' /\
+                                              σ ◁ σ2 ≜ σ2' /\
+                                              M1 ⦂ M2 ◎ σ1' ⊨ (¬ A) /\
+                                              M1 ⦂ M2 ◎ σ2' ⊨ A) \/
+                            (exists σa σb, M1 ⦂ M2 ⦿ σa ⤳ σ /\
+                                      σ ◁ σa ≜ σb /\
+                                      M1 ⦂ M2 ◎ σb ⊨ (¬ A)) \/
+                            (exists σa σb, M1 ⦂ M2 ⦿ σ' ⤳ σa /\
+                                      M1 ⦂ M2 ⦿ σa ⤳⋆ σ /\
+                                      σ ◁ σa ≜ σb /\
+                                      M1 ⦂ M2 ◎ σb ⊨ A).
+Proof.
+  intros M1 M2 σ' σ Hred;
+    induction Hred;
+    intros.
+  - right;
+      left;
+      exists σ1, σ'';
+      repeat split;
+      auto.
+
+  - specialize (IHHred (pair_reduction_preserves_config_wf M1 M2 σ1 σ H H0) A H1).
+    let someσ := fresh "σ" in
+    destruct (exists_adaptation σ2 σ) as [someσ];
+      auto.
+    + eapply pair_reductions_preserves_config_wf; eauto with loo_db.
+    + eapply pair_reduction_preserves_config_wf; eauto with loo_db.
+    + destruct (sat_excluded_middle M1 M2 σ0 A).
+      * right; right.
+        eexists; eauto with loo_db.
+      * apply sat_not in H5.
+        specialize (IHHred σ0 H4 H5).
+        destruct IHHred as [IH|IH];
+          [|destruct IH as [IH|IH]].
+        ** let someσ1 := fresh "σ" in
+           let someσ2 := fresh "σ" in
+           let someσ3 := fresh "σ" in
+           let someσ4 := fresh "σ" in
+           destruct IH as [someσ1 Htmp];
+             destruct Htmp as [someσ2 Htmp];
+             destruct Htmp as [someσ3 Htmp];
+             destruct Htmp as [someσ4];
+             andDestruct;
+             left;
+             exists someσ1, someσ2, someσ3, someσ4;
+             repeat split; eauto with loo_db.
+        ** eauto with loo_db.
+        ** let someσ1 := fresh "σ" in
+           let someσ2 := fresh "σ" in
+           destruct IH as [someσ1 Htmp];
+             destruct Htmp as [someσ2 Htmp];
+             andDestruct;
+             left;
+             exists σ, σ0, someσ1, someσ2;
+             repeat split; eauto with loo_db.
+Qed.
+
+Lemma interpret_update :
+  forall x σ y v v', ⌊ x ⌋ (update_σ_map σ y v) ≜ v' ->
+                x <> y ->
+                ⌊ x ⌋ σ ≜ v'.
+Proof.
+  intros.
+  inversion H; subst.
+  destruct σ as [χ ψ'];
+    destruct ψ' as [|ϕ0 ψ0];
+    match goal with
+    | [H : _ = _ :: _ |- _] =>
+      inversion H; subst
+    end;
+    simpl in *;
+    subst.
+  unfold update, t_update in H2.
+  eq_auto.
+  eapply int_x;
+    simpl;
+    eauto with loo_db.
+Qed.
+
+Hint Resolve interpret_update : loo_db.
+
+Lemma class_of_update :
+  forall x σ y v C, classOf x (update_σ_map σ y v) C ->
+               x <> y ->
+               classOf x σ C.
+Proof.
+  intros.
+  inversion H; subst.
+  apply interpret_update in H1;
+    auto.
+  eapply cls_of;
+    eauto.
+Qed.
+
+Hint Resolve class_of_update : loo_db.
+
+Lemma interpret_update_vMap :
+  forall x χ ϕ ψ v, ⌊ x ⌋ (χ, ϕ::ψ) ≜ v ->
+               forall ϕ' y v', vMap ϕ = update y v' (vMap ϕ') ->
+                         x <> y ->
+                         ⌊ x ⌋ (χ, ϕ'::ψ) ≜ v.
+Proof.
+  intros.
+  inversion H; subst.
+  simpl in *;
+    match goal with
+    | [H : _ = _ :: _ |- _] =>
+      inversion H; subst
+    end;
+    simpl in *;
+    subst.
+  unfold update, t_update in H0.
+  apply equal_f with (x0:=x) in H0.
+  eq_auto.
+  eapply int_x;
+    simpl;
+    crush.
+Qed.
+
+Hint Resolve interpret_update_vMap : loo_db.
+
+Lemma class_of_update_vMap :
+  forall x χ ϕ ψ C, classOf x (χ, ϕ::ψ) C ->
+               forall ϕ' y v, vMap ϕ = update y v (vMap ϕ') ->
+                         x <> y ->
+                         classOf x (χ, ϕ'::ψ) C.
+Proof.
+  intros.
+  inversion H; subst.
+  apply interpret_update_vMap with (ϕ':=ϕ')(y:=y)(v':=v) in H2;
+    auto.
+  eapply cls_of;
+    eauto.
+Qed.
+
+Hint Resolve class_of_update_vMap : loo_db.
+
+Lemma class_of_unique :
+  forall x σ C C', classOf x σ C ->
+              classOf x σ C' ->
+              C' = C.
+Proof.
+  intros.
+  inversion H; subst.
+  inversion H0; subst.
+  interpretation_rewrite.
+  match goal with
+  | [H : v_addr ?α1 = v_addr ?α2,
+         Ha : ?f ?α1 = Some ?o1,
+         Hb : ?f ?α2 = Some ?o2 |- _] =>
+    inversion H;
+      subst;
+      rewrite Ha in Hb;
+      inversion Hb;
+      subst
+  end;
+    auto.
+Qed.
+
+Hint Resolve class_of_unique : loo_db.
+
+Lemma interpretation_same_variable_map :
+  forall x σ v, ⌊ x ⌋ σ ≜ v ->
+           forall χ ϕ ψ χ' ϕ' ψ',
+             σ = (χ, ϕ::ψ) ->
+             vMap ϕ' = vMap ϕ ->
+             ⌊ x ⌋ (χ', ϕ'::ψ') ≜ v.
+Proof.
+  intros;
+    subst.
+
+  inversion H; subst;
+    simpl in *.
+  match goal with
+  | [H : _::_ = _::_ |- _] =>
+    inversion H; subst
+  end.
+  eapply int_x;
+    simpl;
+    eauto with loo_db.
+  crush.
+Qed.
+
+Hint Resolve interpretation_same_variable_map : loo_db.
+Hint Rewrite interpretation_same_variable_map : loo_db.
+
+Lemma class_of_same_variable_map :
+  forall x σ C, classOf x σ C ->
+           forall χ ϕ ψ ϕ' ψ',
+             σ = (χ, ϕ::ψ) ->
+             vMap ϕ' = vMap ϕ ->
+             classOf x (χ, ϕ'::ψ') C.
+Proof.
+  intros;
+    subst.
+  inversion H; subst.
+  eapply cls_of;
+    eauto with loo_db.
+Qed.
+
+Hint Resolve interpretation_same_variable_map : loo_db.
+Hint Rewrite interpretation_same_variable_map : loo_db.
+
+Lemma interpret_x_update_heap_fresh :
+  forall x α vα χ ψ v, ⌊ x ⌋ (χ, ψ) ≜ v ->
+                  forall v', ⌊ x ⌋ (update α vα χ, ψ) ≜ v' ->
+                        fresh_χ χ α ->
+                        v' = v.
+Proof.
+  intros.
+  inversion H;
+    subst.
+  inversion H0;
+    subst.
+  simpl in *; subst.
+  crush.
+Qed.
+
+Hint Resolve interpret_x_update_heap_fresh : loo_db.
+Hint Rewrite interpret_x_update_heap_fresh : loo_db.
+
+Lemma class_of_update_heap_fresh :
+  forall x α v χ ψ C, classOf x (χ, ψ) C ->
+                 forall C', classOf x (update α v χ, ψ) C' ->
+                       fresh_χ χ α ->
+                       C' = C.
+Proof.
+  intros.
+  inversion H;
+    subst.
+  inversion H0;
+    subst.
+  simpl in *.
+  match goal with
+  | [Ha : ⌊ ?x ⌋ (?χ, ?ψ) ≜ ?v1,
+          Hb : ⌊ ?x ⌋ (?χ', ?ψ) ≜ ?v2 |- _] =>
+    eapply interpret_x_update_heap_fresh in Ha;
+      eauto;
+      inversion Ha;
+      subst
+  end.
+  destruct (eq_dec α α0);
+    subst;
+    repeat map_rewrite;
+    eq_auto.
+  - apply fresh_heap_none in H1; crush.
+  - crush.
+Qed.
+
+Hint Resolve class_of_update_heap_fresh : loo_db.
+Hint Rewrite class_of_update_heap_fresh : loo_db.
+
+Lemma class_of_update_same_cname :
+  forall x σ C, classOf x σ C ->
+           forall χ ψ, σ = (χ, ψ) ->
+                  forall α o o', χ α = Some o ->
+                            cname o' = cname o ->
+                            forall C', classOf x (update α o' χ, ψ) C' ->
+                                  C' = C.
+Proof.
+
+  Admitted.
+
+Lemma reduction_different_classes_implies_method_call_or_rtrn :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             forall C1 C2, classOf this σ1 C1 ->
+                      classOf this σ2 C2 ->
+                      C1 <> C2 ->
+                      (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
+                                                contn ϕ1 = (c_stmt (s_stmts (s_meth x0 y0 m ps) s))) \/
+                      (exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
+                                      contn ϕ1 = (c_stmt (s_rtrn x0))) \/
+                      (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
+                                        contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    try solve [left; repeat eexists; eauto with loo_db];
+    try solve [right; left; repeat eexists; eauto with loo_db];
+    try solve [right; right; repeat eexists; eauto with loo_db].
+
+  - subst.
+    match goal with
+    | [H : classOf ?x (update_σ_map _ ?y _) _,
+       Hneq : ?y <> ?x |- _] =>
+      apply class_of_update in H;
+        auto
+    end.
+    match goal with
+    |[C1 : cls, C2 : cls, H : C1 <> C2 |- _] =>
+     contradiction H; subst
+    end.
+    eauto with loo_db.
+
+  -  match goal with
+     |[C1 : cls, C2 : cls, H : C1 <> C2 |- _] =>
+      contradiction H; subst
+     end.
+     eapply class_of_same_variable_map with (ϕ':=ϕ)(ψ':=ψ) in H12; eauto.
+     eapply class_of_update_same_cname in H12; eauto.
+
+  - match goal with
+    |[C1 : cls, C2 : cls, H : C1 <> C2 |- _] =>
+     contradiction H; subst
+    end.
+    apply (class_of_update_vMap this) with (ϕ':=ϕ)(y:=x)(v:=v_addr α) in H10;
+      auto.
+    apply class_of_update_heap_fresh with (C:=C1) in H10; eauto.
+  
+Qed.
+
+Lemma wf_config_this_has_class :
+  forall σ, σ_wf σ ->
+       exists C, classOf this σ C.
+Proof.
+  intros.
+  inversion H; subst.
+  inversion H0; subst.
+  destruct H2 as [ϕ Htmp];
+    destruct Htmp as [ψ'];
+    simpl in *;
+    andDestruct;
+    subst.
+  specialize (H4 ϕ (in_eq ϕ ψ')).
+  inversion H4; subst.
+  destruct H2 as [α Htmp];
+    destruct Htmp as [o];
+    andDestruct.
+  exists (cname o).
+  eapply cls_of; eauto.
+  eapply int_x; simpl; eauto.
+Qed.
+
+Lemma reductions_implies_method_call_or_rtrn :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                 σ_wf σ1 ->
+                 (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
+                                           contn ϕ1 = (c_stmt (s_stmts (s_meth x0 y0 m ps) s))) \/
+                 (exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
+                                 contn ϕ1 = (c_stmt (s_rtrn x0))) \/
+                 (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
+                                   contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
+Proof.
+  intros.
+  induction H; subst; auto.
+
+  destruct (wf_config_this_has_class σ H0) as [C].
+  assert (Hwf : σ_wf σ');
+    [eapply reduction_preserves_config_wf; eauto|].
+  destruct (wf_config_this_has_class σ' Hwf) as [C'].
+  repeat match goal with
+         | [Ha : forall _ : cls, classOf this ?σ _ -> _,
+              Hb : classOf this ?σ ?C |- _] =>
+           specialize (Ha C Hb)
+         end.
+  eapply reduction_different_classes_implies_method_call_or_rtrn; eauto.
+  intro Hcontra;
+    subst;
+    crush.
+Qed.
+
+Lemma pair_reduction_change_access_implies_method_call :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 σ_wf σ1 ->
+                 forall x y, M1 ⦂ M2 ◎ σ2 ⊨ (x access y) ->
+                        forall σ1', σ2 ◁ σ1 ≜ σ1' ->
+                               M1 ⦂ M2 ◎ σ1' ⊨ (¬ (x access y)) ->
+                               (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
+                                                         contn ϕ1 = (c_stmt (s_stmts (s_meth x0 y0 m ps) s))) \/
+                               (exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
+                                               contn ϕ1 = (c_stmt (s_rtrn x0))) \/
+                               (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
+                                                 contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
+Proof.
+  intros.
+  induction H;
+    subst.
+  eapply reductions_implies_method_call_or_rtrn; eauto.
+Qed.
+
+Lemma was_change :
+  (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
+                M1 ⦂ M2 ◎ σ ⊨ (a_was (¬ A)) ->
+                M1 ⦂ M2 ◎ σ ⊨ (a_was (¬ A ∧ (a_next A)))) /\
+  (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
+                M1 ⦂ M2 ◎ σ ⊭ (a_was (¬ A)) ->
+                M1 ⦂ M2 ◎ σ ⊭ (a_was (¬ A ∧ (a_next A)))).
+Proof.
+Admitted.
+
+Lemma was_conjunction :
+  forall A1 A2, entails (a_was (A1 ∧ A2))
+                   ((a_was A1) ∧ (a_was A2)).
+Proof.
+  intros.
+  apply ent;
+    intros;
+    repeat (a_prop).
+
+  - match goal with
+    | [H : _ ⦂ _ ◎ _ ⊨ (a_was (_ ∧ _)) |- _] =>
+      inversion H; subst
+    end.
+    apply sat_was;
+      intros.
+    match goal with
+    | [ Ha : initial ?σ0,
+             Hb : forall σ, initial σ -> exists _ : config, _ |- exists _ : config, _ ] =>
+      specialize (Hb σ0 Ha);
+        let someσ := fresh "σ" in
+        destruct Hb as [someσ];
+          exists someσ;
+          intros
+    end.
+    repeat auto_specialize.
+    match goal with
+    | [Ha : forall σ : config, ?σ1 ◁ ?σ2 ≜ σ -> _,
+         Hb : ?σ1 ◁ ?σ2 ≜ ?σ' |- _] =>
+      specialize (Ha σ' Hb)
+    end.
+    a_prop; auto.
+
+  - match goal with
+    | [H : _ ⦂ _ ◎ _ ⊨ (a_was (_ ∧ _)) |- _] =>
+      inversion H; subst
+    end.
+    apply sat_was;
+      intros.
+    match goal with
+    | [ Ha : initial ?σ0,
+             Hb : forall σ, initial σ -> exists _ : config, _ |- exists _ : config, _ ] =>
+      specialize (Hb σ0 Ha);
+        let someσ := fresh "σ" in
+        destruct Hb as [someσ];
+          exists someσ;
+          intros
+    end.
+    repeat auto_specialize.
+    match goal with
+    | [Ha : forall σ : config, ?σ1 ◁ ?σ2 ≜ σ -> _,
+         Hb : ?σ1 ◁ ?σ2 ≜ ?σ' |- _] =>
+      specialize (Ha σ' Hb)
+    end.
+    a_prop; auto.  
+Qed.
+
+Hint Resolve was_conjunction : chainmail_db.
+Hint Rewrite was_conjunction : chainmail_db.
+
+Notation "'a♢' n" := (a_hole n)(at level 40).
+Notation "'e♢' n" := (e_hole n)(at level 40).
+Notation "'a_' x" := (a_bind x)(at level 40).
+Notation "'e_' x" := (e_var x)(at level 40).
+Notation "e1 '⩦' e2" := (a_eq e1 e2)(at level 40).
+
+Definition guards (x y : a_var) : asrt :=
+  match x with
+  | a_ x' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e_ x'))))
+  | a♢ n => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  end.
+
+Module ExposeExample.
+
+  (** #<h3># Safe example: #</h3># *)
+  (** ---------------------------------------------------- *)
+  (** #<code># >MyModule = { #</code># *)
+  (** #<code># >  Inside = {} #</code># *)
+  (** #<code># >  Boundary = { #</code># *)
+  (** #<code># >    field inside : Inside #</code># *)
+  (** #<code># >    meth expose() = {return this.inside} #</code># *)
+  (** #<code># >  } #</code># *)
+  (** #<code># >} #</code># *)
+  (** --------------------------------------------------- *)
+  (** #<code># we want to prove: #</code># *)
+  (**  *)
+  (** #<code># >MyModule ⊨  #</code># *)
+  (** #<code># >(∀ b, b : Boundary, ∀ i, (b.inside = i ∧ (∀ x, x access i ⇒ x = b)) #</code># *)
+  (** #<code># >             ⇒ (∀ p, will⟨ p access i ⟩ #</code># *)
+  (** #<code># >               ⇒ (∃ o, will⟨ o calls b.expose() ⟩))) #</code># *)
+  (**  *)
+  (**  *)
+
+  (** Inside Definition  *)
+
+  Definition Inside := classID 6.
+
+  Definition InsideDef := clazz Inside
+                                nil
+                                empty
+                                empty.
+
+  (** Boundary Definition *)
+
+  Definition Boundary := classID 7.
+
+  Definition inside := fieldID 0.
+
+  Definition expose := methID 0.
+
+  Definition x := bnd 10.
+
+  Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this inside))
+                                   (s_rtrn x).
+
+  Definition BoundaryDef := clazz Boundary
+                                  (inside :: nil)
+                                  (update
+                                     expose (nil, exposeBody)
+                                     empty)
+                                  empty.
+
+  (** MyModule Definition *)
+
+  Definition MyModule := (update
+                            Boundary BoundaryDef
+                            (update
+                               Inside InsideDef
+                               empty)).
+
+  Theorem expose_example :
+    MyModule ⊨m (∀x∙∀x∙(((a_class (e♢1) Boundary)
+                         ∧
+                         ((e_acc_f (e♢1) inside) ⩦ (e♢0)))
+                        ∧
+                        ((guards (a♢1) (a♢0))
+                         ∧
+                         (a_will(¬ guards (a♢1) (a♢0))))
+                          ⇒
+                          ((∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩)) ∨
+                           a_will(∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩))))).
+  Proof.
+    unfold mdl_sat;
+      intros.
+    repeat (a_intros; a_prop).
+
+  Qed.
+
+End ExposeExample.
+
+Module SafeExample.
+
+  (** #<h3># Safe example: #</h3># *)
+  (** ---------------------------------------------------- *)
+  (** #<code># >MyModule = { #</code># *)
+  (** #<code># >  Inside = {} #</code># *)
+  (** #<code># >  Boundary = { #</code># *)
+  (** #<code># >    field inside : Inside #</code># *)
+  (** #<code># >    meth expose() = {return this.inside} #</code># *)
+  (** #<code># >  } #</code># *)
+  (** #<code># >} #</code># *)
+  (** --------------------------------------------------- *)
+  (** #<code># we want to prove: #</code># *)
+  (**  *)
+  (** #<code># >MyModule ⊨  #</code># *)
+  (** #<code># >(∀ b, b : Boundary, ∀ i, (b.inside = i ∧ (∀ x, x access i ⇒ x = b)) #</code># *)
+  (** #<code># >             ⇒ (∀ p, will⟨ p access i ⟩ #</code># *)
+  (** #<code># >               ⇒ (∃ o, will⟨ o calls b.expose() ⟩))) #</code># *)
+  (**  *)
+  (**  *)
+
+  (** Treasure Definition  *)
+
+  Definition Treasure := classID 6.
+
+  Definition TreasureDef := clazz Treasure
+                                  nil
+                                  empty
+                                  empty.
+
+  (** Safe Definition *)
+
+  Definition Safe := classID 7.
+
+  Definition treasure := fieldID 0.
+
+  Definition open := methID 0.
+
+  Definition x := bnd 10.
+
+  Definition openBody := s_stmts (s_asgn (r_var x) (r_fld this treasure))
+                                 (s_rtrn x).
+
+  Definition SafeDef := clazz Safe
+                              (treasure :: nil)
+                              (update
+                                 open (nil, openBody)
+                                 empty)
+                              empty.
+
+  (** Client Definition *)
+
+  Definition Client := classID 8.
+
+  Definition safe := fieldID 1.
+
+  Definition open_safe := methID 1.
+
+  Definition y := bnd 11.
+
+  Definition openSafeBody := s_stmts (s_asgn (r_var y) (r_fld this safe))
+                                     (s_stmts (s_meth y y open empty)
+                                              (s_rtrn y)).
+
+  Definition ClientDef := clazz Client
+                                (safe :: nil)
+                                (update open_safe (nil, openSafeBody)
+                                        empty)
+                                empty.
+
+  (** MyModule Definition *)
+
+  Definition MyModule := (update Client ClientDef
+                                 (update
+                                    Safe SafeDef
+                                    (update
+                                       Treasure TreasureDef
+                                       empty))).  
+
+  Lemma safe_example_will_was_abort :
+    MyModule ⊨m (∀x∙∀x∙∀x∙((a_class (e♢ 2) Client) ∧
+                           (a_class (e♢ 1) Safe) ∧
+                           ((e_acc_f (e♢ 1) treasure) ⩦ e♢ 0) ∧
+                           ((e_acc_f (e♢ 2) safe) ⩦ e♢ 1) ∧
+                           (guards (a♢ 2) (a♢ 1)) ∧
+                           (guards (a♢ 1) (a♢ 0))
+                             ⇒
+                             (a_will ((guards (a♢ 1) (a♢ 0)) ∨
+                                    (a_was ((a♢ 2) calls (a♢ 1) ∎ open ⟨ empty ⟩)))))).
+  Proof.
+    unfold mdl_sat; intros.
+    a_intros; sbst_simpl; simpl in *.
+    a_contra.
+    eapply will_neg in H8.
+  Abort.
+
+  Lemma safe_may_not_be_exposed :
+    MyModule ⊨m (∀x∙∀x∙(a_was ((a_class (e♢ 1) Client) ∧
+                               (a_class (e♢ 0) Safe) ∧
+                               ((e_acc_f (e♢ 1) safe) ⩦ e♢ 0) ∧
+                               (guards (a♢ 1) (a♢ 0)))
+                              ⇒
+                              (guards (a♢ 1) (a♢ 0)))).
+  Proof.
+    unfold mdl_sat;
+      intros;
+      repeat (a_intros; sbst_simpl; a_prop);
+      simpl in *.
+    a_contra.
+    destruct σ as [χ ψ']; simpl in *.
+    destruct H0 as [ϕ Htmp];
+      destruct Htmp as [ψ];
+      subst.
+    unfold update_σ_map in *;
+      simpl in *.
+    eapply (entails_implies) in H6;
+      [|apply not_all_x_ex_not_1].
+    SearchAbout a_will.
+    Print reduction.
+  Admitted.
+  
+
+  Lemma safe_example_was :
+    MyModule ⊨m (∀x∙∀x∙∀x∙(a_was ((a_class (e♢ 2) Client) ∧
+                                  (a_class (e♢ 1) Safe) ∧
+                                  ((e_acc_f (e♢ 1) treasure) ⩦ e♢ 0) ∧
+                                  ((e_acc_f (e♢ 2) safe) ⩦ e♢ 1) ∧
+                                  (guards (a♢ 2) (a♢ 1)) ∧
+                                  (guards (a♢ 1) (a♢ 0))) ∧
+                           (¬ guards (a♢ 1) (a♢ 0))
+                             ⇒
+                             (a_was ((a♢ 2) calls (a♢ 1) ∎ open ⟨ empty ⟩)))).
+  Proof.
+    unfold mdl_sat;
+      intros;
+      repeat (a_intros; sbst_simpl; a_prop);
+      simpl in *.
+    
+    
+    
+  Qed.
+
+  Lemma safe_example_will :
+    MyModule ⊨m (∀x∙∀x∙∀x∙((a_class (e♢ 2) Client) ∧
+                           (a_class (e♢ 1) Safe) ∧
+                           ((e_acc_f (e♢ 1) treasure) ⩦ e♢ 0) ∧
+                           ((e_acc_f (e♢ 2) safe) ⩦ e♢ 1) ∧
+                           (guards (a♢ 2) (a♢ 1)) ∧
+                           (guards (a♢ 1) (a♢ 0)) ∧
+                           (a_will (¬ guards (a♢ 1) (a♢ 0)))
+                             ⇒
+                             (((a♢ 2) calls (a♢ 1) ∎ open ⟨ empty ⟩) ∨
+                              (a_will ((a♢ 2) calls (a♢ 1) ∎ open ⟨ empty ⟩))))).
+  Proof.
+    unfold mdl_sat; intros.
+    repeat (a_prop; a_intros; sbst_simpl; simpl in *).
+    a_contra.
+    eapply will_neg in H8.
+  Qed.
+
+
+End SafeExample.
+
+Lemma asdfasdf :
+  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A.
+Proof.
+  intros; a_contra.
+    
+  intros.
+  destruct (config_wf_decompose σ H);
+    repeat destruct_exists; subst.
+  eapply sat_next with (χ:=x)(ϕ:=x0)(ψ:=x1); auto.
 Qed.
 
 Print asrt.
@@ -4763,3 +5686,30 @@ Ltac cnf_auto :=
 
   | [|- context[_ ⇒ _]] => rewrite arr_cnf_1
   end.
+
+(** <h2>Thoughts on access, expose, temporal operators:</h2> *)
+
+(**
+The non-determinism of both was and will means that
+will(was _) and was(will _) have no relation to 
+the current configuration. In the original version 
+of the expose example, we used *)
+(**will((_ access _) ⇒ was (_)). *)
+(**
+This does not mean what we expect it to mean, because
+the "was" does not only refer to the reduction from the 
+current configuration to the future moment in time 
+where the data was exposed, rather it refers to all 
+possible reductions that lead up to the future point in 
+time. What we really intend to say is "if in some future
+point in time, the private data is aliased, then 
+at some point in time between the current moment and that 
+future moment, the expose method must have been called".
+ *)
+(**
+In the current model, only was is non-deterministic, 
+will is deterministic. As such was(will _) does in fact
+mean what we initially meant it to mean, however, 
+ideally we would like to model non-determinism of reduction 
+to cover really world programs.
+ *)
