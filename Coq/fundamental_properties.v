@@ -2611,6 +2611,13 @@ Qed.
 
 Hint Resolve reduction_unique : loo_db.
 
+Lemma pair_reduction_unique :
+  forall M1 M2 σ σ1, M1 ⦂ M2 ⦿ σ ⤳ σ1 ->
+                forall σ2, M1 ⦂ M2 ⦿ σ ⤳ σ2 ->
+                      σ1 = σ2.
+Proof.
+Admitted.
+
 (*
 Lemma pair_reduction_unique :
   forall M1 M2 σ σ1, M1 ⦂ M2 ⦿ σ ⤳ σ1 ->
