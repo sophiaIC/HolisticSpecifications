@@ -973,11 +973,11 @@ nsat : mdl -> mdl -> config -> asrt -> Prop :=
                                         M1 ⦂ M2 ◎ σ'' ⊭ A ->
                                         M1 ⦂ M2 ◎ σ ⊭ (a_next A)
 
-| nsat_will : forall M1 M2 σ A ϕ ψ χ σ' σ'', σ = (χ, ϕ :: ψ) ->
-                                        (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') ->
-                                        (σ ◁ σ' ≜ σ'') ->
-                                        M1 ⦂ M2 ◎ σ'' ⊭ A ->
-                                        M1 ⦂ M2 ◎ σ ⊭ (a_will A)
+| nsat_will : forall M1 M2 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
+                                 (forall σ' σ'', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') ->
+                                            (σ ◁ σ' ≜ σ'') ->
+                                            M1 ⦂ M2 ◎ σ'' ⊭ A) ->
+                                 M1 ⦂ M2 ◎ σ ⊭ (a_will A)
 
 | nsat_prev : forall M1 M2 σ A σ0 σ' σ'', initial σ0 ->
                                      M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
