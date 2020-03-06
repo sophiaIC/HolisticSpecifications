@@ -1958,13 +1958,6 @@ Proof.
   
 Qed.*)
 
-Lemma pair_reduction_unique :
-  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                 forall σ2', M1 ⦂ M2 ⦿ σ1 ⤳ σ2' ->
-                        σ2 = σ2'.
-Proof.
-Admitted.
-
 Ltac equiv_pair_reduction_auto :=
   match goal with
   | [Hred : ?M1 ⦂ ?M2 ⦿ ?σa ⤳ ?σb,
