@@ -800,10 +800,11 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
                           M1 ⦂ M2 ◎ σ ⊨ (a_prev A)
 
 | sat_was : forall M1 M2 σ A, (forall σ0, initial σ0 ->
-                                exists σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                                      M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
-                                      forall σ'', σ ◁ σ' ≜ σ'' ->
-                                             M1 ⦂ M2 ◎ σ'' ⊨ A) ->
+                                M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ ->
+                                exists σ' σ'', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' /\
+                                          M1 ⦂ M2 ⦿ σ' ⤳⋆ σ /\
+                                          σ ◁ σ' ≜ σ'' /\
+                                          M1 ⦂ M2 ◎ σ'' ⊨ A) ->
                          M1 ⦂ M2 ◎ σ ⊨ (a_was A)
 
 where "M1 '⦂' M2 '◎' σ '⊨' A" := (sat M1 M2 σ A)
