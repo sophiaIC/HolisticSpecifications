@@ -293,7 +293,7 @@ Proof.
   inversion H;
     subst.
   - eexists; eauto.
-  - repeat destruct_exists;
+  - repeat destruct_exists_loo;
       andDestruct;
       eauto with chainmail_db.
 Qed.
@@ -735,7 +735,7 @@ Proof.
   intros.
   inversion H;
     subst;
-    repeat destruct_exists;
+    repeat destruct_exists_loo;
     andDestruct;
     subst;
     eauto.
@@ -751,7 +751,7 @@ Lemma fresh_not_σ_2 :
 Proof.
   intros.
   unfold fresh_x_σ in *;
-    repeat destruct_exists;
+    repeat destruct_exists_loo;
     andDestruct;
     subst.
   eexists.
@@ -1375,14 +1375,14 @@ Proof.
   repeat (a_intros; a_prop).
 
   - apply ex_x_prop in H;
-      repeat destruct_exists;
+      repeat destruct_exists_loo;
       andDestruct;
       repeat sbst_simpl;
       repeat (a_intros; a_prop). (* x1 is fresh in A, and subst/raise with weakening gives the desired result *)
     admit.
 
   - apply ex_x_prop in H;
-      repeat destruct_exists;
+      repeat destruct_exists_loo;
       andDestruct;
       repeat sbst_simpl;
       repeat (a_intros; a_prop).
@@ -1998,57 +1998,258 @@ Lemma was_change_pair_reduction :
                                               σ ◁ σ2 ≜ σ2' /\
                                               M1 ⦂ M2 ◎ σ1' ⊨ (¬ A) /\
                                               M1 ⦂ M2 ◎ σ2' ⊨ A) \/
-                            (exists σa σb, M1 ⦂ M2 ⦿ σa ⤳ σ /\
+                            (exists σa σb, M1 ⦂ M2 ⦿ σ' ⤳⋆ σa /\
+                                      M1 ⦂ M2 ⦿ σa ⤳ σ /\
                                       σ ◁ σa ≜ σb /\
                                       M1 ⦂ M2 ◎ σb ⊨ (¬ A)) \/
                             (exists σa σb, M1 ⦂ M2 ⦿ σ' ⤳ σa /\
                                       M1 ⦂ M2 ⦿ σa ⤳⋆ σ /\
                                       σ ◁ σa ≜ σb /\
-                                      M1 ⦂ M2 ◎ σb ⊨ A).
+                                      M1 ⦂ M2 ◎ σb ⊨ A) \/
+                            (M1 ⦂ M2 ⦿ σ' ⤳ σ).
 Proof.
   intros M1 M2 σ' σ Hred;
     induction Hred;
-    intros.
-  - right;
-      left;
-      exists σ1, σ'';
-      repeat split;
-      auto.
+    intros;
+    auto.
 
   - specialize (IHHred (pair_reduction_preserves_config_wf M1 M2 σ1 σ H H0) A H1).
     let someσ := fresh "σ" in
     destruct (exists_adaptation σ2 σ) as [someσ];
-      auto.
-    + eapply pair_reductions_preserves_config_wf; eauto with loo_db.
-    + eapply pair_reduction_preserves_config_wf; eauto with loo_db.
-    + destruct (sat_excluded_middle M1 M2 σ0 A).
-      * right; right.
-        eexists; eauto with loo_db.
-      * apply sat_not in H5.
-        specialize (IHHred σ0 H4 H5).
-        destruct IHHred as [IH|IH];
-          [|destruct IH as [IH|IH]].
-        ** let someσ1 := fresh "σ" in
-           let someσ2 := fresh "σ" in
-           let someσ3 := fresh "σ" in
-           let someσ4 := fresh "σ" in
-           destruct IH as [someσ1 Htmp];
-             destruct Htmp as [someσ2 Htmp];
-             destruct Htmp as [someσ3 Htmp];
-             destruct Htmp as [someσ4];
-             andDestruct;
-             left;
-             exists someσ1, someσ2, someσ3, someσ4;
-             repeat split; eauto with loo_db.
-        ** eauto with loo_db.
-        ** let someσ1 := fresh "σ" in
-           let someσ2 := fresh "σ" in
-           destruct IH as [someσ1 Htmp];
-             destruct Htmp as [someσ2 Htmp];
-             andDestruct;
-             left;
-             exists σ, σ0, someσ1, someσ2;
-             repeat split; eauto with loo_db.
+      eauto with loo_db.
+    destruct (sat_excluded_middle M1 M2 σ0 A).
+    + right; right; left.
+      eexists; eauto with loo_db.
+    + apply sat_not in H5.
+      specialize (IHHred σ0 H4 H5).
+      destruct IHHred as [IH|IH];
+        [|destruct IH as [IH|IH];
+          [|destruct IH as [IH|IH]]].
+      * let someσ1 := fresh "σ" in
+         let someσ2 := fresh "σ" in
+         let someσ3 := fresh "σ" in
+         let someσ4 := fresh "σ" in
+         destruct IH as [someσ1 Htmp];
+           destruct Htmp as [someσ2 Htmp];
+           destruct Htmp as [someσ3 Htmp];
+           destruct Htmp as [someσ4];
+           andDestruct;
+           left;
+           exists someσ1, someσ2, someσ3, someσ4;
+           repeat split; eauto with loo_db.
+      * let someσ1 := fresh "σ" in
+         let someσ2 := fresh "σ" in
+         destruct IH as [someσ1 Htmp];
+           destruct Htmp as [someσ2 Htmp];
+           andDestruct;
+           right;
+           left;
+           exists σ3, σ4;
+           repeat split; eauto with loo_db.
+      * let someσ1 := fresh "σ" in
+         let someσ2 := fresh "σ" in
+         destruct IH as [someσ1 Htmp];
+           destruct Htmp as [someσ2 Htmp];
+           andDestruct;
+           left;
+           exists σ, σ0, someσ1, someσ2;
+           repeat split; eauto with loo_db.
+      * right; left;
+          exists σ, σ0;
+          eauto with loo_db.
+Qed.
+
+Print pair_reductions.
+
+Inductive pair_reductions_alt : mdl -> mdl -> config -> config -> Prop :=
+| prs_single' : forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                               pair_reductions_alt M1 M2 σ1 σ2
+| prs_trans'  : forall M1 M2 σ1 σ σ2, pair_reductions_alt M1 M2 σ1 σ ->
+                                 M1 ⦂ M2 ⦿ σ ⤳ σ2 ->
+                                 pair_reductions_alt M1 M2 σ1 σ2.
+
+Hint Constructors pair_reductions_alt : loo_db.
+
+Lemma pair_reductions_alt_implies_pair_reductions :
+  forall M1 M2 σ1 σ2, pair_reductions_alt M1 M2 σ1 σ2 ->
+                 M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    eauto with loo_db.
+  apply pair_reductions_transitive with (σ2:=σ); auto with loo_db.
+Qed.
+
+Hint Resolve pair_reductions_alt_implies_pair_reductions : loo_db.
+Hint Rewrite pair_reductions_alt_implies_pair_reductions : loo_db.
+
+Lemma pair_reductions_alt_extend :
+  forall M1 M2 σ1 σ2, pair_reductions_alt M1 M2 σ1 σ2 ->
+                 forall σ, M1 ⦂ M2 ⦿ σ ⤳ σ1 ->
+                      pair_reductions_alt M1 M2 σ σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto with loo_db.
+Qed.
+
+Lemma pair_reductions_implies_pair_reductions_alt :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 pair_reductions_alt M1 M2 σ1 σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    eauto with loo_db.
+  apply pair_reductions_alt_extend with (σ1:=σ); auto with loo_db.
+Qed.
+
+Hint Resolve pair_reductions_implies_pair_reductions_alt : loo_db.
+Hint Rewrite pair_reductions_implies_pair_reductions_alt : loo_db.
+
+Lemma will_change_pair_reduction :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall σ, σ_wf σ ->
+                      σ_wf σ1 ->
+                      forall σ1' σ2', σ ◁ σ1 ≜ σ1' ->
+                                 σ ◁ σ2 ≜ σ2' ->
+                                 forall A, M1 ⦂ M2 ◎ σ1' ⊨ A ->
+                                      M1 ⦂ M2 ◎ σ2' ⊨ (¬ A) ->
+                                      (exists σa σb, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σa /\
+                                                σ ◁ σa ≜ σb /\
+                                                M1 ⦂ M2 ◎ σb ⊨ (¬ A) /\
+                                                (forall σa' σb', M1 ⦂ M2 ⦿ σ1 ⤳⋆ σa' /\
+                                                            M1 ⦂ M2 ⦿ σa' ⤳⋆ σa /\
+                                                            σ ◁ σa' ≜ σb' /\
+                                                            M1 ⦂ M2 ◎ σb' ⊨ A)) \/
+                                      (M1 ⦂ M2 ⦿ σ1 ⤳ σ2).
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto with loo_db.
+
+  - assert (Hwf : σ_wf σ);
+      [eauto with loo_db|].
+    let someσ := fresh "σ" in
+    let Hadapt := fresh "H" in
+    destruct (exists_adaptation σ0 σ) as [someσ Hadapt];
+      auto;
+      destruct (sat_excluded_middle M1 M2 σ3 A) as [Hsat|Hnsat];
+      specialize (IHHred σ0);
+      repeat auto_specialize;
+      specialize (IHHred someσ σ2');
+      repeat auto_specialize.
+
+    + specialize (IHHred A);
+        repeat auto_specialize.
+      destruct IHHred as [IH|IH].
+
+      * repeat destruct_exists_loo;
+          andDestruct.
+        left.
+        exists σ4, σ5;
+          repeat split;
+          eauto with loo_db;
+          specialize (Hb σa' σb');
+          andDestruct;
+          eauto with loo_db.
+
+      * left.
+        exists σ2, σ2';
+          repeat split;
+          eauto with loo_db.
+
+
+    + left; exists σ, σ3;
+        repeat split;
+        eauto with loo_db.
+      
+      
+    
+
+Qed.
+
+Lemma will_change_pair_reduction :
+  forall M1 M2 σ σ', pair_reductions_alt M1 M2 σ σ' ->
+                σ_wf σ ->
+                forall A, M1 ⦂ M2 ◎ σ ⊨ A ->
+                     forall σ'', σ ◁ σ' ≜ σ'' ->
+                            M1 ⦂ M2 ◎ σ'' ⊨ (¬ A) ->
+                            (forall σa' σb', pair_reductions_alt M1 M2 σ σa' /\
+                                        pair_reductions_alt M1 M2 σa' σ' /\
+                                        σ ◁ σa' ≜ σb' /\
+                                        M1 ⦂ M2 ◎ σb' ⊨ A) \/
+                            (exists σa σb, pair_reductions_alt M1 M2 σ σa /\
+                                      σ ◁ σa ≜ σb /\
+                                      M1 ⦂ M2 ◎ σb ⊨ (¬ A) /\
+                                      (forall σa' σb', pair_reductions_alt M1 M2 σ σa' /\
+                                                  pair_reductions_alt M1 M2 σa' σa /\
+                                                  σ ◁ σa' ≜ σb' /\
+                                                  M1 ⦂ M2 ◎ σb' ⊨ A)) \/
+                            (exists σa σb, M1 ⦂ M2 ⦿ σ ⤳ σa /\
+                                      σ ◁ σa ≜ σb /\
+                                      M1 ⦂ M2 ◎ σb ⊨ (¬ A)).
+Proof.
+  intros M1 M2 σ σ' Hred;
+    induction Hred;
+    intros.
+
+  - right; right; eauto with loo_db.
+
+  - let someσ := fresh "σ" in
+    let Hadapt := fresh "H" in
+    destruct (exists_adaptation σ1 σ) as [someσ Hadapt];
+      eauto with loo_db;
+      specialize (IHHred H0 A H1 someσ Hadapt).
+    destruct (sat_excluded_middle M1 M2 σ0 A).
+    + 
+
+      
+    (pair_reduction_preserves_config_wf M1 M2 σ1 σ H H0) A H1).
+    let someσ := fresh "σ" in
+    destruct (exists_adaptation σ2 σ) as [someσ];
+      eauto with loo_db.
+    destruct (sat_excluded_middle M1 M2 σ0 A).
+    + right; right; left.
+      eexists; eauto with loo_db.
+    + apply sat_not in H5.
+      specialize (IHHred σ0 H4 H5).
+      destruct IHHred as [IH|IH];
+        [|destruct IH as [IH|IH];
+          [|destruct IH as [IH|IH]]].
+      * let someσ1 := fresh "σ" in
+         let someσ2 := fresh "σ" in
+         let someσ3 := fresh "σ" in
+         let someσ4 := fresh "σ" in
+         destruct IH as [someσ1 Htmp];
+           destruct Htmp as [someσ2 Htmp];
+           destruct Htmp as [someσ3 Htmp];
+           destruct Htmp as [someσ4];
+           andDestruct;
+           left;
+           exists someσ1, someσ2, someσ3, someσ4;
+           repeat split; eauto with loo_db.
+      * let someσ1 := fresh "σ" in
+         let someσ2 := fresh "σ" in
+         destruct IH as [someσ1 Htmp];
+           destruct Htmp as [someσ2 Htmp];
+           andDestruct;
+           right;
+           left;
+           exists σ3, σ4;
+           repeat split; eauto with loo_db.
+      * let someσ1 := fresh "σ" in
+         let someσ2 := fresh "σ" in
+         destruct IH as [someσ1 Htmp];
+           destruct Htmp as [someσ2 Htmp];
+           andDestruct;
+           left;
+           exists σ, σ0, someσ1, someσ2;
+           repeat split; eauto with loo_db.
+      * right; left;
+          exists σ, σ0;
+          eauto with loo_db.
 Qed.
 
 Lemma interpret_update :
@@ -2356,18 +2557,15 @@ Proof.
     crush.
 Qed.
 
-Lemma pair_reduction_change_access_implies_method_call :
+Lemma pair_reduction_change_implies_method_call :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
                  σ_wf σ1 ->
-                 forall x y, M1 ⦂ M2 ◎ σ2 ⊨ (x access y) ->
-                        forall σ1', σ2 ◁ σ1 ≜ σ1' ->
-                               M1 ⦂ M2 ◎ σ1' ⊨ (¬ (x access y)) ->
-                               (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
-                                                         contn ϕ1 = (c_stmt (s_stmts (s_meth x0 y0 m ps) s))) \/
-                               (exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
-                                               contn ϕ1 = (c_stmt (s_rtrn x0))) \/
-                               (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
-                                                 contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
+                 (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
+                                           contn ϕ1 = (c_stmt (s_stmts (s_meth x0 y0 m ps) s))) \/
+                 (exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
+                                 contn ϕ1 = (c_stmt (s_rtrn x0))) \/
+                 (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
+                                   contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
 Proof.
   intros.
   induction H;
@@ -2402,20 +2600,20 @@ Proof.
       intros.
     match goal with
     | [ Ha : initial ?σ0,
-             Hb : forall σ, initial σ -> exists _ : config, _ |- exists _ : config, _ ] =>
-      specialize (Hb σ0 Ha);
-        let someσ := fresh "σ" in
-        destruct Hb as [someσ];
-          exists someσ;
+             Hb : ?M1 ⦂ ?M2 ⦿ ?σ0 ⤳⋆ ?σ',
+                  Hc : forall σ, initial σ ->
+                            ?M1 ⦂ ?M2 ⦿ σ ⤳⋆ ?σ' ->  _ |- exists _ : config, _ ] =>
+      specialize (Hc σ0 Ha Hb);
+        let someσ1 := fresh "σ" in
+        let someσ2 := fresh "σ" in
+        let Htmp := fresh in
+        destruct Hc as [someσ1 Htmp];
+          destruct Htmp as [someσ2];
+          exists someσ1, someσ2;
           intros
     end.
-    repeat auto_specialize.
-    match goal with
-    | [Ha : forall σ : config, ?σ1 ◁ ?σ2 ≜ σ -> _,
-         Hb : ?σ1 ◁ ?σ2 ≜ ?σ' |- _] =>
-      specialize (Ha σ' Hb)
-    end.
-    a_prop; auto.
+    andDestruct; a_prop.
+    repeat split; eauto with loo_db.
 
   - match goal with
     | [H : _ ⦂ _ ◎ _ ⊨ (a_was (_ ∧ _)) |- _] =>
@@ -2425,24 +2623,38 @@ Proof.
       intros.
     match goal with
     | [ Ha : initial ?σ0,
-             Hb : forall σ, initial σ -> exists _ : config, _ |- exists _ : config, _ ] =>
-      specialize (Hb σ0 Ha);
-        let someσ := fresh "σ" in
-        destruct Hb as [someσ];
-          exists someσ;
+             Hb : ?M1 ⦂ ?M2 ⦿ ?σ0 ⤳⋆ ?σ',
+                  Hc : forall σ, initial σ ->
+                            ?M1 ⦂ ?M2 ⦿ σ ⤳⋆ ?σ' ->  _ |- exists _ : config, _ ] =>
+      specialize (Hc σ0 Ha Hb);
+        let someσ1 := fresh "σ" in
+        let someσ2 := fresh "σ" in
+        let Htmp := fresh in
+        destruct Hc as [someσ1 Htmp];
+          destruct Htmp as [someσ2];
+          exists someσ1, someσ2;
           intros
     end.
-    repeat auto_specialize.
-    match goal with
-    | [Ha : forall σ : config, ?σ1 ◁ ?σ2 ≜ σ -> _,
-         Hb : ?σ1 ◁ ?σ2 ≜ ?σ' |- _] =>
-      specialize (Ha σ' Hb)
-    end.
-    a_prop; auto.  
+    andDestruct; a_prop.
+    repeat split; eauto with loo_db.
 Qed.
 
 Hint Resolve was_conjunction : chainmail_db.
 Hint Rewrite was_conjunction : chainmail_db.
+
+Lemma pair_reductions_trans :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall σ3, M1 ⦂ M2 ⦿ σ2 ⤳⋆ σ3 ->
+                       M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ3.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto with loo_db.
+Qed.
+
+Hint Resolve pair_reductions_trans : loo_db.
+Hint Rewrite pair_reductions_trans : loo_db.
 
 Notation "'a♢' n" := (a_hole n)(at level 40).
 Notation "'e♢' n" := (e_hole n)(at level 40).
@@ -2451,9 +2663,11 @@ Notation "'e_' x" := (e_var x)(at level 40).
 Notation "e1 '⩦' e2" := (a_eq e1 e2)(at level 40).
 
 Definition guards (x y : a_var) : asrt :=
-  match x with
-  | a_ x' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e_ x'))))
-  | a♢ n => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  match x, y with
+  | a_ x', a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e_ x'))))
+  | a_ x', a♢ n => (∀x∙((¬ ((a♢ 0) access (a♢ (S n)))) ∨ ((e♢ 0) ⩦ (e_ x'))))
+  | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
   end.
 
 Module ExposeExample.
@@ -2514,23 +2728,118 @@ Module ExposeExample.
                                Inside InsideDef
                                empty)).
 
-  Theorem expose_example :
+  Lemma MyModule_makes_no_external_calls :
+    forall M2 σ1 σ2, MyModule ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                σ_wf σ1 ->
+                forall σ1', σ2 ◁ σ1 ≜ σ1' ->
+                       (~ exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
+                                         contn ϕ1 = (c_stmt (s_rtrn x0))) /\
+                       (~ exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
+                                           contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
+  Proof.
+  Admitted.
+
+
+  Theorem expose_example_will :
     MyModule ⊨m (∀x∙∀x∙(((a_class (e♢1) Boundary)
                          ∧
-                         ((e_acc_f (e♢1) inside) ⩦ (e♢0)))
-                        ∧
-                        ((guards (a♢1) (a♢0))
+                         ((e_acc_f (e♢1) inside) ⩦ (e♢0))
                          ∧
-                         (a_will(¬ guards (a♢1) (a♢0))))
+                         ((guards (a♢1) (a♢0))))
+                        ∧
+                        (a_will (¬ guards (a♢1) (a♢0))))
+                  ⇒
+                  (a_will (∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩)) ∨
+                   ((a_ this) calls (a♢1) ∎ expose ⟨ empty ⟩))).
+  Proof.
+    unfold mdl_sat;
+      intros;
+      repeat (a_intros; a_prop);
+      simpl in *.
+
+    
+    
+  Qed.
+
+  (**
+     expose_example_was does not work, because there is no way to ensure that 
+     some frame in the stack below the identified frame in the past does not
+     have access to inside. Thus, access could be granted purely by returning 
+     from some method call. expose_example_will works because will restricts
+     the stack to just the top frame, thus removing the possibility of returning
+     to some lower frame.
+   *)
+
+  Theorem expose_example_was :
+    MyModule ⊨m (∀x∙∀x∙((a_was (((a_class (e♢1) Boundary)
+                                 ∧
+                                 ((e_acc_f (e♢1) inside) ⩦ (e♢0)))
+                                ∧
+                                ((guards (a♢1) (a♢0))))
+                         ∧
+                         (¬ guards (a♢1) (a♢0)))
                           ⇒
-                          ((∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩)) ∨
-                           a_will(∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩))))).
+                          a_was(∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩)))).
   Proof.
     unfold mdl_sat;
       intros.
     repeat (a_intros; a_prop).
+    simpl in *.    
 
-  Qed.
+    inversion H5; subst.
+    apply sat_was; intros.
+    specialize (H11 σ0);
+      repeat auto_specialize.
+    destruct H11 as [σ' Htmp];
+      destruct Htmp as [σ''];
+      andDestruct.
+    inversion Hb; subst.
+
+    assert (Hwf : σ_wf σ');
+      [eauto with loo_db|].
+
+    destruct (was_change_pair_reduction MyModule M')
+      with (σ:=(update_σ_map (update_σ_map σ z v) z0 v0))
+           (σ':=σ')(A:=¬ guards (a_ z) (a_ z0))(σ'':=σ'')
+      as [Hwas|Hwas];
+      auto;
+      [apply sat_not, nsat_not; auto| |destruct Hwas as [Hwas|Hwas]].
+
+    - destruct Hwas as [σ1 Htmp];
+        destruct Htmp as [σ1' Htmp];
+        destruct Htmp as [σ2 Htmp];
+        destruct Htmp as [σ2' Htmp];
+        andDestruct.
+      exists σ1, σ1';
+        repeat split; eauto with loo_db.
+      destruct (pair_reduction_change_implies_method_call MyModule M' σ1 σ2)
+        as [Hcont|Hcont];
+        eauto with loo_db;
+        [|destruct Hcont as [Hcont|Hcont]].
+      * destruct Hcont as [χ1 Hcont];
+          destruct Hcont as [ϕ1 Hcont];
+          destruct Hcont as [ψ1 Hcont];
+          destruct Hcont as [x' Hcont];
+          destruct Hcont as [y' Hcont];
+          destruct Hcont as [m Hcont];
+          destruct Hcont as [ps Hcont];
+          destruct Hcont as [s Hcont];
+          andDestruct;
+          subst.
+
+        admit.
+
+      * admit.
+
+      * admit.
+
+    - destruct Hwas as [σ1 Htmp];
+        destruct Htmp as [σ1' Htmp];
+        andDestruct.
+      exists σ1, σ1';
+        repeat split; eauto with loo_db.
+    
+  Abort.
 
 End ExposeExample.
 
@@ -2584,9 +2893,9 @@ Module SafeExample.
                                  empty)
                               empty.
 
-  (** Client Definition *)
+  (** Owner Definition *)
 
-  Definition Client := classID 8.
+  Definition Owner := classID 8.
 
   Definition safe := fieldID 1.
 
@@ -2598,7 +2907,7 @@ Module SafeExample.
                                      (s_stmts (s_meth y y open empty)
                                               (s_rtrn y)).
 
-  Definition ClientDef := clazz Client
+  Definition OwnerDef := clazz Owner
                                 (safe :: nil)
                                 (update open_safe (nil, openSafeBody)
                                         empty)
@@ -2606,7 +2915,7 @@ Module SafeExample.
 
   (** MyModule Definition *)
 
-  Definition MyModule := (update Client ClientDef
+  Definition MyModule := (update Owner OwnerDef
                                  (update
                                     Safe SafeDef
                                     (update
@@ -2614,7 +2923,7 @@ Module SafeExample.
                                        empty))).  
 
   Lemma safe_example_will_was_abort :
-    MyModule ⊨m (∀x∙∀x∙∀x∙((a_class (e♢ 2) Client) ∧
+    MyModule ⊨m (∀x∙∀x∙∀x∙((a_class (e♢ 2) Owner) ∧
                            (a_class (e♢ 1) Safe) ∧
                            ((e_acc_f (e♢ 1) treasure) ⩦ e♢ 0) ∧
                            ((e_acc_f (e♢ 2) safe) ⩦ e♢ 1) ∧
@@ -2631,7 +2940,7 @@ Module SafeExample.
   Abort.
 
   Lemma safe_may_not_be_exposed :
-    MyModule ⊨m (∀x∙∀x∙(a_was ((a_class (e♢ 1) Client) ∧
+    MyModule ⊨m (∀x∙∀x∙(a_was ((a_class (e♢ 1) Owner) ∧
                                (a_class (e♢ 0) Safe) ∧
                                ((e_acc_f (e♢ 1) safe) ⩦ e♢ 0) ∧
                                (guards (a♢ 1) (a♢ 0)))
@@ -2657,7 +2966,7 @@ Module SafeExample.
   
 
   Lemma safe_example_was :
-    MyModule ⊨m (∀x∙∀x∙∀x∙(a_was ((a_class (e♢ 2) Client) ∧
+    MyModule ⊨m (∀x∙∀x∙∀x∙(a_was ((a_class (e♢ 2) Owner) ∧
                                   (a_class (e♢ 1) Safe) ∧
                                   ((e_acc_f (e♢ 1) treasure) ⩦ e♢ 0) ∧
                                   ((e_acc_f (e♢ 2) safe) ⩦ e♢ 1) ∧
@@ -2677,7 +2986,7 @@ Module SafeExample.
   Qed.
 
   Lemma safe_example_will :
-    MyModule ⊨m (∀x∙∀x∙∀x∙((a_class (e♢ 2) Client) ∧
+    MyModule ⊨m (∀x∙∀x∙∀x∙((a_class (e♢ 2) Owner) ∧
                            (a_class (e♢ 1) Safe) ∧
                            ((e_acc_f (e♢ 1) treasure) ⩦ e♢ 0) ∧
                            ((e_acc_f (e♢ 2) safe) ⩦ e♢ 1) ∧
@@ -2704,7 +3013,7 @@ Proof.
     
   intros.
   destruct (config_wf_decompose σ H);
-    repeat destruct_exists; subst.
+    repeat destruct_exists_loo; subst.
   eapply sat_next with (χ:=x)(ϕ:=x0)(ψ:=x1); auto.
 Qed.
 

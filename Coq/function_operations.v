@@ -14,6 +14,32 @@ Ltac notHyp P :=
       end
   end.
 
+Ltac destruct_exists_loo :=
+  match goal with
+  | [H : exists _ : config, _ |- _] =>
+    let σ := fresh "σ" in
+    destruct H as [σ]
+  | [H : exists _ : frame, _ |- _] =>
+    let ϕ := fresh "ϕ" in
+    destruct H as [ϕ]
+  | [H : exists _ : stack, _ |- _] =>
+    let ψ := fresh "ψ" in
+    destruct H as [ψ]
+  | [H : exists _ : heap, _ |- _] =>
+    let χ := fresh "χ" in
+    destruct H as [χ]
+  | [H : exists _ : stmt, _ |- _] =>
+    let s := fresh "s" in
+    destruct H as [s]
+  | [H : exists _ : stmt, _ |- _] =>
+    let c := fresh "c" in
+    destruct H as [c]
+  | [H : exists _ : partial_map _ _, _ |- _] =>
+    let f := fresh "f" in
+    destruct H as [f]
+  | [H : exists _, _ |- _] => destruct H
+  end.
+
 Ltac destruct_exists :=
   match goal with
   | [H : exists _, _ |- _] => destruct H
@@ -251,7 +277,7 @@ Lemma not_some_implies_none :
 Proof.
   intros.
   destruct (partial_map_dec a f); auto.
-  destruct_exists.
+  destruct_exists_loo.
   crush.
 Qed.
 
@@ -306,7 +332,7 @@ Proof.
            Hmap : ?m ?a = None,
                   H : forall a', In a' ?d -> exists b, ?m a' = Some b |- _] =>
     apply H in Hin;
-      destruct_exists;
+      destruct_exists_loo;
       crush
   end.
 Qed.
@@ -411,7 +437,7 @@ Proof.
     auto.
   assert (exists b : B, empty a = Some b);
     [apply Ha0, in_eq|].
-  destruct_exists.
+  destruct_exists_loo.
   repeat map_rewrite; crush.
 Qed.
 
@@ -592,9 +618,9 @@ Lemma one_to_one_f_nequal :
 Proof.
   intros A B H f H1t1 a1 a2 Hneq Hex Hcontra.
   destruct (partial_map_dec a1 f) as [Hsome1|Hnone1];
-    [destruct_exists|].
+    [destruct_exists_loo|].
   - destruct (partial_map_dec a2 f) as [Hsome2|Hnone2];
-      [destruct_exists|crush].
+      [destruct_exists_loo|crush].
     + rewrite Hcontra in H0;
         rewrite H0 in H1;
         inversion H1;
