@@ -356,7 +356,7 @@ I think that there should be some "generic" reasoning steps which allow us to tr
 
 
 
-\section{Proof that \prg{Safe} satisfies  (HolSpec)}
+\section{Proving that \prg{Safe} satisfies  (HolSpec) -- configurations implicit}
 
 
 \begin{theorem}
@@ -416,7 +416,7 @@ Take \prg{o1}, so that\\
 \begin{tabular}{ll}
 (6) & $\Future{     \External{o1} \ \wedge \ {\CanAccess {o1} {\prg{s.secret}}} }  $ \\
 & \hspace{1.5in} from (5), such an  \prg{o1} exists\\
-(6) & $\exists \prg{p}. [ \ \prg{s.secret } = \prg{p}\ \wedge \ \Future{     \External{o1} \ \wedge \ {\CanAccess {o1} {\prg{p}}} }  \ ]$\\
+(6) & $\exists \prg{p}. [ \ \prg{s.secret } = \prg{p}\ \wedge \ \Future{     \External{o1} \ \wedge \ {\CanAccess {o1} {\prg{p}}}}  \ ]$\\
 & \hspace{1.5in} by Lemma \ref{lemma:secret}, and some more thinking needed, but this should be OK
 
 \end{tabular}
@@ -441,69 +441,45 @@ Then, we will use lemma \ref{lemma:access}, and the fact that only externals can
 This is the more straightforward version of the same proof.
 Take an arbitrary module $\M$, and an arbitrary  $\sigma$ arising from ...
 \begin{proof}
+~ ~
  
 \begin{tabular}{ll}
 (1) & $ \M\mkpair \M_{s1} \sigma \models \prg{s}:\prg{Safe} \wedge \Future{ \Changes{\prg{s.treasure}}}  $ \\
 &  \hspace{1.5in}  (Assume) 
 \\
-(2) & $  \\M\mkpair\M_{s1} , \sigma \models prg{s}:\prg{Safe} \wedge  \Future{ \Changes{\prg{s.treasure}} \ \wedge \exists \prg{o}.\exists \prg{m} .\exists \prg{args}.
+(2) & $ \M\mkpair\M_{s1} , \sigma \models \prg{s}:\prg{Safe} \wedge  \Future{ \Changes{\prg{s.treasure}} \ \wedge $\\
+& \strut \hspace{2.5in}   $\exists \prg{o}.\exists \prg{m} .\exists \prg{args}.
 [\, {\Calls {\prg{o}}   {\prg{m}} {\prg{s}}  {\prg{args}} }\, ]\ \ }$\\
 &     \hspace{1.5in}  where \prg{m} a method in the class of \prg{s} \\
-& \hspace{1.5in}  by (1) and Lemma \ref{lemma:change}
+& \hspace{1.5in}  by (1) and Lemma \ref{lemma:changes}
 \\
 (3) & $  \M\mkpair \M_{s1} , \sigma \models \prg{s}:\prg{Safe} \wedge  \Future{ \Changes{\prg{s.treasure}} \ \wedge \exists \prg{o}.\exists \prg{p}.
 [\, {\Calls {\prg{o}}   {\prg{take}} {\prg{s}}  {\prg{p}} }\, ]\ \ }$\\
 &   \hspace{1.5in}  by code of $\M_{s1}$
 \\
-(4) & \exists \sigma'[\ \M\mkpair \M_{s1}, \sigma \leadsto^* \sigma' \ \wedge  M\mkpair \M_{s1}, \sigma' \models 
+(4) &  $\M\mkpair \M_{s1}, \sigma \leadsto^* \sigma' \ \wedge$\\
+& $ \M\mkpair \M_{s1}, \sigma\triangleleft \sigma' \models  \exists \prg{o}.[
+\ \Changes{\prg{s.treasure}} \ \wedge \    \External{o} \ \wedge \ {\CanAccess {o} {\prg{s.secret}}}\ ] $,\\
+&   \hspace{1.5in}  for some $\sigma'$ 
 \end{tabular}
 
-\textbf{1st Case}: $\prg{p}\neq\prg{s.secret}$
+\textbf{1st Case}: $\M\mkpair \M_{s1}, \sigma\triangleleft \sigma' \models  \prg{p}\neq\prg{s.secret}$
 
-We proceed to show that no change can happen
+then
 
 \begin{tabular}{ll}
-(4) & $ \neg(\Changes{\prg{s.treasure} })  $ \\
+(4) & $  \M\mkpair \M_{s1}, \sigma\triangleleft \sigma' \models    \neg(\Changes{\prg{s.treasure} })  $ \\
 & \hspace{1.5in} by Lemma \ref{lemma:noeffect}  
 \\
-&   \hspace{1.5in} CAREFUL: In the above we need to be able to  talk about the \\
-&  \hspace{1.5in}  specific future configuration that (3) is talking about.\\
-&  \hspace{1.5in} this step is imprecise
-\\
-(5) &   contradiction of (4) and (3)
+(5) &   contradiction of (4) and (5)
 \end{tabular}
 
-\textbf{2nd Case}: $\prg{p}=\prg{s.secret}$
+\textbf{2nd Case}: ...
 
-We proceed to show that \prg{o}, the caller, will have access to the password:
+...
 
-\begin{tabular}{ll}
-(4) & $ \prg{s}:\prg{Safe} \wedge  \Future{   \exists \prg{o}.[\  {\Calls {\prg{o}}   {\prg{take}} {\prg{s}} {\prg{s.secret}} }\ \wedge\ {\CanAccess {o} {\prg{s.secret}}\ ]\ \ } }$ \\
-&\hspace{1.5in}(by (3), Lemma \ref{lemma:calls}, and case (ie $\prg{p}=\prg{s.secret}$).
-\\
-(5) &   $ \prg{s}:\prg{Safe} \wedge  \Future{   \exists \prg{o}.[\ \External{o} \ \wedge \ {\CanAccess {o} {\prg{s.secret}}\ ]\ \ } }$ \\
- & \hspace{1.5in} (by (4), and code of $\M_{s1}$ -- as nothing in \prg{Safe} in of $\M_{s1}$ makes a call
-\end{tabular}
-
-Take \prg{o1}, so that\\
-\begin{tabular}{ll}
-(6) & $\Future{     \External{o1} \ \wedge \ {\CanAccess {o1} {\prg{s.secret}}} }  $ \\
-& \hspace{1.5in} from (5), such an  \prg{o1} exists\\
-(6) & $\exists \prg{p}. [ \ \prg{s.secret } = \prg{p}\ \wedge \ \Future{     \External{o1} \ \wedge \ {\CanAccess {o1} {\prg{p}}} }  \ ]$\\
-& \hspace{1.5in} by Lemma \ref{lemma:secret}, and some more thinking needed, but this should be OK
-
-\end{tabular}
-
-\noindent
-\textbf{2.1 Case}: $ \exists \prg{o}.[\ \External{o} \ \wedge \ {\CanAccess {o} {\prg{s.secret}}} \ ]$
-\\
-Then we are done.
-\\
-
-\noindent
-\textbf{2.2 Case}: $ \forall \prg{o}.[\ \External{o} \ \rightarrow \ \neg({\CanAccess {o} {\prg{s.secret}}} )\ ]$.
-\\
-Then, we will use lemma \ref{lemma:access}, and the fact that only externals can give in $\M_{s1}$ and then we wil have a contradiction.
+..
+\end{proof}
 
 
 
