@@ -22,6 +22,9 @@ Ltac destruct_exists_loo :=
   | [H : exists _ : frame, _ |- _] =>
     let ϕ := fresh "ϕ" in
     destruct H as [ϕ]
+  | [H : exists _ : list frame, _ |- _] =>
+    let ψ := fresh "ψ" in
+    destruct H as [ψ]
   | [H : exists _ : stack, _ |- _] =>
     let ψ := fresh "ψ" in
     destruct H as [ψ]
@@ -31,12 +34,36 @@ Ltac destruct_exists_loo :=
   | [H : exists _ : stmt, _ |- _] =>
     let s := fresh "s" in
     destruct H as [s]
-  | [H : exists _ : stmt, _ |- _] =>
+  | [H : exists _ : continuation, _ |- _] =>
     let c := fresh "c" in
     destruct H as [c]
+  | [H : exists _ : partial_map var _, _ |- _] =>
+    let vMap := fresh "vMap" in
+    destruct H as [vMap]
   | [H : exists _ : partial_map _ _, _ |- _] =>
     let f := fresh "f" in
     destruct H as [f]
+  | [H : exists _ : mth, _ |- _] =>
+    let m := fresh "m" in
+    destruct H as [m]
+  | [H : exists _ : fld, _ |- _] =>
+    let f := fresh "f" in
+    destruct H as [f]
+  | [H : exists _ : gfld, _ |- _] =>
+    let g := fresh "g" in
+    destruct H as [g]
+  | [H : exists _ : cls, _ |- _] =>
+    let C := fresh "C" in
+    destruct H as [C]
+  | [H : exists _ : addr, _ |- _] =>
+    let α := fresh "α" in
+    destruct H as [α]
+  | [H : exists _ : value, _ |- _] =>
+    let v := fresh "v" in
+    destruct H as [v]
+  | [H : exists _ : obj, _ |- _] =>
+    let o := fresh "o" in
+    destruct H as [o]
   | [H : exists _, _ |- _] => destruct H
   end.
 

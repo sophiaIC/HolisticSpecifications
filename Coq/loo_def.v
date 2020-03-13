@@ -803,7 +803,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** σ' = update σ with (x ↦ α) *)
     (** ------------------------------------ (Var_Assgn_OS) *)
     (** M, σ ⤳ σ' *)
-| r_vAssgn : forall M σ ϕ x y f s ψ χ α v o σ' C,
+| r_vAssgn : forall M σ ϕ x y f s ψ χ α v o ϕ' C,
     x <> this ->
     σ = (χ, ϕ :: ψ) ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_var x) (r_fld y f)) s)) ->
@@ -812,8 +812,8 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     classOf y σ C ->
     χ α = Some o ->
     (flds o) f = Some v ->
-    σ' = update_σ_map σ x v ->
-    M ∙ σ ⤳ σ'
+    ϕ' = frm (update x v (vMap ϕ)) (c_stmt s) ->
+    M ∙ σ ⤳ (χ, ϕ'::ψ)
 
     (** σ = (χ, ϕ : ψ') *)
     (** ϕ.contn = y.f := x; s*)
@@ -1076,7 +1076,7 @@ Program Instance stmtRename : Rename stmt :=
         | s_meth x y m' pMap => s_meth (❲f ↦ x❳)  (❲f ↦ y❳) m' (❲f ↦ pMap❳)
         | s_new x C fMap => s_new (❲f ↦ x❳) C (❲f ↦ fMap❳)
         | s_stmts s1 s2 => s_stmts (rname' f s1) (rname' f s2)
-        | s_rtrn _ => s
+        | s_rtrn x => s_rtrn (❲f ↦ x❳)
         end
   }.
 Next Obligation.

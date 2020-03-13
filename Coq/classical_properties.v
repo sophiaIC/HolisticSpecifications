@@ -137,16 +137,7 @@ Proof.
     subst.
   apply compose_v_to_av_equality in H6;
     subst.
-  destruct (e1 x'' v1) as [v2'];
-    auto;
-    andDestruct.
-  destruct Hb0 as [v'];
-    andDestruct.
-  rewrite Ha2 in Ha1;
-    inversion Ha1;
-    subst.
-  contradiction (Hb v' v');
-    auto.
+  admit.
 
   (* external *)
   inversion Hcontra;
@@ -2107,6 +2098,165 @@ Qed.
 Hint Resolve pair_reductions_implies_pair_reductions_alt : loo_db.
 Hint Rewrite pair_reductions_implies_pair_reductions_alt : loo_db.
 
+Lemma pair_reductions_alt_definition :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 <->
+                 (M1 ⦂ M2 ⦿ σ1 ⤳ σ2) \/
+                 (exists σ, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ /\
+                       M1 ⦂ M2 ⦿ σ ⤳⋆ σ2).
+Proof.
+  intros M1 M2 σ1 σ2;
+    split;
+    [intro Hred;
+     induction Hred;
+     eauto with loo_db
+    |intro Hred;
+     destruct Hred;
+     eauto with loo_db].
+
+  - repeat destruct_exists_loo;
+      andDestruct;
+      eauto with loo_db.
+    eapply pair_reductions_transitive; eauto.
+
+Qed.
+
+Inductive reductions : mdl -> config -> config -> Prop :=
+| red_single : forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+                          reductions M σ1 σ2
+| red_trans : forall M σ1 σ2 σ3, reductions M σ1 σ2 ->
+                            M ∙ σ2 ⤳ σ3 ->
+                            reductions M σ1 σ3.
+
+Hint Constructors reductions : loo_db.
+
+Lemma list_does_not_contain_itself :
+  forall {A : Type} (l : list A) a,
+    a :: l = l ->
+    False.
+Proof.
+  intros A l;
+    induction l;
+    intros;
+    crush.
+Qed.
+
+Inductive substmt : stmt -> stmt -> Prop :=
+| sub_eq1 : forall s s', substmt s (s_stmts s s')
+| sub_eq2 : forall s s', substmt s (s_stmts s' s)
+| sub_trns1 : forall s s1 s2, substmt s s1 ->
+                         substmt s (s_stmts s1 s2)
+| sub_trns2 : forall s s1 s2, substmt s s2 ->
+                         substmt s (s_stmts s1 s2).
+
+Hint Constructors substmt : loo_db.
+
+Parameter stmt_not_strict_substatement_of_itself :
+  forall s s', substmt s s' ->
+          s = s' ->
+          False.
+
+Lemma acyclic_reduction :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             σ2 <> σ1.
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred;
+    intro Hcontra;
+    subst.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    apply list_does_not_contain_itself in H8; auto.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    rewrite <- H7 in H1;
+      simpl in *.
+    inversion H1; subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    rewrite <- H8 in H0;
+      simpl in *.
+    inversion H0; subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    rewrite <- H7 in H1;
+      simpl in *.
+    inversion H1; subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    eapply list_does_not_contain_itself; eauto.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    eapply list_does_not_contain_itself; eauto.
+Qed.
+
+Hint Resolve acyclic_reduction : loo_db.
+
+Lemma acyclic_reductions :
+  forall M σ1 σ2, reductions M σ1 σ2 ->
+             σ2 <> σ1.
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred.
+
+  - eauto with loo_db.
+
+  - intro Hcontra;
+      subst.
+  
+Admitted.
+
+Lemma acyclic_pair_reductions :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 σ1 <> σ2.
+Proof.
+Admitted.
+
+Lemma pair_reductions_path_unique :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 forall σ, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ ->
+                      M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
+                      False.
+Proof.
+Admitted.
+
+Lemma adaptation_satisfaction :
+  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
+               forall σ1 σ2 σ', σ1 ◁ σ2 ≜ σ ->
+                           σ1 ◁ σ2 ≜ σ' ->
+                           M1 ⦂ M2 ◎ σ' ⊨ A.
+Proof.
+Admitted.
+
 Lemma will_change_pair_reduction :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
                  forall σ, σ_wf σ ->
@@ -2118,9 +2268,9 @@ Lemma will_change_pair_reduction :
                                       (exists σa σb, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σa /\
                                                 σ ◁ σa ≜ σb /\
                                                 M1 ⦂ M2 ◎ σb ⊨ (¬ A) /\
-                                                (forall σa' σb', M1 ⦂ M2 ⦿ σ1 ⤳⋆ σa' /\
-                                                            M1 ⦂ M2 ⦿ σa' ⤳⋆ σa /\
-                                                            σ ◁ σa' ≜ σb' /\
+                                                (forall σa' σb', M1 ⦂ M2 ⦿ σ1 ⤳⋆ σa' ->
+                                                            M1 ⦂ M2 ⦿ σa' ⤳⋆ σa ->
+                                                            σ ◁ σa' ≜ σb' ->
                                                             M1 ⦂ M2 ◎ σb' ⊨ A)) \/
                                       (M1 ⦂ M2 ⦿ σ1 ⤳ σ2).
 Proof.
@@ -2151,26 +2301,55 @@ Proof.
         exists σ4, σ5;
           repeat split;
           eauto with loo_db;
-          specialize (Hb σa' σb');
-          andDestruct;
-          eauto with loo_db.
+          intros.
+        specialize (Hb σa' σb').
+        inversion H7; subst.
+        ** apply pair_reduction_unique with (σ2:=σ) in H10;
+             auto;
+             subst.
+           eapply adaptation_satisfaction; eauto.
+        ** apply pair_reduction_unique with (σ2:=σ) in H10;
+             auto;
+             subst.
+           apply Hb; auto.
 
       * left.
         exists σ2, σ2';
           repeat split;
-          eauto with loo_db.
-
+          eauto with loo_db;
+          intros.
+        inversion H7; inversion H8; subst.
+        ** apply pair_reduction_unique with (σ2:=σ) in H10;
+             auto;
+             subst.
+           eapply adaptation_satisfaction; eauto.
+        ** apply pair_reduction_unique with (σ2:=σ) in H10;
+             auto;
+             subst.
+           apply pair_reduction_unique with (σ2:=σ2) in H15;
+             auto;
+             subst.
+           eapply adaptation_satisfaction; eauto.
+        ** apply pair_reduction_unique with (σ2:=σ) in H10;
+             auto;
+             subst.
+           apply pair_reductions_path_unique with (σ:=σa') in IH;
+             crush.
+        ** apply pair_reduction_unique with (σ2:=σ) in H10;
+             auto;
+             subst.
+           apply pair_reductions_path_unique with (σ:=σa') in IH;
+             crush.
 
     + left; exists σ, σ3;
         repeat split;
-        eauto with loo_db.
-      
-      
-    
-
+        eauto with loo_db;
+        [apply sat_not; auto|intros].
+      apply pair_reductions_path_unique with (σ:=σa') in H;
+        crush.
 Qed.
 
-Lemma will_change_pair_reduction :
+(*Lemma will_change_pair_reduction :
   forall M1 M2 σ σ', pair_reductions_alt M1 M2 σ σ' ->
                 σ_wf σ ->
                 forall A, M1 ⦂ M2 ◎ σ ⊨ A ->
@@ -2250,7 +2429,7 @@ Proof.
       * right; left;
           exists σ, σ0;
           eauto with loo_db.
-Qed.
+Qed.*)
 
 Lemma interpret_update :
   forall x σ y v v', ⌊ x ⌋ (update_σ_map σ y v) ≜ v' ->
@@ -2478,6 +2657,14 @@ Proof.
     try solve [right; right; repeat eexists; eauto with loo_db].
 
   - subst.
+    apply class_of_same_variable_map
+      with
+        (χ:=χ)(ϕ:=frm (update x v (vMap ϕ)) (c_stmt s))
+        (ψ:=ψ)(ϕ':=update_ϕ_map ϕ x v)(ψ':=ψ)
+      in H9;
+      auto.
+    assert (Htmp : (χ, update_ϕ_map ϕ x v :: ψ) = update_σ_map (χ, ϕ::ψ) x v);
+      [auto|rewrite Htmp in H9].
     match goal with
     | [H : classOf ?x (update_σ_map _ ?y _) _,
        Hneq : ?y <> ?x |- _] =>
@@ -2656,6 +2843,233 @@ Qed.
 Hint Resolve pair_reductions_trans : loo_db.
 Hint Rewrite pair_reductions_trans : loo_db.
 
+Lemma finite_ψ_top_frame :
+  forall ϕ ψ, finite_ψ (ϕ::ψ) ->
+         finite_ψ (ϕ::nil).
+Proof.
+  intros.
+  finite_auto;
+    intros.
+  inversion H0; subst.
+
+  - apply H, in_eq.
+
+  - crush.
+
+Qed.
+
+Hint Resolve finite_ψ_top_frame : loo_db.
+
+Lemma finite_σ_top_frame :
+  forall χ ϕ ψ, finite_σ (χ, ϕ::ψ) ->
+           forall χ', finite_σ (χ', ϕ::nil).
+Proof.
+  intros.
+  unfold finite_σ in *;
+    simpl in *.
+  eauto with loo_db.
+Qed.
+
+Hint Resolve finite_σ_top_frame : loo_db.
+
+Lemma has_self_σ_top_frame :
+  forall χ ϕ ψ, has_self_σ (χ, ϕ::ψ) ->
+           has_self_σ (χ, ϕ::nil).
+Proof.
+  intros.
+  inversion H; subst.
+  apply self_config; intros.
+  inversion H0; subst.
+
+  - apply H1, in_eq.
+
+  - crush.
+Qed.
+
+Hint Resolve has_self_σ_top_frame : loo_db.
+
+Lemma not_stuck_σ_top_frame :
+  forall χ ϕ ψ, not_stuck_σ (χ, ϕ::ψ) ->
+           not_stuck_σ (χ, ϕ::nil).
+Proof.
+  intros.
+  inversion H; subst.
+  unfold not_stuck_σ.
+  destruct_exists_loo;
+    simpl in *;
+    andDestruct.
+  crush.
+  repeat eexists; eauto.
+Qed.
+
+Hint Resolve not_stuck_σ_top_frame : loo_db.
+
+Lemma waiting_σ_top_frame :
+  forall χ ϕ ψ, waiting_σ (χ, ϕ::ψ) ->
+           waiting_σ (χ, ϕ::nil).
+Proof.
+  intros.
+  inversion H; subst.
+  unfold waiting_σ.
+  destruct_exists_loo;
+    simpl in *;
+    andDestruct.
+  crush.
+  repeat eexists; eauto.
+  unfold waiting_ψ;
+    intros;
+    crush.
+Qed.
+
+Hint Resolve waiting_σ_top_frame : loo_db.
+
+Lemma σ_wf_top_frame :
+  forall χ ϕ ψ, σ_wf (χ, ϕ::ψ) ->
+           σ_wf (χ, ϕ::nil).
+Proof.
+  intros.
+  inversion H; subst.
+  apply config_wf; eauto with loo_db.
+Qed.
+
+Hint Resolve σ_wf_top_frame : loo_db.
+
+Lemma finite_ϕ_update :
+  forall ϕ, finite_ϕ ϕ ->
+       forall y v, finite_ϕ (update_ϕ_map ϕ y v).
+Proof.
+  intros.
+  finite_auto;
+    intros.
+  destruct ϕ as [m c];
+    simpl in *.
+  eauto with map_db.
+Qed.
+
+Hint Resolve finite_ϕ_update : loo_db.
+
+Lemma finite_ψ_update :
+  forall ψ, finite_ψ ψ ->
+       forall y v, finite_ψ (update_ψ_map ψ y v).
+Proof.
+  intros.
+  unfold finite_ψ in *;
+    intros.
+  destruct ψ as [|ϕ' ψ'];
+    simpl in *;
+    [crush|].
+  destruct H0; subst;
+    eauto with loo_db.
+Qed.
+
+Hint Resolve finite_ψ_update : loo_db.
+
+Lemma finite_σ_update :
+  forall σ, finite_σ σ ->
+       forall y v, finite_σ (update_σ_map σ y v).
+Proof.
+  intros.
+  unfold finite_σ in *;
+    simpl in *;
+    eauto with loo_db.
+Qed.
+
+Hint Resolve finite_σ_update : loo_db.
+
+Lemma has_self_σ_update :
+  forall σ, has_self_σ σ ->
+       forall y v A, fresh_x_σ y σ A ->
+                has_self_σ (update_σ_map σ y v).
+Proof.
+  intros.
+  inversion H; subst.
+  apply self_config;
+    intros;
+    simpl in *.
+  destruct ψ as [|ϕ' ψ'];
+    unfold update_ψ_map in *;
+    unfold update_ϕ_map in *;
+    [crush|].
+  destruct H2;
+    subst;
+    eauto.
+
+  - apply self_frm.
+    specialize (H1 ϕ' (in_eq ϕ' ψ')).
+    inversion H1;
+      subst.
+    repeat destruct_exists_loo;
+      andDestruct;
+      crush.
+    exists α, o;
+      split;
+      auto.
+    destruct (eq_dec y this) as [Heq|Hneq];
+      subst;
+      repeat map_rewrite;
+      eq_auto.
+    unfold fresh_x_σ in *;
+      repeat destruct_exists_loo;
+      andDestruct;
+      match goal with
+      | [H : (_, _) = (_, _) |- _] =>
+        inversion H; subst
+      end.
+    match goal with
+    | [H : fresh_x _ _ _ |- _] =>
+      inversion H;
+        crush
+    end.
+
+  - apply H1, in_cons; auto.
+Qed.
+
+Hint Resolve has_self_σ_update : loo_db.
+
+Lemma not_stuck_σ_update :
+  forall σ, not_stuck_σ σ ->
+       forall y v, not_stuck_σ (update_σ_map σ y v).
+Proof.
+  intros.
+  inversion H; subst.
+  unfold not_stuck_σ.
+  destruct_exists_loo;
+    simpl in *;
+    andDestruct.
+  crush.
+  repeat eexists; eauto.
+Qed.
+
+Hint Resolve not_stuck_σ_update : loo_db.
+
+Lemma waiting_σ_update :
+  forall σ, waiting_σ σ ->
+       forall y v, waiting_σ (update_σ_map σ y v).
+Proof.
+  intros.
+  inversion H; subst.
+  unfold waiting_σ.
+  destruct_exists_loo;
+    simpl in *;
+    andDestruct.
+  crush.
+  repeat eexists; eauto.
+Qed.
+
+Hint Resolve waiting_σ_update : loo_db.
+
+Lemma σ_wf_update :
+  forall σ, σ_wf σ ->
+       forall y v A, fresh_x_σ y σ A ->
+                σ_wf (update_σ_map σ y v).
+Proof.
+  intros.
+  inversion H; subst.
+  apply config_wf; eauto with loo_db.
+Qed.
+
+Hint Resolve σ_wf_update : loo_db.
+
 Notation "'a♢' n" := (a_hole n)(at level 40).
 Notation "'e♢' n" := (e_hole n)(at level 40).
 Notation "'a_' x" := (a_bind x)(at level 40).
@@ -2669,6 +3083,506 @@ Definition guards (x y : a_var) : asrt :=
   | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
   | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
   end.
+
+Lemma has_self_σ_this_interpretation :
+  forall χ ϕ ψ, has_self_σ (χ, ϕ::ψ) ->
+           exists α o, ⌊ this ⌋ (χ, ϕ::ψ) ≜ (v_addr α) /\
+                  χ α = Some o.
+Proof.
+  intros.
+  match goal with
+  | [H : has_self_σ ?σ |- _] =>
+    inversion H; subst
+  end.
+  match goal with
+  | [H : forall ϕ, In ϕ (?ϕ::?ψ) -> _ |- _] =>
+    specialize (H ϕ (in_eq ϕ ψ));
+      inversion H;
+      subst
+  end.
+  repeat destruct_exists_loo;
+    andDestruct.
+  exists α, o; split; eauto.
+  eapply int_x; simpl; eauto.
+Qed.
+
+Hint Resolve has_self_σ_this_interpretation : loo_db.
+
+Lemma wf_σ_this_interpretation :
+  forall χ ϕ ψ, σ_wf (χ, ϕ::ψ) ->
+           exists α o, ⌊ this ⌋ (χ, ϕ::ψ) ≜ (v_addr α) /\
+                  χ α = Some o.
+Proof.
+  intros χ ϕ ψ H;
+    inversion H;
+    subst;
+    eauto with loo_db.
+Qed.
+
+Hint Resolve wf_σ_this_interpretation : loo_db.
+
+Lemma update_map_implies_mapping :
+  forall {A B : Type}`{Eq A} (f : partial_map A B) a b,
+    f a = Some b ->
+    forall a' b', exists b'', (update a' b' f) a = Some b''.
+Proof.
+  intros.
+  repeat map_rewrite.
+  destruct (eq_dec a a');
+    subst;
+    eq_auto;
+    eexists;
+    eauto.
+Qed.
+
+Hint Resolve update_map_implies_mapping : map_db.
+
+Lemma reduction_heap_monotonic :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             forall α o, (fst σ1) α = Some o ->
+                    exists o', (fst σ2) α = Some o'.
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    subst;
+    simpl in *;
+    eauto with map_db.
+Qed.
+
+Hint Resolve reduction_heap_monotonic : loo_db.
+
+Lemma reductions_heap_monotonic :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                 forall α o, (fst σ1) α = Some o ->
+                        exists o', (fst σ2) α = Some o'.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto with loo_db.
+  match goal with
+  | [Ha : forall α' o', fst ?σ1 α' = Some o' -> exists o'', _,
+       Hb : fst ?σ1 ?α = Some ?o |- _] =>
+    specialize (Ha α o Hb)
+  end.
+  destruct_exists_loo.
+  eauto with loo_db.
+Qed.
+
+Hint Resolve reductions_heap_monotonic : loo_db.
+
+Lemma pair_reduction_heap_monotonic :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 forall α o, (fst σ1) α = Some o ->
+                        exists o', (fst σ2) α = Some o'.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto with loo_db.
+Qed.
+
+Hint Resolve pair_reduction_heap_monotonic.
+
+Lemma pair_reductions_heap_monotonic :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall α o, (fst σ1) α = Some o ->
+                        exists o', (fst σ2) α = Some o'.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    eauto with loo_db.
+  destruct (pair_reduction_heap_monotonic M1 M2 σ1 σ H α o) as [o'];
+    auto.
+  match goal with
+  | [Ha : forall α' o', fst ?σ α' = Some o' -> exists o'', _,
+       Hb : fst ?σ ?α = Some ?o |- _] =>
+    specialize (Ha α o Hb)
+  end.
+  destruct_exists_loo.
+  eauto with loo_db.
+Qed.
+
+Hint Resolve pair_reductions_heap_monotonic : loo_db.
+
+Lemma has_self_adaptation :
+  forall σ1 σ2, has_self_σ σ1 ->
+           has_self_σ σ2 ->
+           forall σ, σ1 ◁ σ2 ≜ σ ->
+                (forall α o, (fst σ1) α = Some o ->
+                        exists o', (fst σ2) α = Some o') ->
+                has_self_σ σ.
+Proof.
+  intros; subst.
+  match goal with
+  | [H : ?σ1 ◁ ?σ2 ≜ ?σ |- _] =>
+    inversion H;
+      subst
+  end.
+  repeat match goal with
+         | [H : has_self_σ (?χ, ?ψ)  |- _] =>
+           notHyp (forall ϕ : frame, In ϕ ψ -> has_self_ϕ χ ϕ);
+             inversion H; subst
+         end.
+  apply self_config;
+    intros ϕ Hin;
+    destruct Hin;
+    subst.
+
+  - repeat match goal with
+           | [H : forall ϕ' : frame, In ϕ' (?ϕ::?ψ) -> has_self_ϕ _ _ |- _] =>
+             specialize (H ϕ (in_eq ϕ ψ));
+               inversion H;
+               subst
+           end.
+    repeat destruct_exists_loo;
+      andDestruct;
+      repeat match goal with
+             | [H : context [vMap _] |- _] =>
+               simpl in H
+             end.
+    apply self_frm;
+      simpl.
+    unfold fst in *.
+    match goal with
+    |[Ha : forall α' o', ?χ α' = Some o' -> exists _, _,
+        Hb : ?χ ?α = Some ?o |- _] =>
+     specialize (Ha α o Hb)
+    end.
+    repeat destruct_exists_loo.
+    exists α0, o1;
+      split; auto.
+    apply extend_some_2; auto.
+    apply disjoint_dom_symmetry.
+    apply disjoint_composition; eauto with map_db.
+
+  - match goal with
+    | [Ha : forall ϕ', In ϕ' (_::?ψ) -> has_self_ϕ ?χ' ϕ',
+         Hb : In ?ϕ ?ψ |- has_self_ϕ ?χ' ?ϕ] =>
+      apply Ha, in_cons; auto
+    end.
+Qed.
+
+Hint Resolve has_self_adaptation : loo_db.
+
+Lemma extend_update :
+  forall {A B : Type}`{Eq A}(f g : partial_map A B) a b,
+    (update a b f) ∪ g = (update a b (f ∪ g)).
+Proof.
+  intros;
+    unfold extend;
+    repeat map_rewrite;
+    apply functional_extensionality;
+    intros a';
+    destruct (eq_dec a' a);
+    subst;
+    eq_auto.
+Qed.
+
+Hint Resolve extend_update : map_db.
+Hint Rewrite @extend_update : map_db.
+
+Lemma finite_extend :
+  forall {A B : Type}`{Eq A}(f : partial_map A B),
+    finite f ->
+    forall g, finite g ->
+         finite (f ∪ g).
+Proof.
+  intros A B HeqA f Hfin;
+    induction Hfin;
+    intros;
+    auto.
+  rewrite extend_update; eauto with map_db.
+Qed.
+
+Hint Resolve finite_extend.
+
+Lemma compose_empty_right :
+  forall {A B C : Type}`{Eq A}{HeqB : Eq B}(f : partial_map A B),
+    (f ∘ (@empty B C HeqB)) = empty.
+Proof.
+  intros;
+    apply functional_extensionality;
+    intros a;
+    repeat map_rewrite;
+    simpl;
+    destruct (f a);
+    auto.
+Qed.
+
+Hint Resolve compose_empty_right : map_db.
+Hint Rewrite @compose_empty_right : map_db.
+
+Lemma compose_empty_left :
+  forall {A B C : Type}{HeqA : Eq A}`{Eq B}(f : partial_map B C),
+    ((@empty A B HeqA) ∘ f) = empty.
+Proof.
+  intros;
+    simpl;
+    auto.
+Qed.
+
+Hint Resolve compose_empty_left : map_db.
+Hint Rewrite @compose_empty_left : map_db.
+
+Lemma finite_map_composition_2' :
+  forall {A B C : Type}`{Eq A}`{Eq B}(g : partial_map B C),
+    finite_normal_form g -> forall (f : partial_map A B), one_to_one f -> finite_normal_form (f ∘ g).
+Proof.
+  intros A B C HeqA HeqB g Hfin;
+    induction Hfin;
+    intros f H121.
+
+  - rewrite compose_empty_right; auto with map_db.
+
+  - destruct (excluded_middle (exists a', f a' = Some a)).
+    + destruct_exists_loo.
+      assert (Heq : f ∘ (update a b m) = (update x b (f ∘ m)));
+        [apply functional_extensionality; intros a'; simpl
+        |rewrite Heq; apply norm_update; auto; crush].
+      repeat map_rewrite; simpl.
+      destruct (partial_map_dec a' f) as [Hsome|Hnone];
+        [destruct Hsome as [b' Htmp];
+         rewrite Htmp
+        |rewrite Hnone].
+      * destruct (eq_dec b' a);
+          subst;
+          eq_auto.
+        ** destruct (eq_dec a' x);
+             subst;
+             eq_auto.
+           specialize (H121 x a' a H0 Htmp);
+             crush.
+        ** destruct (eq_dec a' x);
+             subst;
+             eq_auto.
+           crush.
+      * destruct (eq_dec a' x);
+          subst;
+          [crush|eq_auto].
+    + assert (Heq : f ∘ update a b m = f ∘ m);
+        [apply functional_extensionality; intros a';
+         simpl
+        |rewrite Heq; auto].
+      destruct (partial_map_dec a' f) as [Hsome|Hnone];
+        [destruct Hsome as [b' Hsome];
+         rewrite Hsome
+        |rewrite Hnone; auto].
+      repeat map_rewrite;
+        destruct (eq_dec a b');
+        subst;
+        eq_auto.
+      contradiction n; eauto.
+Qed.
+
+Hint Resolve finite_map_composition_2' : map_db.
+
+Lemma finite_map_composition_2 :
+  forall {A B C : Type}`{Eq A}`{Eq B}(g : partial_map B C),
+    finite g -> forall (f : partial_map A B), one_to_one f -> finite (f ∘ g).
+Proof.
+  intros; eauto with map_db.
+Qed.
+
+Hint Resolve finite_map_composition_2 : map_db.
+
+Lemma finite_adaptation :
+  forall σ1 σ2, finite_σ σ1 ->
+           finite_σ σ2 ->
+           forall σ, σ1 ◁ σ2 ≜ σ ->
+                finite_σ σ.
+Proof.
+  intros σ1 σ2 Hfin1 Hfin2 σ Hadapt;
+    inversion Hadapt;
+    subst.
+  unfold finite_σ, finite_ψ, finite_ϕ in *;
+    intros ϕ;
+    unfold snd in *;
+    intros Hin;
+    destruct Hin;
+    subst;
+    [unfold vMap|].
+
+  - repeat match goal with
+           | [H : forall ϕ', In ϕ' (?ϕ::?ψ) -> finite (vMap ϕ')  |- _] =>
+             specialize (H ϕ (in_eq ϕ ψ));
+               unfold vMap in H
+           end.
+    apply finite_extend;
+      auto.
+    apply finite_map_composition_2; auto.
+
+  - apply Hfin2, in_cons; auto.
+
+Qed.
+
+Hint Resolve finite_adaptation : loo_db.
+
+Print σ_wf.
+
+Lemma not_stuck_adaptation :
+  forall σ1 σ2, not_stuck_σ σ2 ->
+           forall σ, σ1 ◁ σ2 ≜ σ ->
+                not_stuck_σ σ.
+Proof.
+  intros.
+  match goal with
+  | [H : ?σ1 ◁ ?σ2 ≜ ?σ |- _] =>
+    inversion H; subst
+  end.
+  unfold not_stuck_σ, snd in *.
+  repeat destruct_exists_loo;
+    andDestruct.
+  match goal with
+  | [H : ?ϕ1::?ψ  = ?ϕ2::?ψ2 |- _] =>
+    inversion H; subst
+  end.
+  exists (frm ((f ∘ β') ∪ β) (c_stmt (❲ f' ↦ s ❳))), ψ0;
+    split; auto.
+  unfold not_stuck_ϕ, contn in *.
+  auto with loo_db.
+Qed.
+
+Hint Resolve not_stuck_adaptation.
+
+Lemma waiting_adaptation :
+  forall σ1 σ2, waiting_σ σ2 ->
+           forall σ, σ1 ◁ σ2 ≜ σ ->
+                waiting_σ σ.
+Proof.
+  intros.
+  match goal with
+  | [H : ?σ1 ◁ ?σ2 ≜ ?σ |- _] =>
+    inversion H; subst
+  end.
+  unfold waiting_σ, snd in *.
+  repeat destruct_exists_loo;
+    andDestruct.
+  match goal with
+  | [H : ?ϕ1::?ψ  = ?ϕ2::?ψ2 |- _] =>
+    inversion H; subst
+  end.
+  eexists; eauto.
+Qed.
+
+Hint Resolve waiting_adaptation : loo_db.
+
+Lemma wf_adaptation :
+  forall σ1 σ2, σ_wf σ1 ->
+           σ_wf σ2 ->
+           forall σ, σ1 ◁ σ2 ≜ σ ->
+                (forall α o, (fst σ1) α = Some o ->
+                        exists o', (fst σ2) α = Some o') ->
+                σ_wf σ.
+Proof.
+  intros;
+    match goal with
+    | [Ha : σ_wf ?σ1,
+            Hb : σ_wf ?σ2 |- _] =>
+      inversion Ha;
+        inversion Hb;
+        subst
+    end.
+  apply config_wf; eauto with loo_db.
+Qed.
+
+Hint Resolve wf_adaptation : loo_db.
+
+Lemma guards_method_call :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 forall χ ϕ σ1' σ2', (χ, ϕ::nil) ◁ σ1 ≜ σ1' ->
+                                (χ, ϕ::nil) ◁ σ2 ≜ σ2' ->
+                                σ_wf (χ, ϕ::nil) ->
+                                M1 ⦂ M2 ⦿ (χ, ϕ::nil) ⤳⋆ σ1 ->
+                                forall x y, M1 ⦂ M2 ◎ σ1' ⊨ guards x y ->
+                                       M1 ⦂ M2 ◎ σ2' ⊨ (¬ guards x y) ->
+                                       (forall σ σ', M1 ⦂ M2 ⦿ (χ, ϕ::nil) ⤳⋆ σ ->
+                                                M1 ⦂ M2 ⦿ σ ⤳⋆ σ1 ->
+                                                (χ, ϕ::nil) ◁ σ ≜ σ' ->
+                                                M1 ⦂ M2 ◎ σ' ⊨ guards x y) ->
+                                       (M1 ⦂ M2 ◎ (χ, ϕ::nil) ⊨ guards x y) ->
+                                       exists z m vMap, M1 ⦂ M2 ◎ σ1' ⊨ ((a_ this) calls (a_ z) ∎ m ⟨ vMap ⟩).
+Proof.
+  intros.
+
+  destruct (pair_reduction_change_implies_method_call M1 M2 σ1 σ2);
+    auto.
+
+  - eapply pair_reductions_preserves_config_wf;
+      eauto.
+
+  - repeat destruct_exists_loo;
+      andDestruct;
+      subst.
+    match goal with
+    | [H : (_, _) ◁ (_, _) ≜ _ |- _] =>
+      inversion H; subst
+    end;
+      repeat (match goal with
+              | [Heq : ?x = ?x |- _] =>
+                clear Heq
+              | [H : (_, _) = (_, _) |- _] =>
+                inversion H; subst
+              end).
+    match goal with
+    | [H : context [contn _] |- _] =>
+      simpl in H
+    end.
+    match goal with
+    | [H : c_stmt _ = c_stmt _ |- _] =>
+      inversion H; subst
+    end.
+    rename_simpl.
+    let α := fresh "α" in
+    let o := fresh "o" in
+    let H := fresh in
+    destruct (wf_σ_this_interpretation χ')
+      with
+        (ψ:=ψ')
+        (ϕ:=frm ((f ∘ β') ∪ β)
+                (c_stmt (s_stmts (s_meth (❲ f' ↦ x0 ❳) (❲ f' ↦ x1 ❳) m (❲ f' ↦ vMap ❳)) (❲ f' ↦ s ❳))))
+      as [α H];
+      auto.
+    +  apply (wf_adaptation)
+         with
+           (σ1:= (χ1, (frm β c) :: nil))
+           (σ2:= (χ', (frm β' (c_stmt (s_stmts (s_meth x0 x1 m vMap) s))) :: ψ'));
+         auto.
+       * eapply pair_reductions_preserves_config_wf;
+           eauto.
+       * intros.
+         eapply pair_reductions_heap_monotonic; eauto.
+
+    + destruct_exists_loo; andDestruct.
+      exists (❲ f' ↦ x1 ❳), m, (❲ f' ↦ vMap ❳ ∘ v_to_av).
+      eapply sat_call
+        with (χ:=χ')(ψ:=ψ')
+             (x':=❲ f' ↦ x0 ❳)
+             (y':=❲ f' ↦ x1 ❳)
+             (vMap':=❲ f' ↦ vMap ❳)
+             (s:=❲ f' ↦ s ❳);
+        eauto.
+      * admit. (* x1 maps to something  *)
+      * admit. (* x1 maps to something  *)
+      * admit. (* same domain refl *)
+      * intros.
+        (* vMap, the parameters supplied to the method call maps to some values in the  *)
+        (* this perhaps needs to be added to the reduction definition *)
+        admit.
+
+  - admit.
+    (* if the continuation is a return statement, 
+       then there is some method call from within M1 that is  
+       being returned from.
+       Subsequently, either some method then returns back to 
+       client code, or client code is called from the module in 
+       question.
+
+     *)
+
+Admitted.
 
 Module ExposeExample.
 
@@ -2728,17 +3642,6 @@ Module ExposeExample.
                                Inside InsideDef
                                empty)).
 
-  Lemma MyModule_makes_no_external_calls :
-    forall M2 σ1 σ2, MyModule ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                σ_wf σ1 ->
-                forall σ1', σ2 ◁ σ1 ≜ σ1' ->
-                       (~ exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
-                                         contn ϕ1 = (c_stmt (s_rtrn x0))) /\
-                       (~ exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
-                                           contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
-  Proof.
-  Admitted.
-
 
   Theorem expose_example_will :
     MyModule ⊨m (∀x∙∀x∙(((a_class (e♢1) Boundary)
@@ -2747,19 +3650,83 @@ Module ExposeExample.
                          ∧
                          ((guards (a♢1) (a♢0))))
                         ∧
-                        (a_will (¬ guards (a♢1) (a♢0))))
-                  ⇒
-                  (a_will (∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩)) ∨
-                   ((a_ this) calls (a♢1) ∎ expose ⟨ empty ⟩))).
+                        (a_will (¬ guards (a♢1) (a♢0)))
+                          ⇒
+                          (a_will (∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩)) ∨
+                           ((a_ this) calls (a♢1) ∎ expose ⟨ empty ⟩)))).
   Proof.
     unfold mdl_sat;
-      intros;
+      intros;    
       repeat (a_intros; a_prop);
       simpl in *.
+    
+    repeat destruct_exists_loo.
+    destruct σ as [χ]; simpl in *; subst.
 
-    
-    
-  Qed.
+    inversion H6; subst.
+    inversion H10; subst.
+
+    - right.
+      admit.
+
+    - assert (σ_wf (χ0, ϕ0::ψ0)).
+      match goal with
+      | [H : update_σ_map _ _ _ = ?σ |- context[?σ]] =>
+        rewrite <- H
+      end.
+      repeat (eapply σ_wf_update; eauto).
+      apply arising_wf with (M1:=MyModule)(M2:=M'); auto.
+      let someσ := fresh "σ" in
+      destruct (exists_adaptation (χ0,ϕ0::ψ0) σ) as [someσ];
+        auto.
+      apply pair_reduction_preserves_config_wf
+        with (M1:=MyModule)(M2:=M')
+             (σ1:=(χ0, ϕ0::nil));
+        auto.
+      eapply σ_wf_top_frame; eauto.
+
+      destruct (sat_excluded_middle MyModule M' σ0 (guards (a_ z) (a_ z0))) as [Hsat|Hnsat].
+
+      + destruct will_change_pair_reduction
+          with (M1:=MyModule)(M2:=M')
+               (A:=guards (a_ z) (a_ z0))
+               (σ1:=σ)(σ1':=σ0)
+               (σ2:=σ')(σ2':=σ'')
+               (σ:=(χ0,ϕ0::ψ0));
+          eauto with loo_db.
+        * crush.
+        * repeat destruct_exists_loo;
+            andDestruct.
+          left.
+          let Ha := fresh "H" in
+          let Hb := fresh "H" in
+          destruct (pair_reductions_alt_definition MyModule M' σ σ1)
+            as [Ha Hb];
+            match goal with
+            | [H : MyModule ⦂ M' ⦿ σ ⤳⋆ σ1 |- _] =>
+              specialize (Ha H);
+                destruct Ha
+            end.
+
+          ** destruct (pair_reduction_change_implies_method_call MyModule M' σ σ1);
+               eauto with loo_db.
+             *** repeat destruct_exists_loo;
+                   andDestruct;
+                   subst.
+                 apply sat_will with (χ:=χ0)(ψ:=ψ0)(ϕ:=ϕ0)(σ':=(χ1,ϕ1::ψ1))(σ'':=σ0);
+                   eauto with loo_db.
+                 rewrite H9; auto.
+                 admit.
+
+             *** admit.
+
+          ** admit.
+
+        * admit.
+
+      + admit.
+
+  Admitted.
 
   (**
      expose_example_was does not work, because there is no way to ensure that 
@@ -2843,7 +3810,7 @@ Module ExposeExample.
 
 End ExposeExample.
 
-Module SafeExample.
+(*Module SafeExample.
 
   (** #<h3># Safe example: #</h3># *)
   (** ---------------------------------------------------- *)
@@ -2931,7 +3898,7 @@ Module SafeExample.
                            (guards (a♢ 1) (a♢ 0))
                              ⇒
                              (a_will ((guards (a♢ 1) (a♢ 0)) ∨
-                                    (a_was ((a♢ 2) calls (a♢ 1) ∎ open ⟨ empty ⟩)))))).
+                                      (a_was ((a♢ 2) calls (a♢ 1) ∎ open ⟨ empty ⟩)))))).
   Proof.
     unfold mdl_sat; intros.
     a_intros; sbst_simpl; simpl in *.
@@ -2998,26 +3965,13 @@ Module SafeExample.
                               (a_will ((a♢ 2) calls (a♢ 1) ∎ open ⟨ empty ⟩))))).
   Proof.
     unfold mdl_sat; intros.
-    repeat (a_prop; a_intros; sbst_simpl; simpl in *).
-    a_contra.
+    repeat (*a_prop; a_intros; sbst_simpl; simpl in .*)
+    
     eapply will_neg in H8.
   Qed.
 
 
-End SafeExample.
-
-Lemma asdfasdf :
-  forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A.
-Proof.
-  intros; a_contra.
-    
-  intros.
-  destruct (config_wf_decompose σ H);
-    repeat destruct_exists_loo; subst.
-  eapply sat_next with (χ:=x)(ϕ:=x0)(ψ:=x1); auto.
-Qed.
-
-Print asrt.
+End SafeExample.*)
       
 Fixpoint syntactic_depth (A : asrt) : nat :=
   match A with
@@ -3049,2887 +4003,6 @@ Qed.
 
 Require Import Coq.Program.Wf.
 
-Program Fixpoint merge (A1 A2 : asrt)(f : asrt -> asrt -> asrt){measure (syntactic_depth A1 + syntactic_depth A2)} : asrt :=
-  match A1, A2 with
-  | (∀x∙ A1'), _ => (∀x∙ (merge A1' (A2 ↑ 0) f))
-  | _, (∀x∙ A2') => (∀x∙ (merge (A1 ↑ 0) A2' f))
-  | _, _ => f A1 A2
-  end.
-Next Obligation.
-  rewrite <- syntactic_depth_eq_raise;
-    simpl;
-    crush.
-Defined.
-Next Obligation.
-  rewrite <- syntactic_depth_eq_raise;
-    simpl;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-Next Obligation.
-  split; intros;
-    intro Hcontra;
-    andDestruct;
-    subst;
-    crush.
-Defined.
-
-Fixpoint normalize (A : asrt) : asrt :=
-  match A with
-  | (∀x∙ A') => (∀x∙ (normalize A'))
-  | A1 ∧ A2 => merge (normalize A1) (normalize A2) a_and
-  | A1 ∨ A2 => merge (normalize A1) (normalize A2) a_or
-  | _ => A
-  end.
-
-Inductive nf : asrt -> asrt -> Prop :=
-| nf_exp : forall e, nf (a_exp e) (a_exp e)
-| nf_eq : forall e1 e2, nf (a_eq e1 e2) (a_eq e1 e2)
-| nf_class : forall e C, nf (a_class e C) (a_class e C)
-| nf_set : forall e Σ, nf (a_set e Σ) (a_set e Σ)
-| nf_arr : forall A1 A2 A1' A2', nf A1 A1' ->
-                            nf A2 A2' ->
-                            nf (A1 ⇒ A2) (A2' ∨ ¬ A1')
-| nf_and : forall A1 A2 A1' A2', nf A1 A1' ->
-                            nf A2 A2' ->
-                            nf (A1 ∧ A2) (A1' ∧ A2')
-| nf_or1 : forall A1 A2 A1', nf A1 A1' ->
-                        (forall A A', A1' <> A ∧ A') ->
-                        (forall A A', A1' <> A ∧ A') ->
-                        nf (A1 ∨ A2) (A1' ∨ A2).
-
-(* normal form *)
-Inductive nf : asrt -> asrt -> Prop :=
-| nf_exp : forall e, nf (a_exp e) (a_exp e)
-| nf_eq : forall e1 e2, nf (a_eq e1 e2) (a_eq e1 e2)
-| nf_class : forall e C, nf (a_class e C) (a_class e C)
-| nf_set : forall e Σ, nf (a_set e Σ) (a_set e Σ)
-| nf_arr : forall A1 A2 A1' A2', nf A1 A1' ->
-                            nf A2 A2' ->
-                            nf (A1 ⇒ A2) (¬ A1' ∨ A2')
-| nf_and : forall A1 A2 A1' A2', nf A1 A1' ->
-                            nf A2 A2' ->
-                            nf (A1 ∧ A2) (A1' ∧ A2')
-| nf_or : forall A1 A2 A1' A2', nf A1 A1' ->
-                           nf A2 A2' ->
-                           nf (A1 ∨ A2) (A1' ∨ A2')
-| nf_neg : forall A A', nf A A' ->
-                   nf (¬ A) (¬ A')
-| nf_all_x : forall A A', nf A A' ->
-                     nf (∀x∙ A) (∀x∙ A')
-| nf_all_Σ : forall A A', nf A A' ->
-                     nf (∀S∙ A) (∀S∙ A')
-| nf_ex_x : forall A A', nf A A' ->
-                    nf (∃x∙ A) (∃x∙ A')
-| nf_ex_Σ : forall A A', nf A A' ->
-                    nf (∃S∙ A) (∃S∙ A')
-| nf_acc : forall x y, nf (x access y) (x access y)
-| nf_call : forall x y m vMap, nf (x calls y ∎ m ⟨ vMap ⟩) (x calls y ∎ m ⟨ vMap ⟩)
-| nf_next : forall A A', nf A A' ->
-                    nf (a_next A) (a_next A')
-| nf_will : forall A A', nf A A' ->
-                    nf (a_will A) (a_will A')
-| nf_prev : forall A A', nf A A' ->
-                    nf (a_prev A) (a_prev A')
-| nf_was : forall A A', nf A A' ->
-                   nf (a_was A) (a_was A')
-| nf_in : forall A A' Σ, nf A A' ->
-                    nf (a_in A Σ) (a_in A' Σ)
-| nf_extrn : forall x, nf (x external) (x external)
-| nf_intrn : forall x, nf (x internal) (x internal).
-
 Lemma substitution_entails :
   forall A1 A2, entails A1 A2 ->
            forall z, notin_Ax A1 z ->
@@ -5938,63 +4011,6 @@ Lemma substitution_entails :
 Proof.
   intros
 Qed.
-
-Lemma exists_entails :
-  forall A1 A2, entails A1 A2 ->
-           entails (∀x∙A1) (∀x∙A2).
-Proof.
-  intros A1 A2 Hent;
-    apply ent;
-    intros.
-
-  inversion H; subst.
-  apply sat_all_x; intros.
-  
-  
-  
-Qed.
-
-Inductive asrt : Type :=
-  | a_all_x : asrt -> asrt
-  | a_all_Σ : asrt -> asrt
-  | a_ex_x : asrt -> asrt
-  | a_ex_Σ : asrt -> asrt
-  | a_acc : a_var -> a_var -> asrt
-  | a_call : a_var -> a_var -> mth -> partial_map var a_var -> asrt
-  | a_next : asrt -> asrt
-  | a_will : asrt -> asrt
-  | a_prev : asrt -> asrt
-  | a_was : asrt -> asrt
-  | a_in : asrt -> varSet -> asrt
-  | a_extrn : a_var -> asrt
-  | a_intrn : a_var -> asrt
-
-Ltac cnf_auto :=
-  match goal with
-  | [H : context[_ ∧ (∃x∙_)] |- _] => rewrite and_exists_x_entails_1 in H
-  | [H : context[(∃x∙_) ∧ _] |- _] => rewrite and_commutative' in H
-  | [H : context[_ ∧ (∀x∙_)] |- _] => rewrite and_forall_x_entails_1 in H
-  | [H : context[(∀x∙_) ∧ _] |- _] => rewrite and_commutative' in H
-
-  | [H : context[_ ∨ (∃x∙_)] |- _] => rewrite or_exists_x_entails_1 in H
-  | [H : context[(∃x∙_) ∨ _] |- _] => rewrite or_commutative' in H
-  | [H : context[_ ∨ (∀x∙_)] |- _] => rewrite or_forall_x_entails_1 in H
-  | [H : context[(∀x∙_) ∨ _] |- _] => rewrite or_commutative' in H
-
-  | [H : context[_ ⇒ _] |- _] => rewrite arr_cnf_1 in H
-
-  | [|- context[_ ∧ (∃x∙_)]] => rewrite and_exists_x_entails_1
-  | [|- context[(∃x∙_) ∧ _]] => rewrite and_commutative'
-  | [|- context[_ ∧ (∀x∙_)]] => rewrite and_forall_x_entails_1
-  | [|- context[(∀x∙_) ∧ _]] => rewrite and_commutative'
-
-  | [|- context[_ ∨ (∃x∙_)]] => rewrite or_exists_x_entails_1
-  | [|- context[(∃x∙_) ∨ _]] => rewrite or_commutative'
-  | [|- context[_ ∨ (∀x∙_)]] => rewrite or_forall_x_entails_1
-  | [|- context[(∀x∙_) ∨ _]] => rewrite or_commutative'
-
-  | [|- context[_ ⇒ _]] => rewrite arr_cnf_1
-  end.
 
 (** <h2>Thoughts on access, expose, temporal operators:</h2> *)
 

@@ -121,11 +121,7 @@
 <br/>
 <span class="kwd">Instance</span> <span class="id">substAVarMap</span> : <span class="id">Subst</span> (<span class="id">partial_map</span> <span class="id">var</span> <span class="id">a_var</span>) <span class="id">nat</span> <span class="id">var</span> :=<br/>
 &nbsp;&nbsp;{<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">sbst</span> <span class="id">avMap</span> <span class="id">n</span> <span class="id">x</span> := <span class="kwd">fun</span> (<span class="id">y</span> : <span class="id">var</span>) =&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">avMap</span> <span class="id">y</span> <span class="kwd">with</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">Some</span> <span class="id">z</span> =&gt; <span class="id">Some</span> ([<span class="id">x</span> /<span class="id">s</span> <span class="id">n</span>] <span class="id">z</span>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">None</span> =&gt; <span class="id">None</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">sbst</span> <span class="id">avMap</span> <span class="id">n</span> <span class="id">x</span> := <span class="kwd">fun</span> <span class="id">y</span> =&gt; <span class="id">bind</span> (<span class="id">avMap</span> <span class="id">y</span>) (<span class="kwd">fun</span> <span class="id">z</span> =&gt; <span class="id">Some</span> ([<span class="id">x</span> /<span class="id">s</span> <span class="id">n</span>] <span class="id">z</span>))<br/>
 &nbsp;&nbsp;}.<br/>
 <br/>
 <span class="kwd">Instance</span> <span class="id">substAssertionVar</span> : <span class="id">Subst</span> <span class="id">asrt</span> <span class="id">nat</span> <span class="id">var</span> :=<br/>
@@ -294,13 +290,17 @@
 | <span class="id">ni_intrn</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">notin_a_var</span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">notin_Ax</span> (<span class="id">a_intrn</span> <span class="id">x</span>) <span class="id">y</span>.<br/>
 <br/>
-<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">notin_Ax</span> <span class="id">notin_exp</span>.<br/>
+<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">notin_Ax</span> <span class="id">notin_exp</span> : <span class="id">chainmail_db</span>.<br/>
 <br/>
-<span class="kwd">Inductive</span> <span class="id">fresh_x</span> : <span class="id">var</span> -&gt; <span class="id">config</span> -&gt; <span class="id">asrt</span> -&gt; <span class="kwd">Prop</span> :=<br/>
-| <span class="id">frsh</span> : <span class="kwd">forall</span> <span class="id">x</span> σ <span class="id">A</span>, <span class="id">mapp</span> (<span class="id">snd</span> σ) <span class="id">x</span> = <span class="id">None</span> -&gt;<br/>
+<span class="kwd">Inductive</span> <span class="id">fresh_x</span> : <span class="id">var</span> -&gt; <span class="id">frame</span> -&gt; <span class="id">asrt</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+| <span class="id">frsh</span> : <span class="kwd">forall</span> <span class="id">x</span> ϕ <span class="id">A</span>, (<span class="id">vMap</span> ϕ) <span class="id">x</span> = <span class="id">None</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">notin_Ax</span> <span class="id">A</span> <span class="id">x</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x</span> <span class="id">x</span> σ <span class="id">A</span>.<br/>
-<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">fresh_x</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x</span> <span class="id">x</span> ϕ <span class="id">A</span>.<br/>
+<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">fresh_x</span> : <span class="id">chainmail_db</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">fresh_x_</span>σ (<span class="id">x</span> : <span class="id">var</span>)(σ : <span class="id">config</span>)(<span class="id">A</span> : <span class="id">asrt</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">exists</span> χ ϕ ψ, σ = (χ, ϕ::ψ) /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x</span> <span class="id">x</span> ϕ <span class="id">A</span>.<br/>
 <br/>
 <span class="kwd">Inductive</span> <span class="id">notin_A</span>Σ  : <span class="id">asrt</span> -&gt; <span class="id">varSet</span> -&gt; <span class="kwd">Prop</span> :=<br/>
 <br/>
@@ -357,13 +357,13 @@
 | <span class="id">ni</span>Σ<span class="id">_extrn</span> : <span class="kwd">forall</span> <span class="id">x</span> Σ,  <span class="id">notin_A</span>Σ (<span class="id">a_extrn</span> <span class="id">x</span>) Σ<br/>
 | <span class="id">ni</span>Σ<span class="id">_intrn</span> : <span class="kwd">forall</span> <span class="id">x</span> Σ,  <span class="id">notin_A</span>Σ (<span class="id">a_intrn</span> <span class="id">x</span>) Σ.<br/>
 <br/>
-<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">notin_A</span>Σ.<br/>
+<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">notin_A</span>Σ : <span class="id">chainmail_db</span>.<br/>
 <br/>
 <span class="kwd">Inductive</span> <span class="id">fresh_</span>Σ : <span class="id">varSet</span> -&gt; <span class="id">asrt</span> -&gt; <span class="kwd">Prop</span> :=<br/>
 | <span class="id">frsh</span>Σ : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">A</span>, <span class="id">notin_A</span>Σ <span class="id">A</span> <span class="id">x</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_</span>Σ <span class="id">x</span> <span class="id">A</span>.<br/>
 <br/>
-<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">fresh_</span>Σ.<br/>
+<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">fresh_</span>Σ : <span class="id">chainmail_db</span>.<br/>
 <br/>
 <span class="kwd">Fixpoint</span> <span class="id">updates</span> {<span class="id">B</span> <span class="id">C</span> : <span class="kwd">Type</span>} `{<span class="id">Eq</span> <span class="id">B</span>}<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bs</span> : <span class="id">list</span> (<span class="id">B</span> * <span class="id">B</span>))<br/>
@@ -375,13 +375,6 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> <span class="id">map2</span> <span class="id">b2</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> (<span class="id">updates</span> <span class="id">bs</span>' <span class="id">map1</span> <span class="id">map2</span>) <span class="id">b</span><br/>
 &nbsp;&nbsp;<span class="kwd">end</span>.<br/>
-<br/>
-<span class="kwd">Inductive</span> <span class="id">zip</span> {<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>} : <span class="id">list</span> <span class="id">A</span> -&gt; <span class="id">list</span> <span class="id">B</span> -&gt; <span class="id">list</span> (<span class="id">A</span> * <span class="id">B</span>) -&gt; <span class="kwd">Prop</span> :=<br/>
-| <span class="id">z_nil</span> : <span class="id">zip</span> <span class="id">nil</span> <span class="id">nil</span> <span class="id">nil</span><br/>
-| <span class="id">z_cons</span> : <span class="kwd">forall</span> <span class="id">a</span> <span class="id">b</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l</span>, <span class="id">zip</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zip</span> (<span class="id">a</span>::<span class="id">l1</span>) (<span class="id">b</span>::<span class="id">l2</span>) ((<span class="id">a</span>, <span class="id">b</span>)::<span class="id">l</span>).<br/>
-<br/>
-<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">zip</span>.<br/>
 <br/>
 <span class="kwd">Definition</span> <span class="id">fresh_in_map</span> {<span class="id">A</span> : <span class="kwd">Type</span>} (<span class="id">x</span> : <span class="id">var</span>) (<span class="id">m</span> : <span class="id">partial_map</span> <span class="id">var</span> <span class="id">A</span>) : <span class="kwd">Prop</span> :=<br/>
 &nbsp;&nbsp;<span class="id">m</span> <span class="id">x</span> = <span class="id">None</span>.<br/>
@@ -413,16 +406,16 @@
 <br/>
 <span class="kwd">Lemma</span> <span class="id">one_to_one_v_to_av</span> :<br/>
 &nbsp;&nbsp;<span class="id">one_to_one</span> <span class="id">v_to_av</span>.<br/>
-<div class="toggleproof" onclick="toggleDisplay('proof64')">Proof.</div>
-<div class="proofscript" id="proof64">
+<div class="toggleproof" onclick="toggleDisplay('proof200')">Proof.</div>
+<div class="proofscript" id="proof200">
 &nbsp;&nbsp;<span class="tactic">unfold</span> <span class="id">one_to_one</span>, <span class="id">v_to_av</span>; <span class="tactic">intros</span>; <span class="id">crush</span>.<br/>
 Qed.</div>
 <br/>
 <span class="kwd">Lemma</span> <span class="id">into_v_to_av</span> :<br/>
 &nbsp;&nbsp;<span class="kwd">forall</span> {<span class="id">A</span> : <span class="kwd">Type</span>}`{<span class="id">Eq</span> <span class="id">A</span>}(<span class="id">m</span> : <span class="id">partial_map</span> <span class="id">A</span> <span class="id">var</span>),<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id">maps_into</span> <span class="id">m</span> <span class="id">v_to_av</span>.<br/>
-<div class="toggleproof" onclick="toggleDisplay('proof65')">Proof.</div>
-<div class="proofscript" id="proof65">
+<div class="toggleproof" onclick="toggleDisplay('proof201')">Proof.</div>
+<div class="proofscript" id="proof201">
 &nbsp;&nbsp;<span class="tactic">intros</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="tactic">unfold</span> <span class="id">maps_into</span>, <span class="id">v_to_av</span> <span class="kwd">in</span> *;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="tactic">intros</span>;<br/>
@@ -430,15 +423,15 @@ Qed.</div>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="tactic">eauto</span>.<br/>
 Qed.</div>
 <br/>
-<span class="kwd">Hint</span> <span class="kwd">Resolve</span> <span class="id">into_v_to_av</span>.<br/>
-<span class="kwd">Hint</span> <span class="kwd">Resolve</span> <span class="id">one_to_one_v_to_av</span>.<br/>
+<span class="kwd">Hint</span> <span class="kwd">Resolve</span> <span class="id">into_v_to_av</span> : <span class="id">chainmail_db</span>.<br/>
+<span class="kwd">Hint</span> <span class="kwd">Resolve</span> <span class="id">one_to_one_v_to_av</span> : <span class="id">chainmail_db</span>.<br/>
 <br/>
 <span class="kwd">Lemma</span> <span class="id">compose_v_to_av_equality</span> :<br/>
 &nbsp;&nbsp;<span class="kwd">forall</span> {<span class="id">A</span> : <span class="kwd">Type</span>} `{<span class="id">Eq</span> <span class="id">A</span>} (<span class="id">m1</span> <span class="id">m2</span> : <span class="id">partial_map</span> <span class="id">A</span> <span class="id">var</span>),<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id">m1</span> ∘ <span class="id">v_to_av</span> = <span class="id">m2</span> ∘ <span class="id">v_to_av</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id">m1</span> = <span class="id">m2</span>.<br/>
-<div class="toggleproof" onclick="toggleDisplay('proof66')">Proof.</div>
-<div class="proofscript" id="proof66">
+<div class="toggleproof" onclick="toggleDisplay('proof202')">Proof.</div>
+<div class="proofscript" id="proof202">
 &nbsp;&nbsp;<span class="tactic">intros</span>.<br/>
 &nbsp;&nbsp;<span class="tactic">apply</span> <span class="id">functional_extensionality</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="tactic">intros</span> <span class="id">a</span>.<br/>
@@ -446,7 +439,7 @@ Qed.</div>
 &nbsp;&nbsp;<span class="tactic">apply</span> <span class="id">compose_one_to_one_eq</span> <span class="kwd">in</span> <span class="id">H0</span>; <span class="tactic">auto</span>; <span class="id">crush</span>.<br/>
 Qed.</div>
 <br/>
-<span class="kwd">Hint</span> <span class="kwd">Resolve</span> <span class="id">compose_v_to_av_equality</span>.<br/>
+<span class="kwd">Hint</span> <span class="kwd">Resolve</span> <span class="id">compose_v_to_av_equality</span> : <span class="id">chainmail_db</span>.<br/>
 <br/>
 <span class="kwd">Definition</span> <span class="id">initial</span> (σ : <span class="id">config</span>) : <span class="kwd">Prop</span> :=<br/>
 &nbsp;&nbsp;<span class="id">exists</span> α ϕ, σ = ((<span class="id">update</span> α <span class="id">ObjectInstance</span> <span class="id">empty</span>), ϕ :: <span class="id">nil</span>) /\<br/>
@@ -497,12 +490,12 @@ Qed.</div>
 <br/>
 <div class="doc">Quantifiers: </div>
 | <span class="id">sat_all_x</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span>, (<span class="kwd">forall</span> <span class="id">y</span> <span class="id">v</span>, <span class="id">mapp</span> σ <span class="id">y</span> = <span class="id">Some</span> <span class="id">v</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">z</span>, <span class="id">fresh_x</span> <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">z</span>, <span class="id">fresh_x_</span>σ <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ (<span class="id">update_</span>σ<span class="id">_map</span> σ <span class="id">z</span> <span class="id">v</span>) ⊨ ([<span class="id">z</span> /<span class="id">s</span> 0]<span class="id">A</span>)) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊨ (∀<span class="id">x</span>∙ <span class="id">A</span>)<br/>
 <br/>
 | <span class="id">sat_ex_x</span>  : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span> <span class="id">z</span> <span class="id">y</span> <span class="id">v</span>, <span class="id">mapp</span> σ <span class="id">y</span> = <span class="id">Some</span> <span class="id">v</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x</span> <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x_</span>σ <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ (<span class="id">update_</span>σ<span class="id">_map</span> σ <span class="id">z</span> <span class="id">v</span>) ⊨ ([<span class="id">z</span> /<span class="id">s</span> 0] <span class="id">A</span>) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊨ (∃<span class="id">x</span>∙ <span class="id">A</span>)<br/>
 <br/>
@@ -538,7 +531,7 @@ Qed.</div>
 <br/>
 <div class="doc">Control: </div>
 <div class="doc">Julian: I should probably clean up the interpretation equivalence between parameter maps </div>
-| <span class="id">sat_call</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ χ ϕ ψ <span class="id">x</span> <span class="id">x</span>' <span class="id">y</span> <span class="id">y</span>' <span class="id">m</span> <span class="id">vMap</span> <span class="id">vMap</span>' α <span class="id">s</span> α<span class="id">y</span> <span class="id">d</span>,<br/>
+| <span class="id">sat_call</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ χ ϕ ψ <span class="id">x</span> <span class="id">x</span>' <span class="id">y</span> <span class="id">y</span>' <span class="id">m</span> <span class="id">vMap</span> <span class="id">vMap</span>' α <span class="id">s</span> α<span class="id">y</span>,<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;⌊ <span class="id">x</span> ⌋ σ ≜ (<span class="id">v_addr</span> α) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;⌊ <span class="id">this</span> ⌋ σ ≜ (<span class="id">v_addr</span> α) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;σ = (χ, ϕ :: ψ) -&gt;<br/>
@@ -546,12 +539,11 @@ Qed.</div>
 &nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">c_stmt</span> (<span class="id">s_stmts</span> (<span class="id">s_meth</span> <span class="id">x</span>' <span class="id">y</span>' <span class="id">m</span> <span class="id">vMap</span>') <span class="id">s</span>)) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;⌊ <span class="id">y</span> ⌋ σ ≜ (<span class="id">v_addr</span> α<span class="id">y</span>) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;⌊ <span class="id">y</span>'⌋ σ ≜ (<span class="id">v_addr</span> α<span class="id">y</span>) -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">dom</span> <span class="id">vMap</span> <span class="id">d</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">dom</span> <span class="id">vMap</span>' <span class="id">d</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>' <span class="id">v1</span>, <span class="id">vMap</span> <span class="id">x</span>' = <span class="id">Some</span> <span class="id">v1</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exists</span> <span class="id">v2</span>, (<span class="id">vMap</span>' <span class="id">x</span>' = <span class="id">Some</span> <span class="id">v2</span> /\<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">exists</span> <span class="id">v</span>', ⌊ <span class="id">v1</span> ⌋ σ ≜ <span class="id">v</span>' /\<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⌊ <span class="id">v2</span> ⌋ σ ≜ <span class="id">v</span>'))) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">same_dom</span> <span class="id">vMap</span> <span class="id">vMap</span>' -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>' <span class="id">y1</span> <span class="id">y2</span>, <span class="id">vMap</span> <span class="id">x</span>' = <span class="id">Some</span> <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">vMap</span>' <span class="id">x</span>' = <span class="id">Some</span> <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">exists</span> <span class="id">v</span>, ⌊ <span class="id">y1</span> ⌋ σ ≜ <span class="id">v</span> /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⌊ <span class="id">y2</span> ⌋ σ ≜ <span class="id">v</span>)) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊨ ((<span class="id">a_bind</span> <span class="id">x</span>) <span class="id">calls</span> (<span class="id">a_bind</span> <span class="id">y</span>) ∎ <span class="id">m</span> ⟨ (<span class="id">vMap</span> ∘ <span class="id">v_to_av</span>) ⟩ )<br/>
 <br/>
 <div class="doc">Viewpoint: </div>
@@ -594,10 +586,11 @@ Qed.</div>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊨ (<span class="id">a_prev</span> <span class="id">A</span>)<br/>
 <br/>
 | <span class="id">sat_was</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span>, (<span class="kwd">forall</span> σ0, <span class="id">initial</span> σ0 -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exists</span> σ', <span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ σ0 ⤳⋆ σ' -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ σ' ⤳⋆ σ -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> σ'', σ ◁ σ' ≜ σ'' -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ'' ⊨ <span class="id">A</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ σ0 ⤳⋆ σ -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exists</span> σ' σ'', <span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ σ0 ⤳⋆ σ' /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ σ' ⤳⋆ σ /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;σ ◁ σ' ≜ σ'' /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ'' ⊨ <span class="id">A</span>) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊨ (<span class="id">a_was</span> <span class="id">A</span>)<br/>
 <br/>
 <span class="kwd">where</span> "<span class="id">M1</span> '⦂' <span class="id">M2</span> '◎' σ '⊨' <span class="id">A</span>" := (<span class="id">sat</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span>)<br/>
@@ -652,12 +645,12 @@ Qed.</div>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊭ (¬ <span class="id">A</span>)<br/>
 <br/>
 | <span class="id">nsat_all_x</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span> <span class="id">y</span> <span class="id">z</span> <span class="id">v</span>, <span class="id">mapp</span> σ <span class="id">y</span> = <span class="id">Some</span> <span class="id">v</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x</span> <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x_</span>σ <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ (<span class="id">update_</span>σ<span class="id">_map</span> σ <span class="id">z</span> <span class="id">v</span>) ⊭ ([<span class="id">z</span> /<span class="id">s</span> 0]<span class="id">A</span>) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊭ (∀<span class="id">x</span>∙ <span class="id">A</span>) <br/>
 <br/>
 | <span class="id">nsat_ex_x</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span>, (<span class="kwd">forall</span> <span class="id">y</span> <span class="id">v</span> <span class="id">z</span>, <span class="id">mapp</span> σ <span class="id">y</span> = <span class="id">Some</span> <span class="id">v</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x</span> <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fresh_x_</span>σ <span class="id">z</span> σ <span class="id">A</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ (<span class="id">update_</span>σ<span class="id">_map</span> σ <span class="id">z</span> <span class="id">v</span>) ⊭ ([<span class="id">z</span> /<span class="id">s</span> 0]<span class="id">A</span>)) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊭ (∃<span class="id">x</span>∙ <span class="id">A</span>)<br/>
 <br/>
@@ -762,11 +755,11 @@ Qed.</div>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ'' ⊭ <span class="id">A</span> -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊭ (<span class="id">a_next</span> <span class="id">A</span>)<br/>
 <br/>
-| <span class="id">nsat_will</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span> ϕ ψ χ σ' σ'', σ = (χ, ϕ :: ψ) -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ (χ, ϕ :: <span class="id">nil</span>) ⤳⋆ σ') -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(σ ◁ σ' ≜ σ'') -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ'' ⊭ <span class="id">A</span> -&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊭ (<span class="id">a_will</span> <span class="id">A</span>)<br/>
+| <span class="id">nsat_will</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span> ϕ ψ χ, σ = (χ, ϕ :: ψ) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> σ' σ'', (<span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ (χ, ϕ :: <span class="id">nil</span>) ⤳⋆ σ') -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(σ ◁ σ' ≜ σ'') -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ'' ⊭ <span class="id">A</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ◎ σ ⊭ (<span class="id">a_will</span> <span class="id">A</span>)<br/>
 <br/>
 | <span class="id">nsat_prev</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ <span class="id">A</span> σ0 σ' σ'', <span class="id">initial</span> σ0 -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">M1</span> ⦂ <span class="id">M2</span> ⦿ σ0 ⤳⋆ σ' -&gt;<br/>
@@ -789,7 +782,7 @@ Qed.</div>
 <br/>
 <span class="id">Combined</span> <span class="kwd">Scheme</span> <span class="id">sat_mutind</span> <span class="id">from</span> <span class="id">sat_mut_ind</span>, <span class="id">nsat_mut_ind</span>.<br/>
 <br/>
-<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">sat</span> <span class="id">nsat</span>.<br/>
+<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">sat</span> <span class="id">nsat</span> : <span class="id">chainmail_db</span>.<br/>
 <br/>
 <span class="kwd">Inductive</span> <span class="id">arising</span> : <span class="id">mdl</span> -&gt; <span class="id">mdl</span> -&gt; <span class="id">config</span> -&gt; <span class="kwd">Prop</span> :=<br/>
 | <span class="id">arise</span> : <span class="kwd">forall</span> <span class="id">M1</span> <span class="id">M2</span> σ σ0, <span class="id">initial</span> σ0 -&gt;<br/>
@@ -808,7 +801,7 @@ Qed.</div>
 | <span class="id">valid_bind</span> : <span class="kwd">forall</span> σ <span class="id">x</span> α, <span class="id">mapp</span> σ <span class="id">x</span> = <span class="id">Some</span> α -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">valid_avar</span> σ (<span class="id">a_bind</span> <span class="id">x</span>).<br/>
 <br/>
-<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">valid_avar</span>.<br/>
+<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id">valid_avar</span> : <span class="id">chainmail_db</span>.<br/>
 <br/>
 
 </div>
