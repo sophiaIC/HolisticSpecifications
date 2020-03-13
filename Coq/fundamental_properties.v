@@ -886,7 +886,7 @@ Proof.
       simpl;
       auto with loo_db.
 
-  - exists ϕ'', ψ;
+  - exists ϕ', ψ;
       split;
       auto;
       subst;
@@ -894,6 +894,14 @@ Proof.
       simpl;
       auto with loo_db;
       crush.
+
+  - exists ϕ'', ψ;
+      split;
+      auto;
+      subst ϕ'';
+      unfold not_stuck_ϕ;
+      simpl;
+      auto with loo_db.
 
   - exists ϕ'', ψ;
       split;
@@ -1139,7 +1147,14 @@ Proof.
       auto.
 
   - (* var asgn *)
-    apply has_self_update_σ;
+    apply has_self_update_σ_contn
+      with
+        (c:=c_stmt s)
+      in Hself.
+    apply has_self_update_σ
+      with
+        (x:=x)(v:=v)
+      in Hself;
       auto.
 
   - (* field asgn*)
@@ -2220,7 +2235,7 @@ Qed.
 Hint Resolve pair_reductions_preserves_addr_classes : loo_db.
 Hint Rewrite pair_reductions_preserves_addr_classes : loo_db.
 
-Lemma reductions_implies_method_call :
+(*Lemma reductions_implies_method_call :
   forall M1 M2 σ1 σ2,
     M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
     σ_wf σ1 ->
@@ -2469,9 +2484,9 @@ Proof.
     eauto.
 Qed.
 
-Hint Resolve reductions_implies_method_call : loo_db.
+Hint Resolve reductions_implies_method_call : loo_db.*)
 
-Lemma pair_reduction_implies_method_call :
+(*Lemma pair_reduction_implies_method_call :
   forall M1 M2 σ1 σ2,
     M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
     σ_wf σ1 ->
@@ -2491,7 +2506,7 @@ Proof.
     eauto with loo_db.
 Qed.
 
-Hint Resolve pair_reduction_implies_method_call : loo_db.
+Hint Resolve pair_reduction_implies_method_call : loo_db.*)
 
 Parameter fresh_exists_for_expression :
   forall e, exists x, notin_exp e x.

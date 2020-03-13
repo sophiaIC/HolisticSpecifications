@@ -215,3 +215,7 @@ Definition onto {A B C : Type}`{Eq A}`{Eq B}(f : partial_map A B)(g : partial_ma
 
 Definition disjoint_dom {A B C : Type}`{Eq A}(f : partial_map A B)(g : partial_map A C) :=
   (forall a b, f a = Some b -> g a = None).
+
+Definition same_dom {A B C : Type}`{Eq A}(f : partial_map A B)(g : partial_map A C) :=
+  (forall a b, f a = Some b -> exists c, g a = Some c) /\
+  (forall a c, g a = Some c -> exists b, f a = Some b).

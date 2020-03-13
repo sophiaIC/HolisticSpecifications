@@ -293,3 +293,53 @@ Ltac sbst_simpl_actual :=
 
 Ltac sbst_simpl :=
   repeat sbst_simpl_actual.
+
+(** Rename  *)
+
+Lemma rename_simpl_asgn :
+  forall f r1 r2, ❲ f ↦ s_asgn r1 r2 ❳ = (s_asgn (❲ f ↦ r1 ❳) (❲ f ↦ r2 ❳)).
+Proof. auto. Qed.
+
+Lemma rename_simpl_meth :
+  forall f x y m vMap, ❲ f ↦ s_meth x y m vMap ❳ = (s_meth (❲ f ↦ x ❳) (❲ f ↦ y ❳) m (❲ f ↦ vMap ❳)).
+Proof. auto. Qed.
+
+Lemma rename_simpl_new :
+  forall f x C fMap, ❲ f ↦ s_new x C fMap ❳ = (s_new (❲ f ↦ x ❳) C (❲ f ↦ fMap ❳)).
+Proof. auto. Qed.
+
+Lemma rename_simpl_stmts :
+  forall f s1 s2, ❲ f ↦ s_stmts s1 s2 ❳ = (s_stmts (❲ f ↦ s1 ❳) (❲ f ↦ s2 ❳)).
+Proof. auto. Qed.
+
+Lemma rename_simpl_rtrn :
+  forall f x, ❲ f ↦ s_rtrn x ❳ = (s_rtrn (❲ f ↦ x ❳)).
+Proof. auto. Qed.
+
+Ltac rename_simpl_actual :=
+  match goal with
+  | [H : context[❲ _ ↦ (s_asgn _ _) ❳] |- _] =>
+    rewrite rename_simpl_asgn in H
+  | [H : context[❲ _ ↦ (s_meth _ _ _ _) ❳] |- _] =>
+    rewrite rename_simpl_meth in H
+  | [H : context[❲ _ ↦ (s_new _ _ _)❳] |- _] =>
+    rewrite rename_simpl_new in H
+  | [H : context[❲ _ ↦ (s_stmts _ _)❳] |- _] =>
+    rewrite rename_simpl_stmts in H
+  | [H : context[❲ _ ↦ (s_rtrn _)❳] |- _] =>
+    rewrite rename_simpl_rtrn in H
+
+  | [|- context[❲ _ ↦ (s_asgn _ _)❳]] =>
+    rewrite rename_simpl_asgn
+  | [|- context[❲ _ ↦ (s_meth _ _ _ _)❳]] =>
+    rewrite rename_simpl_meth
+  | [|- context[❲ _ ↦ (s_new _ _ _)❳]] =>
+    rewrite rename_simpl_new
+  | [|- context[❲ _ ↦ (s_stmts _ _)❳]] =>
+    rewrite rename_simpl_stmts
+  | [|- context[❲ _ ↦ (s_rtrn _)❳]] =>
+    rewrite rename_simpl_rtrn
+  end.
+
+Ltac rename_simpl :=
+  repeat rename_simpl_actual.

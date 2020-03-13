@@ -744,7 +744,7 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 
 (** Control: *)
 (** Julian: I should probably clean up the interpretation equivalence between parameter maps *)
-| sat_call : forall M1 M2 σ χ ϕ ψ x x' y y' m vMap vMap' α s αy d,
+| sat_call : forall M1 M2 σ χ ϕ ψ x x' y y' m vMap vMap' α s αy,
     ⌊ x ⌋ σ ≜ (v_addr α) ->
     ⌊ this ⌋ σ ≜ (v_addr α) ->
     σ = (χ, ϕ :: ψ) ->
@@ -752,12 +752,11 @@ Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
     (c_stmt (s_stmts (s_meth x' y' m vMap') s)) ->
     ⌊ y ⌋ σ ≜ (v_addr αy) ->
     ⌊ y'⌋ σ ≜ (v_addr αy) ->
-    dom vMap d ->
-    dom vMap' d ->
-    (forall x' v1, vMap x' = Some v1 ->
-              exists v2, (vMap' x' = Some v2 /\
-                     (exists v', ⌊ v1 ⌋ σ ≜ v' /\
-                            ⌊ v2 ⌋ σ ≜ v'))) ->
+    same_dom vMap vMap' ->
+    (forall x' y1 y2, vMap x' = Some y1 ->
+                 vMap' x' = Some y2 ->
+                 (exists v, ⌊ y1 ⌋ σ ≜ v /\
+                       ⌊ y2 ⌋ σ ≜ v)) ->
     M1 ⦂ M2 ◎ σ ⊨ ((a_bind x) calls (a_bind y) ∎ m ⟨ (vMap ∘ v_to_av) ⟩ )
 
 (** Viewpoint: *)
