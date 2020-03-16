@@ -1,22 +1,38 @@
-# Makefile originally taken from coq-club
+EXTRA_DIR:=extra
+COQDOCFLAGS:= \
+  --external 'http://ssr2.msr-inria.inria.fr/doc/ssreflect-1.5/' Ssreflect \
+  --external 'http://ssr2.msr-inria.inria.fr/doc/mathcomp-1.5/' MathComp \
+  --toc --toc-depth 2 --html --interpolate \
+  --index indexpage --no-lib-name --parse-comments \
+  --with-header $(EXTRA_DIR)/header.html --with-footer $(EXTRA_DIR)/footer.html
+export COQDOCFLAGS
+COQMAKEFILE:=Makefile.coq
+COQ_PROJ:=_CoqProject
+VS:=$(wildcard *.v)
+VS_IN_PROJ:=$(shell grep .v $(COQ_PROJ))
 
-%: Makefile.coq phony
-	+make -f Makefile.coq $@
+ifeq (,$(VS_IN_PROJ))
+VS_OTHER := $(VS)
+else
+VS := $(VS_IN_PROJ)
+endif
 
-all: Makefile.coq
-	+make -f Makefile.coq all
+all: html
 
-clean: Makefile.coq
-	+make -f Makefile.coq clean
-	rm -f Makefile.coq
+clean: $(COQMAKEFILE)
+	@$(MAKE) -f $(COQMAKEFILE) $@
+	rm -f $(COQMAKEFILE)
 
-Makefile.coq: _CoqProject Makefile
-	coq_makefile -f _CoqProject | sed 's/$$(COQCHK) $$(COQCHKFLAGS) $$(COQLIBS)/$$(COQCHK) $$(COQCHKFLAGS) $$(subst -Q,-R,$$(COQLIBS))/' > Makefile.coq
+html: $(COQMAKEFILE) $(VS)
+	rm -fr html
+	@$(MAKE) -f $(COQMAKEFILE) $@
+	cp $(EXTRA_DIR)/resources/* html
 
-_CoqProject: ;
+$(COQMAKEFILE): $(COQ_PROJ) $(VS)
+		coq_makefile -f $(COQ_PROJ) $(VS_OTHER) -o $@
 
-Makefile: ;
+%: $(COQMAKEFILE) force
+	@$(MAKE) -f $(COQMAKEFILE) $@
+force $(COQ_PROJ) $(VS): ;
 
-phony: ;
-
-.PHONY: all clean phony
+.PHONY: clean all force
