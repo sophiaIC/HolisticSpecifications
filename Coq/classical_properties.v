@@ -1,7 +1,7 @@
 Require Import common.
 Require Import loo_def.
 Require Import chainmail.
-Require Import fundamental_properties.
+Require Import loo_properties.
 Require Import function_operations.
 Require Import sbst.
 Require Import List.
@@ -4003,18 +4003,23 @@ Qed.
 
 Require Import Coq.Program.Wf.
 
-Lemma substitution_entails :
+(*Lemma substitution_entails :
   forall A1 A2, entails A1 A2 ->
            forall z, notin_Ax A1 z ->
                 notin_Ax A2 z ->
                 entails ([z /s 0] A1) ([z /s 0] A2).
 Proof.
   intros
-Qed.
+Qed.*)
 
-(** <h2>Thoughts on access, expose, temporal operators:</h2> *)
+(** 
+
+<h2>Thoughts on access, expose, temporal operators:</h2>
+
+ *)
 
 (**
+
 The non-determinism of both was and will means that
 will(was _) and was(will _) have no relation to 
 the current configuration. In the original version 
@@ -4030,11 +4035,14 @@ time. What we really intend to say is "if in some future
 point in time, the private data is aliased, then 
 at some point in time between the current moment and that 
 future moment, the expose method must have been called".
+
  *)
 (**
+
 In the current model, only was is non-deterministic, 
 will is deterministic. As such was(will _) does in fact
 mean what we initially meant it to mean, however, 
 ideally we would like to model non-determinism of reduction 
 to cover really world programs.
+
  *)
