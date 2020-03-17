@@ -66,215 +66,24 @@ Notation "x 'access' y" :=(a_acc x y)(at level 40).
 Notation "x 'calls' y '∎' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
 
 
-(*Instance asrtFoldableVar : PropFoldable asrt nat :=
-  {
-    foldAnd :=
-      fix foldA A f n P :=
-        match A with
-        | a_exp e           => foldAnd e f n P
-        | a_eq e1 e2        => foldAnd e1 f n P /\ foldAnd e2 f n P
-        | a_class e C       => foldAnd e f n P
-        | a_set e Σ         => foldAnd e f n P
-        (*connectives*)
-        | a_arr A1 A2       => foldA A1 f n P /\ foldA A2 f n P
-        | a_and A1 A2       => foldA A1 f n P /\ foldA A2 f n P
-        | a_or A1 A2        => foldA A1 f n P /\ foldA A2 f n P
-        | a_neg A'          => foldA A' f n P
-        (*quantifiers*)      
-        | a_all_x A'      => foldA A' f (S n) P
-        | a_all_Σ A'      => foldA A' f n P
-        | a_ex_x A'       => foldA A' f (S n) P
-        | a_ex_Σ A'       => foldA A' f n P
-        (*permission*)
-        | a_acc v1 v2       => f v1 n /\ f v2 n
-        (*control*)
-        | a_call v1 v2 m v3 => f v1 n /\ f v2 n /\ f v3 n
-        (*time*)
-        | a_next A'         => foldA A' f n P
-        | a_will A'         => foldA A' f n P
-        | a_prev A'         => foldA A' f n P
-        | a_was A'          => foldA A' f n P
-        (*space*)
-        | a_in A' Σ         => foldA A' f n P
-        (*viewpoint*)
-        | a_extrn v          => f v n
-        | a_intrn v          => f v n
-        end;
+Notation "'a♢' n" := (a_hole n)(at level 40).
+Notation "'e♢' n" := (e_hole n)(at level 40).
+Notation "'a_' x" := (a_bind x)(at level 40).
+Notation "'e_' x" := (e_var x)(at level 40).
+Notation "e1 '⩦' e2" := (a_eq e1 e2)(at level 40).
 
-    foldOr :=
-      fix foldA A f n P :=
-        match A with
-        | a_exp e           => foldAnd e f n P
-        | a_eq e1 e2        => foldAnd e1 f n P /\ foldAnd e2 f n P
-        | a_class e C       => foldAnd e f n P
-        | a_set e Σ         => foldAnd e f n P
-        (*connectives*)
-        | a_arr A1 A2       => foldA A1 f n P \/ foldA A2 f n P
-        | a_and A1 A2       => foldA A1 f n P \/ foldA A2 f n P
-        | a_or A1 A2        => foldA A1 f n P \/ foldA A2 f n P
-        | a_neg A'          => foldA A' f n P
-        (*quantifiers*)      
-        | a_all_x A'      => foldA A' f (S n) P
-        | a_all_Σ A'      => foldA A' f n P
-        | a_ex_x A'       => foldA A' f (S n) P
-        | a_ex_Σ A'       => foldA A' f n P
-        (*permission*)
-        | a_acc v1 v2       => f v1 n /\ f v2 n
-        (*control*)
-        | a_call v1 v2 m v3 => f v1 n \/ f v2 n \/ f v3 n
-        (*time*)
-        | a_next A'         => foldA A' f n P
-        | a_will A'         => foldA A' f n P
-        | a_prev A'         => foldA A' f n P
-        | a_was A'          => foldA A' f n P
-        (*space*)
-        | a_in A' Σ         => foldA A' f n P
-        (*viewpoint*)
-        | a_extrn v          => f v n
-        | a_intrn v          => f v n
-        end
-  }.
+(**
+(guards x y) holds if x is the only object that has access to y.
+*)
 
-Instance asrtFoldableVarSet : PropFoldable asrt varSet :=
-  {
-    foldAnd :=
-      fix foldA A f n P :=
-        match A with
-        | a_exp e           => P
-        | a_eq e1 e2        => P
-        | a_class e C       => P
-        | a_set e Σ         => f Σ n
-        (*connectives*)
-        | a_arr A1 A2       => foldA A1 f n P /\ foldA A2 f n P
-        | a_and A1 A2       => foldA A1 f n P /\ foldA A2 f n P
-        | a_or A1 A2        => foldA A1 f n P /\ foldA A2 f n P
-        | a_neg A'          => foldA A' f n P
-        (*quantifiers*)      
-        | a_all_x A'      => foldA A' f n P
-        | a_all_Σ A'      => foldA A' f (S n) P
-        | a_ex_x A'       => foldA A' f n P
-        | a_ex_Σ A'       => foldA A' f (S n) P
-        (*permission*)
-        | a_acc v1 v2       => P
-        (*control*)
-        | a_call v1 v2 m v3 => P
-        (*time*)
-        | a_next A'         => foldA A' f n P
-        | a_will A'         => foldA A' f n P
-        | a_prev A'         => foldA A' f n P
-        | a_was A'          => foldA A' f n P
-        (*space*)
-        | a_in A' Σ         => foldA A' f n P /\ f Σ n
-        (*viewpoint*)
-        | a_extrn v          => P
-        | a_intrn v          => P
-        end;
+Definition guards (x y : a_var) : asrt :=
+  match x, y with
+  | a_ x', a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e_ x'))))
+  | a_ x', a♢ n => (∀x∙((¬ ((a♢ 0) access (a♢ (S n)))) ∨ ((e♢ 0) ⩦ (e_ x'))))
+  | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  end.
 
-    foldOr :=
-      fix foldA A f n P :=
-        match A with
-        | a_exp e           => P
-        | a_eq e1 e2        => P
-        | a_class e C       => P
-        | a_set e Σ         => f Σ n
-        (*connectives*)
-        | a_arr A1 A2       => foldA A1 f n P \/ foldA A2 f n P
-        | a_and A1 A2       => foldA A1 f n P \/ foldA A2 f n P
-        | a_or A1 A2        => foldA A1 f n P \/ foldA A2 f n P
-        | a_neg A'          => foldA A' f n P
-        (*quantifiers*)      
-        | a_all_x A'      => foldA A' f (S n) P
-        | a_all_Σ A'      => foldA A' f n P
-        | a_ex_x A'       => foldA A' f (S n) P
-        | a_ex_Σ A'       => foldA A' f n P
-        (*permission*)
-        | a_acc v1 v2       => P
-        (*control*)
-        | a_call v1 v2 m v3 => P
-        (*time*)
-        | a_next A'         => foldA A' f n P
-        | a_will A'         => foldA A' f n P
-        | a_prev A'         => foldA A' f n P
-        | a_was A'          => foldA A' f n P
-        (*space*)
-        | a_in A' Σ         => foldA A' f n P
-        (*viewpoint*)
-        | a_extrn v          => P
-        | a_intrn v          => P
-        end
-  }.
-
-Definition closed_A (A : asrt)(n : nat) :=
-  foldAnd A
-          (fun x n' =>
-             match x with
-             | hole m => n' <> m
-             | _ => True
-             end)
-          n
-          True.
-
-Definition closed_A_set (A : asrt)(n : nat) :=
-  foldAnd A
-          (fun x n' =>
-             match x with
-             | s_hole m => n' <> m
-             | _ => True
-             end)
-          n
-          True.*)
-          
-
-(*Inductive closed_A : asrt -> nat -> Prop :=
-| cla_exp : forall e n, closed e n ->
-                   closed_A (a_exp e) n
-| cla_eq  : forall e1 e2 n, closed e1 n ->
-                       closed e2 n ->
-                       closed_A (a_eq e1 e2) n
-| cla_class : forall e C n, closed e n ->
-                       closed_A (a_class e C) n
-| cla_set : forall e Σ n, closed_A (a_set e Σ) n
-| cla_arr : forall A1 A2 n, closed_A A1 n ->
-                       closed_A A2 n ->
-                       closed_A (a_arr A1 A2) n
-| cla_and : forall A1 A2 n, closed_A A1 n ->
-                       closed_A A2 n ->
-                       closed_A (a_and A1 A2) n
-| cla_or : forall A1 A2 n, closed_A A1 n ->
-                      closed_A A2 n ->
-                      closed_A (a_or A1 A2) n
-| cla_neg : forall A n, closed_A A n ->
-                   closed_A (a_neg A) n
-| cla_all_x : forall A n, closed_A A (S n) ->
-                     closed_A (a_all_x A) n
-| cla_all_Σ : forall A n, closed_A A n ->
-                     closed_A (a_all_Σ A) n
-| cla_ex_x : forall A n, closed_A A (S n) ->
-                    closed_A (a_ex_x A) n
-| cla_ex_Σ : forall A n, closed_A A n ->
-                    closed_A (a_ex_Σ A) n
-| cla_acc : forall x y n, closed x n ->
-                     closed y n ->
-                     closed_A (a_acc x y) n
-| cla_call : forall x y m z n, closed x n ->
-                          closed y n ->
-                          closed z n ->
-                          closed_A (a_call x y m z) n
-| cla_next : forall A n, closed_A A n ->
-                    closed_A (a_next A) n
-| cla_will : forall A n, closed_A A n ->
-                    closed_A (a_will A) n
-| cla_prev : forall A n, closed_A A n ->
-                    closed_A (a_prev A) n
-| cla_was : forall A n, closed_A A n ->
-                   closed_A (a_was A) n.*)
-
-(*Ltac closed_unfold :=
-  match goal with
-  | [H : closed_e _ _ |- _] => unfold closed_e in H; try solve [crush]
-  | [H : closed_A _ _ |- _] => unfold closed_A in H; try solve [crush]
-  | [H : closed_A_set _ _ |- _] => unfold closed_A_set in H; try solve [crush]
-  end.*)
 
 Class Subst (A B C : Type) : Type :=
   {
@@ -1021,53 +830,12 @@ Inductive valid_avar : config -> a_var -> Prop :=
 
 Hint Constructors valid_avar : chainmail_db.
 
-(*Inductive valid_A : mdl -> mdl -> config -> nat -> asrt -> Prop :=
-(** Simple: *)
-| va_exp   : forall M1 M2 σ n e, valid_A M1 M2 σ n (a_exp e)
-| va_eq    : forall M1 M2 σ n e1 e2, valid_A M1 M2 σ n (a_eq e1 e2)
-| va_class : forall M1 M2 σ n e C, valid_A M1 M2 σ n (a_class e C)
-| va_set   : forall M1 M2 σ n e Σ, (forall x, InΣ x Σ ->
-                                    exists v, map σ x = Some v) ->
-                              valid_A M1 M2 σ n (a_set e Σ)
 
-(** Connectives: *)
-| va_arr   : forall M1 M2 σ n A1 A2, valid_A M1 M2 σ n A1 ->
-                                valid_A M1 M2 σ n A1 ->
-                                valid_A M1 M2 σ n (a_arr A1 A2)
-| va_and   : forall M1 M2 σ n A1 A2, valid_A M1 M2 σ n A1 ->
-                                valid_A M1 M2 σ n A1 ->
-                                valid_A M1 M2 σ n (a_and A1 A2)
-| va_or    : forall M1 M2 σ n A1 A2, valid_A M1 M2 σ n A1 ->
-                                valid_A M1 M2 σ n A1 ->
-                                valid_A M1 M2 σ n (a_or A1 A2)
-| va_neg   : forall M1 M2 σ n A, valid_A M1 M2 σ n A ->
-                            valid_A M1 M2 σ n (a_neg A)
 
-(** Quantifiers: *) (* What to do here? maintian a de Bruijn level? *)
-| va_all_x : forall M1 M2 σ n A, valid_A M1 M2 σ (S n) A ->
-                            valid_A M1 M2 σ n (a_all_x A)
-| va_ex_x : forall M1 M2 σ n A, valid_A M1 M2 σ (S n) A ->
-                           valid_A M1 M2 σ n (a_ex_x A)
-| va_all_Σ : forall M1 M2 σ n A, valid_A M1 M2 σ n A ->
-                            valid_A M1 M2 σ n (a_all_Σ A)
-| va_ex_Σ : forall M1 M2 σ n A, valid_A M1 M2 σ n A ->
-                           valid_A M1 M2 σ n (a_ex_Σ A)
+Inductive entails : asrt -> asrt -> Prop :=
+| ent : forall A1 A2, (forall χ ϕ ψ M1 M2, M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A1 ->
+                                 M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A2) ->
+                 entails A1 A2.
 
-(** Permission: *)
-| a_acc   : a_var -> a_var -> asrt
-
-(** Control: *)
-| a_call  : a_var -> a_var -> mth -> partial_map var a_var  -> asrt
-
-(** Time: *)
-| a_next  : asrt -> asrt
-| a_will  : asrt -> asrt
-| a_prev  : asrt -> asrt
-| a_was   : asrt -> asrt
-
-(** Space: *)
-| a_in    : asrt -> varSet -> asrt
-
-(** Viewpoint: *)
-| a_extrn : a_var -> asrt
-| a_intrn : a_var -> asrt.*)
+Definition equiv_a (A1 A2 : asrt): Prop :=
+  (entails A1 A2) /\ (entails A2 A1).
