@@ -219,3 +219,8 @@ Definition disjoint_dom {A B C : Type}`{Eq A}(f : partial_map A B)(g : partial_m
 Definition same_dom {A B C : Type}`{Eq A}(f : partial_map A B)(g : partial_map A C) :=
   (forall a b, f a = Some b -> exists c, g a = Some c) /\
   (forall a c, g a = Some c -> exists b, f a = Some b).
+
+
+
+Definition fresh_in_map {A : Type} (x : var) (m : partial_map var A) : Prop :=
+  m x = None.

@@ -1,11 +1,10 @@
 Require Import common.
 Require Import loo_def.
-Require Import chainmail.
 Require Import loo_properties.
 Require Import loo_reduction_properties.
-Require Import chainmail_properties.
-Require Import classical_properties.
-Require Import chainmail_extended_properties.
+Require Import decoupling.
+Require Import decoupled_classical_properties.
+Require Import sbst_decoupled.
 Require Import function_operations.
 Require Import List.
 Require Import CpdtTactics.
@@ -71,19 +70,39 @@ Module ExposeExample.
 
 
   Theorem expose_example_will :
-    MyModule ⊨m (∀x∙∀x∙(((a_class (e♢1) Boundary)
+    MyModule ⊨m (∀x∙∀x∙(((a_class (a♢1) Boundary)
                          ∧
-                         ((e_acc_f (e♢1) inside) ⩦ (e♢0))
+                         ((ex_acc_f (e♢1) inside) ⩦ (e♢0))
                          ∧
                          ((guards (a♢1) (a♢0))))
                         ∧
                         (a_will (¬ guards (a♢1) (a♢0)))
                           ⇒
-                          (a_will (∃x∙((a♢0) calls (a♢2) ∎ expose ⟨ empty ⟩)) ∨
-                           ((a_ this) calls (a♢1) ∎ expose ⟨ empty ⟩)))).
+                          (a_will (∃x∙((a♢0) calls (a♢2) ▸ expose ⟨ empty ⟩)) ∨
+                           (∃x∙ ((a♢0) calls (a♢2) ▸ expose ⟨ empty ⟩))))).
   Proof.
     unfold mdl_sat;
-      intros;    
+      intros.
+    repeat (a_intros; simpl).
+    a_prop.
+    inversion H4; subst.
+    eapply entails_implies in H14;
+      [|apply not_all_x_ex_not_1].
+    inversion H14; subst; simpl in *.
+    eapply entails_implies in H15;
+      [|apply neg_distributive_or_1].
+    a_prop.
+    apply negate_elim_sat in H7.
+    eapply entails_implies in H7;
+      [|].
+    
+    Search a_neg.
+    
+    apply sat_all_x; intros; simpl.
+    apply sat_all_x; intros; simpl.
+    apply sat_arr1.
+    
+    
       repeat (a_intros; a_prop);
       simpl in *.
     

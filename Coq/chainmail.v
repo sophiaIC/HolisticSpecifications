@@ -392,9 +392,6 @@ Fixpoint updates {B C : Type} `{Eq B}
                           else (updates bs' map1 map2) b
   end.
 
-Definition fresh_in_map {A : Type} (x : var) (m : partial_map var A) : Prop :=
-  m x = None.
-
 Reserved Notation "σ1 '◁' σ2 '≜' σ3" (at level 40).
 
 Inductive adaptation : config -> config -> config -> Prop :=

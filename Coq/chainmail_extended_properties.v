@@ -3,6 +3,7 @@ Require Import loo_def.
 Require Import chainmail.
 Require Import loo_properties.
 Require Import loo_reduction_properties.
+Require Import chainmail_properties.
 Require Import function_operations.
 Require Import sbst.
 Require Import classical_properties.
@@ -236,135 +237,6 @@ Proof.
     eapply pair_reductions_transitive; eauto.
 
 Qed.
-
-Inductive reductions : mdl -> config -> config -> Prop :=
-| red_single : forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
-                          reductions M σ1 σ2
-| red_trans : forall M σ1 σ2 σ3, reductions M σ1 σ2 ->
-                            M ∙ σ2 ⤳ σ3 ->
-                            reductions M σ1 σ3.
-
-Hint Constructors reductions : loo_db.
-
-Lemma list_does_not_contain_itself :
-  forall {A : Type} (l : list A) a,
-    a :: l = l ->
-    False.
-Proof.
-  intros A l;
-    induction l;
-    intros;
-    crush.
-Qed.
-
-Inductive substmt : stmt -> stmt -> Prop :=
-| sub_eq1 : forall s s', substmt s (s_stmts s s')
-| sub_eq2 : forall s s', substmt s (s_stmts s' s)
-| sub_trns1 : forall s s1 s2, substmt s s1 ->
-                         substmt s (s_stmts s1 s2)
-| sub_trns2 : forall s s1 s2, substmt s s2 ->
-                         substmt s (s_stmts s1 s2).
-
-Hint Constructors substmt : loo_db.
-
-Parameter stmt_not_strict_substatement_of_itself :
-  forall s s', substmt s s' ->
-          s = s' ->
-          False.
-
-Lemma acyclic_reduction :
-  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
-             σ2 <> σ1.
-Proof.
-  intros M σ1 σ2 Hred;
-    induction Hred;
-    intro Hcontra;
-    subst.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    apply list_does_not_contain_itself in H8; auto.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    rewrite <- H7 in H1;
-      simpl in *.
-    inversion H1; subst.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    rewrite <- H8 in H0;
-      simpl in *.
-    inversion H0; subst.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    rewrite <- H7 in H1;
-      simpl in *.
-    inversion H1; subst.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    eapply list_does_not_contain_itself; eauto.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    eapply list_does_not_contain_itself; eauto.
-Qed.
-
-Hint Resolve acyclic_reduction : loo_db.
-
-Lemma acyclic_reductions :
-  forall M σ1 σ2, reductions M σ1 σ2 ->
-             σ2 <> σ1.
-Proof.
-  intros M σ1 σ2 Hred;
-    induction Hred.
-
-  - eauto with loo_db.
-
-  - intro Hcontra;
-      subst.
-  
-Admitted.
-
-Lemma acyclic_pair_reductions :
-  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
-                 σ1 <> σ2.
-Proof.
-Admitted.
-
-Lemma pair_reductions_path_unique :
-  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                 forall σ, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ ->
-                      M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
-                      False.
-Proof.
-Admitted.
 
 Lemma adaptation_satisfaction :
   forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
