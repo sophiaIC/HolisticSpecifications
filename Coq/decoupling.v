@@ -50,21 +50,26 @@ Below I define a slightly modified version of chainmail that removes the concept
 
 Inductive a_var : Type :=
 | a_hole : nat -> a_var
-| a_bind : value -> a_var.
+| a_bind : addr -> a_var.
+
+Inductive expr : Type :=
+| ex_var : a_var -> expr
+| ex_val : value -> expr
+| ex_eq : expr -> expr -> expr
+| ex_if : expr -> expr -> expr -> expr
+| ex_acc_f : expr -> fld -> expr
+| ex_acc_g : expr -> gfld -> expr -> expr.
 
 Notation "'a♢' n" := (a_hole n)(at level 40).
-Notation "'e♢' n" := (e_hole n)(at level 40).
-Notation "'a_' α" := (a_bind (v_addr α))(at level 40).
-Notation "'atrue'" := (a_bind (v_true))(at level 40).
-Notation "'afalse'" := (a_bind (v_false))(at level 40).
-Notation "'anull'" := (a_bind (v_null))(at level 40).
+Notation "'e♢' n" := (ex_var (a_hole n))(at level 40).
+Notation "'a_' α" := (a_bind α)(at level 40).
+Notation "'e_' α" := (ex_var (a_bind α))(at level 39).
 
 (** Assertion syntax  *)
 
 Inductive asrt : Type :=
 (** Simple: *)
-| a_true : asrt
-| a_false : asrt
+| a_exp : expr -> asrt
 | a_class : a_var -> cls -> asrt
 (*| a_set   : a_var -> a_set -> asrt*)
 
@@ -111,6 +116,7 @@ Notation "x 'internal'" :=(a_intrn x)(at level 40).
 Notation "x 'external'" :=(a_extrn x)(at level 40).
 Notation "x 'access' y" :=(a_acc x y)(at level 40).
 Notation "x 'calls' y '▸' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
+Notation "e1 '⩦' e2" := (a_exp (ex_eq e1 e2))(at level 40).
 
 Class Subst (A B C : Type) : Type :=
   {
@@ -119,7 +125,7 @@ Class Subst (A B C : Type) : Type :=
 
 Notation "'[' c '/s' b ']' a" := (sbst a b c)(at level 80).
 
-Instance substAVar : Subst a_var nat value :=
+Instance substAVar : Subst a_var nat addr :=
   {
     sbst x n y :=
       match x with
@@ -130,7 +136,7 @@ Instance substAVar : Subst a_var nat value :=
       end
   }.
 
-Instance substAVarMap : Subst (partial_map var a_var) nat value :=
+Instance substAVarMap : Subst (partial_map var a_var) nat addr :=
   {
     sbst avMap n x := fun y => bind (avMap y) (fun z => Some ([x /s n] z))
     (*                        match avMap y with
@@ -139,13 +145,26 @@ Instance substAVarMap : Subst (partial_map var a_var) nat value :=
                         end*)
   }.
 
-Instance substAssertionVar : Subst asrt nat value :=
+Instance substExpr : Subst expr nat addr :=
+  {
+    sbst :=
+      fix sbst' e n v :=
+        match e with
+        | ex_var x => ex_var ([v /s n] x)
+        | ex_eq e1 e2 => ex_eq (sbst' e1 n v) (sbst' e2 n v)
+        | ex_if e1 e2 e3 => ex_if (sbst' e1 n v) (sbst' e2 n v) (sbst' e3 n v)
+        | ex_acc_f e' f => ex_acc_f (sbst' e' n v) f
+        | ex_acc_g e1 g e2 => ex_acc_g (sbst' e1 n v) g (sbst' e2 n v)
+        | _ => e
+        end
+  }.
+
+Instance substAssertionVar : Subst asrt nat addr :=
   {sbst :=
      fix subst' A n x :=
        match A with
-       | a_true => A
-       | a_false => A
-       | a_class y C       => a_class (sbst y n x) C
+       | a_exp e => a_exp ([x /s n] e)
+       | a_class y C       => a_class ([x /s n] y) C
        (*connectives*)
        | a_arr A1 A2       => a_arr (subst' A1 n x) (subst' A2 n x)
        | a_and A1 A2       => a_and (subst' A1 n x) (subst' A2 n x)
@@ -157,9 +176,9 @@ Instance substAssertionVar : Subst asrt nat value :=
        (*permission*)
        | a_acc v1 v2       => a_acc (sbst v1 n x) (sbst v2 n x)
        (*control*)
-       | a_call v1 v2 m avMap => a_call ([x /s n] v1)
-                                       ([x /s n] v2) m
-                                       ([x /s n] avMap)
+       | a_call v1 v2 m vMap => a_call ([x /s n] v1)
+                                      ([x /s n] v2) m
+                                      ([x /s n] vMap)
        (*time*)
        | a_next A'         => a_next (subst' A' n x)
        | a_will A'         => a_will (subst' A' n x)
@@ -225,12 +244,73 @@ Definition initial (σ : config) : Prop :=
          finite_σ σ /\
          not_stuck_σ σ.
 
+Inductive is_exp : expr -> exp -> Prop :=
+| is_addr : forall α, is_exp (e_ α) (e_val (v_addr α))
+| is_val : forall v, is_exp (ex_val v) (e_val v)
+| is_eq : forall e1 e1' e2 e2', is_exp e1 e1' ->
+                           is_exp e2 e2' ->
+                           is_exp (ex_eq e1 e2) (e_eq e1' e2')
+| is_if : forall e1 e2 e3 e1' e2' e3', is_exp e1 e1' ->
+                                  is_exp e2 e2' ->
+                                  is_exp e3 e3' ->
+                                  is_exp (ex_if e1 e2 e3) (e_if e1' e2' e3')
+| is_acc_f : forall e e' f, is_exp e e' ->
+                       is_exp (ex_acc_f e f) (e_acc_f e' f)
+| is_acc_g : forall e1 e1' e2 e2' g, is_exp e1 e1' ->
+                                is_exp e2 e2' ->
+                                is_exp (ex_acc_g e1 g e2) (e_acc_g e1' g e2').
+
+Hint Constructors is_exp : chainmail_db.
+
+Lemma is_exp_unique :
+  forall e e1, is_exp e e1 ->
+          forall e2, is_exp e e2 ->
+                e1 = e2.
+Proof.
+  intros e e1 His;
+    induction His;
+    let e' := fresh "e" in 
+    intros e' His';
+    inversion His';
+    subst;
+    eauto with chainmail_db loo_db;
+    repeat match goal with
+           | [Ha : forall e, is_exp ?e1 e -> ?e1' = e ,
+                Hb : is_exp ?e1 ?e' |- _] =>
+             specialize (Ha e');
+               auto_specialize
+           end;
+    subst;
+    auto with chainmail_db.
+
+Qed.
+
+Hint Resolve is_exp_unique : chainmail_db.
+
+Ltac unique_loo_exp :=
+  match goal with
+  | [Ha : is_exp ?e ?e1,
+          Hb : is_exp ?e ?e2 |- _] =>
+    let H := fresh in
+    assert (H : e1 = e2);
+    [apply (is_exp_unique e e1 Ha e2 Hb)|subst]
+  end.
+
 Reserved Notation "M1 '⦂' M2 '◎' σ '⊨′' A"(at level 40).
 Reserved Notation "M1 '⦂' M2 '◎' σ '⊭′' A"(at level 40).
 
+Definition value_to_addr : partial_map value a_var :=
+  (fun v => match v with
+         | v_addr α => Some (a_ α)
+         | _ => None
+         end).
+
 Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
 (** Simple: *)
-| sat'_true   : forall M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨′ a_true
+| sat'_exp   : forall M1 M2 M e e' σ, is_exp e e' ->
+                                 M1 ⋄ M2 ≜ M ->
+                                 M ∙ σ ⊢ e' ↪ v_true ->
+                                 M1 ⦂ M2 ◎ σ ⊨′ (a_exp e)
 
 | sat'_class : forall M1 M2 σ α C o, mapp σ α = Some o -> 
                                 o.(cname) = C ->
@@ -257,12 +337,12 @@ Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
                             M1 ⦂ M2 ◎ σ ⊨′ (¬ A)
 
 (** Quantifiers: *)
-| sat'_all_x : forall M1 M2 σ A, (forall y v, mapp σ y = Some v ->
-                                    M1 ⦂ M2 ◎ σ ⊨′ ([v /s 0]A)) ->
+| sat'_all_x : forall M1 M2 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
+                                    M1 ⦂ M2 ◎ σ ⊨′ ([α /s 0]A)) ->
                             M1 ⦂ M2 ◎ σ ⊨′ (∀x∙ A)
 
-| sat'_ex_x  : forall M1 M2 σ A y v, mapp σ y = Some v ->
-                                M1 ⦂ M2 ◎ σ ⊨′ ([v /s 0] A) ->
+| sat'_ex_x  : forall M1 M2 σ A y α, mapp σ y = Some (v_addr α) ->
+                                M1 ⦂ M2 ◎ σ ⊨′ ([α /s 0] A) ->
                                 M1 ⦂ M2 ◎ σ ⊨′ (∃x∙ A)
                                    
 (** Permission: *)
@@ -281,7 +361,7 @@ Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
                                             σ = (χ, ϕ :: ψ) ->
                                             (contn ϕ) = c_stmt s ->
                                             in_stmt x s ->
-                                            M1 ⦂ M2 ◎ σ ⊨′ ((a_bind (v_addr α1)) access (a_bind (v_addr α2)))
+                                            M1 ⦂ M2 ◎ σ ⊨′ ((a_ α1) access (a_ α2))
 
 (** Control: *)
 | sat'_call : forall M1 M2 σ χ ϕ ψ x y m vMap s α1 α2,
@@ -289,7 +369,7 @@ Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
     ⌊ y ⌋ σ ≜ (v_addr α2) ->
     σ = (χ, ϕ :: ψ) ->
     (contn ϕ) = (c_stmt (s_stmts (s_meth x y m vMap) s)) ->
-    M1 ⦂ M2 ◎ σ ⊨′ ((a_ α1) calls (a_ α2) ▸ m ⟨ (vMap ∘ (mapp σ) ∘ (fun v => Some (a_bind v))) ⟩ )
+    M1 ⦂ M2 ◎ σ ⊨′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ∘ (mapp σ) ∘ value_to_addr⟩ )
 
 (** Viewpoint: *)
 | sat'_extrn : forall M1 M2 σ α o C, mapp σ α = Some o ->
@@ -332,7 +412,10 @@ where "M1 '⦂' M2 '◎' σ '⊨′' A" := (sat' M1 M2 σ A)
 with
   nsat' : mdl -> mdl -> config -> asrt -> Prop :=
 (*simple*)
-| nsat'_false : forall M1 M2 σ, M1 ⦂ M2 ◎ σ ⊭′ a_false
+| nsat'_exp : forall M1 M2 M σ e e', is_exp e e' ->
+                                M1 ⋄ M2 ≜ M ->
+                                M ∙ σ ⊢ e' ↪ v_false ->
+                                M1 ⦂ M2 ◎ σ ⊭′ (a_exp e)
 
 | nsat'_class1 : forall M1 M2 σ C C' α o, mapp σ α = Some o -> 
                                      o.(cname) = C' ->
@@ -361,12 +444,12 @@ with
                              M1 ⦂ M2 ◎ σ ⊭′ (¬ A)
 
 (*quantifiers*)
-| nsat'_all_x : forall M1 M2 σ A y v, mapp σ y = Some v ->
-                                 M1 ⦂ M2 ◎ σ ⊭′ ([v /s 0]A) ->
+| nsat'_all_x : forall M1 M2 σ A y α, mapp σ y = Some (v_addr α) ->
+                                 M1 ⦂ M2 ◎ σ ⊭′ ([α /s 0]A) ->
                                  M1 ⦂ M2 ◎ σ ⊭′ (∀x∙ A) 
 
-| nsat'_ex_x : forall M1 M2 σ A, (forall y v, mapp σ y = Some v ->
-                                    M1 ⦂ M2 ◎ σ ⊭′ ([v /s 0]A)) ->
+| nsat'_ex_x : forall M1 M2 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
+                                    M1 ⦂ M2 ◎ σ ⊭′ ([α /s 0]A)) ->
                             M1 ⦂ M2 ◎ σ ⊭′ (∃x∙ A)
 
 (** Permission: *)
@@ -388,14 +471,14 @@ with
                                         M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ⟩)
 
 | nsat'_call2 : forall M1 M2 σ ϕ ψ α1 α2 x y m vMap vMap' s, snd σ = ϕ :: ψ ->
-                                                        contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap') s)) ->
+                                                        contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap) s)) ->
                                                         mapp σ y <> Some (v_addr α2) ->
-                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ⟩)
+                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap' ⟩)
 
-| nsat'_call3 : forall M1 M2 σ ϕ ψ α1 α2 x y m vMap' vMap s, snd σ = ϕ :: ψ ->
-                                                        contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap') s)) ->
-                                                        vMap' ∘ (mapp σ) ∘ (fun z => Some (a_bind z)) <> vMap ->
-                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ⟩)
+| nsat'_call3 : forall M1 M2 σ ϕ ψ α1 α2 x y m vMap vMap' s, snd σ = ϕ :: ψ ->
+                                                        contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap) s)) ->
+                                                        vMap' <> vMap ∘ (mapp σ) ∘ value_to_addr ->
+                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap' ⟩)
 
 (*viewpoint*) (* well-formeness? This is important!!!!*)
 | nsat'_extrn1 : forall M1 M2 σ α, mapp σ α = None ->
@@ -510,189 +593,480 @@ Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A"(at level 40).
 
 Inductive sat : mdl -> mdl -> config -> config -> asrt -> Prop :=
 (** Simple: *)
-| sat_true   : forall M1 M2 σ0 σ, M1 ⦂ M2 ◎ σ0 … σ ⊨ a_true
+(**
+Note: #<code>#is_exp e e'#</code># simply maps an #<code>#expr#</code># (defined above) to an expression (#<code>#exp#</code>#) in L#<sub>#oo#</sub>#. #<code>#expr#</code># differs from #<code>#exp#</code># in L#<sub>#oo#</sub># only in that an #<code>#expr#</code># may not contain any variables.
+To aid readability, I ignore this distinction between #<code>#e#</code># and #<code>#e'#</code># in the descriptions of #<code>#sat_exp#</code># and #<code>#nsat_exp#</code>#.
+ *)
+| sat_exp   : forall M1 M2 M σ0 σ e e', is_exp e e' ->
+                                   M1 ⋄ M2 ≜ M ->
+                                   M ∙ σ ⊢ e' ↪ v_true ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_exp e)
+(**
+[[[
+                     M1 ⋄ M2 ≜ M 
+                 M ∙ σ ⊢ e' ↪ v_true
+               -----------------------                   (Sat-Exp)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ e
+]]]
+ *)
 
 | sat_class : forall M1 M2 σ0 σ α C o, mapp σ α = Some o -> 
                                   o.(cname) = C ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_class (a_ α)  C)
+(**
+[[[
+              (α ↦ o) ∈ σ     o has class C
+               ----------------------------                   (Sat-Class)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (α : C)
+]]]
+ *)
 
 (** Connectives: *)
 | sat_and   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A2 ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∧ A2)
-                                     
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
+               ----------------------------                   (Sat-And)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∧ A2)
+]]]
+ *)
+
 | sat_or1   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
-                                     
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
+               ----------------------------                   (Sat-Or1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
+]]]
+ *)
+
 | sat_or2   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A2 ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
+               ----------------------------                   (Sat-Or2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
+]]]
+ *)
 
 | sat_arr1  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A2 ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
+               ----------------------------                   (Sat-Arr1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
+]]]
+ *)
 
 | sat_arr2  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
-                                     
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
+               ----------------------------                   (Sat-Arr2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
+]]]
+ *)
+
 | sat_not   : forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊭ A ->
                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (¬ A)
+(**
+[[[
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ A
+               -----------------------                   (Sat-Not)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ ¬ A
+]]]
+ *)
 
 (** Quantifiers: *)
-| sat_all_x : forall M1 M2 σ0 σ A, (forall y v, mapp σ y = Some v ->
-                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ ([v /s 0]A)) ->
+| sat_all_x : forall M1 M2 σ0 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
+                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0]A)) ->
                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀x∙ A)
+(**
+[[[
+                (∀ y, (y ↦ α) ∈ σ → M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
+               -----------------------------------------------------                   (Sat-All-x)
+                            M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀ x. A)
+]]]
+ *)
 
-| sat_ex_x  : forall M1 M2 σ0 σ A y v, mapp σ y = Some v ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ ([v /s 0] A) ->
+| sat_ex_x  : forall M1 M2 σ0 σ A y α, mapp σ y = Some (v_addr α) ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0] A) ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃x∙ A)
-                                     
-(** Permission: *)
-| sat_access1 : forall M1 M2 σ0 σ x y α, ⌊x⌋ σ ≜ (v_addr α) ->
-                                    ⌊y⌋ σ ≜ (v_addr α) ->
-                                    M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α) access (a_ α))
+(**
+[[[
+                         (y ↦ α) ∈ σ 
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
+               -------------------------------                   (Sat-Ex-x)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃ x. A)
+]]]
+ *)
 
-| sat_access2 : forall M1 M2 σ0 σ x y α α' o f, ⌊x⌋ σ ≜ (v_addr α') ->
-                                           mapp σ α' = Some o ->
-                                           (flds o) f = Some (v_addr α) ->
-                                           ⌊y⌋ σ ≜ (v_addr α) ->
-                                           M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α') access (a_ α))
+(** Permission: *)
+| sat_access1 : forall M1 M2 σ0 σ α, M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α) access (a_ α))
+(**
+[[[
+                
+               ------------------------------                   (Sat-Access1)
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ α access α
+]]]
+ *)
+
+| sat_access2 : forall M1 M2 σ0 σ α α' o f, mapp σ α' = Some o ->
+                                       (flds o) f = Some (v_addr α) ->
+                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α') access (a_ α))
+(**
+[[[
+                 (α' ↦ o) ∈ σ     o.f = α
+               ------------------------------                   (Sat-Access2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α' access α
+]]]
+ *)
 
 | sat_access3 : forall M1 M2 σ0 σ ψ ϕ χ x α1 α2 s, ⌊this⌋ σ ≜ (v_addr α1) ->
                                               ⌊x⌋ σ ≜ (v_addr α2) ->
                                               σ = (χ, ϕ :: ψ) ->
                                               (contn ϕ) = c_stmt s ->
                                               in_stmt x s ->
-                                              M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_bind (v_addr α1)) access (a_bind (v_addr α2)))
+                                              M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) access (a_ α2))
+(**
+[[[
+                     ⌊this⌋ σ ≜ α1
+               ⌊x⌋ σ ≜ α2        x ∈ σ.(contn)
+               -------------------------------                   (Sat-Access3)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 access α2
+]]]
+ *)
 
 (** Control: *)
-| sat_call : forall M1 M2 σ0 σ χ ϕ ψ x y m vMap s α1 α2,
+| sat_call : forall M1 M2 σ0 σ χ ϕ ψ x y m β s α1 α2,
     ⌊ this ⌋ σ ≜ (v_addr α1) ->
     ⌊ y ⌋ σ ≜ (v_addr α2) ->
     σ = (χ, ϕ :: ψ) ->
-    (contn ϕ) = (c_stmt (s_stmts (s_meth x y m vMap) s)) ->
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) calls (a_ α2) ▸ m ⟨ (vMap ∘ (mapp σ) ∘ (fun v => Some (a_bind v))) ⟩ )
+    (contn ϕ) = (c_stmt (s_stmts (s_meth x y m β) s)) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) calls (a_ α2) ▸ m ⟨ (β ∘ (mapp σ) ∘ value_to_addr) ⟩ )
+(**
+[[[
+                               ⌊this⌋ σ ≜ α1        
+               ⌊y⌋ σ ≜ α2        σ.(contn) = (x := y.m(β); s)
+               ------------------------------------------------                   (Sat-Call)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 calls α2.m(β ∘ σ.(vMap))
+]]]
+ *)
 
 (** Viewpoint: *)
 | sat_extrn : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
                                   o.(cname) = C ->
                                   M1 C = None ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ a_extrn (a_ α)
+(**
+[[[
+               (α ↦ o) ∈ χ   o.(className) ∉ M1
+               ---------------------------------                   (Sat-Extrn)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ α external
+]]]
+ *)
 
 | sat_intrn : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
                                   o.(cname) = C ->
                                   (exists CDef, M1 C = Some CDef) ->
                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ a_intrn (a_ α)
+(**
+[[[
+               (α ↦ o) ∈ χ   o.(className) ∈ M1
+               ---------------------------------                   (Sat-Intrn)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ α internal
+]]]
+ *)
 
 (** Time: *)
 (**
 Non-determinism in the temporal operators is removed by using the initial
 configuration that satisfaction is defined with.
-*)
+ *)
 | sat_next : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                       M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ' ->
                                       M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_next A)
+(**
+[[[
+                 M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ'
+               M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A
+               ---------------------------------                   (Sat-Next)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ next A
+]]]
+ *)
 
 | sat_will : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                       M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ' ->
                                       M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_will A)
+(**
+[[[
+                 M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ'
+               M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A
+               ---------------------------------                   (Sat-Will)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ will A
+]]]
+ *)
 
 | sat_prev : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
                                 M1 ⦂ M2 ⦿ σ' ⤳ σ ->
                                 M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
+                    M1 ⦂ M2 ⦿ σ' ⤳ σ
+                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               ---------------------------------                   (Sat-Prev)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ prev A
+]]]
+ *)
                                 M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
 
 | sat_was : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
                                M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
                                M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
+                    M1 ⦂ M2 ⦿ σ' ⤳⋆ σ
+                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               --------------------------------                   (Sat-Was)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ was A
+]]]
+ *)
 
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A" := (sat M1 M2 σ0 σ A)
 
 with
   nsat : mdl -> mdl -> config -> config -> asrt -> Prop :=
 (*simple*)
-| nsat_false : forall M1 M2 σ0 σ, M1 ⦂ M2 ◎ σ0 … σ ⊭ a_false
+| nsat_exp : forall M1 M2 M σ0 σ e e', is_exp e e' ->
+                                  M1 ⋄ M2 ≜ M ->
+                                  M ∙ σ ⊢ e' ↪ v_false ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_exp e)
+(**
+[[[
+                   M1 ⋄ M2 ≜ M
+               M ∙ σ ⊢ e ↪ v_false
+               --------------------                   (NSat-Exp)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ e
+]]]
+ *)
 
 | nsat_class1 : forall M1 M2 σ0 σ C C' α o, mapp σ α = Some o -> 
                                        o.(cname) = C' ->
                                        C <> C' ->
                                        M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_class (a_ α) C)
+(**
+[[[
+                        (α ↦ o) ∈ σ     
+               o has class C'      C' ≠ C
+               --------------------------                   (NSat-Class1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ (α : C)
+]]]
+ *)
 
 | nsat_class2 : forall M1 M2 σ0 σ (α : addr) C, mapp σ α = None ->
                                            M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_class (a_ α) C)
+(**
+[[[
+                     ∄o.(α ↦ o) ∈ σ
+               --------------------------                   (NSat-Class2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ (α : C)
+]]]
+ *)
 
 (*connectives*)
 | nsat_and1  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ->
                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ∧ A2)
-                                      
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
+               --------------------------                   (NSat-And1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ∧ A2
+]]]
+ *)
+
 | nsat_and2  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ∧ A2)
-                                      
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A2
+               --------------------------                   (NSat-And2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ∧ A2
+]]]
+ *)
+
 | nsat_or    : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ->
                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ∨ A2)
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A2
+               --------------------------                   (NSat-Or)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ∨ A2
+]]]
+ *)
 
 | nsat_arr   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ⇒ A2)
-                                      
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A2
+               --------------------------                   (NSat-Arr)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ⇒ A2
+]]]
+ *)
+
 | nsat_not   : forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊨ A ->
                                M1 ⦂ M2 ◎ σ0 … σ ⊭ (¬ A)
+(**
+[[[
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ A
+               ----------------------                   (NSat-Not)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ ¬ A
+]]]
+ *)
 
 (*quantifiers*)
-| nsat_all_x : forall M1 M2 σ0 σ A y v, mapp σ y = Some v ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ ([v /s 0]A) ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (∀x∙ A) 
+| nsat_all_x : forall M1 M2 σ0 σ A y α, mapp σ y = Some (v_addr α) ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ ([α /s 0]A) ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (∀x∙ A)
+(**
+[[[
+                      (y ↦ α) ∈ σ
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
+               ----------------------------                   (NSat-All-x)
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ ∀ x. A
+]]]
+ *)
 
-| nsat_ex_x : forall M1 M2 σ0 σ A, (forall y v, mapp σ y = Some v ->
-                                      M1 ⦂ M2 ◎ σ0 … σ ⊭ ([v /s 0]A)) ->
+| nsat_ex_x : forall M1 M2 σ0 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
+                                      M1 ⦂ M2 ◎ σ0 … σ ⊭ ([α /s 0]A)) ->
                               M1 ⦂ M2 ◎ σ0 … σ ⊭ (∃x∙ A)
+(**
+[[[
+               ∀ y α. (y ↦ α) ∈ σ → M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
+               -------------------------------------------------                   (NSat-Ex-x)
+                         M1 ⦂ M2 ◎ σ0 … σ ⊭ ∃ x. A
+]]]
+ *)
 
 (** Permission: *)
-| nsat_access : forall M1 M2 σ0 σ α1 α2 x y, ⌊x⌋ σ ≜ (v_addr α1)  ->
-                                        ⌊y⌋ σ ≜ (v_addr α2) ->
-                                        α1 <> α2 ->
-                                        (forall o f α3, mapp σ α1 = Some o ->
-                                                   (flds o) f = Some (v_addr α3) ->
-                                                   α2 <> α3) ->
-                                        (forall z, ⌊this⌋ σ ≜ (v_addr α1) ->
-                                              ⌊z⌋ σ ≜ (v_addr α2) ->
-                                              forall ψ ϕ χ s, σ = (χ, ϕ :: ψ) ->
-                                                         (contn ϕ) = c_stmt s ->
-                                                         ~ in_stmt z s) ->
-                                        M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) access (a_ α2))
+| nsat_access : forall M1 M2 σ0 σ α1 α2, α1 <> α2 ->
+                                    (forall o f α3, mapp σ α1 = Some o ->
+                                               (flds o) f = Some (v_addr α3) ->
+                                               α2 <> α3) ->
+                                    (forall x, ⌊this⌋ σ ≜ (v_addr α1) ->
+                                          ⌊x⌋ σ ≜ (v_addr α2) ->
+                                          forall ψ ϕ χ s, σ = (χ, ϕ :: ψ) ->
+                                                     (contn ϕ) = c_stmt s ->
+                                                     ~ in_stmt x s) ->
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) access (a_ α2))
+(**
+[[[
+                α1 ≠ α2        (∀ o f α3. (α1 ↦ o) ∈ σ ∧ o.f = α3 → α2 ≠ α3)
+                    (∀ x. ⌊x⌋ σ ≜ α2 ∧ ⌊this⌋ ≜ α1 → x ∉ σ.(contn))
+               ---------------------------------------------------------------                   (NSat-Access)
+                       M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 access α2
+]]]
+ *)
 
 (** Control: *)
-| nsat_call1 : forall M1 M2 σ0 σ m vMap α1 α2, mapp σ this <> Some (v_addr α1) ->
-                                          M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ⟩)
+| nsat_call1 : forall M1 M2 σ0 σ m β α1 α2, mapp σ this <> Some (v_addr α1) ->
+                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ β ⟩)
+(**
+[[[
+                    ⌊this⌋ σ ≜ α          α ≠ α1
+               ------------------------------------------                   (NSat-Call1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
+]]]
+ *)
 
-| nsat_call2 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m vMap vMap' s, snd σ = ϕ :: ψ ->
-                                                          contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap') s)) ->
-                                                          mapp σ y <> Some (v_addr α2) ->
-                                                          M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ⟩)
+| nsat_call2 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β β' s, snd σ = ϕ :: ψ ->
+                                                    contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
+                                                    mapp σ y <> Some (v_addr α2) ->
+                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ β ⟩)
+(**
+[[[
+                    σ.(contn) = (x := y.m(β'); s) 
+                  ⌊y⌋ σ ≜ α                    α ≠ α2
+               ------------------------------------------                   (NSat-Call2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
+]]]
+ *)
 
-| nsat_call3 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m vMap' vMap s, snd σ = ϕ :: ψ ->
-                                                          contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap') s)) ->
-                                                          vMap' ∘ (mapp σ) ∘ (fun z => Some (a_bind z)) <> vMap ->
-                                                          M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ⟩)
+| nsat_call3 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β' β s, snd σ = ϕ :: ψ ->
+                                                    contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
+                                                    β <> β' ∘ (mapp σ) ∘ value_to_addr ->
+                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ β ⟩)
+(**
+[[[
+                     σ.(contn) = (x := y.m(β'); s)
+                         β ≠ β' ∘ (σ.(vMap))
+               ------------------------------------------                   (NSat-Call2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
+]]]
+ *)
 
 (*viewpoint*) (* well-formeness? This is important!!!!*)
 | nsat_extrn1 : forall M1 M2 σ0 σ α, mapp σ α = None ->
                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
+(**
+[[[
+                       α ∉ σ.(heap)
+               -----------------------------                   (NSat-Extrn1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α external
+]]]
+ *)
 
 | nsat_extrn2 : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
                                     o.(cname) = C ->
                                     (exists CDef, M1 C = Some CDef) ->
                                     M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
+(**
+[[[
+                    (α ↦ o) ∈ σ.(heap)
+                    o.(className) ∈ M1
+               -----------------------------                   (NSat-Extrn2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α external
+]]]
+ *)
 
 | nsat_intrn1 : forall M1 M2 σ0 σ α, mapp σ α = None ->
-                                M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
+                                M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α) internal)
+(**
+[[[
+                       α ∉ σ.(heap)
+               -----------------------------                   (NSat-Intrn1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α internal
+]]]
+ *)
 
 | nsat_intrn2 : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
                                     o.(cname) = C ->
                                     M1 C = None ->
-                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α) internal)
+(**
+[[[
+                    (α ↦ o) ∈ σ.(heap)
+                    o.(className) ∉ M1
+               -----------------------------                   (NSat-Intrn2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α internal
+]]]
+ *)
 
 (*space*)
 (*| nsat_in    : forall M1 M2 σ A Σ σ', σ ↓ Σ ≜ σ' ->
@@ -705,21 +1079,57 @@ with
                                        (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ') ->
                                        M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A ->
                                        M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
+(**
+[[[
+                    
+                  M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ'
+                M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A
+               ----------------------------------                   (NSat-Next)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ next A
+]]]
+ *)
 
 | nsat_will : forall M1 M2 σ0 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
                                     (forall σ', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') ->
                                            M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A) ->
                                     M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_will A)
+(**
+[[[
+                    
+               (∀ σ'. M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ' →
+                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A)
+               -----------------------------------------                   (NSat-Will)
+                  M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ will A
+]]]
+ *)
 
 | nsat_prev : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
                                  M1 ⦂ M2 ⦿ σ' ⤳ σ ->
                                  M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
+(**
+[[[
+                    
+               M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'       M1 ⦂ M2 ⦿ σ' ⤳ σ
+                          M1 ⦂ M2 ◎ σ0 … σ' ⊭ A
+               -------------------------------------------                   (NSat-Prev)
+                    M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+]]]
+ *)
 
 | nsat_was : forall M1 M2 σ0 σ A, (forall σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
                                     M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
                                     M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_was A)
+(**
+[[[
+                    
+               (∀ σ'. M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ∧ M1 ⦂ M2 ⦿ σ' ⤳⋆ σ →
+                      M1 ⦂ M2 ◎ σ0 … σ' ⊭ A)
+               ------------------------------------------------                   (NSat-Was)
+                       M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+]]]
+ *)
 
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A" := (nsat M1 M2 σ0 σ A).
 
@@ -743,3 +1153,63 @@ Definition mdl_sat (M : mdl)(A : asrt) := forall M' σ0 σ, initial σ0 ->
                                                      M ⦂ M' ◎ σ0 … σ ⊨ A.
 
 Notation "M '⊨m' A" := (mdl_sat M A)(at level 40).
+
+
+Definition guards (x y : a_var) : asrt :=
+  match x, y with
+  | a_ x', a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e_ x'))))
+  | a_ x', a♢ n => (∀x∙((¬ ((a♢ 0) access (a♢ (S n)))) ∨ ((e♢ 0) ⩦ (e_ x'))))
+  | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  end.
+
+
+Inductive entails : asrt -> asrt -> Prop :=
+| ent : forall A1 A2, (forall σ0 σ M1 M2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
+                                M1 ⦂ M2 ◎ σ0 … σ⊨ A2) ->
+                 entails A1 A2.
+
+Hint Constructors entails : chainmail_db.
+
+Definition equiv_a (A1 A2 : asrt): Prop :=
+  (entails A1 A2) /\ (entails A2 A1).
+
+(**
+#<h3>#Differences with FASE2020#</h3>#
+#<p>#
+This version of Chainmail is not equivalent to that of the FASE2020 paper due to 
+the differences between the temporal operators. The simple example specification below 
+illustrates the difference.
+#</p>#
+#<code>#
+(MySpec) ≜ ∀x. will (∃y. x access y)
+#</code>#
+#<p>#
+In the definition of Chainmail as defined in the FASE2020 paper, the x in #<code>#MySpec#</code># 
+refers to all 
+variables present in the "current" configuration. y on the otherhand refers to not 
+only variables present in some future configuration, but also variables present in the 
+current configuration. This is due to the definition of adaptation. The adapted 
+configuration includes variable maps from both the present configuration and the 
+future configuration.
+#</p>#
+#<p>#
+In the version of Chainmail defined in here, this is not the case. x still refers to
+any variable present in the current configuration, but y may only refer to variables
+present in the future configuration.
+#</p>#
+#<p>#
+Given the FASE2020 definition of will, the above specification should in fact be satisfied 
+by all configurations since for all x, (x access x) is satsified. The definition of
+adaptation ensures that x occurs in all configurations adapated from the current one.
+On the other hand, the version of Chainmail defined here, does not guarantee that MySpec
+is always satsified, only in the case that there exists some future configuration that 
+contains a variable mapping that has access to x. Since the quantification of x is defined
+outside of the will, and x is replaced by the location in the heap, we are still able to
+use x within the will operator. i.e. the following specification is always satisfied even
+though x may not be defined in any future configuration.
+#</p>#
+#<code>#
+(MySpec′) ≜ ∀x. will (x access x)
+#</code>#
+*)

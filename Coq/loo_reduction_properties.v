@@ -1,6 +1,5 @@
 Require Import common.
 Require Import loo_def.
-Require Import chainmail.
 Require Import loo_properties.
 Require Import function_operations.
 Require Import List.
@@ -142,33 +141,6 @@ Ltac obj_defn_rewrite :=
   | [H : M_wf ?M |- context[?M ObjectName]] => rewrite (M_wf_ObjectDefn M H)
   end.
 
-Lemma initial_heap_wf :
-  forall σ, initial σ ->
-       forall M, M_wf M ->
-            χ_wf M (fst σ).
-Proof.
-  intros σ Hinit;
-    destruct Hinit as [α Hinit];
-    destruct Hinit as [ϕ Hinit];
-    andDestruct;
-    subst;
-    intros.
-  apply heap_wf;
-    intros.
-  simpl in H0; inversion H0; subst.
-  update_auto;
-    [exists ObjectDefn;
-     split; simpl; auto;
-     try solve [obj_defn_rewrite; auto];
-     crush
-    |empty_auto].
-Qed.
-
-Ltac initial_heap_wf_auto :=
-  match goal with
-  | [H : initial ?σ |- χ_wf ?M (fst ?σ)] => eapply initial_heap_wf; eauto
-  end.
-
 Lemma linked_wf :
   forall M1 M2 M, M1 ⋄ M2 ≜ M ->
              M_wf M1 ->
@@ -195,20 +167,6 @@ Ltac linking_wf :=
   match goal with
   | [H1 : M_wf ?M1, H2 : M_wf ?M2, Hlink : ?M1 ⋄ ?M2 ≜ ?M |- M_wf ?M] => eapply linked_wf; eauto
   end.
-
-Lemma arising_heap_wf :
-  forall M1 M2 σ, arising M1 M2 σ ->
-             M_wf M1 ->
-             M_wf M2 ->
-             forall M, M1 ⋄ M2 ≜ M ->
-                  χ_wf M (fst σ).
-Proof.
-  intros.
-  inversion H; subst.
-  pair_reduces_heap_wf_auto.
-  initial_heap_wf_auto.
-  linking_wf.
-Qed.
 
 Lemma reduction_preserves_config_finiteness :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
@@ -754,18 +712,6 @@ Qed.
 
 Hint Resolve pair_reductions_preserves_config_wf : loo_db.
 
-Lemma arising_wf :
-  forall M1 M2 σ, arising M1 M2 σ ->
-             σ_wf σ.
-Proof.
-  intros M1 M2 σ Harise.
-  inversion Harise;
-    subst.
-  eapply pair_reductions_preserves_config_wf; eauto with loo_db.
-Qed.
-
-Hint Resolve arising_wf : loo_db.
-
 Theorem eval_unique :
   forall M σ e v1, M ∙ σ ⊢ e ↪ v1 ->
               forall v2, M ∙ σ ⊢ e ↪ v2 ->
@@ -1043,3 +989,173 @@ Lemma pair_reduction_unique :
                       σ1 = σ2.
 Proof.
 Admitted.
+
+Ltac unique_reduction_auto :=  
+    match goal with
+    | [Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳ ?σa,
+            Hb : ?M1 ⦂ ?M2 ⦿ ?σ ⤳ ?σb |- _] =>
+      eapply pair_reduction_unique with (σ1:=σa) in Hb;
+        eauto;
+        subst
+    end.
+
+Lemma list_does_not_contain_itself :
+  forall {A : Type} (l : list A) a,
+    a :: l = l ->
+    False.
+Proof.
+  intros A l;
+    induction l;
+    intros;
+    crush.
+Qed.
+
+Inductive reductions : mdl -> config -> config -> Prop :=
+| red_single : forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+                          reductions M σ1 σ2
+| red_trans : forall M σ1 σ2 σ3, reductions M σ1 σ2 ->
+                            M ∙ σ2 ⤳ σ3 ->
+                            reductions M σ1 σ3.
+
+Hint Constructors reductions : loo_db.
+
+Inductive substmt : stmt -> stmt -> Prop :=
+| sub_eq1 : forall s s', substmt s (s_stmts s s')
+| sub_eq2 : forall s s', substmt s (s_stmts s' s)
+| sub_trns1 : forall s s1 s2, substmt s s1 ->
+                         substmt s (s_stmts s1 s2)
+| sub_trns2 : forall s s1 s2, substmt s s2 ->
+                         substmt s (s_stmts s1 s2).
+
+Hint Constructors substmt : loo_db.
+
+Parameter stmt_not_strict_substatement_of_itself :
+  forall s s', substmt s s' ->
+          s = s' ->
+          False.
+
+Lemma acyclic_reduction :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             σ2 <> σ1.
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred;
+    intro Hcontra;
+    subst.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    apply list_does_not_contain_itself in H8; auto.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    rewrite <- H7 in H1;
+      simpl in *.
+    inversion H1; subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    rewrite <- H8 in H0;
+      simpl in *.
+    inversion H0; subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    rewrite <- H7 in H1;
+      simpl in *.
+    inversion H1; subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    eapply list_does_not_contain_itself; eauto.
+
+  - match goal with
+    | [H : (_, _) = (_, _) |- _] =>
+      inversion H; subst;
+        simpl in *
+    end.
+    eapply list_does_not_contain_itself; eauto.
+Qed.
+
+Hint Resolve acyclic_reduction : loo_db.
+
+Lemma acyclic_reductions :
+  forall M σ1 σ2, reductions M σ1 σ2 ->
+             σ2 <> σ1.
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred.
+
+  - eauto with loo_db.
+
+  - intro Hcontra;
+      subst.
+  
+Admitted.
+
+Lemma acyclic_pair_reductions :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 σ1 <> σ2.
+Proof.
+Admitted.
+
+Lemma pair_reductions_path_unique :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 forall σ, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ ->
+                      M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
+                      False.
+Proof.
+Admitted.
+
+Lemma pair_reductions_unique_prev :
+  forall M1 M2 σ σ1, M1 ⦂ M2 ⦿ σ ⤳⋆ σ1 ->
+                forall σ2, M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
+                      forall σ', M1 ⦂ M2 ⦿ σ1 ⤳ σ' ->
+                            M1 ⦂ M2 ⦿ σ2 ⤳ σ' ->
+                            σ1 = σ2.
+Proof.
+  intros M1 M2 σ σ1 Hred;
+    induction Hred;
+    intros.
+
+  - inversion H0; subst.
+    unique_reduction_auto.
+    unique_reduction_auto.
+    inversion H4; subst.
+    unique_reduction_auto.
+    contradiction (acyclic_pair_reductions M1 M2 σ0 σ0);
+      auto with loo_db.
+    unique_reduction_auto.
+    contradiction (acyclic_pair_reductions M1 M2 σ3 σ3);
+      auto with loo_db.
+    apply pair_reductions_transitive with (σ2:=σ0);
+      auto with loo_db.
+
+  - inversion H0; subst;
+      unique_reduction_auto;
+      eauto.
+    contradiction (pair_reductions_path_unique M1 M2 σ0 σ')
+      with (σ:=σ2);
+      auto with loo_db.
+Qed.

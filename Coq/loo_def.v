@@ -247,6 +247,117 @@ Next Obligation.
     crush.
 Defined.
 
+Program Instance eqbValue : Eq value :=
+  {
+    eqb := fun v1 v2 =>
+             match v1, v2 with
+             | v_true, v_true => true
+             | v_false, v_false => true
+             | v_null, v_null => true
+             | v_addr α1, v_addr α2 => eqb α1 α2
+             | _, _ => false
+             end
+  }.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  destruct a; simpl; auto.
+  destruct a; simpl; auto.
+  apply Nat.eqb_refl.
+Defined.
+Next Obligation.
+  destruct a1; simpl; auto;
+    destruct a2; simpl; auto.
+  destruct a; simpl; auto;
+    destruct a0; simpl; auto.
+  rewrite Nat.eqb_sym; auto.
+Defined.
+Next Obligation.
+  destruct a1, a2; simpl;
+    try solve [crush].
+  destruct a, a0; simpl; crush; eauto.
+  apply Nat.eqb_eq in H; subst; auto.
+Defined.
+Next Obligation.
+  destruct a1, a2; simpl;
+    try solve [crush].
+  destruct a, a0; simpl; crush; eauto.
+  inversion H0; subst.
+  apply Nat.eqb_neq in H; subst; auto.
+Defined.
+Next Obligation.
+  destruct a1, a2; simpl;
+    try solve [crush].
+  destruct a, a0; simpl.
+  destruct (Nat.eq_dec n n0) as [|Hneq];
+    [crush
+    |apply <- Nat.eqb_neq in Hneq; auto].
+Defined.
+Next Obligation.
+  destruct a1, a2; simpl; auto;
+    try solve [right; intros Hcontra; inversion Hcontra].
+  destruct (eq_dec a a0) as [|Hneq]; [subst|];
+    auto.
+  right; crush.
+Defined.
 
 Definition this := bnd 0.
 
@@ -618,7 +729,7 @@ Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
 (** #<h3>#Expression evaluation (Fig 4, OOPSLA2019)#</h3>#  *)
 
-Inductive val : mdl -> config -> exp -> value -> Prop :=
+Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
 
 (** M, σ true ↪ true     (True_Val) *)
 (**| v_true     : forall M σ, M ∙ σ ⊢ e_true ↪ v_true*)
@@ -701,9 +812,9 @@ Inductive val : mdl -> config -> exp -> value -> Prop :=
                                   v1 <> v2 ->
                                   M ∙ σ ⊢ (e_eq e1 e2) ↪ v_false
 
-where "M '∙' σ '⊢' e1 '↪' e2":= (val M σ e1 e2).
+where "M '∙' σ '⊢' e1 '↪' e2":= (evaluate M σ e1 e2).
 
-Hint Constructors val : loo_db.
+Hint Constructors evaluate : loo_db.
 
 
 (*Inductive dom {A B : Type}`{Eq A} : partial_map A B -> list A -> Prop :=

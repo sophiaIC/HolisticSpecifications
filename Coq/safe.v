@@ -1,10 +1,8 @@
 Require Import common.
 Require Import loo_def.
-Require Import chainmail.
 Require Import loo_properties.
 Require Import loo_reduction_properties.
-Require Import classical_properties.
-Require Import chainmail_extended_properties.
+Require Import decoupled_classical_properties.
 Require Import function_operations.
 Require Import List.
 Require Import CpdtTactics.
