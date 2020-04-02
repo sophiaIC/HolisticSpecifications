@@ -68,7 +68,6 @@ Module ExposeExample.
                                Inside InsideDef
                                empty)).
 
-
   Theorem expose_example_will :
     MyModule ⊨m (∀x∙∀x∙(((a_class (a♢1) Boundary)
                          ∧
@@ -93,8 +92,6 @@ Module ExposeExample.
       [|apply neg_distributive_or_1].
     a_prop.
     apply negate_elim_sat in H7.
-    eapply entails_implies in H7;
-      [|].
     
     Search a_neg.
     
