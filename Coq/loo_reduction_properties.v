@@ -1159,3 +1159,13 @@ Proof.
       with (σ:=σ2);
       auto with loo_db.
 Qed.
+Print red_single.
+
+(* call block *)
+
+Lemma reduction_call_rtrn :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             forall χ ϕ, reductions M (χ, ϕ::nil) σ1 ->
+                    (exists χ' χ'' ϕ' ψ' x y m β, reductions M (χ, ϕ::nil) (χ', ϕ'::ψ') /\
+                    contn ϕ' = (c_stmt ())).
+  
