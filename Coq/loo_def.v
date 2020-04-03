@@ -3,6 +3,8 @@ Require Import CpdtTactics.
 Require Import List.
 Require Import common.
 Require Import Coq.Logic.FunctionalExtensionality.
+Require Export Coq.Numbers.BinNums.
+Require Export Coq.ZArith.BinInt.
 
 Inductive fld : Type := fieldID : nat -> fld.
 
@@ -18,7 +20,11 @@ Inductive value : Type :=
 | v_true  : value
 | v_false : value
 | v_null  : value
-| v_addr   : addr -> value.
+| v_addr   : addr -> value
+| v_int : Z -> value.
+
+Hint Resolve Z.eqb_refl Z.eqb_neq Z.eqb_sym Z.eqb_eq Z.eq_dec Z.eqb_neq : eq_db.
+Hint Rewrite Z.eqb_refl Z.eqb_neq Z.eqb_sym Z.eqb_eq Z.eq_dec Z.eqb_neq : eq_db.
 
 Definition state := partial_map var value.
 
@@ -255,6 +261,7 @@ Program Instance eqbValue : Eq value :=
              | v_false, v_false => true
              | v_null, v_null => true
              | v_addr α1, v_addr α2 => eqb α1 α2
+             | v_int i, v_int j => Z.eqb i j
              | _, _ => false
              end
   }.
@@ -319,9 +326,50 @@ Next Obligation.
     try solve [crush].
 Defined.
 Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
+  repeat split;
+    intro Hcontra;
+    try solve [crush].
+Defined.
+Next Obligation.
   destruct a; simpl; auto.
   destruct a; simpl; auto.
   apply Nat.eqb_refl.
+  apply Z.eqb_refl.
 Defined.
 Next Obligation.
   destruct a1; simpl; auto;
@@ -329,12 +377,14 @@ Next Obligation.
   destruct a; simpl; auto;
     destruct a0; simpl; auto.
   rewrite Nat.eqb_sym; auto.
+  rewrite Z.eqb_sym; auto.
 Defined.
 Next Obligation.
   destruct a1, a2; simpl;
     try solve [crush].
   destruct a, a0; simpl; crush; eauto.
   apply Nat.eqb_eq in H; subst; auto.
+  apply Z.eqb_eq in H; subst; auto.
 Defined.
 Next Obligation.
   destruct a1, a2; simpl;
@@ -342,6 +392,8 @@ Next Obligation.
   destruct a, a0; simpl; crush; eauto.
   inversion H0; subst.
   apply Nat.eqb_neq in H; subst; auto.
+  apply Z.eqb_neq in H; subst; auto.
+  crush.
 Defined.
 Next Obligation.
   destruct a1, a2; simpl;
@@ -350,11 +402,15 @@ Next Obligation.
   destruct (Nat.eq_dec n n0) as [|Hneq];
     [crush
     |apply <- Nat.eqb_neq in Hneq; auto].
+  apply Z.eqb_neq; crush.
 Defined.
 Next Obligation.
   destruct a1, a2; simpl; auto;
     try solve [right; intros Hcontra; inversion Hcontra].
   destruct (eq_dec a a0) as [|Hneq]; [subst|];
+    auto.
+  right; crush.
+  destruct (Z.eq_dec z z0) as [|Hneq]; [subst|];
     auto.
   right; crush.
 Defined.
@@ -390,6 +446,10 @@ Inductive exp : Type :=
 | e_var   : var -> exp
 | e_hole  : nat -> exp
 | e_eq    : exp -> exp -> exp
+| e_plus  : exp -> exp -> exp
+| e_minus : exp -> exp -> exp
+| e_mult  : exp -> exp -> exp
+| e_div   : exp -> exp -> exp
 | e_if    : exp -> exp -> exp -> exp
 | e_acc_f : exp -> fld -> exp
 | e_acc_g : exp -> gfld -> exp -> exp.
@@ -400,6 +460,7 @@ Notation "'e_true'" := (e_val v_true)(at level 40).
 Notation "'e_false'" := (e_val v_false)(at level 40).
 Notation "'e_null'" := (e_val v_null)(at level 40).
 Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
+Notation "'e_int' i" := (e_val (v_int i))(at level 40).
 
 (*methods is a mapping from method names to statements*)
 Definition methods := partial_map mth ((list var) * stmt).
@@ -656,6 +717,18 @@ Inductive notin_exp : exp -> var -> Prop :=
 | ni_eq    : forall e1 e2 x, notin_exp e1 x ->
                         notin_exp e2 x ->
                         notin_exp (e_eq e1 e2) x
+| ni_plus : forall e1 e2 x, notin_exp e1 x ->
+                       notin_exp e2 x ->
+                       notin_exp (e_plus e1 e2) x
+| ni_minut : forall e1 e2 x, notin_exp e1 x ->
+                        notin_exp e2 x ->
+                        notin_exp (e_minus e1 e2) x
+| ni_mult : forall e1 e2 x, notin_exp e1 x ->
+                       notin_exp e2 x ->
+                       notin_exp (e_mult e1 e2) x
+| ni_div : forall e1 e2 x, notin_exp e1 x ->
+                       notin_exp e2 x ->
+                       notin_exp (e_div e1 e2) x
 | ni_if    : forall e1 e2 e3 x, notin_exp e1 x ->
                            notin_exp e2 x ->
                            notin_exp e3 x ->
@@ -811,6 +884,22 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
                                   M ∙ σ ⊢ e2 ↪ v2 ->
                                   v1 <> v2 ->
                                   M ∙ σ ⊢ (e_eq e1 e2) ↪ v_false
+
+| v_plus : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                              M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                              M ∙ σ ⊢ (e_plus e1 e2) ↪ (v_int (i1 + i2))
+
+| v_minus : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                               M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                               M ∙ σ ⊢ (e_minus e1 e2) ↪ (v_int (i1 - i2))
+
+| v_mult : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                              M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                              M ∙ σ ⊢ (e_mult e1 e2) ↪ (v_int (i1 * i2))
+
+| v_div : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                             M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                             M ∙ σ ⊢ (e_div e1 e2) ↪ (v_int (i1 / i2))
 
 where "M '∙' σ '⊢' e1 '↪' e2":= (evaluate M σ e1 e2).
 

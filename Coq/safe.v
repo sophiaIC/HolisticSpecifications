@@ -29,4 +29,55 @@ Module SafeExample.
   (**  *)
   (**  *)
 
+(*  Definition Inside := classID 6.
+
+  Definition InsideDef := clazz Inside
+                                nil
+                                empty
+                                empty.
+
+  (** Boundary Definition *)
+
+  Definition Boundary := classID 7.
+
+  Definition inside := fieldID 0.
+
+  Definition expose := methID 0.
+
+  Definition x := bnd 10.
+
+  Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this inside))
+                                   (s_rtrn x).
+
+  Definition BoundaryDef := clazz Boundary
+                                  (inside :: nil)
+                                  (update
+                                     expose (nil, exposeBody)
+                                     empty)
+                                  empty.
+
+  (** MyModule Definition *)
+
+  Definition MyModule := (update
+                            Boundary BoundaryDef
+                            (update
+                               Inside InsideDef
+                               empty)).
+
+  
+
+  Theorem safe :
+    ∀x∙ (((a_class (a♢0) Safe)
+          ∧
+          (¬ ((e_acc_f (a♢0) treasure) ⩦ e_null))
+          ∧
+          (a_will (((e_acc_f (a♢0) treasure) ⩦ e_null))))
+           ⇒
+           (∃x∙((a♢ 0) external
+                ∧
+                (∀x∙((e_acc_f (a♢2) treasure) ⩦ (e♢0)) ⇒ ((a♢ 1) access (a♢0)))
+               )
+           )
+        ).*)
+
 End SafeExample.

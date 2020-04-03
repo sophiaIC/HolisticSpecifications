@@ -102,7 +102,9 @@ Inductive asrt : Type :=
 
 (** Viewpoint: *)
 | a_extrn : a_var -> asrt
-| a_intrn : a_var -> asrt.
+| a_intrn : a_var -> asrt
+
+| a_name : a_var -> var -> asrt.
 
 Notation "A1 '⇒' A2" := (a_arr A1 A2)(at level 40).
 Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 40).
@@ -188,6 +190,8 @@ Instance substAssertionVar : Subst asrt nat addr :=
        (*viewpoint*)
        | a_extrn v          => a_extrn ([x /s n] v)
        | a_intrn v          => a_intrn ([x /s n] v)
+
+       | a_name y z         => a_name ([x /s n] y) z
        end
   }.
 
@@ -844,6 +848,17 @@ configuration that satisfaction is defined with.
 ]]]
  *)
 
+| sat_name : forall M1 M2 σ0 σ α y, mapp σ y = Some (v_addr α) ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name (a_ α) y)
+(**
+[[[
+                    
+                    (y ↦ α) ∈ σ.(vMap)
+               -----------------------------                   (Sat-Name)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α named y
+]]]
+ *)
+
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A" := (sat M1 M2 σ0 σ A)
 
 with
@@ -1128,6 +1143,17 @@ with
                       M1 ⦂ M2 ◎ σ0 … σ' ⊭ A)
                ------------------------------------------------                   (NSat-Was)
                        M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+]]]
+ *)
+
+| nsat_name : forall M1 M2 σ0 σ α y, mapp σ y <> Some (v_addr α) ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_name (a_ α) y)
+(**
+[[[
+                    
+                    (y ↦ α) ∉ σ.(vMap)
+               -----------------------------                   (NSat-Name)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α named y
 ]]]
  *)
 
