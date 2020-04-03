@@ -724,31 +724,47 @@ Proof.
                apply IHHeval1 in H6; inversion H6].
 
   (** Case 1: eval v *)
-  inversion H; eauto.
+  - inversion H; eauto.
 
   (** Case 2: eval x *)
-  inversion H0; subst; crush.
+  - inversion H0; subst; crush.
 
   (** Case 3: e.f *)
-  inversion H1; subst; crush.
-  apply IHHeval in H4; subst; crush.
+  - inversion H1; subst; crush.
+    apply IHHeval in H4; subst; crush.
 
   (** Case 4: e0.g(e) *)
-  inversion H2; subst.
-  apply IHHeval1 in H6; inversion H6; subst.
-  rewrite H7 in H; inversion H; subst.
-  rewrite H8 in H0; inversion H0; subst.
-  rewrite H11 in H1; inversion H1; subst.
-  apply IHHeval2 in H13; subst.
-  apply IHHeval3 in H14; subst; auto.
+  - inversion H2; subst.
+    apply IHHeval1 in H6; inversion H6; subst.
+    rewrite H7 in H; inversion H; subst.
+    rewrite H8 in H0; inversion H0; subst.
+    rewrite H11 in H1; inversion H1; subst.
+    apply IHHeval2 in H13; subst.
+    apply IHHeval3 in H14; subst; auto.
 
   (** Case 5: e1 = e2 *) 
-  inversion H; subst; eauto.
-  apply IHHeval1 in H2; apply IHHeval2 in H5; subst; crush.
+  - inversion H; subst; eauto.
+    apply IHHeval1 in H2; apply IHHeval2 in H5; subst; crush.
 
   (** Case 6: e1 ≠ e2 *)
-  inversion H0; subst; eauto.
-  apply IHHeval1 in H5; apply IHHeval2 in H7; subst; crush.
+  - inversion H0; subst; eauto.
+    apply IHHeval1 in H5; apply IHHeval2 in H7; subst; crush.
+
+  (** Case 7 : e1 + e2 *)
+  - inversion H; subst; eauto.
+    apply IHHeval1 in H4; apply IHHeval2 in H6; subst; crush.
+
+  (** Case 8 : e1 - e2 *)
+  - inversion H; subst; eauto.
+    apply IHHeval1 in H4; apply IHHeval2 in H6; subst; crush.
+
+  (** Case 9 : e1 * e2 *)
+  - inversion H; subst; eauto.
+    apply IHHeval1 in H4; apply IHHeval2 in H6; subst; crush.
+
+  (** Case 10 : e1 / e2 *)
+  - inversion H; subst; eauto.
+    apply IHHeval1 in H4; apply IHHeval2 in H6; subst; crush.
 Qed.
 
 Hint Rewrite eval_unique : loo_db.
@@ -1163,9 +1179,9 @@ Print red_single.
 
 (* call block *)
 
-Lemma reduction_call_rtrn :
+(*Lemma reduction_call_rtrn :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
              forall χ ϕ, reductions M (χ, ϕ::nil) σ1 ->
                     (exists χ' χ'' ϕ' ψ' x y m β, reductions M (χ, ϕ::nil) (χ', ϕ'::ψ') /\
-                    contn ϕ' = (c_stmt ())).
+                    contn ϕ' = (c_stmt ())).*)
   
