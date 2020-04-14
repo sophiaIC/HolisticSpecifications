@@ -59,7 +59,7 @@ Proof.
 
   - (* Case 11: sat_all_x *)
     inversion Hcontra; subst;
-      contradiction (H y α);
+      contradiction (H α o);
       auto.
 
   - (* Case 12: sat_ex_x *)
@@ -181,18 +181,18 @@ Proof.
   - (* nsat_all_x *)
     inversion Hcontra; subst.
     match goal with
-    | [Ha : forall y' α', ?m y' = Some (v_addr α') -> _,
-         Hb : ?m ?y = Some (v_addr ?α) |- _] =>
-      specialize (Ha y α Hb)
+    | [Ha : forall α' o', ?m α' = Some o' -> _,
+         Hb : ?m ?α = Some ?o |- _] =>
+      specialize (Ha α o Hb)
     end.
     auto.
 
   - (* nsat_ex_x *)
     inversion Hcontra; subst.
     repeat match goal with
-           | [Ha : forall y' α', ?m y' = Some (v_addr α') -> _,
-                Hb : ?m ?y = Some (v_addr ?α) |- _] =>
-             specialize (Ha y α Hb)
+           | [Ha : forall α' o', ?m α' = Some o' -> _,
+                Hb : ?m ?α = Some ?o |- _] =>
+             specialize (Ha α o Hb)
            end.
     auto.
 
@@ -286,12 +286,13 @@ Proof.
     inversion Hcontra; subst.
     simpl_crush.
     match goal with
-    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ σ'' -> _,
+    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ σ'' -> ~ _,
          Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ ?σ' |- _] =>
       specialize (H σ')
     end;
       auto_specialize;
       auto.
+    
 
   - (* nsat_prev *)
     inversion Hcontra; subst.
@@ -398,7 +399,7 @@ Qed.
 Lemma all_x_prop :
   forall M1 M2 σ0 σ A,
     M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀x∙A) <->
-    (forall y α, mapp σ y = Some (v_addr α) ->
+    (forall α (o : obj), mapp σ α = Some o ->
             M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0]A)).
 Proof.
   intros; split; eauto with chainmail_db; intros.
@@ -410,7 +411,7 @@ Qed.
 Lemma ex_x_prop :
   forall M1 M2 σ0 σ A,
     M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃x∙A) <->
-    (exists y α, mapp σ y = Some (v_addr α) /\
+    (exists α (o : obj), mapp σ α = Some o /\
             M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0] A)).
 Proof.
   intros; split; eauto with chainmail_db; intros.
@@ -885,7 +886,7 @@ Proof.
   inversion H5;
     subst.
 
-  apply sat_ex_x with (y:=y)(α:=α);
+  apply sat_ex_x with (α:=α)(o:=o);
     auto with chainmail_db;
     sbst_simpl.
   
@@ -905,7 +906,7 @@ Proof.
     subst.
 
   apply sat_not.
-  apply nsat_all_x with (y:=y)(α:=α);
+  apply nsat_all_x with (α:=α)(o:=o);
     auto with chainmail_db;
     sbst_simpl.
   inversion H6; subst; auto.

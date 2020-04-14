@@ -157,7 +157,7 @@ Proof.
 
   (** Case 16: sat_call *)
   inversion Hcontra; subst;
-    interpretation_rewrite.
+    repeat interpretation_rewrite.
   simpl in H4;
     symmetry in H4;
     inversion H4;

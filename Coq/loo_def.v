@@ -420,27 +420,6 @@ Definition this := bnd 0.
 (*fields are a mapping from field names to locations in the heap*)
 Definition fields := partial_map fld value.
 
-Inductive ref : Type :=
-| r_var : var -> ref
-| r_fld : var -> fld -> ref.
-
-Hint Constructors ref : loo_db.
-
-Inductive stmt : Type :=
-| s_asgn : ref -> ref -> stmt
-| s_meth : var -> var -> mth -> partial_map var var -> stmt
-| s_new  : var -> cls -> partial_map fld var -> stmt
-| s_stmts : stmt -> stmt -> stmt
-| s_rtrn : var -> stmt.
-
-Hint Constructors stmt : loo_db.
-
-Inductive continuation : Type :=
-| c_stmt : stmt -> continuation
-| c_hole : var -> stmt -> continuation.
-
-Hint Constructors continuation : loo_db.
-
 Inductive exp : Type :=
 | e_val   : value -> exp
 | e_var   : var -> exp
@@ -461,6 +440,29 @@ Notation "'e_false'" := (e_val v_false)(at level 40).
 Notation "'e_null'" := (e_val v_null)(at level 40).
 Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
 Notation "'e_int' i" := (e_val (v_int i))(at level 40).
+
+Inductive ref : Type :=
+| r_exp : exp -> ref
+| r_var : var -> ref
+| r_fld : var -> fld -> ref.
+
+Hint Constructors ref : loo_db.
+
+Inductive stmt : Type :=
+| s_asgn : ref -> ref -> stmt
+| s_meth : var -> var -> mth -> partial_map var var -> stmt
+| s_new  : var -> cls -> partial_map fld var -> stmt
+| s_if : exp -> stmt -> stmt -> stmt
+| s_stmts : stmt -> stmt -> stmt
+| s_rtrn : var -> stmt.
+
+Hint Constructors stmt : loo_db.
+
+Inductive continuation : Type :=
+| c_stmt : stmt -> continuation
+| c_hole : var -> stmt -> continuation.
+
+Hint Constructors continuation : loo_db.
 
 (*methods is a mapping from method names to statements*)
 Definition methods := partial_map mth ((list var) * stmt).
@@ -762,6 +764,10 @@ Inductive notin_stmt : stmt -> var -> Prop :=
                        (forall f z, fs f = Some z ->
                                z <> y) ->
                        notin_stmt (s_new x C fs) y
+| ni_if_stmt : forall e s1 s2 x, notin_exp e x ->
+                            notin_stmt s1 x ->
+                            notin_stmt s2 x ->
+                            notin_stmt (s_if e s1 s2) x
 | ni_stmts : forall s1 s2 x, notin_stmt s1 x ->
                         notin_stmt s2 x ->
                         notin_stmt (s_stmts s1 s2) x
@@ -969,6 +975,36 @@ Inductive fresh_χ : heap -> addr -> Prop :=
 
 Hint Constructors fresh_χ : loo_db.
 
+Inductive no_addr : exp -> Prop :=
+| na_value : forall v, (forall α, v <> v_addr α) ->
+                  no_addr (e_val v)
+| na_var : forall x, no_addr (e_var x)
+| na_hole : forall n, no_addr (e_hole n)
+| na_eq : forall e1 e2, no_addr e1 ->
+                   no_addr e2 ->
+                   no_addr (e_eq e1 e2)
+| na_plus : forall e1 e2, no_addr e1 ->
+                     no_addr e2 ->
+                     no_addr (e_plus e1 e2)
+| na_minus : forall e1 e2, no_addr e1 ->
+                      no_addr e2 ->
+                      no_addr (e_minus e1 e2)
+| na_mult : forall e1 e2, no_addr e1 ->
+                     no_addr e2 ->
+                     no_addr (e_mult e1 e2)
+| na_div : forall e1 e2, no_addr e1 ->
+                    no_addr e2 ->
+                    no_addr (e_div e1 e2)
+| na_if : forall e1 e2 e3, no_addr e1 ->
+                      no_addr e2 ->
+                      no_addr e3 ->
+                      no_addr (e_if e1 e2 e3)
+| na_acc_f : forall e f, no_addr e ->
+                    no_addr (e_acc_f e f)
+| na_acc_g : forall e1 g e2, no_addr e1 ->
+                        no_addr e2 ->
+                        no_addr (e_acc_g e1 g e2).
+
 Inductive reduction : mdl -> config -> config -> Prop :=
 
     (** ϕ.contn = x:=y.m(ps); s' *)
@@ -991,6 +1027,14 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     ϕ'' = frm (update this (v_addr α) (ps ∘ (vMap ϕ))) (c_stmt s) ->
     M ∙ σ ⤳ (χ, ϕ'' :: (ϕ' :: ψ))
 
+| r_eAssgn : forall M χ ϕ ψ x e v s,
+    x <> this ->
+    contn ϕ = (c_stmt (s_stmts (s_asgn (r_var x) (r_exp e)) s)) ->
+    M ∙ (χ, ϕ::ψ) ⊢ e ↪ v ->
+    no_addr e ->
+    (forall α, v <> v_addr α) ->
+    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (update x v (vMap ϕ)) (c_stmt s))::ψ)
+
     (** x ≠ this *)
     (** σ = (χ, ψ)*)
     (** ψ = ϕ : _ *)
@@ -1003,7 +1047,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** σ' = update σ with (x ↦ α) *)
     (** ------------------------------------ (Var_Assgn_OS) *)
     (** M, σ ⤳ σ' *)
-| r_vAssgn : forall M σ ϕ x y f s ψ χ α v o ϕ' C,
+| r_xAssgn : forall M σ ϕ x y f s ψ χ α v o ϕ' C,
     x <> this ->
     σ = (χ, ϕ :: ψ) ->
     ϕ.(contn) = (c_stmt (s_stmts (s_asgn (r_var x) (r_fld y f)) s)) ->
@@ -1069,6 +1113,17 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ϕ'' = update (ϕ') with (y ↦ α) and (contn ↦ s) *)
     (** ----------------------------------------------------- (Return_OS_1) *)
     (** M, σ ⤳ (χ, ϕ'' : ψ *)
+
+| r_if1 : forall M χ ϕ ψ e s1 s2,
+    contn ϕ = c_stmt (s_if e s1 s2) ->
+    M ∙ (χ, ϕ::ψ) ⊢ e ↪ v_true ->
+    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt s1))::ψ)
+
+| r_if2 : forall M χ ϕ ψ e s1 s2,
+    contn ϕ = c_stmt (s_if e s1 s2) ->
+    M ∙ (χ, ϕ::ψ) ⊢ e ↪ v_false ->
+    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt s2))::ψ)
+
 | r_ret1 : forall M ϕ ϕ' ψ χ y x α ϕ'' σ s,
     σ = (χ, ϕ :: (ϕ' :: ψ)) ->
     ϕ.(contn) = c_stmt (s_rtrn x) ->
@@ -1207,17 +1262,51 @@ Program Instance varRename : Rename var :=
 Hint Rewrite (@empty_rename var) : map_db.
 Hint Resolve (@empty_rename var) : map_db.
 
-Program Instance refRename : Rename ref :=
+Program Instance expRename : Rename exp :=
   {
-    rname f r := match r with
-                 | r_var x => r_var (❲f ↦ x❳)
-                 | r_fld x f' => r_fld (❲f ↦ x❳) f'
-                 end
+  rname :=
+    fix rname' f e :=
+      match e with
+      | e_var x => e_var (❲f ↦ x❳)
+      | e_eq e1 e2 => e_eq (rname' f e1) (rname' f e2)
+      | e_plus e1 e2 => e_plus (rname' f e1) (rname' f e2)
+      | e_minus e1 e2 => e_minus (rname' f e1) (rname' f e2)
+      | e_mult e1 e2 => e_mult (rname' f e1) (rname' f e2)
+      | e_div e1 e2 => e_div (rname' f e1) (rname' f e2)
+      | e_if e1 e2 e3 => e_if (rname' f e1) (rname' f e2) (rname' f e3)
+      | e_acc_f e' f' => e_acc_f (rname' f e') f'
+      | e_acc_g e1 g e2 => e_acc_g (rname' f e1) g (rname' f e2)
+      | _ => e
+      end
   }.
 Next Obligation.
-  intros.
-  destruct a as [x|x f];
-    auto.
+  crush.
+Defined.
+Next Obligation.
+  crush.
+Defined.
+Next Obligation.
+  induction a; simpl; crush.
+Defined.
+
+Hint Rewrite (@empty_rename exp) : map_db.
+Hint Resolve (@empty_rename exp) : map_db.
+
+Program Instance refRename : Rename ref :=
+  {
+  rname f r := match r with
+               | r_exp e => r_exp (❲f ↦ e❳)
+               | r_var x => r_var (❲f ↦ x❳)
+               | r_fld x f' => r_fld (❲f ↦ x❳) f'
+               end
+  }.
+Next Obligation.
+  destruct a; auto.
+  assert (Hrname : rname empty e = e);
+    [auto with map_db
+    |unfold rname in Hrname;
+     simpl in Hrname;
+     rewrite Hrname; auto].
 Defined.
 
 Hint Rewrite (@empty_rename ref) : map_db.
@@ -1269,25 +1358,50 @@ Hint Rewrite (@map_wrap_id var var) : map_db.
 
 Program Instance stmtRename : Rename stmt :=
   {
-    rname :=
-      fix rname' f s :=
-        match s with
-        | s_asgn r1 r2 => s_asgn (❲f ↦ r1❳) (❲f ↦ r2❳)
-        | s_meth x y m' pMap => s_meth (❲f ↦ x❳)  (❲f ↦ y❳) m' (❲f ↦ pMap❳)
-        | s_new x C fMap => s_new (❲f ↦ x❳) C (❲f ↦ fMap❳)
-        | s_stmts s1 s2 => s_stmts (rname' f s1) (rname' f s2)
-        | s_rtrn x => s_rtrn (❲f ↦ x❳)
-        end
+  rname :=
+    fix rname' f s :=
+      match s with
+      | s_asgn r1 r2 => s_asgn (❲f ↦ r1❳) (❲f ↦ r2❳)
+      | s_meth x y m' pMap => s_meth (❲f ↦ x❳)  (❲f ↦ y❳) m' (❲f ↦ pMap❳)
+      | s_new x C fMap => s_new (❲f ↦ x❳) C (❲f ↦ fMap❳)
+      | s_if e s1 s2 => s_if (❲f ↦ e❳) (rname' f s1) (rname' f s2)
+      | s_stmts s1 s2 => s_stmts (rname' f s1) (rname' f s2)
+      | s_rtrn x => s_rtrn (❲f ↦ x❳)
+      end
   }.
 Next Obligation.
   induction a;
     auto.
 
-  - destruct r, r0; simpl in *; auto.
+  - destruct r, r0; simpl in *; auto;
+      try solve [assert (Hrname : rname empty e = e);
+                 [apply empty_rename
+                 |unfold rname in Hrname;
+                  simpl in Hrname;
+                  rewrite Hrname];
+                 reflexivity].
+    + assert (Hrname : rname empty e = e);
+        [apply empty_rename
+        |unfold rname in Hrname;
+         simpl in Hrname;
+         rewrite Hrname].
+      assert (Hrname0 : rname empty e0 = e0);
+        [apply empty_rename
+        |unfold rname in Hrname0;
+         simpl in Hrname0;
+         rewrite Hrname0].
+      reflexivity.
   - destruct v, v0; simpl in *; eauto.
     rewrite map_wrap_id; auto.
   - destruct v; simpl in *; eauto.
     rewrite map_wrap_id; auto.
+  - fold rname in *.
+    assert (Hrname : rname empty e = e);
+      [apply empty_rename
+      |unfold rname in Hrname;
+       simpl in Hrname;
+       rewrite Hrname].
+    destruct a1, a2; simpl in *; crush.
   - destruct a1, a2;
       simpl in *;
       crush.
@@ -1298,7 +1412,44 @@ Hint Resolve (@empty_rename stmt) : map_db.
 Hint Rewrite empty_rename : map_db.
 Hint Resolve empty_rename : map_db.
 
+Inductive in_exp : var -> exp -> Prop :=
+| in_var : forall x, in_exp x (e_var x)
+| in_eq1 : forall x e1 e2, in_exp x e1 ->
+                      in_exp x (e_eq e1 e2)
+| in_eq2 : forall x e1 e2, in_exp x e2 ->
+                      in_exp x (e_eq e1 e2)
+| in_plus1 : forall x e1 e2, in_exp x e1 ->
+                        in_exp x (e_plus e1 e2)
+| in_plus2 : forall x e1 e2, in_exp x e2 ->
+                        in_exp x (e_plus e1 e2)
+| in_minus1 : forall x e1 e2, in_exp x e1 ->
+                         in_exp x (e_minus e1 e2)
+| in_minus2 : forall x e1 e2, in_exp x e2 ->
+                         in_exp x (e_minus e1 e2)
+| in_mult1 : forall x e1 e2, in_exp x e1 ->
+                        in_exp x (e_mult e1 e2)
+| in_mult2 : forall x e1 e2, in_exp x e2 ->
+                        in_exp x (e_mult e1 e2)
+| in_div1 : forall x e1 e2, in_exp x e1 ->
+                       in_exp x (e_div e1 e2)
+| in_div2 : forall x e1 e2, in_exp x e2 ->
+                       in_exp x (e_div e1 e2)
+| in_if1 : forall x e1 e2 e3, in_exp x e1 ->
+                         in_exp x (e_if e1 e2 e3)
+| in_if2 : forall x e1 e2 e3, in_exp x e2 ->
+                         in_exp x (e_if e1 e2 e3)
+| in_if3 : forall x e1 e2 e3, in_exp x e3 ->
+                         in_exp x (e_if e1 e2 e3)
+| in_acc_f : forall x e f, in_exp x e ->
+                      in_exp x (e_acc_f e f)
+| in_acc_g1 : forall x e1 g e2, in_exp x e1 ->
+                           in_exp x (e_acc_g e1 g e2)
+| in_acc_g2 : forall x e1 g e2, in_exp x e2 ->
+                           in_exp x (e_acc_g e1 g e2).
+
 Inductive in_ref : var -> ref -> Prop :=
+| in_r_exp : forall x e, in_exp x e ->
+                    in_ref x (r_exp e)
 | in_r_var : forall x, in_ref x (r_var x)
 | in_r_fld : forall x f, in_ref x (r_fld x f).
 
@@ -1314,6 +1465,12 @@ Inductive in_stmt : var -> stmt -> Prop :=
 | in_new_1 : forall x C ps, in_stmt x (s_new x C ps)
 | in_new_2 : forall x y C ps, (exists z, ps z = Some y) ->
                          in_stmt y (s_new x C ps)
+| in_sif1 : forall x e s1 s2, in_exp x e ->
+                         in_stmt x (s_if e s1 s2)
+| in_sif2 : forall x e s1 s2, in_stmt x s1 ->
+                         in_stmt x (s_if e s1 s2)
+| in_sif3 : forall x e s1 s2, in_stmt x s2 ->
+                         in_stmt x (s_if e s1 s2)
 | in_stmts_1 : forall x s1 s2, in_stmt x s1 ->
                           in_stmt x (s_stmts s1 s2)
 | in_stmts_2 : forall x s1 s2, in_stmt x s2 ->

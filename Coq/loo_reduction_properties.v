@@ -194,6 +194,8 @@ Proof.
                  eauto];
       eauto with loo_db.
 
+  - 
+
   - unfold update_ψ_map, update_ϕ_map in H0;
       inversion H0;
       subst;
@@ -204,11 +206,13 @@ Proof.
 
   - destruct H0; crush.
 
-  - unfold update_ϕ_contn, update_ϕ_map in H; simpl in H;
-      destruct H; crush.
+  - crush.
 
-  - unfold update_ϕ_contn, update_ϕ_map in H; simpl in H;
-      destruct H; crush.
+  - crush.
+
+  - crush.
+
+  - crush.
 Qed.
 
 Hint Resolve reduction_preserves_config_finiteness : loo_db.
@@ -300,6 +304,10 @@ Proof.
       simpl;
       auto with loo_db;
       crush.
+
+  - repeat eexists.
+
+  - repeat eexists.
 
   - exists ϕ'', ψ;
       split;
@@ -584,6 +592,28 @@ Proof.
         [rewrite eqb_refl; auto
         |rewrite neq_eqb; auto];
         auto.
+
+  - apply self_config;
+      intros.
+    inversion H1; subst;
+      [
+      |specialize (H2 ϕ0)].
+    + apply self_frm.
+      specialize (H2 ϕ (in_eq ϕ ψ)).
+      inversion H2; subst; auto.
+    + specialize (H2 (in_cons ϕ ϕ0 ψ H3));
+        assumption.
+
+  - apply self_config;
+      intros.
+    inversion H1; subst;
+      [
+      |specialize (H2 ϕ0)].
+    + apply self_frm.
+      specialize (H2 ϕ (in_eq ϕ ψ)).
+      inversion H2; subst; auto.
+    + specialize (H2 (in_cons ϕ ϕ0 ψ H3));
+        assumption.
 
   - (* ret 1 *)
     apply self_config;
@@ -970,6 +1000,32 @@ Proof.
     end.
     crush.
 
+  - inversion H1;
+      subst;
+      crush.
+    match goal with
+    | [Ha : contn ?ϕ = _,
+            Hb : contn ?ϕ = _ |- _] =>
+      rewrite Ha in Hb;
+        inversion Hb;
+        subst
+    end.
+    eval_rewrite.
+    crush.
+
+  - inversion H1;
+      subst;
+      crush.
+    match goal with
+    | [Ha : contn ?ϕ = _,
+            Hb : contn ?ϕ = _ |- _] =>
+      rewrite Ha in Hb;
+        inversion Hb;
+        subst
+    end.
+    eval_rewrite.
+    crush.
+
   - (* ret1 *)
     subst.
     inversion H5;
@@ -1036,11 +1092,14 @@ Inductive reductions : mdl -> config -> config -> Prop :=
 Hint Constructors reductions : loo_db.
 
 Inductive substmt : stmt -> stmt -> Prop :=
-| sub_eq1 : forall s s', substmt s (s_stmts s s')
-| sub_eq2 : forall s s', substmt s (s_stmts s' s)
-| sub_trns1 : forall s s1 s2, substmt s s1 ->
+| sub_refl : forall s1 s2, substmt s1 s2
+| sub_if1 : forall s e s1 s2, substmt s s1 ->
+                         substmt s (s_if e s1 s2)
+| sub_if2 : forall s e s1 s2, substmt s s2 ->
+                         substmt s (s_if e s1 s2)
+| sub_stmt1 : forall s s1 s2, substmt s s1 ->
                          substmt s (s_stmts s1 s2)
-| sub_trns2 : forall s s1 s2, substmt s s2 ->
+| sub_stmt2 : forall s s1 s2, substmt s s2 ->
                          substmt s (s_stmts s1 s2).
 
 Hint Constructors substmt : loo_db.
@@ -1096,6 +1155,22 @@ Proof.
     rewrite <- H7 in H1;
       simpl in *.
     inversion H1; subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - simpl_crush; subst.
+    rewrite <- H2 in H.
+    simpl in *.
+    inversion H; subst;
+      simpl in *.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - simpl_crush; subst.
+    rewrite <- H2 in H.
+    simpl in *.
+    inversion H; subst;
+      simpl in *.
     eapply stmt_not_strict_substatement_of_itself;
       eauto with loo_db.
 
