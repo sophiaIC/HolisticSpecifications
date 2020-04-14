@@ -194,7 +194,7 @@ Proof.
                  eauto];
       eauto with loo_db.
 
-  - 
+  - destruct H4.
 
   - unfold update_ψ_map, update_ϕ_map in H0;
       inversion H0;

@@ -975,6 +975,21 @@ Inductive fresh_χ : heap -> addr -> Prop :=
 
 Hint Constructors fresh_χ : loo_db.
 
+(** 
+limiting expressions used in variable assignment to 
+non-address, and non-access expressions.
+
+Addresses: we don't want addresses, because we don't 
+want programs to forge references to objects.
+
+Access: because we don't want to inadvertently allow 
+access to fields that shouldn't be able to be accessed
+It is still possible to write expressions that use 
+values stored in fields, the only restriction is that
+the field has to be explicitly written to a local variable
+first
+*)
+
 Inductive no_addr : exp -> Prop :=
 | na_value : forall v, (forall α, v <> v_addr α) ->
                   no_addr (e_val v)
@@ -998,12 +1013,7 @@ Inductive no_addr : exp -> Prop :=
 | na_if : forall e1 e2 e3, no_addr e1 ->
                       no_addr e2 ->
                       no_addr e3 ->
-                      no_addr (e_if e1 e2 e3)
-| na_acc_f : forall e f, no_addr e ->
-                    no_addr (e_acc_f e f)
-| na_acc_g : forall e1 g e2, no_addr e1 ->
-                        no_addr e2 ->
-                        no_addr (e_acc_g e1 g e2).
+                      no_addr (e_if e1 e2 e3).
 
 Inductive reduction : mdl -> config -> config -> Prop :=
 
@@ -1030,9 +1040,8 @@ Inductive reduction : mdl -> config -> config -> Prop :=
 | r_eAssgn : forall M χ ϕ ψ x e v s,
     x <> this ->
     contn ϕ = (c_stmt (s_stmts (s_asgn (r_var x) (r_exp e)) s)) ->
-    M ∙ (χ, ϕ::ψ) ⊢ e ↪ v ->
     no_addr e ->
-    (forall α, v <> v_addr α) ->
+    M ∙ (χ, ϕ::ψ) ⊢ e ↪ v ->
     M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (update x v (vMap ϕ)) (c_stmt s))::ψ)
 
     (** x ≠ this *)
