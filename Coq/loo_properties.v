@@ -779,6 +779,43 @@ Proof.
   rewrite (IHHint1 αs0); auto.
 Qed.
 
+Lemma interpretation_x_append :
+  forall x χ ψ v ψ', ⌊ x ⌋ (χ, ψ) ≜ v ->
+                ⌊ x ⌋ (χ, ψ ++ ψ') ≜ v.
+Proof.
+  intros x χ ψ v ψ';
+    intros Hint;
+    inversion Hint;
+    subst;
+    simpl in *;
+    subst;
+    simpl in *.
+  apply int_x with (ϕ:=ϕ)(ψ:=ψ0++ψ'); auto.
+
+Qed.
+
+Lemma interpretation_x_cons :
+  forall x χ ϕ ψ v, ⌊ x ⌋ (χ, ϕ::ψ) ≜ v <->
+               ⌊ x ⌋ (χ, ϕ::nil) ≜ v.
+Proof.
+  intros x χ ϕ ψ v; split.
+
+  - intros Hint;
+    inversion Hint;
+    subst;
+    simpl in *;
+    simpl_crush.
+    apply int_x with (ϕ:=ϕ0)(ψ:=nil); auto.
+
+  - intros Hint;
+    inversion Hint;
+    subst;
+    simpl in *;
+    simpl_crush.
+    apply int_x with (ϕ:=ϕ0)(ψ:=ψ); auto.
+
+Qed.
+
 Ltac interpretation_rewrite :=
   repeat match goal with
          | [H1 : ⌊ ?x ⌋ ?σ ≜ ?v1, H2 : ⌊ ?x ⌋ ?σ ≜ ?v2 |- _] =>

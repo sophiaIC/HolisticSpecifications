@@ -680,6 +680,26 @@ Proof.
     apply (class_of_update_vMap this) with (ϕ':=ϕ)(y:=x)(v:=v_addr α) in H10;
       auto.
     apply class_of_update_heap_fresh with (C:=C1) in H10; eauto.
+
+  - inversion H1; inversion H2;
+      subst;
+      simpl in *.
+    inversion H4; inversion H11;
+      subst;
+      simpl in *.
+    repeat simpl_crush;
+      simpl in *.
+    crush.
+
+  - inversion H1; inversion H2;
+      subst;
+      simpl in *.
+    inversion H4; inversion H11;
+      subst;
+      simpl in *.
+    repeat simpl_crush;
+      simpl in *.
+    crush.
   
 Qed.
 

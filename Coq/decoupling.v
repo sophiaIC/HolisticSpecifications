@@ -341,13 +341,13 @@ Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
                             M1 ⦂ M2 ◎ σ ⊨′ (¬ A)
 
 (** Quantifiers: *)
-| sat'_all_x : forall M1 M2 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
-                                    M1 ⦂ M2 ◎ σ ⊨′ ([α /s 0]A)) ->
+| sat'_all_x : forall M1 M2 σ A, (forall α (o : obj), mapp σ α = Some o ->
+                                            M1 ⦂ M2 ◎ σ ⊨′ ([α /s 0] A)) ->
                             M1 ⦂ M2 ◎ σ ⊨′ (∀x∙ A)
 
-| sat'_ex_x  : forall M1 M2 σ A y α, mapp σ y = Some (v_addr α) ->
-                                M1 ⦂ M2 ◎ σ ⊨′ ([α /s 0] A) ->
-                                M1 ⦂ M2 ◎ σ ⊨′ (∃x∙ A)
+| sat'_ex_x  : forall M1 M2 σ A α (o : obj), mapp σ α = Some o ->
+                                        M1 ⦂ M2 ◎ σ ⊨′ ([α /s 0] A) ->
+                                        M1 ⦂ M2 ◎ σ ⊨′ (∃x∙ A)
                                    
 (** Permission: *)
 | sat'_access1 : forall M1 M2 σ x y α, ⌊x⌋ σ ≜ (v_addr α) ->
@@ -448,12 +448,12 @@ with
                              M1 ⦂ M2 ◎ σ ⊭′ (¬ A)
 
 (*quantifiers*)
-| nsat'_all_x : forall M1 M2 σ A y α, mapp σ y = Some (v_addr α) ->
-                                 M1 ⦂ M2 ◎ σ ⊭′ ([α /s 0]A) ->
-                                 M1 ⦂ M2 ◎ σ ⊭′ (∀x∙ A) 
+| nsat'_all_x : forall M1 M2 σ A α (o : obj), mapp σ α = Some o ->
+                                         M1 ⦂ M2 ◎ σ ⊭′ ([α /s 0]A) ->
+                                         M1 ⦂ M2 ◎ σ ⊭′ (∀x∙ A) 
 
-| nsat'_ex_x : forall M1 M2 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
-                                    M1 ⦂ M2 ◎ σ ⊭′ ([α /s 0]A)) ->
+| nsat'_ex_x : forall M1 M2 σ A, (forall α (o : obj), mapp σ α = Some o ->
+                                            M1 ⦂ M2 ◎ σ ⊭′ ([α /s 0]A)) ->
                             M1 ⦂ M2 ◎ σ ⊭′ (∃x∙ A)
 
 (** Permission: *)
@@ -592,6 +592,22 @@ I define this alternate version of satisfaction below.
 
  *)
 
+(**
+Below we define the #<code>#stack_append#</code># function. 
+#<code>#stack_append#</code># appends a stack to the stack of a specific configuration.
+This is used in defining the satisfaction of the #<code>#next#</code># and 
+#<code>#will#</code># assertions. In the definition of #<code>#sat_next#</code># 
+(and #<code>#sat_will#</code>#), we need to restrict reduction from returning out of the 
+current method call (#<code>#M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ'#</code>#), however we still 
+might want to allow assertions in the future to refer to configurations that came before
+the current configuration. For this purpose, we append the original stack's tail.
+*)
+
+Definition stack_append (σ : config)(ψ : stack):=
+  (fst σ, (snd σ)++ψ).
+
+Notation "σ '◁' ψ" := (stack_append σ ψ)(at level 40).
+
 Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A"(at level 40).
 Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A"(at level 40).
 
@@ -689,23 +705,23 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
  *)
 
 (** Quantifiers: *)
-| sat_all_x : forall M1 M2 σ0 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
-                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0]A)) ->
+| sat_all_x : forall M1 M2 σ0 σ A, (forall α (o : obj), mapp σ α = Some o ->
+                                              M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0]A)) ->
                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀x∙ A)
 (**
 [[[
-                (∀ y, (y ↦ α) ∈ σ → M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
-               -----------------------------------------------------                   (Sat-All-x)
+                (∀ α o, (α ↦ o) ∈ σ.(heap) → M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
+               ------------------------------------------------------------                   (Sat-All-x)
                             M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀ x. A)
 ]]]
  *)
 
-| sat_ex_x  : forall M1 M2 σ0 σ A y α, mapp σ y = Some (v_addr α) ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0] A) ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃x∙ A)
+| sat_ex_x  : forall M1 M2 σ0 σ A α (o : obj), mapp σ α = Some o ->
+                                          M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0] A) ->
+                                          M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃x∙ A)
 (**
 [[[
-                         (y ↦ α) ∈ σ 
+                     (α ↦ o) ∈ σ.(heap)
                 M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
                -------------------------------                   (Sat-Ex-x)
                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃ x. A)
@@ -796,12 +812,12 @@ configuration that satisfaction is defined with.
  *)
 | sat_next : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                       M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ' ->
-                                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
+                                      M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A ->
                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_next A)
 (**
 [[[
                  M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ'
-               M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A
+               M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A
                ---------------------------------                   (Sat-Next)
                M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ next A
 ]]]
@@ -809,12 +825,12 @@ configuration that satisfaction is defined with.
 
 | sat_will : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                       M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ' ->
-                                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
+                                      M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A ->
                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_will A)
 (**
 [[[
                  M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ'
-               M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A
+               M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A
                ---------------------------------                   (Sat-Will)
                M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ will A
 ]]]
@@ -848,7 +864,7 @@ configuration that satisfaction is defined with.
 ]]]
  *)
 
-| sat_name : forall M1 M2 σ0 σ α y, mapp σ y = Some (v_addr α) ->
+(*| sat_name : forall M1 M2 σ0 σ α y, mapp σ y = Some (v_addr α) ->
                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name (a_ α) y)
 (**
 [[[
@@ -857,7 +873,7 @@ configuration that satisfaction is defined with.
                -----------------------------                   (Sat-Name)
                M1 ⦂ M2 ◎ σ0 … σ ⊨ α named y
 ]]]
- *)
+ *)*)
 
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A" := (sat M1 M2 σ0 σ A)
 
@@ -956,25 +972,26 @@ with
  *)
 
 (*quantifiers*)
-| nsat_all_x : forall M1 M2 σ0 σ A y α, mapp σ y = Some (v_addr α) ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ ([α /s 0]A) ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (∀x∙ A)
+| nsat_all_x : forall M1 M2 σ0 σ A α (o : obj), mapp σ α = Some o ->
+                                           M1 ⦂ M2 ◎ σ0 … σ ⊭ ([α /s 0]A) ->
+                                           M1 ⦂ M2 ◎ σ0 … σ ⊭ (∀x∙ A) 
 (**
 [[[
-                      (y ↦ α) ∈ σ
+                      (α ↦ o) ∈ σ.(heap)
                 M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
                ----------------------------                   (NSat-All-x)
                 M1 ⦂ M2 ◎ σ0 … σ ⊭ ∀ x. A
 ]]]
  *)
 
-| nsat_ex_x : forall M1 M2 σ0 σ A, (forall y α, mapp σ y = Some (v_addr α) ->
-                                      M1 ⦂ M2 ◎ σ0 … σ ⊭ ([α /s 0]A)) ->
+
+| nsat_ex_x : forall M1 M2 σ0 σ A, (forall α (o : obj), mapp σ α = Some o ->
+                                              M1 ⦂ M2 ◎ σ0 … σ ⊭ ([α /s 0]A)) ->
                               M1 ⦂ M2 ◎ σ0 … σ ⊭ (∃x∙ A)
 (**
 [[[
-               ∀ y α. (y ↦ α) ∈ σ → M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
-               -------------------------------------------------                   (NSat-Ex-x)
+               ∀ α o. (α ↦ o) ∈ σ.(heap) → M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
+               --------------------------------------------------------                   (NSat-Ex-x)
                          M1 ⦂ M2 ◎ σ0 … σ ⊭ ∃ x. A
 ]]]
  *)
@@ -1092,7 +1109,7 @@ with
 
 | nsat_next : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                        (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ') ->
-                                       M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A ->
+                                       M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊭ A ->
                                        M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
 (**
 [[[
@@ -1106,7 +1123,7 @@ with
 
 | nsat_will : forall M1 M2 σ0 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
                                     (forall σ', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') ->
-                                           M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A) ->
+                                           M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊭ A) ->
                                     M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_will A)
 (**
 [[[
@@ -1146,7 +1163,7 @@ with
 ]]]
  *)
 
-| nsat_name : forall M1 M2 σ0 σ α y, mapp σ y <> Some (v_addr α) ->
+(*| nsat_name : forall M1 M2 σ0 σ α y, mapp σ y <> Some (v_addr α) ->
                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_name (a_ α) y)
 (**
 [[[
@@ -1155,7 +1172,7 @@ with
                -----------------------------                   (NSat-Name)
                M1 ⦂ M2 ◎ σ0 … σ ⊭ α named y
 ]]]
- *)
+ *)*)
 
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A" := (nsat M1 M2 σ0 σ A).
 

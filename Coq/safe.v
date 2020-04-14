@@ -3,58 +3,45 @@ Require Import loo_def.
 Require Import loo_properties.
 Require Import loo_reduction_properties.
 Require Import decoupled_classical_properties.
+Require Import decoupling.
 Require Import function_operations.
 Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
+Print reduction.
+
 Module SafeExample.
 
-  (** #<h3># Safe example: #</h3># *)
-  (** ---------------------------------------------------- *)
-  (** #<code># >MyModule = { #</code># *)
-  (** #<code># >  Inside = {} #</code># *)
-  (** #<code># >  Boundary = { #</code># *)
-  (** #<code># >    field inside : Inside #</code># *)
-  (** #<code># >    meth expose() = {return this.inside} #</code># *)
-  (** #<code># >  } #</code># *)
-  (** #<code># >} #</code># *)
-  (** --------------------------------------------------- *)
-  (** #<code># we want to prove: #</code># *)
-  (**  *)
-  (** #<code># >MyModule ⊨  #</code># *)
-  (** #<code># >(∀ b, b : Boundary, ∀ i, (b.inside = i ∧ (∀ x, x access i ⇒ x = b)) #</code># *)
-  (** #<code># >             ⇒ (∀ p, will⟨ p access i ⟩ #</code># *)
-  (** #<code># >               ⇒ (∃ o, will⟨ o calls b.expose() ⟩))) #</code># *)
-  (**  *)
-  (**  *)
+(**
+∀s.[s : Safe ∧ s.treasure <> null ∧ will(s.treasure = null) 
+        ⟶ ∃o.[external(o) ∧ (o access s.secret)]]
+ *)
+  
 
-(*  Definition Inside := classID 6.
+  (** Safe Definition *)
 
-  Definition InsideDef := clazz Inside
-                                nil
-                                empty
-                                empty.
+  Definition Safe := classID 1.
 
-  (** Boundary Definition *)
+  Definition treasure := fieldID 0.
 
-  Definition Boundary := classID 7.
+  Definition secret := fieldID 1.
 
-  Definition inside := fieldID 0.
+  Definition take := methID 0.
 
-  Definition expose := methID 0.
+  Definition scr := bnd 0.
 
-  Definition x := bnd 10.
+  Print reduction.
+  Print evaluate.
 
-  Definition exposeBody := s_stmts (s_asgn (r_var x) (r_fld this inside))
-                                   (s_rtrn x).
+  Definition takeBody := s_stmts (s_if (e_eq scr (e_acc_f this secret) )).
 
-  Definition BoundaryDef := clazz Boundary
-                                  (inside :: nil)
-                                  (update
-                                     expose (nil, exposeBody)
-                                     empty)
-                                  empty.
+  Definition SafeDef := clazz Safe
+                              (treasure :: secret :: nil)
+                              (update
+                                 take (nil, takeBody)
+                                 empty)
+                              empty.
 
   (** MyModule Definition *)
 
@@ -63,21 +50,5 @@ Module SafeExample.
                             (update
                                Inside InsideDef
                                empty)).
-
-  
-
-  Theorem safe :
-    ∀x∙ (((a_class (a♢0) Safe)
-          ∧
-          (¬ ((e_acc_f (a♢0) treasure) ⩦ e_null))
-          ∧
-          (a_will (((e_acc_f (a♢0) treasure) ⩦ e_null))))
-           ⇒
-           (∃x∙((a♢ 0) external
-                ∧
-                (∀x∙((e_acc_f (a♢2) treasure) ⩦ (e♢0)) ⇒ ((a♢ 1) access (a♢0)))
-               )
-           )
-        ).*)
 
 End SafeExample.
