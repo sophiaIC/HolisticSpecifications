@@ -31,9 +31,6 @@ Module SafeExample.
 
   Definition scr := bnd 0.
 
-  Print reduction.
-  Print evaluate.
-
   Definition takeBody := s_stmts (s_if (e_eq scr (e_acc_f this secret) )).
 
   Definition SafeDef := clazz Safe
