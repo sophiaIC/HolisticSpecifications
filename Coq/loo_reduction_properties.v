@@ -194,7 +194,7 @@ Proof.
                  eauto];
       eauto with loo_db.
 
-  - destruct H4.
+  - crush.
 
   - unfold update_ψ_map, update_ϕ_map in H0;
       inversion H0;
@@ -278,6 +278,8 @@ Proof.
       simpl in *;
       eauto with loo_db.
 
+  - repeat eexists.
+
   - exists ϕ', ψ;
       subst;
       simpl in *;
@@ -287,7 +289,7 @@ Proof.
       simpl in *;
       auto with loo_db.
 
-  - subst σ'; simpl;
+  -  subst σ'; simpl;
       exists ϕ', ψ;
       split;
       auto;
@@ -494,6 +496,19 @@ Proof.
         (x:=x)(v:=v)
       in Hself;
       auto.
+
+  - apply self_config;
+      intros;
+      apply self_frm;
+      simpl_crush.
+    destruct H0; subst;
+      simpl.
+    map_rewrite.
+    unfold t_update; eq_auto.
+    specialize (H8 ϕ (in_eq ϕ ψ)).
+    inversion H8; subst; auto.
+    specialize (H8 ϕ0 (in_cons ϕ ϕ0 ψ H0));
+      inversion H8; auto.
 
   - (* field asgn*)
     inversion H12;
@@ -780,6 +795,20 @@ Proof.
   - inversion H0; subst; eauto.
     apply IHHeval1 in H5; apply IHHeval2 in H7; subst; crush.
 
+  (** Case: e1 < e2 *)
+  - inversion H0; subst; eauto.
+    specialize (IHHeval1 (v_int i0));
+      specialize (IHHeval2 (v_int i3));
+      auto_specialize;
+      crush.
+
+  (** Case: e1 >= e2 *)
+  - inversion H0; subst; eauto.
+    specialize (IHHeval1 (v_int i0));
+      specialize (IHHeval2 (v_int i3));
+      auto_specialize;
+      crush.
+
   (** Case 7 : e1 + e2 *)
   - inversion H; subst; eauto.
     apply IHHeval1 in H4; apply IHHeval2 in H6; subst; crush.
@@ -959,6 +988,19 @@ Proof.
     interpretation_rewrite.
     crush.
 
+  - (* eAssgn *)
+    inversion H3; subst; crush.
+    match goal with
+    | [Ha : contn ?ϕ = _,
+            Hb : contn ?ϕ = _ |- _] =>
+      rewrite Ha in Hb;
+        inversion Hb;
+        subst
+    end.
+    eval_rewrite.
+    crush.
+    
+
   - (* vAssgn *)
     inversion H8;
       subst;
@@ -1092,7 +1134,7 @@ Inductive reductions : mdl -> config -> config -> Prop :=
 Hint Constructors reductions : loo_db.
 
 Inductive substmt : stmt -> stmt -> Prop :=
-| sub_refl : forall s1 s2, substmt s1 s2
+| sub_refl : forall s, substmt s s
 | sub_if1 : forall s e s1 s2, substmt s s1 ->
                          substmt s (s_if e s1 s2)
 | sub_if2 : forall s e s1 s2, substmt s s2 ->
@@ -1118,18 +1160,18 @@ Proof.
     intro Hcontra;
     subst.
 
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
+  - simpl_crush.
     apply list_does_not_contain_itself in H8; auto.
 
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
+  - simpl_crush.
+    rewrite <- H4 in H0;
+      simpl in *.
+    inversion H0;
+      subst.
+    eapply stmt_not_strict_substatement_of_itself;
+      eauto with loo_db.
+
+  - simpl_crush; subst.
     rewrite <- H7 in H1;
       simpl in *.
     inversion H1; subst.
@@ -1187,7 +1229,7 @@ Proof.
         simpl in *
     end.
     eapply list_does_not_contain_itself; eauto.
-Qed.
+Admitted.
 
 Hint Resolve acyclic_reduction : loo_db.
 
@@ -1258,5 +1300,4 @@ Print red_single.
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
              forall χ ϕ, reductions M (χ, ϕ::nil) σ1 ->
                     (exists χ' χ'' ϕ' ψ' x y m β, reductions M (χ, ϕ::nil) (χ', ϕ'::ψ') /\
-                    contn ϕ' = (c_stmt ())).*)
-  
+                    contn ϕ' = (c_stmt ())).*)  

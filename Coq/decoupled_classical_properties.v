@@ -332,7 +332,7 @@ Admitted.
 (** Lemma 5: Classical (5) *)
 Lemma arr_true :
   forall M1 M2 σ0 σ A1 A2,
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2) ->
     M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
     M1 ⦂ M2 ◎ σ0 … σ ⊨ A2.
 Proof.
@@ -348,7 +348,7 @@ Qed.
 
 Lemma arr_false :
   forall M1 M2 σ0 σ A1 A2,
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2) ->
     M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
     M1 ⦂ M2 ◎ σ0 … σ ⊭ A1.
 Proof.
@@ -366,7 +366,7 @@ Lemma arr_prop1 :
   forall M1 M2 σ0 σ A1 A2,
     (M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
      M1 ⦂ M2 ◎ σ0 … σ ⊨ A2) ->
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2).
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2).
 Proof.
   intros.
   destruct sat_excluded_middle
@@ -377,7 +377,7 @@ Qed.
 
 Lemma arr_prop2 :
   forall M1 M2 σ0 σ A1 A2,
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2) ->
     (M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
      M1 ⦂ M2 ◎ σ0 … σ ⊨ A2).
 Proof.
@@ -387,7 +387,7 @@ Qed.
 
 Lemma arr_prop :
   forall M1 M2 σ0 σ A1 A2,
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2) <->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2) <->
     (M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
      M1 ⦂ M2 ◎ σ0 … σ ⊨ A2).
 Proof.
@@ -489,7 +489,7 @@ Qed.
 
 Lemma will_arr :
   forall M1 M2 σ0 σ A1 A2,
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ a_will(A1 ⇒ A2 ∧ A1) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ a_will(A1 ⟶ A2 ∧ A1) ->
     M1 ⦂ M2 ◎ σ0 … σ ⊨ a_will(A2).
 Proof.
   intros.
@@ -506,7 +506,7 @@ Proof.
 Qed.
 
 Lemma sat_and_nsat_entails_false :
-  forall A, entails (A ∧ ¬ A) (a_exp (ex_val v_false)).
+  forall A, entails (A ∧ ¬ A) (a_expr (ex_val v_false)).
 Proof.
   intros.
   apply ent;
@@ -524,7 +524,7 @@ Qed.
 Hint Resolve sat_and_nsat_entails_false : chainmail_db.
 
 Lemma false_entails_sat_and_nsat :
-  forall A, entails (a_exp (ex_val v_false)) (A ∧ ¬ A).
+  forall A, entails (a_expr (ex_false)) (A ∧ ¬ A).
 Proof.
   intros.
   apply ent;
@@ -541,7 +541,7 @@ Hint Resolve false_entails_sat_and_nsat : chainmail_db.
 
 (** Lemma 6: (1) *)
 Lemma sat_and_nsat_equiv_false :
-  forall A, equiv_a (A ∧ ¬ A) (a_exp (ex_val v_false)).
+  forall A, equiv_a (A ∧ ¬ A) (a_expr (ex_false)).
 Proof.
   intros;
     unfold equiv_a;
@@ -947,8 +947,8 @@ Ltac sat_destruct :=
 
 Ltac a_intro :=
   match goal with
-  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∀x∙ _)] => apply sat_all_x; intros; sbst_simpl
-  | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ⇒ _)] => apply arr_prop1; intros; sbst_simpl
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∀x∙ _)] => apply sat_all_x; intros; simpl in *
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ⟶ _)] => apply arr_prop1; intros; simpl in *
   end.
 
 Ltac a_intros :=
@@ -959,8 +959,8 @@ Ltac a_prop :=
          | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ∧ _) |- _] => apply -> and_iff in H;
                                            destruct H
          | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _) |- _] => apply -> or_iff in H
-         | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ⇒ _) |- _] => rewrite -> arr_prop in H
-         | [H : context[_ ⦂ _ ◎ _ … _ ⊨ (_ ⇒ _)] |- _] => rewrite -> arr_prop in H
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ⟶ _) |- _] => rewrite -> arr_prop in H
+         | [H : context[_ ⦂ _ ◎ _ … _ ⊨ (_ ⟶ _)] |- _] => rewrite -> arr_prop in H
          | [H : _ ⦂ _ ◎ _ … _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; sbst_simpl
          | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ∧ _)] => apply sat_and
          | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _)] => apply <- or_iff

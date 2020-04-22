@@ -73,7 +73,7 @@ Module ExposeExample.
   Theorem expose_example_will :
     MyModule ⊨m (∀x∙∀x∙(((a_class (e♢1) Boundary)
                          ∧
-                         ((e_acc_f (e♢1) inside) ⩦ (e♢0))
+                         ((e_acc_f (e♢1) inside) ⩶ (e♢0))
                          ∧
                          ((guards (a♢1) (a♢0))))
                         ∧
@@ -167,7 +167,7 @@ Module ExposeExample.
   Theorem expose_example_was :
     MyModule ⊨m (∀x∙∀x∙((a_was (((a_class (e♢1) Boundary)
                                  ∧
-                                 ((e_acc_f (e♢1) inside) ⩦ (e♢0)))
+                                 ((e_acc_f (e♢1) inside) ⩶ (e♢0)))
                                 ∧
                                 ((guards (a♢1) (a♢0))))
                          ∧

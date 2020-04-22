@@ -425,6 +425,7 @@ Inductive exp : Type :=
 | e_var   : var -> exp
 | e_hole  : nat -> exp
 | e_eq    : exp -> exp -> exp
+| e_lt    : exp -> exp -> exp
 | e_plus  : exp -> exp -> exp
 | e_minus : exp -> exp -> exp
 | e_mult  : exp -> exp -> exp
@@ -440,6 +441,15 @@ Notation "'e_false'" := (e_val v_false)(at level 40).
 Notation "'e_null'" := (e_val v_null)(at level 40).
 Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
 Notation "'e_int' i" := (e_val (v_int i))(at level 40).
+Notation "e1 '⩵' e2" := (e_eq e1 e2)(at level 40).
+Notation "e1 '⩵̸' e2" := ((e1 ⩵ e2) ⩵ e_false)(at level 40).
+Notation "e1 '⩻' e2" := (e_lt e1 e2)(at level 40).
+Notation "e1 '⩑' e2" := (e_if e1 (e_if e2 (e_true) (e_false)) (e_false))(at level 40).
+Notation "e1 '⩒' e2" := (e_if e1 (e_true) (e_if e2 (e_true) (e_false)))(at level 40).
+Notation "e1 '⩽' e2" := ((e1 ⩻ e2) ⩒ (e1 ⩵ e2))(at level 40).
+Notation "'neg' e" := (e ⩵ (e_false))(at level 40).
+Notation "e1 '⩼' e2" := (neg (e1 ⩽ e2))(at level 40).
+Notation "e1 '⩾' e2" := ((e1 ⩼ e2) ⩒ (e1 ⩵ e2))(at level 40).
 
 Inductive ref : Type :=
 | r_exp : exp -> ref
@@ -458,6 +468,12 @@ Inductive stmt : Type :=
 
 Hint Constructors stmt : loo_db.
 
+Notation "'r_' x" := (r_var x)(at level 40).
+Notation "x '◌' f" := (r_fld x f)(at level 40).
+Notation "s1 ';;' s2" := (s_stmts s1 s2)(at level 40).
+Notation "r1 '≔' r2" := (s_asgn r1 r2)(at level 40).
+Notation "x '≔′' e" := (s_asgn (r_var x) (r_exp e))(at level 40).
+
 Inductive continuation : Type :=
 | c_stmt : stmt -> continuation
 | c_hole : var -> stmt -> continuation.
@@ -473,7 +489,7 @@ Definition ghost_fields := partial_map gfld (var * exp).
 Record classDef := clazz{c_name : cls;
                          c_flds : list fld;
                          c_meths : methods;
-                         c_g_fields: ghost_fields}.
+                         c_g_fields : ghost_fields}.
 
 Record obj := new{cname : cls;
                   flds : fields;
@@ -891,6 +907,16 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
                                   v1 <> v2 ->
                                   M ∙ σ ⊢ (e_eq e1 e2) ↪ v_false
 
+| v_lt : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                            M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                            Z.lt i1 i2 ->
+                            M ∙ σ ⊢ (e_lt e1 e2) ↪ v_true
+
+| v_nlt : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                             M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                             ~ Z.lt i1 i2 ->
+                             M ∙ σ ⊢ (e_lt e1 e2) ↪ v_false
+
 | v_plus : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
                               M ∙ σ ⊢ e2 ↪ (v_int i2) ->
                               M ∙ σ ⊢ (e_plus e1 e2) ↪ (v_int (i1 + i2))
@@ -1295,6 +1321,9 @@ Next Obligation.
   crush.
 Defined.
 Next Obligation.
+  crush.
+Defined.
+Next Obligation.
   induction a; simpl; crush.
 Defined.
 
@@ -1426,6 +1455,10 @@ Inductive in_exp : var -> exp -> Prop :=
 | in_eq1 : forall x e1 e2, in_exp x e1 ->
                       in_exp x (e_eq e1 e2)
 | in_eq2 : forall x e1 e2, in_exp x e2 ->
+                      in_exp x (e_eq e1 e2)
+| in_lt1 : forall x e1 e2, in_exp x e1 ->
+                      in_exp x (e_eq e1 e2)
+| in_lt2 : forall x e1 e2, in_exp x e2 ->
                       in_exp x (e_eq e1 e2)
 | in_plus1 : forall x e1 e2, in_exp x e1 ->
                         in_exp x (e_plus e1 e2)

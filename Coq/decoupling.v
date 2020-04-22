@@ -56,6 +56,7 @@ Inductive expr : Type :=
 | ex_var : a_var -> expr
 | ex_val : value -> expr
 | ex_eq : expr -> expr -> expr
+| ex_lt : expr -> expr -> expr
 | ex_if : expr -> expr -> expr -> expr
 | ex_acc_f : expr -> fld -> expr
 | ex_acc_g : expr -> gfld -> expr -> expr.
@@ -65,11 +66,24 @@ Notation "'e♢' n" := (ex_var (a_hole n))(at level 40).
 Notation "'a_' α" := (a_bind α)(at level 40).
 Notation "'e_' α" := (ex_var (a_bind α))(at level 39).
 
+Notation "'ex_true'" := (ex_val v_true)(at level 40).
+Notation "'ex_false'" := (ex_val v_false)(at level 40).
+Notation "'ex_null'" := (ex_val v_null)(at level 40).
+Notation "'ex_addr' r" := (ex_val (v_addr r))(at level 40).
+Notation "'ex_int' i" := (ex_val (v_int i))(at level 40).
+Notation "e1 '⩻′' e2" := (ex_lt e1 e2)(at level 40).
+Notation "e1 'e_and' e2" := (ex_if e1 (ex_if e2 (ex_true) (ex_false)) (ex_false))(at level 40).
+Notation "e1 'e_or' e2" := (ex_if e1 (ex_true) (ex_if e2 (ex_true) (ex_false)))(at level 40).
+Notation "e1 '⩽′' e2" := ((e1 ⩻′ e2) e_or (ex_eq e1 e2))(at level 40).
+Notation "'not' e" := (ex_eq e (ex_false))(at level 40).
+Notation "e1 '⩼′' e2" := (not (e1 ⩽′ e2))(at level 40).
+Notation "e1 '⩾′' e2" := ((e1 ⩼′ e2) e_or (ex_eq e1 e2))(at level 40).
+
 (** Assertion syntax  *)
 
 Inductive asrt : Type :=
 (** Simple: *)
-| a_exp : expr -> asrt
+| a_expr : expr -> asrt
 | a_class : a_var -> cls -> asrt
 (*| a_set   : a_var -> a_set -> asrt*)
 
@@ -106,7 +120,7 @@ Inductive asrt : Type :=
 
 | a_name : a_var -> var -> asrt.
 
-Notation "A1 '⇒' A2" := (a_arr A1 A2)(at level 40).
+Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 40).
 Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 40).
 Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 40).
 Notation "'¬' A" :=(a_neg A)(at level 40).
@@ -118,7 +132,8 @@ Notation "x 'internal'" :=(a_intrn x)(at level 40).
 Notation "x 'external'" :=(a_extrn x)(at level 40).
 Notation "x 'access' y" :=(a_acc x y)(at level 40).
 Notation "x 'calls' y '▸' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
-Notation "e1 '⩦' e2" := (a_exp (ex_eq e1 e2))(at level 40).
+Notation "e1 '⩶' e2" := (a_expr (ex_eq e1 e2))(at level 40).
+Notation "e1 '⩶̸' e2" := (a_expr (not (ex_eq e1 e2)))(at level 40).
 
 Class Subst (A B C : Type) : Type :=
   {
@@ -165,7 +180,7 @@ Instance substAssertionVar : Subst asrt nat addr :=
   {sbst :=
      fix subst' A n x :=
        match A with
-       | a_exp e => a_exp ([x /s n] e)
+       | a_expr e => a_expr ([x /s n] e)
        | a_class y C       => a_class ([x /s n] y) C
        (*connectives*)
        | a_arr A1 A2       => a_arr (subst' A1 n x) (subst' A2 n x)
@@ -254,6 +269,9 @@ Inductive is_exp : expr -> exp -> Prop :=
 | is_eq : forall e1 e1' e2 e2', is_exp e1 e1' ->
                            is_exp e2 e2' ->
                            is_exp (ex_eq e1 e2) (e_eq e1' e2')
+| is_lt : forall e1 e1' e2 e2', is_exp e1 e1' ->
+                           is_exp e2 e2' ->
+                           is_exp (ex_lt e1 e2) (e_lt e1' e2')
 | is_if : forall e1 e2 e3 e1' e2' e3', is_exp e1 e1' ->
                                   is_exp e2 e2' ->
                                   is_exp e3 e3' ->
@@ -314,7 +332,7 @@ Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
 | sat'_exp   : forall M1 M2 M e e' σ, is_exp e e' ->
                                  M1 ⋄ M2 ≜ M ->
                                  M ∙ σ ⊢ e' ↪ v_true ->
-                                 M1 ⦂ M2 ◎ σ ⊨′ (a_exp e)
+                                 M1 ⦂ M2 ◎ σ ⊨′ (a_expr e)
 
 | sat'_class : forall M1 M2 σ α C o, mapp σ α = Some o -> 
                                 o.(cname) = C ->
@@ -332,10 +350,10 @@ Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
                                 M1 ⦂ M2 ◎ σ ⊨′ (A1 ∨ A2)
 
 | sat'_arr1  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨′ A2 ->
-                                M1 ⦂ M2 ◎ σ ⊨′ (A1 ⇒ A2)
+                                M1 ⦂ M2 ◎ σ ⊨′ (A1 ⟶ A2)
 
 | sat'_arr2  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭′ A1 ->
-                                M1 ⦂ M2 ◎ σ ⊨′ (A1 ⇒ A2)
+                                M1 ⦂ M2 ◎ σ ⊨′ (A1 ⟶ A2)
                                    
 | sat'_not   : forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭′ A ->
                             M1 ⦂ M2 ◎ σ ⊨′ (¬ A)
@@ -419,7 +437,7 @@ with
 | nsat'_exp : forall M1 M2 M σ e e', is_exp e e' ->
                                 M1 ⋄ M2 ≜ M ->
                                 M ∙ σ ⊢ e' ↪ v_false ->
-                                M1 ⦂ M2 ◎ σ ⊭′ (a_exp e)
+                                M1 ⦂ M2 ◎ σ ⊭′ (a_expr e)
 
 | nsat'_class1 : forall M1 M2 σ C C' α o, mapp σ α = Some o -> 
                                      o.(cname) = C' ->
@@ -442,7 +460,7 @@ with
 
 | nsat'_arr   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨′ A1 ->
                                  M1 ⦂ M2 ◎ σ ⊭′ A2 ->
-                                 M1 ⦂ M2 ◎ σ ⊭′ (A1 ⇒ A2)
+                                 M1 ⦂ M2 ◎ σ ⊭′ (A1 ⟶ A2)
                                     
 | nsat'_not   : forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨′ A ->
                              M1 ⦂ M2 ◎ σ ⊭′ (¬ A)
@@ -620,7 +638,7 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
 | sat_exp   : forall M1 M2 M σ0 σ e e', is_exp e e' ->
                                    M1 ⋄ M2 ≜ M ->
                                    M ∙ σ ⊢ e' ↪ v_true ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_exp e)
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e)
 (**
 [[[
                      M1 ⋄ M2 ≜ M 
@@ -675,7 +693,7 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
  *)
 
 | sat_arr1  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A2 ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2)
 (**
 [[[
                    M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
@@ -685,7 +703,7 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
  *)
 
 | sat_arr2  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2)
 (**
 [[[
                    M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
@@ -883,7 +901,7 @@ with
 | nsat_exp : forall M1 M2 M σ0 σ e e', is_exp e e' ->
                                   M1 ⋄ M2 ≜ M ->
                                   M ∙ σ ⊢ e' ↪ v_false ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_exp e)
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_expr e)
 (**
 [[[
                    M1 ⋄ M2 ≜ M
@@ -951,7 +969,7 @@ with
 
 | nsat_arr   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ⇒ A2)
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ⟶ A2)
 (**
 [[[
                  M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
@@ -1191,7 +1209,8 @@ possible initial configurations by including this as part of the definition
 of satisfaction for modules.
  *)
 
-Definition mdl_sat (M : mdl)(A : asrt) := forall M' σ0 σ, initial σ0 ->
+Definition mdl_sat (M : mdl)(A : asrt) := forall M' σ0 σ, (exists M'', M ⋄ M' ≜ M'') ->
+                                                     initial σ0 ->
                                                      M ⦂ M' ⦿ σ0 ⤳⋆ σ ->
                                                      M ⦂ M' ◎ σ0 … σ ⊨ A.
 
@@ -1200,10 +1219,10 @@ Notation "M '⊨m' A" := (mdl_sat M A)(at level 40).
 
 Definition guards (x y : a_var) : asrt :=
   match x, y with
-  | a_ x', a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e_ x'))))
-  | a_ x', a♢ n => (∀x∙((¬ ((a♢ 0) access (a♢ (S n)))) ∨ ((e♢ 0) ⩦ (e_ x'))))
-  | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
-  | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  | a_ x', a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩶ (e_ x'))))
+  | a_ x', a♢ n => (∀x∙((¬ ((a♢ 0) access (a♢ (S n)))) ∨ ((e♢ 0) ⩶ (e_ x'))))
+  | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩶ (e♢ (S n)))))
+  | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩶ (e♢ (S n)))))
   end.
 
 

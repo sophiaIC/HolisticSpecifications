@@ -70,7 +70,7 @@ Notation "'a♢' n" := (a_hole n)(at level 40).
 Notation "'e♢' n" := (e_hole n)(at level 40).
 Notation "'a_' x" := (a_bind x)(at level 40).
 Notation "'e_' x" := (e_var x)(at level 40).
-Notation "e1 '⩦' e2" := (a_eq e1 e2)(at level 40).
+Notation "e1 '⩶' e2" := (a_eq e1 e2)(at level 40).
 
 (**
 (guards x y) holds if x is the only object that has access to y.
@@ -78,10 +78,10 @@ Notation "e1 '⩦' e2" := (a_eq e1 e2)(at level 40).
 
 Definition guards (x y : a_var) : asrt :=
   match x, y with
-  | a_ x', a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e_ x'))))
-  | a_ x', a♢ n => (∀x∙((¬ ((a♢ 0) access (a♢ (S n)))) ∨ ((e♢ 0) ⩦ (e_ x'))))
-  | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
-  | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩦ (e♢ (S n)))))
+  | a_ x', a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩶ (e_ x'))))
+  | a_ x', a♢ n => (∀x∙((¬ ((a♢ 0) access (a♢ (S n)))) ∨ ((e♢ 0) ⩶ (e_ x'))))
+  | a♢ n, a_ y' => (∀x∙((¬ ((a♢ 0) access y)) ∨ ((e♢ 0) ⩶ (e♢ (S n)))))
+  | a♢ n, a♢ m => (∀x∙((¬ ((a♢ 0) access (a♢ (S m)))) ∨ ((e♢ 0) ⩶ (e♢ (S n)))))
   end.
 
 

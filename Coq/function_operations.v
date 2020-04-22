@@ -38,7 +38,7 @@ Ltac destruct_exists_loo :=
     let c := fresh "c" in
     destruct H as [c]
   | [H : exists _ : partial_map var _, _ |- _] =>
-    let vMap := fresh "vMap" in
+    let vMap := fresh "β" in
     destruct H as [vMap]
   | [H : exists _ : partial_map _ _, _ |- _] =>
     let f := fresh "f" in
@@ -64,34 +64,15 @@ Ltac destruct_exists_loo :=
   | [H : exists _ : obj, _ |- _] =>
     let o := fresh "o" in
     destruct H as [o]
+  | [H : exists _ : mdl, _ |- _] =>
+    let M := fresh "M" in
+    destruct H as [M]
   | [H : exists _, _ |- _] => destruct H
   end.
 
 Ltac destruct_exists :=
   match goal with
   | [H : exists _, _ |- _] => destruct H
-  end.
-
-Ltac map_rewrite :=
-  match goal with
-  | [H : context[mapp _ _] |-_] => unfold mapp in H
-  | [|- context[mapp _ _]] => unfold mapp
-  | [H : context[update_σ_map _ _] |-_] => unfold update_σ_map in H
-  | [|- context[update_σ_map _ _]] => unfold update_σ_map
-  | [H : context[update_ψ_map _ _] |-_] => unfold update_ψ_map in H
-  | [|- context[update_ψ_map _ _]] => unfold update_ψ_map
-  | [H : context[configMapStack _ _] |-_] => unfold configMapStack in H
-  | [|- context[configMapStack _ _]] => unfold configMapStack
-  | [H : context[stackMap _ _] |-_] => unfold stackMap in H
-  | [|- context[stackMap _ _]] => unfold stackMap
-  | [H : context[update _ _] |-_] => unfold update in H
-  | [|- context[update _ _]] => unfold update
-  | [H : context[t_update _ _] |-_] => unfold t_update in H
-  | [|- context[t_update _ _]] => unfold t_update
-  | [H : context[empty] |-_] => unfold empty in H
-  | [|- context[empty]] => unfold empty
-  | [H : context[t_empty] |-_] => unfold t_empty in H
-  | [|- context[t_empty]] => unfold t_empty
   end.
 
 Ltac eq_auto :=
@@ -118,6 +99,34 @@ Ltac eq_auto :=
     notHyp (a1 <> a2);
     assert (a1 <> a2);
     [intro Hcontra; subst; crush|auto]
+  end.
+
+Ltac map_rewrite :=
+  match goal with
+  | [H : context[mapp _ _] |-_] => unfold mapp in H; repeat eq_auto
+  | [|- context[mapp _ _]] => unfold mapp; repeat eq_auto
+  | [H : context[update_σ_map _ _] |-_] => unfold update_σ_map in H; repeat eq_auto
+  | [|- context[update_σ_map _ _]] => unfold update_σ_map; repeat eq_auto
+  | [H : context[update_ψ_map _ _] |-_] => unfold update_ψ_map in H; repeat eq_auto
+  | [|- context[update_ψ_map _ _]] => unfold update_ψ_map; repeat eq_auto
+  | [H : context[configMapStack _ _] |-_] => unfold configMapStack in H; repeat eq_auto
+  | [|- context[configMapStack _ _]] => unfold configMapStack; repeat eq_auto
+  | [H : context[configMapHeap _ _] |-_] => unfold configMapHeap in H; repeat eq_auto
+  | [|- context[configMapHeap _ _]] => unfold configMapHeap; repeat eq_auto
+  | [H : context[stackMap _ _] |-_] => unfold stackMap in H; repeat eq_auto
+  | [|- context[stackMap _ _]] => unfold stackMap; repeat eq_auto
+  | [H : context[update _ _] |-_] => unfold update in H; repeat eq_auto
+  | [|- context[update _ _]] => unfold update; repeat eq_auto
+  | [H : context[t_update _ _] |-_] => unfold t_update in H; repeat eq_auto
+  | [|- context[t_update _ _]] => unfold t_update; repeat eq_auto
+  | [H : context[empty] |-_] => unfold empty in H; repeat eq_auto
+  | [|- context[empty]] => unfold empty; repeat eq_auto
+  | [H : context[t_empty] |-_] => unfold t_empty in H; repeat eq_auto
+  | [|- context[t_empty]] => unfold t_empty; repeat eq_auto
+  | [H : context[fst (_, _)] |- _] => unfold fst in H; repeat eq_auto
+  | [|- context[fst (_, _)]] => unfold fst; repeat eq_auto
+  | [H : context[snd (_, _)] |- _] => unfold snd in H; repeat eq_auto
+  | [|- context[snd (_, _)]] => unfold snd; repeat eq_auto
   end.
 
 Ltac empty_auto :=
