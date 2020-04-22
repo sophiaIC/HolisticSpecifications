@@ -11,47 +11,48 @@ Require Import Coq.Logic.FunctionalExtensionality.
 
 Print reduction.
 
-Module SafeExample.
-
-(**
-∀s.[s : Safe ∧ s.treasure <> null ∧ will(s.treasure = null) 
-        ⟶ ∃o.[external(o) ∧ (o access s.secret)]]
- *)
+Module DAOExample.
   
 
   (** DAO Definition *)
 
-  Definition Safe := classID 1.
+  Definition DAO := classID 1.
 
-  Definition treasure := fieldID 0.
+  Definition ether := fieldID 0.
 
-  Definition secret := fieldID 1.
-
-  Definition take := methID 0.
-
-  Definition scr := bnd 0.
+  Definition amt := bnd 0.
 
   Definition x := bnd 1.
 
   Definition y := bnd 2.
 
-  Definition takeBody := (x ⩦ (e_null);
-                         (s_if ((e_var scr) ⩵ (e_acc_f (e_var this) secret))
-                               ((r_ y) ⩦′ (this ◌ secret) ; ((this ◌ secret) ⩦′ (r_ x)) ; (s_rtrn y))
-                               (s_rtrn x)) ;
-                         (s_rtrn x)).
+  Definition repay := methID 0.
 
-  Definition SafeDef := clazz Safe
-                              (treasure :: secret :: nil)
+  Definition deposit := methID 1.
+
+  Definition depositBody := ((r_ x) ≔ (this ◌ ether) ;;
+                             ((r_ y) ≔ r_exp (e_plus (e_var amt) (e_var x))) ;;
+                             ((this ◌ ether) ≔ (r_ y)) ;;
+                             s_rtrn amt).
+
+  Definition repayBody := ((r_ x) ≔ (this ◌ ether) ;;
+                           ((r_ y) ≔ r_exp (e_int 0)) ;;
+                           ((this ◌ ether) ≔ (r_ y)) ;;
+                           s_rtrn x).
+
+  Definition DAODef := clazz DAO
+                              (ether :: nil)
                               (update
-                                 take (scr :: nil, takeBody)
-                                 empty)
+                                 repay (nil, repayBody)
+                                 (update
+                                    deposit (amt :: nil, depositBody)
+                                    empty))
                               empty.
 
   (** MyModule Definition *)
 
   Definition MyModule := (update
-                            Safe SafeDef
+                            DAO DAODef
                             empty).
 
-End SafeExample.
+End DAOExample.
