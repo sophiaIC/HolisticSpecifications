@@ -413,7 +413,7 @@ Proof.
 Qed.
 
 Lemma sat_and_nsat_entails_false :
-  forall A, entails (A ∧ ¬ A) (a_exp (e_false)).
+  forall A, entails (A ∧ ¬ A) (a_exp (e_val v_false)).
 Proof.
   intros.
   apply ent;
@@ -431,7 +431,7 @@ Qed.
 Hint Resolve sat_and_nsat_entails_false : chainmail_db.
 
 Lemma false_entails_sat_and_nsat :
-  forall A, entails (a_exp (e_false)) (A ∧ ¬ A).
+  forall A, entails (a_exp (e_val v_false)) (A ∧ ¬ A).
 Proof.
   intros.
   apply ent;
@@ -446,7 +446,7 @@ Hint Resolve false_entails_sat_and_nsat : chainmail_db.
 
 (** Lemma 6: (1) *)
 Lemma sat_and_nsat_equiv_false :
-  forall A, equiv_a (A ∧ ¬ A) (a_exp (e_false)).
+  forall A, equiv_a (A ∧ ¬ A) (a_exp (e_val v_false)).
 Proof.
   intros;
     unfold equiv_a;

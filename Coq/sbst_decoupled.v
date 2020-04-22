@@ -30,6 +30,7 @@ Instance raiseExpr : Raiseable expr :=
         match e with
         | ex_var x => ex_var (x ↑ n)
         | ex_eq e1 e2 => ex_eq (raise' e1 n) (raise' e2 n)
+        | ex_lt e1 e2 => ex_eq (raise' e1 n) (raise' e2 n)
         | ex_if e1 e2 e3 => ex_if (raise' e1 n) (raise' e2 n) (raise' e3 n)
         | ex_acc_f e' f => ex_acc_f (raise' e' n) f
         | ex_acc_g e1 g e2 => ex_acc_g (raise' e1 n) g (raise' e2 n)
@@ -47,10 +48,10 @@ Instance raiseAsrt : Raiseable asrt :=
     raise :=
       fix raise' A n :=
         match A with
-        | a_exp e => a_exp (e ↑ n)
+        | a_expr e => a_expr (e ↑ n)
         | a_class e C => a_class (e ↑ n) C
 
-        | A1 ⇒ A2 => (raise' A1 n) ⇒ (raise' A2 n)
+        | A1 ⟶ A2 => (raise' A1 n) ⟶ (raise' A2 n)
         | A1 ∧ A2 => (raise' A1 n) ∧ (raise' A2 n)
         | A1 ∨ A2 => (raise' A1 n) ∨ (raise' A2 n)
         | ¬ A' => ¬ (raise' A' n)
@@ -80,7 +81,7 @@ Proof.
 Qed.
 
 Lemma sbst_x_arr :
-  forall (α : addr) n A1 A2, ([α /s n] (A1 ⇒ A2)) = (([α /s n]A1) ⇒ ([α /s n]A2)).
+  forall (α : addr) n A1 A2, ([α /s n] (A1 ⟶ A2)) = (([α /s n]A1) ⟶ ([α /s n]A2)).
 Proof.
   auto.
 Qed.
@@ -92,7 +93,7 @@ Proof.
 Qed.
 
 Lemma sbst_x_exp :
-  forall (x : addr) n e, ([x /s n] (a_exp e)) = (a_exp ([x /s n] e)).
+  forall (x : addr) n e, ([x /s n] (a_expr e)) = (a_expr ([x /s n] e)).
 Proof.
   auto.
 Qed.
@@ -177,13 +178,13 @@ Qed.
 
 Ltac sbst_simpl_actual :=
   match goal with
-  | [H : context[[_ /s _] (a_exp _)] |- _] => rewrite sbst_x_exp in H
+  | [H : context[[_ /s _] (a_expr _)] |- _] => rewrite sbst_x_exp in H
   | [H : context[[_ /s _] (a_class _ _)] |- _] => rewrite sbst_x_class in H
 
   | [H : context[[_ /s _] (¬ _)] |- _] => rewrite sbst_x_neg in H
   | [H : context[[_ /s _] (_ ∨ _)] |- _] => rewrite sbst_x_or in H
   | [H : context[[_ /s _] (_ ∧ _)] |- _] => rewrite sbst_x_and in H
-  | [H : context[[_ /s _] (_ ⇒ _)] |- _] => rewrite sbst_x_arr in H
+  | [H : context[[_ /s _] (_ ⟶ _)] |- _] => rewrite sbst_x_arr in H
 
   | [H : context[[_ /s _] (a_next _)] |- _] => rewrite sbst_x_next in H
   | [H : context[[_ /s _] (a_will _)] |- _] => rewrite sbst_x_will in H
@@ -201,13 +202,13 @@ Ltac sbst_simpl_actual :=
 
   | [H : context[[_ /s _] (a_name _ _)] |- _] => rewrite sbst_x_name in H
 
-  | [|- context[[_ /s _] (a_exp _)]] => rewrite sbst_x_exp
+  | [|- context[[_ /s _] (a_expr _)]] => rewrite sbst_x_exp
   | [|- context[[_ /s _] (a_class _ _)]] => rewrite sbst_x_class
 
   | [|- context[[_ /s _] (¬ _)]] => rewrite sbst_x_neg
   | [|- context[[_ /s _] (_ ∨ _)]] => rewrite sbst_x_or
   | [|- context[[_ /s _] (_ ∧ _)]] => rewrite sbst_x_and
-  | [|- context[[_ /s _] (_ ⇒ _)]] => rewrite sbst_x_arr
+  | [|- context[[_ /s _] (_ ⟶ _)]] => rewrite sbst_x_arr
 
   | [|- context[[_ /s _] (a_next _)]] => rewrite sbst_x_next
   | [|- context[[_ /s _] (a_will _)]] => rewrite sbst_x_will

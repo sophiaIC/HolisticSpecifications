@@ -605,11 +605,10 @@ Proof.
       subst
   end.
   destruct (eq_dec α α0);
-    subst;
-    repeat map_rewrite;
-    eq_auto.
-  - apply fresh_heap_none in H1; crush.
-  - crush.
+    subst.
+  apply fresh_heap_none in H1;
+    crush.
+  repeat map_rewrite; crush.
 Qed.
 
 Hint Resolve class_of_update_heap_fresh : loo_db.
@@ -644,6 +643,26 @@ Proof.
     try solve [left; repeat eexists; eauto with loo_db];
     try solve [right; left; repeat eexists; eauto with loo_db];
     try solve [right; right; repeat eexists; eauto with loo_db].
+
+  - apply class_of_same_variable_map
+      with
+        (χ:=χ)(ϕ:=frm (update x v (vMap ϕ)) (c_stmt s))
+        (ψ:=ψ)(ϕ':=update_ϕ_map ϕ x v)(ψ':=ψ)
+      in H4;
+      auto.
+    assert (Htmp : (χ, update_ϕ_map ϕ x v :: ψ) = update_σ_map (χ, ϕ::ψ) x v);
+      [auto|rewrite Htmp in H4].
+    match goal with
+    | [H : classOf ?x (update_σ_map _ ?y _) _,
+       Hneq : ?y <> ?x |- _] =>
+      apply class_of_update in H;
+        auto
+    end.
+    match goal with
+    |[C1 : cls, C2 : cls, H : C1 <> C2 |- _] =>
+     contradiction H; subst
+    end.
+    eauto with loo_db.
 
   - subst.
     apply class_of_same_variable_map
@@ -1015,8 +1034,7 @@ Proof.
       auto.
     destruct (eq_dec y this) as [Heq|Hneq];
       subst;
-      repeat map_rewrite;
-      eq_auto.
+      repeat map_rewrite.
     unfold fresh_x_σ in *;
       repeat destruct_exists_loo;
       andDestruct;
@@ -1534,14 +1552,14 @@ Proof.
     destruct (wf_σ_this_interpretation χ')
       with
         (ψ:=ψ')
-        (ϕ:=frm ((f ∘ β') ∪ β)
-                (c_stmt (s_stmts (s_meth (❲ f' ↦ x0 ❳) (❲ f' ↦ x1 ❳) m (❲ f' ↦ vMap ❳)) (❲ f' ↦ s ❳))))
+        (ϕ:=frm ((f ∘ β') ∪ β0)
+                (c_stmt (s_stmts (s_meth (❲ f' ↦ x0 ❳) (❲ f' ↦ x1 ❳) m (❲ f' ↦ β ❳)) (❲ f' ↦ s ❳))))
       as [α H];
       auto.
     +  apply (wf_adaptation)
          with
-           (σ1:= (χ1, (frm β c) :: nil))
-           (σ2:= (χ', (frm β' (c_stmt (s_stmts (s_meth x0 x1 m vMap) s))) :: ψ'));
+           (σ1:= (χ1, (frm β0 c) :: nil))
+           (σ2:= (χ', (frm β' (c_stmt (s_stmts (s_meth x0 x1 m β) s))) :: ψ'));
          auto.
        * eapply pair_reductions_preserves_config_wf;
            eauto.
@@ -1549,12 +1567,12 @@ Proof.
          eapply pair_reductions_heap_monotonic; eauto.
 
     + destruct_exists_loo; andDestruct.
-      exists (❲ f' ↦ x1 ❳), m, (❲ f' ↦ vMap ❳ ∘ v_to_av).
+      exists (❲ f' ↦ x1 ❳), m, (❲ f' ↦ β ❳ ∘ v_to_av).
       eapply sat_call
         with (χ:=χ')(ψ:=ψ')
              (x':=❲ f' ↦ x0 ❳)
              (y':=❲ f' ↦ x1 ❳)
-             (vMap':=❲ f' ↦ vMap ❳)
+             (vMap':=❲ f' ↦ β ❳)
              (s:=❲ f' ↦ s ❳);
         eauto.
       * admit. (* x1 maps to something  *)
