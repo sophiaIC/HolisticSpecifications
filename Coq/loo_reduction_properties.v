@@ -29,13 +29,10 @@ Proof.
        inversion H11; subst; apply (H7 α0); auto].
     inversion H11; subst.
     destruct (H7 α o (cname o)) as [CDef Hwf]; auto;
-      destruct Hwf as [Hwf1 Hwf2];
-      destruct Hwf2 as [Hwf2 Hwf3].
+      destruct Hwf as [Hwf1 Hwf2].
     exists CDef; split;
       [inversion H; subst; auto
-      |split;
-       [intros
-       |inversion H; subst; auto]].
+      |intros].
     inversion H; subst; simpl.
     destruct (eq_dec f0 f) as [Heq|Hneq];
       [destruct f0; subst; rewrite <- beq_nat_refl; exists v; auto
@@ -52,9 +49,7 @@ Proof.
        inversion H9; subst; apply (H6 α0); auto].
     exists CDef;
       split; [inversion H0; subst; auto
-             |split;
-              [intros
-              |inversion H0; subst; auto]].
+             |intros].
     inversion H0; subst; simpl.
     assert (Hin : fMap f = None -> ~ In f (c_flds CDef));
       [intros;
@@ -464,7 +459,7 @@ Proof.
     eauto.
 
   - (* meth *)
-    inversion H10; subst.
+    inversion H11; subst.
     apply self_config;
       intros ϕ' Hin;
       inversion Hin;
@@ -477,11 +472,11 @@ Proof.
     inversion H0;
       subst.
     assert (Hinϕ : In ϕ (ϕ::ψ));
-      [apply in_eq|apply H9 in Hinϕ].
+      [apply in_eq|apply H10 in Hinϕ].
     apply self_frm;
       inversion Hinϕ;
       auto.
-    apply H9;
+    apply H10;
       simpl in *;
       inversion H1;
       auto.
@@ -517,7 +512,7 @@ Proof.
       intros.
     inversion H;
       subst;
-      remember {| cname := cname o; flds := update f v (flds o); meths := meths o |} as o'.
+      remember {| cname := cname o; flds := update f v (flds o) |} as o'.
     assert (Hin : In ϕ (ϕ::ψ));
       [apply in_eq|apply H11 in Hin].
     destruct Hin.
@@ -564,7 +559,7 @@ Proof.
       intros.
     inversion H0;
       subst;
-      remember {| cname := C; flds := fMap ∘ (vMap ϕ); meths := c_meths CDef |} as o'.
+      remember {| cname := C; flds := fMap ∘ (vMap ϕ) |} as o'.
     + apply self_frm; simpl.
       assert (Hin : In ϕ (ϕ::ψ));
         [apply in_eq
@@ -865,7 +860,7 @@ Proof.
   - (* asgn fld*)
     destruct (eq_dec α0 α) as [|Hneq];
       [subst|].
-    + exists {| cname := cname o; flds := update f v (flds o); meths := meths o |};
+    + exists {| cname := cname o; flds := update f v (flds o) |};
         simpl;
         unfold update, t_update;
         rewrite eqb_refl;
@@ -979,12 +974,12 @@ Proof.
     inversion H2;
       subst;
       crush.
-    inversion H9;
+    inversion H10;
       subst;
       crush.
-    inversion H8; subst.
-    rewrite H1 in H10.
-    inversion H10; subst.
+    inversion H9; subst.
+    rewrite H1 in H11.
+    inversion H11; subst.
     interpretation_rewrite.
     crush.
 
@@ -1040,7 +1035,6 @@ Proof.
         subst;
         auto
     end.
-    crush.
 
   - inversion H1;
       subst;
@@ -1161,7 +1155,7 @@ Proof.
     subst.
 
   - simpl_crush.
-    apply list_does_not_contain_itself in H8; auto.
+    apply list_does_not_contain_itself in H9; auto.
 
   - simpl_crush.
     rewrite <- H4 in H0;

@@ -151,11 +151,16 @@ Proof.
       auto_specialize;
       auto.
 
-  - (* prev *)
+  - (* prev 1 *)
     inversion Hcontra; subst.
-    assert (Heq : σ'0 = σ');
-      [eapply pair_reductions_unique_prev; eauto|subst].
-    auto.
+    + assert (Heq : σ'0 = σ');
+        [eapply pair_reductions_unique_prev; eauto|subst].
+      auto.
+    + admit. (* contradiction: cyclic reduction *)
+
+  - (* prev 2*)
+    inversion Hcontra; subst; auto.
+    admit. (* contradiction: cyclic reduction *)
 
   - (* nsat_exp*)
     inversion Hcontra; subst.
@@ -294,18 +299,24 @@ Proof.
       auto.
     
 
-  - (* nsat_prev *)
+  - (* nsat_prev 1*)
     inversion Hcontra; subst.
-    assert (Heq : σ'0 = σ');
-      [eapply pair_reductions_unique_prev; eauto|subst; auto].
+    + assert (Heq : σ'0 = σ');
+        [eapply pair_reductions_unique_prev; eauto|subst; auto].
+    + admit. (* contradiction: cyclic reduction *)
+
+  - (* nsat_prev 2 *)
+    inversion Hcontra; subst; auto.
+    admit. (* contradiction: cyclic reduction *)
+    
 
   - (* nsat_was *)
-    inversion Hcontra; subst.
+    inversion Hcontra; subst; auto.
     specialize (H σ');
       repeat auto_specialize;
       auto.
 
-Qed.
+Admitted.
 
 Theorem sat_implies_not_nsat :
   (forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊨ A ->
@@ -1485,4 +1496,45 @@ Qed.
 
 Hint Resolve will_disj_equiv : chainmail_db.
 
-*)
+ *)
+
+Lemma eval_head :
+  forall M σ e v, M ∙ σ ⊢ e ↪ v ->
+             forall χ ϕ ψ, σ = (χ, ϕ :: ψ) ->
+                      M ∙ (χ, ϕ :: nil) ⊢ e ↪ v.
+Proof.
+  intros M σ e v Heval;
+    induction Heval;
+    intros;
+    subst;
+    eauto with loo_db.
+  eapply v_f_ghost; eauto.
+  repeat map_rewrite.
+  eauto.
+Qed.
+
+Lemma sat_head_exp :
+  forall M1 M2 σ0 σ e, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e) ->
+                  forall χ ϕ ψ, σ = (χ, ϕ :: ψ) ->
+                           M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: nil) ⊨ (a_expr e).
+Proof.
+  intros M1 M2 σ0 σ e Hsat;
+    intros;
+    subst;
+    inversion Hsat;
+    subst.
+  eapply sat_exp; eauto.
+  eapply eval_head; eauto.
+Qed.
+
+Lemma sat_initial_exp :
+  forall M1 M2 σ0 σ e, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e) ->
+                  forall σ', M1 ⦂ M2 ◎ σ' … σ ⊨ (a_expr e).
+Proof.
+  intros M1 M2 σ0 σ e Hsat;
+    intros;
+    subst;
+    inversion Hsat;
+    subst.
+  eapply sat_exp; eauto.
+Qed.

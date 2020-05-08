@@ -9,20 +9,80 @@ Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Print reduction.
-
 Module DAOExample.
-  
 
+  Definition x := bnd 1.
+
+  Definition y := bnd 2.
+
+  Definition z := bnd 3.
+
+  Definition amt := bnd 4.
+
+  Definition id := bnd 5.
+
+  (* List Definition *)
+
+  Definition List := classID 1.
+
+  Definition head := fieldID 1.
+
+  Definition tail := fieldID 2.
+
+  Definition getHead := methID 1.
+
+  Definition getHeadBody := (r_ x) ≔ (this ◌ head) ;;
+                            (s_rtrn x).
+
+  Definition getTail := methID 2.
+
+  Definition getTailBody := (r_ x) ≔ (this ◌ tail) ;;
+                            (s_rtrn x).
+
+  Definition ListDef := clazz List
+                              (tail :: head :: nil)
+                              (update getHead (nil, getHeadBody)
+                                      (update getTail (nil, getTailBody)
+                                              empty))
+                              empty.
+
+  Definition Account := classID 2.
+
+  Definition name := fieldID 3.
+
+  Definition balance := fieldID 4.
+
+  Definition deposit := methID 3.
+
+  Definition depositBody := (r_ x) ≔ (this ◌ name) ;;
+                            ((s_if ((e_var x) ⩵ (e_var id))
+                                   (((r_ y) ≔ (this ◌ balance) ;;
+                                     (z ≔′ (e_plus (e_var y) (e_var amt)) ;;
+                                      ((this ◌ balance) ≔ (r_ z) ;;
+                                       (s_rtrn x)))))
+                                   (s_rtrn x)) ;;
+                             (s_rtrn x)).
+
+  Definition withdraw := methID 4.
+
+  Definition withdrawBody := (r_ x) ≔ (this ◌ balance) ;;
+                             (y ≔′ (e_null) ;; 
+                              (s_if ((e_var x) ⩾ (e_var amt))
+                                    ((z ≔′ e_plus (e_var x) (e_var amt));;
+                                     ((this ◌ balance) ≔ (r_ z);; s_rtrn y))
+                                    (s_rtrn y)) ;;
+                              (s_rtrn y)).
+  
+  
   (** DAO Definition *)
 
   Definition DAO := classID 1.
 
-  Definition ether := fieldID 0.
+  Definition accountBook := fieldID 3.
 
-  Definition amt := bnd 0.
+  Definition ether := fieldID 4.
 
-  Definition x := bnd 1.
+  (*Definition x := bnd 1.
 
   Definition y := bnd 2.
 
@@ -53,6 +113,6 @@ Module DAOExample.
 
   Definition MyModule := (update
                             DAO DAODef
-                            empty).
+                            empty).*)
 
 End DAOExample.

@@ -492,8 +492,7 @@ Record classDef := clazz{c_name : cls;
                          c_g_fields : ghost_fields}.
 
 Record obj := new{cname : cls;
-                  flds : fields;
-                  meths : methods}.
+                  flds : fields}.
 
 Definition ObjectName := classID 0.
 
@@ -503,7 +502,6 @@ Definition ObjectDefn := clazz ObjectName
                                empty.
 
 Definition ObjectInstance := new ObjectName
-                                 empty
                                  empty.
 
 Definition mdl := partial_map cls classDef.
@@ -721,8 +719,7 @@ Inductive χ_wf : mdl -> heap -> Prop :=
                               exists CDef,
                                 M C = Some CDef /\
                                 (forall f, In f (c_flds CDef) ->
-                                      exists v, (flds o) f = Some v) /\
-                                (meths o) = (c_meths CDef)) ->
+                                      exists v, (flds o) f = Some v)) ->
                     χ_wf M χ.
 
 Hint Constructors χ_wf : loo_db.
@@ -1041,6 +1038,12 @@ Inductive no_addr : exp -> Prop :=
                       no_addr e3 ->
                       no_addr (e_if e1 e2 e3).
 
+Fixpoint merge (s1 s2 : stmt) : stmt :=
+  match s1 with
+  | s ;; s' => s ;; (merge s' s2)
+  | _ => s1 ;; s2
+  end.
+
 Inductive reduction : mdl -> config -> config -> Prop :=
 
     (** ϕ.contn = x:=y.m(ps); s' *)
@@ -1059,6 +1062,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (M (o.(cname))) = Some C ->
     C.(c_meths) m = Some (zs, s) ->
     dom ps zs ->
+    maps_into ps (vMap ϕ) ->
     ϕ' =  frm (vMap ϕ) (c_hole x s') ->
     ϕ'' = frm (update this (v_addr α) (ps ∘ (vMap ϕ))) (c_stmt s) ->
     M ∙ σ ⤳ (χ, ϕ'' :: (ϕ' :: ψ))
@@ -1112,7 +1116,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     classOf y σ C ->
     χ α = Some o ->
     (exists v, (flds o) f = Some v) ->
-    o' = new (cname o) (update f v (flds o)) (meths o) ->
+    o' = new (cname o) (update f v (flds o))->
     χ' = update α o' χ ->
     ϕ' = frm (vMap ϕ) (c_stmt s) ->
     σ' = (χ', ϕ' :: ψ) ->
@@ -1135,7 +1139,7 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     dom fMap (c_flds CDef) ->
     (forall f x, fMap f = Some x ->
             exists v, (vMap ϕ) x = Some v) ->
-    o = new C (fMap ∘ (vMap ϕ)) (c_meths CDef) ->
+    o = new C (fMap ∘ (vMap ϕ))->
     ϕ' = frm (update x (v_addr α) (vMap ϕ)) (c_stmt s) ->
     σ' = (update α o χ, ϕ' :: ψ) ->
     M ∙ σ ⤳ σ'
@@ -1149,15 +1153,15 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     (** ----------------------------------------------------- (Return_OS_1) *)
     (** M, σ ⤳ (χ, ϕ'' : ψ *)
 
-| r_if1 : forall M χ ϕ ψ e s1 s2,
-    contn ϕ = c_stmt (s_if e s1 s2) ->
+| r_if1 : forall M χ ϕ ψ e s1 s2 s,
+    contn ϕ = c_stmt ((s_if e s1 s2) ;; s) ->
     M ∙ (χ, ϕ::ψ) ⊢ e ↪ v_true ->
-    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt s1))::ψ)
+    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt (merge s1 s)))::ψ)
 
-| r_if2 : forall M χ ϕ ψ e s1 s2,
-    contn ϕ = c_stmt (s_if e s1 s2) ->
+| r_if2 : forall M χ ϕ ψ e s1 s2 s,
+    contn ϕ = c_stmt ((s_if e s1 s2) ;; s) ->
     M ∙ (χ, ϕ::ψ) ⊢ e ↪ v_false ->
-    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt s2))::ψ)
+    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt (merge s2 s)))::ψ)
 
 | r_ret1 : forall M ϕ ϕ' ψ χ y x α ϕ'' σ s,
     σ = (χ, ϕ :: (ϕ' :: ψ)) ->
