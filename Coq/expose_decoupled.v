@@ -10,38 +10,6 @@ Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Inductive has_access_to : config -> addr -> addr -> Prop :=
-| acc_eq  : forall σ α, has_access_to σ α α
-| acc_fld : forall σ α1 o f α2, mapp σ α1 = Some o ->
-                           flds o f = Some (v_addr α2) ->
-                           has_access_to σ α1 α2
-| acc_contn : forall χ ϕ ψ α1 x α2 s, ⌊ this ⌋ (χ, ϕ::ψ) ≜ (v_addr α1) ->
-                                 ⌊ x ⌋ (χ, ϕ::ψ) ≜ v_addr α2 ->
-                                 contn ϕ = c_stmt s ->
-                                 in_stmt x s ->
-                                 has_access_to (χ, ϕ::ψ) α1 α2.
-
-Hint Constructors has_access_to : chainmail_db.
-
-Ltac acc_auto :=
-  match goal with
-  | [ |- has_access_to _ ?α ?α] =>
-    apply acc_eq
-  | [ H : ~ has_access_to _ ?α ?α |- _] =>
-    contradiction H; acc_auto
-  | [ Hmap : mapp ?σ ?α1 = Some ?o,
-      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to ?σ ?α1 ?α2] =>
-    eapply acc_fld; eauto
-  | [ Hmap : ?χ ?α1 = Some ?o,
-      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to (?χ, _) ?α1 ?α2] =>
-    eapply acc_fld; eauto
-  | [ Hthis : ⌊ this ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α1),
-      Hint : ⌊ ?x ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α2),
-      Hcontn : contn ?ϕ = c_stmt ?s,
-      Hin : in_stmt ?x ?s |- has_access_to ?σ ?α1 ?α2] =>
-    eapply acc_contn; eauto
-  end.
-
 Lemma meth_call :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
              forall χ ϕ1 ψ1, σ1 = (χ, ϕ1::ψ1) ->

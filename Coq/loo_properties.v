@@ -15,6 +15,28 @@ Ltac simpl_crush :=
   | [ H : _::_ = _::_ |- _] =>
     inversion H; subst;
     clear H
+  | [ H : Some _ = Some _ |- _] =>
+    inversion H; subst;
+    clear H
+  | [ H : v_addr _ = v_addr _ |- _] =>
+    inversion H; subst;
+    clear H
+  | [ H : r_exp _ = r_exp _ |- _] =>
+    inversion H; subst;
+    clear H
+  | [ H : _ ◌ _ = _ ◌ _ |- _] =>
+    inversion H; subst;
+    clear H
+  | [ Ha : contn ?ϕ = _, Hb : contn ?ϕ = _ |- _] =>
+    rewrite Ha in Hb;
+    inversion Hb;
+    subst;
+    clear Hb
+  | [Ha : ?m ?a = _, Hb : ?m ?a = _ |- _] =>
+    rewrite Ha in Hb;
+    inversion Hb;
+    subst;
+    clear Hb
   end.
 
 Lemma prop_not_and_distr :

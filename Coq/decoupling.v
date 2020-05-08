@@ -830,7 +830,7 @@ configuration that satisfaction is defined with.
  *)
 | sat_next : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                       M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ' ->
-                                      M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A ->
+                                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_next A)
 (**
 [[[
@@ -843,7 +843,7 @@ configuration that satisfaction is defined with.
 
 | sat_will : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                       M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ' ->
-                                      M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A ->
+                                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_will A)
 (**
 [[[
@@ -854,30 +854,55 @@ configuration that satisfaction is defined with.
 ]]]
  *)
 
-| sat_prev : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                                M1 ⦂ M2 ⦿ σ' ⤳ σ ->
-                                M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+| sat_prev_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                  M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                                  M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
 (**
 [[[
                     M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
                     M1 ⦂ M2 ⦿ σ' ⤳ σ
                     M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
-               ---------------------------------                   (Sat-Prev)
+               ---------------------------------                   (Sat-Prev-1)
                M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ prev A
 ]]]
  *)
-                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
 
-| sat_was : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                               M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
-                               M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
-                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
+| sat_prev_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳ σ ->
+                               M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
+                    M1 ⦂ M2 ⦿ σ' ⤳ σ
+                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               ---------------------------------                   (Sat-Prev-2)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ prev A
+]]]
+ *)
+
+| sat_was_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                 M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
+                                 M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
 (**
 [[[
                     M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
                     M1 ⦂ M2 ⦿ σ' ⤳⋆ σ
                     M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
-               --------------------------------                   (Sat-Was)
+               --------------------------------                   (Sat-Was-1)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ was A
+]]]
+ *)
+
+| sat_was_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ ->
+                              M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ
+                    M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A
+               --------------------------------                   (Sat-Was-2)
                M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ was A
 ]]]
  *)
@@ -1127,7 +1152,7 @@ with
 
 | nsat_next : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
                                        (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ') ->
-                                       M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊭ A ->
+                                       M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A ->
                                        M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
 (**
 [[[
@@ -1141,7 +1166,7 @@ with
 
 | nsat_will : forall M1 M2 σ0 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
                                     (forall σ', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') ->
-                                           M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊭ A) ->
+                                           M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A) ->
                                     M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_will A)
 (**
 [[[
@@ -1153,16 +1178,29 @@ with
 ]]]
  *)
 
-| nsat_prev : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                                 M1 ⦂ M2 ⦿ σ' ⤳ σ ->
-                                 M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
-                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
+| nsat_prev_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                   M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                                   M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
 (**
 [[[
                     
                M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'       M1 ⦂ M2 ⦿ σ' ⤳ σ
                           M1 ⦂ M2 ◎ σ0 … σ' ⊭ A
-               -------------------------------------------                   (NSat-Prev)
+               -------------------------------------------                   (NSat-Prev-1)
+                    M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+]]]
+ *)
+
+| nsat_prev_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳ σ ->
+                                M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
+(**
+[[[
+                    
+                           M1 ⦂ M2 ⦿ σ0 ⤳ σ
+                          M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A
+               -------------------------------------------                   (NSat-Prev-2)
                     M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
 ]]]
  *)
@@ -1170,12 +1208,14 @@ with
 | nsat_was : forall M1 M2 σ0 σ A, (forall σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
                                     M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
                                     M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
+                             M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A ->
                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_was A)
 (**
 [[[
                     
                (∀ σ'. M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ∧ M1 ⦂ M2 ⦿ σ' ⤳⋆ σ →
                       M1 ⦂ M2 ◎ σ0 … σ' ⊭ A)
+                             M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A
                ------------------------------------------------                   (NSat-Was)
                        M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
 ]]]
@@ -1275,3 +1315,38 @@ though x may not be defined in any future configuration.
 (MySpec′) ≜ ∀x. will (x access x)
 #</code>#
 *)
+
+
+
+
+Inductive has_access_to : config -> addr -> addr -> Prop :=
+| acc_eq  : forall σ α, has_access_to σ α α
+| acc_fld : forall σ α1 o f α2, mapp σ α1 = Some o ->
+                           flds o f = Some (v_addr α2) ->
+                           has_access_to σ α1 α2
+| acc_contn : forall χ ϕ ψ α1 x α2 s, ⌊ this ⌋ (χ, ϕ::ψ) ≜ (v_addr α1) ->
+                                 ⌊ x ⌋ (χ, ϕ::ψ) ≜ v_addr α2 ->
+                                 contn ϕ = c_stmt s ->
+                                 in_stmt x s ->
+                                 has_access_to (χ, ϕ::ψ) α1 α2.
+
+Hint Constructors has_access_to : chainmail_db.
+
+Ltac acc_auto :=
+  match goal with
+  | [ |- has_access_to _ ?α ?α] =>
+    apply acc_eq
+  | [ H : ~ has_access_to _ ?α ?α |- _] =>
+    contradiction H; acc_auto
+  | [ Hmap : mapp ?σ ?α1 = Some ?o,
+      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to ?σ ?α1 ?α2] =>
+    eapply acc_fld; eauto
+  | [ Hmap : ?χ ?α1 = Some ?o,
+      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to (?χ, _) ?α1 ?α2] =>
+    eapply acc_fld; eauto
+  | [ Hthis : ⌊ this ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α1),
+      Hint : ⌊ ?x ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α2),
+      Hcontn : contn ?ϕ = c_stmt ?s,
+      Hin : in_stmt ?x ?s |- has_access_to ?σ ?α1 ?α2] =>
+    eapply acc_contn; eauto
+  end.

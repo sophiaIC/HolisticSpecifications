@@ -77,6 +77,10 @@ Ltac destruct_exists :=
 
 Ltac eq_auto :=
   match goal with
+
+  | [Heqb : context[eqb ?a ?a]|- _] => rewrite eqb_refl in Heqb; auto
+  | [|- context[eqb ?a ?a]] => rewrite eqb_refl; auto
+
   | [Heq : ?a1 <> ?a2, Heqb : context[eqb ?a1 ?a2]|- _] => rewrite neq_eqb in Heqb; auto
   | [Heq : ?a1 <> ?a2, Heqb : context[eqb ?a2 ?a1]|- _] => rewrite eqb_sym in Heqb;
                                                         rewrite neq_eqb in Heqb; auto
@@ -84,8 +88,6 @@ Ltac eq_auto :=
   | [Heq : ?a1 <> ?a2 |- context[eqb ?a2 ?a1]] => rewrite eqb_sym;
                                                rewrite neq_eqb; auto
 
-  | [Heqb : context[eqb ?a ?a]|- _] => rewrite eqb_refl in Heqb; auto
-  | [|- context[eqb ?a ?a]] => rewrite eqb_refl; auto
   | [H : eqb ?a1 ?a2 = true |- _] =>
     let Hnew := fresh in
     assert (Hnew : a1 = a2);
