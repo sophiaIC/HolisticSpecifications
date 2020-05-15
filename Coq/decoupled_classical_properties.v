@@ -93,8 +93,6 @@ Proof.
         contradiction H;
         inversion Hint; subst
       end.
-      unfold snd in *.
-      simpl_crush.
       auto.
     + unfold snd in *; simpl_crush.
       match goal with
@@ -110,7 +108,6 @@ Proof.
         contradiction H;
         inversion Hint; subst
       end.
-      unfold snd in *; simpl_crush.
       auto.
     + unfold snd in *; simpl_crush.
       match goal with
@@ -228,8 +225,6 @@ Proof.
         contradiction H;
         inversion Hint; subst
       end.
-      unfold snd in *;
-        simpl_crush.
       auto.
 
   - (* nsat_call2 *)
@@ -249,8 +244,6 @@ Proof.
         contradiction H;
         inversion Hint; subst
       end.
-      unfold snd in *;
-        simpl_crush.
       auto.
 
   - (* nsat_call3 *)

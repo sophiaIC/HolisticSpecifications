@@ -99,9 +99,12 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros.
-  link_unique_auto.
-  reduce_heap_wf_auto.
-  reduces_heap_wf_auto.
+  - link_unique_auto.
+    reduce_heap_wf_auto.
+    reduces_heap_wf_auto.
+
+  - link_unique_auto.
+    reduce_heap_wf_auto.
 Qed.
 
 Ltac pair_reduce_heap_wf_auto :=
@@ -677,10 +680,12 @@ Proof.
     induction Hred;
     intros;
     eauto.
-  eapply reduction_preserves_config_has_self;
-    eauto.
-  eapply reductions_preserves_config_has_self;
-    eauto.
+  - eapply reduction_preserves_config_has_self;
+      eauto.
+    eapply reductions_preserves_config_has_self;
+      eauto.
+  - eapply reduction_preserves_config_has_self;
+      eauto.
 Qed.
 
 Hint Resolve pair_reduction_preserves_config_has_self : loo_db.
@@ -924,6 +929,15 @@ Proof.
     induction Hred;
     intros;
     eauto with loo_db.
+  edestruct reductions_preserves_addr_classes with (σ1:=σ1)(σ2:=σ); eauto;
+    andDestruct;
+    eauto.
+  edestruct reduction_preserves_addr_classes;
+    eauto;
+    andDestruct;
+    eexists;
+    split;
+    crush.
 Qed.
 
 Hint Resolve pair_reduction_preserves_addr_classes : loo_db.
@@ -1105,12 +1119,16 @@ Ltac unique_reduction_auto :=
       eapply pair_reduction_unique with (σ1:=σa) in Hb;
         eauto;
         subst
+    | [Ha : ?M ∙ ?σ ⤳ ?σa,
+            Hb : ?M ∙ ?σ ⤳ ?σb |- _] =>
+      eapply reduction_unique with (σ1:=σa) in Hb;
+        eauto;
+        subst
     end.
 
 Lemma list_does_not_contain_itself :
   forall {A : Type} (l : list A) a,
-    a :: l = l ->
-    False.
+    a :: l <> l.
 Proof.
   intros A l;
     induction l;
@@ -1118,14 +1136,35 @@ Proof.
     crush.
 Qed.
 
+Reserved Notation "M '∙' σ1 '⤳⋆' σ2" (at level 40).
+
 Inductive reductions : mdl -> config -> config -> Prop :=
 | red_single : forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
-                          reductions M σ1 σ2
-| red_trans : forall M σ1 σ2 σ3, reductions M σ1 σ2 ->
-                            M ∙ σ2 ⤳ σ3 ->
-                            reductions M σ1 σ3.
+                          M ∙ σ1 ⤳⋆ σ2
+| red_trans : forall M σ1 σ2 σ3, M ∙ σ1 ⤳ σ2 ->
+                            M ∙ σ2 ⤳⋆ σ3 ->
+                            M ∙ σ1 ⤳⋆ σ3
+
+where "M '∙' σ1 '⤳⋆' σ2" := (reductions M σ1 σ2).
 
 Hint Constructors reductions : loo_db.
+
+Fixpoint stmt_size (s : stmt) : nat :=
+  match s with
+  | s1 ;; s2 => 1 + stmt_size s1 + stmt_size s2
+  | s_if e s1 s2 => 1 + stmt_size s1 + stmt_size s2
+  | _ => 1
+  end.
+        
+
+Lemma stmt_size_eq :
+  forall s1 s2, s1 = s2 ->
+           stmt_size s1 = stmt_size s2.
+Proof.
+  intros;
+    subst;
+    auto.
+Qed.
 
 Inductive substmt : stmt -> stmt -> Prop :=
 | sub_refl : forall s, substmt s s
@@ -1140,10 +1179,17 @@ Inductive substmt : stmt -> stmt -> Prop :=
 
 Hint Constructors substmt : loo_db.
 
-Parameter stmt_not_strict_substatement_of_itself :
-  forall s s', substmt s s' ->
-          s = s' ->
-          False.
+Lemma merge_stmt_size :
+  forall s1 s2, stmt_size (merge s1 s2) = 1 + stmt_size s1 + stmt_size s2.
+Proof.
+  intro s1;
+    induction s1;
+    intros;
+    simpl;
+    auto.
+  rewrite IHs1_2;
+    crush.
+Qed.
 
 Lemma acyclic_reduction :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
@@ -1152,78 +1198,42 @@ Proof.
   intros M σ1 σ2 Hred;
     induction Hred;
     intro Hcontra;
-    subst.
+    subst;
 
-  - simpl_crush.
-    apply list_does_not_contain_itself in H9; auto.
-
-  - simpl_crush.
-    rewrite <- H4 in H0;
-      simpl in *.
-    inversion H0;
-      subst.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - simpl_crush; subst.
-    rewrite <- H7 in H1;
-      simpl in *.
-    inversion H1; subst.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    rewrite <- H8 in H0;
-      simpl in *.
-    inversion H0; subst.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    rewrite <- H7 in H1;
-      simpl in *.
-    inversion H1; subst.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - simpl_crush; subst.
-    rewrite <- H2 in H.
-    simpl in *.
-    inversion H; subst;
-      simpl in *.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - simpl_crush; subst.
-    rewrite <- H2 in H.
-    simpl in *.
-    inversion H; subst;
-      simpl in *.
-    eapply stmt_not_strict_substatement_of_itself;
-      eauto with loo_db.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    eapply list_does_not_contain_itself; eauto.
-
-  - match goal with
-    | [H : (_, _) = (_, _) |- _] =>
-      inversion H; subst;
-        simpl in *
-    end.
-    eapply list_does_not_contain_itself; eauto.
-Admitted.
+    (* assignment *)
+    try solve [simpl_crush; 
+               match goal with
+               | [Ha : _ = ?ϕ, Hb : contn ?ϕ = _ |-_] =>
+                 rewrite <- Ha in Hb;
+                 simpl in *;
+                 inversion Hb;
+                 subst
+               end;
+               match goal with
+               | [H : ?s = _ ;; ?s |- _] =>
+                 apply stmt_size_eq in H;
+                 simpl in *;
+                 crush
+               end];
+    (* meth & rtrn *)
+    try solve [simpl_crush; eapply list_does_not_contain_itself; eauto];
+    (* if *)
+    try solve [simpl_crush;
+               match goal with
+               | [Ha : _ = ?ϕ, Hb : contn ?ϕ = _ |-_] =>
+                 rewrite <- Ha in Hb;
+                 simpl in *;
+                 inversion Hb;
+                 subst
+               end;
+               match goal with
+               | [H : merge _ _ = _ ;; ?s |- _] =>
+                 apply stmt_size_eq in H;
+                 rewrite merge_stmt_size in H;
+                 simpl in *;
+                 crush
+               end].
+Qed.
 
 Hint Resolve acyclic_reduction : loo_db.
 
@@ -1245,6 +1255,7 @@ Lemma acyclic_pair_reductions :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
                  σ1 <> σ2.
 Proof.
+  
 Admitted.
 
 Lemma pair_reductions_path_unique :

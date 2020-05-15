@@ -70,7 +70,7 @@ Module ExposeExample.
                                empty)).
 
 
-  Theorem expose_example_will :
+(*  Theorem expose_example_will :
     MyModule ⊨m (∀x∙∀x∙(((a_class (e♢1) Boundary)
                          ∧
                          ((e_acc_f (e♢1) inside) ⩶ (e♢0))
@@ -153,7 +153,7 @@ Module ExposeExample.
 
       + admit.
 
-  Admitted.
+  Admitted.*)
 
   (**
      expose_example_was does not work, because there is no way to ensure that 
@@ -206,7 +206,7 @@ Module ExposeExample.
         andDestruct.
       exists σ1, σ1';
         repeat split; eauto with loo_db.
-      destruct (pair_reduction_change_implies_method_call MyModule M' σ1 σ2)
+      (*destruct (pair_reduction_change_implies_method_call MyModule M' σ1 σ2)
         as [Hcont|Hcont];
         eauto with loo_db;
         [|destruct Hcont as [Hcont|Hcont]].
@@ -225,7 +225,8 @@ Module ExposeExample.
 
       * admit.
 
-      * admit.
+      * admit.*)
+      admit.
 
     - destruct Hwas as [σ1 Htmp];
         destruct Htmp as [σ1' Htmp];

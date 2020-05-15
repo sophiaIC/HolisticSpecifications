@@ -775,13 +775,7 @@ Proof.
     inversion Hint1;
     inversion Hint2;
     subst.
-  rewrite H4 in H;
-    inversion H;
-    subst.
-  rewrite H5 in H0;
-    inversion H0;
-    subst;
-    auto.
+  crush.
 Qed.
 
 Lemma unique_interpretation_Σ :
@@ -801,6 +795,18 @@ Proof.
   rewrite (IHHint1 αs0); auto.
 Qed.
 
+Lemma mapp_x_append :
+  forall (x : var)(v : value)(χ : heap)(ψ1 ψ2 : stack),
+    ⟦ x ↦ v ⟧ ∈ (χ, ψ1) ->
+    ⟦ x ↦ v ⟧ ∈ (χ, ψ1 ++ ψ2).
+Proof.
+  intros x v χ ψ1;
+    induction ψ1;
+    intros;
+    repeat map_rewrite;
+    crush.
+Qed.
+
 Lemma interpretation_x_append :
   forall x χ ψ v ψ', ⌊ x ⌋ (χ, ψ) ≜ v ->
                 ⌊ x ⌋ (χ, ψ ++ ψ') ≜ v.
@@ -812,8 +818,7 @@ Proof.
     simpl in *;
     subst;
     simpl in *.
-  apply int_x with (ϕ:=ϕ)(ψ:=ψ0++ψ'); auto.
-
+  apply int_x, mapp_x_append; auto.
 Qed.
 
 Lemma interpretation_x_cons :
@@ -825,17 +830,16 @@ Proof.
   - intros Hint;
     inversion Hint;
     subst;
-    simpl in *;
-    simpl_crush.
-    apply int_x with (ϕ:=ϕ0)(ψ:=nil); auto.
+    simpl in *.
+    apply int_x.
+    crush.
 
   - intros Hint;
     inversion Hint;
     subst;
-    simpl in *;
-    simpl_crush.
-    apply int_x with (ϕ:=ϕ0)(ψ:=ψ); auto.
-
+    simpl in *.
+    apply int_x;
+      crush.
 Qed.
 
 Ltac interpretation_rewrite :=

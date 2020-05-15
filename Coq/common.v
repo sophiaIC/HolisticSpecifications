@@ -165,6 +165,8 @@ Hint Constructors finite : map_db.
 Class Mappable (A B C : Type) :=
   mapp : A -> B -> C.
 
+Notation "'⟦' b '↦' c '⟧' ∈ a" := (mapp a b = Some c)(at level 40).
+
 Class PropFoldable (A B : Type) :=
   {
     foldAnd : A -> (B -> nat -> Prop) -> nat -> Prop -> Prop;
