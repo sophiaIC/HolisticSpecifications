@@ -577,9 +577,8 @@ Reserved Notation "'⌊' Σ '⌋' σ '≜′' As" (at level 40).
 (** #<h3># Variable and Set Interpretation (Definition 4, OOPSLA2019):#</h3># *)
 
 Inductive interpret_x : var -> config -> value -> Prop :=
-| int_x : forall x σ ψ ϕ v, snd σ = ϕ :: ψ ->
-                       (vMap ϕ) x = Some v -> 
-                       ⌊ x ⌋ σ ≜ v
+| int_x : forall x σ v, mapp σ x = Some v -> 
+                   ⌊ x ⌋ σ ≜ v
 where "'⌊' x '⌋' σ '≜' v" := (interpret_x x σ v).
 
 Hint Constructors interpret_x : loo_db.
@@ -1232,49 +1231,67 @@ Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
 
 where "M1 '∩'  M2 '⊢' σ '⤳⋆' σ'" := (reductions M1 M2 σ σ').
 *)
+
+Definition is_internal (M1 M2 : mdl)(σ : config)(x : var) :=
+  (exists α o CDef, ⟦ x ↦ (v_addr α) ⟧ ∈ σ /\
+               ⟦ α ↦ o ⟧ ∈ σ /\
+               M1 (cname o) = Some CDef).
+
+Definition is_external (M1 M2 : mdl)(σ : config)(x : var) :=
+  (exists α o, ⟦ x ↦ (v_addr α) ⟧ ∈ σ /\
+          ⟦ α ↦ o ⟧ ∈ σ /\
+          M1 (cname o) = None).
+
+Definition internal_self (M1 M2 : mdl)(σ : config) :=
+  is_internal M1 M2 σ this.
+
+Definition external_self (M1 M2 : mdl)(σ : config) :=
+  is_external M1 M2 σ this.
+
 Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳…' σ'" (at level 40).
                                                
-Inductive reductions : mdl -> mdl -> config -> config -> Prop :=
+Inductive internal_reductions : mdl -> mdl -> config -> config -> Prop :=
 | pr_single : forall M1 M2 M σ σ', M1 ⋄ M2 ≜ M ->
                               M ∙ σ ⤳ σ' ->
-                              (forall C, classOf this σ C ->
-                                    M1 C = None) ->
-                              (forall C, classOf this σ' C ->
-                                    exists CDef, M1 C = Some CDef) ->
+                              external_self M1 M2 σ ->
+                              internal_self M1 M2 σ' ->
                               M1 ⦂ M2 ⦿ σ ⤳… σ'
 
 | pr_trans : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
                                 M1 ⋄ M2 ≜ M ->
                                 M ∙ σ ⤳ σn ->
-                                (forall C, classOf this σn C ->
-                                      exists CDef, M1 C = Some CDef) ->
+                                internal_self M1 M2 σn ->
                                 M1 ⦂ M2 ⦿ σ1 ⤳… σn                            
 
-where "M1 '⦂' M2 '⦿' σ '⤳…' σ'" := (reductions M1 M2 σ σ').
+where "M1 '⦂' M2 '⦿' σ '⤳…' σ'" := (internal_reductions M1 M2 σ σ').
 
-Hint Constructors reductions : loo_db.
+Hint Constructors internal_reductions : loo_db.
 
 Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 40).
                                                
 Inductive pair_reduction : mdl -> mdl -> config -> config -> Prop :=
 
-| p_reduce : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
-                                M1 ⋄ M2 ≜ M ->
-                                M ∙ σ ⤳ σn ->
-                                (forall C, classOf this σn C ->
-                                      exists CDef, M1 C = Some CDef) ->
-                                M1 ⦂ M2 ⦿ σ1 ⤳ σn                            
+| p_internal : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
+                                  M1 ⋄ M2 ≜ M ->
+                                  M ∙ σ ⤳ σn ->
+                                  external_self M1 M2 σn ->
+                                  M1 ⦂ M2 ⦿ σ1 ⤳ σn
+| p_external : forall M1 M2 M σ1 σ2, M1 ⋄ M2 ≜ M ->
+                                M ∙ σ1 ⤳ σ2 ->
+                                external_self M1 M2 σ1 ->
+                                external_self M1 M2 σ2 ->
+                                M1 ⦂ M2 ⦿ σ1 ⤳ σ2
 
 where "M1 '⦂' M2 '⦿' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ').
 
 Hint Constructors pair_reduction : loo_db.
 
 Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" (at level 40).
-                                               
+
 Inductive pair_reductions : mdl -> mdl -> config -> config -> Prop :=
 | prs_single : forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                                  M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
-                                   
+                              M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
+                                 
 | prs_trans : forall M1 M2 σ1 σ σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ ->
                                M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
                                M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2

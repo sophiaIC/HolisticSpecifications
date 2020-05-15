@@ -1051,31 +1051,15 @@ Proof.
     crush.
 Qed.
 
-Definition is_internal (M1 M2 : mdl)(σ : config)(α : addr) :=
-  (exists o CDef, mapp σ α = Some o /\
-             M1 (cname o) = Some CDef).
-
-Definition is_external (M1 M2 : mdl)(σ : config)(α : addr) :=
-  (exists o, mapp σ α = Some o /\
-        M1 (cname o) = None).
-
-Definition is_internal_self (M1 M2 : mdl)(σ : config) :=
-  (exists α, mapp σ this = Some (v_addr α) /\
-        is_internal M1 M2 σ α).
-
-Definition is_external_self (M1 M2 : mdl)(σ : config) :=
-  (exists α, mapp σ this = Some (v_addr α) /\
-        is_external M1 M2 σ α).
-
 Lemma pair_reductions_is_external_1 :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
-                 is_external_self M1 M2 σ1.
+                 external_self M1 M2 σ1.
 Proof.
 Admitted.
 
 Lemma pair_reductions_is_external_2 :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
-                 is_external_self M1 M2 σ2.
+                 external_self M1 M2 σ2.
 Proof.
 Admitted.
 
@@ -1085,8 +1069,8 @@ Lemma frame_arising_from_single_frame_external_internal_is_method_call_reduction
                     σ1 = (χ1, ϕ1 :: nil) ->
                     forall M1 M2,
                       M1 ⋄ M2 ≜ M ->
-                      is_external_self M1 M2 σ1 ->
-                      is_internal_self M1 M2 σ2 ->
+                      external_self M1 M2 σ1 ->
+                      internal_self M1 M2 σ2 ->
                       forall χ2 ϕ2 ψ2, σ2 = (χ2, ϕ2 :: ψ2) ->
                                   (exists x α m β s, method_is_called σ1 x α m β /\
                                                 contn ϕ2 = c_stmt s /\
@@ -1099,7 +1083,7 @@ Proof.
   intros.
   eapply frame_arising_from_single_frame_is_method_call_reductions;
     eauto.
-  unfold is_external_self, is_external, is_internal_self, is_internal in *;
+  unfold external_self, is_external, internal_self, is_internal in *;
     repeat destruct_exists_loo;
     andDestruct;
     repeat destruct_exists_loo;
@@ -1126,11 +1110,11 @@ Proof.
 Qed.
 
 Lemma is_external_self_implies_not_is_internal :
-  forall M1 M2 σ, is_external_self M1 M2 σ ->
-                  ~ is_internal_self M1 M2 σ.
+  forall M1 M2 σ, external_self M1 M2 σ ->
+                  ~ internal_self M1 M2 σ.
 Proof.
   intros;
-    unfold is_internal_self, is_external_self, is_internal, is_external in *;
+    unfold internal_self, external_self, is_internal, is_external in *;
     intro Hcontra;
     repeat destruct_exists_loo;
     andDestruct;
@@ -1138,12 +1122,12 @@ Proof.
 Qed.
 
 Lemma is_internal_self_implies_not_is_external :
-  forall M1 M2 σ, is_internal_self M1 M2 σ ->
-                  ~ is_external_self M1 M2 σ.
+  forall M1 M2 σ, internal_self M1 M2 σ ->
+                  ~ external_self M1 M2 σ.
 Proof.
   intros;
     intro Hcontra;
-    unfold is_internal_self, is_external_self, is_internal, is_external in *;
+    unfold internal_self, external_self, is_internal, is_external in *;
     repeat destruct_exists_loo;
     andDestruct;
     crush.
@@ -1167,14 +1151,14 @@ Lemma is_internal_implies_not_is_external :
 Proof.
   intros;
     intro Hcontra;
-    unfold is_internal_self, is_external_self, is_internal, is_external in *;
+    unfold internal_self, external_self, is_internal, is_external in *;
     repeat destruct_exists_loo;
     andDestruct;
     crush.
 Qed.
 
 Inductive stack_trace : mdl -> mdl -> config -> Prop :=
-| trace_initial : forall M1 M2 χ ϕ x s, is_external_self M1 M2 (χ, ϕ :: nil) ->
+| trace_initial : forall M1 M2 χ ϕ x s, external_self M1 M2 (χ, ϕ :: nil) ->
                                         classOf this (χ, ϕ :: nil) ObjectName ->
                                         contn ϕ = c_hole x s ->
                                         stack_trace M1 M2 (χ, ϕ :: nil)
@@ -1369,9 +1353,9 @@ Lemma reduction_internal_external :
                   forall χ1 ϕ1 ψ1 χ2 ϕ2 ψ2, σ1 = (χ1, ϕ1 :: ψ1) ->
                                             σ2 = (χ2, ϕ2 :: ψ2) ->
                                             forall M1 M2, M1 ⋄ M2 ≜ M ->
-                                                          is_external_self M1 M2 σ1 ->
-                                                          (is_external_self M1 M2 σ2 \/
-                                                           (is_internal_self M1 M2 σ2 /\
+                                                          external_self M1 M2 σ1 ->
+                                                          (external_self M1 M2 σ2 \/
+                                                           (internal_self M1 M2 σ2 /\
                                                             exists C CDef m zs s s', classOf this σ2 C /\
                                                                                      M1 C = Some CDef /\
                                                                                      c_meths CDef m = Some (zs, s) /\
@@ -1609,19 +1593,19 @@ Definition classic_spec_prop (M1 M2 : mdl)(C : cls)(m : mth)(P Q : mdl -> mdl ->
 Inductive reductions_alt : mdl -> mdl -> config -> config -> Prop :=
 | ra_single : forall M1 M2 M σ1 σ2, M1 ⋄ M2 ≜ M ->
                                     M ∙ σ1 ⤳ σ2 ->
-                                    is_internal_self M1 M2 σ1 ->
-                                    is_external_self M1 M2 σ2 ->
+                                    internal_self M1 M2 σ1 ->
+                                    external_self M1 M2 σ2 ->
                                     reductions_alt M1 M2 σ1 σ2
 | ra_trans : forall M1 M2 M σ1 σ2 σ, M1 ⋄ M2 ≜ M ->
                                      M ∙ σ1 ⤳ σ2 ->
-                                     is_internal_self M1 M2 σ1 ->
+                                     internal_self M1 M2 σ1 ->
                                      reductions_alt M1 M2 σ2 σ ->
                                      reductions_alt M1 M2 σ1 σ.
 
 Inductive pair_reduction_alt : mdl -> mdl -> config -> config -> Prop :=
 | pra : forall M1 M2 M σ1 σ σ2, M1 ⋄ M2 ≜ M ->
                            M ∙ σ1 ⤳ σ ->
-                           is_external_self M1 M2 σ1 ->
+                           external_self M1 M2 σ1 ->
                            reductions_alt M1 M2 σ σ2 ->
                            pair_reduction_alt M1 M2 σ1 σ2.
 
@@ -1665,11 +1649,11 @@ Proof.
         clear Hb
     end.
     match goal with
-    | [Ha : is_external_self _ _ _ |- _ ] =>
+    | [Ha : external_self _ _ _ |- _ ] =>
       apply is_external_self_implies_not_is_internal in Ha;
         contradiction Ha
     end.
-    unfold is_internal_self, is_internal in *;
+    unfold internal_self, is_internal in *;
       repeat destruct_exists_loo;
       andDestruct;
       repeat destruct_exists_loo;
@@ -1736,11 +1720,11 @@ Proof.
         clear Hb
     end.
     match goal with
-    | [Ha : is_external_self _ _ _ |- _ ] =>
+    | [Ha : external_self _ _ _ |- _ ] =>
       apply is_external_self_implies_not_is_internal in Ha;
         contradiction Ha
     end.
-    unfold is_internal_self, is_internal in *;
+    unfold internal_self, is_internal in *;
       repeat destruct_exists_loo;
       andDestruct;
       repeat destruct_exists_loo;
@@ -2003,8 +1987,8 @@ Lemma vAssgn_reductions_step :
                                                                                   flds o f = Some v)) /\
                                                                 reductions_alt M1 M2 σ σ2 /\
                                                                 M ∙ σ1 ⤳ σ /\
-                                                                is_internal_self M1 M2 σ1 /\
-                                                                is_internal_self M1 M2 σ.
+                                                                internal_self M1 M2 σ1 /\
+                                                                internal_self M1 M2 σ.
 Proof.
 
 Admitted.
@@ -2022,8 +2006,8 @@ Lemma fAssgn_reductions_step :
                                                             (exists v', flds o f = Some v') /\
                                                             reductions_alt M1 M2 σ σ2 /\
                                                             M ∙ σ1 ⤳ σ /\
-                                                            is_internal_self M1 M2 σ1 /\
-                                                            is_internal_self M1 M2 σ.
+                                                            internal_self M1 M2 σ1 /\
+                                                            internal_self M1 M2 σ.
 Proof.
 
 Admitted.
@@ -2039,8 +2023,8 @@ Lemma if_reductions_step :
                                                                     M ∙ σ1 ⊢ e ↪ v_false)) /\
                                                                   reductions_alt M1 M2 σ σ2 /\
                                                                   M ∙ σ1 ⤳ σ /\
-                                                                  is_internal_self M1 M2 σ1 /\
-                                                                  is_internal_self M1 M2 σ.
+                                                                  internal_self M1 M2 σ1 /\
+                                                                  internal_self M1 M2 σ.
 Proof.
 
 Admitted.
@@ -2056,11 +2040,11 @@ Lemma rtrn_1_reductions_step :
                                          (vMap ϕ1 x1 = Some v) /\
                                          (M ∙ σ1 ⤳ σ)  /\
                                          ((reductions_alt M1 M2 σ σ2 /\
-                                           is_internal_self M1 M2 σ1 /\
-                                           is_internal_self M1 M2 σ) \/
+                                           internal_self M1 M2 σ1 /\
+                                           internal_self M1 M2 σ) \/
                                           (σ2 = σ /\
-                                           is_internal_self M1 M2 σ1 /\
-                                           is_external_self M1 M2 σ)).
+                                           internal_self M1 M2 σ1 /\
+                                           external_self M1 M2 σ)).
 Proof.
 
 Admitted.

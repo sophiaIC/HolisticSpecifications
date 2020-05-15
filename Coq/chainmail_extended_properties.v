@@ -429,17 +429,15 @@ Proof.
   inversion H; subst.
   destruct σ as [χ ψ'];
     destruct ψ' as [|ϕ0 ψ0];
-    match goal with
-    | [H : _ = _ :: _ |- _] =>
-      inversion H; subst
-    end;
     simpl in *;
     subst.
-  unfold update, t_update in H2.
-  eq_auto.
-  eapply int_x;
-    simpl;
-    eauto with loo_db.
+  - repeat map_rewrite;
+      crush.
+
+  - repeat map_rewrite;
+      simpl in *;
+      repeat map_rewrite.
+    crush.
 Qed.
 
 Hint Resolve interpret_update : loo_db.
@@ -468,17 +466,13 @@ Proof.
   intros.
   inversion H; subst.
   simpl in *;
-    match goal with
-    | [H : _ = _ :: _ |- _] =>
-      inversion H; subst
-    end;
-    simpl in *;
     subst.
   unfold update, t_update in H0.
   apply equal_f with (x0:=x) in H0.
   eq_auto.
-  eapply int_x;
+  apply int_x;
     simpl;
+    repeat map_rewrite;
     crush.
 Qed.
 
@@ -536,14 +530,11 @@ Proof.
 
   inversion H; subst;
     simpl in *.
-  match goal with
-  | [H : _::_ = _::_ |- _] =>
-    inversion H; subst
-  end.
   eapply int_x;
     simpl;
     eauto with loo_db.
-  crush.
+  repeat map_rewrite;
+    crush.
 Qed.
 
 Hint Resolve interpretation_same_variable_map : loo_db.
@@ -578,7 +569,8 @@ Proof.
   inversion H0;
     subst.
   simpl in *; subst.
-  crush.
+  repeat map_rewrite;
+    crush.
 Qed.
 
 Hint Resolve interpret_x_update_heap_fresh : loo_db.
@@ -706,6 +698,7 @@ Proof.
     inversion H4; inversion H11;
       subst;
       simpl in *.
+    repeat map_rewrite;
     repeat simpl_crush;
       simpl in *.
     crush.
@@ -716,6 +709,7 @@ Proof.
     inversion H4; inversion H11;
       subst;
       simpl in *.
+    repeat map_rewrite.
     repeat simpl_crush;
       simpl in *.
     crush.
@@ -757,22 +751,44 @@ Proof.
   intros.
   induction H; subst; auto.
 
+  unfold external_self, internal_self, is_external, is_internal in *.
+  repeat (destruct_exists_loo;
+          andDestruct).
   destruct (wf_config_this_has_class σ H0) as [C].
   assert (Hwf : σ_wf σ');
     [eapply reduction_preserves_config_wf; eauto|].
   destruct (wf_config_this_has_class σ' Hwf) as [C'].
-  repeat match goal with
-         | [Ha : forall _ : cls, classOf this ?σ _ -> _,
-              Hb : classOf this ?σ ?C |- _] =>
-           specialize (Ha C Hb)
-         end.
   eapply reduction_different_classes_implies_method_call_or_rtrn; eauto.
   intro Hcontra;
     subst;
     crush.
+  repeat match goal with
+         | [Hclass : classOf this _ _ |- _] =>
+           inversion Hclass;
+             subst;
+             clear Hclass
+         end.
+  destruct σ as [χ ψ];
+    destruct σ' as [χ' ψ'];
+    simpl in *.
+  destruct ψ as [|ϕ ψ];
+    [repeat map_rewrite; crush|].
+  destruct ψ' as [|ϕ' ψ'];
+    [repeat map_rewrite; crush|].
+  repeat map_rewrite.
+  repeat match goal with
+         | [Hint : ⌊ this ⌋ _ ≜ _ |- _] =>
+           inversion Hint;
+             subst;
+             clear Hint
+         end.
+  simpl in *;
+    repeat map_rewrite;
+    repeat simpl_crush.
+  crush.
 Qed.
 
-Lemma pair_reduction_change_implies_method_call :
+(*Lemma pair_reduction_change_implies_method_call :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
                  σ_wf σ1 ->
                  (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
@@ -786,7 +802,7 @@ Proof.
   induction H;
     subst.
   eapply reductions_implies_method_call_or_rtrn; eauto.
-Qed.
+Qed.*)
 
 Lemma was_change :
   (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
@@ -1194,6 +1210,11 @@ Proof.
     induction Hred;
     intros;
     eauto with loo_db.
+  eapply reductions_heap_monotonic in H;
+    eauto.
+  destruct_exists_loo.
+  eapply reduction_heap_monotonic in H;
+    eauto.
 Qed.
 
 Hint Resolve pair_reduction_heap_monotonic.
@@ -1501,7 +1522,7 @@ Qed.
 
 Hint Resolve wf_adaptation : loo_db.
 
-Lemma guards_method_call :
+(*Lemma guards_method_call :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
                  forall χ ϕ σ1' σ2', (χ, ϕ::nil) ◁ σ1 ≜ σ1' ->
                                 (χ, ϕ::nil) ◁ σ2 ≜ σ2' ->
@@ -1593,7 +1614,7 @@ Proof.
 
      *)
 
-Admitted.
+Admitted.*)
 
 (** 
 
