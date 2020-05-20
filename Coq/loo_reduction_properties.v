@@ -1297,7 +1297,76 @@ Proof.
       with (σ:=σ2);
       auto with loo_db.
 Qed.
-Print red_single.
+
+Lemma internal_reductions_external_initial :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                 external_self M1 M2 σ1.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    eauto.
+Qed.
+
+Lemma pair_reduction_external_self1 :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 external_self M1 M2 σ1.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    auto.
+  eapply internal_reductions_external_initial; eauto.
+Qed.
+
+Lemma pair_reduction_external_self2 :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                 external_self M1 M2 σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    auto.
+Qed.
+
+Lemma pair_reductions_external_self1 :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 external_self M1 M2 σ1.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    try solve [eapply pair_reduction_external_self1; eauto].
+Qed.
+
+Lemma pair_reductions_external_self2 :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 external_self M1 M2 σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    [eapply pair_reduction_external_self2; eauto|eauto].
+Qed.
+
+Lemma external_self_head1 :
+  forall M1 M2 χ ϕ ψ, external_self M1 M2 (χ, ϕ :: nil) ->
+                 external_self M1 M2 (χ, ϕ :: ψ).
+Proof.
+  intros;
+    unfold external_self, is_external in *;
+    repeat destruct_exists_loo;
+    andDestruct.
+  exists α, o; split; auto.
+Qed.
+
+Lemma external_self_head2 :
+  forall M1 M2 χ ϕ ψ, external_self M1 M2 (χ, ϕ :: ψ) ->
+                 external_self M1 M2 (χ, ϕ :: nil).
+Proof.
+  intros;
+    unfold external_self, is_external in *;
+    repeat destruct_exists_loo;
+    andDestruct.
+  exists α, o; split; auto.
+Qed.
 
 (* call block *)
 
