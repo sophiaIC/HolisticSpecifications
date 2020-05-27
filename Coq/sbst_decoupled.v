@@ -59,6 +59,9 @@ Instance raiseAsrt : Raiseable asrt :=
         | ∀x∙ A' => ∀x∙ (raise' A' (S n))
         | ∃x∙ A' => ∃x∙ (raise' A' (S n))
 
+        | ∀m∙ A' => ∀m∙ (raise' A' n)
+        | ∃m∙ A' => ∃m∙ (raise' A' n)
+
         | x access y => (x ↑ n) access (y ↑ n)
         | x calls y ▸ m ⟨ vMap ⟩ => (x ↑ n) calls (y ↑ n) ▸ m ⟨ vMap ↑ n ⟩
 
@@ -69,8 +72,6 @@ Instance raiseAsrt : Raiseable asrt :=
 
         | x external => (x ↑ n) external
         | x internal => (x ↑ n) internal
-
-        | a_name x y => a_name (x ↑ n) y
         end
   }.
 
@@ -170,12 +171,6 @@ Proof.
   auto.
 Qed.
 
-Lemma sbst_x_name :
-  forall (x : addr) n y z, ([x /s n] (a_name y z)) = (a_name ([x /s n] y) z).
-Proof.
-  auto.
-Qed.
-
 Ltac sbst_simpl_actual :=
   match goal with
   | [H : context[[_ /s _] (a_expr _)] |- _] => rewrite sbst_x_exp in H
@@ -200,8 +195,6 @@ Ltac sbst_simpl_actual :=
   | [H : context[[_ /s _] (_ external)] |- _] => rewrite sbst_x_extrn in H
   | [H : context[[_ /s _] (_ internal)] |- _] => rewrite sbst_x_intrn in H
 
-  | [H : context[[_ /s _] (a_name _ _)] |- _] => rewrite sbst_x_name in H
-
   | [|- context[[_ /s _] (a_expr _)]] => rewrite sbst_x_exp
   | [|- context[[_ /s _] (a_class _ _)]] => rewrite sbst_x_class
 
@@ -223,8 +216,6 @@ Ltac sbst_simpl_actual :=
 
   | [|- context[[_ /s _] (_ external)]] => rewrite sbst_x_extrn
   | [|- context[[_ /s _] (_ internal)]] => rewrite sbst_x_intrn
-
-  | [|- context[[_ /s _] (a_name _ _)]] => rewrite sbst_x_name
   end.
 
 Ltac sbst_simpl :=

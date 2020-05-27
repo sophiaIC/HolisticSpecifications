@@ -136,7 +136,7 @@ Ltac pair_reduces_heap_wf_auto :=
 
 Ltac obj_defn_rewrite :=
   match goal with
-  | [H : M_wf ?M |- context[?M ObjectName]] => rewrite (M_wf_ObjectDefn M H)
+  | [H : M_wf ?M |- context[?M Object]] => rewrite (M_wf_ObjectDefn M H)
   end.
 
 Lemma linked_wf :
@@ -152,7 +152,7 @@ Proof.
   apply module_wf;
     auto; intros.
   unfold extend;
-    destruct (M1 ObjectName); auto.
+    destruct (M1 Object); auto.
   unfold extend in H7.
   remember (M1 C) as x.
   destruct x; crush.

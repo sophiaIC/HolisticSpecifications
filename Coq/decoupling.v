@@ -79,6 +79,13 @@ Notation "'not' e" := (ex_eq e (ex_false))(at level 40).
 Notation "e1 '⩼′' e2" := (not (e1 ⩽′ e2))(at level 40).
 Notation "e1 '⩾′' e2" := ((e1 ⩼′ e2) e_or (ex_eq e1 e2))(at level 40).
 
+Inductive a_mth :=
+| am_bnd : mth -> a_mth
+| am_hole : nat -> a_mth.
+
+Notation "'am_' m" := (am_bnd m)(at level 40).
+Notation "'am♢' m" := (am_hole m)(at level 40).
+
 (** Assertion syntax  *)
 
 Inductive asrt : Type :=
@@ -98,12 +105,15 @@ Inductive asrt : Type :=
 (*| a_all_Σ : asrt -> asrt*)
 | a_ex_x  : asrt -> asrt
 (*| a_ex_Σ  : asrt -> asrt*)
+| a_all_m : asrt -> asrt
+| a_ex_m  : asrt -> asrt
 
 (** Permission: *)
 | a_acc   : a_var -> a_var -> asrt
 
 (** Control: *)
-| a_call  : a_var -> a_var -> mth -> partial_map var a_var  -> asrt
+| a_call  : a_var -> a_var -> a_mth -> partial_map var a_var  -> asrt
+(*| a_call' : a_var -> a_var -> a_mth -> asrt*)
 
 (** Time: *)
 | a_next  : asrt -> asrt
@@ -116,9 +126,7 @@ Inductive asrt : Type :=
 
 (** Viewpoint: *)
 | a_extrn : a_var -> asrt
-| a_intrn : a_var -> asrt
-
-| a_name : a_var -> var -> asrt.
+| a_intrn : a_var -> asrt.
 
 Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 40).
 Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 40).
@@ -128,10 +136,13 @@ Notation "'∀x∙' A" :=(a_all_x A)(at level 40).
 (*Notation "'∀S∙' A" :=(a_all_Σ A)(at level 40).*)
 Notation "'∃x∙' A" :=(a_ex_x A)(at level 40).
 (*Notation "'∃S∙' A" :=(a_ex_Σ A)(at level 40).*)
+Notation "'∀m∙' A" :=(a_all_m A)(at level 40).
+Notation "'∃m∙' A" :=(a_ex_m A)(at level 40).
 Notation "x 'internal'" :=(a_intrn x)(at level 40).
 Notation "x 'external'" :=(a_extrn x)(at level 40).
 Notation "x 'access' y" :=(a_acc x y)(at level 40).
 Notation "x 'calls' y '▸' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 40).
+(*Notation "x '_calls' y '▹' m " :=(a_call' x y m vMap)(at level 40).*)
 Notation "e1 '⩶' e2" := (a_expr (ex_eq e1 e2))(at level 40).
 Notation "e1 '⩶̸' e2" := (a_expr (not (ex_eq e1 e2)))(at level 40).
 
@@ -190,12 +201,15 @@ Instance substAssertionVar : Subst asrt nat addr :=
        (*quantifiers*)      
        | a_all_x A'      => a_all_x (subst' A' (S n) x)
        | a_ex_x A'       => a_ex_x (subst' A' (S n) x)
+       | a_all_m A'      => a_all_m (subst' A' (S n) x)
+       | a_ex_m A'       => a_ex_m (subst' A' (S n) x)
        (*permission*)
        | a_acc v1 v2       => a_acc (sbst v1 n x) (sbst v2 n x)
        (*control*)
        | a_call v1 v2 m vMap => a_call ([x /s n] v1)
                                       ([x /s n] v2) m
                                       ([x /s n] vMap)
+(*       | a_call' v1 v2 m => a_call' ([x /s n] v1) ([x /s n]v2) m*)
        (*time*)
        | a_next A'         => a_next (subst' A' n x)
        | a_will A'         => a_will (subst' A' n x)
@@ -205,8 +219,41 @@ Instance substAssertionVar : Subst asrt nat addr :=
        (*viewpoint*)
        | a_extrn v          => a_extrn ([x /s n] v)
        | a_intrn v          => a_intrn ([x /s n] v)
+       end
+  }.
 
-       | a_name y z         => a_name ([x /s n] y) z
+Instance substAMth : Subst a_mth nat mth :=
+  {
+  sbst a n m := match a with
+                | am♢ n' => if n' =? n
+                           then am_ m
+                           else a
+                | _ => a
+                end
+  }.
+
+Instance substAssertionMth : Subst asrt nat mth :=
+  {sbst :=
+     fix subst' A n m :=
+       match A with
+       (*connectives*)
+       | a_arr A1 A2       => a_arr (subst' A1 n m) (subst' A2 n m)
+       | a_and A1 A2       => a_and (subst' A1 n m) (subst' A2 n m)
+       | a_or A1 A2        => a_or (subst' A1 n m) (subst' A2 n m)
+       | a_neg A'          => a_neg (subst' A' n m)
+       (*quantifiers*)      
+       | a_all_x A'      => a_all_x (subst' A' n m)
+       | a_ex_x A'       => a_ex_x (subst' A' n m)
+       | a_all_m A'      => a_all_m (subst' A' (S n) m)
+       | a_ex_m A'       => a_ex_m (subst' A' (S n) m)
+       (*control*)
+       | a_call v1 v2 am β => a_call v1 v2 ([m /s n] am) β
+       (*time*)
+       | a_next A'         => a_next (subst' A' n m)
+       | a_will A'         => a_will (subst' A' n m)
+       | a_prev A'         => a_prev (subst' A' n m)
+       | a_was A'          => a_was (subst' A' n m)
+       | _ => A
        end
   }.
 
@@ -391,7 +438,7 @@ Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
     ⌊ y ⌋ σ ≜ (v_addr α2) ->
     σ = (χ, ϕ :: ψ) ->
     (contn ϕ) = (c_stmt (s_stmts (s_meth x y m vMap) s)) ->
-    M1 ⦂ M2 ◎ σ ⊨′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap ∘ (mapp σ) ∘ value_to_addr⟩ )
+    M1 ⦂ M2 ◎ σ ⊨′ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ vMap ∘ (mapp σ) ∘ value_to_addr⟩ )
 
 (** Viewpoint: *)
 | sat'_extrn : forall M1 M2 σ α o C, mapp σ α = Some o ->
@@ -495,12 +542,12 @@ with
 | nsat'_call2 : forall M1 M2 σ ϕ ψ α1 α2 x y m vMap vMap' s, snd σ = ϕ :: ψ ->
                                                         contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap) s)) ->
                                                         mapp σ y <> Some (v_addr α2) ->
-                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap' ⟩)
+                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ vMap' ⟩)
 
 | nsat'_call3 : forall M1 M2 σ ϕ ψ α1 α2 x y m vMap vMap' s, snd σ = ϕ :: ψ ->
                                                         contn ϕ = (c_stmt (s_stmts (s_meth x y m vMap) s)) ->
                                                         vMap' <> vMap ∘ (mapp σ) ∘ value_to_addr ->
-                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ m ⟨ vMap' ⟩)
+                                                        M1 ⦂ M2 ◎ σ ⊭′ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ vMap' ⟩)
 
 (*viewpoint*) (* well-formeness? This is important!!!!*)
 | nsat'_extrn1 : forall M1 M2 σ α, mapp σ α = None ->
@@ -746,6 +793,26 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
 ]]]
  *)
 
+| sat_all_m : forall M1 M2 σ0 σ A, (forall (m : mth), M1 ⦂ M2 ◎ σ0 … σ ⊨ ([m /s 0]A)) ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀m∙ A)
+(**
+[[[
+                ∀ meth o, M1 ⦂ M2 ◎ σ0 … σ ⊨ ([meth_name / m]A)
+               ------------------------------------------------                   (Sat-All-m)
+                        M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀m. A)
+]]]
+ *)
+
+| sat_ex_m  : forall M1 M2 σ0 σ A (m : mth), M1 ⦂ M2 ◎ σ0 … σ ⊨ ([m /s 0] A) ->
+                                        M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃m∙ A)
+(**
+[[[
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ ([meth_name / m]A))
+               ---------------------------------------                   (Sat-Ex-m)
+                     M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃ m. A)
+]]]
+ *)
+
 (** Permission: *)
 | sat_access1 : forall M1 M2 σ0 σ α, M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α) access (a_ α))
 (**
@@ -788,16 +855,31 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
     ⌊ y ⌋ σ ≜ (v_addr α2) ->
     σ = (χ, ϕ :: ψ) ->
     (contn ϕ) = (c_stmt (s_stmts (s_meth x y m β) s)) ->
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) calls (a_ α2) ▸ m ⟨ (β ∘ (mapp σ) ∘ value_to_addr) ⟩ )
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ (β ∘ (mapp σ) ∘ value_to_addr) ⟩ )
 (**
 [[[
                                ⌊this⌋ σ ≜ α1        
                ⌊y⌋ σ ≜ α2        σ.(contn) = (x := y.m(β); s)
-               ------------------------------------------------                   (Sat-Call)
+               ------------------------------------------------                   (Sat-Call-1)
                M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 calls α2.m(β ∘ σ.(vMap))
 ]]]
  *)
 
+(*| sat_call_2 : forall M1 M2 σ0 σ χ ϕ ψ x y m β s α1 α2,
+    ⌊ this ⌋ σ ≜ (v_addr α1) ->
+    ⌊ y ⌋ σ ≜ (v_addr α2) ->
+    σ = (χ, ϕ :: ψ) ->
+    (contn ϕ) = (c_stmt (s_stmts (s_meth x y m β) s)) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_call' (a_ α1) (a_ α2) (am_ m))
+(**
+[[[
+                               ⌊this⌋ σ ≜ α1        
+               ⌊y⌋ σ ≜ α2        σ.(contn) = (x := y.m(β); s)
+               ------------------------------------------------                   (Sat-Call-2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 calls α2.m(β ∘ σ.(vMap))
+]]]
+ *)
+*)
 (** Viewpoint: *)
 | sat_extrn : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
                                   o.(cname) = C ->
@@ -1039,6 +1121,27 @@ with
 ]]]
  *)
 
+| nsat_all_m : forall M1 M2 σ0 σ A (m : mth), M1 ⦂ M2 ◎ σ0 … σ ⊭ ([m /s 0]A) ->
+                                         M1 ⦂ M2 ◎ σ0 … σ ⊭ (∀m∙ A) 
+(**
+[[[
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ [meth_name / m]A
+               -----------------------------------                   (NSat-All-m)
+                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ∀ m. A
+]]]
+ *)
+
+
+| nsat_ex_m : forall M1 M2 σ0 σ A, (forall (m : mth), M1 ⦂ M2 ◎ σ0 … σ ⊭ ([m /s 0]A)) ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (∃m∙ A)
+(**
+[[[
+               ∀ meth_name. M1 ⦂ M2 ◎ σ0 … σ ⊭ [meth_name / m]A
+               --------------------------------------------------------                   (NSat-Ex-m)
+                         M1 ⦂ M2 ◎ σ0 … σ ⊭ ∃ m. A
+]]]
+ *)
+
 (** Permission: *)
 | nsat_access : forall M1 M2 σ0 σ α1 α2, α1 <> α2 ->
                                     (forall o f α3, mapp σ α1 = Some o ->
@@ -1073,7 +1176,7 @@ with
 | nsat_call2 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β β' s, snd σ = ϕ :: ψ ->
                                                     contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
                                                     mapp σ y <> Some (v_addr α2) ->
-                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ β ⟩)
+                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ β ⟩)
 (**
 [[[
                     σ.(contn) = (x := y.m(β'); s) 
@@ -1086,7 +1189,7 @@ with
 | nsat_call3 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β' β s, snd σ = ϕ :: ψ ->
                                                     contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
                                                     β <> β' ∘ (mapp σ) ∘ value_to_addr ->
-                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ β ⟩)
+                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ β ⟩)
 (**
 [[[
                      σ.(contn) = (x := y.m(β'); s)

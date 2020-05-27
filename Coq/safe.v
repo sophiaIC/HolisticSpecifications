@@ -11,7 +11,307 @@ Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
+(*Lemma pair_reduction_nil_tail_implies_pair_reduction :
+  forall M1 M2 χ ϕ σ, M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ ->
+                 forall ψ, exists σ', M1 ⦂ M2 ⦿ (χ, ϕ :: ψ) ⤳ σ'.
+Proof.
+Admitted.
 
+Lemma pair_reduction_nil_tail_same_heap :
+  forall M1 M2 χ ϕ ψ σ, M1 ⦂ M2 ⦿ (χ, ϕ :: ψ) ⤳ σ ->
+                   forall σ', M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ' ->
+                         fst σ = fst σ'.
+Proof.
+Admitted.
+
+Lemma hoare_pr_fieldHeapUpdated_nil :
+  forall M1 M2 P χ ϕ ψ α f v,
+    M1 ⦂ M2 ⦿ {pre:P} (χ, ϕ :: ψ) {post:fieldHeapUpdated (χ, ϕ :: ψ) α f v} ->
+    P (χ, ϕ :: ψ) ->
+    M1 ⦂ M2 ⦿ {pre:P} (χ, ϕ :: nil) {post:fieldHeapUpdated (χ, ϕ :: nil) α f v}.
+Proof.
+  intros M1 M2 P χ ϕ ψ α f v Hhoare HP.
+  
+  apply ht_pr;
+    intros.
+
+  let σ := fresh "σ" in
+  destruct (pair_reduction_nil_tail_implies_pair_reduction M1 M2 χ ϕ σ')
+    with (ψ:=ψ)
+    as [σ];
+    auto.
+
+  hoare_inversion.
+
+
+  
+  inversion Hhoare;
+    subst.
+  speciali
+Qed.*)
+
+Lemma head_pair_reduction :
+  forall M1 M2 χ ϕ χ' ψ', M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ (χ', ψ') ->
+                     forall ψ, M1 ⦂ M2 ⦿ (χ, ϕ :: ψ) ⤳ (χ', ψ' ++ ψ).
+Proof.
+
+Admitted.
+                  
+
+Lemma fieldHeapUpdated_independent_of_stack_1 :
+  forall σ1 α f v σ2, fieldHeapUpdated σ1 α f v σ2 ->
+                 forall (σ : config), fst σ = fst σ1 ->
+                                 fieldHeapUpdated σ α f v σ2.
+Proof.
+  intros σ1 α f v σ2 Hupdate σ Hfst;
+    unfold fieldHeapUpdated in *;
+    repeat destruct_exists_loo;
+    andDestruct;
+    unfold heapUpdated in *;
+    rewrite <- Hfst in *.
+  repeat eexists;
+    eauto.
+  let χ1 := fresh "χ" in
+  let ψ1 := fresh "ψ" in
+  let χ := fresh "χ" in
+  let ψ := fresh "ψ" in
+  destruct σ as [χ ψ];
+    destruct σ1 as [χ1 ψ1];
+    simpl in *;
+    subst.
+  repeat map_rewrite;
+    auto.
+Qed.
+
+Lemma fieldHeapUpdated_independent_of_stack_2 :
+  forall σ1 α f v σ2, fieldHeapUpdated σ1 α f v σ2 ->
+                 forall (σ : config), fst σ = fst σ2 ->
+                                 fieldHeapUpdated σ1 α f v σ.
+Proof.
+  intros σ1 α f v σ2 Hupdate σ Hfst;
+    unfold fieldHeapUpdated in *;
+    repeat destruct_exists_loo;
+    andDestruct;
+    unfold heapUpdated in *;
+    rewrite <- Hfst in *.
+  repeat eexists;
+    eauto.
+Qed.
+
+Lemma hoare_pr_trans :
+  forall M1 M2 P σ Q, M1 ⦂ M2 ⦿ {pre: P} σ {post: Q} ->
+                 forall (Q' : config -> Prop), (forall σ', Q σ' -> Q' σ') ->
+                                      M1 ⦂ M2 ⦿ {pre: P} σ {post: Q'}.
+Proof.
+  intros M1 M2 P σ Q Hhoare;
+    inversion Hhoare;
+    subst;
+    intros;
+    apply ht_pr.
+  intros.
+  eauto.
+Qed.
+
+Definition changes_to (α : addr)(f : fld)(v : value) : asrt :=
+  (ex_acc_f (e_ α) f ⩶̸ (ex_val v)) ∧ (a_next (ex_acc_f (e_ α) f ⩶ (ex_val v))).
+
+(* TODO: This desperately needs to be rewritten. Very fragile!!!!!! *)
+Lemma changes_to_fieldHeapUpdatedTo :
+  forall M1 M2 P σ α f v, M1 ⦂ M2 ⦿ {pre: P} σ {post: fieldHeapUpdated σ α f v} ->
+                     P σ ->
+                     forall σ0 α' f' v', M1 ⦂ M2 ◎ σ0 … σ ⊨ changes_to α' f' v' ->
+                                    α = α' /\ f = f' /\ v = v'.
+Proof.
+  intros M1 M2 P σ α f v Hhoare;
+    inversion Hhoare;
+    subst;
+    intros.
+
+  match goal with
+  | [H : _ ⦂ _ ◎ _ … _ ⊨ changes_to _ _ _ |- _] =>
+    inversion H;
+      subst
+  end.
+
+  inversion H8;
+    subst.
+  repeat match goal with
+         | [H : is_exp _ _ |- _] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+  inversion H11;
+    subst.
+  inversion H10;
+    subst.
+  inversion H7;
+    subst.
+  inversion H13;
+    subst.
+  inversion H5;
+    subst.
+  inversion H6;
+    subst.
+
+  inversion H9;
+    subst.
+  inversion H21;
+    subst.
+  link_unique_auto.
+  repeat match goal with
+         | [H : is_exp _ _ |- _] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+  inversion H23;
+    subst.
+  inversion H22;
+    subst.
+  inversion H20;
+    subst.
+  inversion H17;
+    subst.
+
+  let χ' := fresh "χ" in
+  let ψ' := fresh "ψ" in
+  destruct σ' as [χ' ψ'].
+  apply head_pair_reduction with (ψ:=ψ) in H12.
+  specialize (H (χ0, ψ0 ++ ψ));
+    repeat auto_specialize.
+  unfold fieldHeapUpdated in H;
+    repeat destruct_exists_loo;
+    andDestruct.
+  unfold heapUpdated in Hb0;
+    simpl in Hb0;
+    subst.
+
+  destruct (eq_dec α α1);
+    [subst; split; auto|].
+  destruct (eq_dec f f');
+    [subst; split; auto|].
+  destruct (eq_dec v v0);
+    [subst; split; auto|].
+
+  - rewrite H16 in Ha; simpl_crush.
+    rewrite H18 in Ha0; simpl_crush.
+    unfold mapp, configMapHeap, fst, update, t_update in H25;
+      eq_auto.
+    assert (o0 = {| cname := cname o1; flds := fun x : fld => if eqb x f' then Some v else flds o1 x |});
+      [simpl_crush; auto|subst o0].
+    unfold flds in H27.
+    eq_auto.
+    inversion H27; auto.
+
+  - rewrite H16 in Ha; simpl_crush.
+    unfold mapp, configMapHeap, fst, update, t_update in H25;
+      eq_auto.
+    assert (o0 = {| cname := cname o1; flds := fun x : fld => if eqb x f then Some v else flds o1 x |});
+      [simpl_crush; auto|subst o0].
+    unfold flds in H27.
+    eq_auto.
+    assert (v1 = v0);
+      [destruct o1; crush|subst v1; crush].
+
+  - repeat map_rewrite.
+    crush.
+  
+Qed.
+
+Lemma internal_independent_of_initial :
+  forall M1 M2 σ0 σ α, M1 ⦂ M2 ◎ σ0 … σ ⊨ (α internal) ->
+                  forall σ0', M1 ⦂ M2 ◎ σ0' … σ ⊨ (α internal).
+Proof.
+  intros M1 M2 σ0 σ α Hsat;
+    inversion Hsat;
+    subst;
+    intros;
+    eapply sat_intrn;
+    eauto.
+Qed.
+
+Lemma external_independent_of_initial :
+  forall M1 M2 σ0 σ α, M1 ⦂ M2 ◎ σ0 … σ ⊨ (α external) ->
+                  forall σ0', M1 ⦂ M2 ◎ σ0' … σ ⊨ (α external).
+Proof.
+  intros M1 M2 σ0 σ α Hsat;
+    inversion Hsat;
+    subst;
+    intros;
+    eapply sat_extrn;
+    eauto.
+Qed.
+
+Lemma internal_unchanged_by_reduction :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall σ σ' α, M1 ⦂ M2 ◎ σ … σ1 ⊨ (α internal) ->
+                           M1 ⦂ M2 ◎ σ' … σ2 ⊨ (α internal).
+Proof.
+  intros M1 M2 σ1 σ2 Hred σ σ' α Hsat;
+    inversion Hsat;
+    subst.
+  eapply pair_reductions_preserves_addr_classes in Hred;
+    eauto.
+  repeat destruct_exists_loo;
+    andDestruct.
+  eapply sat_intrn; eauto.
+Qed.
+
+Lemma external_unchanged_by_reduction :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall σ σ' α, M1 ⦂ M2 ◎ σ … σ1 ⊨ (α external) ->
+                           M1 ⦂ M2 ◎ σ' … σ2 ⊨ (α external).
+Proof.
+  intros M1 M2 σ1 σ2 Hred σ σ' α Hsat;
+    inversion Hsat;
+    subst.
+  eapply pair_reductions_preserves_addr_classes in Hred;
+    eauto.
+  repeat destruct_exists_loo;
+    andDestruct.
+  eapply sat_extrn; eauto.
+Qed.
+
+Lemma internal_stack_head_1 :
+  forall M1 M2 σ0 χ ϕ ψ α, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (α internal) ->
+                      M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: nil) ⊨ (α internal).
+Proof.
+  intros M1 M2 σ0 χ ϕ ψ α Hsat;
+    inversion Hsat;
+    subst.
+  eapply sat_intrn; eauto.
+Qed.
+
+Lemma internal_stack_head_2 :
+  forall M1 M2 σ0 χ ϕ ψ α, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: nil) ⊨ (α internal) ->
+                      M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (α internal).
+Proof.
+  intros M1 M2 σ0 χ ϕ ψ α Hsat;
+    inversion Hsat;
+    subst.
+  eapply sat_intrn; eauto.
+Qed.
+
+Lemma external_stack_head_1 :
+  forall M1 M2 σ0 χ ϕ ψ α, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (α external) ->
+                      M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: nil) ⊨ (α external).
+Proof.
+  intros M1 M2 σ0 χ ϕ ψ α Hsat;
+    inversion Hsat;
+    subst.
+  eapply sat_extrn; eauto.
+Qed.
+
+Lemma external_stack_head_2 :
+  forall M1 M2 σ0 χ ϕ ψ α, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: nil) ⊨ (α external) ->
+                      M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (α external).
+Proof.
+  intros M1 M2 σ0 χ ϕ ψ α Hsat;
+    inversion Hsat;
+    subst.
+  eapply sat_extrn; eauto.
+Qed.
 
 Module SafeExample.
 
@@ -20,7 +320,7 @@ Module SafeExample.
         ⟶ ∃o.[external(o) ∧ (o access s.secret)]]
    *)
 
-  (** Safe Definition *)
+  (** #<h1>#Module Definitions#</h1># *)
 
   Definition Safe := classID 1.
 
@@ -36,37 +336,597 @@ Module SafeExample.
 
   Definition y := bnd 3.
 
-  Definition takeBody := ((r_ x) ≔ (r_exp (e_val (v_null)))) ;;
-                         (((r_ y) ≔ (this ◌ treasure)) ;;
-                          ((s_if ((e_var scr) ⩵ (e_acc_f (e_var this) secret))
-                                 (((this ◌ treasure) ≔ (r_ x)) ;;
-                                  (s_rtrn y))
-                                 (s_rtrn x)) ;;
-                           (s_rtrn x))).
+  (**
+     #<h2>#Safe 1#</h2># - Simple safe that allows the treasure to be removed if the secret is known - GOOD
+   *)
+
+  Definition takeBody1 := ((r_ x) ≔ (r_exp (e_val (v_null)))) ;;
+                          (((r_ y) ≔ (this ◌ treasure)) ;;
+                           ((s_if ((e_var scr) ⩵ (e_acc_f (e_var this) secret))
+                                  (((this ◌ treasure) ≔ (r_ x)) ;;
+                                   (s_rtrn y))
+                                  (s_rtrn x)) ;;
+                            (s_rtrn x))).
 
   Definition SafeDef1 := clazz Safe
                                (treasure :: secret :: nil)
                                (update
-                                  take (scr :: nil, takeBody)
+                                  take (scr :: nil, takeBody1)
                                   empty)
                                empty.
-
-
-  (**
-σ ⊨ o ∈ Provides (S) iff
-            ∃ σ’.
-                [ σ ⤳^* σ’ &&
-                  ∃ o’: [ σ ⊨ External<o’> && σ ⊨ ¬ Access<o’,o>
-                                  &&  σ’ ⊨  Access<o,o’> ]
-                 ]
-
-*)
-
-  (** MyModule Definition *)
 
   Definition MyModule1 := (update
                              Safe SafeDef1
                              empty).
+
+  (**
+     #<h2>#Safe 2#</h2># - Allows client to change secret if they know the secret - GOOD
+   *)
+
+  Definition changeSecret := methID 1.
+
+  Definition newSecret := bnd 4.
+
+  Definition changeSecretBody2 := ((r_ x) ≔ (r_exp (e_val (v_null)))) ;;
+                                  ((s_if ((e_var scr) ⩵ (e_acc_f (e_var this) secret))
+                                         (((this ◌ secret) ≔ (r_ newSecret)) ;;
+                                          (s_rtrn x))
+                                         (s_rtrn x)) ;;
+                                   (s_rtrn x)).
+
+  Definition SafeDef2 := clazz Safe
+                               (treasure :: secret :: nil)
+                               (update
+                                  take (scr :: nil, takeBody1)
+                                  (update
+                                     changeSecret (scr :: newSecret :: nil, changeSecretBody2)
+                                     empty))
+                               empty.
+
+  Definition MyModule2 := (update
+                             Safe SafeDef2
+                             empty).
+
+  (**
+     #<h2>#Safe 3#</h2># - Allows indiscriminate overwriting of the secret even if the secret is not known - BAD
+   *)
+
+  Definition changeSecretBody3 := ((r_ x) ≔ (r_exp (e_val (v_null)))) ;;
+                                  ((this ◌ secret) ≔ (r_ newSecret) ;;
+                                   (s_rtrn x)).
+
+  Definition SafeDef3 := clazz Safe
+                               (treasure :: secret :: nil)
+                               (update
+                                  take (scr :: nil, takeBody1)
+                                  (update
+                                     changeSecret (scr :: newSecret :: nil, changeSecretBody3)
+                                     empty))
+                               empty.
+
+  Definition MyModule3 := (update
+                             Safe SafeDef3
+                             empty).
+
+  (**
+     #<h2>#Safe 4#</h2># - allows the secret to be leaked - BAD
+   *)
+
+  Definition leak := methID 2.
+
+  Definition leakBody4 := ((r_ x) ≔ (this ◌ treasure)) ;;
+                          (s_rtrn x).
+
+  Definition SafeDef4 := clazz Safe
+                               (treasure :: secret :: nil)
+                               (update
+                                  take (scr :: nil, takeBody1)
+                                  (update
+                                     leak (nil, leakBody4)
+                                     empty))
+                               empty.
+
+  Definition MyModule4 := (update
+                             Safe SafeDef4
+                             empty).
+
+  (**
+     #<h2>#Safe 5#</h2># - a safe that can leak the secrets of any safe - BAD
+   *)
+
+  Definition anotherSafe := bnd 5.
+
+  Definition leakBody5 := ((r_ x) ≔ (anotherSafe ◌ secret)) ;;
+                          (s_rtrn x).
+
+  Definition SafeDef5 := clazz Safe
+                               (treasure :: secret :: nil)
+                               (update
+                                  take (scr :: nil, takeBody1)
+                                  (update
+                                     leak (nil, leakBody5)
+                                     empty))
+                               empty.
+
+  Definition MyModule5 := (update
+                             Safe SafeDef5
+                             empty).
+
+  (**
+     #<h2>#Safe 6#</h2># - a safe that can steal the treasure of any other safe - BAD
+   *)
+
+  Definition steal := methID 3.
+
+  Definition stealBody6 := ((r_ x) ≔ (anotherSafe ◌ treasure)) ;;
+                           (s_rtrn x).
+
+  Definition SafeDef6 := clazz Safe
+                               (treasure :: secret :: nil)
+                               (update
+                                  take (scr :: nil, takeBody1)
+                                  (update
+                                     steal (anotherSafe :: nil, stealBody6)
+                                     empty))
+                               empty.
+
+  Definition MyModule6 := (update
+                             Safe SafeDef6
+                             empty).
+
+  (**
+     #<h2>#Safe 7#</h2># - a variant of Safe 5 that can leak the secret of any safe that is
+                           not this one. - BAD
+   *)
+
+  Definition leakBody7 := (r_ x) ≔ (r_exp (e_null)) ;;
+                          ((s_if (e_var this ⩵ (e_var anotherSafe))
+                                 (s_rtrn x)
+                                 ((r_ x) ≔ (anotherSafe ◌ secret))) ;;
+                           s_rtrn x).
+
+  Definition SafeDef7 := clazz Safe
+                               (treasure :: secret :: nil)
+                               (update
+                                  take (scr :: nil, takeBody1)
+                                  (update
+                                     leak (anotherSafe :: nil, leakBody7)
+                                     empty))
+                               empty.
+
+  Definition MyModule7 := (update
+                             Safe SafeDef7
+                             empty).
+
+  (**
+     #<h1>#Specifications#</h1>#
+   *)
+
+  (**
+     #<h2>#SPEC 1#</h2># - Too Strong
+     - Original FASE 2020 Safe. 
+
+       s.treasure =/= null & Will <s.treasure = null >
+       ---->
+       exists o. [ External<o> & Access<o, s.secret> ]
+
+       This spec is too strong. It is not satisfied by either Safe 1 or Safe 2
+       because the secret might not be externally known, i.e. it might be stored within another safe, 
+       and recursively accessible by an external object.
+   *)
+
+    Definition SPEC1 := (∀x∙ (∀x∙(((a_class (a♢1) Safe)
+                                   ∧
+                                   ((ex_acc_f (e♢1) secret) ⩶ (e♢0))
+                                   ∧
+                                   ((ex_acc_f (e♢1) treasure) ⩶̸ (ex_null))
+                                   ∧
+                                   (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
+                                    ⟶
+                                    (∃x∙ (((a♢0) external)
+                                          ∧
+                                          ((a♢0) access (a♢1))))
+                        ))).
+
+  Module SPEC1_CounterExample.
+
+    Definition χ0_SPEC1 :=
+      update (address 0) (new Object empty) empty.
+
+    Definition β0_SPEC1 :=
+      update this (v_addr (address 0)) empty.
+
+    Definition s1 := bnd 101.
+    Definition s2 := bnd 102.
+    Definition a := bnd 201.
+    Definition b := bnd 202.
+    Definition c := bnd 203.
+
+    Definition αthis := address 0.
+    Definition αa := address 1.
+    Definition αb := address 2.
+    Definition αs1 := address 3.
+    Definition αs2 := address 4.
+
+    Definition s0_SPEC1 :=
+      s_new a Object empty ;;
+      (s_new b Object empty ;;
+       (s_new s1 Safe (update secret a (update treasure a empty)) ;;
+        (s_new s2 Safe (update secret b (update treasure a empty)) ;; (* (A) *)
+         (s_meth c s2 take (update scr b empty) ;;
+          (s_meth c s1 take (update scr c empty) ;;                   (* (B) *)
+           s_rtrn c))))).
+
+    Definition ϕ0_SPEC1 := frm β0_SPEC1
+                               (c_stmt s0_SPEC1).
+    
+    Definition σ0_SPEC1 := (χ0_SPEC1,
+                            ϕ0_SPEC1
+                              :: nil).
+
+    Definition newObj := new Object empty.
+    Definition safeObj1 := (new Safe (update secret (v_addr αa)
+                                             (update treasure (v_addr αa) empty))).
+    Definition safeObj2 := (new Safe (update secret (v_addr αb)
+                                             (update treasure (v_addr αa) empty))).
+
+    Definition χ_A :=
+      update αs2 safeObj2
+             (update αs1 safeObj1
+                     (update αb newObj
+                             (update αa newObj
+                                     (update αthis newObj
+                                             empty)))).
+
+    Definition β_A :=
+      update s2 (v_addr αs2)
+             (update s1 (v_addr αs1)
+                     (update b (v_addr αb)
+                             (update a (v_addr αa)
+                                     β0_SPEC1))).
+
+    Definition s_A := s_meth c s2 take (update scr b empty) ;;
+                      (s_meth c s1 take (update scr c empty) ;;
+                       s_rtrn c).
+
+    Definition ϕ_A := frm β_A
+                          (c_stmt s_A).
+
+    Definition σ_A :=
+      (χ_A, ϕ_A :: nil).
+
+    Definition χ_B :=
+      update αs1
+             (new Safe (update treasure v_null (flds safeObj1)))
+             (update αs2
+                     (new Safe (update treasure v_null (flds safeObj2)))
+                     χ_A).
+
+    Definition β_B :=
+      update c
+             (v_addr αa)
+             β_A.
+
+    Definition s_B := s_rtrn c.
+
+    Definition ϕ_B := frm β_B
+                          (c_stmt s_B).
+
+    Definition σ_B :=
+      (χ_B, ϕ_B :: nil).
+
+    Definition ExtModule1 := (update Object ObjectDefn empty).
+
+    Lemma MyModule1_linked :
+      MyModule1 ⋄ ExtModule1 ≜ (MyModule1 ∪ ExtModule1).
+    Proof.
+      apply m_link;
+        intros;
+        unfold MyModule1, ExtModule1 in *.
+      - destruct (eq_dec C Safe);
+          subst;
+          repeat map_rewrite.
+      - repeat map_rewrite; crush.
+    Qed.
+
+    Lemma exists_linking_MyModule1 :
+      exists M, MyModule1 ⋄ ExtModule1 ≜ M.
+    Proof.
+      exists (MyModule1 ∪ ExtModule1);
+        apply MyModule1_linked.
+    Qed.
+
+    Lemma σ0_SPEC1_is_initial :
+      initial σ0_SPEC1.
+    Proof.
+      unfold initial.
+      exists (address 0), ϕ0_SPEC1;
+        repeat split;
+        intros;
+        simpl.
+
+      - unfold β0_SPEC1;
+          repeat map_rewrite.
+
+      - unfold finite_σ, finite_ψ, finite_ϕ;
+          intros;
+          simpl in *.
+        destruct H;
+          subst;
+          [|crush].
+        apply fin_update;
+          auto with map_db.
+
+      - not_stuck_auto;
+          simpl.
+        repeat eexists;
+          eauto.
+    Qed.
+
+    Lemma σ0_SPEC1_reduces_to_σ_A :
+      MyModule1 ⦂ ExtModule1 ⦿ σ0_SPEC1 ⤳⋆ σ_A.
+    Proof.
+    Admitted.
+
+    Lemma αs2_mapsto_safeObj2 :
+      ⟦ αs2 ↦ safeObj2 ⟧ ∈ σ_A.
+    Proof.
+      repeat map_rewrite; simpl.
+      unfold χ_A.
+      repeat map_rewrite.
+    Qed.
+
+    Lemma αthis_mapsto_newObj :
+      ⟦ αthis ↦ newObj ⟧ ∈ σ_A.
+    Proof.
+      repeat map_rewrite; simpl.
+      unfold χ_A.
+      repeat map_rewrite.
+    Qed.
+
+    Lemma αa_mapsto_newObj :
+      ⟦ αa ↦ newObj ⟧ ∈ σ_A.
+    Proof.
+      repeat map_rewrite; simpl.
+      unfold χ_A.
+      repeat map_rewrite.
+    Qed.
+
+    Lemma explode_χ_A :
+      forall α o, ⟦ α ↦ o ⟧ ∈ σ_A ->
+             (α = αthis /\ o = newObj) \/
+             (α = αa /\ o = newObj) \/
+             (α = αb /\ o = newObj) \/
+             (α = αs1 /\ o = safeObj1) \/
+             (α = αs2 /\ o = safeObj2).
+    Proof.
+      intros.
+      unfold σ_A in *;
+        repeat map_rewrite;
+        simpl in *;
+        unfold χ_A in *;
+        repeat map_rewrite.
+
+      destruct (eq_dec α αs2);
+        subst;
+        repeat map_rewrite;
+        eq_auto;
+        [simpl_crush; crush|].
+      destruct (eq_dec α αs1);
+        subst;
+        repeat map_rewrite;
+        eq_auto;
+        [simpl_crush; crush|].
+      destruct (eq_dec α αb);
+        subst;
+        repeat map_rewrite;
+        eq_auto;
+        [simpl_crush; crush|].
+      destruct (eq_dec α αa);
+        subst;
+        repeat map_rewrite;
+        eq_auto;
+        [simpl_crush; crush|].
+      destruct (eq_dec α αthis);
+        subst;
+        repeat map_rewrite;
+        eq_auto;
+        [simpl_crush; crush|].
+      crush.
+    Qed.
+
+    Lemma SPEC1_not_satified_MyModule1 :
+      ~ MyModule1 ⊨m SPEC1.
+    Proof.
+      unfold mdl_sat;
+        intro Hcontra.
+      specialize (Hcontra ExtModule1).
+      specialize (Hcontra σ0_SPEC1 σ_A).
+
+      specialize (Hcontra exists_linking_MyModule1).
+      specialize (Hcontra σ0_SPEC1_is_initial).
+      specialize (Hcontra σ0_SPEC1_reduces_to_σ_A).
+
+      inversion Hcontra;
+        subst;
+        simpl in *.
+
+      specialize (H4 αs2 safeObj2 αs2_mapsto_safeObj2).
+      inversion H4;
+        subst;
+        simpl in *.
+
+      specialize (H5 αa newObj αa_mapsto_newObj).
+      inversion H5;
+        subst;
+        simpl in *.
+
+      - inversion H6;
+          subst;
+          simpl in *.
+        apply explode_χ_A in H0;
+          a_prop.
+        repeat match goal with
+               | [H : _ \/ _ |- _] =>
+                 destruct H
+               end;
+          andDestruct;
+          subst.
+        + inversion H1;
+            subst;
+            [unfold αthis, αa in *; crush| |].
+          admit.
+          admit.
+(*        + inversion H1;
+            subst;
+            [unfold αa, αa in *; crush| |].
+          admit.
+          admit.
+        + inversion H1;
+            subst;
+            [unfold αb, αs2 in *; crush| |].
+          admit.
+          admit.
+        + inversion H;
+            subst.
+          repeat map_rewrite;
+            simpl in *.
+          unfold χ_A in *;
+            repeat map_rewrite.
+          destruct (eqb αs1 αs2);
+            simpl_crush;
+            simpl in *;
+            unfold MyModule1 in *;
+            repeat map_rewrite;
+            crush.
+        + inversion H;
+            subst.
+          repeat map_rewrite;
+            simpl in *.
+          unfold χ_A in *;
+            repeat map_rewrite.
+          simpl_crush;
+            simpl in *;
+            unfold MyModule1 in *;
+            repeat map_rewrite;
+            crush.
+
+      -*)
+
+    Admitted.
+
+  End SPEC1_CounterExample.
+
+  Lemma SPEC1_not_satified_MyModule2 :
+    ~ MyModule2 ⊨m SPEC1.
+  Proof.
+  Admitted.
+
+  (**
+     #<h2>#SPEC 2#</h2># - Too Weak.
+     An attempt to exclude the case where secret is stored within another safe.
+     
+     s.treasure ≠ null & Will <s.treasure = null >
+        & (∀ s’. s' = s \/ ¬ internal s' \/ ¬ Access<s', s.secret>)
+     ⟶
+     ∃ o. [ External<o> & Access<o, s.secret> ]
+
+     This spec is too weak.
+     It does not make any claims about what happens when a secret is stored within another safe.
+     i.e. if the client is using one safe as a password manager, then we make no assurances.
+     It is satisfied by Safe 1 and Safe 2, but not Safe 3, Safe 4, Safe 5, or Safe 6.
+   *)
+
+  Definition SPEC2 :=
+    (∀x∙ (∀x∙((((a_class (a♢1) Safe)
+               ∧
+               ((ex_acc_f (e♢1) secret) ⩶ (e♢0))
+               ∧
+               ((ex_acc_f (e♢1) treasure) ⩶̸ (ex_null))
+               ∧
+               (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
+               ∧
+               (∀x∙((e♢ 0) ⩶ (e♢ 2) ∨
+                    (¬ ((a♢ 0) internal)) ∨
+                    (¬ ((a♢ 0) access (a♢ 1)))))
+                ⟶
+                (∃x∙ (((a♢0) external)
+                      ∧
+                      ((a♢0) access (a♢1))))
+    )))).
+
+  Lemma SPEC2_satisfied_MyModule1 :
+    MyModule1 ⊨m SPEC2.
+  Proof.
+  Admitted.
+
+  Lemma SPEC2_satisfied_MyModule2 :
+    MyModule2 ⊨m SPEC2.
+  Proof.
+  Admitted.
+
+  Lemma SPEC2_satisfied_MyModule3 :
+    ~ MyModule3 ⊨m SPEC2.
+  Proof.
+  Admitted.
+
+  Lemma SPEC2_satisfied_MyModule4 :
+    ~ MyModule4 ⊨m SPEC2.
+  Proof.
+  Admitted.
+
+  Lemma SPEC2_satisfied_MyModule5 :
+    ~ MyModule5 ⊨m SPEC2.
+  Proof.
+  Admitted.
+
+  Lemma SPEC2_satisfied_MyModule6 :
+    ~ MyModule6 ⊨m SPEC2.
+  Proof.
+  Admitted.
+
+  (**
+     #<h2>#SPEC 3#</h2># - 
+     Specification of leaking.
+     
+     ∀ s. s : Safe /\
+          ∀ x m β y. x calls s ▸ m (β) /\
+                    ~ y access s.secret
+         ⟶
+                    next <~ y access s.secret>
+
+     SPEC2 specifies that any method call to a safe will never result in the exposure
+     of the secret.
+     It is satisfied by Safe 1 and Safe 2, but not Safe 3, Safe 4, Safe 5, or Safe 6.
+     It is also satisfied by Safe 7. i.e. a safe cannot expose its own secret, but it
+     can expose any other safe's secret.
+   *)
+
+  Definition a_expose (x y : a_var) :=
+    (∃m∙ (∃x∙ ((¬ ((a♢ 0) access y)))
+    )).
+
+  Notation "x 'exposes' y" := (a_expose x y)(at level 40).
+
+  Definition SPEC3 :=
+    (∀x∙ (∀x∙((((a_class (a♢1) Safe)
+               ∧
+               ((ex_acc_f (e♢1) secret) ⩶ (e♢0))
+               ∧
+               ((ex_acc_f (e♢1) treasure) ⩶̸ (ex_null))
+               ∧
+               (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
+               ∧
+               (∀x∙((e♢ 0) ⩶ (e♢ 2) ∨
+                    (¬ ((a♢ 0) internal)) ∨
+                    (¬ ((a♢ 0) access (a♢ 1)))))
+                ⟶
+                (∃x∙ (((a♢0) external)
+                      ∧
+                      ((a♢0) access (a♢1))))
+    )))).
+
+  (** MyModule Definition *)
 
   Lemma link_MyModule1_Safe :
     forall M' M, MyModule1 ⋄ M' ≜ M ->
@@ -119,7 +979,7 @@ Module SafeExample.
                                   M' ∙ σ ⊢ (e_var mySecret ⩵ (e_acc_f (e_var y) secret)) ↪ v_false).
   Proof.
   Admitted.
-
+  
   Parameter take_correct_secret_unchanged_heap :
     forall M M', MyModule1 ⋄ M ≜ M' ->
             forall σ x y mySecret s α , MyModule1 ⦂ M ⦿
@@ -128,7 +988,7 @@ Module SafeExample.
                                                          classOf y σ Safe /\
                                                          M' ∙ σ ⊢ (e_var mySecret ⩵ (e_acc_f (e_var y) secret)) ↪ v_true}
                                              σ
-                                             {post: fun σ' => M' ∙ σ' ⊢ (e_acc_f (e_var y) secret) ↪ v_null}.
+                                             {post: fieldUpdatedValue σ y secret v_null}.
 
   Parameter take_incorrect_secret_unchanged_heap :
     forall M M', MyModule1 ⋄ M ≜ M' ->
@@ -144,16 +1004,16 @@ Module SafeExample.
                                         ((ex_acc_f (e♢1) secret) ⩶ (e♢0))
                                         ∧
                                         ((ex_acc_f (e♢1) treasure) ⩶̸ (ex_null))
-                                         ∧
-                                         (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
-                                           ⟶
-                                           (a_will (∃x∙ (((a♢0) external)
-                                                         ∧
-                                                         ((a♢0) access (a♢1))))
-                                            ∨
-                                            (∃x∙ (((a♢0) external)
-                                                  ∧
-                                                  ((a♢0) access (a♢1))))
+                                        ∧
+                                        (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
+                                         ⟶
+                                         (a_will (∃x∙ (((a♢0) external)
+                                                       ∧
+                                                       ((a♢0) access (a♢1))))
+                                          ∨
+                                          (∃x∙ (((a♢0) external)
+                                                ∧
+                                                ((a♢0) access (a♢1))))
                              )))).
 
   Theorem safe_example :
@@ -195,23 +1055,44 @@ Module SafeExample.
     + destruct_exists_loo;
         andDestruct.
       destruct (pair_reduction_inversion_hoare MyModule1 M' σ σ1); auto.
+
       * apply external_step_leaves_internal_field_unchanged
           with
             (σ':=σ1)
           in Ha2;
           auto.
         -- contradiction Hb0; auto.
-        -- apply internal_class_implies_internal with (σ0:=σ0)(σ:=(χ, ϕ :: ψ))(C:=Safe); auto.
-           exists SafeDef1; unfold MyModule1.
-           repeat map_rewrite.
+        -- assert (MyModule1 ⦂ M' ◎ σ0 … (χ, ϕ :: ψ) ⊨ ((a_ α) internal)).
+           ++ inversion H4; subst.
+              apply sat_intrn with (o:=o1)(C:=Safe);
+                unfold MyModule1;
+                repeat map_rewrite; eauto.
+           ++ destruct Ha;
+                subst; auto.
+              ** eapply internal_stack_head_1, internal_independent_of_initial; eauto.
+              ** eapply internal_unchanged_by_reduction; eauto.
+                 eapply internal_stack_head_1; eauto.
+
       * apply internal_MyModule1_is_take with (M':=M) in H8; auto;
           repeat destruct_exists_loo;
           andDestruct.
         destruct Hb1.
-        -- destruct Ha;
+        -- assert (fieldUpdatedValue σ x1 secret v_null σ1).
+           inversion Ha4; subst.
+           eapply (hoare_triple_pr_inversion) with
+               (P:=fun σ => contn_is ((s_meth x0 x1 take (update scr x2 empty) ;; s)) σ /\
+                         ⟦ x1 ↦ (v_addr α1) ⟧ ∈ σ /\
+                         classOf x1 σ Safe /\
+                         M ∙ σ ⊢ (e_var x2 ⩵ (e_acc_f (e_var x1) secret)) ↪ v_true); eauto;
+             [apply take_correct_secret_unchanged_heap; auto
+             |repeat split; auto].
+           inversion H9; subst; auto.
+             
+          destruct Ha;
              subst;
              [right|left].
-           ++ assert (Hex : external_self MyModule1 M' (χ, ϕ :: ψ));
+           ++
+             assert (Hex : external_self MyModule1 M' (χ, ϕ :: ψ));
                 [eapply external_self_head1, pair_reductions_external_self1; eauto
                 |unfold external_self, is_external in Hex;
                  repeat destruct_exists_loo;
@@ -224,7 +1105,7 @@ Module SafeExample.
                    simpl in *;
                    repeat simpl_crush.
                  eapply sat_access3 with (x:=x2); eauto with loo_db.
-                 --- admit. (* α is the only changed object in the heap *)
+                 --- admit.
                  --- apply in_stmts_1, in_meth_3; exists scr; repeat map_rewrite.
            ++ apply sat_will with (ϕ:=ϕ)(ψ:=ψ)(χ:=χ)(σ':=σ);
                 auto.

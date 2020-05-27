@@ -494,14 +494,14 @@ Record classDef := clazz{c_name : cls;
 Record obj := new{cname : cls;
                   flds : fields}.
 
-Definition ObjectName := classID 0.
+Definition Object := classID 0.
 
-Definition ObjectDefn := clazz ObjectName
+Definition ObjectDefn := clazz Object
                                nil
                                empty
                                empty.
 
-Definition ObjectInstance := new ObjectName
+Definition ObjectInstance := new Object
                                  empty.
 
 Definition mdl := partial_map cls classDef.
@@ -807,7 +807,7 @@ Inductive cls_wf : classDef -> Prop :=
                     cls_wf CDef.
 
 Inductive M_wf : mdl -> Prop :=
-| module_wf : forall M,  M ObjectName = Some ObjectDefn ->
+| module_wf : forall M,  M Object = Some ObjectDefn ->
                     (forall C CDef, M C = Some CDef ->
                                c_name CDef = C) ->
                     (forall C CDef, M C = Some CDef ->
@@ -1194,10 +1194,10 @@ Hint Constructors reduction : loo_db.
 Reserved Notation "M1 '⋄' M2 '≜' M" (at level 40).
 
 Inductive link : mdl -> mdl -> mdl -> Prop :=
-| m_link : forall M1 M2, (forall C def, C <> ObjectName ->
+| m_link : forall M1 M2, (forall C def, C <> Object ->
                               M1 C = Some def ->
                               M2 C = None) ->
-                    (forall C def, C <> ObjectName ->
+                    (forall C def, C <> Object ->
                               M2 C = Some def ->
                               M1 C = None) ->
                     M1 ⋄ M2 ≜ (M1 ∪ M2)

@@ -66,6 +66,11 @@ Proof.
     inversion Hcontra; subst;
       contradiction H; eauto.
 
+  - (* Case 13: sat_all_m *)
+    inversion Hcontra; subst;
+      contradiction (H m);
+      auto.
+
   - (* Case 14: sat_access2 *)
     inversion Hcontra; subst.
     match goal with
@@ -197,6 +202,10 @@ Proof.
              specialize (Ha α o Hb)
            end.
     auto.
+
+  - (* nsat_ex_m *)
+    inversion Hcontra; subst.
+    specialize ( H m); auto.
 
   - (* nsat_access1 *)
     inversion Hcontra; subst; auto.
