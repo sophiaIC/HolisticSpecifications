@@ -70,7 +70,7 @@ Notation "'ex_true'" := (ex_val v_true)(at level 40).
 Notation "'ex_false'" := (ex_val v_false)(at level 40).
 Notation "'ex_null'" := (ex_val v_null)(at level 40).
 Notation "'ex_addr' r" := (ex_val (v_addr r))(at level 40).
-Notation "'ex_int' i" := (ex_val (v_int i))(at level 40).
+Notation "'ex_int' i" := (ex_val (v_nat i))(at level 40).
 Notation "e1 '⩻′' e2" := (ex_lt e1 e2)(at level 40).
 Notation "e1 'e_and' e2" := (ex_if e1 (ex_if e2 (ex_true) (ex_false)) (ex_false))(at level 40).
 Notation "e1 'e_or' e2" := (ex_if e1 (ex_true) (ex_if e2 (ex_true) (ex_false)))(at level 40).
@@ -180,6 +180,7 @@ Instance substExpr : Subst expr nat addr :=
         match e with
         | ex_var x => ex_var ([v /s n] x)
         | ex_eq e1 e2 => ex_eq (sbst' e1 n v) (sbst' e2 n v)
+        | ex_lt e1 e2 => ex_lt (sbst' e1 n v) (sbst' e2 n v)
         | ex_if e1 e2 e3 => ex_if (sbst' e1 n v) (sbst' e2 n v) (sbst' e3 n v)
         | ex_acc_f e' f => ex_acc_f (sbst' e' n v) f
         | ex_acc_g e1 g e2 => ex_acc_g (sbst' e1 n v) g (sbst' e2 n v)
@@ -201,8 +202,8 @@ Instance substAssertionVar : Subst asrt nat addr :=
        (*quantifiers*)      
        | a_all_x A'      => a_all_x (subst' A' (S n) x)
        | a_ex_x A'       => a_ex_x (subst' A' (S n) x)
-       | a_all_m A'      => a_all_m (subst' A' (S n) x)
-       | a_ex_m A'       => a_ex_m (subst' A' (S n) x)
+       | a_all_m A'      => a_all_m (subst' A' n x)
+       | a_ex_m A'       => a_ex_m (subst' A' n x)
        (*permission*)
        | a_acc v1 v2       => a_acc (sbst v1 n x) (sbst v2 n x)
        (*control*)
