@@ -350,6 +350,7 @@ Module SafeExample.
 
   Definition SafeDef1 := clazz Safe
                                (treasure :: secret :: nil)
+                               nil
                                (update
                                   take (scr :: nil, takeBody1)
                                   empty)
@@ -376,6 +377,7 @@ Module SafeExample.
 
   Definition SafeDef2 := clazz Safe
                                (treasure :: secret :: nil)
+                               nil
                                (update
                                   take (scr :: nil, takeBody1)
                                   (update
@@ -397,6 +399,7 @@ Module SafeExample.
 
   Definition SafeDef3 := clazz Safe
                                (treasure :: secret :: nil)
+                               nil
                                (update
                                   take (scr :: nil, takeBody1)
                                   (update
@@ -419,6 +422,7 @@ Module SafeExample.
 
   Definition SafeDef4 := clazz Safe
                                (treasure :: secret :: nil)
+                               nil
                                (update
                                   take (scr :: nil, takeBody1)
                                   (update
@@ -441,6 +445,7 @@ Module SafeExample.
 
   Definition SafeDef5 := clazz Safe
                                (treasure :: secret :: nil)
+                               nil
                                (update
                                   take (scr :: nil, takeBody1)
                                   (update
@@ -463,6 +468,7 @@ Module SafeExample.
 
   Definition SafeDef6 := clazz Safe
                                (treasure :: secret :: nil)
+                               nil
                                (update
                                   take (scr :: nil, takeBody1)
                                   (update
@@ -487,6 +493,7 @@ Module SafeExample.
 
   Definition SafeDef7 := clazz Safe
                                (treasure :: secret :: nil)
+                               nil
                                (update
                                   take (scr :: nil, takeBody1)
                                   (update
@@ -497,6 +504,12 @@ Module SafeExample.
   Definition MyModule7 := (update
                              Safe SafeDef7
                              empty).
+
+  
+
+  Definition internal_to (x y : a_var) : asrt :=
+    ((ex_var x) ⩶ (ex_var y)) ∨
+    ((ex_acc_f (ex_var x) secret) ⩶ (ex_var y)).
 
   (**
      #<h1>#Specifications#</h1>#

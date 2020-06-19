@@ -66,6 +66,8 @@ Proof.
     inversion Hcontra; subst;
       contradiction H; eauto.
 
+  - admit.
+
   - (* Case 13: sat_all_m *)
     inversion Hcontra; subst;
       contradiction (H m);
@@ -170,6 +172,10 @@ Proof.
     unique_loo_exp.
     eval_rewrite; crush.
 
+  - admit.
+
+  - admit.
+
   - (* nsat_class1 *)
     inversion Hcontra; subst.
     match goal with
@@ -202,6 +208,8 @@ Proof.
              specialize (Ha α o Hb)
            end.
     auto.
+
+  - admit.
 
   - (* nsat_ex_m *)
     inversion Hcontra; subst.

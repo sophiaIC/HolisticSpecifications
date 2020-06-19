@@ -72,11 +72,13 @@ Module SimpleDAO.
 
   Definition DAODef1 := clazz DAO
                               (name :: balance :: ether :: nil)
+                              nil
                               (update repay ((id :: nil),repayDef1) empty)
                               empty.
 
   Definition DAODef2 := clazz DAO
                               (name :: balance :: ether :: nil)
+                              nil
                               (update repay ((id :: nil),repayDef2) empty)
                               empty.
 
@@ -96,6 +98,7 @@ Module SimpleDAO.
   Definition sendBody := s_rtrn amt.
 
   Definition ClientDef := clazz Client
+                                nil
                                 nil
                                 (update send (amt :: nil, sendBody) empty)
                                 empty.
@@ -380,6 +383,12 @@ Module SimpleDAO.
       + inversion H15.
   Qed.
 
+  Lemma repay_pre_post :
+    forall M σ x y z, DAOModule2 ⦂ M ⦿ {pre:contn_is (s_meth x y repay (update id z empty))} σ {post:∅}.
+  Proof.
+    intros M σ.
+  Admitted.
+
   Lemma DAO2_sat :
     DAOModule2 ⊨m DAOSPEC1.
   Proof.
@@ -421,6 +430,7 @@ Module DAOExample.
 
   Definition ListDef := clazz List
                               (tail :: head :: nil)
+                              nil
                               (update getHead (nil, getHeadBody)
                                       (update getTail (nil, getTailBody)
                                               empty))

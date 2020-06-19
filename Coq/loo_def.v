@@ -498,6 +498,7 @@ Definition ghost_fields := partial_map gfld (var * exp).
 
 Record classDef := clazz{c_name : cls;
                          c_flds : list fld;
+                         c_intrn : list fld;
                          c_meths : methods;
                          c_g_fields : ghost_fields}.
 
@@ -507,6 +508,7 @@ Record obj := new{cname : cls;
 Definition Object := classID 0.
 
 Definition ObjectDefn := clazz Object
+                               nil
                                nil
                                empty
                                empty.
