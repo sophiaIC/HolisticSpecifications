@@ -1,7 +1,9 @@
+Require Import CpdtTactics.
 Require Import common.
 Require Import loo_def.
 Require Import function_operations.
 Require Import List.
+Require Export Coq.Lists.ListSet.
 
 (**
 #<h1>#Holistic Reasoning#</h1>#
@@ -52,6 +54,111 @@ Inductive a_var : Type :=
 | a_hole : nat -> a_var
 | a_bind : addr -> a_var.
 
+Program Instance eq_a_var : Eq a_var :=
+  {
+  eqb x y := match x, y with
+             | a_hole n, a_hole m => n =? m
+             | a_bind α1, a_bind α2 => eqb α1 α2
+             | _, _ => false
+             end
+  }.
+Next Obligation.
+  split;
+    intros;
+    intro Hcontra;
+    andDestruct;
+    crush.
+Defined.
+Next Obligation.
+  split;
+    intros;
+    intro Hcontra;
+    andDestruct;
+    crush.
+Defined.
+Next Obligation.
+  repeat destruct a;
+    auto;
+    apply Nat.eqb_refl.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    try solve [rewrite Nat.eqb_sym;
+               auto];
+    auto.
+  destruct a, a0;
+    try solve [rewrite Nat.eqb_sym;
+               auto].
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    try match goal with
+        | [H : (_ =? _) = true |- _] =>
+          apply Nat.eqb_eq in H;
+            subst
+        end;
+    auto;
+    try solve [crush].
+  destruct a, a0;
+    try match goal with
+        | [H : (_ =? _) = true |- _] =>
+          apply Nat.eqb_eq in H;
+            subst
+        end;
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    try match goal with
+        | [H : (_ =? _) = false |- _] =>
+          apply Nat.eqb_neq in H;
+            subst
+        end;
+    auto;
+    try solve [crush].
+  destruct a, a0;
+    match goal with
+    | [H : (_ =? _) = false |- _] =>
+      apply Nat.eqb_neq in H;
+        subst
+    end;
+    crush.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    try match goal with
+        | [H : (_ =? _) = false |- _] =>
+          apply Nat.eqb_neq in H;
+            subst
+        end;
+    auto.
+  match goal with
+  | [|- (_ =? _) = false ] =>
+    apply Nat.eqb_neq
+  end;
+    crush.
+  destruct a, a0.
+  match goal with
+  | [|- (_ =? _) = false ] =>
+    apply Nat.eqb_neq
+  end;
+    crush.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    [|right; crush|right; crush|].
+  - destruct (eq_dec n n0);
+      subst;
+      auto;
+      right;
+      crush.
+  - destruct (eq_dec a a0);
+      subst;
+      auto;
+      right;
+      crush.
+Defined.
+
 Inductive expr : Type :=
 | ex_var : a_var -> expr
 | ex_val : value -> expr
@@ -92,7 +199,7 @@ Inductive asrt : Type :=
 (** Simple: *)
 | a_expr : expr -> asrt
 | a_class : a_var -> cls -> asrt
-(*| a_set   : a_var -> a_set -> asrt*)
+| a_elem   : expr -> a_set -> asrt
 
 (** Connectives: *)
 | a_arr   : asrt -> asrt -> asrt
@@ -102,9 +209,9 @@ Inductive asrt : Type :=
 
 (** Quantifiers: *)
 | a_all_x : asrt -> asrt
-(*| a_all_Σ : asrt -> asrt*)
+| a_all_Σ : asrt -> asrt
 | a_ex_x  : asrt -> asrt
-(*| a_ex_Σ  : asrt -> asrt*)
+| a_ex_Σ  : asrt -> asrt
 | a_all_m : asrt -> asrt
 | a_ex_m  : asrt -> asrt
 
@@ -113,7 +220,6 @@ Inductive asrt : Type :=
 
 (** Control: *)
 | a_call  : a_var -> a_var -> a_mth -> partial_map var a_var  -> asrt
-(*| a_call' : a_var -> a_var -> a_mth -> asrt*)
 
 (** Time: *)
 | a_next  : asrt -> asrt
@@ -122,22 +228,30 @@ Inductive asrt : Type :=
 | a_was   : asrt -> asrt
 
 (** Space: *)
-(*| a_in    : asrt -> varSet -> asrt*)
+| a_in    : asrt -> a_set -> asrt
 
 (** Viewpoint: *)
 | a_extrn : a_var -> asrt
-| a_intrn : a_var -> asrt.
+| a_intrn : a_var -> asrt
+
+with a_set :=
+| as_hole : nat -> a_set
+| as_bnd  : set a_var -> a_set
+| as_asrt : asrt -> a_set.
 
 Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 40).
 Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 40).
 Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 40).
 Notation "'¬' A" :=(a_neg A)(at level 40).
 Notation "'∀x∙' A" :=(a_all_x A)(at level 40).
-(*Notation "'∀S∙' A" :=(a_all_Σ A)(at level 40).*)
+Notation "'∀S∙' A" :=(a_all_Σ A)(at level 40).
 Notation "'∃x∙' A" :=(a_ex_x A)(at level 40).
-(*Notation "'∃S∙' A" :=(a_ex_Σ A)(at level 40).*)
+Notation "'∃S∙' A" :=(a_ex_Σ A)(at level 40).
 Notation "'∀m∙' A" :=(a_all_m A)(at level 40).
 Notation "'∃m∙' A" :=(a_ex_m A)(at level 40).
+Notation "'⦃x⃒' A '⦄'" := (as_asrt A)(at level 40).
+Notation "e '∈' Σ" := (a_elem e Σ)(at level 40).
+Notation "A 'in_' Σ" := (a_in A Σ)(at level 40).
 Notation "x 'internal'" :=(a_intrn x)(at level 40).
 Notation "x 'external'" :=(a_extrn x)(at level 40).
 Notation "x 'access' y" :=(a_acc x y)(at level 40).
@@ -188,40 +302,55 @@ Instance substExpr : Subst expr nat addr :=
         end
   }.
 
+Fixpoint sbstxA (A : asrt)(n : nat)(x : addr) : asrt :=
+  match A with
+  | a_expr e => a_expr ([x /s n] e)
+  | a_class y C       => a_class ([x /s n] y) C
+  | e ∈ Σ => ([x /s n] e) ∈ Σ
+
+  (*connectives*)
+  | a_arr A1 A2       => a_arr (sbstxA A1 n x) (sbstxA A2 n x)
+  | a_and A1 A2       => a_and (sbstxA A1 n x) (sbstxA A2 n x)
+  | a_or A1 A2        => a_or (sbstxA A1 n x) (sbstxA A2 n x)
+  | a_neg A'          => a_neg (sbstxA A' n x)
+  (*quantifiers*)      
+  | a_all_x A'      => a_all_x (sbstxA A' (S n) x)
+  | a_ex_x A'       => a_ex_x (sbstxA A' (S n) x)
+  | (∀S∙ A')          => (∀S∙ (sbstxA A' n x))
+  | ∃S∙ A'          => ∃S∙ (sbstxA A' n x)
+  | a_all_m A'      => a_all_m (sbstxA A' n x)
+  | a_ex_m A'       => a_ex_m (sbstxA A' n x)
+  (*permission*)
+  | a_acc v1 v2       => a_acc (sbst v1 n x) (sbst v2 n x)
+  (*control*)
+  | a_call v1 v2 m vMap => a_call ([x /s n] v1)
+                                 ([x /s n] v2) m
+                                 ([x /s n] vMap)
+
+  (*time*)
+  | a_next A'         => a_next (sbstxA A' n x)
+  | a_will A'         => a_will (sbstxA A' n x)
+  | a_prev A'         => a_prev (sbstxA A' n x)
+  | a_was A'          => a_was (sbstxA A' n x)
+
+  (*space*)
+  | A' in_ Σ           => (sbstxA A' n x) in_ Σ
+
+  (*viewpoint*)
+  | a_extrn v          => a_extrn ([x /s n] v)
+  | a_intrn v          => a_intrn ([x /s n] v)
+  end
+
+with
+sbstxΣ (Σ : a_set)(n : nat)(x : addr) : a_set :=
+  match Σ with
+  | as_bnd Σ' => as_bnd (set_map eq_dec (fun y => [x /s n] y) Σ')
+  | ⦃x⃒ A'⦄ => ⦃x⃒ sbstxA A' (S n) x⦄
+  | _ => Σ
+  end.
+
 Instance substAssertionVar : Subst asrt nat addr :=
-  {sbst :=
-     fix subst' A n x :=
-       match A with
-       | a_expr e => a_expr ([x /s n] e)
-       | a_class y C       => a_class ([x /s n] y) C
-       (*connectives*)
-       | a_arr A1 A2       => a_arr (subst' A1 n x) (subst' A2 n x)
-       | a_and A1 A2       => a_and (subst' A1 n x) (subst' A2 n x)
-       | a_or A1 A2        => a_or (subst' A1 n x) (subst' A2 n x)
-       | a_neg A'          => a_neg (subst' A' n x)
-       (*quantifiers*)      
-       | a_all_x A'      => a_all_x (subst' A' (S n) x)
-       | a_ex_x A'       => a_ex_x (subst' A' (S n) x)
-       | a_all_m A'      => a_all_m (subst' A' n x)
-       | a_ex_m A'       => a_ex_m (subst' A' n x)
-       (*permission*)
-       | a_acc v1 v2       => a_acc (sbst v1 n x) (sbst v2 n x)
-       (*control*)
-       | a_call v1 v2 m vMap => a_call ([x /s n] v1)
-                                      ([x /s n] v2) m
-                                      ([x /s n] vMap)
-(*       | a_call' v1 v2 m => a_call' ([x /s n] v1) ([x /s n]v2) m*)
-       (*time*)
-       | a_next A'         => a_next (subst' A' n x)
-       | a_will A'         => a_will (subst' A' n x)
-       | a_prev A'         => a_prev (subst' A' n x)
-       | a_was A'          => a_was (subst' A' n x)
-       (*space*)
-       (*viewpoint*)
-       | a_extrn v          => a_extrn ([x /s n] v)
-       | a_intrn v          => a_intrn ([x /s n] v)
-       end
-  }.
+  {sbst := sbstxA}.
 
 Instance substAMth : Subst a_mth nat mth :=
   {
@@ -233,75 +362,86 @@ Instance substAMth : Subst a_mth nat mth :=
                 end
   }.
 
-Instance substAssertionMth : Subst asrt nat mth :=
-  {sbst :=
-     fix subst' A n m :=
-       match A with
-       (*connectives*)
-       | a_arr A1 A2       => a_arr (subst' A1 n m) (subst' A2 n m)
-       | a_and A1 A2       => a_and (subst' A1 n m) (subst' A2 n m)
-       | a_or A1 A2        => a_or (subst' A1 n m) (subst' A2 n m)
-       | a_neg A'          => a_neg (subst' A' n m)
-       (*quantifiers*)      
-       | a_all_x A'      => a_all_x (subst' A' n m)
-       | a_ex_x A'       => a_ex_x (subst' A' n m)
-       | a_all_m A'      => a_all_m (subst' A' (S n) m)
-       | a_ex_m A'       => a_ex_m (subst' A' (S n) m)
-       (*control*)
-       | a_call v1 v2 am β => a_call v1 v2 ([m /s n] am) β
-       (*time*)
-       | a_next A'         => a_next (subst' A' n m)
-       | a_will A'         => a_will (subst' A' n m)
-       | a_prev A'         => a_prev (subst' A' n m)
-       | a_was A'          => a_was (subst' A' n m)
-       | _ => A
-       end
+Fixpoint substmA (A : asrt)(n : nat)(m : mth) :=
+  match A with
+  (*connectives*)
+  | a_arr A1 A2       => a_arr (substmA A1 n m) (substmA A2 n m)
+  | a_and A1 A2       => a_and (substmA A1 n m) (substmA A2 n m)
+  | a_or A1 A2        => a_or (substmA A1 n m) (substmA A2 n m)
+  | a_neg A'          => a_neg (substmA A' n m)
+  (*quantifiers*)      
+  | a_all_x A'      => a_all_x (substmA A' n m)
+  | a_ex_x A'       => a_ex_x (substmA A' n m)
+  | a_all_m A'      => a_all_m (substmA A' (S n) m)
+  | a_ex_m A'       => a_ex_m (substmA A' (S n) m)
+  (*control*)
+  | a_call v1 v2 am β => a_call v1 v2 ([m /s n] am) β
+  (*time*)
+  | a_next A'         => a_next (substmA A' n m)
+  | a_will A'         => a_will (substmA A' n m)
+  | a_prev A'         => a_prev (substmA A' n m)
+  | a_was A'          => a_was (substmA A' n m)
+
+  | e ∈ Σ => e ∈ (substmΣ Σ n m)
+  | (∀S∙ A') => (∀S∙ substmA A' n m)
+  | (∃S∙ A') => (∃S∙ substmA A' n m)
+  | (A' in_ Σ) => (substmA A' n m) in_ (substmΣ Σ n m)
+
+  | _ => A
+  end
+
+with
+substmΣ (Σ : a_set)(n : nat)(m : mth) :=
+  match Σ with
+  | ⦃x⃒ A ⦄ => ⦃x⃒ substmA A n m ⦄
+  | _ => Σ
+  end.
+
+Instance sbstAssertionMth : Subst asrt nat mth :=
+  {sbst := substmA
   }.
 
-(*Instance varSetSubst : Subst varSet nat varSet :=
-  {
-    sbst :=
-      fix subst' Σ1 n Σ2 :=
-        match Σ1 with
-        | s_hole m => if (m =? n)
-                     then Σ2
-                     else Σ1
-        | _ => Σ1
-        end
-  }.
-        
-Instance substAssertionVarSet : Subst asrt nat varSet :=
-  {
-    sbst :=
-      fix subst' A n Σ :=
-        match A with
-        (*simpl*)
-        | a_set e Σ'         => a_set e ([Σ /s n] Σ')
+Fixpoint sbstΣ (Σ1 : a_set)(n : nat)(Σ2 : set a_var) :=
+  match Σ1 with
+  |as_hole m => if n =? m
+               then as_bnd Σ2
+               else Σ1
+  | ⦃x⃒ A ⦄ => ⦃x⃒ sbstΣA A n Σ2 ⦄
+  | _ => Σ1
+  end
 
-        (*connectives*)
-        | a_arr A1 A2       => a_arr (subst' A1 n Σ) (subst' A2 n Σ)
-        | a_and A1 A2       => a_and (subst' A1 n Σ) (subst' A2 n Σ)
-        | a_or A1 A2        => a_or (subst' A1 n Σ) (subst' A2 n Σ)
-        | a_neg A'          => a_neg (subst' A' n Σ)
+with
+sbstΣA (A : asrt)(n : nat)(Σ : set a_var) : asrt :=
+  match A with
+  (*connectives*)
+  | a_arr A1 A2       => a_arr (sbstΣA A1 n Σ) (sbstΣA A2 n Σ)
+  | a_and A1 A2       => a_and (sbstΣA A1 n Σ) (sbstΣA A2 n Σ)
+  | a_or A1 A2        => a_or (sbstΣA A1 n Σ) (sbstΣA A2 n Σ)
+  | a_neg A'          => a_neg (sbstΣA A' n Σ)
+  (*quantifiers*)      
+  | a_all_x A'      => a_all_x (sbstΣA A' n Σ)
+  | a_ex_x A'       => a_ex_x (sbstΣA A' n Σ)
+  | a_all_m A'      => a_all_m (sbstΣA A' n Σ)
+  | a_ex_m A'       => a_ex_m (sbstΣA A' n Σ)
+  (*time*)
+  | a_next A'         => a_next (sbstΣA A' n Σ)
+  | a_will A'         => a_will (sbstΣA A' n Σ)
+  | a_prev A'         => a_prev (sbstΣA A' n Σ)
+  | a_was A'          => a_was (sbstΣA A' n Σ)
 
-        (*quantifiers*)      
-        | a_all_x A'      => a_all_x (subst' A' n Σ)
-        | a_all_Σ A'      => a_all_Σ (subst' A' (S n) Σ)
-        | a_ex_x A'       => a_ex_x (subst' A' (n) Σ)
-        | a_ex_Σ A'       => a_ex_Σ (subst' A' (S n) Σ)
+  | e ∈ Σ' => e ∈ (sbstΣ Σ' n Σ)
+  | (∀S∙ A') => (∀S∙ sbstΣA A' (S n) Σ)
+  | (∃S∙ A') => (∃S∙ sbstΣA A' (S n) Σ)
+  | (A' in_ Σ') => (sbstΣA A' n Σ) in_ (sbstΣ Σ' (S n) Σ)
 
-        (*time*)
-        | a_next A'         => a_next (subst' A' n Σ)
-        | a_will A'         => a_will (subst' A' n Σ)
-        | a_prev A'         => a_prev (subst' A' n Σ)
-        | a_was A'          => a_was (subst' A' n Σ)
+  | _ => A
+  end. 
 
-        (*space*)
-        | a_in A' Σ'         => a_in (subst' A' n Σ) ([Σ /s n] Σ')
+Instance substΣ : Subst a_set nat (set a_var) :=
+  { sbst := sbstΣ }.
 
-        | _          => A
-        end;
-  }.*)
+Instance substΣA : Subst asrt nat (set a_var) :=
+  { sbst := sbstΣA }.
 
 Definition initial (σ : config) : Prop :=
   exists α ϕ, σ = ((update α ObjectInstance empty), ϕ :: nil) /\
@@ -375,6 +515,7 @@ Definition value_to_addr : partial_map value a_var :=
          | _ => None
          end).
 
+(**
 Inductive sat' : mdl -> mdl -> config -> asrt -> Prop :=
 (** Simple: *)
 | sat'_exp   : forall M1 M2 M e e' σ, is_exp e e' ->
@@ -603,7 +744,7 @@ Scheme sat'_mut_ind := Induction for sat' Sort Prop
 
 Combined Scheme sat'_mutind from sat'_mut_ind, nsat'_mut_ind.
 
-Hint Constructors sat' nsat' : chainmail_db.
+Hint Constructors sat' nsat' : chainmail_db. *)
 
 (**
 #<p>#
@@ -791,6 +932,31 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
                 M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
                -------------------------------                   (Sat-Ex-x)
                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃ x. A)
+]]]
+ *)
+
+| sat_all_Σ : forall M1 M2 σ0 σ A, (forall Σ, (forall α, set_In (a_bind α) Σ ->
+                                          exists (o : obj), mapp σ α = Some o) ->
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊨ ([Σ /s 0]A)) ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀S∙ A)
+(**
+[[[
+                (∀ Σ, Σ ⊂ σ.χ → M1 ⦂ M2 ◎ σ0 … σ ⊨ ([Σ / x]A))
+               ------------------------------------------------------------                   (Sat-All-Σ)
+                            M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀ Σ. A)
+]]]
+ *)
+
+| sat_ex_Σ  : forall M1 M2 σ0 σ A Σ, (forall α, set_In (a_bind α) Σ ->
+                                          exists (o : obj), mapp σ α = Some o) ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ ([Σ /s 0] A) ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃S∙ A)
+(**
+[[[
+                         Σ ⊂ σ.χ
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ ([Σ / x]A))
+               -------------------------------                   (Sat-Ex-Σ)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃ Σ. A)
 ]]]
  *)
 
@@ -990,17 +1156,22 @@ configuration that satisfaction is defined with.
 ]]]
  *)
 
-(*| sat_name : forall M1 M2 σ0 σ α y, mapp σ y = Some (v_addr α) ->
-                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name (a_ α) y)
 (**
-[[[
-                    
-                    (y ↦ α) ∈ σ.(vMap)
-               -----------------------------                   (Sat-Name)
-               M1 ⦂ M2 ◎ σ0 … σ ⊨ α named y
-]]]
- *)*)
+#<h3>#Space#</h3>#
+ *)
+| sat_elem : forall M1 M2 M σ0 σ e e' α Σ, M1 ⋄ M2 ≜ M ->
+                                      M ∙ σ ⊢ e' ↪ (v_addr α) ->
+                                      set_In (a_bind α) Σ ->
+                                      is_exp e e' ->
+                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ (as_bnd Σ))
 
+| sat_elem_comprehension : forall M1 M2 M σ0 σ e e' α A,
+    M1 ⋄ M2 ≜ M ->
+    M ∙ σ ⊢ e' ↪ (v_addr α) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0] A) ->
+    is_exp e e' ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ ⦃x⃒ A ⦄)
+                                 
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A" := (sat M1 M2 σ0 σ A)
 
 with
@@ -1119,6 +1290,32 @@ with
                ∀ α o. (α ↦ o) ∈ σ.(heap) → M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
                --------------------------------------------------------                   (NSat-Ex-x)
                          M1 ⦂ M2 ◎ σ0 … σ ⊭ ∃ x. A
+]]]
+ *)
+
+| nsat_all_Σ : forall M1 M2 σ0 σ A Σ, (forall α, set_In (a_bind α) Σ ->
+                                       exists (o : obj), mapp σ α = Some o) ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ ([Σ /s 0]A) ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (∀S∙ A)
+(**
+[[[
+                          Σ' ⊂ σ.χ
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ ([Σ' / Σ]A)
+               -------------------------------                   (Sat-All-Σ)
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀ Σ. A)
+]]]
+ *)
+
+| nsat_ex_Σ  : forall M1 M2 σ0 σ A, (forall Σ, (forall α, set_In (a_bind α) Σ ->
+                                           exists (o : obj), mapp σ α = Some o) ->
+                                     M1 ⦂ M2 ◎ σ0 … σ ⊭ ([Σ /s 0] A)) ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊭ (∃S∙ A)
+(**
+[[[
+                         ∀ Σ, Σ ⊂ σ.χ ->
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ ([Σ / x]A))
+               -------------------------------                   (Sat-Ex-Σ)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊯ (∃ Σ. A)
 ]]]
  *)
 
@@ -1325,16 +1522,21 @@ with
 ]]]
  *)
 
-(*| nsat_name : forall M1 M2 σ0 σ α y, mapp σ y <> Some (v_addr α) ->
-                                M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_name (a_ α) y)
 (**
-[[[
-                    
-                    (y ↦ α) ∉ σ.(vMap)
-               -----------------------------                   (NSat-Name)
-               M1 ⦂ M2 ◎ σ0 … σ ⊭ α named y
-]]]
- *)*)
+#<h3>#Space#</h3>#
+ *)
+| nsat_elem : forall M1 M2 M σ0 σ e e' α Σ, M1 ⋄ M2 ≜ M ->
+                                       M ∙ σ ⊢ e' ↪ (v_addr α) ->
+                                       ~ set_In (a_bind α) Σ ->
+                                       is_exp e e' ->
+                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ (as_bnd Σ))
+
+| nsat_elem_comprehension : forall M1 M2 M σ0 σ e e' α A,
+    M1 ⋄ M2 ≜ M ->
+    M ∙ σ ⊢ e' ↪ (v_addr α) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ ([α /s 0] A) ->
+    is_exp e e' ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ ⦃x⃒ A ⦄)
 
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A" := (nsat M1 M2 σ0 σ A).
 

@@ -38,6 +38,7 @@ Module ExposeExample.
 
   Definition InsideDef := clazz Inside
                                 nil
+                                nil
                                 empty
                                 empty.
 
@@ -56,6 +57,7 @@ Module ExposeExample.
 
   Definition BoundaryDef := clazz Boundary
                                   (inside :: nil)
+                                  nil
                                   (update
                                      expose (nil, exposeBody)
                                      empty)

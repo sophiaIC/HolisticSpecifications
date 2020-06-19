@@ -43,7 +43,7 @@ Instance raiseFn {A B : Type}`{Eq A}`{Raiseable B} : Raiseable (partial_map A B)
     raise f n := fun x => bind (f x) (fun y => Some (y ↑ n))
   }.
 
-Instance raiseAsrt : Raiseable asrt :=
+(*Instance raiseAsrt : Raiseable asrt :=
   {
     raise :=
       fix raise' A n :=
@@ -70,10 +70,12 @@ Instance raiseAsrt : Raiseable asrt :=
         | a_prev A' => a_prev (raise' A' n)
         | a_was A' => a_was (raise' A' n)
 
+        | e ∈ Σ => 
+
         | x external => (x ↑ n) external
         | x internal => (x ↑ n) internal
         end
-  }.
+  }.*)
 
 Lemma sbst_x_neg :
   forall (α : addr) n A, ([α /s n] ¬A) = (¬ ([α /s n]A)).

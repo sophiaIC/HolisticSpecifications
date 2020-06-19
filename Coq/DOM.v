@@ -8,3 +8,10 @@ Require Import function_operations.
 Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
+
+
+Module DOMExample.
+
+  
+
+End DOMExample.
