@@ -516,6 +516,26 @@ Module SafeExample.
    *)
 
   (**
+     SPEC4 :
+     Using set comprehensions we can define the internal_to predicate
+   *)
+
+  Definition SPEC4 := (∀x∙ (∀x∙(((¬ internal_to (a♢ 1) (a_ 0))
+                                 ∧
+                                 (a_class (a♢1) Safe)
+                                 ∧
+                                 ((ex_acc_f (e♢1) secret) ⩶ (e♢0))
+                                 ∧
+                                 ((ex_acc_f (e♢1) treasure) ⩶̸ (ex_null))
+                                 ∧
+                                 (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
+                                  ⟶
+                                  (∃x∙ ((¬ internal_to (a♢2) (a♢0))
+                                        ∧
+                                        ((a♢0) access (a♢1))))
+                      ))).
+
+  (**
      #<h2>#SPEC 1#</h2># - Too Strong
      - Original FASE 2020 Safe. 
 
@@ -4067,3 +4087,4 @@ Module SafeExample.
 
 End SafeExample.
 *)
+
