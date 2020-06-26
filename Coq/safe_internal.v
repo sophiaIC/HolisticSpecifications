@@ -135,10 +135,9 @@ argument.
 (**
 By the law of the excluded middle, the x referenced in the above lemma, is
 either internal to #<code>#s#</code># or it is not. If it is, then since 
-the current object is external to #<code>##</code># it follows that there is a
+the current object is external to #<code>#s#</code># it follows that there 
+is 
 *)
-
-  Lemma 
 
   Definition HolisticSpec := (∀x∙ (∀x∙(((∀x∙ ((a_name (a♢ 0) this)
                                                 ⟶
@@ -165,6 +164,6 @@ the current object is external to #<code>##</code># it follows that there is a
     a_intros;
       a_prop;
       simpl in *.
-  Qed.
+  Admitted.
 
 End SafeExample.
