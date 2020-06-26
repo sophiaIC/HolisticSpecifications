@@ -234,6 +234,8 @@ Inductive asrt : Type :=
 | a_extrn : a_var -> asrt
 | a_intrn : a_var -> asrt
 
+| a_name : a_var -> var -> asrt
+
 with a_set :=
 | as_hole : nat -> a_set
 | as_bnd  : set a_var -> a_set
@@ -339,6 +341,8 @@ Fixpoint sbstxA (A : asrt)(n : nat)(x : addr) : asrt :=
   (*viewpoint*)
   | a_extrn v          => a_extrn ([x /s n] v)
   | a_intrn v          => a_intrn ([x /s n] v)
+
+  | a_name y z         => a_name ([x /s n] y) z
   end
 
 with
@@ -819,15 +823,19 @@ Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A"(at level 40).
 Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A"(at level 40).
 
 Inductive sat : mdl -> mdl -> config -> config -> asrt -> Prop :=
+
+| sat_name : forall M1 M2 σ σ0 α x, mapp σ x = Some (v_addr α) ->
+                               M1 ⦂ M2 ◎ σ … σ0 ⊨ a_name (a_ α) x
+
 (** Simple: *)
 (**
 Note: #<code>#is_exp e e'#</code># simply maps an #<code>#expr#</code># (defined above) to an expression (#<code>#exp#</code>#) in L#<sub>#oo#</sub>#. #<code>#expr#</code># differs from #<code>#exp#</code># in L#<sub>#oo#</sub># only in that an #<code>#expr#</code># may not contain any variables.
 To aid readability, I ignore this distinction between #<code>#e#</code># and #<code>#e'#</code># in the descriptions of #<code>#sat_exp#</code># and #<code>#nsat_exp#</code>#.
  *)
 | sat_exp   : forall M1 M2 M σ0 σ e e', is_exp e e' ->
-                                   M1 ⋄ M2 ≜ M ->
-                                   M ∙ σ ⊢ e' ↪ v_true ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e)
+                                        M1 ⋄ M2 ≜ M ->
+                                        M ∙ σ ⊢ e' ↪ v_true ->
+                                        M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e)
 (**
 [[[
                      M1 ⋄ M2 ≜ M 
@@ -1176,6 +1184,11 @@ where "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A" := (sat M1 M2 σ0 σ A)
 
 with
   nsat : mdl -> mdl -> config -> config -> asrt -> Prop :=
+
+| nsat_name : forall M1 M2 σ σ0 α x v, mapp σ x = Some v ->
+                                  v <> (v_addr α) ->
+                                  M1 ⦂ M2 ◎ σ … σ0 ⊭ a_name (a_ α) x
+
 (*simple*)
 | nsat_exp : forall M1 M2 M σ0 σ e e', is_exp e e' ->
                                   M1 ⋄ M2 ≜ M ->

@@ -46,6 +46,11 @@ Proof.
     eauto with chainmail_db;
     try solve [inversion Hcontra; auto].
 
+  - (* sat_name *)
+    inversion Hcontra;
+      subst;
+      crush.
+
   - (* sat_exp *)
     inversion Hcontra; subst.
     unique_loo_exp.
@@ -173,6 +178,11 @@ Proof.
     eval_rewrite; crush.
 
   - admit.
+
+  - (* nsat_name *)
+    inversion Hcontra;
+      subst;
+      crush.
 
   - admit.
 

@@ -12,6 +12,8 @@ Inductive mth : Type := methID : nat -> mth.
 
 Inductive gfld : Type := gFieldID : nat -> gfld.
 
+Definition internal_g : gfld := gFieldID 0.
+
 Inductive cls : Type := classID : nat -> cls.
 
 Inductive addr : Type := address : nat -> addr.
