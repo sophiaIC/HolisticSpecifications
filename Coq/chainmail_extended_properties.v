@@ -629,7 +629,7 @@ Lemma reduction_different_classes_implies_method_call_or_rtrn :
                       (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
                                         contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
 Proof.
-  intros M σ1 σ2 Hred;
+  intros M σ1 σ2 Hred.
     induction Hred;
     intros;
     try solve [left; repeat eexists; eauto with loo_db];
@@ -655,7 +655,6 @@ Proof.
      contradiction H; subst
     end.
     eauto with loo_db.
-
   - subst.
     apply class_of_same_variable_map
       with
@@ -663,8 +662,8 @@ Proof.
         (ψ:=ψ)(ϕ':=update_ϕ_map ϕ x v)(ψ':=ψ)
       in H9;
       auto.
-    assert (Htmp : (χ, update_ϕ_map ϕ x v :: ψ) = update_σ_map (χ, ϕ::ψ) x v);
-      [auto|rewrite Htmp in H9].
+    assert (Htmp : (@pair heap (list frame) χ (update_ϕ_map ϕ x v :: ψ)) = update_σ_map (χ, ϕ::ψ) x v). { auto. }
+      rewrite -> Htmp in H9.
     match goal with
     | [H : classOf ?x (update_σ_map _ ?y _) _,
        Hneq : ?y <> ?x |- _] =>
