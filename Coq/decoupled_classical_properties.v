@@ -359,6 +359,15 @@ Lemma sat_excluded_middle :
 Proof.
 Admitted.
 
+Theorem not_sat_implies_nsat :
+  (forall M1 M2 σ0 σ A, ~ M1 ⦂ M2 ◎ σ0 … σ ⊨ A ->
+                   M1 ⦂ M2 ◎ σ0 … σ ⊭ A).
+Proof.
+  intros.
+  destruct (sat_excluded_middle M1 M2 σ0 σ A);
+    crush.
+Qed.
+
 
 (** Lemma 5: Classical (5) *)
 Lemma arr_true :
