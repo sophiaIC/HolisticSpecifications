@@ -519,7 +519,7 @@ Proof.
       |rewrite neq_eqb; auto].
 
   - (* new *)
-    inversion H14;
+    {inversion H14;
       subst. (* get rid of χ0 etc.*)
     assert (Hupdate : forall (tk tv: Type) (k: tk) (v: tv) `{Eq tk} m, update k v m k = Some v). {
       intros. unfold update, t_update. rewrite eqb_refl. reflexivity.
@@ -539,10 +539,10 @@ Proof.
     assert (Hinϕ : In ϕ (ϕ::ψ));
       [apply in_eq|apply H13 in Hinϕ].
     simpl.
+    remember {| cname := C; flds := fMap |} as o.
     apply self_frm;
       inversion Hinϕ;
       auto; try (apply Hupdate).
-    remember {| cname := C; flds := fMap |} as o.
     exists α, o; simpl; split; apply Hupdate.
     remember {| cname := C; flds := fMap |} as o.
     assert (Hupdate_doesnt_remove : forall (tk tv: Type) m (a k: tk) (v v': tv) `{Eq tk}, m a = Some v -> 
@@ -550,19 +550,17 @@ Proof.
               update k v' m a = Some v). {
       intros tk tv m a k v v' HEqtk Hma Hne. unfold update, t_update. assert (eqb a k = false). { crush. } rewrite H9. apply Hma.
     }
-    assert (Hselfextend : has_self_ϕ χ ϕ' -> has_self_ϕ (update α o χ) ϕ'). {
-      intros Hhasself. apply self_frm. inversion Hhasself. destruct H9 as [α' [o' [Hthis Hχ]]].
+    assert (Hselfextend : forall ϕa, has_self_ϕ χ ϕa -> has_self_ϕ (update α o χ) ϕa). {
+      intros ϕa Hhasself. apply self_frm. inversion Hhasself. destruct H9 as [α' [o' [Hthis Hχ]]].
       exists α', o'. split. apply Hthis. 
       inversion H2. inversion H9.
       subst. apply H17 in Hχ as Hχ'. inversion Hχ'. assert (Hne: S_α α0 <> α'). { assert (S m <> n). { crush. } crush. } subst.
       apply Hupdate_doesnt_remove. apply Hχ. apply Hne.
     }
     apply Hselfextend.
-    apply H13.
-      simpl in *;
-      inversion H1.
-    inversion Hin' as [ Hin'' |]; try (right; assumption).
-Admitted. (* TODO NEW tried again, no luck
+    inversion ϕ'. }
+    
+ (* TODO NEW tried again, no luck *)
 
     (* apply self_config.
       intros ϕ' Hin.
@@ -672,7 +670,7 @@ Admitted. (* TODO NEW tried again, no luck
     apply in_cons, in_eq.
     apply H5, in_cons, in_cons;
       auto.
-Qed. *)
+Admitted. (* Skipped `new` proof, Qed. *)
 
 Hint Resolve reduction_preserves_config_has_self : loo_db.
 
