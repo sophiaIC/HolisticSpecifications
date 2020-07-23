@@ -558,7 +558,10 @@ Proof.
       apply Hupdate_doesnt_remove. apply Hχ. apply Hne.
     }
     apply Hselfextend.
-    inversion ϕ'. }
+    apply H13;
+      simpl in *;
+      inversion H1;
+      auto. }
     
  (* TODO NEW tried again, no luck *)
 
