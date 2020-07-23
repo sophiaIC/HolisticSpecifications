@@ -476,8 +476,7 @@ Inductive stmt : Type :=
 | s_new  : var -> cls -> partial_map var var -> stmt
 | s_if : exp -> stmt -> stmt -> stmt
 | s_stmts : stmt -> stmt -> stmt
-| s_rtrn : var -> stmt
-| s_while : exp -> stmt -> stmt.
+| s_rtrn : var -> stmt.
 
 Hint Constructors stmt : loo_db.
 
@@ -814,9 +813,6 @@ Inductive notin_stmt : stmt -> var -> Prop :=
                             notin_stmt s1 x ->
                             notin_stmt s2 x ->
                             notin_stmt (s_if e s1 s2) x
-| ni_while_stmt : forall e s x, notin_exp e x ->
-                            notin_stmt s x ->
-                            notin_stmt (s_while e s) x
 | ni_stmts : forall s1 s2 x, notin_stmt s1 x ->
                         notin_stmt s2 x ->
                         notin_stmt (s_stmts s1 s2) x
@@ -1216,10 +1212,6 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     M ∙ (χ, ϕ::ψ) ⊢ e ↪ v_false ->
     M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt (merge s2 s)))::ψ)
 
-| r_while : forall M χ ϕ ψ e s b,
-    contn ϕ = c_stmt ((s_while e b) ;; s) ->
-    M ∙ (χ, ϕ::ψ) ⤳ (χ, (frm (vMap ϕ) (c_stmt (s_if e (merge b (s_while e b)) s)))::ψ)
-
 | r_ret1 : forall M ϕ ϕ' ψ χ y x α ϕ'' σ s,
     σ = (χ, ϕ :: (ϕ' :: ψ)) ->
     ϕ.(contn) = c_stmt (s_rtrn x) ->
@@ -1482,7 +1474,6 @@ Program Instance stmtRename : Rename stmt :=
       | s_meth x y m' pMap => s_meth (❲f ↦ x❳)  (❲f ↦ y❳) m' (❲f ↦ pMap❳)
       | s_new x C fMap => s_new (❲f ↦ x❳) C (❲f ↦ fMap❳)
       | s_if e s1 s2 => s_if (❲f ↦ e❳) (rname' f s1) (rname' f s2)
-      | s_while e s  => s_while (❲f ↦ e❳) (rname' f s)
       | s_stmts s1 s2 => s_stmts (rname' f s1) (rname' f s2)
       | s_rtrn x => s_rtrn (❲f ↦ x❳)
       end
@@ -1523,13 +1514,6 @@ Next Obligation.
   - destruct a1, a2;
       simpl in *;
       crush.
-  - fold rname in *. (* Stolen from `s_if` case two above. This seems to work *)
-    assert (Hrname : rname empty e = e);
-      [apply empty_rename
-      |unfold rname in Hrname;
-       simpl in Hrname;
-       rewrite Hrname].
-    destruct a; simpl in *; crush.
 Defined.
 Hint Rewrite (@empty_rename stmt) : map_db.
 Hint Resolve (@empty_rename stmt) : map_db.
@@ -1600,10 +1584,6 @@ Inductive in_stmt : var -> stmt -> Prop :=
                          in_stmt x (s_if e s1 s2)
 | in_sif3 : forall x e s1 s2, in_stmt x s2 ->
                          in_stmt x (s_if e s1 s2)
-| in_swhile_cond : forall x e s, in_exp x e ->
-                         in_stmt x (s_while e s)
-| in_swhile_body : forall x e s, in_stmt x s ->
-                         in_stmt x (s_while e s)
 | in_stmts_1 : forall x s1 s2, in_stmt x s1 ->
                           in_stmt x (s_stmts s1 s2)
 | in_stmts_2 : forall x s1 s2, in_stmt x s2 ->

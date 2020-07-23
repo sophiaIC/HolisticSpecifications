@@ -646,16 +646,6 @@ Admitted. (* TODO NEW tried again, no luck
     + specialize (H2 (in_cons ϕ ϕ0 ψ H3));
         assumption.
 
-  - (* while; copied from if above *)
-    apply self_config.
-    intros.
-    inversion H0; subst.
-    + apply self_frm.
-      specialize (H1 ϕ (in_eq ϕ ψ)).
-      inversion H1; subst; auto.
-    + specialize (H1 ϕ0). specialize (H1 (in_cons ϕ ϕ0 ψ H2));
-        assumption.
-
   - (* ret 1 *)
     apply self_config;
       intros.
@@ -1135,11 +1125,6 @@ Proof.
     eval_rewrite.
     crush.
 
-  - (* while *)
-    inversion H0;
-      subst;
-      crush.
-
   - (* ret1 *)
     subst.
     inversion H5;
@@ -1217,7 +1202,6 @@ Fixpoint stmt_size (s : stmt) : nat :=
   match s with
   | s1 ;; s2 => 1 + stmt_size s1 + stmt_size s2
   | s_if e s1 s2 => 1 + stmt_size s1 + stmt_size s2
-  | s_while e s => 1 + stmt_size s
   | _ => 1
   end.
         
@@ -1237,8 +1221,6 @@ Inductive substmt : stmt -> stmt -> Prop :=
                          substmt s (s_if e s1 s2)
 | sub_if2 : forall s e s1 s2, substmt s s2 ->
                          substmt s (s_if e s1 s2)
-| sub_while : forall s e s', substmt s s' ->
-                         substmt s (s_while e s')
 | sub_stmt1 : forall s s1 s2, substmt s s1 ->
                          substmt s (s_stmts s1 s2)
 | sub_stmt2 : forall s s1 s2, substmt s s2 ->

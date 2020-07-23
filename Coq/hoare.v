@@ -173,9 +173,6 @@ Definition is_new : config -> Prop :=
 Definition is_if : config -> Prop :=
   fun σ => exists e s1 s2 s, contn_is (s_if e s1 s2 ;; s) σ.
 
-Definition is_while : config -> Prop :=
-  fun σ => exists e b s, contn_is (s_while e b ;; s) σ.
-
 Definition is_rtrn : config -> Prop :=
   fun σ => exists x, (contn_is (s_rtrn x) σ \/
               exists s, contn_is (s_rtrn x ;; s) σ).
@@ -258,7 +255,6 @@ Ltac hoare_auto :=
   unfold is_fAccess in *;
   unfold is_fAssgn in *;
   unfold is_if in *;
-  unfold is_while in *;
   unfold is_new in *;
   unfold heapUnchanged in *; simpl in *;
   andDestruct;
@@ -418,17 +414,6 @@ Proof.
   eval_rewrite; crush.
 Qed.
 
-Lemma while_hoare :
-  forall M σ e b s, M ∙ {pre: fun σ => contn_is (s_while e b ;; s) σ}
-                     σ
-                     {post: contn_is (s_if e (merge b (s_while e b)) s)}.
-Proof.
-  intros M σ.
-  destruct σ as [χ ψ].
-  intros e b s.
-  repeat hoare_auto.
-Qed.
-
 Lemma if_heap_unchanged_hoare :
   forall M σ, M ∙ {pre: is_if} σ {post: heapUnchanged σ}.
 Proof.
@@ -444,22 +429,6 @@ Proof.
   intros M σ;
     destruct σ;
     repeat hoare_auto.
-Qed.
-
-Lemma while_heap_unchanged_hoare :
-  forall M σ, M ∙ {pre: is_while} σ {post: heapUnchanged σ}.
-Proof.
-  intros M σ.
-  destruct σ as [χ ψ].
-  repeat hoare_auto.
-Qed.
-
-Lemma while_ctx_unchanged_hoare :
-  forall M σ, M ∙ {pre: is_while} σ {post: ctxUnchanged σ}.
-Proof.
-  intros M σ.
-  destruct σ as [χ ψ].
-  repeat hoare_auto.
 Qed.
 
 Lemma hoare_triple_inversion :
@@ -751,28 +720,6 @@ Proof.
     end;
       auto.
 Admitted.
-(*  -(*  match goal with TODO WHILE
-    | [|- reduction_order (?ϕ :: ?ψ) (?ϕ' :: ?ψ)] =>
-      assert (Ha : (ϕ :: ψ) = (nil ++ (ϕ :: ψ))); { crush; }
-        rewrite <- Ha;
-        constructor
-    end. *)
-    remember (eval e) as v.
-    remember ({| vMap := vMap ϕ; contn := c_stmt (s_if e (merge b (s_while e b)) s) |}) as ϕw.
-    assert (H' : forall (ϕk: frame), (ϕk :: ψ) = (nil ++ (ϕk :: ψ))). { crush. }
-   (*  assert (H'' : (ϕw :: ψ) = (nil ++ (ϕw :: ψ))). { crush. } *)
-    rewrite (H' ϕw).
-    rewrite H'.
-    apply ro_frame.
-    simpl.
-    match goal with
-    | [H : contn ?ϕ = _ |- context[contn ?ϕ]] =>
-      rewrite H
-    end.
-    subst.
-    simpl.
-    rewrite merge_stmt_size. simpl.
-Abort.*)
 
 Lemma reductions_is_ordered :
   forall M σ1 σ2, M ∙ σ1 ⤳⋆ σ2 ->
@@ -871,7 +818,6 @@ Definition external_step :=
                       (is_assgn σ \/
                        is_new σ \/
                        is_if σ \/
-                       is_while σ \/
                        is_call_to (is_external M1 M2) σ \/
                        is_return_to (external_self M1 M2) σ).
 

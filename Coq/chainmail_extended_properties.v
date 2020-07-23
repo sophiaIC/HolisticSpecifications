@@ -708,17 +708,6 @@ Proof.
     repeat simpl_crush;
       simpl in *.
     crush.
-
-  - inversion H0; inversion H1;
-      subst;
-      simpl in *.
-    inversion H3; inversion H10;
-      subst;
-      simpl in *.
-    repeat map_rewrite.
-    repeat simpl_crush;
-      simpl in *.
-    crush.
 Qed.
 
 Lemma wf_config_this_has_class :
