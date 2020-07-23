@@ -1,0 +1,291 @@
+Software guards our secrets, our money, our intellectual property,
+our reputation \cite{covern}.  We entrust personal and
+corporate information to software which works in an \emph{open} world, 
+where  it interacts with 
+third party software of unknown provenance, possibly buggy and potentially malicious.
+
+This means we need our software to be \emph{robust}:
+to behave correctly even if  used 
+by erroneous or malicious third parties.
+We expect that our bank will only make payments 
+from our account if instructed by us, or by somebody we have authorised, 
+that space on a web given to an advertiser will not be used
+to obtain access to our bank details \cite{cwe}, or that a
+concert hall will not book the same seat more than once.
+
+
+%% The importance of robustness has led to the design of many programming
+%% language mechanisms to help developers write robust programs:
+%% constant fields, private methods, ownership \cite{ownalias}
+%% as well as the object capability paradigm \cite{MillerPhD},
+%% and its adoption in  web systems
+%% \cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14}, and programming languages such as Newspeak
+%% \cite{newspeak17}, Dart \cite{dart15},
+%% Grace \cite{grace,graceClasses}, and Wyvern \cite{wyverncapabilities}.
+
+%% While such programming language mechanisms
+While language mechanisms such as private members,  constants, invariants, 
+object capabilities \cite{MillerPhD}, and 
+ownership \cite{ownalias} are
+\textit{indispensable} to write robust
+programs, they cannot \textit{ensure} that programs are robust.
+Ensuring robustness is difficult because it means 
+different things for different systems: perhaps
+that critical operations should only be invoked with the requisite authority;
+perhaps that sensitive personal information should not be leaked; 
+or perhaps that a resource belonging to one user should not be consumed by another. 
+%
+To ensure robustness, we need ways to specify what robustness means for a 
+particular program, and ways to demonstrate that the particular program 
+adheres to its specific robustness requirements.
+
+  \vspace*{-0.2cm}
+ \begin{figure}[htb]
+ \begin{tabular}{lll} % {lll}
+\begin{minipage}{0.45\textwidth}
+\begin{lstlisting}
+class Account {
+    field balance
+    field myBank
+    
+    method deposit(src,amt){
+       if (amt>=0 && src.myBank=this.myBank && src.balance>=amt) then{
+           this.balance = this.balance + amt
+           src.balance = src.balance - amt
+   }   }
+}
+\end{lstlisting}
+\end{minipage}
+  &\ \ \  \ \ \ \ \  &
+\begin{minipage}{0.45\textwidth}
+\begin{lstlisting}
+class Account {
+    field balance
+    field myBank
+    
+    method deposit(dest,src,amt){
+       $\mathit{... as\, version\,1 ...}$          
+    }  }     
+    method add(dest, amt){
+       this.balance = this.balance + amt
+    }
+}
+\end{lstlisting}
+\end{minipage} 
+ \end{tabular}
+  \vspace*{-0.95cm}
+  \caption{Two Versions of the class \prg{Account}}
+ \label{fig:ExampleBank}
+ \end{figure}
+ 
+% \begin{figure}[htb]
+% \begin{tabular}{lll} % {lll}
+%\begin{minipage}{0.45\textwidth}
+%\begin{lstlisting}
+%class Wallet{
+%  fld balance 
+%  fld secret 
+%  mthd pay(who,amt,scr){
+%    if ( (secret==scr)
+%       &amnt>0 ) then 
+%      balance-=amnt
+%      who.balance+=amt   }
+% }
+%\end{lstlisting}
+%\end{minipage}
+%  & 
+%\begin{minipage}{0.45\textwidth}
+%\begin{lstlisting}
+%class Wallet{
+%  fld balance  
+%  fld secret  
+%  mthd pay(...){
+%    $\mathit{... as\, version\,1 ...}$ }
+%  mthd set(secr){
+%      secret=secr }
+%}
+%\end{lstlisting}
+%\end{minipage} 
+%%&  
+%%\begin{minipage}{0.32\textwidth}
+%%\begin{lstlisting}
+%%class Wallet{
+%%  fld balance  
+%%  fld secret  
+%%  fld owner  
+%%  mthd pay(...){
+%%    $\mathit{... as\, version\,1 ...}$ }
+%%  mthd send( ){
+%%    owner.take(secret) }  
+%%}
+%%\end{lstlisting}
+%%  \end{minipage}
+% \end{tabular}
+%  \vspace*{-0.95cm}
+%  \caption{Three Versions of the class \prg{Wallet}}
+% \label{fig:ExampleWallet}
+% \end{figure}
+
+Consider the code snippets from fig. \ref{fig:ExampleBank}. Objects of
+ class \prg{Account} hold a reference to \prg{myBank}, and only the holders of the references to accounts can move money between them, given the accounts are at the same bank.
+
+ We show the code in two versions; both have the same method \prg{deposit}, and the last version 
+ has an additional method \prg{add}.
+  We use a Java-like syntax, and assume an untyped language (as we are in the open world setting).
+ \sd{We assume that fields are private in the sense of C++ or Java, \ie only methods of that class may read or write these fields,
+ and that addresses are unforgeable, and so there is no way to guess a secret.}
+ Thus, the classical Hoare triple describing the behaviour of \prg{deposit} would be:
+ 
+ \vspace{0.1in}
+(ClassicalSpec)\ \  $\triangleq$\\ 
+\vspace{-0.22in}
+\begin{lstlisting}
+   method deposit(src, amt)
+   PRE:  this,src:Account $\wedge$  this$\neq$src $\wedge$ this.myBank=src.myBank $\wedge$ 
+         amt:$\mathbb{N}$  $\wedge$   src.balance$\geq$amt
+   POST: src.balance=src.balance$\pre$-amt $\wedge$ this.balance=this.balance$\pre$+amt
+\end{lstlisting}
+\vspace{-0.1in}
+%SD changed function to method, to fir what comes later.
+
+(ClassicSpec)  expresses  that knowledge of the \prg{src} account, and the accounts sharing the same bank, is \emph{sufficient}, %condition 
+and that  % from the safe.
+%make payments. 
+%But it does not show that it is a \emph{necessary} condition. 
+%To make the specification  
+%  more ``robust'' we  also describe the behaviour of    \prg{take} when the pre-condition is not satisfied:
+%
+%%\begin{figure}[htbp] 
+%\vspace{-.1in}
+%\begin{lstlisting}
+%   method take(scr)
+%   PRE:  this:Safe $\wedge$  
+%   POST: $\forall$s: Safe.$ \,$s.treasure=s.treasure$\pre$ 
+% \end{lstlisting}
+%%\end{figure} 
+%\vspace{-.1in}
+%The specification from above mandates 
+ \prg{deposit} cannot create money from nowhere. 
+%
+But it cannot preclude that \prg{Account} -- or some other class, for that matter -- contains more methods 
+which might make it possible to create "free" money. For this, we introduce \emph{holistic specifications}, and require that:
+ 
+  \vspace{.01in}
+(HolisticSpec)\ \  $\triangleq$\\ 
+$\forall \prg{a}.[\ \ \prg{a}:\prg{Account} \wedge \Changes{\prg{a.balance}}  \ \    
+    \longrightarrow \ \    \hfill$ \\
+  $\strut \hspace{2.3cm} 
+% TODO explain:
+% we no longer need Past here, as we are ion visible states 
+  \exists \prg{o}. [\    \Calls{\prg{o}}{\prg{deposit}}{\prg{a}}{\_,\_} \vee\  \Calls{\prg{o}}{\prg{deposit}}{\_}{\prg{a},\_}\  \ ] \ \ \ \ ] \hfill $
+\vspace{.05in}
+
+
+
+(HolisticSpec) mandates that for any change in the value of an account, the deposit method must have been called on it, or it must have been the source to another accounts deposit. This prevents the \prg{add} method above, where \prg{a.balance} changes, but the deposit method isn't called. Further holistic propositions are discussed in section~\ref{sect:motivate:Bank} to provide other protections, such as against the leaking of accounts.
+%Neither does \prg{Safe} from Figure \ref{fig:Example}.version 3,  sarisfy (Spec1), since it is possible for the \prg{owner} not to know the \prg{secret} and the secret to be 
+%communicated to them. Insteed, the class saisfies (Spec2) from below
+% 
+%
+\vspace{.02in}
+%(Spec2)\ \  $\triangleq$\ \ $\forall \prg{w},\prg{m}.$\\
+%$\strut \hspace{.6in} [ \ \ \prg{w}:\prg{Safe} \wedge \prg{w.balance}=m\ \wedge \Future{\prg{w.balance}<m} \ \    
+%    \longrightarrow \ \    \hfill$ \\
+%  $\strut   \hspace{3.4cm} 
+%  \exists \prg{o}. [\  \External{\prg{o}}\,  \wedge\, (\,  \CanAccess{\prg{o}}{\prg{w.secret}}\ \vee \prg{o}=\prg{w}.\prg{owner}\, )   \ \ ] \hfill $
+%\vspace{.02in}
+%
+% 
+% (Spec2) mandates that for any Safe \prg{w} defined in the current configuration, if some time in the future the balance of
+%\prg{w} were to decrease, then at least one external object   in the current configuration
+%has direct access to the secret, or is the \prg{owner} of the \prg{Safe}. 
+%The class \prg{Safe} %from Figure \ref{fig:ExampleSafe}
+%from .version 1 and version 3 satisfy (Spec2), but \prg{Safe} %from Figure \ref{fig:ExampleSafe}.
+%version 2, does not.
+
+In this paper we propose \Chainmail, a specification language to
+express holistic specifications.
+The design of \Chainmail was guided by the study of a sequence of
+examples from the object-capability literature and the smart contracts world: the
+membrane \cite{membranesJavascript}, the DOM \cite{dd,ddd}, the Mint/Purse \cite{MillerPhD}, the Escrow \cite{proxiesECOOP2013}, the DAO \cite{Dao,DaoBug} and
+ERC20 \cite{ERC20}.  As we worked through the
+examples, we found a small set of language constructs that let us
+write holistic specifications across a range of different contexts.
+%
+In particular, \Chainmail extends 
+traditional program specification languages \cite{Leavens-etal07,Meyer92} with features which talk about:
+%
+\begin{description}
+\item[Permission: ] 
+%\ \ \textbullet \ \emph{Permission}, \ie
+Which objects may have access to which other objects; 
+this is central since access to an object usually also grants access to the functions it provides.
+%
+\item[Control: ]
+%\ \ \textbullet  \ \emph{Control}, \ie
+Which objects called functions on other objects; this
+ is useful in identifying the causes of certain effects - eg 
+funds can only be reduced if the owner called a payment function.
+%
+%$\bullet$ \ \\emph{Authority}, \ie which objects' state or properties may change; this is useful in describing effects, such as reduction of funds.
+%
+\item[Time: ]
+%\ \ \textbullet \ \emph{Time}:\ \ie
+What holds some time in  the past, the future, and what changes with time,
+\item[Space: ]
+%\ \ \textbullet \ \emph{Space}:\ \ie
+Which parts of the heap are considered when establishing some property, or when 
+performing program execution; a concept
+related to, but different from, memory footprints and separation logics,
+\item[Viewpoint: ]
+%\ \ \textbullet \ \emph{Viewpoints}:\ \ie
+%a distinction between the objects internal to our component, and those external to it;
+Which objects and which configurations are internal to our component, and which  are
+external to it;
+a concept related to the open world setting.
+\end{description}
+
+%% Holistic assertions usually employ several of these features. They often have the form  of a guarantee
+%% that only if some property holds now will a certain effect occur in the future, or that
+%% certain effects can only be caused if another property held earlier.
+%% For example, if within a certain heap (space) some change is possible in the future (time), then this particular heap 
+%% (space again) contains 
+%% at least one object which has access (permission) to a specific other, privileged object.
+%% %\james{moved around --- not sure we need this para}
+%% %\susan{I think we don't so there is a paragraph I have commented out.}
+%% \forget{Often, holistic assertions typically have the form of a guarantee
+%% that if some property ever holds in the future, then some other property holds now.
+%% For example, if within a certain heap some change is possible in the future, then this particular heap contains 
+%% at least one object which has access to a specific other, privileged object.}
+%% A module satisfies a holistic assertion if  
+%%  the assertion is satisfied  in all runtime configurations reachable through execution of the combined code of our module and any other module.
+%%   This reflects the open-world view.
+
+While many individual features of \Chainmail can be found in other work, 
+their power and novelty for specifying open systems lies in their careful combination.
+The contributions of this paper are:
+\begin{itemize}
+\item the design of the holistic specification language \Chainmail,
+\item the semantics of \Chainmail, and a Coq mechanisation of its core,
+\item the application of \Chainmail  to a sequence of examples.
+%\item a further validation of \Chainmail through informal proofs of adherence of code to some of these specifications.
+\end{itemize}  
+  
+  
+The rest of the paper is organised as follows:
+Section~\ref{sect:motivate:Bank} 
+\sd{gives an example from the literature} which we will use 
+to elucidate key points of \Chainmail.
+%motivates our work via an example, and then section
+Section~\ref{sect:chainmail} presents the \Chainmail\ specification
+language.  Section~\ref{sect:formal} introduces the formal model
+underlying \Chainmail, and then section~\ref{sect:assertions} defines
+the 
+semantics of \Chainmail's assertions.
+% SD the below is NOT ture
+%full details are relegated toappendices.   
+Section~\ref{sect:discussion}
+discusses our design, section~\ref{sect:problemdriven} shows how key points of 
+exemplar problems can be specified in \Chainmail. Section~\ref{sect:model} discusses the Coq model, section~\ref{sect:related} considers related
+work, and section~\ref{sect:conclusion} concludes.
+We relegate various details to appendices.

@@ -173,6 +173,9 @@ Definition is_new : config -> Prop :=
 Definition is_if : config -> Prop :=
   fun σ => exists e s1 s2 s, contn_is (s_if e s1 s2 ;; s) σ.
 
+Definition is_while : config -> Prop :=
+  fun σ => exists e b s, contn_is (s_while e b ;; s) σ.
+
 Definition is_rtrn : config -> Prop :=
   fun σ => exists x, (contn_is (s_rtrn x) σ \/
               exists s, contn_is (s_rtrn x ;; s) σ).
@@ -210,11 +213,34 @@ Definition fieldMapsTo : config -> var -> fld -> value -> Prop :=
                      ⟦ α ↦ o ⟧ ∈ σ /\
                      flds o f = Some v.
 
-Definition new_object_created : config -> var -> cls -> partial_map fld var -> config -> Prop :=
-  fun σ x C ps σ' =>  exists χ ϕ ψ α s, σ = (χ, ϕ :: ψ) /\
-                                contn ϕ = c_stmt (s_new x C ps ;; s) /\
+
+(*
+    x <> this ->                                              (* If the target is not `this` *)
+    σ = (χ, ϕ :: ψ) ->                                        (* with configuration (χ, ϕ :: ψ) *)
+    ϕ.(contn) = (c_stmt (s_stmts (s_new x C ps) s')) ->       (* Where new C(ps) is the next statement *)
+    fresh_χ χ α ->                                            (* α is fresh in χ *)
+    M C = Some CDef ->                                        (* M(C) = CDef = class { ... } *)
+    (zs, s) = constructor CDef ->                             (* constructor(CDef) = constructor(zs) { s } *)
+    (forall p x, ps p = Some x ->                             (* All variables passed in for a parameter *)
+            exists v, (vMap ϕ) x = Some v) ->                 (*    exist in the variable map *)
+    dom ps zs ->                                              (* ps = (z_1 ↦ p_1, ..., z_n ↦ p_n); the arguments match the constructor *)
+    dom fMap (c_flds CDef) ->                                 (* let domain(fMap) = fields(CDef) *)
+    (forall f x, fMap f = Some x -> x = v_null) ->            (* fMap maps to v_nil; fMap = (f_1 ↦ v_nil, ..., f_n ↦ v_nil) *)
+    ϕ' = frm (vMap ϕ) (c_hole x s') ->                        (* ϕ' is ϕ with a hole assignment in place of the new *) (* was originally (update x (v_addr α) (vMap ϕ)) but this isn't right *)
+    o = new C fMap ->                                         (* o = (C, fMap) *)
+    ϕ'' = frm (update this (v_addr α) (ps ∘ (vMap ϕ))) (c_stmt (merge s (s_rtrn this))) -> (* ϕ'' = (this ↦ α, z_1 ↦ p_1 ↦ x_1, ...) *)
+    σ' = (update α o χ, ϕ'' :: ϕ' :: ψ) ->                    (* End up with o at α in the heap, executing ϕ'', with ϕ' to come back to *)
+    M ∙ σ ⤳ σ'
+*)
+
+Definition new_object_created : mdl -> config -> var -> cls -> partial_map var var -> config -> Prop :=
+  fun M σ x C ps σ' => exists χ ϕ ψ α s fMap CDef, σ = (χ, ϕ :: ψ) /\
+                                ϕ.(contn) = c_stmt (s_new x C ps ;; s) /\
                                 fresh_χ χ α /\
-                                heapUpdated σ α (new C (ps ∘ (vMap ϕ))) σ' /\
+                                M C = Some CDef /\
+                                dom fMap (c_flds CDef) /\
+                                (forall f x, fMap f = Some x -> x = v_null) /\
+                                heapUpdated σ α (new C fMap) σ' /\
                                 ctxUpdated σ x (v_addr α) σ'.
 
 Definition heapUnchanged : config -> config -> Prop :=
@@ -232,6 +258,7 @@ Ltac hoare_auto :=
   unfold is_fAccess in *;
   unfold is_fAssgn in *;
   unfold is_if in *;
+  unfold is_while in *;
   unfold is_new in *;
   unfold heapUnchanged in *; simpl in *;
   andDestruct;
@@ -347,20 +374,23 @@ Proof.
     repeat hoare_auto.
 Qed.
 
-Lemma new_hoare :
+(* Lemma new_hoare :
   forall M σ x C β s, M ∙
                    {pre: contn_is (s_new x C β ;; s)}
                    σ
-                   {post: fun σ' => contn_is s σ' /\
-                                 new_object_created σ x C β σ'}.
+                   {post: fun σ' => (*contn_is (constructor (M C)) σ' /\*)
+                                 new_object_created M σ x C β σ'}.
 Proof.
-  intros M σ;
-    destruct σ as [χ ψ];
-    repeat hoare_auto;
-    split;
+  intros M σ.
+    destruct σ as [χ ψ].
+    repeat hoare_auto.
+    unfold new_object_created.
+    repeat (eexists; auto; eauto); try crush.
+    simpl in *.
     try solve [repeat (eexists; eauto);
                eauto].
-Qed.
+    
+Admitted. (* Discuss whether this is any longer of relevence *) *)
 
 Lemma if_true_hoare :
   forall M σ e s1 s2 s, M ∙ {pre: fun σ => contn_is (s_if e s1 s2 ;; s) σ /\
@@ -388,6 +418,17 @@ Proof.
   eval_rewrite; crush.
 Qed.
 
+Lemma while_hoare :
+  forall M σ e b s, M ∙ {pre: fun σ => contn_is (s_while e b ;; s) σ}
+                     σ
+                     {post: contn_is (s_if e (merge b (s_while e b)) s)}.
+Proof.
+  intros M σ.
+  destruct σ as [χ ψ].
+  intros e b s.
+  repeat hoare_auto.
+Qed.
+
 Lemma if_heap_unchanged_hoare :
   forall M σ, M ∙ {pre: is_if} σ {post: heapUnchanged σ}.
 Proof.
@@ -403,6 +444,22 @@ Proof.
   intros M σ;
     destruct σ;
     repeat hoare_auto.
+Qed.
+
+Lemma while_heap_unchanged_hoare :
+  forall M σ, M ∙ {pre: is_while} σ {post: heapUnchanged σ}.
+Proof.
+  intros M σ.
+  destruct σ as [χ ψ].
+  repeat hoare_auto.
+Qed.
+
+Lemma while_ctx_unchanged_hoare :
+  forall M σ, M ∙ {pre: is_while} σ {post: ctxUnchanged σ}.
+Proof.
+  intros M σ.
+  destruct σ as [χ ψ].
+  repeat hoare_auto.
 Qed.
 
 Lemma hoare_triple_inversion :
@@ -638,7 +695,7 @@ Proof.
     inversion Hred;
     subst;
     unfold ro;
-    simpl in *;
+    simpl in *; crush;
     try solve [match goal with
                | [|- reduction_order (?ϕ1 :: ?ψ) (?ϕ2 :: ?ψ)] =>
                  let Ha := fresh in
@@ -693,7 +750,29 @@ Proof.
         simpl
     end;
       auto.
-Qed.
+Admitted.
+(*  -(*  match goal with TODO WHILE
+    | [|- reduction_order (?ϕ :: ?ψ) (?ϕ' :: ?ψ)] =>
+      assert (Ha : (ϕ :: ψ) = (nil ++ (ϕ :: ψ))); { crush; }
+        rewrite <- Ha;
+        constructor
+    end. *)
+    remember (eval e) as v.
+    remember ({| vMap := vMap ϕ; contn := c_stmt (s_if e (merge b (s_while e b)) s) |}) as ϕw.
+    assert (H' : forall (ϕk: frame), (ϕk :: ψ) = (nil ++ (ϕk :: ψ))). { crush. }
+   (*  assert (H'' : (ϕw :: ψ) = (nil ++ (ϕw :: ψ))). { crush. } *)
+    rewrite (H' ϕw).
+    rewrite H'.
+    apply ro_frame.
+    simpl.
+    match goal with
+    | [H : contn ?ϕ = _ |- context[contn ?ϕ]] =>
+      rewrite H
+    end.
+    subst.
+    simpl.
+    rewrite merge_stmt_size. simpl.
+Abort.*)
 
 Lemma reductions_is_ordered :
   forall M σ1 σ2, M ∙ σ1 ⤳⋆ σ2 ->
@@ -792,6 +871,7 @@ Definition external_step :=
                       (is_assgn σ \/
                        is_new σ \/
                        is_if σ \/
+                       is_while σ \/
                        is_call_to (is_external M1 M2) σ \/
                        is_return_to (external_self M1 M2) σ).
 

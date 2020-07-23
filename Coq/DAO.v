@@ -132,9 +132,9 @@ Module SimpleDAO.
 
   Definition ten := bnd 11.
 
-  Definition daoParams := update name client
-                                 (update balance ten
-                                         (update ether ten
+  Definition daoParams := update (field_param name) client
+                                 (update (field_param balance) ten
+                                         (update (field_param ether) ten
                                                  empty)).
 
   Definition s0 := (s_new client Client empty) ;;

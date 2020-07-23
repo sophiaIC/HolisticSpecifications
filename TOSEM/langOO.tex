@@ -40,13 +40,17 @@ From now on we expect that the set of field and the set of ghostfields defined i
 
 \begin{definition}[Classes]
 \label{def:syntax:classes}
-Class descriptions consist of field declarations, method declarations, and ghostfield  declarations.
+Class descriptions consist of field declarations, method declarations, ghostfield declarations, and, optionally, a constructor.
  
 \begin{tabular}{lcll}
- \syntax{ClassDescr}   &   \BBC  &     \kwN{class}  \syntax{ClassId}    \lb\,  $($\ \ \syntax{FieldDecl} $)^*$ \
+ \syntax{ClassDescr}   &   \BBC  &     \kwN{class}  \syntax{ClassId} \lp \x$^*$\rp    \lb\,  $($ \syntax{FieldDecl} $)^*$ $($ CDecl\ $)?$ \
  $($  \syntax{MethDecl}\ $)^*$   \   $($   \syntax{GhosDecl}\ $)^*$ \ \ \rb
 \\
 \syntax{FieldDecl} &\BBC& \kwN{field} \f \\
+\syntax{CDecl} &\BBC&
+     \kwN{constructor}\    \lp \x$^*$\rp     \lb\, \syntax{Stmts}  \,
+    \rb
+ \\
 \syntax{MethDecl} &\BBC&
      \kwN{method}\    \m\lp \x$^*$\rp     \lb\, \syntax{Stmts}  \,
     \rb
@@ -68,7 +72,7 @@ Class descriptions consist of field declarations, method declarations, and ghost
 \end{definition}
 
 
-We define a method lookup function, $\mathcal{M}$ which returns the corresponding method definition given a class \c\ and a method identifier \m, and similarly a ghostfield lookup function, $\mathcal{G}$ 
+We define a method lookup function $\mathcal{M}$, which returns the corresponding method definition given a class \c\ and a method identifier \m, and similarly a ghostfield lookup function $\mathcal{G}$, and a constructor lookup function $\mathcal{C}$, which returns a default, field-filling constructor if one wasn't defined.
 
  \begin{definition}[Lookup] For a class identifier \prg{C}  and a method identifier \prg{m}$:$  $ ~ $ \\
 \label{def:lookup}
@@ -76,8 +80,8 @@ We define a method lookup function, $\mathcal{M}$ which returns the correspondin
 $
 \Meths {} {\prg{C}} {m}       \triangleq  \ \left\{
 \begin{array}{l}
-                        \m\, \lp \p_1, ... \p_n \rp \lb Stmts   \rb\\
-\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...   \kwN{method}\, \m\, \lp \p_1, ... \p_n \rp \lb Stmts  \rb  ... \ \rb.
+                        \m\, \lp \p_1, ... \p_n \rp \lb Stmts\, \rb\\
+\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...\,   \kwN{method}\, \m\, \lp \p_1, ... \p_n \rp \lb Stmts\,  \rb  ... \ \rb.
 \\
 \mbox{undefined},  \ \ \ \mbox{otherwise.}
 \end{array}
@@ -86,10 +90,21 @@ $
 $
 {\mathcal G} (\M, {\prg{C}}, {\f})    \ \   \triangleq  \ \left\{
 \begin{array}{l}
-                        \f\, \lp \p_1, ... \p_n \rp \lb \prg{e}  \rb\\
-\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...   \kwN{ghost}\,  \m\, \lp \p_1, ... \p_n \rp \lb \prg{e}  \rb  ... \ \rb.
+                        \f\, \lp \p_1, ... \p_n \rp \lb \prg{e}\  \rb\\
+\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ...\,   \kwN{ghost}\,  \m\, \lp \p_1, ... \p_n \rp \lb \prg{e} \  \rb  ... \ \rb.
 \\
 \mbox{undefined},  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.$
+\\
+$
+{\mathcal C} (\M, {\prg{C}})   \quad \ \,   \triangleq  \ \left\{
+\begin{array}{l}
+                        \kwN{constructor} \, \lp \p_1, ... \p_n \rp \lb Stmts\, \rb\\
+\hspace{0.5in} \mbox{if}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb ... \, \kwN{constructor} \, \lp \p_1, ... \p_n \rp \lb Stmts\, \rb ... \ \rb.
+\\
+\kwN{constructor} \, \lp \p_1, ... \p_n \rp \lb \prg{this}.\f_1 \kw{:=} \p_1; ... \prg{this}.\f_n \kw{:=} \p_n\ \rb\\
+\hspace{0.5in} \mbox{where}\  \M(\prg{C}) =   \kwN{class}\, \prg{C}\, \  \lb \kwN{field}\, \f_1\, ... \kwN{field}\, \f_n\ ... \ \rb.
 \end{array}
                     \right.$
   \end{definition}
@@ -205,10 +220,10 @@ $\begin{array}{l}
 \inferenceruleNN {methCall\_OS} {
 \\
 \phi.\prg{contn}\ =\ \x {\kw{:= }} \x_0.\m \lp \x_1, ... \x_n \rp \semi \prg{Stmts}
-\\
+\hspace{2cm}
 \interp{\x_0}{\phi} = \alpha
 \\
-\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp \p_1, \ldots \p_n \rp \lb \prg{Stmts}_1   \rb
+\Meths {} {\ClassOf {\alpha} {\chi}} {\m} \  =  \ \m\lp \p_1, \ldots \p_n \rp \lb \prg{Stmts}_1 \,  \rb
   \\
  \phi''\ =\  (\  \prg{Stmts}_1,\ \ (\ \this \mapsto \alpha,
   \p_1 \mapsto  \interp{\x_1}{\phi}, \ldots \p_n \mapsto  \interp{\x_n}{\phi}\ ) \ )
@@ -236,13 +251,18 @@ $\begin{array}{l}
 \\
 \inferenceruleNN {objCreate\_OS} {
  \phi.\prg{contn}\ =\  \x  \kw{:=} \kwN{new }\, \c \lp \x_1, ... \x_n \rp  \semi \prg{Stmts}
- \\
+ \hspace{2cm}
  \alpha\ \mbox{new in}\ \chi
  \\
-\f_1, .. \f_n\ \mbox{are the fields declared in } \M(\c)
+{\mathcal C}(\M, \c) = \kwN{constructor} \lp \p_1, \ldots \p_n \rp \lb \prg{Stmts}_1\,\rb
+
+  \\
+ \phi''\ =\  (\  \prg{Stmts}_1\semi \kwN{return}\ \prg{this},\ \ (\ \this \mapsto \alpha,
+  \p_1 \mapsto  \interp{\x_1}{\phi}, \ldots \p_n \mapsto  \interp{\x_n}{\phi}\ ) \ )
+
 }
 {
- \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi[\prg{contn}\mapsto  \prg{Stmts},\x \mapsto \alpha\ ] \cdot\psi, \ \chi[\alpha \mapsto (\c,\f_1 \mapsto \interp{\x_1}{\phi},  ... \f_n \mapsto \interp{\x_n}{\phi}  ) ]\ )
+ \M,\,  (\ \phi\cdot\psi, \chi\ )\ \ \leadsto\  \ (\ \phi''\cdot \phi[\prg{contn}\mapsto  \x  \kw{:=} \bullet \semi\prg{Stmts}] \cdot\psi, \ \chi[\alpha \mapsto (\c, \emptyset  ) ]\ )
 }
 \\
 \\

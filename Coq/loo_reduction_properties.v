@@ -40,28 +40,14 @@ Proof.
        assert (Hneq' : n <> n0);
        [intros Hcontra; subst; crush| apply Nat.eqb_neq in Hneq'; rewrite Hneq'; auto]].
 
-  - (*new object initialization*)
+  - (*new object initialization*) (* newly written by mrr, may not be ideal solution? *)
     simpl in *.
     unfold update, t_update in H0.
-    destruct (eq_dec α0 α) as [Heq|Hneq];
-      [subst; rewrite eqb_refl in H0
-      |apply neq_eqb in Hneq; rewrite Hneq in H0;
-       inversion H9; subst; apply (H6 α0); auto].
-    exists CDef;
-      split; [inversion H0; subst; auto
-             |intros].
-    inversion H0; subst; simpl.
-    assert (Hin : fMap f = None -> ~ In f (c_flds CDef));
-      [intros;
-       apply not_in_map_implies_not_in_dom with (m:=fMap); auto
-      |].
-    remember (fMap f) as res.
-    destruct res as [y|];
-      [
-      |contradiction Hin; auto].
-    destruct (H5 f y) as [v];
-      auto.
-    exists v; auto.
+    inversion H7 as [HinF [HinfM Huniq]].
+    destruct (eq_dec α0 α) as [Heq|Hneq].
+      + exists CDef. subst. rewrite eqb_refl in H0. crush.
+      + apply neq_eqb in Hneq. rewrite Hneq in H0.
+        inversion H13. subst. apply (H9 α0). auto. reflexivity.
 Qed.
 
 Ltac reduce_heap_wf_auto :=
@@ -118,7 +104,7 @@ Lemma pair_reductions_preserves_heap_wf :
                  forall M, M1 ⋄ M2 ≜ M ->
                       χ_wf M (fst σ1) ->
                       χ_wf M (fst σ2).
-Proof. Admitted. (* TODO "solve not found huh?"
+Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
@@ -126,7 +112,7 @@ Proof. Admitted. (* TODO "solve not found huh?"
     try solve pair_reduce_heap_wf_auto.
   eapply IHHred; eauto;
     pair_reduce_heap_wf_auto.
-Qed. *)
+Qed.
 
 Ltac pair_reduces_heap_wf_auto :=
   match goal with
@@ -178,7 +164,8 @@ Proof.
     finite_auto;
     simpl in *;
     intros;
-    auto.
+    auto;
+    try solve [crush].
 
   - destruct H0 as [Ha|Ha];
       [|destruct Ha as [Ha|Ha]];
@@ -192,25 +179,19 @@ Proof.
                  eauto];
       eauto with loo_db.
 
-  - crush.
-
-  - unfold update_ψ_map, update_ϕ_map in H0;
-      inversion H0;
+  (* copied from s_meth above for introduction of 
+     constructors, may not be optimal *)
+  - destruct H0 as [Ha|Ha];
+      [|destruct Ha as [Ha|Ha]];
       subst;
-      [simpl; apply fin_update|];
-      apply H8; crush.
-
-  - destruct H; [subst; simpl|]; eauto.
-
-  - destruct H0; crush.
-
-  - crush.
-
-  - crush.
-
-  - crush.
-
-  - crush.
+      simpl;
+      [apply fin_update;
+       apply finite_map_composition;
+       auto
+      | |];
+      try solve [crush;
+                 eauto];
+      eauto with loo_db.
 Qed.
 
 Hint Resolve reduction_preserves_config_finiteness : loo_db.
@@ -268,15 +249,13 @@ Proof.
     intros;
     unfold not_stuck_σ in *;
     simpl in *;
-    try solve [eexists; crush; eauto].
+    try solve [eexists; crush; eauto]; try solve [repeat eexists].
 
   - exists ϕ'', (ϕ'::ψ); split;
       unfold not_stuck_ϕ;
       subst;
       simpl in *;
       eauto with loo_db.
-
-  - repeat eexists.
 
   - exists ϕ', ψ;
       subst;
@@ -296,22 +275,15 @@ Proof.
       simpl;
       auto with loo_db.
 
-  - exists ϕ', ψ;
-      split;
-      auto;
-      subst;
+  - exists ϕ'', (ϕ'::ψ); split;
       unfold not_stuck_ϕ;
-      simpl;
-      auto with loo_db;
-      crush.
-
-  - repeat eexists.
-
-  - repeat eexists.
+      subst;
+      simpl in *;
+      eauto with loo_db.
 
   - exists ϕ'', ψ;
       split;
-      auto;
+      auto; 
       subst ϕ'';
       unfold not_stuck_ϕ;
       simpl;
@@ -377,7 +349,8 @@ Proof.
     intros;
     unfold waiting_σ in *;
     simpl in *;
-    try solve [eexists; crush; eauto].
+    try solve [eexists; crush; eauto];
+    try solve [exists ϕ'', ψ; split; unfold waiting_ψ, waiting_ϕ in *; crush].
 
   - exists ϕ'', (ϕ'::ψ); split;
       unfold waiting_ψ, waiting_ϕ in *;
@@ -388,24 +361,14 @@ Proof.
       | [H : In ?ϕ0 _ |- waiting (contn ?ϕ0)] => destruct H; subst; crush
       end.
 
-  - exists ϕ'', ψ; subst;
-      split;
-      auto;
+  - exists ϕ'', (ϕ'::ψ); split;
       unfold waiting_ψ, waiting_ϕ in *;
+      subst;
       intros;
-      simpl in *;
       auto;
-      crush.
-
-  - exists ϕ'', ψ; subst;
-      split;
-      auto;
-      unfold waiting_ψ, waiting_ϕ in *;
-      intros;
-      simpl;
-      auto;
-      crush.
-
+      match goal with
+      | [H : In ?ϕ0 _ |- waiting (contn ?ϕ0)] => destruct H; subst; crush
+      end.
 Qed.
 
 Hint Resolve reduction_preserves_config_waiting : loo_db.
@@ -556,17 +519,72 @@ Proof.
       |rewrite neq_eqb; auto].
 
   - (* new *)
-    inversion H10;
-      subst.
+    inversion H14;
+      subst. (* get rid of χ0 etc.*)
+    assert (Hupdate : forall (tk tv: Type) (k: tk) (v: tv) `{Eq tk} m, update k v m k = Some v). {
+      intros. unfold update, t_update. rewrite eqb_refl. reflexivity.
+    }
     apply self_config;
-      intros.
-    inversion H0;
-      subst;
-      remember {| cname := C; flds := fMap ∘ (vMap ϕ) |} as o'.
-    + apply self_frm; simpl.
+      intros ϕ' Hin;
+      inversion Hin;
+      auto;
+      [subst|].
+    remember {| cname := C; flds := fMap |} as o.
+    apply self_frm;
+      exists α, o;
+      split;
+      auto.
+    inversion Hin as [| Hin'];
+      subst.
+    assert (Hinϕ : In ϕ (ϕ::ψ));
+      [apply in_eq|apply H13 in Hinϕ].
+    simpl.
+    apply self_frm;
+      inversion Hinϕ;
+      auto; try (apply Hupdate).
+    remember {| cname := C; flds := fMap |} as o.
+    exists α, o; simpl; split; apply Hupdate.
+    remember {| cname := C; flds := fMap |} as o.
+    assert (Hupdate_doesnt_remove : forall (tk tv: Type) m (a k: tk) (v v': tv) `{Eq tk}, m a = Some v -> 
+              k <> a ->
+              update k v' m a = Some v). {
+      intros tk tv m a k v v' HEqtk Hma Hne. unfold update, t_update. assert (eqb a k = false). { crush. } rewrite H9. apply Hma.
+    }
+    assert (Hselfextend : has_self_ϕ χ ϕ' -> has_self_ϕ (update α o χ) ϕ'). {
+      intros Hhasself. apply self_frm. inversion Hhasself. destruct H9 as [α' [o' [Hthis Hχ]]].
+      exists α', o'. split. apply Hthis. 
+      inversion H2. inversion H9.
+      subst. apply H17 in Hχ as Hχ'. inversion Hχ'. assert (Hne: S_α α0 <> α'). { assert (S m <> n). { crush. } crush. } subst.
+      apply Hupdate_doesnt_remove. apply Hχ. apply Hne.
+    }
+    apply Hselfextend.
+    apply H13.
+      simpl in *;
+      inversion H1.
+    inversion Hin' as [ Hin'' |]; try (right; assumption).
+Admitted. (* TODO NEW tried again, no luck
+
+    (* apply self_config.
+      intros ϕ' Hin.
+    apply self_frm.
+    remember {| cname := C; flds := fMap |} as o.
+    exists α, o; simpl; split; try (apply Hupdate).
+    inversion Hin as [|Hin'];subst; simpl; try (apply Hupdate).
+    inversion Hin';
+      subst.
+    assert (Hinϕ : In ϕ (ϕ::ψ));
+      [apply in_eq|apply H13 in Hinϕ]; simpl.
+    apply self_frm;
+      inversion Hinϕ;
+      auto.
+    apply H10;
+      simpl in *;
+      inversion H1;
+      auto. *)
+    (* + apply self_frm; simpl.
       assert (Hin : In ϕ (ϕ::ψ));
         [apply in_eq
-        |apply H9 in Hin].
+        |apply H12 in Hin].
       destruct Hin as [χ ϕ Ha];
         destruct Ha as [α0 Ha];
         destruct Ha as [o0];
@@ -604,7 +622,7 @@ Proof.
         |exists o0];
         [rewrite eqb_refl; auto
         |rewrite neq_eqb; auto];
-        auto.
+        auto. *)
 
   - apply self_config;
       intros.
@@ -626,6 +644,16 @@ Proof.
       specialize (H2 ϕ (in_eq ϕ ψ)).
       inversion H2; subst; auto.
     + specialize (H2 (in_cons ϕ ϕ0 ψ H3));
+        assumption.
+
+  - (* while; copied from if above *)
+    apply self_config.
+    intros.
+    inversion H0; subst.
+    + apply self_frm.
+      specialize (H1 ϕ (in_eq ϕ ψ)).
+      inversion H1; subst; auto.
+    + specialize (H1 ϕ0). specialize (H1 (in_cons ϕ ϕ0 ψ H2));
         assumption.
 
   - (* ret 1 *)
@@ -654,14 +682,14 @@ Proof.
     apply in_cons, in_eq.
     apply H5, in_cons, in_cons;
       auto.
-Qed.
+Qed. *)
 
 Hint Resolve reduction_preserves_config_has_self : loo_db.
 
 Lemma reductions_preserves_config_has_self :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
                  has_self_σ σ1 ->
-                 has_self_σ σ2.
+                 has_self_σ σ2. 
 Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
@@ -1033,22 +1061,53 @@ Proof.
     interpretation_rewrite.
     crush.
 
-  - (* new *)
-    inversion H9;
-      subst;
-      crush.
+  - (* new *) (*entirely written by mrr, may be bad? *)
+    simpl in *; subst.
+    inversion H13; subst; crush.
+    inversion H9; subst.
+    assert (α0 = α). { apply (fresh_heap_unique χ0); assumption. }
+    subst.
+    rewrite H1 in H10. inversion H10; subst.
+    rewrite H3 in H12. inversion H12; subst.
+    rewrite <- H4 in H14. inversion H14; subst.
+    assert (HfMapeq : fMap = fMap0). {
+      apply functional_extensionality.
+      intros x. inversion H7 as [H7a [H7b H7c]]; subst; simpl in *. inversion H17 as [H17a [H17b H17c]]; subst; simpl in *.
+      remember (fMap x) as y. destruct y as [ y' |].
+        + symmetry in Heqy. apply H8 in Heqy as Heqy'. subst. symmetry.
+          inversion H7c as [ Hnil | f l Hnin Huniq Hcons ]; try (apply H7a in Heqy as Heqy').
+            * rewrite <- Hnil in Heqy'. destruct Heqy'.
+            * apply H17b in Heqy' as [x' Heqy'']. apply H18 in Heqy'' as Heqy'''. subst. assumption.
+        + inversion H7c as [ Hnil | f l Hnin Huniq Hcons ].
+            * rewrite <- Hnil in *. 
+              assert (HnIn : forall t (x: t), In x nil = False). { crush. } 
+              remember (H17a x) as H17ax. destruct HeqH17ax. rewrite (HnIn fld x) in H17ax.
+              apply not_some_implies_none in H17ax. symmetry. assumption.
+            * assert (Hnone_implies_not_some : forall tk `{Eq tk} tv (m : partial_map tk tv) k, None = m k -> ~(exists v, m k = Some v)). {
+                intros a b Hab.
+                crush.
+              }
+              assert (Hmodus_tollens : forall (p q : Prop), (p -> q) -> ~q -> ~p). { auto. }
+              apply Hnone_implies_not_some in Heqy as Heqy'.
+              remember (H7b x) as H7bx. apply Hmodus_tollens in H7bx as H7bx'; try (assumption).
+              remember (H17a x) as H17ax.
+              assert (H17axe : (exists b, fMap0 x = Some b) -> In x (c_flds CDef0)). {
+                intros [ b' Hb' ]. apply (H17ax b'). apply Hb'.
+              }
+              apply Hmodus_tollens in H17axe; try (assumption).
+              assert (H17ax' : forall b : value, fMap0 x <> Some b). {
+                intros b' Hb'. apply H17axe. exists b'. assumption.
+              }
+              apply not_some_implies_none in H17ax'.
+              symmetry. assumption.
+    }
+    rewrite <- HfMapeq. reflexivity.
+
+(* alt formulation for proving a0 = a: 
     inversion H11; subst.
-    rewrite H1 in H12;
-      inversion H12;
-      subst;
-      crush.
-    match goal with
-    | [H1 : fresh_χ ?χ ?αa,
-            H2 : fresh_χ ?χ ?αb |- _] =>
-      apply fresh_heap_unique with (α1:=αa) in H2;
-        subst;
-        auto
-    end.
+    inversion H2; subst.
+    assert (α0 = α1). { apply (max_χ_injective obj χ0); assumption. }
+*)
 
   - inversion H1;
       subst;
@@ -1075,6 +1134,11 @@ Proof.
     end.
     eval_rewrite.
     crush.
+
+  - (* while *)
+    inversion H0;
+      subst;
+      crush.
 
   - (* ret1 *)
     subst.
@@ -1153,6 +1217,7 @@ Fixpoint stmt_size (s : stmt) : nat :=
   match s with
   | s1 ;; s2 => 1 + stmt_size s1 + stmt_size s2
   | s_if e s1 s2 => 1 + stmt_size s1 + stmt_size s2
+  | s_while e s => 1 + stmt_size s
   | _ => 1
   end.
         
@@ -1172,6 +1237,8 @@ Inductive substmt : stmt -> stmt -> Prop :=
                          substmt s (s_if e s1 s2)
 | sub_if2 : forall s e s1 s2, substmt s s2 ->
                          substmt s (s_if e s1 s2)
+| sub_while : forall s e s', substmt s s' ->
+                         substmt s (s_while e s')
 | sub_stmt1 : forall s s1 s2, substmt s s1 ->
                          substmt s (s_stmts s1 s2)
 | sub_stmt2 : forall s s1 s2, substmt s s2 ->
