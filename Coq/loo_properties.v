@@ -633,6 +633,26 @@ Proof.
   exists (fst σ), ϕ, ψ; destruct σ; crush.
 Qed.
 
+Lemma wf_exists_self :
+  forall σ, σ_wf σ ->
+       exists α o, ⟦ this ↦ (v_addr α) ⟧ ∈ σ /\
+              ⟦ α ↦ o ⟧ ∈ σ.
+Proof.
+  intros.
+  destruct (config_wf_decompose σ) as [χ];
+    auto;
+    repeat destruct_exists_loo;
+    subst.
+  repeat map_rewrite.
+  inversion H; subst.
+  inversion H0; subst.
+  specialize (H5 ϕ);
+    specialize (H5 (in_eq ϕ ψ)).
+  inversion H5;
+    subst.
+  auto.
+Qed.
+
 Lemma limited_config_wf :
   forall χ ϕ ψ, σ_wf (χ, ϕ::ψ) ->
            σ_wf (χ, ϕ::nil).
