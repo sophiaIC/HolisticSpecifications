@@ -498,6 +498,8 @@ Definition methods := partial_map mth ((list var) * stmt).
 (*ghost_fields is a mapping from ghost field names to expressions*)
 Definition ghost_fields := partial_map gfld (var * exp).
 
+Definition private := gFieldID 0.
+
 Record classDef := clazz{c_name : cls;
                          c_flds : list fld;
                          c_intrn : list fld;
@@ -1306,13 +1308,34 @@ Inductive pair_reductions : mdl -> mdl -> config -> config -> Prop :=
 | prs_single : forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
                               M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
                                  
-| prs_trans : forall M1 M2 σ1 σ σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ ->
-                               M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
+| prs_trans : forall M1 M2 σ1 σ σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ ->
+                               M1 ⦂ M2 ⦿ σ ⤳ σ2 ->
                                M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
 
 where "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" := (pair_reductions M1 M2 σ σ').
 
 Hint Constructors pair_reductions : loo_db.
+
+Definition stack_append (σ : config)(ψ : stack):=
+  (fst σ, (snd σ)++ψ).
+
+Notation "σ '◁' ψ" := (stack_append σ ψ)(at level 40).
+
+Definition constrained_pair_reduction (M1 M2 : mdl)(σ1 σ2 : config):=
+  exists χ ϕ ψ σ, σ1 = (χ, ϕ :: ψ) /\
+             M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ /\
+             σ2 = (σ ◁ ψ).
+
+Notation "M1 '⦂' M2 '⦿' σ1 '⌈⤳⌉' σ2":=
+  (constrained_pair_reduction M1 M2 σ1 σ2)(at level 40).
+
+Definition constrained_pair_reductions (M1 M2 : mdl)(σ1 σ2 : config):=
+  exists χ ϕ ψ σ, σ1 = (χ, ϕ :: ψ) /\
+             M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ /\
+             σ2 = (σ ◁ ψ).
+
+Notation "M1 '⦂' M2 '⦿' σ1 '⌈⤳⋆⌉' σ2":=
+  (constrained_pair_reductions M1 M2 σ1 σ2)(at level 40).
 
 Class Rename (A : Type) :=
   {rname : (partial_map var var) -> A -> A;

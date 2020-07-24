@@ -160,23 +160,26 @@ Next Obligation.
 Defined.
 
 Inductive expr : Type :=
-| ex_var : a_var -> expr
+| ex_hole : nat -> expr
 | ex_val : value -> expr
 | ex_eq : expr -> expr -> expr
 | ex_lt : expr -> expr -> expr
+| ex_plus : expr -> expr -> expr
+| ex_minus : expr -> expr -> expr
+| ex_mult : expr -> expr -> expr
+| ex_div : expr -> expr -> expr
 | ex_if : expr -> expr -> expr -> expr
 | ex_acc_f : expr -> fld -> expr
 | ex_acc_g : expr -> gfld -> expr -> expr.
 
 Notation "'a♢' n" := (a_hole n)(at level 40).
-Notation "'e♢' n" := (ex_var (a_hole n))(at level 40).
+Notation "'e♢' n" := (ex_hole n)(at level 40).
 Notation "'a_' α" := (a_bind α)(at level 40).
-Notation "'e_' α" := (ex_var (a_bind α))(at level 39).
+Notation "'e_' α" := (ex_val (v_addr α))(at level 39).
 
 Notation "'ex_true'" := (ex_val v_true)(at level 40).
 Notation "'ex_false'" := (ex_val v_false)(at level 40).
 Notation "'ex_null'" := (ex_val v_null)(at level 40).
-Notation "'ex_addr' r" := (ex_val (v_addr r))(at level 40).
 Notation "'ex_int' i" := (ex_val (v_nat i))(at level 40).
 Notation "e1 '⩻′' e2" := (ex_lt e1 e2)(at level 40).
 Notation "e1 'e_and' e2" := (ex_if e1 (ex_if e2 (ex_true) (ex_false)) (ex_false))(at level 40).
@@ -233,6 +236,7 @@ Inductive asrt : Type :=
 (** Viewpoint: *)
 | a_extrn : a_var -> asrt
 | a_intrn : a_var -> asrt
+| a_private : a_var -> a_var -> asrt
 
 | a_name : a_var -> var -> asrt
 
@@ -294,7 +298,10 @@ Instance substExpr : Subst expr nat addr :=
     sbst :=
       fix sbst' e n v :=
         match e with
-        | ex_var x => ex_var ([v /s n] x)
+        | ex_hole m =>
+          if n =? m
+          then (e_ v)
+          else e
         | ex_eq e1 e2 => ex_eq (sbst' e1 n v) (sbst' e2 n v)
         | ex_lt e1 e2 => ex_lt (sbst' e1 n v) (sbst' e2 n v)
         | ex_if e1 e2 e3 => ex_if (sbst' e1 n v) (sbst' e2 n v) (sbst' e3 n v)
@@ -308,7 +315,7 @@ Fixpoint sbstxA (A : asrt)(n : nat)(x : addr) : asrt :=
   match A with
   | a_expr e => a_expr ([x /s n] e)
   | a_class y C       => a_class ([x /s n] y) C
-  | e ∈ Σ => ([x /s n] e) ∈ Σ
+  | e ∈ Σ => ([x /s n] e) ∈ (sbstxΣ Σ n x)
 
   (*connectives*)
   | a_arr A1 A2       => a_arr (sbstxA A1 n x) (sbstxA A2 n x)
@@ -336,11 +343,12 @@ Fixpoint sbstxA (A : asrt)(n : nat)(x : addr) : asrt :=
   | a_was A'          => a_was (sbstxA A' n x)
 
   (*space*)
-  | A' in_ Σ           => (sbstxA A' n x) in_ Σ
+  | A' in_ Σ           => (sbstxA A' n x) in_ (sbstxΣ Σ n x)
 
   (*viewpoint*)
   | a_extrn v          => a_extrn ([x /s n] v)
   | a_intrn v          => a_intrn ([x /s n] v)
+  | a_private y z      => a_private ([x /s n] y) ([x /s n] z)
 
   | a_name y z         => a_name ([x /s n] y) z
   end
@@ -456,7 +464,6 @@ Definition initial (σ : config) : Prop :=
          not_stuck_σ σ.
 
 Inductive is_exp : expr -> exp -> Prop :=
-| is_addr : forall α, is_exp (e_ α) (e_val (v_addr α))
 | is_val : forall v, is_exp (ex_val v) (e_val v)
 | is_eq : forall e1 e1' e2 e2', is_exp e1 e1' ->
                            is_exp e2 e2' ->
@@ -464,6 +471,27 @@ Inductive is_exp : expr -> exp -> Prop :=
 | is_lt : forall e1 e1' e2 e2', is_exp e1 e1' ->
                            is_exp e2 e2' ->
                            is_exp (ex_lt e1 e2) (e_lt e1' e2')
+
+| is_plus : forall e1 e1' e2 e2',
+    is_exp e1 e1' ->
+    is_exp e2 e2' ->
+    is_exp (ex_plus e1 e2) (e_plus e1' e2')
+
+| is_minus : forall e1 e1' e2 e2',
+    is_exp e1 e1' ->
+    is_exp e2 e2' ->
+    is_exp (ex_minus e1 e2) (e_minus e1' e2')
+
+| is_mult : forall e1 e1' e2 e2',
+    is_exp e1 e1' ->
+    is_exp e2 e2' ->
+    is_exp (ex_mult e1 e2) (e_mult e1' e2')
+
+| is_div : forall e1 e1' e2 e2',
+    is_exp e1 e1' ->
+    is_exp e2 e2' ->
+    is_exp (ex_div e1 e2) (e_div e1' e2')
+
 | is_if : forall e1 e2 e3 e1' e2' e3', is_exp e1 e1' ->
                                   is_exp e2 e2' ->
                                   is_exp e3 e3' ->
@@ -814,18 +842,13 @@ might want to allow assertions in the future to refer to configurations that cam
 the current configuration. For this purpose, we append the original stack's tail.
 *)
 
-Definition stack_append (σ : config)(ψ : stack):=
-  (fst σ, (snd σ)++ψ).
-
-Notation "σ '◁' ψ" := (stack_append σ ψ)(at level 40).
-
 Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A"(at level 40).
 Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A"(at level 40).
 
 Inductive sat : mdl -> mdl -> config -> config -> asrt -> Prop :=
 
 | sat_name : forall M1 M2 σ σ0 α x, mapp σ x = Some (v_addr α) ->
-                               M1 ⦂ M2 ◎ σ … σ0 ⊨ a_name (a_ α) x
+                               M1 ⦂ M2 ◎ σ0 … σ ⊨ a_name (a_ α) x
 
 (** Simple: *)
 (**
@@ -1080,34 +1103,44 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
 ]]]
  *)
 
+| sat_private : forall M1 M2 M σ0 σ α1 α2,
+    M1 ⋄ M2 ≜ M ->
+    M ∙ σ ⊢ (e_acc_g (e_val (v_addr α1)) private (e_val (v_addr α2))) ↪ v_true ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ a_private (a_ α1) (a_ α2)
+(**
+[[[
+               (α ↦ o) ∈ χ   o.(className) ∈ M1
+               ---------------------------------                   (Sat-Intrn)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ α internal
+]]]
+ *)
+
 (** Time: *)
 (**
 Non-determinism in the temporal operators is removed by using the initial
 configuration that satisfaction is defined with.
  *)
-| sat_next : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
-                                      M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ' ->
-                                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
-                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_next A)
+| sat_next : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ' ->
+                                M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_next A)
 (**
 [[[
-                 M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ'
-               M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A
-               ---------------------------------                   (Sat-Next)
-               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ next A
+                 M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ'
+               M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               -------------------------                   (Sat-Next)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ next A
 ]]]
  *)
 
-| sat_will : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
-                                      M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ' ->
-                                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊨ A ->
-                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_will A)
+| sat_will : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ ⌈⤳⋆⌉ σ' ->
+                                M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_will A)
 (**
 [[[
-                 M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ'
-               M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ A
-               ---------------------------------                   (Sat-Will)
-               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ will A
+                 M1 ⦂ M2 ⦿ σ ⌈⤳⋆⌉ σ'
+               M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               -------------------------                   (Sat-Will)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ will A
 ]]]
  *)
 
@@ -1187,7 +1220,7 @@ with
 
 | nsat_name : forall M1 M2 σ σ0 α x v, mapp σ x = Some v ->
                                   v <> (v_addr α) ->
-                                  M1 ⦂ M2 ◎ σ … σ0 ⊭ a_name (a_ α) x
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ a_name (a_ α) x
 
 (*simple*)
 | nsat_exp : forall M1 M2 M σ0 σ e e', is_exp e e' ->
@@ -1464,31 +1497,29 @@ with
 
 (*time*)
 
-| nsat_next : forall M1 M2 σ0 σ A ϕ ψ χ σ', σ = (χ, ϕ :: ψ) ->
-                                       (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ') ->
-                                       M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A ->
-                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
+| nsat_next : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ' ->
+                                 M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
 (**
 [[[
                     
-                  M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳ σ'
-                M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A
-               ----------------------------------                   (NSat-Next)
-               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ next A
+                  M1 ⦂ M2 ⦿ σ0 ⌈⤳⌉ σ'
+                M1 ⦂ M2 ◎ σ0 … σ' ⊭ A
+               -------------------------                   (NSat-Next)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ next A
 ]]]
  *)
 
-| nsat_will : forall M1 M2 σ0 σ A ϕ ψ χ, σ = (χ, ϕ :: ψ) ->
-                                    (forall σ', (M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ') ->
-                                           M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A) ->
-                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_will A)
+| nsat_will : forall M1 M2 σ0 σ A, (forall σ', (M1 ⦂ M2 ⦿ σ ⌈⤳⋆⌉ σ') ->
+                                     M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_will A)
 (**
 [[[
                     
-               (∀ σ'. M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ' →
-                      M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ' ⊭ A)
-               -----------------------------------------                   (NSat-Will)
-                  M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ will A
+               (∀ σ'. M1 ⦂ M2 ⦿ σ0 ⌈⤳⋆⌉ σ' →
+                      M1 ⦂ M2 ◎ σ0 … σ' ⊭ A)
+               -----------------------------                   (NSat-Will)
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ will A
 ]]]
  *)
 

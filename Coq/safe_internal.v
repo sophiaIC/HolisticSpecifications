@@ -4,6 +4,7 @@ Require Import loo_properties.
 Require Import loo_reduction_properties.
 Require Import decoupled_classical_properties.
 Require Import decoupling.
+Require Import exp.
 Require Import sbst_decoupled.
 Require Import function_operations.
 Require Import hoare.
@@ -25,7 +26,7 @@ Definition always_was (A : asrt) :=
 Definition always (A : asrt) :=
   A ∧ (always_was A) ∧ (always_will A).
 
-Lemma not_always :
+(*Lemma not_always :
   forall M1 M2 σ0 χ ϕ ψ A, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (¬ always_will A) ->
                       M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ A ->
                       (exists σ, M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ /\
@@ -42,8 +43,6 @@ Proof.
     subst.
   simpl_crush.
 
-  Check pair_reduction_change.
-
   destruct (pair_reduction_change M1 M2 σ0 σ') with (P:=fun M1 M2 σ => M1 ⦂ M2 ◎ (χ0, ϕ0 :: ψ0) … σ ⊨ A);
     auto.
 
@@ -54,7 +53,7 @@ Proof.
 
   - exists σ'; repeat split; auto.
     
-Qed.
+Qed.*)
 
 Module SafeExample.
 
@@ -100,9 +99,9 @@ Module SafeExample.
 
   Definition safeInternalBody := (((e_hole 0) ⩵ (e_var this))
                                     ⩒
-                                    (((e_hole 0) ⩵ (e_acc_f (e_var this) secret))
-                                       ⩒
-                                       (e_acc_g (e_acc_f (e_var this) secret) internal_g (e_hole 0)))).
+                                    ((e_hole 0) ⩵ (e_acc_f (e_var this) secret))).
+(*                                       ⩒
+                                       (e_acc_g (e_acc_f (e_var this) secret) private (e_hole 0)))).*)
   (**
 #<h3>#internal_to#</h3>#
 We define the #<code>#internal_to#</code># predicate below. We assume that
@@ -112,8 +111,8 @@ considered "internal".
 Question: do we want to define a "default" internal? i.e. 
 #<code>#internal_to x y := x == y ∨ x.internal_g(y)#</code>#
   *)
-  Definition internal_to (x y: a_var) :=
-    a_expr (ex_acc_g (ex_var x) internal_g (ex_var y)).
+(*  Definition internal_to (x y: a_var) :=
+    a_expr (ex_acc_g (ex_var x) internal_g (ex_var y)).*)
   
 (**
 #<h3>#always#</h3>#
@@ -134,7 +133,7 @@ with access to #<code>#s.secret#</code>#.
 
 *)
 
-  Lemma safe_does_not_expose_secret :
+(*  Lemma safe_does_not_expose_secret :
     forall M σ σ0 s s', MyModule ⦂ M ◎ σ … σ0 ⊨ (a_class s Safe) ->
                    MyModule ⦂ M ◎ σ … σ0 ⊨ (ex_acc_f (ex_var s) secret ⩶ (ex_var s')) ->
                    MyModule ⦂ M ◎ σ … σ0 ⊨ (¬ (∃x∙ (¬ (internal_to s (a♢ 0))
@@ -158,7 +157,7 @@ with access to #<code>#s.secret#</code>#.
       a_prop.
     
     
-  Admitted.
+  Admitted.*)
 
 (**
 The second lemma is given below (#<code>#treasure_removed_implies_will_external_access#</code>#).
@@ -167,7 +166,7 @@ the future a call to #<code>#take#</code># will be made with #<code>#s.secret#</
 argument.
 *)
 
-  Lemma treasure_removed_implies_take_called :
+(*  Lemma treasure_removed_implies_take_called :
     forall M σ σ0 s s', MyModule ⦂ M ◎ σ … σ0 ⊨ (a_class s Safe) ->
                    MyModule ⦂ M ◎ σ … σ0 ⊨ (ex_acc_f (ex_var s) secret ⩶ (ex_var s')) ->
                    MyModule ⦂ M ◎ σ … σ0 ⊨ ((ex_acc_f (ex_var s) treasure) ⩶̸ (ex_null)) ->
@@ -175,18 +174,118 @@ argument.
                    exists x β, MyModule ⦂ M ◎ σ … σ0 ⊨ ((x calls s ▸ (am_ take) ⟨ β ⟩) ∨
                                                    (a_will (x calls s ▸ (am_ take) ⟨ β ⟩))).
   Proof.
-  Admitted.
+  Admitted.*)
 
 (**
 By the law of the excluded middle, the x referenced in the above lemma, is
 either internal to #<code>#s#</code># or it is not. If it is, then since 
 the current object is external to #<code>#s#</code># it follows that there 
 is 
-*)
+ *)
 
-  Definition HolisticSpec := (∀x∙ (∀x∙(((∀x∙ ((a_name (a♢ 0) this)
-                                                ⟶
-                                                (¬ internal_to (a♢ 2) (a♢ 0))))
+  Definition is_private (x : a_var) (y : var) :=
+    (∃x∙ ((a_name (a♢ 0) y)
+          ∧
+          (a_private x (a♢ 0)))).
+
+  Parameter internal_step_MyModule :
+    forall M σ, internal_step MyModule M σ ->
+           exists x y myScr s, contn_is (s_meth x y take (update scr myScr empty) ;; s) σ.
+
+  Lemma external_step_access_to_this :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                   external_step M1 M2 σ1 ->
+                   forall σ0 α1 α2, M1 ⦂ M2 ◎ σ0 … σ1 ⊨ a_name α1 this ->
+                               M1 ⦂ M2 ◎ σ0 … σ2 ⊨ a_name α2 this ->
+                               M1 ⦂ M2 ◎ σ0 … σ1 ⊨ (α1 access α2).
+  Proof.
+    
+  Admitted.
+
+  Parameter safe_private :
+    forall {M σ0 σ s x}, MyModule ⦂ M ◎ σ0 … σ ⊨ a_private (a_ s) (a_ x) ->
+                    MyModule ⦂ M ◎ σ0 … σ ⊨ a_class (a_ s) Safe ->
+                    MyModule ⦂ M ◎ σ0 … σ ⊨ (((e_ s) ⩶ (e_ x)) ∨ (ex_acc_f (e_ s) secret ⩶ (e_ x))).
+
+  Parameter secret_immutable :
+    forall M σ0 σ s v, MyModule ⦂ M ◎ σ0 … σ ⊨ (a_class (a_ s) Safe) ->
+                  MyModule ⦂ M ◎ σ0 … ⋆ ⊨
+                           {pre: (ex_acc_f (e_ s) secret) ⩶ (ex_val v) }
+                           σ
+                           {post: (ex_acc_f (e_ s) secret) ⩶ (ex_val v)}.
+
+  Lemma safe_does_not_expose_secret :
+    forall M σ0 σ s myScr, MyModule ⦂ M ◎ σ0 … σ ⊨ (a_class (a_ s) Safe) ->
+                      MyModule ⦂ M ◎ σ0 … σ ⊨ ((ex_acc_f (e_ s) secret) ⩶ (e_ myScr)) ->
+                      σ_wf σ ->
+                      MyModule ⦂ M ◎ σ0 … ⋆ ⊨
+                               {pre: (¬ is_private (a_ s) this)
+                                     ∧
+                                     ∀x∙ ((a_private (a_ s) (a♢ 0))
+                                          ∨
+                                          (¬ ((a♢ 0) access (a_ myScr))))}
+                               σ
+                               {post: (¬ is_private (a_ s) this)
+                                      ∧
+                                      ∀x∙ ((a_private (a_ s) (a♢ 0))
+                                           ∨
+                                           (¬ ((a♢ 0) access (a_ myScr))))}.
+  Proof.
+    intros.
+    apply ht_pr;
+      intros.
+    destruct (pair_reduction_inversion_hoare MyModule M σ σ');
+      auto.
+
+    - a_prop;
+        simpl in *;
+        auto.
+
+      + destruct (wf_exists_self σ) as [α];
+          auto;
+          destruct_exists_loo;
+          andDestruct.
+
+        unfold is_private in *;
+          a_prop.
+
+        a_intros.
+        a_contradiction.
+        a_prop.
+
+        specialize (H2 α o);
+          auto_specialize.
+        a_prop.
+        destruct H2.
+
+        * inversion H2;
+            subst.
+          inversion H14;
+            subst.
+          crush.
+        * apply safe_private in H8;
+            auto;
+            a_prop.
+          ** destruct H8.
+             exp_auto;
+               simpl_crush.
+             blerg.
+             (*
+               σ' is external. 
+               this var is internal class (Safe).
+               contradiction.
+              *)
+             
+             eapply (hoare_triple_pr_inversion
+                       (secret_immutable M σ0 σ s (v_addr myScr)H)) in H0;
+               eauto.
+             exp_auto.
+             (* secret never changes *)
+        
+
+  Qed.
+
+  Definition HolisticSpec := (∀x∙ (∀x∙(((¬ internal_to' (a♢ 1) this)
                                         ∧
                                         (a_class (a♢1) Safe)
                                         ∧

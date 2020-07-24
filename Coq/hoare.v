@@ -445,9 +445,9 @@ Ltac hoare_inversion_2 :=
   end.
 
 Lemma hoare_triple_pr_inversion :
-  forall M1 M2 P σ Q, M1 ⦂ M2 ⦿ {pre: P} σ {post: Q} ->
-                 forall σ', M1 ⦂ M2 ⦿ σ ⤳ σ' ->
-                       P σ -> Q σ'.
+  forall {M1 M2 P σ Q}, M1 ⦂ M2 ⦿ {pre: P} σ {post: Q} ->
+                   forall {σ'}, M1 ⦂ M2 ⦿ σ ⤳ σ' ->
+                           P σ -> Q σ'.
 Proof.
   intros M1 M2 P σ Q Hhoare;
     inversion Hhoare;

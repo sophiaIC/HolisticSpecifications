@@ -146,19 +146,18 @@ Proof.
   - (* next *)
     inversion Hcontra;
       subst.
-    simpl_crush; unique_reduction_auto.
+    unique_reduction_auto.
     auto.
 
-  - (* will *)
-    inversion Hcontra; subst;
-      simpl_crush.
+(*  - (* will *)
+    inversion Hcontra; subst.
     match goal with
     | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ σ'' -> _,
          Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ ?σ' |- _] =>
       specialize (H σ')
     end;
       auto_specialize;
-      auto.
+      auto.*)
 
   - (* prev 1 *)
     inversion Hcontra; subst.
@@ -304,15 +303,14 @@ Proof.
 
   - (* nsat_next *)
     inversion Hcontra; subst.
-    simpl_crush; unique_reduction_auto.
+    unique_reduction_auto.
     auto.
 
   - (* nsat_will *)
     inversion Hcontra; subst.
-    simpl_crush.
     match goal with
-    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ σ'' -> ~ _,
-         Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ ?σ' |- _] =>
+    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⋆⌉ σ'' -> ~ _,
+         Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⋆⌉ ?σ' |- _] =>
       specialize (H σ')
     end;
       auto_specialize;
@@ -535,11 +533,11 @@ Proof.
   intros.
   inversion H;
     subst.
-  inversion H7;
+  inversion H6;
     subst;
     eauto.
   apply sat_will
-    with (ϕ:=ϕ)(ψ:=ψ)(χ:=χ)(σ':=σ');
+    with (σ':=σ');
     auto.
   eapply arr_true;
     eauto.
@@ -1004,6 +1002,36 @@ Ltac a_prop :=
          | [H : _ ⦂ _ ◎ _ … _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; sbst_simpl
          | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ∧ _)] => apply sat_and
          | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _)] => apply <- or_iff
+
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∧ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply neg_distributive_and]
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∨ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply neg_distributive_or]
+
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∧ _))] =>
+           eapply entails_implies;
+           [|apply neg_distributive_and_2]
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∨ _)) |- _ ] =>
+           eapply entails_implies;
+           [|apply neg_distributive_or_2]
+
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (∃x∙ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply not_ex_x_all_not]
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (∀x∙ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply not_all_x_ex_not]
+
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ (∃x∙ _)) ] =>
+           eapply entails_implies;
+           [|apply not_ex_x_all_not_2]
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ (∀x∙ _)) ] =>
+           eapply entails_implies;
+           [|apply not_all_x_ex_not_2]
+
+
          | [H : entails ?A1 ?A2,
                 Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ?A1 |- _] =>
            notHyp (M1 ⦂ M2 ◎ σ0 … σ  ⊨ A2);
@@ -1016,7 +1044,38 @@ Ltac a_prop :=
          | [Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ¬ ?A,
                  Hb : ~ ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊭ ?A |- _] =>
            inversion Ha; subst; crush
+
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ ¬ _) |- _] =>
+           apply negate_elim_sat in H
+         | [H : _ ⦂ _ ◎ _ … _ ⊭ (¬ ¬ _) |- _] =>
+           apply negate_elim_nsat in H
+
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ ¬ _) ] =>
+           apply negate_intro_sat
+         | [|- _ ⦂ _ ◎ _ … _ ⊭ (¬ ¬ _) ] =>
+           apply negate_intro_nsat
          end.
+
+Ltac a_destruct H :=
+  match goal with
+  | [H : _ ⦂ _ ◎ _ … _ ⊨ (∃x∙_) |- _] =>
+    apply -> ex_x_prop in H;
+    destruct_exists_loo
+  | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _) |- _] =>
+    apply -> or_iff in H;
+    destruct H
+  end.
+
+Ltac a_contradiction :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ _)] =>
+    apply sat_not;
+    apply not_sat_implies_nsat;
+    intro
+  | [|- _ ⦂ _ ◎ _ … _ ⊭ _] =>
+    apply not_sat_implies_nsat;
+    intro
+  end.
 
 (*Lemma and_forall_x_entails_1 :
   forall A1 A2, entails (A1 ∧ (∀x∙A2))

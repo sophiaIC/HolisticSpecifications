@@ -28,7 +28,7 @@ Instance raiseExpr : Raiseable expr :=
     raise :=
       fix raise' e n :=
         match e with
-        | ex_var x => ex_var (x ↑ n)
+        | ex_hole m => ex_hole (m ↑ n)
         | ex_eq e1 e2 => ex_eq (raise' e1 n) (raise' e2 n)
         | ex_lt e1 e2 => ex_eq (raise' e1 n) (raise' e2 n)
         | ex_if e1 e2 e3 => ex_if (raise' e1 n) (raise' e2 n) (raise' e3 n)
