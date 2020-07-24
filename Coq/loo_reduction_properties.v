@@ -425,27 +425,28 @@ Proof.
     eauto.
 
   - (* meth *)
-    inversion H11; subst.
-    apply self_config;
-      intros ϕ' Hin;
-      inversion Hin;
+    inversion H11; subst.                       (* Get rid of χ0, ψ0 in favour of χ, ϕ :: ψ *)
+    apply self_config.                          (* Transform has_self_σ to a check that all frames in ϕ?1::ϕ?2::ψ are s.t. has_self_ϕ *)
+    intros ϕ' Hin.                              (* Introduce the frame in the list *)
+    inversion Hin as [| Hin'];                  (* Use inversion to say it's either the head ϕ?1 or in the tail ϕ?2::ψ *)
       auto;
-      [subst|].
-    apply self_frm;
-      exists α, o;
-      split;
-      auto.
-    inversion H0;
-      subst.
-    assert (Hinϕ : In ϕ (ϕ::ψ));
-      [apply in_eq|apply H10 in Hinϕ].
-    apply self_frm;
-      inversion Hinϕ;
-      auto.
-    apply H10;
-      simpl in *;
-      inversion H1;
-      auto.
+      [subst|].                                   (* and substitute the head into place for simplification *)
+    apply self_frm.                             (* Transform has_self_ϕ to a check `this` maps to an address in vMap, which locates an object in heap *)
+    exists α, o.                                (* Pick α, o, the object being called (at ⌊y⌋=α), set to `this` in the new configuration *)
+    split;                                      (* Split `this` maps to α, and α maps to o checks *)
+      auto.                                       (* both of which are evident from the hypotheses *)
+    inversion Hin';                             (* Use inversion to say it's either the head ϕ?2 or in the tail ψ  *)
+      subst.                                      (* and substitute the head into place for simplification *)
+    assert (Hinϕ : In ϕ (ϕ::ψ)). {              (* Assert that the original frame was in the original list *)
+      apply in_eq.
+    }
+    apply H10 in Hinϕ.                            (* so we can prove it has_self_ϕ *)
+    apply self_frm.                             (* Transform has_self_ϕ to a check `this` maps to an address in vMap, which locates an object in heap *)
+    inversion Hinϕ.                             (* Inversion on the has_self_ϕ to not only get the exists, but also the equalities *)
+    auto.                                         (* allowing the result to be solved, this also yield `In ϕ' ψ` *)
+    apply H10.                                  (* Convert has_self_ϕ to `In ϕ' (ϕ :: ψ)` form from initial *)
+    simpl in *.                                 (* Unfold `In` one step to `ϕ = ϕ' \/ In ϕ' ψ` *)
+    right; assumption.
 
   - (* var asgn *)
     apply has_self_update_σ_contn
@@ -518,112 +519,43 @@ Proof.
       [rewrite eqb_refl; auto
       |rewrite neq_eqb; auto].
 
-  - (* new *)
-    {inversion H14;
+  - (* new *) (* written by mrr (based v. loosely on method case above), rewrite if bad *)
+    inversion H14;
       subst. (* get rid of χ0 etc.*)
     assert (Hupdate : forall (tk tv: Type) (k: tk) (v: tv) `{Eq tk} m, update k v m k = Some v). {
       intros. unfold update, t_update. rewrite eqb_refl. reflexivity.
     }
-    apply self_config;
-      intros ϕ' Hin;
-      inversion Hin;
+    apply self_config.
+    intros ϕ' Hin.
+    inversion Hin as [| Hin'];
       auto;
       [subst|].
     remember {| cname := C; flds := fMap |} as o.
-    apply self_frm;
-      exists α, o;
-      split;
-      auto.
-    inversion Hin as [| Hin'];
-      subst.
-    assert (Hinϕ : In ϕ (ϕ::ψ));
-      [apply in_eq|apply H13 in Hinϕ].
-    simpl.
-    remember {| cname := C; flds := fMap |} as o.
-    apply self_frm;
-      inversion Hinϕ;
-      auto; try (apply Hupdate).
-    exists α, o; simpl; split; apply Hupdate.
-    remember {| cname := C; flds := fMap |} as o.
-    assert (Hupdate_doesnt_remove : forall (tk tv: Type) m (a k: tk) (v v': tv) `{Eq tk}, m a = Some v -> 
-              k <> a ->
-              update k v' m a = Some v). {
-      intros tk tv m a k v v' HEqtk Hma Hne. unfold update, t_update. assert (eqb a k = false). { crush. } rewrite H9. apply Hma.
-    }
-    assert (Hselfextend : forall ϕa, has_self_ϕ χ ϕa -> has_self_ϕ (update α o χ) ϕa). {
-      intros ϕa Hhasself. apply self_frm. inversion Hhasself. destruct H9 as [α' [o' [Hthis Hχ]]].
-      exists α', o'. split. apply Hthis. 
-      inversion H2. inversion H9.
-      subst. apply H17 in Hχ as Hχ'. inversion Hχ'. assert (Hne: S_α α0 <> α'). { assert (S m <> n). { crush. } crush. } subst.
-      apply Hupdate_doesnt_remove. apply Hχ. apply Hne.
-    }
-    apply Hselfextend.
-    apply H13;
-      simpl in *;
-      inversion H1;
-      auto. }
-    
- (* TODO NEW tried again, no luck *)
-
-    (* apply self_config.
-      intros ϕ' Hin.
     apply self_frm.
-    remember {| cname := C; flds := fMap |} as o.
-    exists α, o; simpl; split; try (apply Hupdate).
-    inversion Hin as [|Hin'];subst; simpl; try (apply Hupdate).
-    inversion Hin';
-      subst.
-    assert (Hinϕ : In ϕ (ϕ::ψ));
-      [apply in_eq|apply H13 in Hinϕ]; simpl.
-    apply self_frm;
-      inversion Hinϕ;
+    exists α, o.
+    split;
       auto.
-    apply H10;
-      simpl in *;
-      inversion H1;
-      auto. *)
-    (* + apply self_frm; simpl.
-      assert (Hin : In ϕ (ϕ::ψ));
-        [apply in_eq
-        |apply H12 in Hin].
-      destruct Hin as [χ ϕ Ha];
-        destruct Ha as [α0 Ha];
-        destruct Ha as [o0];
-        andDestruct.
-      exists α0.
-      destruct (eq_dec α0 α) as [|Hneq];
-        [subst α0;
-         exists o'
-        |simpl;
-         exists o0];
-        simpl;
-        auto;
-        unfold update, t_update;
-        [rewrite neq_eqb; auto
-        |rewrite neq_eqb; auto];
-        split;
-        auto;
-        [rewrite eqb_refl
-        |rewrite neq_eqb; auto];
-        auto.
+    inversion Hin' as [| Hin''];
+      subst.
+    assert (Hinϕ : In ϕ (ϕ::ψ)). {
+      apply in_eq.
+    }
+    apply H13 in Hinϕ.
+    remember {| cname := C; flds := fMap |} as o.
+    apply self_frm.
+    inversion Hinϕ; simpl in *.
+    destruct H0 as [α' [o' [H0l  H0r]]].
+    exists α', o'.
+    split; [assumption |].
+    apply update_doesn't_remove. assumption.
+    apply fresh_heap_none in H2 as Hαnone. crush.
 
-    + apply self_frm.
-      unfold update, t_update.
-      assert (Hin : In ϕ0 (ϕ::ψ));
-        [apply in_cons; auto
-        |apply H9 in Hin;
-         destruct Hin as [χ ϕ' Ha];
-         destruct Ha as [α0 Ha];
-         destruct Ha as [o0];
-         andDestruct].
-      exists α0.
-      destruct (eq_dec α0 α) as [|Hneq];
-        [subst α0;
-         exists o'
-        |exists o0];
-        [rewrite eqb_refl; auto
-        |rewrite neq_eqb; auto];
-        auto. *)
+    apply has_self_update_χ_fresh. apply H2.
+    assert (Hinϕ' : In ϕ' (ϕ::ψ)). {
+      simpl. right. apply Hin''.
+    }
+    apply H13.
+    assumption.
 
   - apply self_config;
       intros.
@@ -673,7 +605,7 @@ Proof.
     apply in_cons, in_eq.
     apply H5, in_cons, in_cons;
       auto.
-Admitted. (* Skipped `new` proof, Qed. *)
+Qed.
 
 Hint Resolve reduction_preserves_config_has_self : loo_db.
 

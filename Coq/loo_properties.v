@@ -516,6 +516,19 @@ Qed.
 
 Hint Resolve dom_finite : loo_db.
 
+Lemma update_doesn't_remove :
+  forall (tk tv: Type) m (a k: tk) (v v': tv) `{Eq tk}, 
+                m a = Some v -> 
+                k <> a ->
+                update k v' m a = Some v.
+Proof.
+      intros tk tv m a k v v' HEqtk Hma Hne. 
+      unfold update, t_update. 
+      assert (Hneq : eqb a k = false). { crush. }
+      rewrite Hneq.
+      apply Hma.
+Qed.
+
 Lemma has_self_update_ϕ :
   forall χ ϕ, has_self_ϕ χ ϕ ->
        forall x v, x <> this ->
@@ -590,6 +603,18 @@ Proof.
   apply H, in_eq.
   apply H, in_cons;
     auto.
+Qed.
+
+Lemma has_self_update_χ_fresh : forall χ ϕ o α,
+                            fresh_χ χ α ->
+                            has_self_ϕ χ ϕ -> 
+                            has_self_ϕ (update α o χ) ϕ.
+Proof.
+  intros χ ϕ o α Hfresh Hhasself. apply self_frm. inversion Hhasself as [χ' ϕ' [α' [o' [Hthis Hχ]]]].
+  exists α', o'. split. apply Hthis. 
+  inversion Hfresh as [χ'' α'' Hmax]. inversion Hmax as [χ''' α''' Hα'' Hα'α''].
+  subst. apply Hα'α'' in Hχ as Hχ'. inversion Hχ'. assert (Hne: S_α α'' <> α'). { assert (S m <> n). { crush. } crush. } subst.
+  apply update_doesn't_remove. apply Hχ. apply Hne.
 Qed.
 
 Lemma config_head_wf :

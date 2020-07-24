@@ -16,46 +16,6 @@ Require Import Coq.Logic.FunctionalExtensionality.
     In this file I provide a proof of the Safe example in the FASE2020 paper.
    *)
 
-Definition always_will (A : asrt) :=
-  ¬ (a_will (¬ A)).
-
-Definition always_was (A : asrt) :=
-  ¬ (a_was (¬ A)).
-
-Definition always (A : asrt) :=
-  A ∧ (always_was A) ∧ (always_will A).
-
-Lemma not_always :
-  forall M1 M2 σ0 χ ϕ ψ A, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (¬ always_will A) ->
-                      M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ A ->
-                      (exists σ, M1 ⦂ M2 ⦿ (χ, ϕ :: nil) ⤳⋆ σ /\
-                            M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ ⊨ A /\
-                            M1 ⦂ M2 ◎ (χ, ϕ :: nil) … σ ⊨ ¬ A) \/
-                      M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (a_next (¬ A)).
-Proof.
-  intros M1 M2 σ0 χ ϕ ψ A;
-    intros.
-  inversion H; subst.
-  inversion H6;
-    subst.
-  inversion H7;
-    subst.
-  simpl_crush.
-
-  Check pair_reduction_change.
-
-  destruct (pair_reduction_change M1 M2 σ0 σ') with (P:=fun M1 M2 σ => M1 ⦂ M2 ◎ (χ0, ϕ0 :: ψ0) … σ ⊨ A);
-    auto.
-
-  destruct (sat_excluded_middle M1 M2 σ0 (χ0, ϕ0 :: ψ0) (a_next (¬ A)));
-    [right; auto|left].
-
-  Print pair
-
-  - exists σ'; repeat split; auto.
-    
-Qed.
-
 Module SafeExample.
 
   (** #<h3>#Definitions#</h3># *)
@@ -122,6 +82,15 @@ Below we provide some definitions of "always":
 These are used in the proof, of the Safe example, but perhaps they might be pushed to a more
 general file.
  *)
+  
+  Definition always_will (A : asrt) :=
+    ¬ (a_will (¬ A)).
+
+  Definition always_was (A : asrt) :=
+    ¬ (a_was (¬ A)).
+
+  Definition always (A : asrt) :=
+    A ∧ (always_was A) ∧ (always_will A).
 
 (**
 #<h2>#Proof Sketch#</h2>#
@@ -144,20 +113,6 @@ with access to #<code>#s.secret#</code>#.
                                                                 ∧
                                                                 ((a♢ 0) access s')))).
   Proof.
-    intros.
-    unfold always_will.
-    apply sat_not.
-    apply not_sat_implies_nsat.
-    intro Hcontra.
-    inversion Hcontra;
-      subst.
-    apply negate_elim_sat in H9.
-    inversion H9;
-      subst.
-    simpl in *;
-      a_prop.
-    
-    
   Admitted.
 
 (**
