@@ -1518,6 +1518,19 @@ Qed.
 
 Hint Resolve wf_adaptation : loo_db.
 
+(* Lemma implication_restriction :
+  forall M1 M2 σ A B, (M1 ⦂ M2 ◎ σ ⊨ (A ⇒ B)) -> (M1 ⦂ M2 ◎ σ ⊨ ∀S∙ (a_in A (s_hole 0)) ⇒ B).
+Proof.
+  intros M1 M2 σ A B HAB. inversion HAB; subst.
+    + apply sat_arr1. assumption.
+    + apply sat_arr2.
+      remember (map vMap (snd σ)) as l.
+      apply nsat_all_Σ with (Σ:=l).
+      { intros x Hin. contradiction Hin. }
+      simpl. apply nsat_in with (σ':=σ). apply 
+     (* apply (sat_all_Σ M1 M2 σ (a_in A (s_hole 0))). *)
+Admitted. *)
+
 (*Lemma guards_method_call :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
                  forall χ ϕ σ1' σ2', (χ, ϕ::nil) ◁ σ1 ≜ σ1' ->

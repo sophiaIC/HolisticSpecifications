@@ -1220,24 +1220,24 @@ Qed.
 Hint Resolve acyclic_reduction : loo_db.
 
 Lemma acyclic_reductions :
-  forall M σ1 σ2, reductions M σ1 σ2 ->
+  forall M σ1 σ2, M ∙ σ1 ⤳⋆ σ2 ->
              σ2 <> σ1.
 Proof.
-  intros M σ1 σ2 Hred;
-    induction Hred.
-
+  intros M σ1 σ2 Hred.
+  induction Hred.
   - eauto with loo_db.
-
-  - intro Hcontra;
-      subst.
-  
+  - intro Hcontra; subst. apply red_trans with (σ3:=σ1) in H as H'; try assumption. inversion H'; subst.
+    + apply acyclic_reduction in H0. apply H0. reflexivity.
+    (* + this should be induction but I don't get what I want for the base case?  *)
 Admitted.
 
 Lemma acyclic_pair_reductions :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
                  σ1 <> σ2.
 Proof.
-  
+  intros M1 M2 σ1 σ2 Hred.
+  induction Hred.
+    - intros Hcontra; subst. inversion H; subst. inversion H0; subst.
 Admitted.
 
 Lemma pair_reductions_path_unique :
