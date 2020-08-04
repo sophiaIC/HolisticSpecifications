@@ -849,7 +849,7 @@ Proof.
   - eauto with loo_db.
 Qed.
 
-Lemma pair_reductions_transitive :
+Lemma pair_reductions_transitive_single :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
                  forall σ3, M1 ⦂ M2 ⦿ σ2 ⤳ σ3 ->
                        M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ3.
@@ -862,6 +862,23 @@ Proof.
 
   - eauto with loo_db.
 Qed.
+
+Lemma pair_reductions_transitive :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall σ3, M1 ⦂ M2 ⦿ σ2 ⤳⋆ σ3 ->
+                       M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ3.
+Proof.
+  intros M1 M2 σ1 σ2 Hred.
+  induction Hred;
+    intros.
+  - eapply pair_reductions_transitive_alt;
+      eauto with loo_db.
+
+  - apply IHHred.
+    eapply pair_reductions_transitive_alt;
+      eauto.
+Qed.
+  
 
 Lemma reduction_preserves_addr_classes :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->

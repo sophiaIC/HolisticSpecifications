@@ -8,6 +8,7 @@ Require Import exp.
 Require Import sbst_decoupled.
 Require Import function_operations.
 Require Import hoare.
+Require Import always.
 Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
@@ -16,15 +17,6 @@ Require Import Coq.Logic.FunctionalExtensionality.
      #<h1>#Safe#</h1>#
     In this file I provide a proof of the Safe example in the FASE2020 paper.
    *)
-
-Definition always_will (A : asrt) :=
-  ¬ (a_will (¬ A)).
-
-Definition always_was (A : asrt) :=
-  ¬ (a_was (¬ A)).
-
-Definition always (A : asrt) :=
-  A ∧ (always_was A) ∧ (always_will A).
 
 (*Lemma not_always :
   forall M1 M2 σ0 χ ϕ ψ A, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (¬ always_will A) ->
@@ -183,11 +175,6 @@ the current object is external to #<code>#s#</code># it follows that there
 is 
  *)
 
-  Definition is_private (x : a_var) (y : var) :=
-    (∃x∙ ((a_name (a♢ 0) y)
-          ∧
-          (a_private x (a♢ 0)))).
-
   Parameter internal_step_MyModule :
     forall M σ, internal_step MyModule M σ ->
            exists x y myScr s, contn_is (s_meth x y take (update scr myScr empty) ;; s) σ.
@@ -209,23 +196,90 @@ is
 
   Parameter secret_immutable :
     forall M σ0 σ s v, MyModule ⦂ M ◎ σ0 … σ ⊨ (a_class (a_ s) Safe) ->
-                  MyModule ⦂ M ◎ σ0 … ⋆ ⊨
+                  MyModule ⦂ M ◎ σ0 … ̱ ⊨
                            {pre: (ex_acc_f (e_ s) secret) ⩶ (ex_val v) }
                            σ
                            {post: (ex_acc_f (e_ s) secret) ⩶ (ex_val v)}.
 
+  Lemma this_not_internal :
+    forall {M1 M2 σ0 σ x}, M1 ⦂ M2 ◎ σ0 … σ ⊨ a_name x this ->
+                      forall {σ'}, M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ ¬ (x internal).
+  Proof.
+    intros.
+    a_contradiction.
+    match goal with
+    | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ internal) |-_] =>
+      inversion H;
+        subst;
+        destruct_exists_loo
+    end.
+    match goal with
+    | [H : _ ⦂ _ ◎ _ … _ ⊨ (a_name _ _) |-_] =>
+      inversion H;
+        subst
+    end.
+    match goal with
+      | [H : _ ⦂ _ ⦿ _ ⤳ _ |- _] =>
+        apply pair_reduction_external_self2 in H
+    end.
+    unfold external_self, is_external in *;
+      repeat destruct_exists_loo;
+      andDestruct.
+    repeat simpl_crush.
+  Qed.
+
+  Lemma safe_is_internal :
+    forall M σ0 σ x, MyModule ⦂ M ◎ σ0 … σ ⊨ (a_class x Safe) ->
+                MyModule ⦂ M ◎ σ0 … σ ⊨ (x internal).
+  Proof.
+    intros.
+    match goal with
+    | [H : _ ⦂ _ ◎ _ … _ ⊨ a_class _ _ |- _] =>
+      inversion H;
+        subst
+    end.
+    eapply sat_intrn; eauto.
+    exists SafeDef.
+    eauto.
+  Qed.
+
+  Lemma invariant_class_name :
+    forall {M1 M2 σ0 σ α C}, M1 ⦂ M2 ◎ σ0 … ̱ ⊨ {pre: a_class α C} σ {post: a_class α C}.
+  Proof.
+    intros.
+    apply ht_pr;
+      intros.
+    inversion H;
+      subst.
+    match goal with
+    | [H : ?Ma ⦂ ?Mb ◎ _ … ?σa ⊨ a_class ?α ?C |-
+       ?Ma ⦂ ?Mb ◎ _ … ?σb ⊨ a_class ?α ?C] =>
+      edestruct (pair_reduction_preserves_addr_classes);
+        eauto
+    end.
+    andDestruct.
+    eapply sat_class;
+      eauto.
+  Qed.
+
   Lemma safe_does_not_expose_secret :
-    forall M σ0 σ s myScr, MyModule ⦂ M ◎ σ0 … σ ⊨ (a_class (a_ s) Safe) ->
-                      MyModule ⦂ M ◎ σ0 … σ ⊨ ((ex_acc_f (e_ s) secret) ⩶ (e_ myScr)) ->
-                      σ_wf σ ->
-                      MyModule ⦂ M ◎ σ0 … ⋆ ⊨
-                               {pre: (¬ is_private (a_ s) this)
+    forall M s myScr σ0 σ, MyModule ⦂ M ◎ σ0 … ̱ ⊨
+                               {pre: (a_class (a_ s) Safe)
+                                     ∧
+                                     ((ex_acc_f (e_ s) secret) ⩶ (e_ myScr))
+                                     ∧
+                                     (¬ is_private (a_ s) this)
                                      ∧
                                      ∀x∙ ((a_private (a_ s) (a♢ 0))
                                           ∨
                                           (¬ ((a♢ 0) access (a_ myScr))))}
                                σ
-                               {post: (¬ is_private (a_ s) this)
+                               {post: (a_class (a_ s) Safe)
+                                      ∧
+                                      ((ex_acc_f (e_ s) secret) ⩶ (e_ myScr))
+                                      ∧
+                                      (¬ is_private (a_ s) this)
                                       ∧
                                       ∀x∙ ((a_private (a_ s) (a♢ 0))
                                            ∨
@@ -237,7 +291,7 @@ is
     destruct (pair_reduction_inversion_hoare MyModule M σ σ');
       auto.
 
-    - a_prop;
+(*    - a_prop;
         simpl in *;
         auto.
 
@@ -267,25 +321,49 @@ is
             auto;
             a_prop.
           ** destruct H8.
-             exp_auto;
-               simpl_crush.
-             blerg.
-             (*
-               σ' is external. 
-               this var is internal class (Safe).
-               contradiction.
-              *)
-             
-             eapply (hoare_triple_pr_inversion
-                       (secret_immutable M σ0 σ s (v_addr myScr)H)) in H0;
-               eauto.
-             exp_auto.
-             (* secret never changes *)
+             *** exp_auto;
+                   simpl_crush.
+                 match goal with
+                 | [ H : _ ⦂ _ ◎ _ … ?σ ⊨ a_class _ _,
+                     Hred : _ ⦂ _ ⦿ ?σ ⤳ _ |- _] =>
+                 eapply (hoare_triple_pr_inversion
+                           (invariant_class_name)
+                           Hred)
+                   in H
+                 end.
+                 match goal with
+                 | [H : _ ⦂ _ ◎ _ … ?σ ⊨ a_class _ _ |- _] =>
+                   apply safe_is_internal in H
+                 end.
+                 match goal with
+                 | [H : _ ⦂ _ ◎ _ … ?σ ⊨ a_name _ this,
+                    Hred : _ ⦂ _ ⦿ _ ⤳ ?σ |- _] =>
+                   eapply (this_not_internal) in H;
+                     [inversion H; subst|apply Hred]
+                 end.
+                 a_prop.
+
+             *** exp_auto.
+                 admit.
+          ** *)
         
 
-  Qed.
+  Admitted.
 
-  Definition HolisticSpec := (∀x∙ (∀x∙(((¬ internal_to' (a♢ 1) this)
+  Definition treasure_removed_implies_access :
+    forall M σ0 σ s myScr, MyModule ⦂ M ◎ σ0 … σ ⊨ (a_class (a_ s) Safe) ->
+                      MyModule ⦂ M ◎ σ0 … σ ⊨ ((ex_acc_f (e_ s) secret) ⩶ (e_ myScr)) ->
+                      MyModule ⦂ M ◎ σ0 … σ ⊨ ((ex_acc_f (e_ s) treasure) ⩶̸ (ex_null)) ->
+                      MyModule ⦂ M ◎ σ0 … σ ⊨ (a_will ((ex_acc_f (e_ s) treasure) ⩶ (ex_null))) ->
+                      MyModule ⦂ M ◎ σ0 … σ ⊨ (a_will (∃x∙ ((a_name (a♢ 0) this)
+                                                            ∧
+                                                            ((a♢ 0) access (a_ myScr))
+                                              ))).
+  Proof.
+
+  Admitted.
+
+  Definition HolisticSpec := (∀x∙ (∀x∙(((¬ is_private (a♢ 1) this)
                                         ∧
                                         (a_class (a♢1) Safe)
                                         ∧
@@ -295,7 +373,7 @@ is
                                         ∧
                                         (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
                                          ⟶
-                                         (∃x∙ ((¬ internal_to (a♢2) (a♢0))
+                                         (∃x∙ ((¬ a_private (a♢2) (a♢0))
                                                ∧
                                                ((a♢0) access (a♢1))))
                              ))).
@@ -308,6 +386,75 @@ is
     a_intros;
       a_prop;
       simpl in *.
-  Admitted.
+
+    assert (Hacc : MyModule ⦂ M' ◎ σ0 … σ ⊨ (a_will (∃x∙ ((a_name (a♢ 0) this)
+                                                  ∧
+                                                  ((a♢ 0) access (a_ α0))
+           ))));
+      [eapply treasure_removed_implies_access; eauto|].
+
+    apply (entails_implies (not_all_x_ex)).
+
+    a_contradiction.
+    inversion H7;
+      subst;
+      simpl in *.
+
+    assert (Hinv : MyModule ⦂ M' ◎ σ0 … σ ⊨ ((a_class (a_ α) Safe)
+                                             ∧
+                                             ((ex_acc_f (e_ α) secret) ⩶ (e_ α0))
+                                             ∧
+                                             (¬ is_private (a_ α) this)
+                                             ∧
+                                             ∀x∙ ((a_private (a_ α) (a♢ 0))
+                                                  ∨
+                                                  (¬ ((a♢ 0) access (a_ α0))))));
+      auto.
+    - a_prop;
+        auto.
+      + unfold is_private.
+        apply (entails_implies not_ex_x_all_not_2).
+        a_intros.
+        a_contradiction.
+        a_prop.
+        specialize (H4 α1 o1);
+          auto_specialize.
+        a_prop.
+        destruct H4;
+          a_prop.
+      + a_intros.
+        specialize (Hcontra α1 o1);
+          auto_specialize.
+        a_prop.
+        destruct Hcontra;
+          [left|right];
+          a_prop;
+          auto.
+    - apply invariant_always_will in Hinv;
+        [|apply safe_does_not_expose_secret].
+      repeat (a_always; andDestruct).
+      a_prop.
+      apply (always_will_will_conj Hb) in Hacc.
+      apply (always_will_will_conj Hb0) in Hacc.
+      inversion Hacc;
+        subst;
+        simpl in *.
+      a_prop;
+        simpl in *.
+      inversion H9;
+        subst;
+        simpl in *.
+      a_prop.
+      specialize (H14 α1 o1);
+        auto_specialize.
+      a_prop.
+      destruct H14;
+        subst;
+        a_prop.
+      + apply sat_and with (A2:=a_name (a_ α1) this) in H14;
+          [|auto].
+        apply (entails_implies a_private_is_private) in H14.
+        a_prop.
+  Qed.
 
 End SafeExample.

@@ -2,47 +2,6 @@ Require Import common.
 Require Import loo_def.
 Require Import decoupling.
 
-Class Raiseable (A : Type) :=
-  {
-    raise : A -> nat -> A
-  }.
-
-Notation "a '↑' n" := (raise a n)(at level 40).
-
-Instance raiseNat : Raiseable nat :=
-  {
-    raise n m := if leb m n
-                 then (S n)
-                 else n
-  }.
-Instance raiseAVar : Raiseable a_var :=
-  {
-    raise x n := match x with
-                 | a_hole m => a_hole (m ↑ n)
-                 | _ => x
-                 end
-  }.
-
-Instance raiseExpr : Raiseable expr :=
-  {
-    raise :=
-      fix raise' e n :=
-        match e with
-        | ex_hole m => ex_hole (m ↑ n)
-        | ex_eq e1 e2 => ex_eq (raise' e1 n) (raise' e2 n)
-        | ex_lt e1 e2 => ex_eq (raise' e1 n) (raise' e2 n)
-        | ex_if e1 e2 e3 => ex_if (raise' e1 n) (raise' e2 n) (raise' e3 n)
-        | ex_acc_f e' f => ex_acc_f (raise' e' n) f
-        | ex_acc_g e1 g e2 => ex_acc_g (raise' e1 n) g (raise' e2 n)
-        | _ => e
-        end
-  }.
-
-Instance raiseFn {A B : Type}`{Eq A}`{Raiseable B} : Raiseable (partial_map A B) :=
-  {
-    raise f n := fun x => bind (f x) (fun y => Some (y ↑ n))
-  }.
-
 (*Instance raiseAsrt : Raiseable asrt :=
   {
     raise :=
