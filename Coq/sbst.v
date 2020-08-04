@@ -1,85 +1,8 @@
 Require Import common.
 Require Import loo_def.
-Require Import chainmail.
-
-Class Raiseable (A : Type) :=
-  {
-    raise : A -> nat -> A
-  }.
-
-Notation "a '↑' n" := (raise a n)(at level 40).
-
-Instance raiseNat : Raiseable nat :=
-  {
-    raise n m := if leb m n
-                 then (S n)
-                 else n
-  }.
-
-Instance raiseExp : Raiseable exp :=
-  {
-    raise :=
-      fix raise' e n :=
-        match e with
-        | e_hole m => e_hole (m ↑ n)
-        | e_eq e1 e2 => e_eq (raise' e1 n) (raise' e2 n)
-        | e_if e1 e2 e3 => e_if (raise' e1 n) (raise' e2 n) (raise' e3 n)
-        | e_acc_f e' f => e_acc_f (raise' e' n) f
-        | e_acc_g e1 g e2 => e_acc_g (raise' e1 n) g (raise' e2 n)
-        | _ => e
-        end
-  }.
-
-Instance raiseAVar : Raiseable a_var :=
-  {
-    raise x n := match x with
-                 | a_hole m => a_hole (m ↑ n)
-                 | _ => x
-                 end
-  }.
-
-Instance raiseFn {A B : Type}`{Eq A}`{Raiseable B} : Raiseable (partial_map A B) :=
-  {
-    raise f n := fun x => bind (f x) (fun y => Some (y ↑ n))
-  }.
-
-Instance raiseAsrt : Raiseable asrt :=
-  {
-    raise :=
-      fix raise' A n :=
-        match A with
-        | a_exp e => a_exp (e ↑ n)
-        | a_eq e1 e2 => a_eq (e1 ↑ n) (e2 ↑ n)
-        | a_class e C => a_class (e ↑ n) C
-        | a_set e Σ => a_set (e ↑ n) Σ
-
-        | A1 ⇒ A2 => (raise' A1 n) ⇒ (raise' A2 n)
-        | A1 ∧ A2 => (raise' A1 n) ∧ (raise' A2 n)
-        | A1 ∨ A2 => (raise' A1 n) ∨ (raise' A2 n)
-        | ¬ A' => ¬ (raise' A' n)
-
-        | ∀x∙ A' => ∀x∙ (raise' A' (S n))
-        | ∃x∙ A' => ∃x∙ (raise' A' (S n))
-        | ∀S∙ A' => ∀S∙ (raise' A' (S n))
-        | ∃S∙ A' => ∃S∙ (raise' A' (S n))
-
-        | x access y => (x ↑ n) access (y ↑ n)
-        | x calls y ∎ m ⟨ vMap ⟩ => (x ↑ n) calls (y ↑ n) ∎ m ⟨ vMap ↑ n ⟩
-
-        | a_next A' => a_next (raise' A' n)
-        | a_will A' => a_will (raise' A' n)
-        | a_prev A' => a_prev (raise' A' n)
-        | a_was A' => a_was (raise' A' n)
-
-        | a_in A' Σ => a_in (raise' A' n) Σ
-
-        | x external => (x ↑ n) external
-        | x internal => (x ↑ n) internal
-        end
-  }.
 
 Lemma sbst_x_neg :
-  forall (x : var) n A, ([x /s n] ¬A) = (¬ ([x /s n]A)).
+  forall (x : var) n A, (x /s n] ¬A) = (¬ ([x /s n]A)).
 Proof.
   auto.
 Qed.

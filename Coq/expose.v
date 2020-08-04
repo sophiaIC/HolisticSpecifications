@@ -1,4 +1,4 @@
-Require Import common.
+(*Require Import common.
 Require Import loo_def.
 Require Import chainmail.
 Require Import loo_properties.
@@ -238,4 +238,4 @@ Module ExposeExample.
     
   Abort.
 
-End ExposeExample.
+End ExposeExample.*)

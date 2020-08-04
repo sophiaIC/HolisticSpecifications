@@ -88,10 +88,11 @@ Lemma sat_change_pair_reductions :
                              (M1 ⦂ M2 ⦿ σ' ⤳⋆ σ2 \/
                               σ' = σ2) /\
                              (M1 ⦂ M2 ◎ σ0 … (σ ◁ ψ) ⊨ A) /\
-                             (M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ ¬ A) /\
+                             (M1 ⦂ M2 ◎ σ0 … (σ' ◁ ψ) ⊨ ¬ A).
+  (*/\
                              (forall σ'', M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ'' ->
                                      M1 ⦂ M2 ⦿ σ'' ⤳⋆ σ ->
-                                     M1 ⦂ M2 ◎ σ0 … (σ'' ◁ ψ) ⊨ A).
+                                     M1 ⦂ M2 ◎ σ0 … (σ'' ◁ ψ) ⊨ A).*)
 Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
@@ -102,8 +103,31 @@ Proof.
       repeat split;
       auto;
       intros.
-    admit. (* acylic contradiction: σ'' cannot exist *)
+    (*admit.  acylic contradiction: σ'' cannot exist *)
 
-  - admit.
-    
-Admitted.
+  - destruct (sat_excluded_middle M1 M2 σ0 (σ ◁ ψ) A).
+    + exists σ, σ2;
+        repeat split;
+        auto.
+
+    + destruct (IHHred χ ϕ) with (σ0:=σ0)(ψ:=ψ)(A:=A);
+        eauto with chainmail_db;
+        repeat destruct_exists_loo;
+        andDestruct.
+      exists x, σ3;
+        repeat split;
+        auto.
+      match goal with
+      | [Ha : _ ⦂ _ ⦿ ?σ1 ⤳⋆ ?σ \/ ?σ1 = ?σ,
+              Hb : _ ⦂ _ ⦿ ?σ ⤳ ?σ',
+                   Hc : _ ⦂ _ ⦿ ?σ' ⤳⋆ ?σ2 \/ ?σ' = ?σ2,
+                        Hd : _ ⦂ _ ⦿ ?σ2 ⤳ ?σ3
+         |- _ ⦂ _ ⦿ ?σ' ⤳⋆ ?σ3 \/ ?σ' = ?σ3] =>
+        left;
+          destruct Ha, Hc;
+          subst;
+          auto
+      end;
+        try solve [eapply pair_reductions_transitive; eauto with loo_db];
+        eauto with loo_db.
+Qed.
