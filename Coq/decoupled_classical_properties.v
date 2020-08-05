@@ -4,7 +4,7 @@ Require Import decoupling.
 Require Import loo_properties.
 Require Import loo_reduction_properties.
 Require Import function_operations.
-Require Import sbst.
+Require Import sbst_decoupled.
 Require Import List.
 Require Import String.
 Open Scope string_scope.

@@ -796,15 +796,15 @@ Proof.
 
   (** Case: e1 < e2 *)
   - inversion H0; subst; eauto.
-    specialize (IHHeval1 (v_nat i0));
-      specialize (IHHeval2 (v_nat i3));
+    specialize (IHHeval1 (v_int i0));
+      specialize (IHHeval2 (v_int i3));
       auto_specialize;
       crush.
 
   (** Case: e1 >= e2 *)
   - inversion H0; subst; eauto.
-    specialize (IHHeval1 (v_nat i0));
-      specialize (IHHeval2 (v_nat i3));
+    specialize (IHHeval1 (v_int i0));
+      specialize (IHHeval2 (v_int i3));
       auto_specialize;
       crush.
 
