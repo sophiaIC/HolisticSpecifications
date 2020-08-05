@@ -4,7 +4,7 @@ Require Import List.
 Require Import common.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Export Coq.Numbers.BinNums.
-Require Export Coq.ZArith.BinInt.
+Require Export ZArith.
 
 Inductive fld : Type := fieldID : nat -> fld.
 
@@ -23,10 +23,10 @@ Inductive value : Type :=
 | v_false : value
 | v_null  : value
 | v_addr   : addr -> value
-| v_nat : nat -> value.
+| v_int : Z -> value.
 
-(*Hint Resolve Z.eqb_refl Z.eqb_neq Z.eqb_sym Z.eqb_eq Z.eq_dec Z.eqb_neq : eq_db.
-Hint Rewrite Z.eqb_refl Z.eqb_neq Z.eqb_sym Z.eqb_eq Z.eq_dec Z.eqb_neq : eq_db.*)
+Hint Resolve Z.eqb_refl Z.eqb_neq Z.eqb_sym Z.eqb_eq Z.eq_dec Z.eqb_neq : eq_db.
+Hint Rewrite Z.eqb_refl Z.eqb_neq Z.eqb_sym Z.eqb_eq Z.eq_dec Z.eqb_neq : eq_db.
 
 Definition state := partial_map var value.
 
@@ -263,7 +263,7 @@ Program Instance eqbValue : Eq value :=
              | v_false, v_false => true
              | v_null, v_null => true
              | v_addr α1, v_addr α2 => eqb α1 α2
-             | v_nat i, v_nat j => i =? j
+             | v_int i, v_int j => Z.eqb i j
              | _, _ => false
              end
   }.
@@ -369,7 +369,7 @@ Next Obligation.
 Defined.
 Next Obligation.
   destruct a; simpl; auto;
-    try solve [apply Nat.eqb_refl].
+    try solve [apply Z.eqb_refl].
   destruct a; simpl; auto.
   apply Nat.eqb_refl.
 Defined.
@@ -379,7 +379,7 @@ Next Obligation.
   destruct a; simpl; auto;
     destruct a0; simpl; auto.
   rewrite Nat.eqb_sym; auto.
-  rewrite Nat.eqb_sym; auto.
+  rewrite Z.eqb_sym; auto.
 (*  rewrite Z.eqb_sym; auto.*)
 Defined.
 Next Obligation.
@@ -387,7 +387,7 @@ Next Obligation.
     try solve [crush].
   destruct a, a0; simpl; crush; eauto.
   apply Nat.eqb_eq in H; subst; auto.
-  apply Nat.eqb_eq in H; subst; auto.
+  apply Z.eqb_eq in H; subst; auto.
 (*  apply Z.eqb_eq in H; subst; auto.*)
 Defined.
 Next Obligation.
@@ -396,7 +396,7 @@ Next Obligation.
   destruct a, a0; simpl; crush; eauto.
   inversion H0; subst.
   apply Nat.eqb_neq in H; subst; auto.
-  apply Nat.eqb_neq in H; subst; auto.
+  apply Z.eqb_neq in H; subst; auto.
   crush.
 (*  apply Z.eqb_neq in H; subst; auto.
   crush.*)
@@ -408,9 +408,9 @@ Next Obligation.
   destruct (Nat.eq_dec n n0) as [|Hneq];
     [crush
     |apply <- Nat.eqb_neq in Hneq; auto].
-  destruct (Nat.eq_dec n n0) as [|Hneq];
+  destruct (Z.eq_dec z z0) as [|Hneq];
     [crush
-    |apply <- Nat.eqb_neq in Hneq; auto].
+    |apply <- Z.eqb_neq in Hneq; auto].
 (*  apply Z.eqb_neq; crush.*)
 Defined.
 Next Obligation.
@@ -419,7 +419,7 @@ Next Obligation.
   destruct (eq_dec a a0) as [|Hneq]; [subst|];
     auto.
   right; crush.
-  destruct (eq_dec n n0) as [|Hneq]; [subst|];
+  destruct (Z.eq_dec z z0) as [|Hneq]; [subst|];
     auto.
   right; crush.
 (*  destruct (Z.eq_dec z z0) as [|Hneq]; [subst|];
@@ -452,7 +452,7 @@ Notation "'e_true'" := (e_val v_true)(at level 40).
 Notation "'e_false'" := (e_val v_false)(at level 40).
 Notation "'e_null'" := (e_val v_null)(at level 40).
 Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
-Notation "'e_nat' i" := (e_val (v_nat i))(at level 40).
+Notation "'e_int' i" := (e_val (v_int i))(at level 40).
 Notation "e1 '⩵' e2" := (e_eq e1 e2)(at level 40).
 Notation "e1 '⩵̸' e2" := ((e1 ⩵ e2) ⩵ e_false)(at level 40).
 Notation "e1 '⩻' e2" := (e_lt e1 e2)(at level 40).
@@ -835,7 +835,7 @@ Hint Constructors M_wf : loo_db.
 Reserved Notation "M '∙' σ '⊢' e1 '↪' e2" (at level 40).
 
 (** #<h3>#Expression evaluation (Fig 4, OOPSLA2019)#</h3>#  *)
-
+Open Scope Z_scope.
 Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
 
 (** M, σ true ↪ true     (True_Val) *)
@@ -919,33 +919,35 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
                                   v1 <> v2 ->
                                   M ∙ σ ⊢ (e_eq e1 e2) ↪ v_false
 
-| v_lt : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_nat i1) ->
-                            M ∙ σ ⊢ e2 ↪ (v_nat i2) ->
+| v_lt : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                            M ∙ σ ⊢ e2 ↪ (v_int i2) ->
                             i1 < i2 ->
                             M ∙ σ ⊢ (e_lt e1 e2) ↪ v_true
 
-| v_nlt : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_nat i1) ->
-                             M ∙ σ ⊢ e2 ↪ (v_nat i2) ->
+| v_nlt : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                             M ∙ σ ⊢ e2 ↪ (v_int i2) ->
                              ~ i1 < i2 ->
                              M ∙ σ ⊢ (e_lt e1 e2) ↪ v_false
 
-| v_plus : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_nat i1) ->
-                              M ∙ σ ⊢ e2 ↪ (v_nat i2) ->
-                              M ∙ σ ⊢ (e_plus e1 e2) ↪ (v_nat (i1 + i2))
+| v_plus : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                              M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                              M ∙ σ ⊢ (e_plus e1 e2) ↪ (v_int (i1 + i2))
 
-| v_minus : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_nat i1) ->
-                               M ∙ σ ⊢ e2 ↪ (v_nat i2) ->
-                               M ∙ σ ⊢ (e_minus e1 e2) ↪ (v_nat (i1 - i2))
+| v_minus : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                               M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                               M ∙ σ ⊢ (e_minus e1 e2) ↪ (v_int (i1 - i2))
 
-| v_mult : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_nat i1) ->
-                              M ∙ σ ⊢ e2 ↪ (v_nat i2) ->
-                              M ∙ σ ⊢ (e_mult e1 e2) ↪ (v_nat (i1 * i2))
+| v_mult : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                              M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                              M ∙ σ ⊢ (e_mult e1 e2) ↪ (v_int (i1 * i2))
 
-| v_div : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_nat i1) ->
-                             M ∙ σ ⊢ e2 ↪ (v_nat i2) ->
-                             M ∙ σ ⊢ (e_div e1 e2) ↪ (v_nat (i1 / i2))
+| v_div : forall M σ e1 e2 i1 i2, M ∙ σ ⊢ e1 ↪ (v_int i1) ->
+                             M ∙ σ ⊢ e2 ↪ (v_int i2) ->
+                             M ∙ σ ⊢ (e_div e1 e2) ↪ (v_int (i1 / i2))
 
 where "M '∙' σ '⊢' e1 '↪' e2":= (evaluate M σ e1 e2).
+
+Close Scope Z_scope.
 
 Hint Constructors evaluate : loo_db.
 
