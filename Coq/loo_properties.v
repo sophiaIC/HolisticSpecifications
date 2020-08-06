@@ -37,6 +37,10 @@ Ltac simpl_crush :=
     inversion Hb;
     subst;
     clear Hb
+  | [H : true = false |- _] =>
+    inversion H
+  | [H : false = true |- _] =>
+    inversion H
   end.
 
 Lemma prop_not_and_distr :

@@ -271,7 +271,7 @@ is
                                      ∧
                                      (¬ is_private (a_ s) this)
                                      ∧
-                                     ∀x∙ ((a_private (a_ s) (a♢ 0))
+                                     ∀[x⦂ a_Obj]∙ ((a_private (a_ s) (a♢ 0))
                                           ∨
                                           (¬ ((a♢ 0) access (a_ myScr))))}
                                σ
@@ -281,7 +281,7 @@ is
                                       ∧
                                       (¬ is_private (a_ s) this)
                                       ∧
-                                      ∀x∙ ((a_private (a_ s) (a♢ 0))
+                                      ∀[x⦂ a_Obj]∙ ((a_private (a_ s) (a♢ 0))
                                            ∨
                                            (¬ ((a♢ 0) access (a_ myScr))))}.
   Proof.
@@ -355,7 +355,7 @@ is
                       MyModule ⦂ M ◎ σ0 … σ ⊨ ((ex_acc_f (e_ s) secret) ⩶ (e_ myScr)) ->
                       MyModule ⦂ M ◎ σ0 … σ ⊨ ((ex_acc_f (e_ s) treasure) ⩶̸ (ex_null)) ->
                       MyModule ⦂ M ◎ σ0 … σ ⊨ (a_will ((ex_acc_f (e_ s) treasure) ⩶ (ex_null))) ->
-                      MyModule ⦂ M ◎ σ0 … σ ⊨ (a_will (∃x∙ ((a_name (a♢ 0) this)
+                      MyModule ⦂ M ◎ σ0 … σ ⊨ (a_will (∃[x⦂ a_Obj]∙ ((a_name (a♢ 0) this)
                                                             ∧
                                                             ((a♢ 0) access (a_ myScr))
                                               ))).
@@ -363,19 +363,21 @@ is
 
   Admitted.
 
-  Definition HolisticSpec := (∀x∙ (∀x∙(((¬ is_private (a♢ 1) this)
-                                        ∧
-                                        (a_class (a♢1) Safe)
-                                        ∧
-                                        ((ex_acc_f (e♢1) secret) ⩶ (e♢0))
-                                        ∧
-                                        ((ex_acc_f (e♢1) treasure) ⩶̸ (ex_null))
-                                        ∧
-                                        (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
-                                         ⟶
-                                         (∃x∙ ((¬ a_private (a♢2) (a♢0))
-                                               ∧
-                                               ((a♢0) access (a♢1))))
+  Definition HolisticSpec := (∀[x⦂ a_Obj]∙
+                               (∀[x⦂ a_Obj]∙
+                                 (((¬ is_private (a♢ 1) this)
+                                   ∧
+                                   (a_class (a♢1) Safe)
+                                   ∧
+                                   ((ex_acc_f (e♢1) secret) ⩶ (e♢0))
+                                   ∧
+                                   ((ex_acc_f (e♢1) treasure) ⩶̸ (ex_null))
+                                   ∧
+                                   (a_will ((ex_acc_f (e♢1) treasure) ⩶ (ex_null))))
+                                    ⟶
+                                    (∃[x⦂ a_Obj]∙ ((¬ a_private (a♢2) (a♢0))
+                                                   ∧
+                                                   ((a♢0) access (a♢1))))
                              ))).
 
   Lemma Safe_satisfies_HolisticSpec :
@@ -387,44 +389,41 @@ is
       a_prop;
       simpl in *.
 
-    assert (Hacc : MyModule ⦂ M' ◎ σ0 … σ ⊨ (a_will (∃x∙ ((a_name (a♢ 0) this)
-                                                  ∧
-                                                  ((a♢ 0) access (a_ α0))
+    assert (Hacc : MyModule ⦂ M' ◎ σ0 … σ ⊨ (a_will (∃[x⦂ a_Obj]∙
+                                                      ((a_name (a♢ 0) this)
+                                                       ∧
+                                                       ((a♢ 0) access (a_ α))
            ))));
-      [eapply treasure_removed_implies_access; eauto|].
+      [apply treasure_removed_implies_access with (s:=α0); eauto|].
 
-    apply (entails_implies (not_all_x_ex)).
+    apply (entails_implies (not_all_ex)).
 
     a_contradiction.
-    inversion H7;
-      subst;
-      simpl in *.
 
-    assert (Hinv : MyModule ⦂ M' ◎ σ0 … σ ⊨ ((a_class (a_ α) Safe)
+    assert (Hinv : MyModule ⦂ M' ◎ σ0 … σ ⊨ ((a_class (a_ α0) Safe)
                                              ∧
-                                             ((ex_acc_f (e_ α) secret) ⩶ (e_ α0))
+                                             ((ex_acc_f (e_ α0) secret) ⩶ (e_ α))
                                              ∧
-                                             (¬ is_private (a_ α) this)
+                                             (¬ is_private (a_ α0) this)
                                              ∧
-                                             ∀x∙ ((a_private (a_ α) (a♢ 0))
-                                                  ∨
-                                                  (¬ ((a♢ 0) access (a_ α0))))));
+                                             ∀[x⦂ a_Obj]∙ ((a_private (a_ α0) (a♢ 0))
+                                                           ∨
+                                                           (¬ ((a♢ 0) access (a_ α))))));
       auto.
     - a_prop;
         auto.
       + unfold is_private.
-        apply (entails_implies not_ex_x_all_not_2).
+        apply (entails_implies not_ex_all_not_2).
         a_intros.
         a_contradiction.
         a_prop.
-        specialize (H4 α1 o1);
-          auto_specialize.
+        specialize (H4 (ax_val (v_ α1)) (t_obj σ α1 o1 Hb1)).
         a_prop.
         destruct H4;
           a_prop.
-      + a_intros.
-        specialize (Hcontra α1 o1);
-          auto_specialize.
+      + a_intros;
+          a_prop.
+        specialize (Hcontra (ax_val (v_ α1)) (t_obj σ α1 o1 Hb1)).
         a_prop.
         destruct Hcontra;
           [left|right];
@@ -434,26 +433,26 @@ is
         [|apply safe_does_not_expose_secret].
       repeat (a_always; andDestruct).
       a_prop.
-      apply (always_will_will_conj Hb) in Hacc.
-      apply (always_will_will_conj Hb0) in Hacc.
+      apply (always_will_will_conj Hb2) in Hacc.
+      apply (always_will_will_conj Hb1) in Hacc.
       inversion Hacc;
         subst;
         simpl in *.
       a_prop;
         simpl in *.
-      inversion H9;
+      inversion H2;
         subst;
         simpl in *.
       a_prop.
-      specialize (H14 α1 o1);
-        auto_specialize.
+      specialize (H9 (ax_val (v_ α1)) (t_obj σ' α1 o1 Hb4)).
       a_prop.
-      destruct H14;
+      simpl in *.
+      destruct H9;
         subst;
         a_prop.
-      + apply sat_and with (A2:=a_name (a_ α1) this) in H14;
+      + apply sat_and with (A2:=a_name (a_ α1) this) in H9;
           [|auto].
-        apply (entails_implies a_private_is_private) in H14.
+        apply (entails_implies a_private_is_private) in H9.
         a_prop.
   Qed.
 

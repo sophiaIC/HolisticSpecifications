@@ -113,7 +113,19 @@ Module BankAccount.
   Definition HolisticSpec :=
     (∀x∙ (((a_class (a♢ 0) Account)
            ∧
-           (changes (a♢ 0) balance)))).
-  
+           (changes (a♢ 0) balance))
+            ⟶
+            (∃x∙ (((a♢ 0) calls (a♢ 1) ▸ (am_ deposit) ⟨ update
+                                                           src (a♢ 0)
+                                                           (update
+                                                              amt (a♢ 0)
+                                                              empty) ⟩)
+                  ∨
+                  ((a♢ 0) calls (a♢ 0) ▸ (am_ deposit) ⟨ update
+                                                           src (a♢ 1)
+                                                           (update
+                                                              amt (a♢ 0)
+                                                              empty) ⟩))))).
+
 
 End BankAccount.
