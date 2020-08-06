@@ -96,7 +96,7 @@ Proof.
   
 Admitted.
 
-Lemma was_change_pair_reduction :
+(*Lemma was_change_pair_reduction :
   forall M1 M2 σ' σ, M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
                 σ_wf σ' ->
                 forall A, M1 ⦂ M2 ◎ σ ⊨ A ->
@@ -168,9 +168,9 @@ Proof.
       * right; left;
           exists σ, σ0;
           eauto with loo_db.
-Qed.
+Qed.*)
 
-Inductive pair_reductions_alt : mdl -> mdl -> config -> config -> Prop :=
+(*Inductive pair_reductions_alt : mdl -> mdl -> config -> config -> Prop :=
 | prs_single' : forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
                                pair_reductions_alt M1 M2 σ1 σ2
 | prs_trans'  : forall M1 M2 σ1 σ σ2, pair_reductions_alt M1 M2 σ1 σ ->
@@ -1658,17 +1658,4 @@ mean what we initially meant it to mean, however,
 ideally we would like to model non-determinism of reduction 
 to cover really world programs.
 
- *)
- 
-(* Lemma restricted_reduction_implies_reduction :
-  forall M M' ϕ χ Σ ϕΣ, (χ, ϕ :: nil) ↓ Σ ≜ ϕΣ ->
-    (exists σ, M ⦂ M' ⦿ ϕΣ ⤳ σ) ->
-    (exists σ, M ⦂ M' ⦿ (χ, ϕ :: nil) ⤳ σ)
-.
-Proof.
-  intros M M' ϕ χ Σ ϕΣ HϕΣ [σ Hσ].
-  inversion HϕΣ; subst; simpl in *.
-  inversion Hσ; subst.
-  - inversion H4; subst.
-    + 
-   *)
+ *)*)

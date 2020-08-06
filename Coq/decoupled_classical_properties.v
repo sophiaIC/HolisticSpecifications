@@ -4,7 +4,7 @@ Require Import decoupling.
 Require Import loo_properties.
 Require Import loo_reduction_properties.
 Require Import function_operations.
-Require Import sbst.
+Require Import sbst_decoupled.
 Require Import List.
 Require Import String.
 Open Scope string_scope.
@@ -62,20 +62,9 @@ Proof.
       [eval_rewrite;
        crush|crush; eauto].
 
-  - (* Case 11: sat_all_x *)
+  - (* Case 11: sat_all *)
     inversion Hcontra; subst;
-      contradiction (H α o);
-      auto.
-
-  - (* Case 12: sat_ex_x *)
-    inversion Hcontra; subst;
-      contradiction H; eauto.
-
-  - admit.
-
-  - (* Case 13: sat_all_m *)
-    inversion Hcontra; subst;
-      contradiction (H m);
+      contradiction (H x);
       auto.
 
   - (* Case 14: sat_access2 *)
@@ -146,19 +135,18 @@ Proof.
   - (* next *)
     inversion Hcontra;
       subst.
-    simpl_crush; unique_reduction_auto.
+    unique_reduction_auto.
     auto.
 
-  - (* will *)
-    inversion Hcontra; subst;
-      simpl_crush.
+(*  - (* will *)
+    inversion Hcontra; subst.
     match goal with
     | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ σ'' -> _,
          Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ ?σ' |- _] =>
       specialize (H σ')
     end;
       auto_specialize;
-      auto.
+      auto.*)
 
   - (* prev 1 *)
     inversion Hcontra; subst.
@@ -201,29 +189,14 @@ Proof.
     inversion Hcontra; subst;
       crush.
 
-  - (* nsat_all_x *)
+  - (* nsat_all *)
     inversion Hcontra; subst.
     match goal with
-    | [Ha : forall α' o', ?m α' = Some o' -> _,
-         Hb : ?m ?α = Some ?o |- _] =>
-      specialize (Ha α o Hb)
+    | [Ha : forall x, has_type ?m x ?T  -> _,
+         Hb : has_type ?m ?x ?T |- _] =>
+      specialize (Ha x Hb)
     end.
     auto.
-
-  - (* nsat_ex_x *)
-    inversion Hcontra; subst.
-    repeat match goal with
-           | [Ha : forall α' o', ?m α' = Some o' -> _,
-                Hb : ?m ?α = Some ?o |- _] =>
-             specialize (Ha α o Hb)
-           end.
-    auto.
-
-  - admit.
-
-  - (* nsat_ex_m *)
-    inversion Hcontra; subst.
-    specialize ( H m); auto.
 
   - (* nsat_access1 *)
     inversion Hcontra; subst; auto.
@@ -304,15 +277,14 @@ Proof.
 
   - (* nsat_next *)
     inversion Hcontra; subst.
-    simpl_crush; unique_reduction_auto.
+    unique_reduction_auto.
     auto.
 
   - (* nsat_will *)
     inversion Hcontra; subst.
-    simpl_crush.
     match goal with
-    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ σ'' -> ~ _,
-         Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ ?σ' |- _] =>
+    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⋆⌉ σ'' -> ~ _,
+         Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⋆⌉ ?σ' |- _] =>
       specialize (H σ')
     end;
       auto_specialize;
@@ -436,11 +408,11 @@ Proof.
     [apply arr_prop2|apply arr_prop1].
 Qed.
 
-Lemma all_x_prop :
-  forall M1 M2 σ0 σ A,
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀x∙A) <->
-    (forall α (o : obj), mapp σ α = Some o ->
-            M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0]A)).
+Lemma all_prop :
+  forall M1 M2 σ0 σ T A,
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀[x⦂ T]∙A) <->
+    (forall x, has_type σ x T ->
+          M1 ⦂ M2 ◎ σ0 … σ ⊨ ([x /s 0]A)).
 Proof.
   intros; split; eauto with chainmail_db; intros.
   inversion H;
@@ -448,11 +420,11 @@ Proof.
     eauto.
 Qed.
 
-Lemma ex_x_prop :
-  forall M1 M2 σ0 σ A,
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃x∙A) <->
-    (exists α (o : obj), mapp σ α = Some o /\
-            M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α /s 0] A)).
+Lemma ex_prop :
+  forall M1 M2 σ0 σ T A,
+    (M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ T]∙ A)) <->
+    (exists x, has_type σ x T /\
+          M1 ⦂ M2 ◎ σ0 … σ ⊨ ([x /s 0] A)).
 Proof.
   intros; split; eauto with chainmail_db; intros.
   inversion H;
@@ -535,18 +507,18 @@ Proof.
   intros.
   inversion H;
     subst.
-  inversion H7;
+  inversion H6;
     subst;
     eauto.
   apply sat_will
-    with (ϕ:=ϕ)(ψ:=ψ)(χ:=χ)(σ':=σ');
+    with (σ':=σ');
     auto.
   eapply arr_true;
     eauto.
 Qed.
 
 Lemma sat_and_nsat_entails_false :
-  forall A, entails (A ∧ ¬ A) (a_expr (ex_val v_false)).
+  forall {A}, entails (A ∧ ¬ A) (a_expr (ex_val v_false)).
 Proof.
   intros.
   apply ent;
@@ -564,7 +536,7 @@ Qed.
 Hint Resolve sat_and_nsat_entails_false : chainmail_db.
 
 Lemma false_entails_sat_and_nsat :
-  forall A, entails (a_expr (ex_false)) (A ∧ ¬ A).
+  forall {A}, entails (a_expr (ex_false)) (A ∧ ¬ A).
 Proof.
   intros.
   apply ent;
@@ -581,7 +553,7 @@ Hint Resolve false_entails_sat_and_nsat : chainmail_db.
 
 (** Lemma 6: (1) *)
 Lemma sat_and_nsat_equiv_false :
-  forall A, equiv_a (A ∧ ¬ A) (a_expr (ex_false)).
+  forall {A}, equiv_a (A ∧ ¬ A) (a_expr (ex_false)).
 Proof.
   intros;
     unfold equiv_a;
@@ -591,7 +563,7 @@ Proof.
 Qed.
 
 Lemma or_commutative' :
-  forall A1 A2, entails (A1 ∨ A2) (A2 ∨ A1).
+  forall {A1 A2}, entails (A1 ∨ A2) (A2 ∨ A1).
 Proof.
   intros;
     apply ent;
@@ -605,7 +577,7 @@ Hint Resolve or_commutative' : chainmail_db.
 
 (** Lemma 6: (4) *)
 Lemma or_commutative :
-  forall A1 A2, equiv_a (A1 ∨ A2) (A2 ∨ A1).
+  forall {A1 A2}, equiv_a (A1 ∨ A2) (A2 ∨ A1).
 Proof.
   intros;
     unfold equiv_a;
@@ -617,7 +589,7 @@ Qed.
 Hint Resolve or_commutative : chainmail_db.
 
 Lemma and_commutative' :
-  forall A1 A2, entails (A1 ∧ A2) (A2 ∧ A1).
+  forall {A1 A2}, entails (A1 ∧ A2) (A2 ∧ A1).
 Proof.
   intros;
     eapply ent;
@@ -631,7 +603,7 @@ Hint Resolve and_commutative' : chainmail_db.
 
 (** Lemma 6: (3) *)
 Lemma and_commutative :
-  forall A1 A2, equiv_a (A1 ∧ A2) (A2 ∧ A1).
+  forall {A1 A2}, equiv_a (A1 ∧ A2) (A2 ∧ A1).
 Proof.
   intros;
     unfold equiv_a;
@@ -643,7 +615,7 @@ Qed.
 Hint Resolve and_commutative : chainmail_db.
 
 Lemma or_associative_1:
-  forall A1 A2 A3, entails ((A1 ∨ A2) ∨ A3) (A1 ∨ (A2 ∨ A3)).
+  forall {A1 A2 A3}, entails ((A1 ∨ A2) ∨ A3) (A1 ∨ (A2 ∨ A3)).
 Proof.
   intros;
     apply ent;
@@ -658,7 +630,7 @@ Qed.
 Hint Resolve or_associative_1 : chainmail_db.
 
 Lemma or_associative_2:
-  forall A1 A2 A3, entails (A1 ∨ (A2 ∨ A3)) ((A1 ∨ A2) ∨ A3).
+  forall {A1 A2 A3}, entails (A1 ∨ (A2 ∨ A3)) ((A1 ∨ A2) ∨ A3).
 Proof.
   intros;
     apply ent;
@@ -674,7 +646,7 @@ Hint Resolve or_associative_2 : chainmail_db.
 
 (** Lemma 6: (5) *)
 Lemma or_associative:
-  forall A1 A2 A3, equiv_a ((A1 ∨ A2) ∨ A3) (A1 ∨ (A2 ∨ A3)).
+  forall {A1 A2 A3}, equiv_a ((A1 ∨ A2) ∨ A3) (A1 ∨ (A2 ∨ A3)).
 Proof.
   intros;
     unfold equiv_a;
@@ -686,7 +658,7 @@ Qed.
 Hint Resolve or_associative : chainmail_db.
 
 Lemma and_distributive_1:
-  forall A1 A2 A3, entails ((A1 ∨ A2) ∧ A3) ((A1 ∧ A3) ∨ (A2 ∧ A3)).
+  forall {A1 A2 A3}, entails ((A1 ∨ A2) ∧ A3) ((A1 ∧ A3) ∨ (A2 ∧ A3)).
 Proof.
   intros;
     apply ent;
@@ -701,7 +673,7 @@ Qed.
 Hint Resolve and_distributive_1 : chainmail_db.
 
 Lemma and_distributive_2:
-  forall A1 A2 A3, entails ((A1 ∧ A3) ∨ (A2 ∧ A3)) ((A1 ∨ A2) ∧ A3).
+  forall {A1 A2 A3}, entails ((A1 ∧ A3) ∨ (A2 ∧ A3)) ((A1 ∨ A2) ∧ A3).
 Proof.
   intros;
     apply ent;
@@ -717,7 +689,7 @@ Hint Resolve and_distributive_2 : chainmail_db.
 
 (** Lemma 6: (6) *)
 Lemma and_distributive:
-  forall A1 A2 A3, equiv_a ((A1 ∨ A2) ∧ A3) ((A1 ∧ A3) ∨ (A2 ∧ A3)).
+  forall {A1 A2 A3}, equiv_a ((A1 ∨ A2) ∧ A3) ((A1 ∧ A3) ∨ (A2 ∧ A3)).
 Proof.
   intros;
     unfold equiv_a;
@@ -729,7 +701,7 @@ Qed.
 Hint Resolve and_distributive : chainmail_db.
 
 Lemma or_distributive_1:
-  forall A1 A2 A3, entails ((A1 ∧ A2) ∨ A3) ((A1 ∨ A3) ∧ (A2 ∨ A3)).
+  forall {A1 A2 A3}, entails ((A1 ∧ A2) ∨ A3) ((A1 ∨ A3) ∧ (A2 ∨ A3)).
 Proof.
   intros;
     apply ent;
@@ -744,7 +716,7 @@ Qed.
 Hint Resolve or_distributive_1 : chainmail_db.
 
 Lemma or_distributive_2:
-  forall A1 A2 A3, entails ((A1 ∨ A3) ∧ (A2 ∨ A3)) ((A1 ∧ A2) ∨ A3).
+  forall {A1 A2 A3}, entails ((A1 ∨ A3) ∧ (A2 ∨ A3)) ((A1 ∧ A2) ∨ A3).
 Proof.
   intros;
     apply ent;
@@ -761,7 +733,7 @@ Hint Resolve or_distributive_2 : chainmail_db.
 
 (** Lemma 6: (7) *)
 Lemma or_distributive:
-  forall A1 A2 A3, equiv_a ((A1 ∧ A2) ∨ A3) ((A1 ∨ A3) ∧ (A2 ∨ A3)).
+  forall {A1 A2 A3}, equiv_a ((A1 ∧ A2) ∨ A3) ((A1 ∨ A3) ∧ (A2 ∨ A3)).
 Proof.
   intros;
     unfold equiv_a;
@@ -773,7 +745,7 @@ Qed.
 Hint Resolve or_distributive : chainmail_db.
 
 Lemma neg_distributive_and_1:
-  forall A1 A2, entails (¬(A1 ∧ A2))  (¬A1 ∨ ¬A2).
+  forall {A1 A2}, entails (¬(A1 ∧ A2))  (¬A1 ∨ ¬A2).
 Proof.
   intros;
     apply ent;
@@ -788,7 +760,7 @@ Qed.
 Hint Resolve neg_distributive_and_1 : chainmail_db.
 
 Lemma neg_distributive_and_2:
-  forall A1 A2, entails (¬A1 ∨ ¬A2) (¬(A1 ∧ A2)).
+  forall {A1 A2}, entails (¬A1 ∨ ¬A2) (¬(A1 ∧ A2)).
 Proof.
   intros;
     apply ent;
@@ -804,7 +776,7 @@ Hint Resolve neg_distributive_and_2 : chainmail_db.
 
 (** Lemma 6: (8) *)
 Lemma neg_distributive_and:
-  forall A1 A2, equiv_a (¬(A1 ∧ A2))  (¬A1 ∨ ¬A2).
+  forall {A1 A2}, equiv_a (¬(A1 ∧ A2))  (¬A1 ∨ ¬A2).
 Proof.
   intros;
     unfold equiv_a;
@@ -816,7 +788,7 @@ Qed.
 Hint Resolve neg_distributive_and : chainmail_db.
 
 Lemma neg_distributive_or_1:
-  forall A1 A2, entails (¬(A1 ∨ A2)) (¬A1 ∧ ¬A2).
+  forall {A1 A2}, entails (¬(A1 ∨ A2)) (¬A1 ∧ ¬A2).
 Proof.
   intros;
     apply ent;
@@ -831,7 +803,7 @@ Qed.
 Hint Resolve neg_distributive_or_1 : chainmail_db.
 
 Lemma neg_distributive_or_2:
-  forall A1 A2, entails (¬A1 ∧ ¬A2) (¬(A1 ∨ A2)).
+  forall {A1 A2}, entails (¬A1 ∧ ¬A2) (¬(A1 ∨ A2)).
 Proof.
   intros;
     apply ent;
@@ -848,7 +820,7 @@ Hint Resolve neg_distributive_or_2 : chainmail_db.
 
 (** Lemma 6: (9) *)
 Lemma neg_distributive_or:
-  forall A1 A2, equiv_a (¬(A1 ∨ A2)) (¬A1 ∧ ¬A2).
+  forall {A1 A2}, equiv_a (¬(A1 ∨ A2)) (¬A1 ∧ ¬A2).
 Proof.
   intros;
     unfold equiv_a;
@@ -859,8 +831,8 @@ Qed.
 
 Hint Resolve neg_distributive_or : chainmail_db.
 
-Lemma not_ex_x_all_not_1 : 
-  forall A, entails (¬(∃x∙A)) (∀x∙¬A).
+Lemma not_ex_all_not_1 : 
+  forall {T A}, entails (¬(∃[x⦂ T]∙A)) (∀[x⦂ T]∙¬A).
 Proof.
   intros;
     apply ent;
@@ -871,16 +843,16 @@ Proof.
   inversion H5;
     subst.
 
-  apply sat_all_x;
+  apply sat_all;
     intros.
   apply sat_not.
   eapply H6; eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_ex_x_all_not_1 : chainmail_db.
+Hint Resolve not_ex_all_not_1 : chainmail_db.
 
-Lemma not_ex_x_all_not_2 : 
-  forall A, entails (∀x∙¬A) (¬(∃x∙A)).
+Lemma not_ex_all_not_2 : 
+  forall {A T}, entails (∀[x⦂ T]∙¬A) (¬(∃[x⦂ T]∙A)).
 Proof.
   intros;
     apply ent;
@@ -890,7 +862,7 @@ Proof.
     subst.
 
   apply sat_not.
-  apply nsat_ex_x;
+  apply nsat_ex;
     intros.
   eapply H5 in H0;
     eauto with chainmail_db.
@@ -899,11 +871,11 @@ Proof.
     eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_ex_x_all_not_2 : chainmail_db.
+Hint Resolve not_ex_all_not_2 : chainmail_db.
 
 (** Lemma 6: (10) *)
-Lemma not_ex_x_all_not : 
-  forall A, equiv_a (¬(∃x∙A)) (∀x∙¬A).
+Lemma not_ex_all_not : 
+  forall {A T}, equiv_a (¬(∃[x⦂ T]∙A)) (∀[x⦂ T]∙¬A).
 Proof.
   intros;
     unfold equiv_a;
@@ -912,10 +884,46 @@ Proof.
     eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_ex_x_all_not : chainmail_db.
+Hint Resolve not_ex_all_not : chainmail_db.
 
-Lemma not_all_x_ex_not_1 : 
-  forall A, entails (¬(∀x∙A)) (∃x∙¬A).
+Lemma not_ex_all :
+  forall {A T}, entails (¬ ∃[x⦂ T]∙ (¬ A)) (∀[x⦂ T]∙A).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  inversion H;
+    subst.
+  inversion H5;
+    subst.
+  apply sat_all;
+    intros.
+  specialize (H6 x);
+    auto_specialize.
+  inversion H6;
+    subst.
+  auto.
+Qed.
+
+Lemma ex_not_all :
+  forall {A T}, entails (∃[x⦂ T]∙ A) (¬ ∀[x⦂ T]∙ (¬ A)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  inversion H;
+    subst.
+  apply sat_not.
+  apply nsat_all with (x:=x);
+    auto with chainmail_db;
+    sbst_simpl.
+  simpl in *.
+  apply nsat_not;
+    auto.
+Qed.
+
+Lemma not_all_ex_not_1 : 
+  forall {A T}, entails (¬(∀[x⦂ T]∙A)) (∃[x⦂ T]∙¬A).
 Proof.
   intros;
     apply ent;
@@ -926,17 +934,17 @@ Proof.
   inversion H5;
     subst.
 
-  apply sat_ex_x with (α:=α)(o:=o);
+  apply sat_ex with (x:=x);
     auto with chainmail_db;
     sbst_simpl.
   
   apply sat_not; auto.
 Qed.
 
-Hint Resolve not_all_x_ex_not_1 : chainmail_db.
+Hint Resolve not_all_ex_not_1 : chainmail_db.
 
-Lemma not_all_x_ex_not_2 : 
-  forall A, entails (∃x∙¬A) (¬(∀x∙A)).
+Lemma not_all_ex_not_2 : 
+  forall {A T}, entails (∃[x⦂ T]∙¬A) (¬(∀[x⦂ T]∙A)).
 Proof.
   intros;
     apply ent;
@@ -946,16 +954,17 @@ Proof.
     subst.
 
   apply sat_not.
-  apply nsat_all_x with (α:=α)(o:=o);
+  sbst_simpl.
+  apply nsat_all with (x:=x);
     auto with chainmail_db;
     sbst_simpl.
-  inversion H6; subst; auto.
+  inversion H7; subst; auto.
 Qed.
 
-Hint Resolve not_all_x_ex_not_2 : chainmail_db.
+Hint Resolve not_all_ex_not_2 : chainmail_db.
 
-Lemma not_all_x_ex_not : 
-  forall A, equiv_a (¬(∀x∙A)) (∃x∙¬A).
+Lemma not_all_ex_not : 
+  forall {A T}, equiv_a (¬(∀[x⦂ T]∙A)) (∃[x⦂ T]∙¬A).
 Proof.
   intros;
     unfold equiv_a;
@@ -964,20 +973,299 @@ Proof.
     eauto with chainmail_db.
 Qed.
 
-Hint Resolve not_all_x_ex_not : chainmail_db.
+Hint Resolve not_all_ex_not : chainmail_db.
 
-Lemma entails_implies :
-  forall M1 M2 σ0 σ A1, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
-                   forall A2, entails A1 A2 ->
-                         M1 ⦂ M2 ◎ σ0 … σ ⊨ A2.
+Lemma not_all_ex :
+  forall {A T}, entails (¬ ∀[x⦂ T]∙ (¬ A)) (∃[x⦂ T]∙A).
 Proof.
   intros.
-  inversion H0;
+  apply ent;
+    intros.
+  inversion H;
+    subst.
+  inversion H5;
+    subst.
+  simpl in *.
+  eapply sat_ex;
+    eauto.
+  simpl in *.
+  inversion H8;
+    subst.
+  auto.
+Qed.
+
+Lemma all_not_ex :
+  forall {A T}, entails (∀[x⦂ T]∙ A) (¬ ∃[x⦂ T]∙ (¬ A)).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  inversion H;
+    subst.
+  apply sat_not.
+  apply nsat_ex; intros.
+  simpl in *;
+    apply nsat_not.
+  eapply H5;
+    eauto.
+Qed.
+
+Lemma entails_implies :
+  forall {M1 M2 σ0 σ A1 A2}, entails A1 A2 ->
+                        M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
+                        M1 ⦂ M2 ◎ σ0 … σ ⊨ A2.
+Proof.
+  intros.
+  inversion H;
     auto.
 Qed.
 
 Hint Resolve entails_implies : chainmail_db.
-Hint Rewrite entails_implies : chainmail_db.
+(*Hint Rewrite entails_implies : chainmail_db.*)
+
+Ltac a_contradiction :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ _)] =>
+    apply sat_not;
+    apply not_sat_implies_nsat;
+    let Hcontra := fresh "Hcontra" in
+    intro Hcontra
+  | [|- _ ⦂ _ ◎ _ … _ ⊭ _] =>
+    apply not_sat_implies_nsat;
+    let Hcontra := fresh "Hcontra" in
+    intro Hcontra
+  end.
+
+Ltac a_contradiction_neg :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ _] =>
+    apply negate_elim_sat;
+    a_contradiction
+  end.
+
+Lemma entails_implies_neg :
+  forall {M1 M2 σ0 σ A1 A2}, entails A1 A2 ->
+                        M1 ⦂ M2 ◎ σ0 … σ ⊨ (¬ A2) ->
+                        M1 ⦂ M2 ◎ σ0 … σ ⊨ ¬ A1.
+Proof.
+  intros.
+  a_contradiction.
+  apply (entails_implies H) in Hcontra.
+  apply sat_implies_not_nsat in Hcontra.
+  inversion H0;
+    auto.
+Qed.
+
+Lemma a_name_unique :
+  forall {M1 M2 σ0 σ a1 x}, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name a1 x) ->
+                       forall {a2}, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name a2 x) ->
+                               a1 = a2.
+Proof.
+  intros.
+  repeat match goal with
+         | [H : _ ⦂  _ ◎ _ … _ ⊨ a_name _ _ |- _] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+  crush.
+Qed.
+
+Lemma is_private_a_private :
+  forall {a1 a2 x}, entails (is_private a1 x ∧ a_name a2 x)
+                       (a_private a1 a2).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  inversion H;
+    subst.
+  unfold is_private in *.
+  assert (exists α2, a2 = a_ α2);
+    [inversion H7;
+     subst;
+     eauto
+    |destruct_exists_loo; subst].
+  assert (exists α1, a1 = a_ α1);
+    [|destruct_exists_loo; subst; simpl in *].
+
+  - destruct a1; simpl in *.
+    + inversion H6;
+        subst.
+      simpl in *.
+      inversion H9;
+        subst.
+      inversion H11;
+        subst.
+      destruct x0;
+        crush.
+    + inversion H6;
+        subst;
+        simpl in *.
+      inversion H9;
+        subst.
+      destruct v;
+        simpl in *;
+        eauto;
+        try solve [inversion H11].
+
+  - inversion H6;
+      subst;
+      simpl in *.
+    inversion H9;
+      subst;
+      auto.
+    destruct x0;
+      [|inversion H10|inversion H10].
+    inversion H10;
+      subst.
+    apply a_name_unique with (a2:=a_ α1) in H7;
+      crush.
+Qed.
+
+Lemma a_private_is_private :
+  forall {a1 a2 x}, entails (a_private a1 a2 ∧ a_name a2 x)
+                       (is_private a1 x).
+Proof.
+  intros.
+  apply ent;
+    intros.
+  inversion H;
+    subst.
+  unfold is_private in *.
+  
+  assert (exists α2, a2 = a_ α2);
+    [inversion H7;
+     subst;
+     eauto
+    |destruct_exists_loo; subst].
+  assert (exists α1, a1 = a_ α1);
+    [|destruct_exists_loo; subst; simpl in *].
+
+  - destruct a1.
+    + simpl in *.
+      inversion H6;
+        subst.
+    + inversion H6;
+        eauto.
+
+  - inversion H7;
+      subst.
+    apply sat_ex with (x:=(ax_val (v_ α)));
+      eauto with chainmail_db;
+      simpl.
+    apply sat_and;
+      auto.
+Qed.
+
+Lemma has_type_val :
+  forall {σ x}, has_type σ x a_Val ->
+           exists v, x = ax_val v.
+Proof.
+  intros.
+  match goal with
+  | [H : has_type _ _ _ |- _ ] =>
+    inversion H
+  end.
+  eauto.
+Qed.
+
+Lemma has_type_obj :
+  forall {σ x}, has_type σ x a_Obj ->
+           exists α o, x = (ax_val (v_ α)) /\
+                  ⟦ α ↦ o ⟧ ∈ σ.
+Proof.
+  intros.
+  match goal with
+  | [H : has_type _ _ _ |- _ ] =>
+    inversion H
+  end.
+  eauto.
+Qed.
+
+Lemma has_type_bool :
+  forall {σ x}, has_type σ x a_Bool ->
+           exists v, x = (ax_val v) /\
+                (v = v_true \/
+                 v = v_false).
+Proof.
+  intros.
+  match goal with
+  | [H : has_type _ _ _ |- _ ] =>
+    inversion H
+  end;
+  eauto.
+Qed.
+
+Lemma has_type_int :
+  forall {σ x}, has_type σ x a_Int ->
+           exists i, x = (ax_val (v_int i)).
+Proof.
+  intros.
+  match goal with
+  | [H : has_type _ _ _ |- _ ] =>
+    inversion H
+  end;
+  eauto.
+Qed.
+
+Lemma has_type_mth :
+  forall {σ x}, has_type σ x a_Mth ->
+           exists m, x = (ax_mth m).
+Proof.
+  intros.
+  match goal with
+  | [H : has_type _ _ _ |- _ ] =>
+    inversion H
+  end;
+  eauto.
+Qed.
+
+Lemma has_type_set :
+  forall {σ x}, has_type σ x a_Set ->
+           exists Σ, x = (ax_set Σ).
+Proof.
+  intros.
+  match goal with
+  | [H : has_type _ _ _ |- _ ] =>
+    inversion H
+  end;
+  eauto.
+Qed.
+
+Ltac has_type_decompose :=
+  match goal with
+  | [H : has_type _ _ a_Val |- _] =>
+    apply has_type_val in H;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst
+  | [H : has_type _ _ a_Obj |- _] =>
+    apply has_type_obj in H;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst
+  | [H : has_type _ _ a_Bool |- _] =>
+    apply has_type_bool in H;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst
+  | [H : has_type _ _ a_Int |- _] =>
+    apply has_type_int in H;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst
+  | [H : has_type _ _ a_mth |- _] =>
+    apply has_type_mth in H;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst
+  | [H : has_type _ _ a_set |- _] =>
+    apply has_type_set in H;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst
+  end.
 
 Ltac sat_destruct :=
   match goal with
@@ -987,7 +1275,7 @@ Ltac sat_destruct :=
 
 Ltac a_intro :=
   match goal with
-  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∀x∙ _)] => apply sat_all_x; intros; simpl in *
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∀[x⦂ _]∙ _)] => apply sat_all; intros; simpl in *
   | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ⟶ _)] => apply arr_prop1; intros; simpl in *
   end.
 
@@ -1001,9 +1289,39 @@ Ltac a_prop :=
          | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _) |- _] => apply -> or_iff in H
          | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ⟶ _) |- _] => rewrite -> arr_prop in H
          | [H : context[_ ⦂ _ ◎ _ … _ ⊨ (_ ⟶ _)] |- _] => rewrite -> arr_prop in H
-         | [H : _ ⦂ _ ◎ _ … _ ⊨ (∀x∙_) |- _] => rewrite all_x_prop in H; sbst_simpl
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (∀[x⦂ _ ]∙_) |- _] => rewrite all_prop in H; sbst_simpl
          | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ∧ _)] => apply sat_and
          | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _)] => apply <- or_iff
+
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∧ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply neg_distributive_and]
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∨ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply neg_distributive_or]
+
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∧ _))] =>
+           eapply entails_implies;
+           [|apply neg_distributive_and_2]
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (_ ∨ _)) |- _ ] =>
+           eapply entails_implies;
+           [|apply neg_distributive_or_2]
+
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (∃[x⦂ _ ]∙ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply not_ex_all_not]
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ (∀[x⦂ _ ]∙ _)) |- _ ] =>
+           eapply entails_implies in H;
+           [|apply not_all_ex_not]
+
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ (∃[x⦂ _ ]∙ _)) ] =>
+           eapply entails_implies;
+           [|apply not_ex_all_not_2]
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ (∀[x⦂ _ ]∙ _)) ] =>
+           eapply entails_implies;
+           [|apply not_all_ex_not_2]
+
+
          | [H : entails ?A1 ?A2,
                 Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ?A1 |- _] =>
            notHyp (M1 ⦂ M2 ◎ σ0 … σ  ⊨ A2);
@@ -1012,11 +1330,45 @@ Ltac a_prop :=
            [apply (entails_implies M1 M2 σ0 σ A1 Ha A2 H); eauto|]
          | [Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ?A,
                  Hb : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ¬ ?A |- _] =>
-           apply sat_implies_not_nsat in Ha
+           apply sat_implies_not_nsat in Ha;
+           auto
+         | [Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ?A,
+                 Hb : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊭ ?A |- _] =>
+           apply sat_implies_not_nsat in Ha;
+           auto
          | [Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ¬ ?A,
                  Hb : ~ ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊭ ?A |- _] =>
            inversion Ha; subst; crush
-         end.
+
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ (¬ ¬ _) |- _] =>
+           apply negate_elim_sat in H
+         | [H : _ ⦂ _ ◎ _ … _ ⊭ (¬ ¬ _) |- _] =>
+           apply negate_elim_nsat in H
+
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (¬ ¬ _) ] =>
+           apply negate_intro_sat
+         | [|- _ ⦂ _ ◎ _ … _ ⊭ (¬ ¬ _) ] =>
+           apply negate_intro_nsat
+
+         | [H : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (a_private ?a1 ?a2 ∧ a_name ?a2 ?x)
+            |- ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ is_private ?a1 ?x] =>
+           apply (entails_implies (@a_private_is_private a1 a2 x))
+         | [Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (a_private ?a1 ?a2),
+                 Hb : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (a_name ?a2 ?x)
+            |- ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (is_private ?a1 ?x)] =>
+           apply (entails_implies (@a_private_is_private a1 a2 x))
+         end;
+  repeat has_type_decompose.
+
+Ltac a_destruct H :=
+  match goal with
+  | [H : _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ _ ]∙_) |- _] =>
+    apply -> ex_prop in H;
+    destruct_exists_loo
+  | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _) |- _] =>
+    apply -> or_iff in H;
+    destruct H
+  end.
 
 (*Lemma and_forall_x_entails_1 :
   forall A1 A2, entails (A1 ∧ (∀x∙A2))
@@ -1567,3 +1919,18 @@ Proof.
     subst.
   eapply sat_exp; eauto.
 Qed.
+
+Lemma will_entails :
+  forall {A1 A2}, entails A1 A2 ->
+             forall {M1 M2 σ0 σ}, M1 ⦂ M2 ◎ σ0 … σ ⊨ a_will A1 ->
+                             M1 ⦂ M2 ◎ σ0 … σ ⊨ a_will A2.
+Proof.
+  intros.
+  inversion H0;
+    subst.
+  apply sat_will with (σ':=σ');
+    auto.
+  eapply (entails_implies);
+    eauto.
+Qed.
+

@@ -11,7 +11,5 @@ Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Definition access (χ, φ :: _) (α β : Address) : Prop :=
-  (exists f, χ α = (_, (f, β))) \/ ⌊this⌋ σ ≜ α /\ (exists γ, φ γ = β) 
-
-Lemma connectivity : H.
+(* Definition access χ φ (α β : Address) : Prop :=
+  (exists f, χ α = (_, (f, β))) \/ ⌊this⌋ σ ≜ α /\ (exists γ, φ γ = β). *)

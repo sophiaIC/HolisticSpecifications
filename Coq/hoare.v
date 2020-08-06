@@ -145,7 +145,7 @@ where "M1 '⦂' M2 '⦿' '{pre:' P '}' σ '{post:' Q '}'"
 
 Hint Constructors hoare_triple hoare_triples hoare_triple_pr : loo_db.
 
-Notation "M1 '⦂' M2 '◎' σ0 '…' '⋆' '⊨' '{pre:' A1 '}' σ '{post:' A2 '}'" :=
+Notation "M1 '⦂' M2 '◎' σ0 '…' '̱' '⊨' '{pre:' A1 '}' σ '{post:' A2 '}'" :=
   (M1 ⦂ M2 ⦿ {pre: fun σ => M1 ⦂ M2 ◎ σ0 … σ ⊨ A1} σ {post: fun σ' => M1 ⦂ M2 ◎ σ0 … σ' ⊨ A2})(at level 40).
 
 Inductive contn_is : stmt -> config -> Prop :=
@@ -471,9 +471,9 @@ Ltac hoare_inversion_2 :=
   end.
 
 Lemma hoare_triple_pr_inversion :
-  forall M1 M2 P σ Q, M1 ⦂ M2 ⦿ {pre: P} σ {post: Q} ->
-                 forall σ', M1 ⦂ M2 ⦿ σ ⤳ σ' ->
-                       P σ -> Q σ'.
+  forall {M1 M2 P σ Q}, M1 ⦂ M2 ⦿ {pre: P} σ {post: Q} ->
+                   forall {σ'}, M1 ⦂ M2 ⦿ σ ⤳ σ' ->
+                           P σ -> Q σ'.
 Proof.
   intros M1 M2 P σ Q Hhoare;
     inversion Hhoare;
@@ -1030,7 +1030,7 @@ Proof.
 Admitted.
 
 Lemma fieldChange_not_heapUnchanged :
-  forall M1 M2 σ0 σ α f v, M1 ⦂ M2 ◎ σ0 … ⋆ ⊨ {pre: ex_acc_f (e_ α) f ⩶̸ v} σ {post: ex_acc_f (e_ α) f ⩶ v} ->
+  forall M1 M2 σ0 σ α f v, M1 ⦂ M2 ◎ σ0 … ̱ ⊨ {pre: ex_acc_f (e_ α) f ⩶̸ v} σ {post: ex_acc_f (e_ α) f ⩶ v} ->
                       forall σ', M1 ⦂ M2 ⦿ σ ⤳ σ' ->
                             ~ heapUnchanged σ σ'.
 Proof.

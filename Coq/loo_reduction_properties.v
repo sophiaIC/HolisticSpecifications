@@ -2,6 +2,7 @@ Require Import common.
 Require Import loo_def.
 Require Import loo_properties.
 Require Import function_operations.
+Require Import adaptation.
 Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
@@ -110,8 +111,6 @@ Proof.
     intros;
     auto;
     try solve pair_reduce_heap_wf_auto.
-  eapply IHHred; eauto;
-    pair_reduce_heap_wf_auto.
 Qed.
 
 Ltac pair_reduces_heap_wf_auto :=
@@ -748,15 +747,15 @@ Proof.
 
   (** Case: e1 < e2 *)
   - inversion H0; subst; eauto.
-    specialize (IHHeval1 (v_nat i0));
-      specialize (IHHeval2 (v_nat i3));
+    specialize (IHHeval1 (v_int i0));
+      specialize (IHHeval2 (v_int i3));
       auto_specialize;
       crush.
 
   (** Case: e1 >= e2 *)
   - inversion H0; subst; eauto.
-    specialize (IHHeval1 (v_nat i0));
-      specialize (IHHeval2 (v_nat i3));
+    specialize (IHHeval1 (v_int i0));
+      specialize (IHHeval2 (v_int i3));
       auto_specialize;
       crush.
 
@@ -787,16 +786,50 @@ Ltac eval_rewrite :=
            subst
          end.
 
+Lemma pair_reductions_transitive_alt :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall σ0, M1 ⦂ M2 ⦿ σ0 ⤳ σ1 ->
+                       M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ2.
+Proof.
+  intros M1 M2 σ1 σ2 Hred.
+  induction Hred;
+    intros.
+  - apply prs_trans with (σ:=σ1);
+      eauto with loo_db.
+
+  - eauto with loo_db.
+Qed.
+
+Lemma pair_reductions_transitive_single :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                 forall σ3, M1 ⦂ M2 ⦿ σ2 ⤳ σ3 ->
+                       M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ3.
+Proof.
+  intros M1 M2 σ1 σ2 Hred.
+  induction Hred;
+    intros.
+  - eapply pair_reductions_transitive_alt;
+      eauto with loo_db.
+
+  - eauto with loo_db.
+Qed.
+
 Lemma pair_reductions_transitive :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
                  forall σ3, M1 ⦂ M2 ⦿ σ2 ⤳⋆ σ3 ->
                        M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ3.
 Proof.
-  intros M1 M2 σ1 σ2 Hred;
-    induction Hred;
-    intros;
-    eauto with loo_db.
+  intros M1 M2 σ1 σ2 Hred.
+  induction Hred;
+    intros.
+  - eapply pair_reductions_transitive_alt;
+      eauto with loo_db.
+
+  - apply IHHred.
+    eapply pair_reductions_transitive_alt;
+      eauto.
 Qed.
+  
 
 Lemma reduction_preserves_addr_classes :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
@@ -906,15 +939,16 @@ Proof.
     intros;
     eauto with loo_db.
 
-  destruct (pair_reduction_preserves_addr_classes M1 M2 σ1 σ)
-    with
-      (α:=α)(o1:=o1)
-    as [o Hclass1];
-    auto;
+  specialize (IHHred α o1);
+    auto_specialize;
+    destruct_exists_loo;
     andDestruct.
 
-  edestruct IHHred as [o' Hclass2];
-    eauto;
+  destruct (pair_reduction_preserves_addr_classes M1 M2 σ σ2)
+    with
+      (α:=α)(o1:=o)
+    as [o' Hclass1];
+    auto;
     andDestruct.
 
   eexists; split; eauto; crush.
@@ -1094,6 +1128,44 @@ Lemma pair_reduction_unique :
 Proof.
 Admitted.
 
+Lemma constrained_pair_reductions_is_reductions :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⌈⤳⋆⌉ σ2 ->
+                 M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2.
+Proof.
+  intros.
+  unfold constrained_pair_reductions in *.
+  repeat destruct_exists_loo;
+    andDestruct;
+    subst.
+  apply adapted_pair_reductions with (ψ:=ψ) in Ha0;
+    auto.
+Qed.
+
+Lemma constrained_pair_reduction_is_reduction :
+  forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⌈⤳⌉ σ2 ->
+                 M1 ⦂ M2 ⦿ σ1 ⤳ σ2.
+Proof.
+  intros.
+  unfold constrained_pair_reduction in *.
+  repeat destruct_exists_loo;
+    andDestruct;
+    subst.
+  apply adapted_pair_reduction with (ψ:=ψ) in Ha0;
+    auto.
+Qed.
+
+Lemma constrained_pair_reduction_unique :
+  forall M1 M2 σ σ1, M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ1 ->
+                forall σ2, M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ2 ->
+                      σ1 = σ2.
+Proof.
+  intros.
+  apply constrained_pair_reduction_is_reduction in H.
+  apply constrained_pair_reduction_is_reduction in H0.
+  eapply pair_reduction_unique;
+    eauto.
+Qed.
+
 Ltac unique_reduction_auto :=  
     match goal with
     | [Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳ ?σa,
@@ -1104,6 +1176,11 @@ Ltac unique_reduction_auto :=
     | [Ha : ?M ∙ ?σ ⤳ ?σa,
             Hb : ?M ∙ ?σ ⤳ ?σb |- _] =>
       eapply reduction_unique with (σ1:=σa) in Hb;
+        eauto;
+        subst
+    | [Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⌉ ?σa,
+            Hb : ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⌉ ?σb |- _] =>
+      eapply constrained_pair_reduction_unique with (σ1:=σa) in Hb;
         eauto;
         subst
     end.
@@ -1259,26 +1336,12 @@ Proof.
     induction Hred;
     intros.
 
-  - inversion H0; subst.
-    unique_reduction_auto.
-    unique_reduction_auto.
-    inversion H4; subst.
-    unique_reduction_auto.
-    contradiction (acyclic_pair_reductions M1 M2 σ0 σ0);
-      auto with loo_db.
-    unique_reduction_auto.
-    contradiction (acyclic_pair_reductions M1 M2 σ3 σ3);
-      auto with loo_db.
-    apply pair_reductions_transitive with (σ2:=σ0);
-      auto with loo_db.
+  - admit.
+    (* acyclic *)
 
-  - inversion H0; subst;
-      unique_reduction_auto;
-      eauto.
-    contradiction (pair_reductions_path_unique M1 M2 σ0 σ')
-      with (σ:=σ2);
-      auto with loo_db.
-Qed.
+  - admit.
+    (* i'm not sure if this lemma is necessary *)
+Admitted.
 
 Lemma internal_reductions_external_initial :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -1315,6 +1378,7 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
+    auto;
     try solve [eapply pair_reduction_external_self1; eauto].
 Qed.
 
@@ -1325,7 +1389,8 @@ Proof.
   intros M1 M2 σ1 σ2 Hred;
     induction Hred;
     intros;
-    [eapply pair_reduction_external_self2; eauto|eauto].
+    [eapply pair_reduction_external_self2; eauto|].
+  eapply pair_reduction_external_self2; eauto.
 Qed.
 
 Lemma external_self_head1 :
