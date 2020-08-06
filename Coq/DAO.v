@@ -88,9 +88,9 @@ Module SimpleDAO.
   Definition DAOModule2 := update DAO DAODef2 empty.
 
   Definition DAOSPEC1 :=
-    (∀x∙ ((a_class (a♢ 0) DAO ∧
-           (a_expr (ex_acc_f (e♢ 0) balance ⩽′ (ex_acc_f (e♢ 0) ether))))
-            ⟶
+    (∀[x⦂ a_Obj]∙ ((a_class (a♢ 0) DAO ∧
+                    (a_expr (ex_acc_f (e♢ 0) balance ⩽′ (ex_acc_f (e♢ 0) ether))))
+                     ⟶
             (a_next (a_expr (ex_acc_f (e♢ 0) balance ⩽′ (ex_acc_f (e♢ 0) ether))))
     )).
 
@@ -285,7 +285,7 @@ Module SimpleDAO.
     inversion Hcontra;
       subst;
       simpl in *.
-    specialize (H4 αDAO DAOObj σA_maps_αDAO_to_DAOObj).
+    (*specialize (H4 αDAO DAOObj σA_maps_αDAO_to_DAOObj).
     a_prop.
     assert (DAOModule1 ⦂ ClientModule ◎ σ0 … σA
                        ⊨ (a_class (a_ αDAO) DAO
@@ -297,7 +297,8 @@ Module SimpleDAO.
     unfold σA in H2;
       repeat simpl_crush. 
     assert (DAOModule1 ⦂ ClientModule ⦿ σA ⤳ σB);
-      [apply σA_reduces_to_σB|].
+      [apply σA_reduces_to_σB|].*)
+    
     (*unique_reduction_auto.
 
     inversion H9;

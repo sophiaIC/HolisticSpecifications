@@ -37,97 +37,120 @@ Require Import decoupling.
   }.*)
 
 Lemma sbst_x_neg :
-  forall (α : addr) n A, ([α /s n] ¬A) = (¬ ([α /s n]A)).
+  forall (x : a_var) n A, ([x /s n] ¬A) = (¬ ([x /s n]A)).
 Proof.
-  auto.
+  intros.
+  destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_arr :
-  forall (α : addr) n A1 A2, ([α /s n] (A1 ⟶ A2)) = (([α /s n]A1) ⟶ ([α /s n]A2)).
+  forall (x : a_var) n A1 A2, ([x /s n] (A1 ⟶ A2)) = (([x /s n]A1) ⟶ ([x /s n]A2)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_and :
-  forall (x : addr) n A1 A2, ([x /s n] (A1 ∧ A2)) = (([x /s n]A1) ∧ ([x /s n]A2)).
+  forall (x : a_var) n A1 A2, ([x /s n] (A1 ∧ A2)) = (([x /s n]A1) ∧ ([x /s n]A2)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_exp :
-  forall (x : addr) n e, ([x /s n] (a_expr e)) = (a_expr ([x /s n] e)).
+  forall (x : a_var) n e, ([x /s n] (a_expr e)) = (a_expr ([x /s n] e)).
 Proof.
   auto.
 Qed.
 
 Lemma sbst_x_class :
-  forall (x : addr) n e C, ([x /s n] (a_class e C)) = (a_class ([x /s n] e) C).
+  forall (x : a_var) n e C, ([x /s n] (a_class e C)) = (a_class ([x /s n] e) C).
 Proof.
   auto.
 Qed.
 
 Lemma sbst_x_or :
-  forall (x : addr) n A1 A2, ([x /s n] (A1 ∨ A2)) = (([x /s n]A1) ∨ ([x /s n]A2)).
+  forall (x : a_var) n A1 A2, ([x /s n] (A1 ∨ A2)) = (([x /s n]A1) ∨ ([x /s n]A2)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
-Lemma sbst_x_all_x :
-  forall (x : addr) n A, ([x /s n] (∀x∙A)) = ((∀x∙[x /s S n] A)).
+Lemma sbst_x_all :
+  forall {x : a_var}{T : a_type} n A, ([x /s n] (∀[x⦂ T ]∙A)) = ((∀[x⦂ T ]∙[x /s S n] A)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
-Lemma sbst_x_ex_x :
-  forall (x : addr) n A, ([x /s n] (∃x∙A)) = ((∃x∙[x /s S n] A)).
+Lemma sbst_x_ex :
+  forall (x : a_var) T n A, ([x /s n] (∃[x⦂ T]∙A)) = ((∃[x⦂ T]∙[x /s S n] A)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_next :
-  forall (x : addr) n A, ([x /s n] (a_next A)) = (a_next ([x /s n] A)).
+  forall (x : a_var) n A, ([x /s n] (a_next A)) = (a_next ([x /s n] A)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_will :
-  forall (x : addr) n A, ([x /s n] (a_will A)) = (a_will ([x /s n] A)).
+  forall (x : a_var) n A, ([x /s n] (a_will A)) = (a_will ([x /s n] A)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_prev :
-  forall (x : addr) n A, ([x /s n] (a_prev A)) = (a_prev ([x /s n] A)).
+  forall (x : a_var) n A, ([x /s n] (a_prev A)) = (a_prev ([x /s n] A)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_was :
-  forall (x : addr) n A, ([x /s n] (a_was A)) = (a_was ([x /s n] A)).
+  forall (x : a_var) n A, ([x /s n] (a_was A)) = (a_was ([x /s n] A)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_acc :
-  forall (x : addr) n y z, ([x /s n] (y access z)) = (([x /s n] y) access ([x /s n] z)).
+  forall (x : a_var) n y z, ([x /s n] (y access z)) = (([x /s n] y) access ([x /s n] z)).
 Proof.
-  auto.
+  intros;
+    destruct x;
+    auto.
 Qed.
 
 Lemma sbst_x_call :
-  forall (x : addr) n y z m vMap, ([x /s n] (y calls z ▸ m ⟨ vMap ⟩)) = (([x /s n] y) calls ([x /s n] z) ▸ m ⟨ ([x /s n] vMap) ⟩).
+  forall (x : a_var) n y z m vMap, ([x /s n] (y calls z ▸ m ⟨ vMap ⟩)) =
+                              (([x /s n] y) calls ([x /s n] z) ▸ ([x /s n] m) ⟨ ([x /s n] vMap) ⟩).
 Proof.
   auto.
 Qed.
 
 Lemma sbst_x_extrn :
-  forall (x : addr) n y, ([x /s n] (y external)) = (([x /s n] y) external).
+  forall (x : a_var) n y, ([x /s n] (y external)) = (([x /s n] y) external).
 Proof.
   auto.
 Qed.
 
 Lemma sbst_x_intrn :
-  forall (x : addr) n y, ([x /s n] (y internal)) = (([x /s n] y) internal).
+  forall (x : a_var) n y, ([x /s n] (y internal)) = (([x /s n] y) internal).
 Proof.
   auto.
 Qed.
@@ -147,8 +170,8 @@ Ltac sbst_simpl_actual :=
   | [H : context[[_ /s _] (a_prev _)] |- _] => rewrite sbst_x_prev in H
   | [H : context[[_ /s _] (a_was _)] |- _] => rewrite sbst_x_was in H
 
-  | [H : context[[_ /s _] (∀x∙_)] |- _] => rewrite sbst_x_all_x in H
-  | [H : context[[_ /s _] (∃x∙_)] |- _] => rewrite sbst_x_ex_x in H
+  | [H : context[[_ /s _] (∀[x⦂ _]∙_)] |- _] => rewrite sbst_x_all in H
+  | [H : context[[_ /s _] (∃[x⦂ _]∙_)] |- _] => rewrite sbst_x_ex in H
 
   | [H : context[[_ /s _] (_ access _)] |- _] => rewrite sbst_x_acc in H
   | [H : context[[_ /s _] (_ calls _ ▸ _ ⟨ _ ⟩)] |- _] => rewrite sbst_x_call in H
@@ -169,8 +192,8 @@ Ltac sbst_simpl_actual :=
   | [|- context[[_ /s _] (a_prev _)]] => rewrite sbst_x_prev
   | [|- context[[_ /s _] (a_was _)]] => rewrite sbst_x_was
 
-  | [|- context[[_ /s _] (∀x∙_)]] => rewrite sbst_x_all_x
-  | [|- context[[_ /s _] (∃x∙_)]] => rewrite sbst_x_ex_x
+  | [|- context[[_ /s _] (∀[x⦂ _]∙_)]] => rewrite sbst_x_all
+  | [|- context[[_ /s _] (∃[x⦂ _]∙_)]] => rewrite sbst_x_ex
 
   | [|- context[[_ /s _] (_ access _)]] => rewrite sbst_x_acc
   | [|- context[[_ /s _] (_ calls _ ▸ _ ⟨ _ ⟩)]] => rewrite sbst_x_call
@@ -178,6 +201,7 @@ Ltac sbst_simpl_actual :=
   | [|- context[[_ /s _] (_ external)]] => rewrite sbst_x_extrn
   | [|- context[[_ /s _] (_ internal)]] => rewrite sbst_x_intrn
   end.
+
 
 Ltac sbst_simpl :=
   repeat sbst_simpl_actual.
