@@ -1659,3 +1659,16 @@ ideally we would like to model non-determinism of reduction
 to cover really world programs.
 
  *)
+ 
+(* Lemma restricted_reduction_implies_reduction :
+  forall M M' ϕ χ Σ ϕΣ, (χ, ϕ :: nil) ↓ Σ ≜ ϕΣ ->
+    (exists σ, M ⦂ M' ⦿ ϕΣ ⤳ σ) ->
+    (exists σ, M ⦂ M' ⦿ (χ, ϕ :: nil) ⤳ σ)
+.
+Proof.
+  intros M M' ϕ χ Σ ϕΣ HϕΣ [σ Hσ].
+  inversion HϕΣ; subst; simpl in *.
+  inversion Hσ; subst.
+  - inversion H4; subst.
+    + 
+   *)

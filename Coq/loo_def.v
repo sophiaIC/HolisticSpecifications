@@ -629,6 +629,7 @@ Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
 
 Inductive restrict : config -> list var -> config -> Prop :=
 | rstrct : forall Σ σ As χ χ', ⌊ Σ ⌋ σ ≜′ As ->
+                          fst σ = χ ->
                           (forall α o, χ' α = Some o ->
                                   χ α = Some o) ->
                           (forall α o, χ' α = Some o ->
