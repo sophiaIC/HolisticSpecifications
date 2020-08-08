@@ -1255,12 +1255,12 @@ Ltac has_type_decompose :=
     repeat destruct_exists_loo;
     andDestruct;
     subst
-  | [H : has_type _ _ a_mth |- _] =>
+  | [H : has_type _ _ a_Mth |- _] =>
     apply has_type_mth in H;
     repeat destruct_exists_loo;
     andDestruct;
     subst
-  | [H : has_type _ _ a_set |- _] =>
+  | [H : has_type _ _ a_Set |- _] =>
     apply has_type_set in H;
     repeat destruct_exists_loo;
     andDestruct;
@@ -1321,6 +1321,10 @@ Ltac a_prop :=
            eapply entails_implies;
            [|apply not_all_ex_not_2]
 
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (∀[x⦂ _ ]∙ _)] =>
+           a_intro
+         | [|- _ ⦂ _ ◎ _ … _ ⊨ (_ ⟶ _)] =>
+           a_intro
 
          | [H : entails ?A1 ?A2,
                 Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ ?A1 |- _] =>
@@ -1360,7 +1364,7 @@ Ltac a_prop :=
          end;
   repeat has_type_decompose.
 
-Ltac a_destruct H :=
+Ltac a_destruct :=
   match goal with
   | [H : _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ _ ]∙_) |- _] =>
     apply -> ex_prop in H;
@@ -1368,6 +1372,183 @@ Ltac a_destruct H :=
   | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ∨ _) |- _] =>
     apply -> or_iff in H;
     destruct H
+  end.
+
+Definition ex_conv (M1 M2 : mdl)(σ0 σ : config)(T : a_type)(A : asrt):=
+  match T with
+  | a_Obj => exists α, has_type σ (ax_val (v_ α)) T /\
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_val (v_ α) /s 0] A
+  | a_Int => exists i, has_type σ (ax_val (v_int i)) T /\
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_val (v_int i) /s 0] A
+  | a_Mth => exists m, has_type σ (ax_mth m) T /\
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_mth m /s 0] A
+  | a_Set => exists Σ, has_type σ (ax_set Σ) T /\
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_set Σ /s 0] A
+  | _ => exists v, has_type σ (ax_val v) T /\
+             M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_val v /s 0] A
+  end.
+
+Ltac a_var_crush :=
+  match goal with
+  | [H : ax_val ?v = ax_val ?v' |- _] =>
+    inversion H;
+    subst;
+    clear H
+  end.
+
+Ltac disj_destruct :=
+  match goal with
+  | [H : _ \/ _ |- _] =>
+    destruct H
+  end.
+
+Lemma exists_obj :
+  forall {M1 M2 σ0 σ A}, (exists α, has_type σ (ax_val (v_ α)) a_Obj /\
+                          M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_val (v_ α) /s 0] A) <->
+                    (M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ a_Obj]∙A)).
+Proof.
+  intros;
+    split;
+    intro.
+
+  - destruct_exists_loo;
+      andDestruct.
+    eapply sat_ex;
+    eauto.
+
+  - a_destruct;
+      andDestruct.
+    a_prop.
+    eauto with chainmail_db.
+Qed.
+
+Lemma exists_val :
+  forall {M1 M2 σ0 σ A}, (exists v, has_type σ (ax_val v) a_Val /\
+                          M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_val v /s 0] A) <->
+                    (M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ a_Val]∙A)).
+Proof.
+  intros;
+    split;
+    intro.
+
+  - destruct_exists_loo;
+      andDestruct.
+    eapply sat_ex;
+    eauto.
+
+  - a_destruct;
+      andDestruct.
+    a_prop.
+    eauto with chainmail_db.
+Qed.
+
+Lemma exists_int :
+  forall {M1 M2 σ0 σ A}, (exists i, has_type σ (ax_val (v_int i)) a_Int /\
+                          M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_val (v_int i) /s 0] A) <->
+                    (M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ a_Int]∙A)).
+Proof.
+  intros;
+    split;
+    intro.
+
+  - destruct_exists_loo;
+      andDestruct.
+    eapply sat_ex;
+    eauto.
+
+  - a_destruct;
+      andDestruct.
+    a_prop.
+    eauto with chainmail_db.
+Qed.
+
+Lemma exists_bool :
+  forall {M1 M2 σ0 σ A}, (exists b, has_type σ (ax_val b) a_Bool /\
+                          M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_val b /s 0] A) <->
+                    (M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ a_Bool]∙A)).
+Proof.
+  intros;
+    split;
+    intro.
+
+  - destruct_exists_loo;
+      andDestruct.
+    a_prop.
+    a_var_crush.
+    disj_destruct;
+      subst.
+    + apply sat_ex with (x:=ax_val v_true);
+        eauto with chainmail_db.
+    + apply sat_ex with (x:=ax_val v_false);
+        eauto with chainmail_db.
+
+  - a_destruct;
+      andDestruct.
+    a_prop.
+    disj_destruct;
+      subst;
+      eauto with chainmail_db.
+Qed.
+
+Lemma exists_set :
+  forall {M1 M2 σ0 σ A}, (exists Σ, has_type σ (ax_set Σ) a_Set /\
+                          M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_set Σ /s 0] A) <->
+                    (M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ a_Set]∙A)).
+Proof.
+  intros;
+    split;
+    intro.
+
+  - destruct_exists_loo;
+      andDestruct.
+    eapply sat_ex;
+    eauto.
+
+  - a_destruct;
+      andDestruct.
+    a_prop.
+    eauto with chainmail_db.
+Qed.
+
+Lemma exists_mth :
+  forall {M1 M2 σ0 σ A}, (exists m, has_type σ (ax_mth m) a_Mth /\
+                          M1 ⦂ M2 ◎ σ0 … σ ⊨ [ax_mth m /s 0] A) <->
+                    (M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ a_Mth]∙A)).
+Proof.
+  intros;
+    split;
+    intro.
+
+  - destruct_exists_loo;
+      andDestruct.
+    eapply sat_ex;
+    eauto.
+
+  - a_destruct;
+      andDestruct.
+    a_prop.
+    eauto with chainmail_db.
+Qed.
+
+Ltac a_exists' :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ a_Obj]∙_)] =>
+    apply exists_obj
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ a_Val]∙_)] =>
+    apply exists_val
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ a_Int]∙_)] =>
+    apply exists_int
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ a_Set]∙_)] =>
+    apply exists_set
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ a_Mth]∙_)] =>
+    apply exists_mth
+  end.
+
+Ltac a_exists :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ _ ]∙ _)] =>
+    a_exists';
+    simpl
   end.
 
 (*Lemma and_forall_x_entails_1 :

@@ -13,20 +13,21 @@ Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Definition changes (a : a_var)(f : fld) :=
+Definition changes (a : a_val)(f : fld) :=
   match a with
   | a♢ m =>
-    ∃x∙(((ex_acc_f (e♢ (S m)) f) ⩶ (e♢ 0))
-        ∧
-        (a_will (∃x∙ ((ex_acc_f (e♢ (S (S m))) f) ⩶ (e♢ 0)
-                      ∧
-                      ((e♢ 0) ⩶̸ (e♢ 1))))))
+    ∃[x⦂ a_Obj]∙(((ex_acc_f (e♢ (S m)) f) ⩶ (e♢ 0))
+                 ∧
+                 (a_will (∃[x⦂ a_Val]∙ ((ex_acc_f (e♢ (S (S m))) f) ⩶ (e♢ 0)
+                                        ∧
+                                        ((e♢ 0) ⩶̸ (e♢ 1))))))
   | a_ α =>
-    ∃x∙(((ex_acc_f (e_ α) f) ⩶ (e♢ 0))
-        ∧
-        (a_will (∃x∙ ((ex_acc_f (e_ α) f) ⩶ (e♢ 0)
-                      ∧
-                      ((e♢ 0) ⩶̸ (e♢ 1))))))
+    ∃[x⦂ a_Obj]∙(((ex_acc_f (e_ α) f) ⩶ (e♢ 0))
+                 ∧
+                 (a_will (∃[x⦂ a_Val]∙ ((ex_acc_f (e_ α) f) ⩶ (e♢ 0)
+                                        ∧
+                                        ((e♢ 0) ⩶̸ (e♢ 1))))))
+  | _ => (a_expr (ex_false))
   end.
 
 Module BankAccount.
@@ -111,21 +112,48 @@ Module BankAccount.
 
 
   Definition HolisticSpec :=
-    (∀x∙ (((a_class (a♢ 0) Account)
-           ∧
-           (changes (a♢ 0) balance))
-            ⟶
-            (∃x∙ (((a♢ 0) calls (a♢ 1) ▸ (am_ deposit) ⟨ update
-                                                           src (a♢ 0)
+    (∀[x⦂ a_Obj]∙
+      (((a_class (a♢ 0) Account)
+        ∧
+        (changes (a♢ 0) balance))
+         ⟶
+         (∃[x⦂ a_Obj]∙
+             ∃[x⦂ a_Obj]∙
+                ∃[x⦂ a_Val]∙
+                 (((a♢ 2) calls (a♢ 3) ▸ (am_ deposit) ⟨ update
+                                                           src (a♢ 1)
                                                            (update
                                                               amt (a♢ 0)
                                                               empty) ⟩)
                   ∨
-                  ((a♢ 0) calls (a♢ 0) ▸ (am_ deposit) ⟨ update
-                                                           src (a♢ 1)
+                  ((a♢ 2) calls (a♢ 1) ▸ (am_ deposit) ⟨ update
+                                                           src (a♢ 3)
                                                            (update
                                                               amt (a♢ 0)
-                                                              empty) ⟩))))).
+                                                              empty) ⟩)
+    )))).
+
+  Lemma bank_account_sat :
+    MyModule ⊨m HolisticSpec.
+  Proof.
+    unfold mdl_sat, HolisticSpec;
+      intros;
+      a_intros;
+      a_prop.
+
+    a_destruct;
+      simpl in *;
+      andDestruct;
+      a_prop.
+
+    a_exists.
+
+    (* if balance changes, then there is deposit was called *)
+
+    (* if deposit was called, and the balance of α changed, then
+       α was either the receiver or the src *)
+    
+  Qed.
 
 
 End BankAccount.
