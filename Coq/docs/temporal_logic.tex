@@ -1,0 +1,284 @@
+\title{Temporal Logic Operators in Chainmail}
+
+\documentclass[12pt]{article}
+
+\usepackage{mathpartir}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{color,soul}
+
+\usepackage{listings}
+\usepackage{color}
+
+\renewcommand\lstlistingname{Quelltext} % Change language of section name
+
+\lstset{ % General setup for the package
+	language=Java,
+	basicstyle=\small\sffamily,
+	numbers=left,
+ 	numberstyle=\tiny,
+	frame=tb,
+	tabsize=4,
+	columns=fixed,
+	showstringspaces=false,
+	showtabs=false,
+	keepspaces,
+	morekeywords={field, method},
+	commentstyle=\color{red},
+	keywordstyle=\color{blue}
+}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This is document describes and discusses the temporal operators of Chainmail.
+\end{abstract}
+
+\section{Linear and Non-Linear forms of Chainmail}
+
+The Chainmail as described in the FASE 2020 paper is non-linear. Satisfaction 
+of the operators takes into account both (i) all possible ``initial'' configuration that 
+might give rise to the current configuration, and (ii) all possible configurations that 
+might arise from the current configuration. Figure \ref{f:sat_temporal_fase} provides the definition of 
+satisfaction of these operators.
+
+\begin{figure}
+\begin{mathpar}
+\infer
+	{
+	M_1\ :\ M_2 \bullet (\chi, \phi :: \texttt{nil})\ \leadsto\ \sigma \\
+	M_1\ :\ M_2 \bullet \sigma \triangleleft\ (\chi, \phi :: \psi) \vDash A
+	}
+	{M_1\ :\ M_2 \bullet (\chi, \phi :: \psi) \vDash \texttt{next} <\ A\ >}
+	\quad(\textsc{Sat-Next})
+	\and
+\infer
+	{
+	M_1\ :\ M_2 \bullet (\chi, \phi :: \texttt{nil})\ \leadsto^*\ \sigma \\
+	M_1\ :\ M_2 \bullet \sigma \triangleleft\ (\chi, \phi :: \psi) \vDash A
+	}
+	{M_1\ :\ M_2 \bullet (\chi, \phi :: \psi) \vDash \texttt{will} <\ A\ >}
+	\quad(\textsc{Sat-Will})
+	\and
+\infer
+	{
+	\forall \sigma_0.\left[
+	\infer
+		{
+		(initial\ \sigma_0 \\
+		 M_1\ :\ M_2 \bullet \sigma_0\ \leadsto^*\ \sigma' \\
+		 M_1\ :\ M_2 \bullet \sigma'\ \leadsto\ \sigma) \longrightarrow \\\\
+		(M_1\ :\ M_2 \bullet \sigma' \triangleleft\ \sigma \vDash A)}
+		{}
+		\right]
+	}
+	{M_1\ :\ M_2 \bullet \sigma \vDash \texttt{prev} <\ A\ >}
+	\quad(\textsc{Sat-Prev})
+	\and
+\infer
+	{
+	\forall \sigma_0.\left[
+	\infer
+		{
+		(initial\ \sigma_0 \\
+		 M_1\ :\ M_2 \bullet \sigma_0\ \leadsto^*\ \sigma' \\
+		 M_1\ :\ M_2 \bullet \sigma'\ \leadsto^*\ \sigma) \longrightarrow \\\\
+		(M_1\ :\ M_2 \bullet \sigma' \triangleleft\ \sigma \vDash A)
+		}
+		{}
+		\right]
+	}
+	{M_1\ :\ M_2 \bullet \sigma \vDash \texttt{was} <\ A\ >}
+	\quad(\textsc{Sat-Was})
+\end{mathpar}
+\caption{Satisfaction of Temporal Operators (FASE 2020)}
+\label{f:sat_temporal_fase}
+\end{figure}
+We do not describe these rules in depth here, but we make several notes.
+
+\subsubsection*{Adaptation}
+Figure \ref{f:sat_temporal_fase} makes extensive use of the adaptation operator ($\sigma' \triangleleft \sigma$), which essentially describes a series of variable renamings so that we are able to refer to the same values across time, even if they have been renamed. Adaptation is a particularly troublesome operator to encode in Coq, and as a result, we devised a new definition of Chainmail that ignored variable names, and rather focused on values (heap locations, bools, ints, etc.). For this reason, we do not include adaptation in later definitions, as it is not necessary.
+
+\subsubsection*{Initial Configurations}
+
+We note that Figure \ref{f:sat_temporal_fase} references a definition: \emph{initial}. An initial configuration in Chainmail is defined as a fresh configuration with only one object in the heap, and the \texttt{this} variable in the variable map pointing to this object.
+
+\subsubsection*{Constrained Pair Reduction}
+The reduction used in the definition of \textsc{Sat-Next} and \textsc{Sat-Will} is a constrained form of pair reduction, in that we only consider the top frame of the stack, and as such do not consider reductions that might arise after a return out of the top frame. It is somewhat verbose write reduction out this way, and so to keep definitions compact, we define constrained reduction:
+\begin{mathpar}
+\infer
+	{M_1\ :\ M_2 \bullet (\chi, \phi :: \texttt{nil})\ \leadsto\ (\chi', \phi' :: \psi')}
+	{M_1\ :\ M_2 \bullet (\chi, \phi :: \psi)\ \lceil\leadsto\rceil\ (\chi', \phi' :: \psi' ++ \psi)}
+	\quad(\text{Constrained Pair Reduction})
+\end{mathpar}
+
+
+\subsubsection*{Linearity}
+
+Another change was made, was to try and linearize the logic by referring to an explicit reduction path. There are three ways that the logic might not be linear:
+\begin{enumerate}
+\item
+Non-deterministic reduction: Reduction in L$_{OO}$ is, for the time being, deterministic. An interesting question would be to try and introduce non-determinism.
+\item
+Multiple possible initial configurations: This is true of L$_{OO}$ multiple initial program states may give rise to a configuration.
+\item
+Multiple paths between two configurations (i.e. loops, or non-determinism): 
+Reduction of L$_{OO}$ programs is unique, that is there is only one path connecting any two configurations. This is because there are no loops, and an attempt to model loops using recursion will still result in a unique path through a program since each iteration will add a frame to the stack.
+\end{enumerate}
+Therefore, in order to linearize Chainmail for L$_{OO}$, we need only address the possibility of multiple initial configurations. For this reason, we define a new version of Chainmail's temporal operators that account for the initial configurations that gave rise to the current one. This can be found in Figure \ref{f:sat_temporal_linear}.
+
+\begin{figure}
+\begin{mathpar}
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma\ \lceil\leadsto\rceil\ \sigma' \\
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma' \vDash A
+	}
+	{M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{next} <\ A\ >}
+	\quad(\textsc{Sat-Next})
+	\and
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma\ \lceil\leadsto^*\rceil\ \sigma' \\
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma' \vDash A
+	}
+	{M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{will} <\ A\ >}
+	\quad(\textsc{Sat-Will})
+	\and
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma_0\ \leadsto^*\ \sigma' \\
+	M_1\ :\ M_2 \bullet \sigma'\ \leadsto\ \sigma \\
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma' \vDash A
+	}
+	{M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{prev} <\ A\ >}
+	\quad(\textsc{Sat-Prev})
+	\and
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma_0\ \leadsto^*\ \sigma' \\
+	M_1\ :\ M_2 \bullet \sigma'\ \leadsto^*\ \sigma \\
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma' \vDash A
+	}
+	{M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A\ >}
+	\quad(\textsc{Sat-Was})
+\end{mathpar}
+\caption{Satisfaction of Temporal Operators (Linearized)}
+\label{f:sat_temporal_linear}
+\end{figure}
+
+The rules in Figure \ref{f:sat_temporal_linear} ensure that there is only one reduction path that is ever considered at any one time. This simplifies the rules, and means that we only need to consider one reduction path during proofs. Further, it means that \texttt{was} and disjunction in Chainmail are equivalent to classical disjunction
+\begin{mathpar}
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A_1 \vee A_2\ >
+	}
+	{
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A_1\ >\ \vee\ 
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A_2\ >
+	}
+	\and
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A_1\ >
+	}
+	{
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A_1 \vee A_2\ >
+	}
+	\and
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A_2\ >
+	}
+	{
+	M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{was} <\ A_1 \vee A_2\ >
+	}
+\end{mathpar}
+Note: the second two properties are true of the definition of \texttt{was} from Figure \ref{f:sat_temporal_linear} too, we include them here for completeness. The first property above, however is not true of the original definition of Chainmail due to the universal quantification that required $A_1 \vee A_2$ to be satisfied for all potential reduction 
+paths. Since the new definition specifies only one path, this property can now be demonstrated.
+
+\section{Making Assertions on a Constrained portion of a Reduction Path}
+Consider the Bank Account example from FASE 2020:
+\begin{lstlisting}
+class Bank {}
+class Account{
+  field balance
+  field myBank
+  method deposit(src, amt){
+  	if (src.myBank == this.myBank &&
+  	    src.balance >= amt &&
+  	    amt >= 0){
+		src.balance -= amt
+		this.balance += amt
+   }
+  }
+}
+\end{lstlisting}
+Below we state a potential specification for Bank Account. Note: this is not the spec defined in the FASE 2020 paper.
+\begin{mathpar}
+\infer
+	{\left(\texttt{Spec}\ \triangleq\ \forall a.\left[ 
+	\infer
+		{
+		a : \texttt{Account} \wedge \exists v.[\texttt{a.balance} = v\ \wedge\ \texttt{will}<\texttt{a.balance} \neq v>] \longrightarrow \\\\
+		 \texttt{will}<\exists o.[\langle o\ \texttt{calls}\ \texttt{a.deposit(\_, \_)}\rangle \vee
+		 \langle o\ \texttt{calls}\ \texttt{\_.deposit(a,\_)} \rangle]>
+		}
+		{}
+	\right]\right)}
+	{}
+\end{mathpar}
+That is, \\
+``\emph{if the balance of an account changes between now and some future time, then} \texttt{deposit} \emph{will be called with \texttt{a} as either the receiver, or as the source account.}''
+
+This specification works, but is perhaps not as accurate as we would like. 
+A more accurate specification would say that\\
+``\emph{if the balance of an account changes between now and some future time, then} \texttt{deposit} \emph{will be called, \textbf{between now and then}, with \texttt{a} as either the receiver, or as the source account.}''\\
+Intuitively one might attempt to use \texttt{will} coupled with \texttt{was} to get this 
+behavior. i.e.
+\begin{mathpar}
+\infer
+	{\left(\texttt{Spec}\ \triangleq\ \forall a.\left[ 
+	\infer
+		{
+		a : \texttt{Account} \wedge \forall v.\big[\\
+		\infer
+			{\texttt{a.balance} = v\ \wedge\ \texttt{always\_will}<\texttt{a.balance} \neq v \\\\ \longrightarrow\ \texttt{was}<\exists o.[\langle o\ \texttt{calls}\ \texttt{a.deposit(\_, \_)}\rangle \vee
+		 \langle o\ \texttt{calls}\ \texttt{\_.deposit(a,\_)} \rangle]>>
+			}
+			{}
+		\big]
+		}
+		{}
+	\right]\right)}
+	{}
+\end{mathpar}
+\hl{Julian: Sorry for the formatting above. I need to figure out what's wrong, but you should get the general idea.}\\
+(Note: $\texttt{always\_will} <A>$ is satisfied if $A$ is satisfied for all points in the future, and is in fact sugar for $\neg \texttt{will} <\neg A>$). The above specification does not however quite capture the intuition, because the \texttt{was} can refer to not only any point between now and the future moment, but also any time before now. In order to get the semantics we want, we need to be able to constrain the portion of the reduction path that may be used in satisfaction. Modified satisfaction for \texttt{will} is defined in Figure \ref{f:constrained_will}
+
+\begin{figure}
+\begin{mathpar}
+\infer
+	{
+	M_1\ :\ M_2 \bullet \sigma\ \lceil\leadsto^*\rceil\ \sigma' \\
+	M_1\ :\ M_2 \bullet \sigma \ldots \sigma' \vDash A
+	}
+	{M_1\ :\ M_2 \bullet \sigma_0 \ldots \sigma \vDash \texttt{constrained\_will} <\ A\ >}
+	\quad(\textsc{Sat-Constrained-Will})
+\end{mathpar}
+\caption{Satisfaction of a constrained form of \texttt{will}}
+\label{f:constrained_will}
+\end{figure}
+
+In Figure \ref{f:constrained_will}, \texttt{constrained\_will} modifies \texttt{will} by 
+specifying the current moment as the ``\emph{starting}'' configuration (not ``\emph{initial}'' because that has a specific meaning), thus any \texttt{was} nested within the \texttt{will} must start from the current configuration.
+
+
+
+
+\bibliographystyle{abbrv}
+\bibliography{main}
+
+\end{document}
