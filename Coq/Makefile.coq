@@ -627,9 +627,9 @@ $(filter %.cmx, $(MLFILES:.ml=.cmx) $(MLGFILES:.mlg=.cmx)): %.cmx: %.ml
 
 
 $(MLLIBFILES:.mllib=.cmxs): %.cmxs: %.cmxa
-	$(SHOW)'CAMLOPT -shared -o $@'
+	$(SHOW)'CAMLOPT -shared -g -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
-		-linkall -shared -o $@ $<
+		-linkall -shared -g -o $@ $<
 
 $(MLLIBFILES:.mllib=.cma): %.cma: | %.mllib
 	$(SHOW)'CAMLC -a -o $@'
@@ -641,9 +641,9 @@ $(MLLIBFILES:.mllib=.cmxa): %.cmxa: | %.mllib
 
 
 $(MLPACKFILES:.mlpack=.cmxs): %.cmxs: %.cmxa
-	$(SHOW)'CAMLOPT -shared -o $@'
+	$(SHOW)'CAMLOPT -shared -g -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
-		-shared -linkall -o $@ $<
+		-shared -g -linkall -o $@ $<
 
 $(MLPACKFILES:.mlpack=.cmxa): %.cmxa: %.cmx
 	$(SHOW)'CAMLOPT -a -o $@'
@@ -663,9 +663,9 @@ $(MLPACKFILES:.mlpack=.cmx): %.cmx: | %.mlpack
 
 # This rule is for _CoqProject with no .mllib nor .mlpack
 $(filter-out $(MLLIBFILES:.mllib=.cmxs) $(MLPACKFILES:.mlpack=.cmxs) $(addsuffix .cmxs,$(PACKEDFILES)) $(addsuffix .cmxs,$(LIBEDFILES)),$(MLFILES:.ml=.cmxs) $(MLGFILES:.mlg=.cmxs)): %.cmxs: %.cmx
-	$(SHOW)'[deprecated,use-mllib-or-mlpack] CAMLOPT -shared -o $@'
+	$(SHOW)'[deprecated,use-mllib-or-mlpack] CAMLOPT -shared -g -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
-		-shared -o $@ $<
+		-shared -g -o $@ $<
 
 ifneq (,$(TIMING))
 TIMING_EXTRA = > $<.$(TIMING_EXT)
