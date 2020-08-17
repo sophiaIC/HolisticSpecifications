@@ -3,6 +3,7 @@ Require Import common.
 Require Import loo_def.
 Require Import loo_properties.
 Require Import function_operations.
+Require Import decoupling.
 Require Import List.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
@@ -133,7 +134,23 @@ Proof.
     unfold update_ϕ_map in *; simpl in *.
     remember {| vMap := update this (v_addr α) (update x v (vMap ϕ)); contn := contn ϕ |} as ϕ'.
     apply IHHev3.
-    eauto.
+(*     (* -- *)
+    apply rstrct with (As:=As) (χ:=χ); eauto with loo_db.
+    induction H2.
+    + inversion HϕΣ; subst; simpl in *.
+      inversion H1; subst.
+      crush.
+    + apply int_cons; eauto with loo_db.
+      * inversion H; subst.
+        apply int_x.
+        inversion H2; subst.
+        unfold mapp in *.
+        unfold configMapStack in *.
+        unfold mapp in *.
+        unfold stackMap in *.
+        simpl in *.
+        destruct σ; subst; simpl in *. *)
+        
     (* TODO stuck! *)
     
  (*  - apply (v_f_heap M (χ, ϕ :: ψ) e f α o v); auto with loo_db.
@@ -142,6 +159,34 @@ Proof.
   - apply (v_lt M (χ, ϕ :: ψ) e1 e2 i1 i2); auto with loo_db.
   - apply (v_nlt M (χ, ϕ :: ψ) e1 e2 i1 i2); auto with loo_db. *)
 Admitted. (* apply (v_if_true M (χ, ϕ :: ψ) (e1 ⩵ e2) e1 e2 v); auto with loo_db. *)
+
+Lemma restriction_ignores_stack : 
+  forall χ χ' ψ ψ' Σ, (χ, ψ) ↓ Σ ≜ (χ', ψ) ->
+    (χ, ψ') ↓ Σ ≜ (χ', ψ')
+.
+Proof.
+  intros χ χ' ψ ψ' Σ HϕΣ.
+  inversion HϕΣ; subst.
+  apply rstrct with (As:=As) (χ:=χ); eauto with loo_db.
+  generalize dependent ψ'. generalize dependent χ'.
+  induction H0.
+  - intros χ' HϕΣ. inversion HϕΣ; subst; simpl in *.
+    inversion H1; subst.
+    crush.
+  - intros χ' HϕΣ H1 H2 H3 ψ'.
+    inversion HϕΣ; subst; simpl in *.
+    inversion H; subst; simpl in *.
+   (* crush. apply int_cons.
+    + inversion H; subst.
+      apply int_x.
+      unfold mapp in *.
+      unfold configMapStack in *.
+      unfold mapp in *.
+      unfold stackMap in *.
+      simpl in *. *)
+Abort.
+
+(* Hint Resolve restriction_ignores_stack : loo_db. *)
 
 Lemma restricted_reduction_implies_reduction :
   forall M ϕ ψ χ Σ ϕΣ, (χ, ϕ :: ψ) ↓ Σ ≜ ϕΣ -> has_self_ϕ χ ϕ ->
@@ -491,4 +536,23 @@ Proof.
     remember (update α o' χ) as χ1.
     exists (χ1, ϕ' :: nil).
 Admitted. *)
+
+
+(* SECOND HALF *)
+
+
+(* Inductive adapdation : config -> config -> config -> Prop
+  
+
+Lemma second_half :
+  forall M M' χ ϕ χ χ' σ' σ'Σ σ0 σ0Σ A Σ, (χ, ϕ :: nil) ↓ Σ ≜ (χ', ϕ :: nil) ->
+    M ⦂  M' ⦿ (χ', ϕ :: nil) ⤳⋆ σ'Σ ->
+    M ⦂  M' ⦿ (χ, ϕ :: nil) ⤳⋆ σ' ->
+    (χ, ϕ :: nil) ◁ σ'Σ ≜ σ'Σ_adapt ->    (* we could use χ' here instead instead *)
+    (χ, ϕ :: nil) ◁ σ' ≜ σ'_adapt ->
+    M1 ⦂ M2 ◎ σ0Σ … σ'Σ_adapt ⊨ A ->
+    M1 ⦂ M2 ◎ σ0Σ … σ'_adapt ⊨ A
+.
+Proof. *)
+  
 
