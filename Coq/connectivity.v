@@ -12,7 +12,7 @@ Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 Definition accss (χ : heap) (ϕ : frame) (α β : addr) : Prop :=
-  (exists o f, χ α = Some o \/ flds o f = Some (v_addr β)) \/ ⌊this⌋ (χ, ϕ :: nil) ≜ v_addr α /\ (exists γ, vMap ϕ γ = Some (v_addr β)).
+  (exists o f, χ α = Some o /\ flds o f = Some (v_addr β)) \/ ⌊this⌋ (χ, ϕ :: nil) ≜ v_addr α /\ (exists γ, vMap ϕ γ = Some (v_addr β)).
 
 Definition cont (α : addr) (χ : heap) (ϕ : frame) (s : stmt) : Prop :=
   (exists statements, ϕ.(contn) = c_stmt (s;; statements)) /\ ⌊this⌋ (χ, ϕ :: nil) ≜ v_addr α.
@@ -47,8 +47,7 @@ Proof.
   inversion Hself as [χ_ ϕ_ [α_this [o_this Hthis]]]; subst.
   inversion H2; subst; simpl in *.
   - inversion H13; subst χ' ϕ0 ψ0.
-    right.
-    exists α_this.
-    left.
+    unfold accss in H3. destruct H3 as [ [o_f_b [f_b [Ho_f_b Hf_b]]] | [Hlocal [γ Hγ]]].
+    + eauto.
     (* continuation gives you the witnesses, need to excl. middle on whether or no they assign to the right thing though? *)
-    
+Abort.
