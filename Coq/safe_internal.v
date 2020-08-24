@@ -113,15 +113,6 @@ Below we provide some definitions of "always":
 These are used in the proof, of the Safe example, but perhaps they might be pushed to a more
 general file.
  *)
-  
-  Definition always_will (A : asrt) :=
-    ¬ (a_will (¬ A)).
-
-  Definition always_was (A : asrt) :=
-    ¬ (a_was (¬ A)).
-
-  Definition always (A : asrt) :=
-    A ∧ (always_was A) ∧ (always_will A).
 
 (**
 #<h2>#Proof Sketch#</h2>#

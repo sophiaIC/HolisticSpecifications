@@ -686,6 +686,14 @@ Proof.
      end.
      eapply class_of_same_variable_map with (ϕ':=ϕ)(ψ':=ψ) in H12; eauto.
      eapply class_of_update_same_cname in H12; eauto.
+(* Following case may be unneccessary *)
+  - match goal with
+    |[C1 : cls, C2 : cls, H : C1 <> C2 |- _] =>
+     contradiction H; subst
+    end.
+    apply (class_of_update_vMap this) with (ϕ':=ϕ)(y:=x)(v:=v_addr α) in H10;
+      auto.
+    apply class_of_update_heap_fresh with (C:=C1) in H10; eauto.
 
   - inversion H1; inversion H2;
       subst;
@@ -1517,19 +1525,6 @@ Proof.
 Qed.
 
 Hint Resolve wf_adaptation : loo_db.
-
-(* Lemma implication_restriction :
-  forall M1 M2 σ A B, (M1 ⦂ M2 ◎ σ ⊨ (A ⇒ B)) -> (M1 ⦂ M2 ◎ σ ⊨ ∀S∙ (a_in A (s_hole 0)) ⇒ B).
-Proof.
-  intros M1 M2 σ A B HAB. inversion HAB; subst.
-    + apply sat_arr1. assumption.
-    + apply sat_arr2.
-      remember (map vMap (snd σ)) as l.
-      apply nsat_all_Σ with (Σ:=l).
-      { intros x Hin. contradiction Hin. }
-      simpl. apply nsat_in with (σ':=σ). apply 
-     (* apply (sat_all_Σ M1 M2 σ (a_in A (s_hole 0))). *)
-Admitted. *)
 
 (*Lemma guards_method_call :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->

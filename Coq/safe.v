@@ -520,7 +520,7 @@ Module SafeExample.
      Using set comprehensions we can define the internal_to predicate
    *)
 
-  Definition SPEC4 := (∀x∙ (∀x∙(((¬ internal_to (a♢ 1) (a_ (address 0)))
+  Definition SPEC4 := (∀x∙ (∀x∙(((¬ internal_to (a♢ 1) (a_ 0))
                                  ∧
                                  (a_class (a♢1) Safe)
                                  ∧

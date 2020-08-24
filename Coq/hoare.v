@@ -664,7 +664,7 @@ Proof.
     inversion Hred;
     subst;
     unfold ro;
-    simpl in *; crush;
+    simpl in *;
     try solve [match goal with
                | [|- reduction_order (?ϕ1 :: ?ψ) (?ϕ2 :: ?ψ)] =>
                  let Ha := fresh in
@@ -719,7 +719,24 @@ Proof.
         simpl
     end;
       auto.
-Admitted.
+  - match goal with
+    | [|- reduction_order (?ϕ :: ?ψ) (?ϕ1 :: ?ϕ2 :: ?ψ)] =>
+      let Ha := fresh in
+      let Hb := fresh in
+      assert (Ha : (ϕ :: ψ) = (nil ++ (ϕ :: ψ)));
+        [crush|rewrite Ha];
+        assert (Hb : (ϕ1 :: ϕ2 :: ψ) = ((ϕ1 :: nil) ++ (ϕ2 :: ψ)));
+        [crush|rewrite Hb];
+        apply ro_frame;
+        simpl
+    end.
+    match goal with
+    | [H : contn ?ϕ = _ |- context[contn ?ϕ]] =>
+      rewrite H;
+        simpl
+    end;
+      auto.
+Qed.
 
 Lemma reductions_is_ordered :
   forall M σ1 σ2, M ∙ σ1 ⤳⋆ σ2 ->
