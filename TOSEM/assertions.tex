@@ -60,6 +60,34 @@ challenges, which we discuss in this section.}
 %% defined  through the usual shorthands, \eg, $\neg \A$ is short for
 %% $\A \rightarrow \ff$ \etc, but here we give full definitions
 %% instead\kjx{can we just cut this please?}}
+
+\jm{
+\begin{definition}[Assertions]  \sd{Assertions consist of (pure) expressions \e, classical assertions about the contents of heap/stack, the usual logical  connectives, as well as our holistic concepts.}
+\label{def:assertions}
+
+
+ $\begin{array}{lcl}
+  ~  \\
+ \prg{v}  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \alpha  \\
+  ~  \\
+ \SE  &\BBC&    \prg{v}\ ~\SOR~ \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp\\
+     \\
+ \A &\ \BBC   &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
+    \SE\in\prg{S}   \mid  \  \\
+    &
+  &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
+  & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid\ \forall \m.\A \ \mid\ \exists \m. \A \\
+ &    &  \CanAccess {\alpha_1} {\alpha_2} %\ \mid\  \ \Changes e 
+           \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\\          
+% &    &  \kjx{\CanAccess x y \ \mid\  \ \Changes e 
+%           \ \mid\  \Calls {\prg{x}}  {\prg{m}} {\prg{x}}  {\prg{x}^*} }\\
+&    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A   \ \mid \ \Past \A \ \mid \\  
+ &    &        \Using \SF  \A  \ \mid \  \External \alpha  \jm{\ \mid\ \prg{name}\langle \alpha, \x \rangle } \\
+% &    &   \kjx{\Using \SF  \A  \ \mid \  \External \x \ \mid \ \prg{x} \obeys \prg{S} }  \\
+ \\
+ \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
+\end{array}$
+\end{definition}}
  
 Expressions support calls with parameters  ($\e.\f(\e^*)$); these are calls to ghostfield
 functions. This  supports recursion at the level of expressions; therefore, the value of  an expression  may be
@@ -278,6 +306,26 @@ $\M\mkpair \M', \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ suc
 \end{itemize}
 \end{definition}
 
+ \jm{
+\begin{definition}[ Basic Assertions] For modules $\M$, $\M'$,  configuration $\sigma$,  we define$:$
+%validity of basic assertions: 
+\label{def:valid:assertion:basic}
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma_0 \ldots \sigma \models\SE$ \IFF   $ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}$ 
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models\SE=\SEPrime$ \IFF there exists a value $v$ such that  $\M,\,  \sigma, \SE \ \hookrightarrow\   v$  and $ \M,\,  \sigma, \SEPrime \ \hookrightarrow\   v$.
+           \item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models\SE:\prg{ClassId}$ \IFF there exists an address $\alpha$ such that \\
+$\strut ~ $ \hspace{2in} \hfill   
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha$, and $\ClassOf{\alpha}{\sigma}$ = \prg{ClassId}.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
+\end{itemize}
+\end{definition}
+}
+
 Satisfaction of assertions which contain expressions is predicated on termination of these expressions.
 Continuing our earlier example,  
 $\M_0\mkpair \M', \sigma_0 \models \prg{acyc.acyclic}$ holds for any $\M'$, while $\M_0\mkpair \M', \sigma_0 \models \prg{cyc.acyclic}$
@@ -320,6 +368,46 @@ $\M\mkpair \M', \sigma \models  \neg\A$   \IFF  $\M\mkpair \M', \sigma \models  
 does not hold.
 \end{itemize}
 \end{definition}
+
+\jm{
+\begin{definition}[Assertions with logical connectives and quantifiers]  
+%We now consider 
+\label{def:valid:assertion:logical}
+For modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x}, \prg{y}, \prg{S},  and configurations $\sigma_0$ $\sigma$, we define$:$
+\begin{itemize}
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \forall \prg{S}:\prg{SET}.\A$ \IFF  $\M\mkpair \M', \sigma_0 \ldots \sigma \models  \A[\prg{S}/\prg{R}]$ \\
+$\strut ~ $ \hfill for all sets of addresses $R\subseteq dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \exists \prg{S}:\prg{SET}\!.\,\A$ \IFF  $\M\mkpair \M', \sigma_0 \ldots  \sigma \models  \A[\prg{S}/\prg{R}]$ \\
+ $\strut ~ $ \hfill  for some set of addresses $R\subseteq dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \forall \alpha.\A$ \IFF
+$\M\mkpair \M',\sigma_0 \ldots \sigma \models  \A[\alpha/\alpha']$ \ for all  $\alpha'\in dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \exists \alpha.\A$ \IFF
+$\M\mkpair \M', \sigma_0 \ldots \sigma \models  \A[\alpha/\alpha']$\ for some  $\alpha
+\in dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \forall \prg{m}.\A$ \IFF
+$\M\mkpair \M',\sigma_0 \ldots \sigma \models  \A[\prg{m}/\prg{m}']$ \ for all method names  $\prg{m}'$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \exists \prg{m}.\A$ \IFF
+$\M\mkpair \M', \sigma_0 \ldots \sigma \models  \A[\prg{m}/\prg{m}']$\ for some  method name $\prg{m}'$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M',\sigma_0 \ldots   \sigma \models \A $ implies $\M\mkpair \M',\sigma_0 \ldots   \sigma \models \A' $
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models  \A \wedge \A'$   \IFF  $\M\mkpair \M',\sigma_0 \ldots   \sigma \models  \A $
+and $\M\mkpair \M',\sigma_0 \ldots   \sigma \models  \A'$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models  \A \vee \A'$   \IFF  $\M\mkpair \M', \sigma_0 \ldots \sigma \models  \A $
+or $\M\mkpair \M',\sigma_0 \ldots  \sigma \models  \A'$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models  \neg\A$   \IFF  $\M\mkpair \M',\sigma_0 \ldots  \sigma \models  \A $
+does not hold.
+\end{itemize}
+\end{definition}
+}
 
 Satisfaction is not preserved with growing configurations; for example, the assertion $\forall \x. [\ \x : \prg{Account} \rightarrow \x.\prg{balance}>100\ ]$ 
 may hold in a smaller configuration, but not hold in an extended configuration. 
@@ -365,6 +453,26 @@ for some variable \z\ and  \z\ appears in  $\sigma$.\prg{contn}.
 \end{itemize}
 \end{definition}
 
+\jm{
+\begin{definition}[%Satisfaction of  Assertions about 
+Permission]  \label{def:valid:assertion:access}
+For any modules $\M$, $\M'$,  variables \prg{x} and \prg{y}, we define
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma_0 \ldots \sigma \models  \CanAccess{\alpha_1}{\alpha_2}$   \IFF   \begin{itemize}
+\item
+$\alpha_1$=$\alpha$, \ \ or
+\item
+${\alpha_1.\f} $=${\alpha_2}$, \  \ for some field \prg{f},  \ \ or
+\item
+${\alpha_1}$=$\interp {\this} {\sigma}$ and
+  ${\alpha_2}$=$\interp {\x} {\sigma}$,\ \ \ 
+for some variable \x\ and  \x\ appears in  $\sigma$.\prg{contn}.
+ \end{itemize}
+\end{itemize}
+\end{definition}
+}
+
 \noindent 
 %Therefore, $\CanAccess{\prg{x}}{\prg{y}}$ expresses that \x\, has a {\em direct} path to \y.
 %It says that in the current frame,
@@ -400,6 +508,27 @@ $\sigma.\prg{contn}$=${\uu.\m(\v_1,..\v_n);\_}$,\ \ \ for some  $\uu$,$\v_1$,...
  \end{itemize}
   \end{itemize}
 \end{definition}
+\jm{
+\begin{definition}[%Satisfaction of  Assertions about 
+Control]  \label{def:valid:assertion:control}
+For any modules $\M$, $\M'$,  addresses $\alpha_1$, $\alpha_2$, $\prg{v}_1,...\prg{v}_n$, we define$:$
+\begin{itemize}
+   \item
+$\M\mkpair \M', \sigma_0 \ldots \sigma \models  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\v_1,...\v_n}$ \IFF \ \ \ 
+\begin{itemize}
+\item
+$\interp{\prg{this}}{\sigma}$=$\alpha_1$, \ and
+\item
+% $\strut ~ \hspace{2.1in} $  
+$\sigma.\prg{contn}$=${\x.\m(\y_1,..\y_n);\_}$,\ \ \ for some  $\x$,$\y_1$,... $\y_n$, \ and
+\item
+%  $\strut ~ \hspace{2.1in} $ 
+ $\interp{\prg{x}}{\sigma}$=$\alpha_2$,\ \ \ and \ \ \ 
+  $\interp{{\prg{y}_i}}{\sigma}=\v_i$, for all  $i$.
+ \end{itemize}
+  \end{itemize}
+\end{definition}
+}
 \noindent 
 Thus,  $\Calls {\prg{x}}  {\prg{m}} {\prg{y}}  {{\z_1,...\z_n}}$ expresses the  call 
 $\y.\m(\z_1,...\z_n)$ will be executed next, and that the caller is \x. 
@@ -424,6 +553,26 @@ $\M\mkpair \M', \sigma \models \Internal {\x}$
   \sd{$\interp {\x} {\sigma}$ is defined} and $\ClassOf {\interp{\x}{\sigma}} {\sigma} \in dom(\M)$
 \end{itemize}
 \end{definition}
+\jm{
+ \begin{definition}[%Satisfaction of  Assertions about 
+Viewpoint]  \label{def:valid:assertion:view}
+For any modules $\M$, $\M'$, and addresses $\alpha$, $\alpha'$, we define
+\begin{itemize}
+ \item
+$\M\mkpair \M', \sigma_0 \ldots \sigma \models \External {\alpha}$ 
+  \IFF
+ $\ClassOf {\alpha} {\sigma} \notin dom(\M)$
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \Internal {\alpha}$ 
+  \IFF
+  $\ClassOf {\alpha} {\sigma} \in dom(\M)$
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \prg{private} \langle {\alpha, \alpha'} \rangle$ 
+  \IFF
+  $\M\mkpair \M',\sigma_0 \ldots  \sigma \models \alpha.\texttt{private}\prg{(}\alpha'{)}$
+\end{itemize}
+\end{definition}
+}
 \noindent 
 
 
@@ -485,7 +634,17 @@ For any modules $\M$, $\M'$, assertions $\A$ and variable \prg{S}, we define$:$
  $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
 \end{itemize}
 \end{definition}
- 
+\jm{
+\begin{definition}[Space]  \label{def:valid:assertion:space} 
+For any modules $\M$, $\M'$, assertions $\A$ and variable \prg{S}, we define$:$
+\begin{itemize}
+\item
+ $\M\mkpair \M', \sigma_0 \ldots \sigma \models \Using {\A} {\prg{S}}$
+ \IFF
+ $\M\mkpair \M', \restrct \sigma {\prg{S}} \models  \A  $.
+\end{itemize}
+\end{definition}
+ }
 
 \sd{
 The set \SF\ in the assertion $\Using {\A} {\prg{S}}$ is related to  framing  from implicit dynamic frames \cite{IDF}:
@@ -620,6 +779,56 @@ $\forall \sigma_1. [\ \ \Initial{\sigma_1}\ \wedge \  \M\mkpair \M',\sigma_1 \le
  )]$ 
 \end{itemize}
 \end{definition}
+\jm{
+\begin{definition}[Constrained Reduction]  \label{def:constrained_reduction}
+For any modules $\M$, $\M'$, and configurations $\sigma_1$, $\sigma_2$\\
+\begin{itemize}
+\item
+$\M\mkpair \M',  \sigma_1\lceil\leadsto\rceil \sigma_2$ 
+\IFF
+$\M\mkpair \M',  (\phi \cdot \_, \chi_1) \leadsto(\psi, \chi_2)$\\
+$\strut ~ \hspace{1.4in} $ \hfill 
+where
+$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
+and
+\item
+$\M\mkpair \M',  \sigma_1\lceil\leadsto^*\rceil \sigma_2$ 
+\IFF
+$\M\mkpair \M',  (\phi \cdot \_, \chi_1) \leadsto^* (\psi, \chi_2)$\\
+$\strut ~ \hspace{1.4in} $ \hfill 
+where
+$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
+\end{itemize}
+\end{definition}
+\begin{definition}[Time Assertions]  \label{def:valid:assertion:time}
+For any modules $\M$, $\M'$, and assertion  $\A$ we define
+\begin{itemize}
+% \item
+% $\M\mkpair \M', \sigma \models   \Changes{\prg{e}}$  \IFF
+% $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \leadsto \sigma' \ \wedge \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$.
+ \item
+  $\M\mkpair \M', \sigma_0 \ldots \sigma \models  \Next \A $
+  \IFF
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto\rceil \sigma' \ \wedge \M\mkpair \M',\sigma_0 \ldots \sigma \models \A \ \  ]$
+  \item
+  $\M\mkpair \M', \sigma_0 \ldots \sigma \models  \Future \A $
+  \IFF
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto^*\rceil \sigma' \ \wedge \M\mkpair \M',\sigma_0 \ldots \sigma \models \A \ \  ]$
+  \item
+ $\M\mkpair \M', \sigma_0 \ldots \sigma \models  \Prev \A $ \IFF
+$\forall \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpair \M',\sigma' \leadsto \sigma \longrightarrow $\\
+ $\strut ~ \hspace{0.1in} $   \hfill 
+$ \M\mkpair \M', \sigma_0 \ldots \sigma'  \models \A\ \ 
+ ]$ 
+ \item
+ $\M\mkpair \M',\sigma_0 \ldots  \sigma \models  \Past \A $ \IFF
+$\forall \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpair \M',\sigma' \leadsto^* \sigma \longrightarrow $\\
+ $\strut ~ \hspace{0.1in} $   \hfill   
+ $\M\mkpair \M', \sigma_0 \ldots \sigma'  \models \A\ \ 
+ ]$ 
+\end{itemize}
+\end{definition}
+}
 
 %Thus,  $\M\mkpair \M', \sigma \models  \Future \A $ holds if
 %$\A$ holds in some configuration $\sigma'$ which arises from execution of $\phi$, where $\phi$ is the top frame of $\sigma$. By requiring that $\phi \leadsto^* \sigma' $ rather than
@@ -676,7 +885,7 @@ $\M$ satisfies an assertion $\A$ if for all other potential modules $\M'$, in al
 For any module $\M$, and  assertion $\A$, we define:
 \begin{itemize}
 \item
-$\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma\!\in\!\Arising{\M\mkpair\M'}.\   \M\mkpair\M', \sigma \models \A$
+$\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma_0, \Initial{\sigma_0}, \ \sigma\!\in\!\Arising{\M\mkpair\M', \sigma_0}.\   \M\mkpair\M', \sigma_0 \ldots \sigma \models \A$
 \end{itemize}
 \end{definition}
 
