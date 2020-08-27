@@ -64,9 +64,8 @@ challenges, which we discuss in this section.}
 \jm{
 \begin{definition}[Assertions]  \sd{Assertions consist of (pure) expressions \e, classical assertions about the contents of heap/stack, the usual logical  connectives, as well as our holistic concepts.}
 \label{def:assertions}
-
-
- $\begin{array}{lcl}
+ \[
+ \begin{array}{lcl}
   ~  \\
  \prg{v}  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \alpha  \\
   ~  \\
@@ -76,17 +75,18 @@ challenges, which we discuss in this section.}
     \SE\in\prg{S}   \mid  \  \\
     &
   &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
-  & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid\ \forall \m.\A \ \mid\ \exists \m. \A \\
+  & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid\ \forall \m.\A \ \mid\ \exists \m. \A \ \mid \\
  &    &  \CanAccess {\alpha_1} {\alpha_2} %\ \mid\  \ \Changes e 
            \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\\          
-% &    &  \kjx{\CanAccess x y \ \mid\  \ \Changes e 
-%           \ \mid\  \Calls {\prg{x}}  {\prg{m}} {\prg{x}}  {\prg{x}^*} }\\
+ &    &  \CanAccess x y \ \mid\  \ \Changes e 
+           \ \mid\  \Calls {\prg{x}}  {\prg{m}} {\prg{x}}  {\prg{x}^*} \\
 &    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A   \ \mid \ \Past \A \ \mid \\  
- &    &        \Using \SF  \A  \ \mid \  \External \alpha  \jm{\ \mid\ \prg{name}\langle \alpha, \x \rangle } \\
-% &    &   \kjx{\Using \SF  \A  \ \mid \  \External \x \ \mid \ \prg{x} \obeys \prg{S} }  \\
+ &    &        \Using \SF  \A  \ \mid \  \External \alpha \ \mid\ \prg{name}\langle \alpha, \x \rangle \ \mid \\
+ &    &   \Using \SF  \A  \ \mid \  \External \x \ % \mid \ \\ \prg{x} \obeys \prg{S}  \\
  \\
  \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
-\end{array}$
+\end{array}
+\]
 \end{definition}}
  
 Expressions support calls with parameters  ($\e.\f(\e^*)$); these are calls to ghostfield
@@ -180,7 +180,8 @@ $\begin{array}{l}
  \M,\, \sigma, \kwN{null} \ \hookrightarrow\  \kwN{null}
 }
 &
-\inferenceruleN {\mrr[Addr\_Val]{Had to switch old \textit{Var_Val} rule for \textit{Addr_Val}}} {
+\inferenceruleN {\mrrz{Addr\_Val}%{Had to switch old \textit{Var_Val} rule for \textit{Addr_Val}}
+} {
 \alpha : \text{Address}
 }
 {
@@ -322,6 +323,9 @@ $\strut ~ $ \hspace{2in} \hfill
 \item
 $\M\mkpair \M',\sigma_0 \ldots  \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
  $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
+\item
+$\M\mkpair \M',\sigma_0 \ldots  \sigma \models\ \prg{name} \langle \alpha, \prg{x} \rangle $ \IFF 
+ $ \interp{\prg{x}}{\sigma} = \alpha$.
 \end{itemize}
 \end{definition}
 }
@@ -333,6 +337,9 @@ does not hold, and $\M_A\mkpair \M', \sigma_0\ldots\sigma_A \models \prg{cyc.acy
 In general, when $\M\mkpair \M', \sigma  \models \prg{e}$ holds,  then $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too.
 But when $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
 Finally, an assertion of the form $\e_0=\e_0$ does not always hold; for example,   $\M_A\mkpair \M', \sigma_A \models \prg{cyc.last}=\prg{cyc.last}$ does not hold.
+
+\jm{Satisfaction of the assertion $\prg{name} \langle \alpha, \prg{x} \rangle$ is required to connect the object in the heap represented by $\alpha$ 
+to the variable $\prg{x}$ in the local variable map. This is primarily required to connect the \prg{this} variable to a specific object.}
 
 % \subsubsection{Logical connectives, quantifiers, space and control} 
 We now define satisfaction of assertions which involve logical connectives and existential or universal quantifiers, in the standard way:
@@ -458,19 +465,32 @@ Permission]  \label{def:valid:assertion:access}
 For any modules $\M$, $\M'$,  variables \prg{x} and \prg{y}, we define
 \begin{itemize}
 \item
-$\M\mkpair \M', \sigma_0 \ldots \sigma \models  \CanAccess{\alpha_1}{\alpha_2}$   \IFF   \begin{itemize}
+$\M\mkpair \M', \sigma_0 \ldots \sigma \models  \CanAccess{\alpha_1}{\alpha_2}$  \IFF  
+%\begin{itemize}
+%\item
+%$\alpha_1$=$\alpha_{\mrrz{2}}$, \ \ or
+%\item
+%$\interp {\x.\f} {\sigma}$=$\interp {\y} {\sigma}$, \  \ for some field \prg{f},  \ \ or
+%\item
+%$\interp {\x} {\sigma}$=$\interp {\this} {\sigma}$ and
+%  $\interp {\y} {\sigma}$=$\interp {\z} {\sigma}$,\ \ \ 
+%for some variable \z\ and  \z\ appears in  $\sigma$.\prg{contn}.
+% \end{itemize}
+%$\M\mkpair \M', \sigma_0 \ldots \sigma \models  \CanAccess{\alpha_1}{\alpha_2}$   \IFF   
+\begin{itemize}
 \item
-$\alpha_1$=$\alpha_{\mrr[2]{}}$, \ \ or
+$\alpha_1$=$\alpha_{2}$, \ \ or
 \item
 ${\alpha_1.\f} $=${\alpha_2}$, \  \ for some field \prg{f},  \ \ or
 \item
 ${\alpha_1}$=$\interp {\this} {\sigma}$ and
   ${\alpha_2}$=$\interp {\x} {\sigma}$,\ \ \ 
 for some variable \x\ and  \x\ appears in  $\sigma$.\prg{contn}.
- \end{itemize}
+\end{itemize}
 \end{itemize}
 \end{definition}
 }
+
 
 \noindent 
 %Therefore, $\CanAccess{\prg{x}}{\prg{y}}$ expresses that \x\, has a {\em direct} path to \y.
@@ -563,10 +583,10 @@ $\M\mkpair \M', \sigma_0 \ldots \sigma \models \External {\alpha}$
 $\M\mkpair \M',\sigma_0 \ldots  \sigma \models \Internal {\alpha}$ 
   \IFF
   $\ClassOf {\alpha} {\sigma} \in dom(\M)$
-\item
-$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \prg{private} \langle {\alpha, \alpha'} \rangle$ 
-  \IFF
-  $\M\mkpair \M',\sigma_0 \ldots  \sigma \models \alpha.\texttt{private}\prg{(}\alpha'{)}$
+%\item
+%$\M\mkpair \M',\sigma_0 \ldots  \sigma \models \prg{private} \langle {\alpha, \alpha'} \rangle$ 
+%  \IFF
+%  $\M\mkpair \M',\sigma_0 \ldots  \sigma \models \alpha.\texttt{private}\prg{(}\alpha'{)}$
 \end{itemize}
 \end{definition}
 }
@@ -831,9 +851,20 @@ $\M$ satisfies an assertion $\A$ if for all other potential modules $\M'$, in al
 For any module $\M$, and  assertion $\A$, we define:
 \begin{itemize}
 \item
+$\M \models \A$ \IFF  $\forall \M'.\, \forall \ \sigma\!\in\!\Arising{\M\mkpair\M'}.\   \M\mkpair\M', \sigma \models \A$
+\end{itemize}
+\end{definition}
+
+\jm{
+\begin{definition}
+\label{def:module_satisfies}
+For any module $\M$, and  assertion $\A$, we define:
+\begin{itemize}
+\item
 $\M \models \A$ \IFF  $\forall \M'.\, \forall \sigma_0, \Initial{\sigma_0}, \ \sigma\!\in\!\Arising{\M\mkpair\M', \sigma_0}.\   \M\mkpair\M', \sigma_0 \ldots \sigma \models \A$
 \end{itemize}
 \end{definition}
+}
 
  
 
