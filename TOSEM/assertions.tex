@@ -76,13 +76,10 @@ challenges, which we discuss in this section.}
     &
   &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
   & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid\ \forall \m.\A \ \mid\ \exists \m. \A \ \mid \\
- &    &  \CanAccess {\alpha_1} {\alpha_2} %\ \mid\  \ \Changes e 
-           \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\\          
- &    &  \CanAccess x y \ \mid\  \ \Changes e 
-           \ \mid\  \Calls {\prg{x}}  {\prg{m}} {\prg{x}}  {\prg{x}^*} \\
+ &    &  \CanAccess {\alpha_1} {\alpha_2} \ \mid\  \ \Changes e 
+           \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\mid\\          
 &    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A   \ \mid \ \Past \A \ \mid \\  
- &    &        \Using \SF  \A  \ \mid \  \External \alpha \ \mid\ \prg{name}\langle \alpha, \x \rangle \ \mid \\
- &    &   \Using \SF  \A  \ \mid \  \External \x \ % \mid \ \\ \prg{x} \obeys \prg{S}  \\
+ &    &        \Using \SF  \A  \ \mid \  \External \alpha \ \mid\ \Name \alpha \x \ \mid \\
  \\
  \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
 \end{array}
@@ -145,6 +142,8 @@ $\M_A,\sigma_A,\,\prg{acyc.acyclic}  \ \hookrightarrow\  \prg{true}$, but we wou
 $\M_A,\sigma_A,\, \prg{cyc.last}  \ \hookrightarrow\  ...$, nor for
 $\M_A,\sigma_A,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$.
 
+\mrr{In Fig.~\ref{fig:ValueSimpleExpressions}, I rewrote ${\sf {Field\_Ghost\_Val}}$, but what does $_W$ mean? I've left it for now but I don't understand it. (or have I missed something?)}
+
 Notice also that for an expression of the form  
 \prg{\e.\f}, both ${\sf {Field\_Heap\_Val}}$ and ${\sf {Field\_Ghost\_Val2}}$ could be applicable: rule ${\sf {Field\_Heap\_Val}}$
 will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf {Field\_Ghost\_Val}}$
@@ -156,7 +155,6 @@ For example, assertions (1) and (2) from  section  \ref{sect:motivate:Bank}
 In module $\M_{BA1}$ (Appendix~\ref{Bank:appendix}), where we keep the balances in the account objects, this is a physical field. 
 In $\M_{BA2}$ (also in Appendix~\ref{Bank:appendix}), where we keep the
 balances in a ledger, this is ghost information.  
- 
 
 \begin{figure*}
 {
@@ -208,10 +206,10 @@ $\begin{array}{l}
 }
 \end{array}
 & &
-\inferenceruleNM{Field\_Ghost\_Val}
+\inferenceruleNM{\mrrz{Field\_Ghost\_Val}}
 {
-~ \\
- \M,\, \sigma, \SE_0   \ \hookrightarrow\  \alpha
+%~ \\
+ \M,\, \sigma, \SE_0   \ \hookrightarrow\  \alpha \hspace{1.9cm} \sigma = (\_, \chi) 
 \\
  \M,\, \sigma, \SE_i  \ \hookrightarrow\   v_i\ \ \ \ i\in\{1..n\}
  \\
@@ -219,7 +217,10 @@ $\begin{array}{l}
 (\M, {\ClassOf {\alpha} {\sigma}}, {\f}) \  =  
 \ \f\lp \p_1, \ldots \p_n \rp \lb\ \SE \ \rb
   \\
-  \M,\,\sigma[\p_1\mapsto v_1, .... \p_n\mapsto v_n], \SE    \hookrightarrow_{\SAF}\   v 
+
+\phi = (\_, (\this\mapsto\alpha, \p_1\mapsto v_1, .... \p_n\mapsto v_n))\\  
+  
+  \M,\,(\phi, \chi), \SE    \hookrightarrow_{\SAF}\   v 
  }
 {
  \M,\,  \sigma, \ \SE_0.\f \lp \SE_1,....\SE_n\rp \hookrightarrow   \ v
@@ -265,7 +266,13 @@ $}
 \caption{Value of  Expressions}
 \label{fig:ValueSimpleExpressions}
 \end{figure*}
-\subsection{Satisfaction of Assertions - standard}
+
+\mrrz{\paragraph{Referenced-based Assertions} \Chainmail as}
+\mrrx[I added this to try to explain the changes as requested. I originally put it in the ``explain things'' sections, rather than break up the formal definitions. I have left it here, however, to not introduce it too soon. \textbf{I am also unsure} about whether even using \prg{this} is that useful, since \Chainmail predicates don't concern themselves with local execution?]{described here uses addresses rather than variable names to refer to objects. The $\Name \alpha x$ assertion allows addresses to be bound to current local variables. Previous papers have used variable names, both for referring to local variables, and in quantification. Using addresses allows for simpler formal semantics, without superficially affecting predicates for quantified variables. To specify local variables, as could be done in previous papers, universally-quantified addresses should be bound to names in an implication, $\forall \alpha_x. (\Name {\alpha_x} {x} \rightarrow \dots)$. This is more flexible as names can be bound at any time with temporal assertions, rather than restricted to their current value.}
+
+\mrrz{The cost of complicating specifying local variables is considered acceptable, as in most use cases, only \prg{this} is needed. As \Chainmail works with invariants, not assertions or pre/post-conditions, there is no consistent scope for local names to have a persistent meaning, so they are rarely useful.}\\
+
+\subsection{Satisfaction of Assertions - Standard}
 \label{sect:standard}
 \sd{
 We now define the semantics of assertions involving expressions, the heap/stack, and logical connectives.
@@ -324,7 +331,7 @@ $\strut ~ $ \hspace{2in} \hfill
 $\M\mkpair \M',\sigma_0 , \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
  $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
 \item
-$\M\mkpair \M',\sigma_0 ,  \sigma \models\ \prg{name} \langle \alpha, \prg{x} \rangle $ \IFF 
+$\M\mkpair \M',\sigma_0 ,  \sigma \models\ \Name \alpha x $ \IFF 
  $ \interp{\prg{x}}{\sigma} = \alpha$.
 \end{itemize}
 \end{definition}
@@ -498,12 +505,7 @@ ${\alpha_1}$=$\interp {\this} {\sigma}$ and
 %It says that in the current frame,
 %either \x~and \y\ are  aliases, or \x~points to an object which has a field
 % whose value is the same as that of \y, or \x\, is the currently executing object and \y\, is
-In the last disjunct, where \mrr[\x]{Is this paragraph, and the associated definition, still neccessary? Given the switch from named variables to addresses, it would seem this is no longer a concern?} is a parameter or local variable,
-we  ask that   \mrr[\x]{} appears in the code being executed ($\sigma$.\prg{contn}).
-This requirement % is subtle; it 
-ensures that variables which were introduced into the variable map 
-in order to give meaning to existentially quantified assertions, are not considered.
-
+\mrr[In the last disjunct the interpretation of \x\ in the configuration ensures it is a parameter or local variable.]{Kept and reworded, might as well?}
 
 \vspace{.2cm} \noindent
 \textit{Control} expresses which object is the process of making a function call on another object and
@@ -534,23 +536,23 @@ Control]  \label{def:valid:assertion:control}
 For any modules $\M$, $\M'$,  addresses $\alpha_1$, $\alpha_2$, $\prg{v}_1,...\prg{v}_n$, we define$:$
 \begin{itemize}
    \item
-$\M\mkpair \M', \sigma_0 , \sigma \models  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {v_1,...v_n}$ \IFF \ \ \ 
+$\M\mkpair \M', \sigma_0 , \sigma \models  \Calls {\alpha}  {\prg{m}} {\alpha'}  {\alpha_1,...\alpha_n}$ \IFF \ \ \ 
 \begin{itemize}
 \item
-$\interp{\prg{this}}{\sigma}$=$\alpha_1$, \ and
+$\interp{\prg{this}}{\sigma}$=$\alpha$, \ and
 \item
 % $\strut ~ \hspace{2.1in} $  
 $\sigma.\prg{contn}$=${\x.\m(\y_1,..\y_n);\_}$,\ \ \ for some  $\x$,$\y_1$,... $\y_n$, \ and
 \item
 %  $\strut ~ \hspace{2.1in} $ 
- $\interp{\prg{x}}{\sigma}$=$\alpha_2$,\ \ \ and \ \ \ 
-  $\interp{{\prg{y}_i}}{\sigma}=v_i$, for all  $i$.
+ $\interp{\prg{x}}{\sigma}$=$\alpha'$,\ \ \ and \ \ \ 
+  $\interp{{\prg{y}_i}}{\sigma}=\alpha_i$, for all  $i$.
  \end{itemize}
   \end{itemize}
 \end{definition}
 }
 \noindent 
-\mrr[Thus, $\Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {{v_1,...v_n}}$ expresses the there will be a call from $\alpha_1$ to the method \m\ on object $\alpha_2$ , given objects $v_1,...v_n$. If these are named \y, and $\z_1,...\z_n$ respectively, then $\y.\m(\z_1,...\z_n)$ will be executed next, with the caller \this\ being $\alpha_1$.]{}
+\mrr[Thus, $\Calls {\alpha}  {\prg{m}} {\alpha'}  {{\alpha_1,...\alpha_n}}$ expresses the there will be a call from $\alpha_1$ to the method \m\ on object $\alpha'$ , given objects $\alpha_1,...\alpha_n$. If these are named \y, and $\z_1,...\z_n$ respectively, then $\y.\m(\z_1,...\z_n)$ will be executed next, with the caller \this\ being $\alpha$.]{Updated to use addresses, further update to rename $v_k$ to $a_k$ as they can only be addresses in a call.}
  
  
 
