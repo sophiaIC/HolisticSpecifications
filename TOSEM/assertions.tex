@@ -112,6 +112,10 @@ We use the configuration, $\sigma$, to read the contents of the top stack frame
 ${\sf {Field\_Heap\_Val}}$). We use the module, \M, to find the  ghost field declaration corresponding to the
 ghost field being used. 
 
+\mrrz{\Chainmail as}
+\mrrx[I added this to try to explain the changes as requested. I originally put it in the ``explain things'' section (§3), rather than break up the formal definitions. I have left it here, however, to not introduce it too soon. \textbf{I am also unsure} about whether even using \prg{this} is that useful, since \Chainmail predicates don't concern themselves with local execution?]{described here uses addresses rather than variable names to refer to objects. The $\Name \alpha x$ assertion allows addresses to be bound to current local variables. Previous papers have used variable names, both for referring to local variables, and in quantification. Using addresses allows for simpler formal semantics, without superficially affecting predicates for quantified variables. To specify local variables, as could be done in previous papers, universally-quantified addresses should be bound to names in an implication, $\forall \alpha_x. (\Name {\alpha_x} {\x} \rightarrow \dots)$. This is more flexible as names can be bound at any time with temporal assertions, rather than restricted to their current value.}
+
+\mrrz{The cost of complicating specifying local variables is considered acceptable, as in most use cases, only \prg{this} is needed. As \Chainmail works with invariants, not assertions or pre/post-conditions, there is no consistent scope for local names to have a persistent meaning, so they are rarely useful.}\\
 
 The treatment of fields and ghost fields is described in rules ${\sf {Field\_Heap\_Val}}$,\\  ${\sf {Field\_Ghost\_Val}}$ and 
 ${\sf {Field\_Ghost\_Val2}}$.  If the field \f~ exists in the heap, then its value is returned (${\sf {Field\_Heap\_Val}}$). 
@@ -123,6 +127,19 @@ returns the expression constituting the body for that ghost field, as defined in
 We return  that expression
 evaluated in a configuration where the formal parameters have been substituted by the values of the actual
 parameters.
+
+\mrrx[I have done this for now to discuss that it would need to be translated in general, however limit the scope of discussion given the limited circumstances. Also is there a more fundamental reason we are excluding quantifiers, or is it just for show?]{As they are embedded in program bodies, ghost fields more closely resemble the target language. For \LangOO, this means they are restricted to exclude quantifiers, and retain the ability to refer to local variables, either parameters or \prg{this}, directly, as would be expected in an expression. We thus define a translation function $f_{\mathcal G}$ to decode ghost field syntax into \Chainmail assertions.}
+
+
+\begin{definition}[\mrrz{Ghost Field Translation}] \label{def:valid:assertion:view}
+\mrrz{For any expression \e, we define}
+\begin{itemize}
+ \item
+\mrrz{$f_{\mathcal G}(\e) = \forall \alpha_{\x_1}. \dots \forall \alpha{\x_n}. (\Name{\alpha_{\x_1}}{\x} \wedge \dots \Name{\alpha_{\x_n}}{\x_n} \rightarrow  \e[\x_n/\alpha_{x_n}])$}
+\end{itemize}
+\end{definition}
+
+
 
 Ghost fields support recursive definitions. For example, imagine a module $\M_A$ with
 a class \prg{Node} which has a field called \prg{next}, and which 
@@ -220,7 +237,7 @@ $\begin{array}{l}
 
 \phi = (\_, (\this\mapsto\alpha, \p_1\mapsto v_1, .... \p_n\mapsto v_n))\\  
   
-  \M,\,(\phi, \chi), \SE    \hookrightarrow_{\SAF}\   v 
+  \M,\,(\phi, \chi), \SE'    \hookrightarrow_{\SAF}\   v  \hspace{1.2cm} \SE' = f_{\mathcal G}(\SE)
  }
 {
  \M,\,  \sigma, \ \SE_0.\f \lp \SE_1,....\SE_n\rp \hookrightarrow   \ v
@@ -266,11 +283,6 @@ $}
 \caption{Value of  Expressions}
 \label{fig:ValueSimpleExpressions}
 \end{figure*}
-
-\mrrz{\paragraph{Address-based Assertions} \Chainmail as}
-\mrrx[I added this to try to explain the changes as requested. I originally put it in the ``explain things'' sections, rather than break up the formal definitions. I have left it here, however, to not introduce it too soon. \textbf{I am also unsure} about whether even using \prg{this} is that useful, since \Chainmail predicates don't concern themselves with local execution?]{described here uses addresses rather than variable names to refer to objects. The $\Name \alpha x$ assertion allows addresses to be bound to current local variables. Previous papers have used variable names, both for referring to local variables, and in quantification. Using addresses allows for simpler formal semantics, without superficially affecting predicates for quantified variables. To specify local variables, as could be done in previous papers, universally-quantified addresses should be bound to names in an implication, $\forall \alpha_x. (\Name {\alpha_x} {x} \rightarrow \dots)$. This is more flexible as names can be bound at any time with temporal assertions, rather than restricted to their current value.}
-
-\mrrz{The cost of complicating specifying local variables is considered acceptable, as in most use cases, only \prg{this} is needed. As \Chainmail works with invariants, not assertions or pre/post-conditions, there is no consistent scope for local names to have a persistent meaning, so they are rarely useful.}\\
 
 \subsection{Satisfaction of Assertions - Standard}
 \label{sect:standard}
@@ -331,7 +343,7 @@ $\strut ~ $ \hspace{2in} \hfill
 $\M\mkpair \M',\sigma_0 , \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
  $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
 \item
-$\M\mkpair \M',\sigma_0 ,  \sigma \models\ \Name \alpha x $ \IFF 
+$\M\mkpair \M',\sigma_0 ,  \sigma \models\ \Name \alpha \x $ \IFF 
  $ \interp{\prg{x}}{\sigma} = \alpha$.
 \end{itemize}
 \end{definition}
