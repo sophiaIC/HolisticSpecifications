@@ -1,6 +1,7 @@
 Require Import common.
 Require Import loo_def.
 Require Import decoupling.
+Require Import decoupled_classical_properties.
 Require Import loo_properties.
 Require Import loo_reduction_properties.
 Require Import function_operations.
@@ -251,6 +252,34 @@ Proof.
   apply value_reflexivity_eval.
 Qed.
 
+Lemma neq_is_nsat_eq_1 :
+  forall M1 M2 σ0 σ e1 e2, M1 ⦂ M2 ◎ σ0 … σ ⊨ (e1 ⩶̸ e2) ->
+                      M1 ⦂ M2 ◎ σ0 … σ ⊭ (e1 ⩶ e2).
+Proof.
+  intros M1 M2 σ0 σ e1 e2 Hneq.
+  apply not_sat_implies_nsat;
+    intro Hcontra.
+  repeat match goal with
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+  is_exp_auto.
+  link_unique_auto.
+  match goal with
+  | [H : _ ∙ _ ⊢ neg _ ↪ _  |- _] =>
+    inversion H;
+      subst;
+      clear H
+  end.
+  eval_rewrite.
+  match goal with
+  | [H : _ ∙ _ ⊢ _ ↪ _ |- _ ] =>
+    inversion H
+  end.
+Qed.
+
 Ltac exp_sym_auto :=
   match goal with
   | [H : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (?e1 ⩶ ?e2) |- _] =>
@@ -294,5 +323,3 @@ Ltac exp_auto :=
         eapply value_reflexivity_eval;
         eauto
       end.
-  
-  

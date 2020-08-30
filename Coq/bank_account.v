@@ -18,13 +18,13 @@ Definition changes (a : a_val)(f : fld) :=
   | a♢ m =>
     ∃[x⦂ a_Obj]∙(((ex_acc_f (e♢ (S m)) f) ⩶ (e♢ 0))
                  ∧
-                 (a_will (∃[x⦂ a_Val]∙ ((ex_acc_f (e♢ (S (S m))) f) ⩶ (e♢ 0)
+                 (a_next (∃[x⦂ a_Val]∙ ((ex_acc_f (e♢ (S (S m))) f) ⩶ (e♢ 0)
                                         ∧
                                         ((e♢ 0) ⩶̸ (e♢ 1))))))
   | a_ α =>
     ∃[x⦂ a_Obj]∙(((ex_acc_f (e_ α) f) ⩶ (e♢ 0))
                  ∧
-                 (a_will (∃[x⦂ a_Val]∙ ((ex_acc_f (e_ α) f) ⩶ (e♢ 0)
+                 (a_next (∃[x⦂ a_Val]∙ ((ex_acc_f (e_ α) f) ⩶ (e♢ 0)
                                         ∧
                                         ((e♢ 0) ⩶̸ (e♢ 1))))))
   | _ => (a_expr (ex_false))
@@ -110,6 +110,44 @@ Module BankAccount.
                                           ⩒
                                           ((e_hole 0) ⩵ (e_acc_f (e_var this) myBank))).
 
+  Parameter deposit_into_account :
+    forall M σ0 σ α1 α2 α3 i bal1 bal2, MyModule ⦂ M ◎ σ0 … ̱ ⊨
+                                            {pre: (a_expr ((ex_int 0) ⩻′ (ex_val i))
+                                                   ∧
+                                                   ((ex_acc_f (e_ α1) myBank) ⩶  ex_acc_f (e_ α2) myBank)
+                                                   ∧
+                                                   ((ex_acc_f (e_ α1) balance) ⩶  (ex_val bal1))
+                                                   ∧
+                                                   ((ex_acc_f (e_ α2) balance) ⩶  (ex_val bal2))
+                                                   ∧
+                                                   a_expr ((ex_val i) ⩻′ ex_acc_f (e_ α2) balance)
+                                                   ∧
+                                                   ((a_ α3) calls (a_ α1) ▸ (am_ deposit)
+                                                            ⟨update amt (av_bnd i) (update src (a_ α2) empty)⟩))}
+                                            σ
+                                            {post: (ex_acc_f (e_ α1) balance) ⩶  (ex_plus (ex_val bal1) (ex_val i))
+                                                   ∧
+                                                   ((ex_acc_f (e_ α2) balance) ⩶  (ex_minus (ex_val bal2) (ex_val i)))}.
+
+  Lemma external_step_does_not_change_balance :
+    forall M σ0 σ α bal, external_step MyModule M σ ->
+                    MyModule ⦂ M ◎ σ0 … ̱ ⊨
+                             {pre: (a_ α) internal ∧
+                                   ((ex_acc_f (e_ α) balance) ⩶ (ex_val bal))}
+                             σ
+                             {post: (ex_acc_f (e_ α) balance) ⩶ (ex_val bal)}.
+  Proof.
+    intros.
+    apply external_step_does_not_mutate_internal_fields;
+      auto.
+  Qed.
+
+  Lemma internal_step_is_deposit :
+    forall M σ, internal_step MyModule M σ ->
+           forall σ0, exists x y β, MyModule ⦂ M ◎ σ0 … σ ⊨ (x calls y ▸ (am_ deposit) ⟨ β ⟩).
+  Proof.
+    
+  Qed.
 
   Definition HolisticSpec :=
     (∀[x⦂ a_Obj]∙
@@ -146,7 +184,11 @@ Module BankAccount.
       andDestruct;
       a_prop.
 
-    a_exists.
+    a_exists α0 α0 v_true;
+      eauto with chainmail_db.
+    a_prop.
+
+
 
     (* if balance changes, then there is deposit was called *)
 
@@ -157,3 +199,4 @@ Module BankAccount.
 
 
 End BankAccount.
+y

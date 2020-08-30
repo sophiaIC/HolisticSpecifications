@@ -340,6 +340,14 @@ Proof.
     crush.
 Qed.
 
+Theorem not_nsat_implies_sat :
+  forall M1 M2 σ0 σ A, ~ M1 ⦂ M2 ◎ σ0 … σ ⊭ A ->
+                  M1 ⦂ M2 ◎ σ0 … σ ⊨ A.
+Proof.
+  intros.
+  destruct (sat_excluded_middle M1 M2 σ0 σ A);
+    crush.
+Qed.
 
 (** Lemma 5: Classical (5) *)
 Lemma arr_true :
@@ -1530,7 +1538,7 @@ Proof.
     eauto with chainmail_db.
 Qed.
 
-Ltac a_exists' :=
+Ltac a_exists_base :=
   match goal with
   | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ a_Obj]∙_)] =>
     apply exists_obj
@@ -1544,12 +1552,53 @@ Ltac a_exists' :=
     apply exists_mth
   end.
 
-Ltac a_exists :=
+Ltac a_exists_actual :=
   match goal with
   | [|- _ ⦂ _ ◎ _ … _ ⊨ (∃[x⦂ _ ]∙ _)] =>
-    a_exists';
+    a_exists_base;
     simpl
   end.
+
+Inductive ltac_No_arg : Set :=
+| ltac_no_arg : ltac_No_arg.
+
+Ltac a_exists_with_args x y z :=
+  match type of x with
+  | ltac_No_arg => a_exists_actual
+  | _ =>
+    match type of y with
+    | ltac_No_arg => 
+      a_exists_actual;
+      exists x; split
+    | _ =>
+      match type of z with
+      | ltac_No_arg =>
+        a_exists_actual;
+        exists x; split;
+        [
+        |a_exists_actual;
+         exists y; split]
+      | _ => 
+        a_exists_actual;
+        exists x; split;
+        [
+        |a_exists_actual;
+         exists y; split;
+         [|
+          a_exists_actual;
+          exists z; split]]
+      end
+    end
+  end.
+
+Tactic Notation "a_exists" :=
+  a_exists_base.
+Tactic Notation "a_exists" constr(x) :=
+  a_exists_with_args x ltac_no_arg ltac_no_arg.
+Tactic Notation "a_exists" constr(x) constr(y):=
+  a_exists_with_args x y ltac_no_arg.
+Tactic Notation "a_exists" constr(x) constr(y) constr(z):=
+  a_exists_with_args x y z.
 
 (*Lemma and_forall_x_entails_1 :
   forall A1 A2, entails (A1 ∧ (∀x∙A2))
