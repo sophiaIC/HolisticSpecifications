@@ -66,7 +66,7 @@ challenges, which we discuss in this section.}
  \[
  \begin{array}{lcl}
   ~  \\
- \prg{v}  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \alpha  \\
+ \prg{v}  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \alpha ~\SOR~ \Mrrz{\prg{x}} \\
   ~  \\
  \SE  &\BBC&    \prg{v}\ ~\SOR~ \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp\\
      \\
@@ -74,11 +74,11 @@ challenges, which we discuss in this section.}
     \SE\in\prg{S}   \mid  \  \\
     &
   &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
-  & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid\ \forall \m.\A \ \mid\ \exists \m. \A \ \mid \\
+  & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid \\
  &    &  \CanAccess {\alpha_1} {\alpha_2} \ \mid\  \ \Changes e 
            \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\mid\\          
 &    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A   \ \mid \ \Past \A \ \mid \\  
- &    &        \Using \SF  \A  \ \mid \  \External \alpha \ \mid\ \Name \alpha \x \ \mid \\
+ &    &        \Using \SF  \A  \ \mid \  \External \alpha\\
  \\
  \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
 \end{array}
@@ -89,11 +89,11 @@ Expressions support calls with parameters  ($\e.\f(\e^*)$); these are calls to g
 functions. This  supports recursion at the level of expressions; therefore, the value of  an expression  may be
 undefined (either because of infinite recursion, or because the expression accessed undefined fields or variables). 
 Assertions of the form   $\e$=$\e'$ are satisfied only if both $\e$ and $\e'$ are defined. Because we do not support 
-recursion at the level of assertions, assertions from a classical logic (\eg $\A \vee \neg\A$ is a tautology).
+recursion at the level of assertions, assertions form a classical logic (\eg $\A \vee \neg\A$ is a tautology).
  
 We will discuss evaluation of expressions in section \ref{sect:expressions}, standard assertions about heap/stack and logical
  connectives in \ref{sect:standard}. 
- \sophia{We have discussed  the treatment of  permission, control, space, and viewpoint  in 
+ \sophia{We \Mrr[As per S.D.]{will discuss} the treatment of  permission, control, space, and viewpoint  in 
 the main text in the  Definitions 3-7  in section \ref{sect:pcsv} %HARD
 the treatment of time in  Definitions 8,9 in the main text, section \ref{sect:time},
 We will discuss properties of assertions in Lemmas \ref{lemma:classic}-\ref{lemma:classic:two}.}
@@ -111,11 +111,6 @@ We use the configuration, $\sigma$, to read the contents of the top stack frame
 ${\sf {Field\_Heap\_Val}}$). We use the module, \M, to find the  ghost field declaration corresponding to the
 ghost field being used. 
 
-\mrrz{\Chainmail as}
-\mrrx[I added this to try to explain the changes as requested. I originally put it in the ``explain things'' section (§3), rather than break up the formal definitions. I have left it here, however, to not introduce it too soon. \textbf{I am also unsure} about whether even using \prg{this} is that useful, since \Chainmail predicates don't concern themselves with local execution?]{described here uses addresses rather than variable names to refer to objects. The $\Name \alpha x$ assertion allows addresses to be bound to current local variables. Previous papers have used variable names, both for referring to local variables, and in quantification. Using addresses allows for simpler formal semantics, without superficially affecting predicates for quantified variables. To specify local variables, as could be done in previous papers, universally-quantified addresses should be bound to names in an implication, $\forall \alpha_x. (\Name {\alpha_x} {\x} \rightarrow \dots)$. This is more flexible as names can be bound at any time with temporal assertions, rather than restricted to their current value.}
-
-\mrrz{The cost of complicating specifying local variables is considered acceptable, as in most use cases, only \prg{this} is needed. As \Chainmail works with invariants, not assertions or pre/post-conditions, there is no consistent scope for local names to have a persistent meaning, so they are rarely useful.}\\
-
 The treatment of fields and ghost fields is described in rules ${\sf {Field\_Heap\_Val}}$,\\  ${\sf {Field\_Ghost\_Val}}$ and 
 ${\sf {Field\_Ghost\_Val2}}$.  If the field \f~ exists in the heap, then its value is returned (${\sf {Field\_Heap\_Val}}$). 
 Ghost field reads, on the other hand, have the form $\e_0.\f(\e_1,...\e_n)$, and their value is
@@ -126,21 +121,6 @@ returns the expression constituting the body for that ghost field, as defined in
 We return  that expression
 evaluated in a configuration where the formal parameters have been substituted by the values of the actual
 parameters.
-
-\mrrx[I have done this for now to discuss that it would need to be translated in general, however limit the scope of discussion given the limited circumstances. Also is there a more fundamental reason we are excluding quantifiers, or is it just for show?]{As they are embedded in program bodies, ghost fields more closely resemble the target language. For \LangOO, this means they are restricted to exclude quantifiers, and retain the ability to refer to local variables, either parameters or \prg{this}, directly, as would be expected in an expression. We thus define a translation function $f_{\mathcal G}$ to decode ghost field syntax into \Chainmail assertions.}
-
-
-\begin{definition}[\mrrz{Ghost Field Translation}] \label{def:valid:assertion:view}
-\mrrz{For any expression \e, we define}
-\begin{itemize}
- \item
-\mrrz{$f_{\mathcal G}(\e) = \forall {\alpha_{\x_1}}. \dots \forall \alpha_{\x_n}. (\Name{\alpha_{\x_1}}{\x} \wedge \dots \Name{\alpha_{\x_n}}{\x_n} \rightarrow  \e[\x_n/\alpha_{x_n}])
-\IFF \\
- ~ \strut  \hfill\x_1$..$x_n$ are the variables in \e.}
-\end{itemize}
-\end{definition}
-
-
 
 Ghost fields support recursive definitions. For example, imagine a module $\M_A$ with
 a class \prg{Node} which has a field called \prg{next}, and which 
@@ -207,20 +187,30 @@ $\begin{array}{l}
 \\ \\
 \begin{array}{lll}
 \begin{array}{l}
+\begin{array}{ll}
+\inferenceruleExact{\SP\SP\SP}{\Mrrz{Var\_val}} {
+ \interp {\x}{\sigma} = v
+}
+{
+ \M,\, \sigma, \x  \ \hookrightarrow\   v
+}
+
+&
+\inferenceruleExact{\SP}{Field\_Ghost\_Val2} {
+ \M,\, \sigma, \SE.\f \lp \rp \ \hookrightarrow\   v
+}
+{
+ \M,\, \sigma, \SE.\f   \ \hookrightarrow\   v
+}
+\end{array}
+\\
+\\
 \inferenceruleNM{Field\_Heap\_Val} {
  \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha \hspace{1.5cm} 
  \sigma(\alpha,\f)=v
 }
 {
  \M,\, \sigma, \SE.\f  \ \hookrightarrow\   v
-}
-\\
-\\
-\inferenceruleNM{Field\_Ghost\_Val2} {
- \M,\, \sigma, \SE.\f \lp \rp \ \hookrightarrow\   v
-}
-{
- \M,\, \sigma, \SE.\f   \ \hookrightarrow\   v
 }
 \end{array}
 & &
@@ -238,7 +228,7 @@ $\begin{array}{l}
 
 \phi = (\_, (\this\mapsto\alpha, \p_1\mapsto v_1, .... \p_n\mapsto v_n))\\  
   
-  \M,\,(\phi, \chi), \SE'    \hookrightarrow_{\SAF}\   v  \hspace{1.2cm} \SE' = f_{\mathcal G}(\SE)
+  \M,\,(\phi, \chi), \SE'    \hookrightarrow\   v  \hspace{1.2cm} \SE' = f_{\mathcal G}(\SE)
  }
 {
  \M,\,  \sigma, \ \SE_0.\f \lp \SE_1,....\SE_n\rp \hookrightarrow   \ v
@@ -302,8 +292,6 @@ expressions.
   \item
   $\interp {\x}{\sigma}$ $ \triangleq$ $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
   \item
-  $\interp {\SF}{\sigma}$ $ \triangleq$ $\phi(\SF)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
-  \item
     $\interp {\x.\f}{\sigma}$ $ \triangleq$ $\chi(\interp {\x}{\sigma},\f)$  \ \ if \ \ $\sigma$=$(\_,\chi)$
    \end{itemize}
 \end{definition}   
@@ -343,9 +331,6 @@ $\strut ~ $ \hspace{2in} \hfill
 \item
 $\M\mkpair \M',\sigma_0 , \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
  $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
-\item
-$\M\mkpair \M',\sigma_0 ,  \sigma \models\ \Name \alpha \x $ \IFF 
- $ \interp{\prg{x}}{\sigma} = \alpha$.
 \end{itemize}
 \end{definition}
 }
@@ -357,9 +342,6 @@ does not hold, and $\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{cyc.acyclic}
 In general, when $\M\mkpair \M', \sigma  \models \prg{e}$ holds,  then $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too.
 But when $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
 Finally, an assertion of the form $\e_0=\e_0$ does not always hold; for example,   $\M_A\mkpair \M', \sigma_A \models \prg{cyc.last}=\prg{cyc.last}$ does not hold.
-
-\jm{Satisfaction of the assertion $\prg{name} \langle \alpha, \prg{x} \rangle$ is required to connect the object in the heap represented by $\alpha$ 
-to the variable $\prg{x}$ in the local variable map. This is primarily required to connect the \prg{this} variable to a specific object.}
 
 % \subsubsection{Logical connectives, quantifiers, space and control} 
 We now define satisfaction of assertions which involve logical connectives and existential or universal quantifiers, in the standard way:
@@ -416,12 +398,6 @@ $\M\mkpair \M',\sigma_0 , \sigma \models \exists \alpha.\A$ \IFF
 $\M\mkpair \M', \sigma_0 , \sigma \models  \A[\alpha/\alpha']$\ for some  $\alpha
 \in dom(\sigma)$.
 \item
-$\M\mkpair \M',\sigma_0 , \sigma \models \forall \prg{m}.\A$ \IFF
-$\M\mkpair \M',\sigma_0 , \sigma \models  \A[\prg{m}/\prg{m}']$ \ for all method names  $\prg{m}'$.
-\item
-$\M\mkpair \M',\sigma_0 ,\sigma \models \exists \prg{m}.\A$ \IFF
-$\M\mkpair \M', \sigma_0 , \sigma \models  \A[\prg{m}/\prg{m}']$\ for some  method name $\prg{m}'$.
-\item
 $\M\mkpair \M',\sigma_0 , \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M',\sigma_0 ,   \sigma \models \A $ implies $\M\mkpair \M',\sigma_0 ,   \sigma \models \A' $
 \item
 $\M\mkpair \M',\sigma_0 ,  \sigma \models  \A \wedge \A'$   \IFF  $\M\mkpair \M',\sigma_0 ,   \sigma \models  \A $
@@ -448,6 +424,11 @@ and also
 $\M_A\mkpair \M', \sigma_0 , \sigma_A \models  \neg (\prg{cyc.last}=\prg{cyc.last})$
 hold.
 
+\mrrz{\sout{\Chainmail as described here uses addresses rather than variable names to refer to objects. The $\Name \alpha x$ assertion allows addresses to be bound to current local variables. Previous papers have used variable names, both for referring to local variables, and in quantification. Using addresses allows for simpler formal semantics, without superficially affecting predicates for quantified variables. To specify local variables, as could be done in previous papers, universally-quantified addresses should be bound to names in an implication, $\forall \alpha_x. (\Name {\alpha_x} {\x} \rightarrow \dots)$. This is more flexible as names can be bound at any time with temporal assertions, rather than restricted to their current value.}}
+
+\mrrz{\sout{The cost of complicating specifying local variables is considered acceptable, as in most use cases, only \prg{this} is needed. As \Chainmail works with invariants, not assertions or pre/post-conditions, there is no consistent scope for local names to have a persistent meaning, so they are rarely useful.}}\\
+
+\Mrr[New discussion moved further down and updated to follow changes. Once again I'm unsure what you want "previous work" things to look like?]{\Chainmail quantifies over addresses, as referring to instances rather than local variables is more relevant. Since \Chainmail assertions are invariants over modules, local variable names no consistent meaning. Previous work on \Chainmail exclusively used variables in assertions, including for quantification. Aside from being less clear, as in assertions we generally want to refer to objects rather than the value at a certain name, it also complicated handling temporal assertions, as discussed in section~\ref{sect:time}}.
 
 \subsection{Satisfaction of Assertions - Access, Control, Space, Viewpoint}
 \label{sect:pcsv} 
@@ -478,7 +459,7 @@ for some variable \z\ and  \z\ appears in  $\sigma$.\prg{contn}.}
  \end{itemize}
 \end{itemize}
 \end{definition}
-\mrr{A missing $2$ here below?}
+\Mrr[Added $\sigma(\alpha,\f)$ for now, since this is what is used above, and I don't think we define interpretation for fields on addresses, no?]{}
 \jm{
 \begin{definition}[%Satisfaction of  Assertions about 
 Permission]  \label{def:valid:assertion:access}
@@ -501,7 +482,7 @@ $\M\mkpair \M', \sigma_0 , \sigma \models  \CanAccess{\alpha_1}{\alpha_2}$  \IFF
 \item
 $\alpha_1$=$\alpha_{2}$, \ \ or
 \item
-${\alpha_1.\f} $=${\alpha_2}$, \  \ for some field \prg{f},  \ \ or
+$\Mrrz{\sigma(\alpha_1,\f)} $=${\alpha_2}$, \  \ for some field \prg{f},  \ \ or
 \item
 ${\alpha_1}$=$\interp {\this} {\sigma}$ and
   ${\alpha_2}$=$\interp {\x} {\sigma}$
@@ -565,8 +546,7 @@ $\sigma.\prg{contn}$=${\x.\m(\y_1,..\y_n);\_}$,\ \ \ for some  $\x$,$\y_1$,... $
 \end{definition}
 }
 \noindent 
-\mrr[Thus, $\Calls {\alpha}  {\prg{m}} {\alpha'}  {{\alpha_1,...\alpha_n}}$ expresses the there will be a call from $\alpha_1$ to the method \m\ on object $\alpha'$ , given objects $\alpha_1,...\alpha_n$. If these are named \y, and $\z_1,...\z_n$ respectively, then $\y.\m(\z_1,...\z_n)$ will be executed next, with the caller \this\ being $\alpha$.]{Updated to use addresses, further update to rename $v_k$ to $a_k$ as they can only be addresses in a call.}
- 
+\Mrr{Thus, $\Calls {\alpha}  {\prg{m}} {\alpha'}  {{\alpha_1,...\alpha_n}}$ expresses that there will be a call from $\alpha_1$ to the method \m\ on object $\alpha'$ , given objects $\alpha_1,...\alpha_n$. If these are named \y, and $\z_1,...\z_n$ respectively, then $\y.\m(\z_1,...\z_n)$ will be executed next, and the current caller \this\ is $\alpha$.}
  
 
 \vspace{.2cm} \noindent
@@ -702,20 +682,16 @@ The difference is that frames are sets of locations (pairs of address and field)
 are allowed and may   hold %(\eg $\M_{BA2}\mkpair \M', \sigma  \models \Using {(\not(\exists n.\acc_2.\prg{balance}=n))} {\prg{S}_4}$),  
 or not, \eg   %$\M_{BA2}\mkpair \M', \sigma   \models \exists n.\acc_2.\prg{balance}=n$, while 
  $\M_{BA2}\mkpair \M', \sigma_0 , \sigma  \models \neg\ \Using {(\exists n.\acc_2.\prg{balance}=n)} {\prg{S}_4}$.
-} 
+}\Mrr{where \prg{S}$_4$ is as defined previously.}
  
  
 
 \subsection{Satisfaction of Assertions - Time}
 \label{sect:time} 
-\sd{To deal with time, we are faced with four challenges: (a) the current configuration needs to store the code being executed, so
+\sd{To deal with time, we are faced with three challenges: (a) the current configuration needs to store the code being executed, so
 as to be able to calculate future configurations, (b) when considering the future, we do not want to observe 
 configurations which go beyond the frame currently at the top of the stack, (c) there is no "undo" operator to deterministically enumerate
 all the previous configurations.} 
-
-\mrr[Through working with addresses instead of names, and instead requiring addresses to be bound to a name explicitly, we avoid the need to adapt the future configuration to use the current configuration's bindings. This would otherwise be necessary to allow the specification to keep the meaning of names consistent. Explicitly binding the name to an instance once renders it irrelevant if that binding changes over time, as the address will not, providing a time-independent handle to the same instance. It also allows for further flexibility over when the binding occurs, allowing for assertions referencing the past or future values of a certain binding.]{This read "validity of assertions in the future or the past needs to be judged in the 
-future configuration, but using the bindings from the current one", however this is no longer the case. Consequently, the discussion of this challenge has been removed.\\
-This has since been rewritten again to clear up the language; I am \textbf{unsure if the discussion over future/past bindings are helpful}, I'm doubtful right now because this seems kind of silly. }
 
 \sd{
 We address challenge (a) by storing the remaining code to be executed in \prg{cntn} in each frame. 
@@ -833,7 +809,7 @@ $\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpa
     % chopped as the example no longer works.
   For example, revisit Fig. \ref{fig:BankAccountDiagrams}, and take $\SF_1$ to consist of objects \prg{1}, \prg{2},   \prg{4}, \prg{93}, and \prg{94},
   and $\SF_2$ to consist of objects \prg{1}, \prg{2},   \prg{4}.  Assume that 
-   $\sigma_5$ is like $\sigma_1$, that the next call in $\sigma_5$ is a method on $\prg{u}_{94}$, whose  body obtains the
+   $\sigma_5$ is like $\sigma_1$, \Mrr{except that} the next call in $\sigma_5$ is a method on $\prg{u}_{94}$, whose  body obtains the
   address of $\acc_4$ (by making a call on \prg{93} to which it has access), and the address of $\acc_2$ (to which it has access),
   and then makes the call $\acc_2.\prg{deposit}(\acc_4,360)$. Assume also     that $\prg{a}_4$'s balance is \prg{380}.
   %Assume   that $\sigma_1$ contains the
@@ -843,7 +819,9 @@ $\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpa
    $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_5 \ \not\models \ \Using {\Future{ \Changes {\acc_2.\bal}}} {\SF_2}$\\
  $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_5 \ \models \ \Future{ \Using {\Changes {\acc_2.\bal}} {\SF_2}}$\
 
-Whilst the above shows that from $\Future { \Using{A}{\SF} }$ we cannot conclude $\Using { \Future{A} }{\SF}$, it is also worth noting that in general the inverse doesn't hold either. $\Future { \Using{A}{\SF} }$ restricts $A$ in the future, meaning any objects instantiated in the between the present and then are excluded, whereas $\Using { \Future{A} }{\SF}$ restricts the space in the present, so the objects are considered in A. Taking a new configuration $\sigma_6$  with continuation \prg{x := new Account(100, null) } and otherwise similar to $\sigma_1$, and $\SF = \emptyset$, we cannot prove $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Future{ \Using { \prg{x.bank} = \prg{null} } {\SF}}$  as \prg{x} is not in $S$, however, we can prove $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Using { \Future{ \prg{x.bank} = \prg{null} } } {\SF}$, since the restriction of the configuration to $\SF$ in the present doesn't prevent the next statement's new \prg{Account} being considered in the \Future{\cdot}.
+Whilst the above shows that from $\Future { \Using{A}{\SF} }$ we cannot conclude $\Using { \Future{A} }{\SF}$, it is also worth noting that in general the inverse does not hold either. $\Future { \Using{A}{\SF} }$ restricts $A$ in the future, meaning any objects instantiated in the between the present and then are excluded, whereas $\Using { \Future{A} }{\SF}$ restricts the space in the present, so the objects are considered in A. Taking a new configuration $\sigma_6$  with continuation \prg{x := new Account(100, null) } and otherwise similar to $\sigma_1$, and $\SF = \emptyset$, \Mrr{the assertion $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Future{ \Using { \prg{x.bank} = \prg{null} } {\SF}}$  does not hold, as \prg{x} is not in $S$. However, we can prove $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Using { \Future{ \prg{x.bank} = \prg{null} } } {\SF}$, since the restriction of the configuration to $\SF$ in the present doesn't exclude new \prg{Account} with field $\prg{bank} = \prg{null}$, created in the next statement, being considered in the \Future{\_}}.
+
+\Mrr[This again replaces the "adaption" section]{Through quantifying over addresses instead of variables, as had been the case in previous formalisations of \Chainmail, we avoid the need to adapt the future or past configuration to use the current configuration's bindings in $\Future{\_}$ and $\Past{\_}$. This would otherwise be necessary to allow specifications to reference consistent values. However, not adapting the future configuration means references to an explicit variable, such as \prg{this}, will refer to the value of the variable at the time specified, given the context of the surrounding temporal connectives. Thus, to use the current object at a local variable in a future or past context, as can be done directly if the future or past configuration were adapted as above, universally-quantified addresses should be bound to names in an implication, $\forall \alpha_x. (\alpha_x = \x \rightarrow \dots)$. This is more flexible as names can be bound at any time, rather than restricted to their current value. Explicitly binding the name to an instance once, renders it irrelevant if that binding changes over time, as the address will not, providing a time-independent handle to the same instance. It also allows for further flexibility over when the binding occurs, allowing for assertions to reference the past or future values of a certain binding.}
 
 
 \subsection{Properties of Assertions}
@@ -858,8 +836,10 @@ We can then prove that the usual equivalences hold, \eg\  $ \A \vee \A' \ \equiv
 Our assertions are classical, \eg  $ \A \wedge\neg \A \ \equiv \  \prg{false}$, and $\M\mkpair \M', \sigma_0 , \sigma  \models \A$ and  $\M\mkpair \M', \sigma_0 , \sigma  \models \A \rightarrow \A'$  implies
 $\M\mkpair \M', \sigma_0 , \sigma  \models \A '$. 
  \sd{This desirable property comes at the loss of some expected equivalences, \eg, in general, 
- $\e = \prg{false}$ and $\neg\e$ are not equivalent. 
- More  in Appendix \ref{app:assertions}.}
+ $\e = \prg{false}$ and $\neg\e$ are not equivalent.}
+\Mrr[Moved up properties as requested, however I'm not sure >>exactly how<< it should be moved up?]{}
+
+\input{assertionsAppendix}
 
 \subsection{Modules satisfying assertions}
 
