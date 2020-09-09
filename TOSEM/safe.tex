@@ -1,0 +1,122 @@
+An earlier publication of this work, published at FASE 2020 \cite{FASE}, used an example of a Safe to
+demonstrate how holistic specifications could be used to protect against dangerous implementations
+of a safe. We now revisit this example, and discuss a bug that has since been discovered, along with
+the nuance that this example points to in Chainmail. 
+
+ \begin{figure}[htb]
+ \begin{tabular}{lll} % {lll}
+\begin{minipage}{0.45\textwidth}
+\begin{lstlisting}
+class Safe{
+   field treasure 
+   field secret 
+   method take(scr){
+      if (secret==scr) then {
+         t=treasure
+         treasure = null
+         return t }  }
+ }
+\end{lstlisting}
+\end{minipage}
+  &\ \ \  \ \ \ \ \  \ \ \ \ \ \ &
+\begin{minipage}{0.45\textwidth}
+\begin{lstlisting}
+class Safe{
+   field treasure   
+   field secret  
+   method take(scr){
+       $\mathit{... as\, version\,1 ...}$ 
+   }
+   method set(scr){
+         secret=scr }
+ }
+\end{lstlisting}
+\end{minipage} 
+ \end{tabular}
+  \vspace*{-0.95cm}
+  \caption{Two Versions of the class \prg{Safe}}
+ \label{fig:ExampleSafe}
+ \vspace*{-0.65cm}
+ \end{figure}
+
+Consider the two implementations of a \prg{Safe} class in Figure \ref{fig:ExampleSafe}. Both implementations 
+present a class with two fields:
+\begin{itemize}
+\item
+\prg{treasure} : the object stored in the safe,  and 
+\item
+\prg{secret} : the password required to open the \prg{Safe} and remove the treasure.
+\end{itemize}
+Both implementations also include a method for using the 
+ \prg{secret} to remove the \prg{treasure}: \prg{take}.
+The second implementation also includes another method, \prg{set}, that allows any object to change the \prg{secret}.
+This clearly violates any reasonable specification for a \prg{Safe}, and seems an ideal target for a Holistic specification.
+ A classical Hoare triple describing the behaviour of \prg{take} would be:
+ 
+  \vspace{.1in}
+  
+% \begin{figure}[htbp] 
+(ClassicSpec)$  \ \ $  $\triangleq$
+\vspace{-.1in}
+\begin{lstlisting}
+   method take(scr)
+   PRE:   this:Safe  
+   POST:  scr=this.secret$\pre$  $\longrightarrow$ this.treasure=null 
+               $\wedge$
+          scr$\neq$this.secret$\pre$ $\longrightarrow$  $\forall$s:Safe.$\,$s.treasure=s.treasure$\pre$
+ \end{lstlisting}
+%^\end{figure} 
+\vspace{-.2in}
+
+(ClassicSpec)  expresses  that knowledge of the \prg{secret} is  \emph{sufficient} %condition 
+to remove the treasure, and further that  knowledge of the \prg{secret} is \emph{necessary} for
+ \prg{take} to remove the \prg{treasure}. (ClassicSpec) does not however ensure that there
+ is not some other means of removing the \prg{treasure}, or in the case of the second implementation
+ of \prg{Safe}, changing the \prg{secret}. In order to capture such a specification, we would need 
+ a holistic specification.
+ 
+ 
+ 
+\vspace{.1in}
+(HolisticSpec)\ \  $\triangleq$\\ 
+$\strut \hspace{.3in}   \forall \prg{s}. % $\\ 
+[\ \ \prg{s}:\prg{Safe} \wedge \prg{s.treasure}\neq\prg{null}   \wedge   \Future{\prg{s.treasure}=\prg{null}} $ \\ 
+ $ \strut \hspace{4.3cm}     \longrightarrow \ \  \exists \prg{o}. [\  \External{\prg{o}} \wedge  \CanAccess{\prg{o}}{\prg{s.secret}}\ ]  \  \ ] \hfill $
+\vspace{.1in}
+
+(HolisticSpec) requires that for any \prg{Safe} with a non-null \prg{treasure}, if
+that treasure is ever removed, it follows that there is some current external object 
+with knowledge of the \prg{secret}. i.e. it is not possible to either forge, steal, 
+or illegally modify the \prg{secret}. 
+
+Both classes in Fig. \ref{fig:ExampleSafe} satisfy (ClassicSpec), and in the paper presented at FASE 2020 \cite{FASE}, 
+we claimed that the first version satisfies (HolisticSpec) while the second does not. In fact neither implementation satisfies 
+(HolisticSpec). The nuance is found in the notion of \prg{external} and \prg{internal}. The counter example to (HolisticSpec)
+is where the \prg{secret} of one \prg{Safe}, say \prg{s1}, is stored as the \prg{treasure} of another, say \prg{s2}: i.e. \prg{s2.treasure = s1.secret}. 
+In such a case, there might be no external objects with explicit knowledge of \prg{s1.secret} (since \prg{s2} is a \prg{Safe}, and thus considered \prg{internal}), but some object might 
+know \prg{s2.secret}, and thus have a way to obtain \prg{s1.secret}, and finally removing \prg{s1.treasure}. 
+
+The discovery of this bug identifies the nuances of \prg{external} and \prg{internal}. In the current formulation of 
+Chainmail, these concepts are defined at a module level, but in the example of the Safe, are needed to be defined 
+at a data-structure level. i.e. in our example above, we need to be able to say that \prg{s2} is external to \prg{s1}.
+We have since reformulated the Safe example by making use of ghost fields to define what is internal and external 
+to a \prg{Safe}.
+
+ \begin{figure}[htb]
+\begin{lstlisting}
+class Safe{
+   ghost is_internal(x) = x == this || x == secret
+   field treasure 
+   field secret 
+   method take(scr){
+      if (secret==scr) then {
+         t=treasure
+         treasure = null
+         return t }  }
+ }
+\end{lstlisting}
+  \vspace*{-0.95cm}
+  \caption{A fixed version of the class \prg{Safe}}
+ \label{fig:ExampleSafeFix}
+ \vspace*{-0.65cm}
+ \end{figure}
