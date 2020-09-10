@@ -625,14 +625,17 @@ $\M\mkpair \M', \sigma_0 , \sigma  \models \A '$.
 
 \subsection{\mrrz{Connectivity}}
 \mrr[Not sure if this is where we want it, but just trying it for now]{
-Many programs are required to only pass on objects under certain conditions. This is to keep these objects safe from code that shouldn't have access to them, such as malicious external modules, or even other internal objects that were not expecting them, and whose actions may have unintended consequences. \Chainmail allows expressing concepts such as this through checking every object who will have access, or if change will be effected, currently has the means by which it could gain access to do so.
+Many programs are required to only pass on objects under certain conditions. This is to keep these objects safe from code that shouldn't have access to them, such as malicious external modules, or even other internal objects that were not expecting them, and whose actions may have unintended consequences. \Chainmail allows expressing concepts such as this through checking every object who will have access currently has the means by which it could gain access to do so, or by checking if change is effected, an object could have had access to do so.
 }
 
-\mrr{However, to ensure these assertions are sound, we need to ensure that code only has access to objects it is directly passed, thereby ensuring checking direct connections is sufficient for checking these assertions. To ensure code only has access to what it is passed, we can ensure any method call, the entry point for any code, only \emph{connects} to what the parameters could have access to. This can be expressed formally as:
+\mrr{However, to ensure these assertions are sound, we need to ensure that code only has access to objects it is directly passed, thereby ensuring that checking direct connections is sufficient for checking these assertions. To ensure code only has access to what it is passed, we can ensure any method call---the barrier between different objects executing code, and therefore different connectivity---only \emph{connects} to what its parameters could have access to. This can be expressed formally as:
 }
 
 
 \mrr[We don't need to create a separate ``connected'' predicate since we're not dealing the return step in the main lemma]{
+\begin{lemma}[Method call connectivity]
+\label{lemma:method_call_connectivity}
+\vspace{-0.15in}
 \begin{align*}
 \forall M . \forall \sigma, \sigma'. &\forall \alpha, \alpha'. [\\
 &\sigma\text{.cont} = \x_0.\m(\x_1,\dots\x_n) \wedge \M,\sigma\leadsto^\text{call} \sigma' \wedge \text{access}_{\sigma'}\langle \alpha,\alpha'\rangle 
@@ -644,12 +647,13 @@ Many programs are required to only pass on objects under certain conditions. Thi
 \text{access}^*_\sigma\langle \alpha'',\alpha'\rangle)\\
 &]
 \end{align*}
+\end{lemma}
 }
 
 \mrr{This says for any method call, if in the configuration when the call has completed two objects are connected, then either they were originally connected, or an object explicitly passed to the call could connect to both.
 }
 
-\mrr{To evaluate the entire call, we define a new reduction operator $\leadsto^\text{call}$, which executes function calls in one step. It does this by skipping any intermediate reduction steps with the additional frames for the method calls and its child calls in the tail of the stack.
+\mrr{To evaluate the entire call, we define a new reduction operator $\leadsto^\text{call}$, which executes function calls in one step. It does this by skipping any intermediate reduction steps with the additional frames for the method call and its child calls in the tail of the stack.
 }
 \begin{definition}[\mrrz{Call-as-step execution}]
 \label{def:call_execution} 
@@ -659,23 +663,49 @@ Many programs are required to only pass on objects under certain conditions. Thi
 \item
 $\M, \sigma \leadsto^\text{call} \sigma'$ \IFF
 there exist  $n\geq 2$, runtime configurations $\sigma_1$ ... $\sigma_n$,
-and stack $\psi$
+frame $\phi$, and heap $\chi$
 \\such that
 \begin{itemize}
 \item
-$\sigma$=$\sigma_1$,\ \  \ \ and\ \ \ \ $\sigma_n=\sigma'$.
+$\sigma = (\phi \cdot \_, \chi)$, \ \ \ \ and\ \ \ \
+$\sigma' = (\phi', \_)$, for some frame $\phi'$
 \item
-$\M, \sigma_i \leadsto \sigma_{i+1}'$,\ \ \ \ \ \ \ for $1\leq i \leq n\!-\!1$
+$(\phi, \chi)=\sigma_1$,\ \ \ \ \ \ \ \ and\ \ \ \ $\sigma_n=\sigma'$.
 \item
-$\sigma = (\_ \cdot \psi, \_)$, \ \ \ \ and\ \ \ \
-$\sigma' = (\_ \cdot \psi, \_)$,
+$\M, \sigma_i \leadsto \sigma_{i+1}'$,\ \ \ \ \ \ \ for $1\leq i \leq n\!-\!1$,
 \item
- $\sigma_i = (\_\cdot\psi'\cdot\psi, \_)$,\ \ \ \ for $2\leq i \leq n\!-\!2$ and some stack $\psi'$ 
+ $\sigma_i = (\psi'\cdot\phi, \_)$,\ \ \ \ for $2\leq i \leq n\!-\!2$ and some non-empty stack $\psi'$ 
 \end{itemize}
 \end{itemize}
 \end{definition}
 
-\mrr{We define a predicate $\text{access}\langle\_,\_\rangle$ similar to $\CanAccess{\_}{\_}$ in \Chainmail. However, the receiver and parameters can gain access to any object they initially only have indirect access to. If one of their fields has access to an object, this object could be passed up, either directly if they are of the same class, or otherwise by a method invocation. This could happen to any depth, and so any $n^\text{th}$ child field must be considered. We therefore define a transitive access predicate, $\text{access}^*\langle\_,\_\rangle$, to encode this property.}
+\mrr[I don't know if we should include definitions, or elide them?]{We define a predicate $\text{access}\langle\_,\_\rangle$ similar to $\CanAccess{\_}{\_}$ in \Chainmail, to encode when an object is connected to another. However, the receiver and parameters can gain access to any object they initially only have indirect access to. If one of their fields has access to an object, this object could be passed up, either directly if they are of the same class, or otherwise by a method invocation. This could happen to any depth, and so any $n^\text{th}$ child field must be considered. We therefore define a transitive access predicate, $\text{access}^*\langle\_,\_\rangle$, to encode this property.}
+
+\mrr{To prove this lemma, we use a series of auxiliary lemmas. The first concerns local variables, and says that if an object is referred to by a local variable in any frame, when starting reduction from a single initial frame, then the initial frame's receiver, \prg{this}, was transitively connected to it. The strengthening of this lemma to all frames of the stack, instead of simply the top frame, allows for its inductive proof to handle the \prg{return} case. In this case we need to prove that the initial receiver can access the variables in the new top frame, which was previously the second top frame. Knowing it can access local variables in all frames inductively, renders this trivial. We take a single initial frame to prevent going up a frame from where we begin, which is not useful for single method calls.}\\
+\mrr{
+\begin{lemma}[Local variable connectivity]
+\label{lemma:local_variable_connectivity}
+$$\forall M. \forall \phi, \phi'. \forall \psi. \forall \chi, \chi'.\forall \x. \forall \alpha. M,(\phi, \chi) \leadsto^* (\psi, \chi') \wedge \phi' \in \psi \wedge \interp{\x}{\phi'} \longrightarrow \text{access}^*_{(\phi, \chi)}\langle \interp{\prg{this}}{\phi}, \alpha\rangle$$
+\end{lemma}
+}
+
+\mrr{
+We then prove that if two objects are connected by the final configuration, either the inital \prg{this} had access to both, or they were initially connected. This follows intuitively from lemma~\ref{lemma:local_variable_connectivity}, since any connections made must occur through local variables by the grammar of \LangOO.
+}
+
+\mrr{
+\begin{lemma}[Receiver connectivity]
+\label{lemma:receiver_connectivity}
+\vspace{-0.15in}
+\begin{align*}
+\forall M. \forall \phi, \phi'. \forall \psi. \forall \chi, \chi'\forall \alpha, \alpha'. &\ M,(\phi, \chi) \leadsto^* (\psi, \chi') \wedge \text{access}_{(\psi, \chi')}\langle \alpha, \alpha'\rangle \longrightarrow\\
+&\quad \text{access}^*_{(\phi, \chi)}\langle \interp{\prg{this}}, \alpha\rangle \vee \text{access}_{(\phi, \chi)}\langle{\alpha, \alpha'}\rangle
+\end{align*}
+\end{lemma}
+}
+
+\mrr{From here we can prove the original lemma~\ref{lemma:method_call_connectivity} by noticing in the next step, the receiver will have access to the parameters, and so lemma~\ref{lemma:receiver_connectivity} applies.
+}
 
 \subsection{Modules satisfying assertions}
 
