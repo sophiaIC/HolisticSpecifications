@@ -5,6 +5,7 @@ Require Import loo_properties.
 Require Import loo_reduction_properties.
 Require Import function_operations.
 Require Import sbst_decoupled.
+Require Import exp.
 Require Import List.
 Require Import String.
 Open Scope string_scope.
@@ -31,6 +32,135 @@ Proof.
     auto.
 Qed.
 
+Ltac disj_split :=
+  match goal with
+  | [H : _ \/ _ |- _ ] =>
+    destruct H
+  end.
+
+Ltac sat_contra_inversion :=
+  match goal with
+  | [|- ~ _ ⦂ _ ◎ _ … _ ⊨ _] =>
+    let Hcontra := fresh in
+    intro Hcontra;
+    inversion Hcontra;
+    subst;
+    clear Hcontra
+  | [|- ~ _ ⦂ _ ◎ _ … _ ⊭ _] =>
+    let Hcontra := fresh in
+    intro Hcontra;
+    inversion Hcontra;
+    subst;
+    clear Hcontra
+  | [|- ~ ?P] =>
+    let Hcontra := fresh in
+    intro Hcontra
+  end.
+
+(*Ltac nsat_class_auto :=
+  match goal with
+  | [|- _ ⦂ _ ◎ _ … _ ⊭ (a_class (av_ (v_true)) _) ] =>
+    apply nsat_class4;
+    intros;
+    crush
+  | [|- ~ _ ⦂ _ ◎ _ … _ ⊨ (a_class (av_ (v_true)) _) ] =>
+    sat_contra_inversion
+
+  | [|- _ ⦂ _ ◎ _ … _ ⊭ (a_class (av_ (v_false)) _) ] =>
+    apply nsat_class4;
+    intros;
+    crush
+  | [|- ~ _ ⦂ _ ◎ _ … _ ⊨ (a_class (av_ (v_false)) _) ] =>
+    sat_contra_inversion
+
+  | [|- _ ⦂ _ ◎ _ … _ ⊭ (a_class (av_ (v_null)) _) ] =>
+    apply nsat_class4;
+    intros;
+    crush
+  | [|- ~ _ ⦂ _ ◎ _ … _ ⊨ (a_class (av_ (v_null)) _) ] =>
+    sat_contra_inversion
+
+  | [|- _ ⦂ _ ◎ _ … _ ⊭ (a_class (av_ (v_int _)) _) ] =>
+    apply nsat_class4;
+    intros;
+    crush
+  | [|- ~ _ ⦂ _ ◎ _ … _ ⊨ (a_class (av_ (v_int _)) _) ] =>
+    sat_contra_inversion
+  end.*)
+
+
+
+Lemma restrict_unique :
+  forall Σ χ χ1 χ2, restrict Σ χ χ1 ->
+               restrict Σ χ χ2 ->
+               χ1 = χ2.
+Proof.
+  intros;
+    repeat match goal with
+           | [H : restrict _ _ _ |- _ ] =>
+             inversion H;
+               subst;
+               clear H
+           end.
+  apply functional_extensionality;
+    intros.
+  destruct (partial_map_dec x χ1) as [Hsome1 | Hnone1];
+    destruct (partial_map_dec x χ2) as [Hsome2 | Hnone2];
+    repeat destruct_exists_loo;
+    try rewrite Hsome1;
+    try rewrite Hsome2;
+    try rewrite Hnone1;
+    try rewrite Hnone2;
+    auto.
+
+  - repeat match goal with
+           | [Ha : forall y o', ?m y = Some o' -> _ ,
+                Hb : ?m ?x = Some ?o |- context [?m ?x]] =>
+             specialize (Ha x o);
+               auto_specialize
+           end.
+    repeat simpl_crush;
+      crush.
+
+  - repeat match goal with
+           | [Ha : forall y o', ?m y = Some o' -> _ ,
+                Hb : ?m ?x = Some ?o |- context [?m ?x]] =>
+             specialize (Ha x o);
+               auto_specialize
+           end.
+    repeat match goal with
+           | [Ha : forall y, set_In (a_ y) ?Σ -> _ ,
+                Hb : set_In (a_ ?x) ?Σ |- _ ] =>
+             specialize (Ha x);
+               auto_specialize
+           end;
+      repeat destruct_exists_loo;
+      repeat simpl_crush.
+
+  -  repeat match goal with
+           | [Ha : forall y o', ?m y = Some o' -> _ ,
+                Hb : ?m ?x = Some ?o |- context [?m ?x]] =>
+             specialize (Ha x o);
+               auto_specialize
+           end.
+    repeat match goal with
+           | [Ha : forall y, set_In (a_ y) ?Σ -> _ ,
+                Hb : set_In (a_ ?x) ?Σ |- _ ] =>
+             specialize (Ha x);
+               auto_specialize
+           end;
+      repeat destruct_exists_loo;
+      repeat simpl_crush.
+Qed.
+
+Ltac unique_restriction :=
+  match goal with
+  | [Ha : restrict ?Σ ?χ ?χ1,
+          Hb : restrict ?Σ ?χ ?χ2 |- _ ] =>
+    assert (χ1 = χ2);
+    [eapply restrict_unique; eauto|subst; clear Hb]
+  end.
+
 (** Lemma 5: Classical (4) *)
 (** This is yet to be proven. *)
 Theorem sat_implies_not_nsat_mutind :
@@ -42,273 +172,116 @@ Theorem sat_implies_not_nsat_mutind :
 Proof.
   apply sat_mutind;
     intros;
-    intros Hcontra;
-    eauto with chainmail_db;
-    try solve [inversion Hcontra; auto].
+    try solve [sat_contra_inversion;
+               repeat is_exp_auto;
+               repeat link_unique_auto;
+               repeat eval_rewrite;
+               repeat simpl_crush;
+               repeat unique_reduction_auto;
+               auto];
+    try solve [sat_contra_inversion;
+               repeat match goal with
+                      | [Ha : forall _, has_type _ _ _ -> _,
+                           Hb : has_type _ ?x _ |- _] =>
+                        specialize (Ha x);
+                        auto_specialize
+                      end;
+               auto].
 
-  - (* sat_name *)
-    inversion Hcontra;
-      subst;
-      crush.
-
-  - (* sat_exp *)
-    inversion Hcontra; subst.
-    unique_loo_exp.
-    link_unique_auto.
-    eval_rewrite; crush.
-
-  - (* Case 3: sat_class *)
-    inversion Hcontra; subst; 
-      [eval_rewrite;
-       crush|crush; eauto].
-
-  - (* Case 11: sat_all *)
-    inversion Hcontra; subst;
-      contradiction (H x);
-      auto.
-
-  - (* Case 14: sat_access2 *)
-    inversion Hcontra; subst.
+  - (* sat-prev *)
+    sat_contra_inversion.
     match goal with
-    | [Ha : forall o' f' α', mapp ?σ ?α1 = Some o' ->
-                        flds o' f' = Some (v_addr α') ->
-                        ?α2 <> α',
-         Hb : mapp ?σ ?α1 = Some ?o,
-         Hc : flds ?o ?f = Some (v_addr ?α2)  |- _] => 
-      specialize (Ha o f α2 Hb Hc)
-    end.
-    crush.
-
-  - (* Case 15: sat_access3 *)
-    inversion Hcontra; subst.
-    assert (Htmp : (χ, ϕ::ψ) = (χ, ϕ::ψ));
-      [auto|].
-    specialize (H7 x i i0 ψ ϕ χ s Htmp e0).
-    crush.
-
-  - (* Case 16: sat_call_1 *)
-    inversion Hcontra; subst.
-    + match goal with
-      | [H : mapp ?σ this <> Some ?v,
-             Hint : ⌊this⌋ ?σ ≜ ?v  |- _] =>
-        contradiction H;
-        inversion Hint; subst
-      end.
-      auto.
-    + unfold snd in *; simpl_crush.
-      match goal with
-      | [Ha : contn ?ϕ = _,
-              Hb : contn ?ϕ = _ |- _] =>
-        rewrite Ha in Hb;
-          inversion Hb;
-          subst
-      end.
-      match goal with
-      | [H : mapp ?σ ?x <> Some ?v,
-             Hint : ⌊?x⌋ ?σ ≜ ?v  |- _] =>
-        contradiction H;
-        inversion Hint; subst
-      end.
-      auto.
-    + unfold snd in *; simpl_crush.
-      match goal with
-      | [Ha : contn ?ϕ = _,
-              Hb : contn ?ϕ = _ |- _] =>
-        rewrite Ha in Hb;
-          inversion Hb;
-          subst
-      end.
-      crush.
-
-  - (* external *)
-    inversion Hcontra;
-      interpretation_rewrite;
-      subst;
-      crush.
-
-  - (* internal *)
-    inversion Hcontra;
-      interpretation_rewrite;
-      subst;
-      crush.
-
-  - (* next *)
-    inversion Hcontra;
-      subst.
-    unique_reduction_auto.
-    auto.
-
-(*  - (* will *)
-    inversion Hcontra; subst.
-    match goal with
-    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ σ'' -> _,
-         Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⤳⋆ ?σ' |- _] =>
-      specialize (H σ')
-    end;
-      auto_specialize;
-      auto.*)
-
-  - (* prev 1 *)
-    inversion Hcontra; subst.
-    + assert (Heq : σ'0 = σ');
-        [eapply pair_reductions_unique_prev; eauto|subst].
-      auto.
-    + admit. (* contradiction: cyclic reduction *)
-
-  - (* prev 2*)
-    inversion Hcontra; subst; auto.
-    admit. (* contradiction: cyclic reduction *)
-
-  - (* nsat_exp*)
-    inversion Hcontra; subst.
-    link_unique_auto.
-    unique_loo_exp.
-    eval_rewrite; crush.
-
-  - admit.
-
-  - (* nsat_name *)
-    inversion Hcontra;
-      subst;
-      crush.
-
-  - admit.
-
-  - (* nsat_class1 *)
-    inversion Hcontra; subst.
-    match goal with
-    | [Ha : mapp ?σ ?α = Some _,
-            Hb : mapp ?σ ?α = Some _ |- _] =>
-      rewrite Ha in Hb;
-        inversion Hb;
+    | [H : _ \/ _ |- _] =>
+      destruct H;
         subst
     end.
-    auto.
-
-  - (* nsat_class2 *)
-    inversion Hcontra; subst;
-      crush.
-
-  - (* nsat_all *)
-    inversion Hcontra; subst.
-    match goal with
-    | [Ha : forall x, has_type ?m x ?T  -> _,
-         Hb : has_type ?m ?x ?T |- _] =>
-      specialize (Ha x Hb)
-    end.
-    auto.
-
-  - (* nsat_access1 *)
-    inversion Hcontra; subst; auto.
-    + match goal with
-      | [Ha : forall o' f' α', ?m ?α1 = Some o' ->
-                          flds o' f' = Some (v_addr α') ->
-                          ?α2 <> α',
-           Hb : flds ?o ?f = Some _ |- _] =>
-        specialize (Ha o f α2);
-          repeat auto_specialize
-      end.
-      auto.
-    + specialize (n1 x);
+    + specialize (H σ');
         repeat auto_specialize.
-      assert (Htmp : (χ, ϕ::ψ) = (χ, ϕ::ψ));
-        [auto|].
-      specialize (n1 ψ ϕ χ s Htmp);
-        auto_specialize;
+      auto.
+    + specialize (H σ' (or_intror eq_refl));
+        repeat auto_specialize.
+      auto.
+
+  - (* sat-was *)
+    sat_contra_inversion.
+    + disj_split;
+        subst;
         auto.
-
-  - (* nsat_call1 *)
-    inversion Hcontra; subst; auto.
+    + disj_split;
+        subst;
+        auto.
       match goal with
-      | [H : mapp ?σ ?x <> Some ?v,
-             Hint : ⌊?x⌋ ?σ ≜ ?v  |- _] =>
-        contradiction H;
-        inversion Hint; subst
+      | [H : ~ _ ⦂ _ ⦿ _ ⤳⋆ _ |- _ ] =>
+        contradiction H
       end.
-      auto.
+      eapply pair_reductions_transitive;
+        eauto.
 
-  - (* nsat_call2 *)
-    inversion Hcontra; subst;
-      unfold snd in *;
-      simpl_crush.
-      match goal with
-      | [Ha : contn ?ϕ = _,
-              Hb : contn ?ϕ = _ |- _] =>
-        rewrite Ha in Hb;
-          inversion Hb;
-          subst
-      end.
-      match goal with
-      | [H : mapp ?σ ?x <> Some ?v,
-             Hint : ⌊?x⌋ ?σ ≜ ?v  |- _] =>
-        contradiction H;
-        inversion Hint; subst
-      end.
-      auto.
+  - (* sat-in *)
+    sat_contra_inversion;
+      [crush; eauto|unique_restriction; auto].
 
-  - (* nsat_call3 *)
-    inversion Hcontra; subst;
-      unfold snd in *;
-      simpl_crush.
-      match goal with
-      | [Ha : contn ?ϕ = _,
-              Hb : contn ?ϕ = _ |- _] =>
-        rewrite Ha in Hb;
-          inversion Hb;
-          subst
-      end.
-      contradiction n; auto.
-
-  - (* nsat_extrn1 *)
-    inversion Hcontra; subst.
-    crush.
-
-  - (* nsat_extrn2 *)
-    inversion Hcontra; subst.
-    crush.
-
-  - (* nsat_intrn1 *)
-    inversion Hcontra; subst.
-    crush.
-
-  - (* nsat_intrn2 *)
-    inversion Hcontra; subst.
-    crush.
-
-  - (* nsat_next *)
-    inversion Hcontra; subst.
-    unique_reduction_auto.
-    auto.
-
-  - (* nsat_will *)
-    inversion Hcontra; subst.
-    match goal with
-    | [H : forall σ'', ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⋆⌉ σ'' -> ~ _,
-         Ha : ?M1 ⦂ ?M2 ⦿ ?σ ⌈⤳⋆⌉ ?σ' |- _] =>
-      specialize (H σ')
-    end;
+  - (* nsat-next *)
+    sat_contra_inversion.
+    specialize (H σ');
       auto_specialize;
       auto.
-    
 
-  - (* nsat_prev 1*)
-    inversion Hcontra; subst.
-    + assert (Heq : σ'0 = σ');
-        [eapply pair_reductions_unique_prev; eauto|subst; auto].
-    + admit. (* contradiction: cyclic reduction *)
+  - (* nsat-will *)
+    sat_contra_inversion.
+    repeat match goal with
+           | [Ha : forall σ', _ ⦂ _ ⦿ _ ⌈⤳⋆⌉ σ' -> _,
+                Hb : _ ⦂ _ ⦿ _ ⌈⤳⋆⌉ ?σ |- _] =>
+             specialize (Ha σ);
+               auto_specialize
+           end.
+    auto.
 
-  - (* nsat_prev 2 *)
-    inversion Hcontra; subst; auto.
-    admit. (* contradiction: cyclic reduction *)
-    
-
-  - (* nsat_was *)
-    inversion Hcontra; subst; auto.
-    specialize (H σ');
-      repeat auto_specialize;
+  - (* nsat-prev *)
+    sat_contra_inversion.
+    disj_split;
+      subst;
       auto.
 
-Admitted.
+  - (* nsat-was1 *)
+    sat_contra_inversion.
+    disj_split;
+      subst;
+      auto.
+    specialize (n σ');
+      specialize (H σ');
+      repeat auto_specialize.
+    auto.
+
+  - (* nsat-was2 *)
+    sat_contra_inversion.
+    disj_split;
+      subst;
+      auto.
+    match goal with
+    | [H : ~ _ ⦂ _ ⦿ _ ⤳⋆ _ |- _ ] =>
+      contradiction H
+    end.
+    eapply pair_reductions_transitive;
+      eauto.
+
+  - (* nsat-in1 *)
+    sat_contra_inversion;
+      eauto.
+    match goal with
+    | [Ha : forall χ', ~ restrict _ _ χ',
+         Hb : restrict _ _ ?χ |- _ ] =>
+      specialize (Ha χ)
+    end;
+      auto.
+
+
+
+  - (* nsat-in2 *)
+    sat_contra_inversion;
+      unique_restriction;
+      auto.
+Qed.
 
 Theorem sat_implies_not_nsat :
   (forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊨ A ->
@@ -324,12 +297,414 @@ Proof.
   destruct sat_implies_not_nsat_mutind; crush.
 Qed.
 
-(** Lemma 5: Classical (1) *)
-(** Yet to be proven *)
-Lemma sat_excluded_middle :
-  forall M1 M2 σ0 σ A, (M1 ⦂ M2 ◎ σ0 … σ ⊨ A) \/ (M1 ⦂ M2 ◎ σ0 … σ ⊭ A).
+Fixpoint subst_list {A : Type}`{Subst A nat a_var} (s : list (a_var * nat))(a : A) :=
+  match s with
+  | (x, n) :: s' => [x /s n] (subst_list s' a)
+  | _ => a
+  end.
+
+Instance substΣavar : Subst a_set nat a_var :=
+  {
+    sbst := sbstΣ
+  }.
+
+Lemma subst_list_asrt_exp :
+  forall s e, subst_list s (a_expr e) = (a_expr (subst_list s e)).
 Proof.
-Admitted.
+  intro s;
+    induction s as [|p s'];
+    intros;
+    try solve [simpl; auto].
+
+  destruct p as [a n].
+  simpl.
+  rewrite IHs'.
+  auto.
+Qed.
+
+Ltac subst_list_induction :=
+  match goal with
+  | [|- context[subst_list ?s _]] =>
+    let p := fresh "p" in
+    let s' := fresh "s" in
+    let a := fresh "a" in
+    let n := fresh "n" in
+    let IH := fresh "IH" in
+    induction s as [|p s' IH];
+    intros;
+    [|destruct p as [a n];
+      simpl;
+      rewrite IH];
+    try solve [simpl; auto]
+  end.
+
+Fixpoint list_S (s : list (a_var * nat)) :=
+  match s with
+  | (a, n) :: s' => (a, S n) :: (list_S s')
+  | _ => s
+  end.
+
+Lemma subst_list_asrt_class :
+  forall s v C, subst_list s (a_class v C) = (a_class (subst_list s v) C).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_arr :
+  forall s A1 A2, subst_list s (A1 ⟶ A2) =
+             ((subst_list s A1) ⟶ (subst_list s A2)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_and :
+  forall s A1 A2, subst_list s (A1 ∧ A2) =
+             ((subst_list s A1) ∧ (subst_list s A2)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_or :
+  forall s A1 A2, subst_list s (A1 ∨ A2) =
+             ((subst_list s A1) ∨ (subst_list s A2)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_all :
+  forall s T A, subst_list s (∀[x⦂ T]∙ A) = (∀[x⦂ T]∙ (subst_list (list_S s) A)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_ex :
+  forall s T A, subst_list s (∃[x⦂ T]∙ A) = (∃[x⦂ T]∙ (subst_list (list_S s) A)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_neg :
+  forall s A, (subst_list s (¬ A)) = (¬ (subst_list s A)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_asrt_cons :
+  forall s A x m, ([x /s m] subst_list s A) = subst_list ((x, m) :: s) A.
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_access :
+  forall s x y, subst_list s (x access y) = ((subst_list s x) access (subst_list s y)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_calls :
+  forall s x y m β, subst_list s (x calls y ▸ m ⟨ β ⟩) =
+               ((subst_list s x) calls (subst_list s y) ▸ (subst_list s m) ⟨ subst_list s β ⟩).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_internal :
+  forall s x, subst_list s (x internal) = ((subst_list s x) internal).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_external :
+  forall s x, subst_list s (x external) = ((subst_list s x) external).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_next :
+  forall s A, subst_list s (a_next A) = (a_next (subst_list s A)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_will :
+  forall s A, subst_list s (a_will A) = (a_will (subst_list s A)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_prev :
+  forall s A, subst_list s (a_prev A) = (a_prev (subst_list s A)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_was :
+  forall s A, subst_list s (a_was A) = (a_was (subst_list s A)).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_in_set :
+  forall s e Σ, subst_list s (a_in e Σ) = a_in (subst_list s e) (subst_list s Σ).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_elem :
+  forall s e Σ, subst_list s (e ∈ Σ) = (subst_list s e) ∈ (subst_list s Σ).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_private :
+  forall s a1 a2, subst_list s (a_private a1 a2) =
+             a_private (subst_list s a1) (subst_list s a2).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Lemma subst_list_self :
+  forall s a', subst_list s (a_self a') = (a_self (subst_list s a')).
+Proof.
+  intro s;
+    subst_list_induction.
+Qed.
+
+Ltac subst_list_rewrite :=
+  try rewrite subst_list_asrt_exp in *;
+  try rewrite subst_list_asrt_class in *;
+  try rewrite subst_list_elem in *;
+  try rewrite subst_list_arr in *;
+  try rewrite subst_list_and in *;
+  try rewrite subst_list_or in *;
+  try rewrite subst_list_all in *;
+  try rewrite subst_list_ex in *;
+  try rewrite subst_list_neg in *;
+  try rewrite subst_list_access in *;
+  try rewrite subst_list_calls in *;
+  try rewrite subst_list_next in *;
+  try rewrite subst_list_will in *;
+  try rewrite subst_list_prev in *;
+  try rewrite subst_list_was in *;
+  try rewrite subst_list_in_set in *;
+  try rewrite subst_list_external in *;
+  try rewrite subst_list_internal in *;
+  try rewrite subst_list_private in *;
+  try rewrite subst_list_self in *.
+
+(** Lemma 5: Classical (1) *)
+Lemma sat_excluded_middle_with_subst :
+  (forall A M1 M2 σ0 σ s, (M1 ⦂ M2 ◎ σ0 … σ ⊨ (subst_list s A)) \/
+                     (M1 ⦂ M2 ◎ σ0 … σ ⊭ (subst_list s A))).
+Proof.
+  intro A;
+    induction A;
+    intros;
+    auto;
+    subst_list_rewrite;
+    try solve [repeat match goal with
+                      | [H : (forall (_ _ : mdl) (_ _ : config)(_ : list (a_var * nat)), _ \/ _)
+                         |- ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ _ \/ _ ] =>
+                        specialize (H M1 M2 σ0 σ);
+                        match goal with
+                        | [|- context [subst_list ?s _]] =>
+                          specialize (H s)
+                        end
+                      end;
+               repeat match goal with
+                      | [H : _ \/ _ |- _ ] =>
+                        destruct H
+                      end;
+               eauto with chainmail_db].
+
+  - (* exp *)
+    destruct (excluded_middle (exp_satisfaction M1 M2 σ (subst_list s e)));
+      auto with chainmail_db.
+
+  - (* class *)
+    destruct (excluded_middle (has_class σ (subst_list s a) c));
+      auto with chainmail_db.
+
+  - (* elem *)
+    destruct (excluded_middle (elem_of_set M1 M2 σ (subst_list s e) (subst_list s a)));
+      auto with chainmail_db.
+
+  - (* all *)
+    destruct (excluded_middle (exists x, has_type σ x a /\
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ([x /s 0]subst_list (list_S s) A)));
+      [destruct_exists_loo;
+       andDestruct;
+       eauto with chainmail_db|].
+    left.
+     apply sat_all;
+      intros.
+    destruct (IHA M1 M2 σ0 σ ((x, 0)::(list_S s)));
+      auto.
+    match goal with
+    | [ H : ~ _ |- _ ] =>
+      contradiction H
+    end.
+    eauto.
+
+  - (* ex *)
+    destruct (excluded_middle (exists x, has_type σ x a /\
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊨ ([x /s 0]subst_list (list_S s) A)));
+      [destruct_exists_loo;
+       andDestruct;
+       eauto with chainmail_db|].
+
+    right;
+      apply nsat_ex;
+      intros.
+    destruct (IHA M1 M2 σ0 σ ((x, 0) :: (list_S s)));
+      eauto with chainmail_db.
+    match goal with
+    | [ H : ~ _ |- _ ] =>
+      contradiction H
+    end.
+    eauto.
+
+  - (* access *)
+    destruct (excluded_middle (has_access_to σ (subst_list s a) (subst_list s a0)));
+      auto with chainmail_db.
+
+  - (* calls *)
+    destruct (excluded_middle (makes_call M1 M2 σ
+                                          (subst_list s a)
+                                          (subst_list s a0)
+                                          (subst_list s a1)
+                                          (subst_list s p)));
+      auto with chainmail_db.
+
+  - (* next *)
+    destruct (excluded_middle (exists σ', M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ' /\ M1 ⦂ M2 ◎ σ0 … σ' ⊨ (subst_list s A)));
+      [destruct_exists_loo;
+       andDestruct;
+       eauto with chainmail_db
+      |right].
+    apply nsat_next;
+      intros.
+    specialize (IHA M1 M2 σ0 σ' s).
+    disj_split;
+      auto.
+    contradiction n;
+      eauto.
+
+  - (* will *)
+    destruct (excluded_middle (exists σ', M1 ⦂ M2 ⦿ σ ⌈⤳⋆⌉ σ' /\ M1 ⦂ M2 ◎ σ0 … σ' ⊨ (subst_list s A)));
+      [destruct_exists_loo;
+       andDestruct;
+       eauto with chainmail_db
+      |right].
+    apply nsat_will;
+      intros.
+    specialize (IHA M1 M2 σ0 σ' s).
+    disj_split;
+      auto.
+    contradiction n;
+      eauto.
+
+  - (* prev *)
+    destruct (excluded_middle (exists σ', ((M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' \/
+                                       σ0 = σ') /\
+                                      M1 ⦂ M2 ⦿ σ' ⤳ σ /\
+                                      M1 ⦂ M2 ◎ σ0 … σ' ⊭ (subst_list s A))));
+      [destruct_exists_loo; andDestruct; eauto with chainmail_db|left].
+
+    apply sat_prev;
+      intros.
+    specialize (IHA M1 M2 σ0 σ' s).
+    repeat disj_split;
+      subst;
+      auto;
+      contradiction n;
+      eauto.
+
+  - (* was *)
+    destruct (excluded_middle (M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ));
+      [|auto with chainmail_db].
+    destruct (excluded_middle (exists σ', (M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' \/
+                                      σ0 = σ') /\
+                                     M1 ⦂ M2 ⦿ σ' ⤳⋆ σ /\
+                                     M1 ⦂ M2 ◎ σ0 … σ' ⊨ (subst_list s A)));
+      [destruct_exists_loo; andDestruct; eauto with chainmail_db|].
+
+    right; apply nsat_was1;
+      intros;
+      auto.
+
+    + specialize (IHA M1 M2 σ0 σ' s).
+      disj_split;
+        eauto with chainmail_db.
+      * contradiction n.
+        exists σ';
+          repeat split;
+          eauto.
+
+    + specialize (IHA M1 M2 σ0 σ0 s).
+      disj_split;
+        eauto with chainmail_db.
+      * contradiction n.
+        exists σ0;
+          repeat split;
+          eauto.
+
+  - (* space *)
+    destruct σ as [χ ψ].
+    destruct (excluded_middle (exists χ', restrict (subst_list s a) χ χ'));
+      [destruct_exists_loo|].
+
+    + specialize (IHA M1 M2 σ0 (χ0, ψ) s);
+        disj_split;
+        eauto with chainmail_db.
+
+    + right; apply nsat_in1;
+        intros; intro Hcontra.
+      contradiction n;
+        eauto.
+
+  - destruct (excluded_middle (external_obj M1 M2 σ (subst_list s a)));
+      auto with chainmail_db.
+
+  - destruct (excluded_middle (internal_obj M1 M2 σ (subst_list s a)));
+      auto with chainmail_db.
+
+  - destruct (excluded_middle (is_private M1 M2 σ (subst_list s a) (subst_list s a0)));
+      auto with chainmail_db.
+
+  - destruct (excluded_middle (is_self σ (subst_list s a)));
+      auto with chainmail_db.
+
+Qed.
+
+Theorem sat_excluded_middle :
+  forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊨ A \/
+                  M1 ⦂ M2 ◎ σ0 … σ ⊭ A.
+Proof.
+  intros.
+  destruct (sat_excluded_middle_with_subst A M1 M2 σ0 σ nil);
+    simpl in *;
+    auto.
+Qed.
 
 Theorem not_sat_implies_nsat :
   (forall M1 M2 σ0 σ A, ~ M1 ⦂ M2 ◎ σ0 … σ ⊨ A ->
@@ -550,11 +925,21 @@ Proof.
   apply ent;
     intros.
 
-  inversion H;
-    subst.
-  inversion H1;
-    subst.
-  inversion H7.
+  match goal with
+  | [H : context[ex_false] |- _] =>
+    inversion H;
+      subst
+  end.
+  match goal with
+  | [H : context[exp_satisfaction] |- _] =>
+    inversion H;
+      subst
+  end.
+  is_exp_auto.
+  match goal with
+  | [H : _ ∙ _ ⊢ e_false ↪ v_true |- _] =>
+    inversion H
+  end.
 Qed.
 
 Hint Resolve false_entails_sat_and_nsat : chainmail_db.
@@ -1064,14 +1449,20 @@ Proof.
     auto.
 Qed.
 
-Lemma a_name_unique :
-  forall {M1 M2 σ0 σ a1 x}, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name a1 x) ->
-                       forall {a2}, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name a2 x) ->
+Lemma a_self_unique :
+  forall {M1 M2 σ0 σ a1}, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_self a1) ->
+                       forall {a2}, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_self a2) ->
                                a1 = a2.
 Proof.
   intros.
   repeat match goal with
-         | [H : _ ⦂  _ ◎ _ … _ ⊨ a_name _ _ |- _] =>
+         | [H : _ ⦂  _ ◎ _ … _ ⊨ a_self _ |- _] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+  repeat match goal with
+         | [H : is_self _ _ |- _] =>
            inversion H;
              subst;
              clear H
@@ -1079,8 +1470,8 @@ Proof.
   crush.
 Qed.
 
-Lemma is_private_a_private :
-  forall {a1 a2 x}, entails (is_private a1 x ∧ a_name a2 x)
+(*Lemma is_private_a_private :
+  forall {a1 a2 x}, entails (is_private a1 x ∧ a_self a1)
                        (a_private a1 a2).
 Proof.
   intros.
@@ -1129,9 +1520,9 @@ Proof.
       subst.
     apply a_name_unique with (a2:=a_ α1) in H7;
       crush.
-Qed.
+Qed.*)
 
-Lemma a_private_is_private :
+(*Lemma a_private_is_private :
   forall {a1 a2 x}, entails (a_private a1 a2 ∧ a_name a2 x)
                        (is_private a1 x).
 Proof.
@@ -1164,7 +1555,7 @@ Proof.
       simpl.
     apply sat_and;
       auto.
-Qed.
+Qed.*)
 
 Lemma has_type_val :
   forall {σ x}, has_type σ x a_Val ->
@@ -1362,13 +1753,13 @@ Ltac a_prop :=
          | [|- _ ⦂ _ ◎ _ … _ ⊭ (¬ ¬ _) ] =>
            apply negate_intro_nsat
 
-         | [H : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (a_private ?a1 ?a2 ∧ a_name ?a2 ?x)
+(*         | [H : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (a_private ?a1 ?a2 ∧ a_name ?a2 ?x)
             |- ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ is_private ?a1 ?x] =>
            apply (entails_implies (@a_private_is_private a1 a2 x))
          | [Ha : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (a_private ?a1 ?a2),
                  Hb : ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (a_name ?a2 ?x)
             |- ?M1 ⦂ ?M2 ◎ ?σ0 … ?σ ⊨ (is_private ?a1 ?x)] =>
-           apply (entails_implies (@a_private_is_private a1 a2 x))
+           apply (entails_implies (@a_private_is_private a1 a2 x))*)
          end;
   repeat has_type_decompose.
 
@@ -2124,18 +2515,36 @@ Proof.
   eauto.
 Qed.
 
-Lemma sat_head_exp :
-  forall M1 M2 σ0 σ e, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e) ->
-                  forall χ ϕ ψ, σ = (χ, ϕ :: ψ) ->
-                           M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: nil) ⊨ (a_expr e).
+Lemma exp_satisfaction_head :
+  forall M1 M2 χ ϕ ψ e, exp_satisfaction M1 M2 (χ, ϕ :: ψ) e ->
+                   exp_satisfaction M1 M2 (χ, ϕ :: nil) e.
 Proof.
-  intros M1 M2 σ0 σ e Hsat;
-    intros;
-    subst;
-    inversion Hsat;
-    subst.
-  eapply sat_exp; eauto.
-  eapply eval_head; eauto.
+  intros.
+  match goal with
+  | [H : exp_satisfaction _ _ _ _ |- _] =>
+    inversion H;
+      subst
+  end.
+  match goal with
+  | [H : _ ∙ (?χ, ?ϕ :: ?ψ) ⊢ _ ↪ _ |- _] =>
+    apply eval_head with (χ:=χ)(ϕ:=ϕ)(ψ:=ψ) in H;
+      auto
+  end.
+  eauto with chainmail_db.
+Qed.
+
+Lemma sat_head_exp :
+  forall M1 M2 σ0 χ ϕ ψ e, M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: ψ) ⊨ (a_expr e) ->
+                      M1 ⦂ M2 ◎ σ0 … (χ, ϕ :: nil) ⊨ (a_expr e).
+Proof.
+  intros.
+  match goal with
+  | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _] =>
+    inversion H;
+      subst
+  end.
+  apply sat_exp; eauto.
+  eapply exp_satisfaction_head; eauto.
 Qed.
 
 Lemma sat_initial_exp :

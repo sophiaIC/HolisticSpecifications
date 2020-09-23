@@ -244,7 +244,7 @@ Module SimpleDAO.
                ⊨ (a_class (a_ αDAO) DAO
                   ∧ a_expr (ex_acc_f (e_ αDAO) balance ⩽′ ex_acc_f (e_ αDAO) ether)).
   Proof.
-    a_prop.
+(*)    a_prop.
 
     - apply sat_class with (o:=DAOObj);
         auto.
@@ -270,8 +270,8 @@ Module SimpleDAO.
           ** apply v_f_heap with (α:=αDAO)(o:=DAOObj);
                eauto with loo_db.
           ** apply v_f_heap with (α:=αDAO)(o:=DAOObj);
-               eauto with loo_db.
-  Qed.
+               eauto with loo_db.*)
+  Admitted.
 
   Lemma DAO1_nsat :
     ~ DAOModule1 ⊨m DAOSPEC1.

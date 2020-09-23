@@ -5,6 +5,7 @@ Require Import loo_reduction_properties.
 Require Import decoupled_classical_properties.
 Require Import decoupling.
 Require Import exp.
+Require Import exp_chainmail.
 Require Import sbst_decoupled.
 Require Import function_operations.
 Require Import List.
@@ -1012,17 +1013,17 @@ Proof.
 
 Admitted.
 
-Lemma not_eq_implies_neq :
+(*Lemma not_eq_implies_neq :
   forall M1 M2 σ0 σ e1 e2, ~ M1 ⦂ M2 ◎ σ0 … σ ⊨ (e1 ⩶ e2) ->
                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (e1 ⩶̸ e2).
 Proof.
-Admitted.
+Admitted.*)
 
-Lemma not_neq_implies_eq :
+(*Lemma not_neq_implies_eq :
   forall M1 M2 σ0 σ e1 e2, ~ M1 ⦂ M2 ◎ σ0 … σ ⊨ (e1 ⩶̸ e2) ->
                       M1 ⦂ M2 ◎ σ0 … σ ⊨ (e1 ⩶ e2).
 Proof.
-Admitted.
+Admitted.*)
 
 Lemma update_contn_map :
   forall ϕ c, vMap (update_ϕ_contn ϕ c) = vMap ϕ.
@@ -1198,30 +1199,232 @@ Proof.
 
 Qed.
 
+Lemma le_S_α_neq :
+  forall α1 α2, le_α α1 α2 ->
+           (S_α α2) <> α1.
+Proof.
+  intros α1 α2 Hle;
+    inversion Hle;
+    subst;
+    crush.
+Qed.
+
+Lemma max_χ_le :
+  forall {A : Type} (χ : partial_map addr A) α1,
+    max_χ χ α1 ->
+    forall α2 o, χ α2 = Some o ->
+            le_α α2 α1.
+Proof.
+  intros ? ? ? Hmax;
+    inversion Hmax;
+    crush.
+Qed.
+
+Lemma fresh_χ_neq :
+  forall χ α1, fresh_χ χ α1 ->
+          forall α2 o ψ, ⟦ α2 ↦ o ⟧ ∈ (χ, ψ) ->
+                    α1 <> α2.
+Proof.
+  intros ? ? Hfresh;
+    inversion Hfresh;
+    subst;
+    intros.
+  apply le_S_α_neq.
+  eapply max_χ_le;
+    eauto.
+Qed.
+
+Lemma fresh_χ_some_neq :
+  forall χ α1, fresh_χ χ α1 ->
+          forall α2 o, χ α2 = Some o ->
+                  α1 <> α2.
+Proof.
+  intros ? ? Hfresh;
+    inversion Hfresh;
+    subst;
+    intros.
+  apply le_S_α_neq.
+  eapply max_χ_le;
+    eauto.
+Qed.
+
+
+Ltac fresh_is_fresh :=
+  match goal with
+  | [Hfresh : fresh_χ ?χ ?α1,
+              Hmap : ⟦ ?α2 ↦ _ ⟧ ∈ (?χ, _) |- _ ] =>
+    notHyp (α1 <> α2);
+    assert (α1 <> α2);
+    [eapply fresh_χ_neq; eauto|]
+  | [Hfresh : fresh_χ ?χ ?α1,
+              Hmap : ?χ ?α2 = Some _ |- _ ] =>
+    notHyp (α1 <> α2);
+    assert (α1 <> α2);
+    [eapply fresh_χ_some_neq; eauto|]
+  end.
+
 Lemma external_self_is_external :
   forall M1 M2 σ0 σ, external_self M1 M2 σ ->
-                     exists α, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_name (a_ α) this ∧
-                                                   ((a_ α) external)).
+                     exists α, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_self (a_ α) ∧
+                                              ((a_ α) external)).
 Proof.
   intros M1 M2 σ0 σ Hext.
   unfold external_self, is_external in *;
     repeat destruct_exists_loo;
     andDestruct.
 
-  a_prop;
+  eexists;
+    a_prop;
     eauto with chainmail_db.
 Qed.
+
+Lemma reduction_preserves_field_eval_wf :
+  forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+             forall α f v1, M ∙ σ1 ⊢ (e_acc_f (e_val α) f) ↪ v1 ->
+                       exists v2, M ∙ σ2 ⊢ (e_acc_f (e_val α) f) ↪ v2.
+Proof.
+  intros M σ1 σ2 Hred;
+    induction Hred;
+    intros;
+    subst;
+    try solve [match goal with
+               | [H : _ ∙ _ ⊢ _ ↪ ?v |- (exists v' : value, _) ] =>
+                 inversion H;
+                 subst;
+                 exists v
+               end;
+               match goal with
+               | [H : _ ∙ _ ⊢ (e_val _) ↪ (v_ _) |- _] =>
+                 inversion H;
+                 subst
+               end;
+               eapply v_f_heap;
+               eauto with loo_db].
+
+  -  repeat match goal with
+            | [H : _ ∙ _ ⊢ _ ↪ _ |- _] =>
+              inversion H;
+                subst;
+                clear H
+            end;
+       destruct_exists_loo.
+     match goal with
+     | [_ : flds ?o1 ?f1 = Some ?v1,
+            _ : flds ?o2 ?f2 = Some ?v2,
+                _ : ⟦ _ ↦ ?o2 ⟧ ∈ _ |- context[update ?f1 ?v3 _]] =>
+       destruct (eq_dec α α1);
+         [destruct (eq_dec f f0);
+          [exists v3
+            |exists v2]
+         |exists v2];
+         subst;
+         simpl;
+         repeat map_rewrite
+     end.
+     + eapply v_f_heap;
+         eauto with loo_db.
+       repeat map_rewrite;
+         unfold flds in *;
+         eq_auto.
+       unfold flds.
+       eq_auto.
+     + match goal with
+       | [|- context[Some ?o']] =>
+         match goal with
+         | [|- context[e_addr ?α']] =>
+           apply v_f_heap with (α:=α')(o:=o')
+         end
+       end;
+         eauto with loo_db;
+         unfold flds;
+         repeat map_rewrite.
+       repeat match goal with
+              | [H : ⌊ _ ⌋ _ ≜ _ |- _ ] =>
+                inversion H;
+                  subst;
+                  clear H
+              end.
+       repeat simpl_crush.
+       eq_auto.
+
+     + match goal with
+       | [_ : _ ?α1 = Some ?o1 |- context[e_addr ?α1]] =>
+         apply v_f_heap with (α:=α1)(o:=o1)
+       end;
+         repeat map_rewrite;
+         eauto with loo_db.
+
+  - repeat match goal with
+            | [H : _ ∙ _ ⊢ _ ↪ _ |- _] =>
+              inversion H;
+                subst;
+                clear H
+            end.
+     match goal with
+     | [_ : flds ?o1 _ = Some ?v1 |- context[e_addr ?α1] ] =>
+       exists v1;
+         apply v_f_heap with (α:=α1)(o:=o1)
+     end;
+       auto with loo_db.
+     repeat fresh_is_fresh.
+     repeat map_rewrite.
+
+Qed.
+
+Ltac unfold_eval :=
+  match goal with
+  | [H : _ ∙ _ ⊢ (e_val _) ↪ _ |- _] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (e_acc_f _ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (e_acc_g _ _ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (e_if _ _ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (_ ⩵ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (_ ⩻ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (e_plus _ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (e_minus _ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (e_mult _ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : _ ∙ _ ⊢ (e_div _ _) ↪ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  end.
 
 Lemma mutation_is_assignment :
   forall M σ σ', M ∙ σ ⤳ σ' ->
                  forall M1 M2 σ0 α v f,
                    M1 ⦂ M2 ◎ σ0 … σ ⊨ (ex_acc_f (e_ α) f ⩶ (ex_val v)) ->
-                   M1 ⦂ M2 ◎ σ0 … σ' ⊨ (ex_acc_f (e_ α) f ⩶̸ (ex_val v)) ->
+                   M1 ⦂ M2 ◎ σ0 … σ' ⊭ (ex_acc_f (e_ α) f ⩶ (ex_val v)) ->
                    M ∙ σ ⤳ σ' ->
                    M1 ⋄ M2 ≜ M ->
                    is_assgn σ.
 Proof.
-  intros M σ σ' Hred;                                
+  intros M σ σ' Hred;
     inversion Hred;
     subst;
     clear Hred;
@@ -1232,74 +1435,219 @@ Proof.
                  repeat eexists;
                  eauto
                end];
+
     try solve [repeat match goal with
-                      | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _] =>
+                      | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _ ] =>
+                        inversion H;
+                        subst;
+                        clear H
+                      | [H : _ ⦂ _ ◎ _ … _ ⊭ _ |- _ ] =>
                         inversion H;
                         subst;
                         clear H
                       end;
-               repeat link_unique_auto;
-               repeat match goal with
-                      | [H : is_exp _ _ |- _ ] =>
-                        inversion H;
-                        subst;
-                        clear H
-                      end;
-               repeat match goal with
-                      | [Ha : _ ∙ _ ⊢ _ ↪ _,
-                              Hstmt : _ = c_stmt (s_if ?e _ _ ;; _),
-                                      Hb : _ ∙ _ ⊢ ?e ↪ _ |- _] =>
-                        inversion Ha;
-                        subst;
-                        clear Ha
-                      end;
-               repeat match goal with
-                      | [Ha : _ ∙ _ ⊢ _ ↪ _  |- _] =>
-                        match goal with
-                        | [_ : _ = c_stmt (s_if _ _ _ ;; _) |- _ ] =>
-                          fail 1
-                        | _ =>
-                          idtac
-                        end;
-                        inversion Ha;
-                        subst;
-                        clear Ha
-                      end;
-               repeat map_rewrite;
-               simpl_crush;
-               crush].
+               unfold_exp_sat;
+               match goal with
+               | [H : ~ exp_satisfaction _ _ _ _ |- _] =>
+                 contradiction H;
+                 eapply exp_sat;
+                 eauto with chainmail_db
+               end;
+               repeat unfold_eval;
+               eauto with loo_db].
 
   - repeat match goal with
-           | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _] =>
+           | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _ ] =>
              inversion H;
                subst;
                clear H
-           end.
-    repeat link_unique_auto.
-    repeat match goal with
-           | [H : is_exp _ _ |- _ ] =>
+           | [H : _ ⦂ _ ◎ _ … _ ⊭ _ |- _ ] =>
              inversion H;
                subst;
                clear H
-           end.
-    repeat match goal with
-           | [H : _ ∙ _ ⊢ _ ↪ _ |- _ ] =>
-             inversion H;
-               subst;
-               clear H
-           end.
+           end;
+      unfold_exp_sat;
+      match goal with
+      | [H : ~ exp_satisfaction _ _ _ _ |- _] =>
+        contradiction H;
+          eapply exp_sat;
+          eauto with chainmail_db
+      end;
+      repeat unfold_eval;
+      fresh_is_fresh.
+    eapply v_equals;
+      eauto with loo_db;
+      eapply v_f_heap;
+      eauto with loo_db.
     repeat map_rewrite.
-    destruct (eq_dec α0 α);
+Qed.
+
+Ltac unfold_interpretation :=
+  match goal with
+  | [H : ⌊ _ ⌋ _ ≜ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  end.
+
+Lemma mutation_is_field_assignment :
+  forall M σ σ', M ∙ σ ⤳ σ' ->
+                 forall M1 M2 σ0 α v f,
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (ex_acc_f (e_ α) f ⩶ (ex_val v)) ->
+                   M1 ⦂ M2 ◎ σ0 … σ' ⊭ (ex_acc_f (e_ α) f ⩶ (ex_val v)) ->
+                   M ∙ σ ⤳ σ' ->
+                   M1 ⋄ M2 ≜ M ->
+                   exists x r2 s, contn_is ((x ◌ f) ≔ r2 ;; s) σ /\
+                             ⌊ x ⌋ σ ≜ (v_ α).
+Proof.
+  intros.
+  let H := fresh in
+  assert (H : is_assgn σ);
+    [eapply mutation_is_assignment; eauto|unfold is_assgn in H];
+    repeat destruct_exists_loo.
+
+  destruct σ as [χ ψ].
+  repeat match goal with
+         | [Hcontn : contn_is _ _ |- _] =>
+           inversion Hcontn;
+             simpl in *;
+             subst;
+             clear Hcontn
+         end.
+  match goal with
+  | [H : _ ∙ _ ⤳ _ |- _ ] =>
+    inversion H;
       subst;
-      eq_auto.
+      repeat simpl_crush
+  end;
+    try solve [repeat eexists;
+               eauto];
+    try solve [match goal with
+               | [H : _ ⦂ _ ◎ _ … _ ⊭ _ |- _ ] =>
+                 apply nsat_implies_not_sat in H;
+                 contradiction H
+               end;
+               eapply sat_exp, exp_sat;
+               eauto with chainmail_db;
+               repeat match goal with
+                      | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ⩶ _)  |- _ ] =>
+                        inversion H;
+                        subst;
+                        clear H
+                      end;
+               unfold_exp_sat;
+               repeat unfold_eval;
+               eauto with loo_db].
+
+  - destruct (eq_dec f0 f);
+      subst.
+    + repeat eexists;
+        eauto.
+      destruct (eq_dec α0 α);
+        subst.
+      * repeat unfold_interpretation;
+          auto.
+      *  match goal with
+         | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _ ] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+         match goal with
+         | [H : _ ⦂ _ ◎ _ … _ ⊭ _ |- _ ] =>
+           apply nsat_implies_not_sat in H;
+             contradiction H
+         end;
+           eapply sat_exp, exp_sat;
+           eauto with chainmail_db.
+         unfold_exp_sat.
+         clean.
+         repeat unfold_eval.
+         match goal with
+         | [|- context[_ ⩵ (e_val ?v0)] ] =>
+           apply v_equals with (v:=v0);
+             eauto with loo_db
+         end.
+         eapply v_f_heap; eauto with loo_db.
+         repeat map_rewrite.
+
     + match goal with
-      | [Hfresh : fresh_χ ?χ ?α,
-                  H : ?χ ?α = Some _ |- _] =>
-        rewrite (fresh_heap_none χ α Hfresh) in H
+      | [H : _ ⦂ _ ◎ _ … _ ⊭ _ |- _ ] =>
+        apply nsat_implies_not_sat in H;
+          contradiction H
+      end;
+        eapply sat_exp, exp_sat;
+        eauto with chainmail_db.
+      match goal with
+      | [H : _ ⦂ _ ◎ _ … _ ⊨ _ |- _ ] =>
+        inversion H;
+          subst;
+          clear H
       end.
-      crush.
-    + simpl_crush.
-      crush.
+      unfold_exp_sat.
+      clean.
+      destruct (eq_dec α0 α);
+        subst.
+      * repeat unfold_interpretation;
+          auto.
+        repeat unfold_eval.
+        match goal with
+        | [|- context[_ ⩵ (e_val ?v0)] ] =>
+          apply v_equals with (v:=v0);
+            eauto with loo_db
+        end.
+        match goal with
+        | [|- context[e_addr ?α0]] =>
+          match goal with
+          | [|-context[update α0 ?o0 _]] =>
+            apply v_f_heap with (α:=α0)(o:=o0)
+          end
+        end;
+          repeat map_rewrite;
+          repeat simpl_crush;
+          eauto with loo_db;
+          unfold flds;
+          eq_auto.
+
+      * repeat unfold_interpretation;
+          auto.
+        repeat unfold_eval.
+        match goal with
+        | [|- context[_ ⩵ (e_val ?v0)] ] =>
+          apply v_equals with (v:=v0);
+            eauto with loo_db
+        end.
+        match goal with
+        | [Hmap : ⟦ ?α1 ↦ ?o1 ⟧ ∈ _,
+                  Hflds : flds ?o1 _ = Some ?v1 |- context[e_addr ?α1]] =>
+          apply v_f_heap with (α:=α1)(o:=o1)
+        end;
+        repeat map_rewrite;
+          repeat simpl_crush;
+          eauto with loo_db;
+          unfold flds.
+Qed.
+
+Lemma classOf_this_prop :
+  forall σ C, classOf this σ C ->
+         forall M1 M2 σ0, exists a, M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_self a) ∧ (a_class a C)).
+Proof.
+  intros.
+  match goal with
+  | [H : classOf _ _ _ |- _ ] =>
+    inversion H;
+      subst;
+      clear H
+  end.
+  match goal with
+  | [H : interpret_x _ _ _ |- _ ] =>
+    inversion H;
+      subst;
+      clear H
+  end.
+  eexists;
+    a_prop;
+    eauto with chainmail_db.
 Qed.
 
 Lemma external_step_does_not_mutate_internal_fields :
@@ -1332,146 +1680,54 @@ Proof.
       unfold external_step;
       auto.
 
-  - assert (is_assgn σ);
-      [eapply mutation_is_assignment; eauto|].
-
-    + let Hcontra := fresh "Hcontra" in
-      apply not_eq_implies_neq;
-        apply nsat_implies_not_sat;
-        auto.
-
-    + unfold is_assgn in *;
+  - assert (exists x r2 s, contn_is ((x ◌ f) ≔ r2 ;; s) σ /\
+                      ⌊ x ⌋ σ ≜ (v_ α));
+      [eapply mutation_is_field_assignment; eauto
+      |repeat destruct_exists_loo;
+       andDestruct].
+    destruct σ as [χ ψ].
+    match goal with
+    | [H : contn_is _ _ |- _ ] =>
+      inversion H;
+        simpl in *;
+        subst;
+        clear H
+    end.
+    match goal with
+    | [H : _ ∙ _ ⤳ _ |- _ ] =>
+      inversion H;
         repeat destruct_exists_loo;
-        andDestruct.
-      match goal with
-      | [Hcontn : contn_is _ ?σ |- _ ] =>
-        inversion Hcontn;
-          subst;
-          clear Hcontn;
-          let χ := fresh "χ" in
-          let ψ := fresh "ψ" in
-          destruct σ as [χ ψ];
-            simpl in *;
-            subst
-      end.
-      match goal with
-      | [H : _ ∙  _ ⤳ _  |- _] =>
-        inversion H;
-          subst;
-          repeat simpl_crush
-      end.
-
-      * match goal with
-        | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ⩶ _) |- _ ] =>
-          inversion H;
-            subst;
-            clear H
-        end;
-        match goal with
-        | [H : _ ⦂ _ ◎ _ … _ ⊭ (_ ⩶ _) |- _ ] =>
-          inversion H;
-            subst;
-            clear H
-        end;
-        repeat link_unique_auto;
-        is_exp_auto;
-        try (match goal with
-        | [H : _ ∙ _ ⊢ ?e ↪ _,
-               H' : context[_ ≔′ ?e] |- _] =>
-          clear H
-        end);
-        repeat match goal with
-               | [H : _ ∙ _ ⊢ _ ↪ _ |- _ ] =>
-                 inversion H;
-                   subst;
-                   clear H
-               end;
-        repeat map_rewrite;
-        repeat simpl_crush;
-        crush.
-
-      * match goal with
-        | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ⩶ _) |- _ ] =>
-          inversion H;
-            subst;
-            clear H
-        end.
-        match goal with
-        | [H : _ ⦂ _ ◎ _ … _ ⊭ (_ ⩶ _) |- _ ] =>
-          inversion H;
-            subst;
-            clear H
-        end.
-        repeat link_unique_auto.
-        is_exp_auto.
-        repeat match goal with
-               | [H : _ ∙ _ ⊢ _ ↪ _ |- _ ] =>
-                 inversion H;
-                   subst;
-                   clear H
-               end.
-        repeat map_rewrite.
-        repeat simpl_crush.
-
-      * match goal with
-        | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ ⩶ _) |- _ ] =>
-          inversion H;
-            subst;
-            clear H
-        end.
-        match goal with
-        | [H : _ ⦂ _ ◎ _ … _ ⊭ (_ ⩶ _) |- _ ] =>
-          inversion H;
-            subst;
-            clear H
-        end.
-        repeat link_unique_auto.
-        is_exp_auto.
-        repeat match goal with
-               | [H : _ ∙ _ ⊢ _ ↪ _ |- _ ] =>
-                 inversion H;
-                   subst;
-                   clear H
-               end.
-        repeat map_rewrite.
-        (* if the original interal object is the same object we are mutating  *)
-        destruct (eq_dec α α0);
-          subst;
-          eq_auto.
-
-        ** (* we are mutating the interal object -> contradiction*)
-          repeat match goal with
-                  | [Hclass : classOf _ _ _ |- _] =>
-                    inversion Hclass;
-                      subst;
-                      clear Hclass
-                  end.
-           repeat interpretation_rewrite.
-           repeat simpl_crush.
-           repeat match goal with
-                  | [Hint : ⌊ _ ⌋ _ ≜ _ |- _] =>
-                    inversion Hint;
-                      subst;
-                      clear Hint
-                  end.
-           unfold external_self, is_external in *;
-             repeat destruct_exists_loo;
-             andDestruct.
-           repeat map_rewrite.
-           repeat simpl_crush.
-           match goal with
-           | [H : _ ⦂ _ ◎ _ … _ ⊨ (_ internal) |- _] =>
+        subst;
+        repeat simpl_crush
+    end.
+    repeat interpretation_rewrite.
+    repeat simpl_crush.
+    clean.
+    unfold external_self, is_external in *;
+      repeat destruct_exists_loo;
+      andDestruct.
+    repeat match goal with
+           | [H : classOf _ _ _ |- _ ] =>
              inversion H;
                subst;
                clear H
-           end.
-           destruct_exists_loo.
-           repeat map_rewrite.
-           repeat simpl_crush.
-
-        ** (* we are not mutating the interal object -> contradiction*)
-          repeat simpl_crush.
-
+           end;
+      repeat unfold_interpretation;
+      simpl in *.
+    repeat map_rewrite.
+    repeat simpl_crush.
+    match goal with
+    | [H : context[_ internal] |- _] =>
+      inversion H;
+        subst
+    end.
+    match goal with
+    | [H : internal_obj _ _ _ _ |- _] =>
+      inversion H;
+        subst
+    end.
+    repeat map_rewrite.
+    repeat simpl_crush.
 Qed.
 
 Definition contains_method_call (m : mth)(C : cls)(M : mdl):=
@@ -1901,20 +2157,12 @@ Proof.
       specialize (H2 ϕ (in_eq ϕ ψ)).
       repeat destruct_exists_loo;
         andDestruct.
+      admit.
 
-      specialize (H2 or_introl).
-            auto_specialize.
-
-      match goal with
-      | [H : c_hole _ _ = c_hole _ _ |- _] =>
-        inversion H;
-          subst;
-          clear H
-      end.
+    + admit.
 
 
-
-Qed.
+Admitted.
 
 
 Lemma no_method_calls_internal_steps_method_calls :
@@ -1939,10 +2187,7 @@ Proof.
       repeat destruct_exists_loo;
       andDestruct;
       subst.
-
-
-  -
-Qed.
+Admitted.
 
 
 
