@@ -1131,16 +1131,17 @@ Proof.
       unfold cname in *;
       repeat simpl_crush.
 
-  - destruct (eq_dec α0 α);
+  - destruct (eq_dec α0 α1);
       subst;
       eq_auto;
       unfold cname in *;
-      repeat simpl_crush.
+      repeat simpl_crush;
     match goal with
     | [H : fresh_χ _ _ |- _] =>
       apply fresh_heap_none in H
-    end.
+    end;
     crush.
+    admit.
 
   - unfold is_call_to in *;
       repeat destruct_exists_loo;
@@ -1240,7 +1241,7 @@ Proof.
       repeat map_rewrite.
       crush.
 
-Qed.
+Admitted.
 
 Lemma le_S_α_neq :
   forall α1 α2, le_α α1 α2 ->
@@ -2141,6 +2142,7 @@ Proof.
         contradiction (H x y m β)
       end.
       eauto with loo_db.
+    + admit.
 
     + simpl in *.
       repeat simpl_crush.
