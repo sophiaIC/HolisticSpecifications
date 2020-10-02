@@ -1214,7 +1214,6 @@ Fixpoint stmt_size (s : stmt) : nat :=
   | s_if e s1 s2 => 1 + stmt_size s1 + stmt_size s2
   | _ => 1
   end.
-        
 
 Lemma stmt_size_eq :
   forall s1 s2, s1 = s2 ->
@@ -1227,14 +1226,13 @@ Qed.
 
 Inductive substmt : stmt -> stmt -> Prop :=
 | sub_refl : forall s, substmt s s
-| sub_if1 : forall s e s1 s2, substmt s s1 ->
-                         substmt s (s_if e s1 s2)
-| sub_if2 : forall s e s1 s2, substmt s s2 ->
-                         substmt s (s_if e s1 s2)
-| sub_stmt1 : forall s s1 s2, substmt s s1 ->
-                         substmt s (s_stmts s1 s2)
-| sub_stmt2 : forall s s1 s2, substmt s s2 ->
-                         substmt s (s_stmts s1 s2).
+| sub_trans : forall s1 s2 s3, substmt s1 s2 ->
+                          substmt s2 s3 ->
+                          substmt s1 s3
+| sub_if1 : forall e s1 s2, substmt s1 (s_if e s1 s2)
+| sub_if2 : forall e s1 s2, substmt s2 (s_if e s1 s2)
+| sub_stmts1 : forall s1 s2, substmt s1 (s_stmts s1 s2)
+| sub_stmts2 : forall s1 s2, substmt s2 (s_stmts s1 s2).
 
 Hint Constructors substmt : loo_db.
 

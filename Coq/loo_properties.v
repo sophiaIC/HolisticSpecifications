@@ -18,6 +18,13 @@ Ltac simpl_crush :=
   | [ H : Some _ = Some _ |- _] =>
     inversion H; subst;
     clear H
+  | [ Ha : ?x = ?y,
+           Hb : ?M ?x = Some _ |- _] =>
+    rewrite Ha in Hb
+  | [ Ha : ?M ?x = None,
+           Hb : ?M ?x = Some _ |- _] =>
+    rewrite Ha in Hb;
+    inversion Hb
   | [ H : v_addr _ = v_addr _ |- _] =>
     inversion H; subst;
     clear H
@@ -40,6 +47,53 @@ Ltac simpl_crush :=
   | [H : true = false |- _] =>
     inversion H
   | [H : false = true |- _] =>
+    inversion H
+  | [H : ?x <> ?x |- _] =>
+    contradiction H;
+    auto
+
+  | [H : v_true = v_false |- _] =>
+    inversion H
+  | [H : v_false = v_true |- _] =>
+    inversion H
+  | [H : v_true = v_null |- _] =>
+    inversion H
+  | [H : v_null = v_true |- _] =>
+    inversion H
+  | [H : v_true = (v_addr _) |- _] =>
+    inversion H
+  | [H : (v_addr _) = v_true |- _] =>
+    inversion H
+  | [H : v_true = (v_int _) |- _] =>
+    inversion H
+  | [H : (v_int _) = v_true |- _] =>
+    inversion H
+
+  | [H : v_false = v_null |- _] =>
+    inversion H
+  | [H : v_null = v_false |- _] =>
+    inversion H
+  | [H : v_false = (v_addr _) |- _] =>
+    inversion H
+  | [H : (v_addr _) = v_false |- _] =>
+    inversion H
+  | [H : v_false = (v_int _) |- _] =>
+    inversion H
+  | [H : (v_int _) = v_false |- _] =>
+    inversion H
+
+  | [H : v_null = (v_addr _) |- _] =>
+    inversion H
+  | [H : (v_addr _) = v_null |- _] =>
+    inversion H
+  | [H : v_null = (v_int _) |- _] =>
+    inversion H
+  | [H : (v_int _) = v_null |- _] =>
+    inversion H
+
+  | [H : (v_addr _) = (v_int _) |- _] =>
+    inversion H
+  | [H : (v_int _) = (v_addr _) |- _] =>
     inversion H
   end.
 

@@ -1,0 +1,954 @@
+\title{Chainmail: Coq Model Specification}
+
+\documentclass[12pt]{article}
+
+\usepackage{mathpartir}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{color,soul}
+
+\usepackage{listings}
+\usepackage{color}
+
+\usepackage{minted}
+\usemintedstyle{tango}
+\usepackage{fontspec}
+\usepackage{newunicodechar}
+
+\setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]
+\newfontfamily{\fallbackmono}{Latin Modern Math}
+
+\newunicodechar{⦂}{%
+  \texttt{\makebox[\fontcharwd\font`a]{\fallbackmono $\colon$}}%
+}
+
+\newunicodechar{⊨}{%
+  \texttt{\makebox[\fontcharwd\font`a]{\fallbackmono ⊨}}%
+}
+
+\newunicodechar{⦃}{%
+  \texttt{\makebox[\fontcharwd\font`a]{\fallbackmono ⦃}}%
+}
+
+\newunicodechar{⦄}{%
+  \texttt{\makebox[\fontcharwd\font`a]{\fallbackmono ⦄}}%
+}
+
+\newunicodechar{⩶}{%
+  \texttt{\makebox[\fontcharwd\font`a]{\fallbackmono ⩶}}%
+}
+
+
+\renewcommand\lstlistingname{Quelltext} % Change language of section name
+
+\lstset{ % General setup for the package
+	language=Java,
+	basicstyle=\small\sffamily,
+	numbers=left,
+ 	numberstyle=\tiny,
+	frame=tb,
+	tabsize=4,
+	columns=fixed,
+	showstringspaces=false,
+	showtabs=false,
+	keepspaces,
+	morekeywords={field, method},
+	commentstyle=\color{red},
+	keywordstyle=\color{blue}
+}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This is document describes the version of L$_{OO}$ and Chainmail that is encoded in the Coq model.  
+Note: the coq model makes significant use of unicode characters and notation in order to more resemble
+the mathematical notation defined in the FASE 2020 paper. There are some problems with typesetting the
+unicode characters from the Coq source in latex, and as a result some of the definitions are better understood by looking them up 
+in the source code. As I annotate the code, I will make an attempt to clean up the more unreadable instances 
+of unicode typesetting.
+\end{abstract}
+
+\section{L$_{OO}$}
+
+L$_{OO}$ is the underlying language that Chainmail is built on top of. L$_{OO}$ is object oriented and untyped.
+A  L$_{OO}$ program consists of a configuration made up of a heap ($\chi$) and a stack of frames ($\psi$).
+A heap is a map from addresses ($\alpha$) to objects. A frame consists of a variable map ($\beta$) mapping variables
+to values, and a continuation ($c$) representing the program to be evaluated.
+\[
+\chi : addr \rightarrow obj
+\]
+\[
+\phi : \{\texttt{vMap}:= \beta\; ; \texttt{contn} := c\}
+\]
+\[
+\psi := \emptyset\; |\; \phi :: \psi'
+\]
+\[
+\sigma = (\chi, \psi)
+\]
+
+\hl{Julian: [TODO] this is mostly in line with what is found in the FASE 2020 paper.}
+
+\section{Chainmail}
+
+Chainmail is the assertion language built on top of L$_{OO}$. The version of Chainmail found in the Coq is largely similar to 
+the Chainmail of the FASE 2020 paper, but differs in some key ways that will be outlined here.
+
+\subsection{Preliminary Definitions}
+
+\subsubsection{\texttt{a\_val}}
+A core difference between the Chainmail defined in the Coq model and that defined in the FASE 2020 paper, is the way variables (those mapped in variable maps of the current frame) are used in 
+assertions. The Chainmail of the Coq model  is largely based on the heap, and only references the current frame when asserting that a method is called, or attempting to link a location in the heap 
+to a specific variable name. This modification has two different intentions: (i) to remove a layer of complexity that is introduced by variables when reasoning about Chainmail, and (ii) to decouple
+Chainmail from L$_{OO}$ in the hopes of parameterizing Chainmail on the underlying language. 
+
+To this end, as a departure from the assertions of FASE 2020, the assertions of the Coq model do not use variables (except in some specific circumstances), but rather use values 
+(booleans, integers, addresses in the heap, or null). This is captured by the \verb|a_val| definition given below.
+\begin{minted}{coq}
+Inductive a_val : Type :=
+| av_hole : nat -> a_val
+| av_bnd  : value -> a_val.
+\end{minted}
+An \verb|a_val| is either a value (\verb|av_bnd|), or a hole waiting for a value (\verb|av_hole|). Some notation is defined below:
+\begin{minted}{coq}
+Notation "'a♢' n" := (av_hole n)(at level 40).
+Notation "'av_' v" := (av_bnd v)(at level 40).
+Notation "'a_' α" := (av_bnd (v_ α))(at level 40).
+\end{minted}
+Holes are captured by the notation \verb|a♢ n|, bound values are denoted \verb|av_ v|, and bound addresses are given the special notation \verb|a_ α|.
+
+\subsubsection{\texttt{a\_mth}}
+Assertions in Chainmail can be quantified over method names. For this purpose, we include a similar construct to \verb|a_val| for methods: \verb|a_mth|.
+\begin{minted}{coq}
+Inductive a_mth : Type :=
+| am_hole : nat -> a_mth
+| am_bnd : mth -> a_mth.
+\end{minted}
+Similar to \verb|a_val|, an instance of \verb|a_mth| is either a method name, or a hole waiting to be replaced by a method name.
+
+\subsubsection{\texttt{a\_type}}
+Both \verb|a_val| and \verb|a_mth| are defined for the purposes of quantification in chainmail. Since we are able to quantify over several different, 
+unrelated language terms in Chainmail we use \verb|a_type| to differentiate between them.
+\begin{minted}{coq}
+Inductive a_type : Type :=
+| a_Obj : a_type
+| a_Bool : a_type
+| a_Int  : a_type
+| a_Val  : a_type
+| a_Mth  : a_type
+| a_Set  : a_type.
+\end{minted}
+\verb|a_type| specifies the kinds of terms that assertions may be quantified over: objects, booleans, integers, values (a superset of the previous three types), methods, and sets.
+We have already defined constructs for values and methods, but we have not mentioned quantification of sets. Sets (and as a result their quantification) need to be defined mutually 
+with assertions.
+
+
+\subsection{Assertions}
+Below I give the assertion syntax as it is found in the Coq source (see \texttt{decoupling.v}) 
+
+\begin{minted}{coq}
+(** Assertion syntax  *)
+
+Inductive asrt : Type :=
+(** Simple: *)
+| a_expr : expr -> asrt
+| a_class : a_val -> cls -> asrt
+| a_elem   : expr -> a_set -> asrt
+\end{minted}
+Assertion connectives are given below as \verb|a_arr| (notation: $\longrightarrow$), \verb|a_and| (notation: $\wedge$), \verb|a_or| (notation $\vee$), and \verb|a_neg| (notation: $\neg$).
+\begin{minted}{coq}
+(** Connectives: *)
+| a_arr   : asrt -> asrt -> asrt
+| a_and   : asrt -> asrt -> asrt
+| a_or    : asrt -> asrt -> asrt
+| a_neg   : asrt -> asrt
+\end{minted}
+Assertions can include both universal (\verb|a_all|) and existential (\verb|a_ex|) quantifiers. Quantification includes a ``type'' (\verb|a_type|) that is either a boolean, integer, value, object, method, or set. In order to include a new quantified type, the \verb|a_type| definition needs to be extended, and a substitution for that type needs to be defined. As an example, we might add \verb|a_field : a_type| to the \verb|a_type| definition, and define a function for substituting fields into assertions.
+\begin{minted}{coq}
+(** Quantifiers: *)
+| a_all : a_type -> asrt -> asrt
+| a_ex  : a_type -> asrt -> asrt
+\end{minted}
+Access is given below by \verb|a_acc|, that takes two values \verb|x| and \verb|y|, and is satisfied if \verb|x| has access to \verb|y|.
+\begin{minted}{coq}
+(** Permission: *)
+| a_acc   : a_val -> a_val -> asrt
+\end{minted}
+Control (\verb|a_call|) is one of the two assertion forms that makes direct reference to the current frame rather than the heap, in this case refering to the current continuation and 
+specifying that it is a call to a specific method on an object by another object with a set of arguments.
+\begin{minted}{coq}
+(** Control: *)
+| a_call  : a_val -> a_val -> a_mth -> 
+                       partial_map var a_val  -> asrt
+\end{minted}
+Chainmail's temporal logic operators are given below as \verb|a_next|, \verb|a_will|, \verb|a_prev|, and \verb|a_was|.
+\begin{minted}{coq}
+(** Time: *)
+| a_next  : asrt -> asrt
+| a_will  : asrt -> asrt
+| a_prev  : asrt -> asrt
+| a_was   : asrt -> asrt
+\end{minted}
+The space operator is defined below in \verb|a_in|
+\begin{minted}{coq}
+(** Space: *)
+| a_in    : asrt -> a_set -> asrt
+\end{minted}
+Viewpoint operators refer to what parts of the heap are considered ``internal'' or ``external'' to a module (\verb|a_intrn| and \verb|a_extrn|), or are ``private'' to a datastructure (\verb|a_private|).
+\begin{minted}{coq}
+(** Viewpoint: *)
+| a_extrn : a_val -> asrt
+| a_intrn : a_val -> asrt
+| a_private : a_val -> a_val -> asrt
+\end{minted}
+\verb|a_name| is the second operator that makes reference to the current frame, and links a value to a specific variable name in the variable map of the current configuration.
+\begin{minted}{coq}
+| a_name : a_val -> var -> asrt
+\end{minted}
+We define \verb|a_set| mutually with \verb|asrt| since they are mutually dependent. A set can be a specific set of values, a hole waiting to be replaced with a set, or a set comprehension 
+that is defined by the satisfaction of an assertions. This last defintion (\verb|a_asrt|)  is what introduces the mutual dependency between assertions and sets.
+\begin{minted}{coq}
+with
+a_set :=
+| as_hole : nat -> a_set
+| as_bnd  : set a_val -> a_set
+| as_asrt : asrt -> a_set.
+\end{minted}
+
+Finally, we introduce a series of notations that make assertions more readable.
+\begin{minted}{coq}
+Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 40).
+Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 40).
+Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 40).
+Notation "'¬' A" :=(a_neg A)(at level 40).
+Notation "'∀[x⦂' T ']∙' A" :=(a_all T A)(at level 40).
+Notation "'∃[x⦂' T ']∙' A" :=(a_ex T A)(at level 40).
+Notation "'⦃x⃒' A '⦄'" := (as_asrt A)(at level 40).
+Notation "e '∈' Σ" := (a_elem e Σ)(at level 40).
+Notation "A 'in_' Σ" := (a_in A Σ)(at level 40).
+Notation "x 'internal'" :=(a_intrn x)(at level 40).
+Notation "x 'external'" :=(a_extrn x)(at level 40).
+Notation "x 'access' y" :=(a_acc x y)(at level 40).
+Notation "x 'calls' y '▸' m '⟨' vMap '⟩'" :=
+                                 (a_call x y m vMap)(at level 40).
+Notation "e1 '⩶' e2" := (a_expr (ex_eq e1 e2))(at level 40).
+Notation "e1 '⩶̸' e2" := (a_expr (not (ex_eq e1 e2)))(at level 40).
+\end{minted}
+
+
+
+\subsection{Satisfaction}
+
+Satisfaction of assertions is defined by \verb|sat| and \verb|nsat|.
+\begin{minted}{coq}
+Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A"(at level 40).
+Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A"(at level 40).
+\end{minted}
+\begin{minted}{coq}
+Inductive sat : mdl -> mdl -> config -> config -> asrt -> Prop :=
+
+| sat_name : forall M1 M2 σ σ0 α o x, mapp σ x = Some (v_ α) ->
+                                 mapp σ α = Some o ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊨ a_name (a_ α) x
+\end{minted}
+\begin{minted}{coq}
+| sat_exp   : forall M1 M2 M σ0 σ e e', is_exp e e' ->
+                                        M1 ⋄ M2 ≜ M ->
+                                        M ∙ σ ⊢ e' ↪ v_true ->
+                                        M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e)
+(**
+[[[
+                     M1 ⋄ M2 ≜ M 
+                 M ∙ σ ⊢ e' ↪ v_true
+               -----------------------                   (Sat-Exp)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ e
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_class : forall M1 M2 σ0 σ α C o, mapp σ α = Some o -> 
+                                  o.(cname) = C ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_class (a_ α)  C)
+(**
+[[[
+              (α ↦ o) ∈ σ     o has class C
+               ----------------------------                   (Sat-Class)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (α : C)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(** Connectives: *)
+| sat_and   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ A2 ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∧ A2)
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
+               ----------------------------                   (Sat-And)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∧ A2)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_or1   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
+               ----------------------------                   (Sat-Or1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_or2   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A2 ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
+               ----------------------------                   (Sat-Or2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ∨ A2)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_arr1  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A2 ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2)
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
+               ----------------------------                   (Sat-Arr1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_arr2  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⟶ A2)
+(**
+[[[
+                   M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
+               ----------------------------                   (Sat-Arr2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ (A1 ⇒ A2)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_not   : forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊭ A ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (¬ A)
+(**
+[[[
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ A
+               -----------------------                   (Sat-Not)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ ¬ A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(** Quantifiers: *)
+
+| sat_all : forall M1 M2 σ0 σ T A, (forall x, has_type σ x T ->
+                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ ([x /s 0]A)) ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀[x⦂ T ]∙ A)
+(**
+[[[
+                (∀ α o, (α ↦ o) ∈ σ.(heap) → M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
+               ------------------------------------------------------------                   (Sat-All-x)
+                            M1 ⦂ M2 ◎ σ0 … σ ⊨ (∀ x. A)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_ex  : forall M1 M2 σ0 σ x T A, has_type σ x T ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ ([x /s 0] A) ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃[x⦂ T ]∙ A)
+(**
+[[[
+                     (α ↦ o) ∈ σ.(heap)
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
+               -------------------------------                   (Sat-Ex-x)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ (∃ x. A)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(** Permission: *)
+| sat_access1 : forall M1 M2 σ0 σ α, M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α) access (a_ α))
+(**
+[[[
+                
+               ------------------------------                   (Sat-Access1)
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ α access α
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_access2 : forall M1 M2 σ0 σ α α' o f, mapp σ α' = Some o ->
+                                       (flds o) f = Some (v_addr α) ->
+                                       M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α') access (a_ α))
+(**
+[[[
+                 (α' ↦ o) ∈ σ     o.f = α
+               ------------------------------                   (Sat-Access2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α' access α
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_access3 : forall M1 M2 σ0 σ ψ ϕ χ x α1 α2 s, ⌊this⌋ σ ≜ (v_addr α1) ->
+                                              ⌊x⌋ σ ≜ (v_addr α2) ->
+                                              σ = (χ, ϕ :: ψ) ->
+                                              (contn ϕ) = c_stmt s ->
+                                              in_stmt x s ->
+                                              M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) access (a_ α2))
+(**
+[[[
+                     ⌊this⌋ σ ≜ α1
+               ⌊x⌋ σ ≜ α2        x ∈ σ.(contn)
+               -------------------------------                   (Sat-Access3)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 access α2
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(** Control: *)
+| sat_call : forall M1 M2 σ0 σ χ ϕ ψ x y m β s α1 α2,
+    ⌊ this ⌋ σ ≜ (v_addr α1) ->
+    ⌊ y ⌋ σ ≜ (v_addr α2) ->
+    σ = (χ, ϕ :: ψ) ->
+    (contn ϕ) = (c_stmt (s_stmts (s_meth x y m β) s)) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) calls (a_ α2) ▸ (am_ m)
+                                ⟨ (β ∘ (mapp σ) ∘ (fun v => Some (av_bnd v))) ⟩ )
+(**
+[[[
+                               ⌊this⌋ σ ≜ α1        
+               ⌊y⌋ σ ≜ α2        σ.(contn) = (x := y.m(β); s)
+               ------------------------------------------------                   (Sat-Call-1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 calls α2.m(β ∘ σ.(vMap))
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(*| sat_call_2 : forall M1 M2 σ0 σ χ ϕ ψ x y m β s α1 α2,
+    ⌊ this ⌋ σ ≜ (v_addr α1) ->
+    ⌊ y ⌋ σ ≜ (v_addr α2) ->
+    σ = (χ, ϕ :: ψ) ->
+    (contn ϕ) = (c_stmt (s_stmts (s_meth x y m β) s)) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_call' (a_ α1) (a_ α2) (am_ m))
+(**
+[[[
+                               ⌊this⌋ σ ≜ α1        
+               ⌊y⌋ σ ≜ α2        σ.(contn) = (x := y.m(β); s)
+               ------------------------------------------------                   (Sat-Call-2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 calls α2.m(β ∘ σ.(vMap))
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+*)
+(** Viewpoint: *)
+| sat_extrn : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
+                                  o.(cname) = C ->
+                                  M1 C = None ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ a_extrn (a_ α)
+(**
+[[[
+               (α ↦ o) ∈ χ   o.(className) ∉ M1
+               ---------------------------------                   (Sat-Extrn)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ α external
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_intrn : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
+                                  o.(cname) = C ->
+                                  (exists CDef, M1 C = Some CDef) ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ a_intrn (a_ α)
+(**
+[[[
+               (α ↦ o) ∈ χ   o.(className) ∈ M1
+               ---------------------------------                   (Sat-Intrn)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ α internal
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_private : forall M1 M2 M σ0 σ α1 α2,
+    M1 ⋄ M2 ≜ M ->
+    M ∙ σ ⊢ (e_acc_g (e_val (v_addr α1)) private (e_val (v_addr α2))) ↪ v_true ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ a_private (a_ α1) (a_ α2)
+(**
+[[[
+               (α ↦ o) ∈ χ   o.(className) ∈ M1
+               ---------------------------------                   (Sat-Intrn)
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ α internal
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(** Time: *)
+(**
+Non-determinism in the temporal operators is removed by using the initial
+configuration that satisfaction is defined with.
+ *)
+| sat_next : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ' ->
+                                M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_next A)
+(**
+[[[
+                 M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ'
+               M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               -------------------------                   (Sat-Next)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ next A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_will : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ ⌈⤳⋆⌉ σ' ->
+                                M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_will A)
+(**
+[[[
+                 M1 ⦂ M2 ⦿ σ ⌈⤳⋆⌉ σ'
+               M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               -------------------------                   (Sat-Will)
+               M1 ⦂ M2 ◎ σ0 … σ ⊨ will A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_prev_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                  M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                                  M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
+                    M1 ⦂ M2 ⦿ σ' ⤳ σ
+                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               ---------------------------------                   (Sat-Prev-1)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ prev A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_prev_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳ σ ->
+                               M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
+                    M1 ⦂ M2 ⦿ σ' ⤳ σ
+                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               ---------------------------------                   (Sat-Prev-2)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ prev A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_was_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                 M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
+                                 M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
+                    M1 ⦂ M2 ⦿ σ' ⤳⋆ σ
+                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
+               --------------------------------                   (Sat-Was-1)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ was A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| sat_was_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ ->
+                              M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
+(**
+[[[
+                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ
+                    M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A
+               --------------------------------                   (Sat-Was-2)
+               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ was A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(**
+#<h3>#Space#</h3>#
+ *)
+| sat_elem : forall M1 M2 M σ0 σ e e' α Σ, M1 ⋄ M2 ≜ M ->
+                                      M ∙ σ ⊢ e' ↪ (v_addr α) ->
+                                      set_In (av_bnd (v_addr α)) Σ ->
+                                      is_exp e e' ->
+                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ (as_bnd Σ))
+\end{minted}
+\begin{minted}{coq}
+| sat_elem_comprehension : forall M1 M2 M σ0 σ e e' α A,
+    M1 ⋄ M2 ≜ M ->
+    M ∙ σ ⊢ e' ↪ (v_addr α) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ ([ax_val (v_ α) /s 0] A) ->
+    is_exp e e' ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ ⦃x⃒ A ⦄)
+\end{minted}
+\begin{minted}{coq}
+where "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A" := (sat M1 M2 σ0 σ A)
+\end{minted}
+\begin{minted}{coq}
+with
+  nsat : mdl -> mdl -> config -> config -> asrt -> Prop :=
+
+| nsat_name : forall M1 M2 σ σ0 α x v, mapp σ x = Some v ->
+                                  v <> (v_addr α) ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ a_name (a_ α) x
+\end{minted}
+\begin{minted}{coq}
+(*simple*)
+| nsat_exp : forall M1 M2 M σ0 σ e e', is_exp e e' ->
+                                  M1 ⋄ M2 ≜ M ->
+                                  M ∙ σ ⊢ e' ↪ v_false ->
+                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_expr e)
+(**
+[[[
+                   M1 ⋄ M2 ≜ M
+               M ∙ σ ⊢ e ↪ v_false
+               --------------------                   (NSat-Exp)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ e
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_class1 : forall M1 M2 σ0 σ C C' α o, mapp σ α = Some o -> 
+                                       o.(cname) = C' ->
+                                       C <> C' ->
+                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_class (a_ α) C)
+(**
+[[[
+                        (α ↦ o) ∈ σ     
+               o has class C'      C' ≠ C
+               --------------------------                   (NSat-Class1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ (α : C)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_class2 : forall M1 M2 σ0 σ (α : addr) C, mapp σ α = None ->
+                                           M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_class (a_ α) C)
+(**
+[[[
+                     ∄o.(α ↦ o) ∈ σ
+               --------------------------                   (NSat-Class2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ (α : C)
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(*connectives*)
+| nsat_and1  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ∧ A2)
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
+               --------------------------                   (NSat-And1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ∧ A2
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_and2  : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ∧ A2)
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A2
+               --------------------------                   (NSat-And2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ∧ A2
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_or    : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ∨ A2)
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A2
+               --------------------------                   (NSat-Or)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ∨ A2
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_arr   : forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ A2 ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (A1 ⟶ A2)
+(**
+[[[
+                 M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
+                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A2
+               --------------------------                   (NSat-Arr)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ A1 ⇒ A2
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_not   : forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊨ A ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊭ (¬ A)
+(**
+[[[
+                M1 ⦂ M2 ◎ σ0 … σ ⊨ A
+               ----------------------                   (NSat-Not)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ ¬ A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(*quantifiers*)
+| nsat_all : forall M1 M2 σ0 σ A x T, has_type σ x T ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ ([x /s 0]A) ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (∀[x⦂ T ]∙ A) 
+(**
+[[[
+                      (α ↦ o) ∈ σ.(heap)
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
+               ----------------------------                   (NSat-All-x)
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ ∀ x. A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_ex : forall M1 M2 σ0 σ T A, (forall x, has_type σ x T ->
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ([x /s 0]A)) ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (∃[x⦂ T ]∙ A)
+(**
+[[[
+               ∀ α o. (α ↦ o) ∈ σ.(heap) → M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
+               --------------------------------------------------------                   (NSat-Ex-x)
+                         M1 ⦂ M2 ◎ σ0 … σ ⊭ ∃ x. A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(** Permission: *)
+| nsat_access : forall M1 M2 σ0 σ α1 α2, α1 <> α2 ->
+                                    (forall o f α3, mapp σ α1 = Some o ->
+                                               (flds o) f = Some (v_addr α3) ->
+                                               α2 <> α3) ->
+                                    (forall x, ⌊this⌋ σ ≜ (v_addr α1) ->
+                                          ⌊x⌋ σ ≜ (v_addr α2) ->
+                                          forall ψ ϕ χ s, σ = (χ, ϕ :: ψ) ->
+                                                     (contn ϕ) = c_stmt s ->
+                                                     ~ in_stmt x s) ->
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) access (a_ α2))
+(**
+[[[
+                α1 ≠ α2        (∀ o f α3. (α1 ↦ o) ∈ σ ∧ o.f = α3 → α2 ≠ α3)
+                    (∀ x. ⌊x⌋ σ ≜ α2 ∧ ⌊this⌋ ≜ α1 → x ∉ σ.(contn))
+               ---------------------------------------------------------------                   (NSat-Access)
+                       M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 access α2
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(** Control: *)
+| nsat_call1 : forall M1 M2 σ0 σ m β α1 α2, mapp σ this <> Some (v_addr α1) ->
+                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ β ⟩)
+(**
+[[[
+                    ⌊this⌋ σ ≜ α          α ≠ α1
+               ------------------------------------------                   (NSat-Call1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_call2 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β β' s, snd σ = ϕ :: ψ ->
+                                                    contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
+                                                    mapp σ y <> Some (v_addr α2) ->
+                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ β ⟩)
+(**
+[[[
+                    σ.(contn) = (x := y.m(β'); s) 
+                  ⌊y⌋ σ ≜ α                    α ≠ α2
+               ------------------------------------------                   (NSat-Call2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_call3 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β' β s, snd σ = ϕ :: ψ ->
+                                                    contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
+                                                    β <> β' ∘ (mapp σ) ∘ (fun v => Some (av_bnd v)) ->
+                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ β ⟩)
+(**
+[[[
+                     σ.(contn) = (x := y.m(β'); s)
+                         β ≠ β' ∘ (σ.(vMap))
+               ------------------------------------------                   (NSat-Call2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(*viewpoint*) (* well-formeness? This is important!!!!*)
+| nsat_extrn1 : forall M1 M2 σ0 σ α, mapp σ α = None ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
+(**
+[[[
+                       α ∉ σ.(heap)
+               -----------------------------                   (NSat-Extrn1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α external
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_extrn2 : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
+                                    o.(cname) = C ->
+                                    (exists CDef, M1 C = Some CDef) ->
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
+(**
+[[[
+                    (α ↦ o) ∈ σ.(heap)
+                    o.(className) ∈ M1
+               -----------------------------                   (NSat-Extrn2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α external
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_intrn1 : forall M1 M2 σ0 σ α, mapp σ α = None ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α) internal)
+(**
+[[[
+                       α ∉ σ.(heap)
+               -----------------------------                   (NSat-Intrn1)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α internal
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_intrn2 : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
+                                    o.(cname) = C ->
+                                    M1 C = None ->
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α) internal)
+(**
+[[[
+                    (α ↦ o) ∈ σ.(heap)
+                    o.(className) ∉ M1
+               -----------------------------                   (NSat-Intrn2)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ α internal
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(*space*)
+(*| nsat_in    : forall M1 M2 σ A Σ σ', σ ↓ Σ ≜ σ' ->
+                                 M1 ⦂ M2 ◎ σ' ⊭ A ->
+                                 M1 ⦂ M2 ◎ σ ⊭ (a_in A (s_bind Σ))*)
+
+(*time*)
+
+| nsat_next : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ' ->
+                                 M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
+(**
+[[[
+                    
+                  M1 ⦂ M2 ⦿ σ0 ⌈⤳⌉ σ'
+                M1 ⦂ M2 ◎ σ0 … σ' ⊭ A
+               -------------------------                   (NSat-Next)
+               M1 ⦂ M2 ◎ σ0 … σ ⊭ next A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_will : forall M1 M2 σ0 σ A, (forall σ', (M1 ⦂ M2 ⦿ σ ⌈⤳⋆⌉ σ') ->
+                                     M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_will A)
+(**
+[[[
+                    
+               (∀ σ'. M1 ⦂ M2 ⦿ σ0 ⌈⤳⋆⌉ σ' →
+                      M1 ⦂ M2 ◎ σ0 … σ' ⊭ A)
+               -----------------------------                   (NSat-Will)
+                M1 ⦂ M2 ◎ σ0 … σ ⊭ will A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_prev_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                   M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                                   M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
+(**
+[[[
+                    
+               M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'       M1 ⦂ M2 ⦿ σ' ⤳ σ
+                          M1 ⦂ M2 ◎ σ0 … σ' ⊭ A
+               -------------------------------------------                   (NSat-Prev-1)
+                    M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_prev_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳ σ ->
+                                M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
+(**
+[[[
+                    
+                           M1 ⦂ M2 ⦿ σ0 ⤳ σ
+                          M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A
+               -------------------------------------------                   (NSat-Prev-2)
+                    M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+| nsat_was : forall M1 M2 σ0 σ A, (forall σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                    M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
+                                    M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
+                             M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A ->
+                             M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_was A)
+(**
+[[[
+                    
+               (∀ σ'. M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ∧ M1 ⦂ M2 ⦿ σ' ⤳⋆ σ →
+                      M1 ⦂ M2 ◎ σ0 … σ' ⊭ A)
+                             M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A
+               ------------------------------------------------                   (NSat-Was)
+                       M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+]]]
+ *)
+\end{minted}
+\begin{minted}{coq}
+(**
+#<h3>#Space#</h3>#
+ *)
+| nsat_elem : forall M1 M2 M σ0 σ e e' α Σ, M1 ⋄ M2 ≜ M ->
+                                       M ∙ σ ⊢ e' ↪ (v_addr α) ->
+                                       ~ set_In (av_bnd (v_addr α)) Σ ->
+                                       is_exp e e' ->
+                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ (as_bnd Σ))
+\end{minted}
+\begin{minted}{coq}
+| nsat_elem_comprehension : forall M1 M2 M σ0 σ e e' α A,
+    M1 ⋄ M2 ≜ M ->
+    M ∙ σ ⊢ e' ↪ (v_addr α) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ ([ax_val (v_ α) /s 0] A) ->
+    is_exp e e' ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ ⦃x⃒ A ⦄)
+\end{minted}
+\begin{minted}{coq}
+where "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A" := (nsat M1 M2 σ0 σ A).
+\end{minted}
+
+
+\bibliographystyle{abbrv}
+\bibliography{main}
+
+\end{document}

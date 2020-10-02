@@ -226,6 +226,10 @@ Inductive a_mth : Type :=
 Notation "'am_' m" := (am_bnd m)(at level 40).
 Notation "'am♢' m" := (am_hole m)(at level 40).
 
+Inductive a_set :=
+| as_hole : nat -> a_set
+| as_bnd  : set a_val -> a_set.
+
 (** Assertion syntax  *)
 
 Inductive asrt : Type :=
@@ -264,13 +268,18 @@ Inductive asrt : Type :=
 | a_intrn : a_val -> asrt
 | a_private : a_val -> a_val -> asrt
 
-| a_name : a_val -> var -> asrt
+| a_self : a_val -> asrt.
 
-with
+(*with
 a_set :=
 | as_hole : nat -> a_set
 | as_bnd  : set a_val -> a_set
-| as_asrt : asrt -> a_set.
+| as_asrt : asrt -> a_set.*)
+
+(*)Scheme asrt_mut_ind := Induction for asrt Sort Prop
+  with a_set_mut_ind := Induction for a_set Sort Prop.
+
+Combined Scheme asrt_mutind from asrt_mut_ind, a_set_mut_ind.*)
 
 Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 40).
 Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 40).
@@ -278,7 +287,7 @@ Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 40).
 Notation "'¬' A" :=(a_neg A)(at level 40).
 Notation "'∀[x⦂' T ']∙' A" :=(a_all T A)(at level 40).
 Notation "'∃[x⦂' T ']∙' A" :=(a_ex T A)(at level 40).
-Notation "'⦃x⃒' A '⦄'" := (as_asrt A)(at level 40).
+(*)Notation "'⦃x⃒' A '⦄'" := (as_asrt A)(at level 40).*)
 Notation "e '∈' Σ" := (a_elem e Σ)(at level 40).
 Notation "A 'in_' Σ" := (a_in A Σ)(at level 40).
 Notation "x 'internal'" :=(a_intrn x)(at level 40).
@@ -356,6 +365,16 @@ Instance substExpr : Subst expr nat a_var :=
         end
   }.
 
+Fixpoint sbstΣ (Σ : a_set)(n : nat)(x : a_var) : a_set :=
+  match Σ with
+  | as_bnd Σ' => as_bnd (set_map eq_dec (fun y => [x /s n] y) Σ')
+(*)  | ⦃x⃒ A'⦄ => ⦃x⃒ sbstA A' (S n) x⦄*)
+  | as_hole m => match x with
+                | ax_set Σ' => as_bnd Σ'
+                | _ => Σ
+                end
+  end.
+
 Fixpoint sbstA (A : asrt)(n : nat)(x : a_var) : asrt :=
   match A with
   | a_expr e => a_expr ([x /s n] e)
@@ -392,19 +411,19 @@ Fixpoint sbstA (A : asrt)(n : nat)(x : a_var) : asrt :=
   | a_intrn v          => a_intrn ([x /s n] v)
   | a_private y z      => a_private ([x /s n] y) ([x /s n] z)
 
-  | a_name y z         => a_name ([x /s n] y) z
-  end
+  | a_self y         => a_self ([x /s n] y)
+  end.
 
-with
+(*)with
 sbstΣ (Σ : a_set)(n : nat)(x : a_var) : a_set :=
   match Σ with
   | as_bnd Σ' => as_bnd (set_map eq_dec (fun y => [x /s n] y) Σ')
-  | ⦃x⃒ A'⦄ => ⦃x⃒ sbstA A' (S n) x⦄
+(*)  | ⦃x⃒ A'⦄ => ⦃x⃒ sbstA A' (S n) x⦄*)
   | as_hole m => match x with
                 | ax_set Σ' => as_bnd Σ'
                 | _ => Σ
                 end
-  end.
+  end.*)
 
 (*Instance substAssertionVar : Subst asrt nat value :=
   {sbst := sbstxA}.
@@ -896,24 +915,120 @@ Inductive has_type : config -> a_var -> a_type -> Prop :=
 
 Hint Constructors has_type : chainmail_db.
 
+Inductive has_access_to : config -> a_val -> a_val -> Prop :=
+| acc_eq  : forall σ α, has_access_to σ (a_ α) (a_ α)
+| acc_fld : forall σ α1 o f α2, mapp σ α1 = Some o ->
+                           flds o f = Some (v_addr α2) ->
+                           has_access_to σ (a_ α1) (a_ α2)
+| acc_contn : forall χ ϕ ψ α1 x α2 s, ⌊ this ⌋ (χ, ϕ::ψ) ≜ (v_addr α1) ->
+                                 ⌊ x ⌋ (χ, ϕ::ψ) ≜ v_addr α2 ->
+                                 contn ϕ = c_stmt s ->
+                                 in_stmt x s ->
+                                 has_access_to (χ, ϕ::ψ) (a_ α1) (a_ α2).
+
+Hint Constructors has_access_to : chainmail_db.
+
+Ltac acc_auto :=
+  match goal with
+  | [ |- has_access_to _ ?α ?α] =>
+    apply acc_eq
+  | [ H : ~ has_access_to _ ?α ?α |- _] =>
+    contradiction H; acc_auto
+  | [ Hmap : mapp ?σ ?α1 = Some ?o,
+      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to ?σ ?α1 ?α2] =>
+    eapply acc_fld; eauto
+  | [ Hmap : ?χ ?α1 = Some ?o,
+      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to (?χ, _) ?α1 ?α2] =>
+    eapply acc_fld; eauto
+  | [ Hthis : ⌊ this ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α1),
+      Hint : ⌊ ?x ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α2),
+      Hcontn : contn ?ϕ = c_stmt ?s,
+      Hin : in_stmt ?x ?s |- has_access_to ?σ ?α1 ?α2] =>
+    eapply acc_contn; eauto
+  end.
+
+Inductive makes_call : mdl -> mdl -> config ->
+                       a_val -> a_val -> a_mth -> partial_map var a_val ->
+                       Prop :=
+| method_call : forall M1 M2 σ χ ϕ ψ x y m β s α1 α2,
+    ⌊ this ⌋ σ ≜ (v_addr α1) ->
+    ⌊ y ⌋ σ ≜ (v_addr α2) ->
+    σ = (χ, ϕ :: ψ) ->
+    (contn ϕ) = (c_stmt (s_stmts (s_meth x y m β) s)) ->
+    makes_call M1 M2 σ (a_ α1) (a_ α2) (am_ m) (β ∘ (mapp σ) ∘ (fun v => Some (av_bnd v))).
+
+Hint Constructors makes_call : chainmail_db.
+
+Inductive internal_obj : mdl -> mdl -> config -> a_val -> Prop :=
+| int_obj : forall M1 M2 σ α o CDef, ⟦ α ↦ o ⟧ ∈ σ ->
+                                M1 (cname o) = Some CDef ->
+                                internal_obj M1 M2 σ (a_ α).
+
+Inductive external_obj : mdl -> mdl -> config -> a_val -> Prop :=
+| ext_obj : forall M1 M2 σ α o, ⟦ α ↦ o ⟧ ∈ σ ->
+                           M1 (cname o) = None ->
+                           external_obj M1 M2 σ (a_ α).
+
+Hint Constructors internal_obj external_obj : chainmail_db.
+
+Inductive has_class : config -> a_val -> cls -> Prop :=
+| has_cls : forall σ α o, ⟦ α ↦ o ⟧ ∈ σ ->
+                     has_class σ (a_ α) (cname o).
+
+Inductive is_self : config -> a_val -> Prop :=
+| is_slf : forall σ α o, ⟦ this ↦ (v_ α) ⟧ ∈ σ ->
+                    ⟦ α ↦ o ⟧ ∈ σ ->
+                    is_self σ (a_ α).
+
+Inductive exp_satisfaction : mdl -> mdl -> config -> expr -> Prop :=
+| exp_sat : forall M1 M2 M σ e e', is_exp e e' ->
+                              M1 ⋄ M2 ≜ M ->
+                              M ∙ σ ⊢ e' ↪ v_true ->
+                              exp_satisfaction M1 M2 σ e.
+
+Hint Constructors has_class is_self exp_satisfaction : chainmail_db.
+
+Inductive elem_of_set : mdl -> mdl -> config -> expr -> a_set -> Prop :=
+| in_set : forall M1 M2 M σ e e' α Σ, M1 ⋄ M2 ≜ M ->
+                                 M ∙ σ ⊢ e' ↪ (v_addr α) ->
+                                 set_In (av_bnd (v_addr α)) Σ ->
+                                 is_exp e e' ->
+                                 elem_of_set M1 M2 σ e (as_bnd Σ).
+
+Hint Constructors elem_of_set.
+
+Inductive restrict : a_set -> heap -> heap -> Prop :=
+| rest : forall Σ χ χ', (forall α, set_In (a_ α) Σ ->
+                         exists o, χ' α = Some o) ->
+                   (forall α o, χ' α = Some o ->
+                           set_In (a_ α) Σ) ->
+                   (forall α o, χ' α = Some o ->
+                           χ α = Some o) ->
+                   restrict (as_bnd Σ) χ χ'.
+
+Hint Constructors restrict : chainmail_db.
+
+Inductive is_private : mdl -> mdl -> config -> a_val -> a_val -> Prop :=
+| is_priv : forall M1 M2 M σ α1 α2,
+    M1 ⋄ M2 ≜ M ->
+    M ∙ σ ⊢ (e_acc_g (e_val (v_addr α1)) private (e_val (v_addr α2))) ↪ v_true ->
+    is_private M1 M2 σ (a_ α1) (a_ α2).
+
 Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A"(at level 40).
 Reserved Notation "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A"(at level 40).
 
 Inductive sat : mdl -> mdl -> config -> config -> asrt -> Prop :=
 
-| sat_name : forall M1 M2 σ σ0 α o x, mapp σ x = Some (v_ α) ->
-                                 mapp σ α = Some o ->
-                                 M1 ⦂ M2 ◎ σ0 … σ ⊨ a_name (a_ α) x
+| sat_self : forall M1 M2 σ σ0 a, is_self σ a ->
+                             M1 ⦂ M2 ◎ σ0 … σ ⊨ a_self a
 
 (** Simple: *)
 (**
 Note: #<code>#is_exp e e'#</code># simply maps an #<code>#expr#</code># (defined above) to an expression (#<code>#exp#</code>#) in L#<sub>#oo#</sub>#. #<code>#expr#</code># differs from #<code>#exp#</code># in L#<sub>#oo#</sub># only in that an #<code>#expr#</code># may not contain any variables.
 To aid readability, I ignore this distinction between #<code>#e#</code># and #<code>#e'#</code># in the descriptions of #<code>#sat_exp#</code># and #<code>#nsat_exp#</code>#.
  *)
-| sat_exp   : forall M1 M2 M σ0 σ e e', is_exp e e' ->
-                                        M1 ⋄ M2 ≜ M ->
-                                        M ∙ σ ⊢ e' ↪ v_true ->
-                                        M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e)
+| sat_exp   : forall M1 M2 σ0 σ e, exp_satisfaction M1 M2 σ e ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_expr e)
 (**
 [[[
                      M1 ⋄ M2 ≜ M 
@@ -923,9 +1038,8 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
 ]]]
  *)
 
-| sat_class : forall M1 M2 σ0 σ α C o, mapp σ α = Some o -> 
-                                  o.(cname) = C ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_class (a_ α)  C)
+| sat_class : forall M1 M2 σ0 σ a C, has_class σ a C ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_class a  C)
 (**
 [[[
               (α ↦ o) ∈ σ     o has class C
@@ -1023,7 +1137,9 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
  *)
 
 (** Permission: *)
-| sat_access1 : forall M1 M2 σ0 σ α, M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α) access (a_ α))
+| sat_access : forall M1 M2 σ0 σ a1 a2, has_access_to σ a1 a2 ->
+                                   M1 ⦂ M2 ◎ σ0 … σ ⊨ (a1 access a2)
+
 (**
 [[[
                 
@@ -1032,7 +1148,7 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
 ]]]
  *)
 
-| sat_access2 : forall M1 M2 σ0 σ α α' o f, mapp σ α' = Some o ->
+(*| sat_access2 : forall M1 M2 σ0 σ α α' o f, mapp σ α' = Some o ->
                                        (flds o) f = Some (v_addr α) ->
                                        M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α') access (a_ α))
 (**
@@ -1056,16 +1172,12 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
                -------------------------------                   (Sat-Access3)
                M1 ⦂ M2 ◎ σ0 … σ ⊨ α1 access α2
 ]]]
- *)
+ *)*)
 
 (** Control: *)
-| sat_call : forall M1 M2 σ0 σ χ ϕ ψ x y m β s α1 α2,
-    ⌊ this ⌋ σ ≜ (v_addr α1) ->
-    ⌊ y ⌋ σ ≜ (v_addr α2) ->
-    σ = (χ, ϕ :: ψ) ->
-    (contn ϕ) = (c_stmt (s_stmts (s_meth x y m β) s)) ->
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ ((a_ α1) calls (a_ α2) ▸ (am_ m)
-                                ⟨ (β ∘ (mapp σ) ∘ (fun v => Some (av_bnd v))) ⟩ )
+| sat_call : forall M1 M2 σ0 σ a1 a2 m β,
+    makes_call M1 M2 σ a1 a2 m β ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (a1 calls a2 ▸ m ⟨ β ⟩)
 (**
 [[[
                                ⌊this⌋ σ ≜ α1        
@@ -1091,10 +1203,8 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
  *)
 *)
 (** Viewpoint: *)
-| sat_extrn : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
-                                  o.(cname) = C ->
-                                  M1 C = None ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ a_extrn (a_ α)
+| sat_extrn : forall M1 M2 σ0 σ a, external_obj M1 M2 σ a ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ a_extrn a
 (**
 [[[
                (α ↦ o) ∈ χ   o.(className) ∉ M1
@@ -1103,10 +1213,8 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
 ]]]
  *)
 
-| sat_intrn : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
-                                  o.(cname) = C ->
-                                  (exists CDef, M1 C = Some CDef) ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ a_intrn (a_ α)
+| sat_intrn : forall M1 M2 σ0 σ a, internal_obj M1 M2 σ a ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ a_intrn a
 (**
 [[[
                (α ↦ o) ∈ χ   o.(className) ∈ M1
@@ -1115,10 +1223,9 @@ To aid readability, I ignore this distinction between #<code>#e#</code># and #<c
 ]]]
  *)
 
-| sat_private : forall M1 M2 M σ0 σ α1 α2,
-    M1 ⋄ M2 ≜ M ->
-    M ∙ σ ⊢ (e_acc_g (e_val (v_addr α1)) private (e_val (v_addr α2))) ↪ v_true ->
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ a_private (a_ α1) (a_ α2)
+| sat_private : forall M1 M2 σ0 σ a1 a2,
+    is_private M1 M2 σ a1 a2 ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ a_private a1 a2
 (**
 [[[
                (α ↦ o) ∈ χ   o.(className) ∈ M1
@@ -1156,10 +1263,11 @@ configuration that satisfaction is defined with.
 ]]]
  *)
 
-| sat_prev_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                                  M1 ⦂ M2 ⦿ σ' ⤳ σ ->
-                                  M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
+| sat_prev : forall M1 M2 σ0 σ A, (forall σ', (M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' \/
+                                     σ' = σ0) ->
+                                    M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A) ->
+                             M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
 (**
 [[[
                     M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
@@ -1170,23 +1278,11 @@ configuration that satisfaction is defined with.
 ]]]
  *)
 
-| sat_prev_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳ σ ->
-                               M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A ->
-                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_prev A)
-(**
-[[[
-                    M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
-                    M1 ⦂ M2 ⦿ σ' ⤳ σ
-                    M1 ⦂ M2 ◎ σ0 … σ' ⊨ A
-               ---------------------------------                   (Sat-Prev-2)
-               M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊨ prev A
-]]]
- *)
-
-| sat_was_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                                 M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
-                                 M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
-                                 M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
+| sat_was : forall M1 M2 σ0 σ A σ', (M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' \/
+                                σ0 = σ') ->
+                               M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
+                               M1 ⦂ M2 ◎ σ0 … σ' ⊨ A ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
 (**
 [[[
                     M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ'
@@ -1197,9 +1293,9 @@ configuration that satisfaction is defined with.
 ]]]
  *)
 
-| sat_was_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ ->
+(*| sat_was_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ ->
                               M1 ⦂ M2 ◎ σ0 … σ0 ⊨ A ->
-                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)
+                              M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_was A)*)
 (**
 [[[
                     M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ
@@ -1212,33 +1308,32 @@ configuration that satisfaction is defined with.
 (**
 #<h3>#Space#</h3>#
  *)
-| sat_elem : forall M1 M2 M σ0 σ e e' α Σ, M1 ⋄ M2 ≜ M ->
-                                      M ∙ σ ⊢ e' ↪ (v_addr α) ->
-                                      set_In (av_bnd (v_addr α)) Σ ->
-                                      is_exp e e' ->
-                                      M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ (as_bnd Σ))
+| sat_elem : forall M1 M2 σ0 σ e Σ, elem_of_set M1 M2 σ e Σ ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ Σ)
 
-| sat_elem_comprehension : forall M1 M2 M σ0 σ e e' α A,
+(*)| sat_elem_comp : forall M1 M2 M σ0 σ e e' α A,
     M1 ⋄ M2 ≜ M ->
     M ∙ σ ⊢ e' ↪ (v_addr α) ->
     M1 ⦂ M2 ◎ σ0 … σ ⊨ ([ax_val (v_ α) /s 0] A) ->
     is_exp e e' ->
-    M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ ⦃x⃒ A ⦄)
-                                 
+    M1 ⦂ M2 ◎ σ0 … σ ⊨ (e ∈ ⦃x⃒ A ⦄)*)
+
+| sat_in : forall M1 M2 σ0 χ ψ χ' A Σ,
+    restrict Σ χ χ' ->
+    M1 ⦂ M2 ◎ σ0 … (χ', ψ) ⊨ A ->
+    M1 ⦂ M2 ◎ σ0 … (χ, ψ) ⊨ (A in_ Σ)
+
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊨' A" := (sat M1 M2 σ0 σ A)
 
 with
   nsat : mdl -> mdl -> config -> config -> asrt -> Prop :=
 
-| nsat_name : forall M1 M2 σ σ0 α x v, mapp σ x = Some v ->
-                                  v <> (v_addr α) ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ a_name (a_ α) x
+| nsat_self : forall M1 M2 σ0 σ a, ~ is_self σ a ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ a_self a
 
 (*simple*)
-| nsat_exp : forall M1 M2 M σ0 σ e e', is_exp e e' ->
-                                  M1 ⋄ M2 ≜ M ->
-                                  M ∙ σ ⊢ e' ↪ v_false ->
-                                  M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_expr e)
+| nsat_exp : forall M1 M2 σ0 σ e, ~ exp_satisfaction M1 M2 σ e ->
+                             M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_expr e)
 (**
 [[[
                    M1 ⋄ M2 ≜ M
@@ -1248,25 +1343,13 @@ with
 ]]]
  *)
 
-| nsat_class1 : forall M1 M2 σ0 σ C C' α o, mapp σ α = Some o -> 
-                                       o.(cname) = C' ->
-                                       C <> C' ->
-                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_class (a_ α) C)
+| nsat_class : forall M1 M2 σ0 σ a C, ~ has_class σ a C ->
+                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_class a C)
 (**
 [[[
                         (α ↦ o) ∈ σ     
                o has class C'      C' ≠ C
                --------------------------                   (NSat-Class1)
-               M1 ⦂ M2 ◎ σ0 … σ ⊭ (α : C)
-]]]
- *)
-
-| nsat_class2 : forall M1 M2 σ0 σ (α : addr) C, mapp σ α = None ->
-                                           M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_class (a_ α) C)
-(**
-[[[
-                     ∄o.(α ↦ o) ∈ σ
-               --------------------------                   (NSat-Class2)
                M1 ⦂ M2 ◎ σ0 … σ ⊭ (α : C)
 ]]]
  *)
@@ -1351,16 +1434,8 @@ with
  *)
 
 (** Permission: *)
-| nsat_access : forall M1 M2 σ0 σ α1 α2, α1 <> α2 ->
-                                    (forall o f α3, mapp σ α1 = Some o ->
-                                               (flds o) f = Some (v_addr α3) ->
-                                               α2 <> α3) ->
-                                    (forall x, ⌊this⌋ σ ≜ (v_addr α1) ->
-                                          ⌊x⌋ σ ≜ (v_addr α2) ->
-                                          forall ψ ϕ χ s, σ = (χ, ϕ :: ψ) ->
-                                                     (contn ϕ) = c_stmt s ->
-                                                     ~ in_stmt x s) ->
-                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) access (a_ α2))
+| nsat_access : forall M1 M2 σ0 σ a1 a2, ~ has_access_to σ a1 a2 ->
+                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ (a1 access a2)
 (**
 [[[
                 α1 ≠ α2        (∀ o f α3. (α1 ↦ o) ∈ σ ∧ o.f = α3 → α2 ≠ α3)
@@ -1371,8 +1446,8 @@ with
  *)
 
 (** Control: *)
-| nsat_call1 : forall M1 M2 σ0 σ m β α1 α2, mapp σ this <> Some (v_addr α1) ->
-                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ m ⟨ β ⟩)
+| nsat_call : forall M1 M2 σ0 σ a1 a2 m β, ~ makes_call M1 M2 σ a1 a2 m β ->
+                                      M1 ⦂ M2 ◎ σ0 … σ ⊭ (a1 calls a2 ▸ m ⟨ β ⟩)
 (**
 [[[
                     ⌊this⌋ σ ≜ α          α ≠ α1
@@ -1381,35 +1456,8 @@ with
 ]]]
  *)
 
-| nsat_call2 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β β' s, snd σ = ϕ :: ψ ->
-                                                    contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
-                                                    mapp σ y <> Some (v_addr α2) ->
-                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ β ⟩)
-(**
-[[[
-                    σ.(contn) = (x := y.m(β'); s) 
-                  ⌊y⌋ σ ≜ α                    α ≠ α2
-               ------------------------------------------                   (NSat-Call2)
-               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
-]]]
- *)
-
-| nsat_call3 : forall M1 M2 σ0 σ ϕ ψ α1 α2 x y m β' β s, snd σ = ϕ :: ψ ->
-                                                    contn ϕ = (c_stmt (s_stmts (s_meth x y m β') s)) ->
-                                                    β <> β' ∘ (mapp σ) ∘ (fun v => Some (av_bnd v)) ->
-                                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α1) calls (a_ α2) ▸ (am_ m) ⟨ β ⟩)
-(**
-[[[
-                     σ.(contn) = (x := y.m(β'); s)
-                         β ≠ β' ∘ (σ.(vMap))
-               ------------------------------------------                   (NSat-Call2)
-               M1 ⦂ M2 ◎ σ0 … σ ⊭ α1 calls α2 ▸ m ⟨ β ⟩
-]]]
- *)
-
-(*viewpoint*) (* well-formeness? This is important!!!!*)
-| nsat_extrn1 : forall M1 M2 σ0 σ α, mapp σ α = None ->
-                                M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
+| nsat_extrn : forall M1 M2 σ0 σ a, ~ external_obj M1 M2 σ a ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn a
 (**
 [[[
                        α ∉ σ.(heap)
@@ -1418,38 +1466,12 @@ with
 ]]]
  *)
 
-| nsat_extrn2 : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
-                                    o.(cname) = C ->
-                                    (exists CDef, M1 C = Some CDef) ->
-                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ a_extrn (a_ α)
-(**
-[[[
-                    (α ↦ o) ∈ σ.(heap)
-                    o.(className) ∈ M1
-               -----------------------------                   (NSat-Extrn2)
-               M1 ⦂ M2 ◎ σ0 … σ ⊭ α external
-]]]
- *)
-
-| nsat_intrn1 : forall M1 M2 σ0 σ α, mapp σ α = None ->
-                                M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α) internal)
+| nsat_intrn : forall M1 M2 σ0 σ a, ~ internal_obj M1 M2 σ a ->
+                               M1 ⦂ M2 ◎ σ0 … σ ⊭ (a internal)
 (**
 [[[
                        α ∉ σ.(heap)
                -----------------------------                   (NSat-Intrn1)
-               M1 ⦂ M2 ◎ σ0 … σ ⊭ α internal
-]]]
- *)
-
-| nsat_intrn2 : forall M1 M2 σ0 σ α o C, mapp σ α = Some o ->
-                                    o.(cname) = C ->
-                                    M1 C = None ->
-                                    M1 ⦂ M2 ◎ σ0 … σ ⊭ ((a_ α) internal)
-(**
-[[[
-                    (α ↦ o) ∈ σ.(heap)
-                    o.(className) ∉ M1
-               -----------------------------                   (NSat-Intrn2)
                M1 ⦂ M2 ◎ σ0 … σ ⊭ α internal
 ]]]
  *)
@@ -1461,9 +1483,9 @@ with
 
 (*time*)
 
-| nsat_next : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ' ->
-                                 M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
-                                 M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
+| nsat_next : forall M1 M2 σ0 σ A, (forall σ', M1 ⦂ M2 ⦿ σ ⌈⤳⌉ σ' ->
+                                     M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_next A)
 (**
 [[[
                     
@@ -1487,10 +1509,11 @@ with
 ]]]
  *)
 
-| nsat_prev_1 : forall M1 M2 σ0 σ A σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                                   M1 ⦂ M2 ⦿ σ' ⤳ σ ->
-                                   M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
-                                   M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
+| nsat_prev : forall M1 M2 σ0 σ A σ', (M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' \/
+                                  σ0 = σ') ->
+                                 M1 ⦂ M2 ⦿ σ' ⤳ σ ->
+                                 M1 ⦂ M2 ◎ σ0 … σ' ⊭ A ->
+                                M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
 (**
 [[[
                     
@@ -1501,24 +1524,25 @@ with
 ]]]
  *)
 
-| nsat_prev_2 : forall M1 M2 σ0 σ A, M1 ⦂ M2 ⦿ σ0 ⤳ σ ->
-                                M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A ->
-                                M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_prev A)
+| nsat_was1 : forall M1 M2 σ0 σ A, (forall σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
+                                     M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
+                                     M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
+                              M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A ->
+                              M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_was A)
 (**
 [[[
                     
-                           M1 ⦂ M2 ⦿ σ0 ⤳ σ
-                          M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A
-               -------------------------------------------                   (NSat-Prev-2)
-                    M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
+               (∀ σ'. M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ∧ M1 ⦂ M2 ⦿ σ' ⤳⋆ σ →
+                      M1 ⦂ M2 ◎ σ0 … σ' ⊭ A)
+                             M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A
+               ------------------------------------------------                   (NSat-Was)
+                       M1 ⦂ M2 ◎ σ0 … (χ, ϕ::ψ) ⊭ prev A
 ]]]
  *)
 
-| nsat_was : forall M1 M2 σ0 σ A, (forall σ', M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ' ->
-                                    M1 ⦂ M2 ⦿ σ' ⤳⋆ σ ->
-                                    M1 ⦂ M2 ◎ σ0 … σ' ⊭ A) ->
-                             M1 ⦂ M2 ◎ σ0 … σ0 ⊭ A ->
-                             M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_was A)
+| nsat_was2 : forall M1 M2 σ0 σ A, ~ M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ ->
+                              M1 ⦂ M2 ◎ σ0 … σ ⊭ (a_was A)
 (**
 [[[
                     
@@ -1533,18 +1557,37 @@ with
 (**
 #<h3>#Space#</h3>#
  *)
-| nsat_elem : forall M1 M2 M σ0 σ e e' α Σ, M1 ⋄ M2 ≜ M ->
-                                       M ∙ σ ⊢ e' ↪ (v_addr α) ->
-                                       ~ set_In (av_bnd (v_addr α)) Σ ->
-                                       is_exp e e' ->
-                                       M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ (as_bnd Σ))
+| nsat_elem : forall M1 M2 σ0 σ e Σ,
+    ~ elem_of_set M1 M2 σ e Σ ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ Σ)
 
-| nsat_elem_comprehension : forall M1 M2 M σ0 σ e e' α A,
+(*)| nsat_elem_comp1 : forall M1 M2 M σ0 σ e e' α A,
     M1 ⋄ M2 ≜ M ->
+    is_exp e e' ->
     M ∙ σ ⊢ e' ↪ (v_addr α) ->
     M1 ⦂ M2 ◎ σ0 … σ ⊭ ([ax_val (v_ α) /s 0] A) ->
-    is_exp e e' ->
     M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ ⦃x⃒ A ⦄)
+
+| nsat_elem_comp2 : forall M1 M2 σ0 σ e A,
+    (forall M, ~ M1 ⋄ M2 ≜ M) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ ⦃x⃒ A ⦄)
+
+| nsat_elem_comp3 : forall M1 M2 M σ0 σ e e' A,
+    M1 ⋄ M2 ≜ M ->
+    is_exp e e' ->
+    (forall α, ~ M ∙ σ ⊢ e' ↪ (v_addr α)) ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ (e ∈ ⦃x⃒ A ⦄)*)
+
+| nsat_in1 : forall M1 M2 σ0 χ ψ A Σ, (forall χ', ~ restrict Σ χ χ') ->
+                                 M1 ⦂ M2 ◎ σ0 … (χ, ψ) ⊭ (A in_ Σ)
+
+| nsat_in2 : forall M1 M2 σ0 χ χ' ψ A Σ, restrict Σ χ χ' ->
+                                    M1 ⦂ M2 ◎ σ0 … (χ', ψ) ⊭ A ->
+                                    M1 ⦂ M2 ◎ σ0 … (χ, ψ) ⊭ (A in_ Σ)
+
+| nsat_private : forall M1 M2 σ0 σ a1 a2,
+    ~ is_private M1 M2 σ a1 a2 ->
+    M1 ⦂ M2 ◎ σ0 … σ ⊭ a_private a1 a2
 
 where "M1 '⦂' M2 '◎' σ0 '…' σ '⊭' A" := (nsat M1 M2 σ0 σ A).
 
@@ -1676,39 +1719,7 @@ Instance raiseFn {A B : Type}`{Eq A}`{Raiseable B} : Raiseable (partial_map A B)
     raise f n := fun x => bind (f x) (fun y => Some (y ↑ n))
   }.
 
-Definition is_private (x : a_val) (y : var) :=
-  (∃[x⦂ a_Obj ]∙ ((a_name (a♢ 0) y)
+Definition this_is_private (x : a_val) :=
+  (∃[x⦂ a_Obj ]∙ ((a_self (a♢ 0))
                   ∧
                   (a_private (x ↑ 0) (a♢ 0)))).
-
-Inductive has_access_to : config -> addr -> addr -> Prop :=
-| acc_eq  : forall σ α, has_access_to σ α α
-| acc_fld : forall σ α1 o f α2, mapp σ α1 = Some o ->
-                           flds o f = Some (v_addr α2) ->
-                           has_access_to σ α1 α2
-| acc_contn : forall χ ϕ ψ α1 x α2 s, ⌊ this ⌋ (χ, ϕ::ψ) ≜ (v_addr α1) ->
-                                 ⌊ x ⌋ (χ, ϕ::ψ) ≜ v_addr α2 ->
-                                 contn ϕ = c_stmt s ->
-                                 in_stmt x s ->
-                                 has_access_to (χ, ϕ::ψ) α1 α2.
-
-Hint Constructors has_access_to : chainmail_db.
-
-Ltac acc_auto :=
-  match goal with
-  | [ |- has_access_to _ ?α ?α] =>
-    apply acc_eq
-  | [ H : ~ has_access_to _ ?α ?α |- _] =>
-    contradiction H; acc_auto
-  | [ Hmap : mapp ?σ ?α1 = Some ?o,
-      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to ?σ ?α1 ?α2] =>
-    eapply acc_fld; eauto
-  | [ Hmap : ?χ ?α1 = Some ?o,
-      Hfld : flds ?o ?f = Some (v_addr ?α2) |- has_access_to (?χ, _) ?α1 ?α2] =>
-    eapply acc_fld; eauto
-  | [ Hthis : ⌊ this ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α1),
-      Hint : ⌊ ?x ⌋ (?χ, ?ϕ::?ψ) ≜ (v_addr ?α2),
-      Hcontn : contn ?ϕ = c_stmt ?s,
-      Hin : in_stmt ?x ?s |- has_access_to ?σ ?α1 ?α2] =>
-    eapply acc_contn; eauto
-  end.

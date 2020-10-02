@@ -756,6 +756,16 @@ Ltac auto_specialize :=
   match goal with
   | [H : ?P -> ?Q,
          H' : ?P |- _ ] => specialize (H H')
+  | [Ha : ?P \/ _ -> _,
+          Hb : ?P |- _ ] =>
+    specialize (Ha (or_introl Hb))
+  | [Ha : _ \/ ?P -> _,
+          Hb : ?P |- _ ] =>
+    specialize (Ha (or_intror Hb))
+  | [Ha : ?P \/ ?Q -> _,
+          Hb : ?P,
+               Hc : ?Q |- _ ] =>
+    specialize (Ha (conj Ha Hb))
   end.
 
 Definition inv {A B : Type}`{Eq A}`{Eq B}(f : partial_map A B)(f' : partial_map B A) :=
