@@ -3,7 +3,7 @@ Our work on Holistic Specifications
 
 ## Chainmail Model
 
-The Chainmail model implements formal specification, although differs from the formalisation in the paper in a few noticable ways. These differences are outlined here, along with any other parts of the model which may need some explanation.
+The Coq model implements Chainmail mostly as described, however, it differs from the formalisation in the paper in a few noticable ways. These differences are outlined here, along with any other parts of the model which may need some explanation.
 
 ### Quantified variables
 
@@ -16,7 +16,7 @@ av_hole : nat -> a_val
 
 ### Expanded Loo
 
-*Loo* in the paper is the simplest possible language to allow encodings of the programs and situations required. However, using nested encodings for simple values and statements such as numbers and control flow is not as practical in the model, since any proof must step through these encodings, or a vast number of auxilliary lemmas and tactics must be defined for these encodings. To avoid this, *Loo* as presented in the model is a strict superset of that presented in the paper. It expands the paper encoding with if statements `s_if`, integers `v_int`, booleans `v_true` and `v_false`, and null `v_null`. Since these all can be encoded in the paper's formalisation, and the language in the model is a superset, we again suggest this is not problematic as there exists a simple bijection between paper and the model. We provide the encodings for the models extensions as would be required in the paper's definition below:
+The *Loo* language in the paper is purposefully simple to allow encodings of the programs and situations required, without needing to provide a complicated formal model, or rely on a part of the language that reduces the generality of the paper's results. However, using nested encodings for simple values and statements such as numbers and control flow is not as practical in the model, since any proof must step through these encodings, or a vast number of auxilliary lemmas and tactics must be defined for these encodings. To avoid this, *Loo* as presented in the model is a strict superset of that presented in the paper. It expands the paper encoding with if statements `s_if`, integers `v_int`, booleans `v_true` and `v_false`, and null `v_null`. Since these all can be encoded in the paper's formalisation, and the language in the model is a superset, we again suggest this is not problematic as there exists a simple bijection between paper and the model. We provide the encodings for the models extensions as would be required in the paper's definition below:
 
 * `v_int` can be encoded through three classes, `Zero`, `Succ`, and `Negate`, which define arithmetic operations as methods
 * `v_null` is encoded through an empty class `Null`
