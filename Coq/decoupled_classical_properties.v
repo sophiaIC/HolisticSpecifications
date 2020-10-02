@@ -12,6 +12,29 @@ Open Scope string_scope.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
+(**
+#<h1>Classical Properties of Chainmail</h1>#
+Lemma 5.1 (Assertions are classical-1). For all initial configurations σ0 , runtime configurations
+σ , assertions A and A′, and modules M and M′, we have
+#<ol>#
+#<li>#
+(1) M M′, σ0 , σ ⊨ A or M # M′, σ0 , σ |= ¬A
+#</li>#
+#<li>#
+(2) M M′, σ0 , σ ⊨ A ∧ A′ if and only if M M′, σ0 , σ |= A and M M′, σ0 , σ |= A′
+#</li>#
+#<li>#
+(3) M M′, σ0 , σ ⊨ A ∨ A′ if and only if M M′, σ0 , σ |= A or σ0 , |= A′
+#</li>#
+#<li>#
+(4) M M′, σ0 , σ ⊨ A ∧ ¬A never holds.
+#</li>#
+#<li>#
+(5) M M′, σ0 , σ ⊨ A and M # M′, σ0 , σ ⊨ A → A′ implies M # M′, σ0 , σ |= A′.
+#</li>#
+</ol>#
+ *)
+
 Theorem prop_and_if_sat_and :
   (forall M1 M2 σ0 σ A1 A2, M1 ⦂ M2 ◎ σ0 … σ ⊨ (a_and A1 A2) ->
                        M1 ⦂ M2 ◎ σ0 … σ ⊨ A1 /\

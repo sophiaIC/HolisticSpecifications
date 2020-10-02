@@ -966,9 +966,9 @@ Proof.
       eauto
   end.
 
-  - admit.
+  - 
 
-   
+
 Admitted.
 
 Lemma external_self_implies_external_step :
