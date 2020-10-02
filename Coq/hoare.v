@@ -212,11 +212,34 @@ Definition fieldMapsTo : config -> var -> fld -> value -> Prop :=
                      ⟦ α ↦ o ⟧ ∈ σ /\
                      flds o f = Some v.
 
-Definition new_object_created : config -> var -> cls -> partial_map fld var -> config -> Prop :=
-  fun σ x C ps σ' =>  exists χ ϕ ψ α s, σ = (χ, ϕ :: ψ) /\
-                                contn ϕ = c_stmt (s_new x C ps ;; s) /\
+
+(*
+    x <> this ->                                              (* If the target is not `this` *)
+    σ = (χ, ϕ :: ψ) ->                                        (* with configuration (χ, ϕ :: ψ) *)
+    ϕ.(contn) = (c_stmt (s_stmts (s_new x C ps) s')) ->       (* Where new C(ps) is the next statement *)
+    fresh_χ χ α ->                                            (* α is fresh in χ *)
+    M C = Some CDef ->                                        (* M(C) = CDef = class { ... } *)
+    (zs, s) = constructor CDef ->                             (* constructor(CDef) = constructor(zs) { s } *)
+    (forall p x, ps p = Some x ->                             (* All variables passed in for a parameter *)
+            exists v, (vMap ϕ) x = Some v) ->                 (*    exist in the variable map *)
+    dom ps zs ->                                              (* ps = (z_1 ↦ p_1, ..., z_n ↦ p_n); the arguments match the constructor *)
+    dom fMap (c_flds CDef) ->                                 (* let domain(fMap) = fields(CDef) *)
+    (forall f x, fMap f = Some x -> x = v_null) ->            (* fMap maps to v_nil; fMap = (f_1 ↦ v_nil, ..., f_n ↦ v_nil) *)
+    ϕ' = frm (vMap ϕ) (c_hole x s') ->                        (* ϕ' is ϕ with a hole assignment in place of the new *) (* was originally (update x (v_addr α) (vMap ϕ)) but this isn't right *)
+    o = new C fMap ->                                         (* o = (C, fMap) *)
+    ϕ'' = frm (update this (v_addr α) (ps ∘ (vMap ϕ))) (c_stmt (merge s (s_rtrn this))) -> (* ϕ'' = (this ↦ α, z_1 ↦ p_1 ↦ x_1, ...) *)
+    σ' = (update α o χ, ϕ'' :: ϕ' :: ψ) ->                    (* End up with o at α in the heap, executing ϕ'', with ϕ' to come back to *)
+    M ∙ σ ⤳ σ'
+*)
+
+Definition new_object_created : mdl -> config -> var -> cls -> partial_map var var -> config -> Prop :=
+  fun M σ x C ps σ' => exists χ ϕ ψ α s fMap CDef, σ = (χ, ϕ :: ψ) /\
+                                ϕ.(contn) = c_stmt (s_new x C ps ;; s) /\
                                 fresh_χ χ α /\
-                                heapUpdated σ α (new C (ps ∘ (vMap ϕ))) σ' /\
+                                M C = Some CDef /\
+                                dom fMap (c_flds CDef) /\
+                                (forall f x, fMap f = Some x -> x = v_null) /\
+                                heapUpdated σ α (new C fMap) σ' /\
                                 ctxUpdated σ x (v_addr α) σ'.
 
 Definition heapUnchanged : config -> config -> Prop :=
@@ -349,20 +372,23 @@ Proof.
     repeat hoare_auto.
 Qed.
 
-Lemma new_hoare :
+(* Lemma new_hoare :
   forall M σ x C β s, M ∙
                    {pre: contn_is (s_new x C β ;; s)}
                    σ
-                   {post: fun σ' => contn_is s σ' /\
-                                 new_object_created σ x C β σ'}.
+                   {post: fun σ' => (*contn_is (constructor (M C)) σ' /\*)
+                                 new_object_created M σ x C β σ'}.
 Proof.
-  intros M σ;
-    destruct σ as [χ ψ];
-    repeat hoare_auto;
-    split;
+  intros M σ.
+    destruct σ as [χ ψ].
+    repeat hoare_auto.
+    unfold new_object_created.
+    repeat (eexists; auto; eauto); try crush.
+    simpl in *.
     try solve [repeat (eexists; eauto);
                eauto].
-Qed.
+    
+Admitted. (* Discuss whether this is any longer of relevence *) *)
 
 Lemma if_true_hoare :
   forall M σ e s1 s2 s, M ∙ {pre: fun σ => contn_is (s_if e s1 s2 ;; s) σ /\
@@ -678,6 +704,23 @@ Proof.
                end;
                auto].
 
+  - match goal with
+    | [|- reduction_order (?ϕ :: ?ψ) (?ϕ1 :: ?ϕ2 :: ?ψ)] =>
+      let Ha := fresh in
+      let Hb := fresh in
+      assert (Ha : (ϕ :: ψ) = (nil ++ (ϕ :: ψ)));
+        [crush|rewrite Ha];
+        assert (Hb : (ϕ1 :: ϕ2 :: ψ) = ((ϕ1 :: nil) ++ (ϕ2 :: ψ)));
+        [crush|rewrite Hb];
+        apply ro_frame;
+        simpl
+    end.
+    match goal with
+    | [H : contn ?ϕ = _ |- context[contn ?ϕ]] =>
+      rewrite H;
+        simpl
+    end;
+      auto.
   - match goal with
     | [|- reduction_order (?ϕ :: ?ψ) (?ϕ1 :: ?ϕ2 :: ?ψ)] =>
       let Ha := fresh in
@@ -1088,16 +1131,17 @@ Proof.
       unfold cname in *;
       repeat simpl_crush.
 
-  - destruct (eq_dec α0 α);
+  - destruct (eq_dec α0 α1);
       subst;
       eq_auto;
       unfold cname in *;
-      repeat simpl_crush.
+      repeat simpl_crush;
     match goal with
     | [H : fresh_χ _ _ |- _] =>
       apply fresh_heap_none in H
-    end.
+    end;
     crush.
+    admit.
 
   - unfold is_call_to in *;
       repeat destruct_exists_loo;
@@ -1197,7 +1241,7 @@ Proof.
       repeat map_rewrite.
       crush.
 
-Qed.
+Admitted.
 
 Lemma le_S_α_neq :
   forall α1 α2, le_α α1 α2 ->
@@ -2098,6 +2142,7 @@ Proof.
         contradiction (H x y m β)
       end.
       eauto with loo_db.
+    + admit.
 
     + simpl in *.
       repeat simpl_crush.

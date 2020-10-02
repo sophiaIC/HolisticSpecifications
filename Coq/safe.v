@@ -584,8 +584,8 @@ Module SafeExample.
     Definition s0_SPEC1 :=
       s_new a Object empty ;;
       (s_new b Object empty ;;
-       (s_new s1 Safe (update secret a (update treasure a empty)) ;;
-        (s_new s2 Safe (update secret b (update treasure a empty)) ;; (* (A) *)
+       (s_new s1 Safe (update (field_param secret) a (update (field_param treasure) a empty)) ;;
+        (s_new s2 Safe (update (field_param secret) b (update (field_param treasure) a empty)) ;; (* (A) *)
          (s_meth c s2 take (update scr b empty) ;;
           (s_meth c s1 take (update scr c empty) ;;                   (* (B) *)
            s_rtrn c))))).

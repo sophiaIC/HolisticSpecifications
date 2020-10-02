@@ -616,25 +616,29 @@ Lemma class_of_update_same_cname :
 Proof.
 
   Admitted.
-
-Lemma reduction_different_classes_implies_method_call_or_rtrn :
+  
+  
+Lemma reduction_different_classes_implies_method_call_new_or_rtrn :
   forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
              forall C1 C2, classOf this σ1 C1 ->
                       classOf this σ2 C2 ->
                       C1 <> C2 ->
                       (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
                                                 contn ϕ1 = (c_stmt (s_stmts (s_meth x0 y0 m ps) s))) \/
+                      (exists χ1 ϕ1 ψ1 x0 C0 ps s, σ1 = (χ1, ϕ1::ψ1) /\
+                                                contn ϕ1 = (c_stmt (s_stmts (s_new x0 C0 ps) s))) \/
                       (exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
                                       contn ϕ1 = (c_stmt (s_rtrn x0))) \/
                       (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
                                         contn ϕ1 = (c_stmt (s_stmts (s_rtrn x0) s))).
 Proof.
-  intros M σ1 σ2 Hred;
+  intros M σ1 σ2 Hred.
     induction Hred;
     intros;
     try solve [left; repeat eexists; eauto with loo_db];
     try solve [right; left; repeat eexists; eauto with loo_db];
-    try solve [right; right; repeat eexists; eauto with loo_db].
+    try solve [right; right; left; repeat eexists; eauto with loo_db];
+    try solve [right; right; right; repeat eexists; eauto with loo_db].
 
   - apply class_of_same_variable_map
       with
@@ -655,7 +659,6 @@ Proof.
      contradiction H; subst
     end.
     eauto with loo_db.
-
   - subst.
     apply class_of_same_variable_map
       with
@@ -663,8 +666,8 @@ Proof.
         (ψ:=ψ)(ϕ':=update_ϕ_map ϕ x v)(ψ':=ψ)
       in H9;
       auto.
-    assert (Htmp : (χ, update_ϕ_map ϕ x v :: ψ) = update_σ_map (χ, ϕ::ψ) x v);
-      [auto|rewrite Htmp in H9].
+    assert (Htmp : (@pair heap (list frame) χ (update_ϕ_map ϕ x v :: ψ)) = update_σ_map (χ, ϕ::ψ) x v). { auto. }
+      rewrite -> Htmp in H9.
     match goal with
     | [H : classOf ?x (update_σ_map _ ?y _) _,
        Hneq : ?y <> ?x |- _] =>
@@ -677,13 +680,13 @@ Proof.
     end.
     eauto with loo_db.
 
-  -  match goal with
+  - match goal with
      |[C1 : cls, C2 : cls, H : C1 <> C2 |- _] =>
       contradiction H; subst
      end.
      eapply class_of_same_variable_map with (ϕ':=ϕ)(ψ':=ψ) in H12; eauto.
      eapply class_of_update_same_cname in H12; eauto.
-
+(* Following case may be unneccessary *)
   - match goal with
     |[C1 : cls, C2 : cls, H : C1 <> C2 |- _] =>
      contradiction H; subst
@@ -713,7 +716,6 @@ Proof.
     repeat simpl_crush;
       simpl in *.
     crush.
-  
 Qed.
 
 Lemma wf_config_this_has_class :
@@ -738,11 +740,13 @@ Proof.
   eapply int_x; simpl; eauto.
 Qed.
 
-Lemma reductions_implies_method_call_or_rtrn :
+Lemma reductions_implies_method_call_new_or_rtrn :
   forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
                  σ_wf σ1 ->
                  (exists χ1 ϕ1 ψ1 x0 y0 m ps s, σ1 = (χ1, ϕ1::ψ1) /\
                                            contn ϕ1 = (c_stmt (s_stmts (s_meth x0 y0 m ps) s))) \/
+                 (exists χ1 ϕ1 ψ1 x0 C0 ps s, σ1 = (χ1, ϕ1::ψ1) /\
+                                           contn ϕ1 = (c_stmt (s_stmts (s_new x0 C0 ps) s))) \/
                  (exists χ1 ϕ1 ψ1 x0, σ1 = (χ1, ϕ1::ψ1) /\
                                  contn ϕ1 = (c_stmt (s_rtrn x0))) \/
                  (exists χ1 ϕ1 ψ1 x0 s, σ1 = (χ1, ϕ1::ψ1) /\
@@ -758,7 +762,7 @@ Proof.
   assert (Hwf : σ_wf σ');
     [eapply reduction_preserves_config_wf; eauto|].
   destruct (wf_config_this_has_class σ' Hwf) as [C'].
-  eapply reduction_different_classes_implies_method_call_or_rtrn; eauto.
+  eapply reduction_different_classes_implies_method_call_new_or_rtrn; eauto.
   intro Hcontra;
     subst;
     crush.

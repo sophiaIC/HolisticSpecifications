@@ -1,0 +1,742 @@
+
+\Chainmail assertions (details in appendix \ref{sect:standard}) consist of (pure) expressions \e, comparisons between expressions, classical
+assertions about the contents of heap and stack, the usual logical
+connectives, as well as our holistic concepts.
+In this section we focus on the novel,
+ holistic, features of \Chainmail (permission, control, time, space, and viewpoint),
+as well as our wish to support some form of recursion while keeping the logic of assertions classical.
+% SD I removed the belowas it is no longer true here. % don't understand what you mean so i have deleted the next paragraph
+%\sdN{Expressions include variables, field lookup, and the execution of (pure) ghost methods. 
+%This  supports recursion at the level of expressions; therefore, the value of  an expression  may be
+% undefined (either because of infinite recursion, or because the expression accessed undefined fields or variables). 
+ %Assertions of the form   $\e$=$\e'$ are satisfied only if both $\e$ and $\e'$ are defined. Because we do not support 
+% recursion at the level of assertions, assertions form a classical logic (\eg $\A \vee \neg\A$ is a tautology)
+%}
+%Assertions support the comparison of expressions, and the usual logical connectives
+%(Appendix, section \ref{sect:standard}), as well as the usual connectives discussed below.
+%We now define the syntax and semantics of expressions and holistic assertions.
+%\sd{The novel, holistic, features of \Chainmail (permission, control, time, space, and viewpoint),
+%as well as our wish to support some form of recursion while keeping the logic of assertions classical,  introduced 
+%challenges, which we discuss in this section.}
+
+\subsection{Syntax and Semantics}
+ 
+We now define the syntax and semantics of expressions and holistic assertions.
+\sd{The novel, holistic, features of \Chainmail (permission, control, time, space, and viewpoint),
+as well as our wish to support some form of recursion while keeping the logic of assertions classical,  introduced 
+challenges, which we discuss in this section.}
+
+ \subsection{Syntax of Assertions}
+
+\begin{definition}[Assertions]  Assertions consist of (pure) expressions \e, classical assertions about the contents of heap/stack, the usual logical  connectives, as well as our holistic concepts.
+\label{def:assertions}
+ \[
+ \begin{array}{lcl}
+  ~  \\
+ \prg{v}  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \alpha ~\SOR~ \prg{x} \\
+  ~  \\
+ \SE  &\BBC&    \prg{v}\ ~\SOR~ \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp\\
+     \\
+ \A &\ \BBC   &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
+    \SE\in\prg{S}   \mid  \  \\
+    &
+  &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
+  & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid \\
+ &    &  \CanAccess {\alpha_1} {\alpha_2} \ \mid\  \ \Changes e 
+           \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\mid\\          
+&    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A   \ \mid \ \Past \A \ \mid \\  
+ &    &        \Using \SF  \A  \ \mid \  \External \alpha\\
+ \\
+ \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
+\end{array}
+\]
+\end{definition}
+ 
+Expressions support calls with parameters  ($\e.\f(\e^*)$); these are calls to ghostfield
+functions. This  supports recursion at the level of expressions; therefore, the value of  an expression  may be
+undefined (either because of infinite recursion, or because the expression accessed undefined fields or variables). 
+Assertions of the form   $\e$=$\e'$ are satisfied only if both $\e$ and $\e'$ are defined. Because we do not support 
+recursion at the level of assertions, assertions form a classical logic (\eg $\A \vee \neg\A$ is a tautology).
+ 
+We will discuss evaluation of expressions in section \ref{sect:expressions}, standard assertions about heap/stack and logical
+ connectives in \ref{sect:standard}. 
+ We will discuss the treatment of  permission, control, space, and viewpoint  in 
+the main text in the  Definitions 3-7  in section \ref{sect:pcsv} %HARD
+the treatment of time in  Definitions 8,9 in the main text, section \ref{sect:time},
+We will discuss properties of assertions in Lemmas \ref{lemma:classic}-\ref{lemma:classic:two}.
+ The judgement $\M\mkpair \M', \sigma_0 ,  \sigma  \models \A$ expresses that $\A$ holds in  $\M\mkpair \M'$ and $\sigma$, and 
+while $\M\mkpair \M', \sigma_0 , \sigma  \not\models \A$  expresses that $\A$ does not hold  in  $\M\mkpair \M'$ and $\sigma_0,\sigma$.
+ 
+\subsection{Values of Expressions}
+\label{sect:expressions}
+
+The value  of  an expression  is described through judgment $ \M,\, \sigma, \SE \ \hookrightarrow\  v$,
+defined in  Figure \ref{fig:ValueSimpleExpressions}.
+We use the configuration, $\sigma$, to read the contents of the top stack frame
+% value of variables defined in the stack frame
+(rule ${\sf {Var\_Val}}$) or the contents of the heap (rule
+${\sf {Field\_Heap\_Val}}$). We use the module, \M, to find the  ghost field declaration corresponding to the
+ghost field being used. 
+
+The treatment of fields and ghost fields is described in rules ${\sf {Field\_Heap\_Val}}$,\\  ${\sf {Field\_Ghost\_Val}}$ and 
+${\sf {Field\_Ghost\_Val2}}$.  If the field \f~ exists in the heap, then its value is returned (${\sf {Field\_Heap\_Val}}$). 
+Ghost field reads, on the other hand, have the form $\e_0.\f(\e_1,...\e_n)$, and their value is
+described in rule ${\sf {Field\_Ghost\_Val}}$:
+%
+The lookup function $\mathcal G$  (defined in the obvious way in the Appendix, Def.\ref{def:lookup})
+returns the expression constituting the body for that ghost field, as defined in the class of $\e_0$.
+We return  that expression
+evaluated in a configuration where the formal parameters have been substituted by the values of the actual
+parameters.
+
+Ghost fields support recursive definitions. For example, imagine a module $\M_A$ with
+a class \prg{Node} which has a field called \prg{next}, and which 
+had a ghost field \prg{last}, which finds  the last \prg{Node} in a sequence
+and is defined recursively as \\
+$~ \strut \hspace{.1cm}$ \ \ \ \prg{if}\ \ \prg{this.next}=\prg{null}\  \prg{then} \ \prg{this} \ \prg{else} \ \prg{this.next.last},\\
+and another ghost field \prg{acyclic}, which expresses that a sequence is acyclic,
+defined recursively as \\
+$~ \strut \hspace{.1cm}$ \ \ \ \prg{if}\ \ \prg{this.next}=\prg{null}\  \prg{then} \ \prg{true} \ \prg{else} \ \prg{this.next.acyclic}.
+
+The relation $ \hookrightarrow$ is partial. 
+For example, assume   a configuration
+$\sigma_A$ where
+\prg{acyc} points to a \prg{Node} whose field \prg{next} has value \prg{null}, and   
+\prg{cyc} points to a \prg{Node} whose field \prg{next} has the same value as \prg{cyc}. Then,   
+$\M_A,\sigma_A,\,\prg{acyc.acyclic}  \ \hookrightarrow\  \prg{true}$, but we would have no value for 
+$\M_A,\sigma_A,\, \prg{cyc.last}  \ \hookrightarrow\  ...$, nor for
+$\M_A,\sigma_A,\, \prg{cyc.acyclic}  \ \hookrightarrow\  ...$.
+
+Notice also that for an expression of the form  
+\prg{\e.\f}, both ${\sf {Field\_Heap\_Val}}$ and ${\sf {Field\_Ghost\_Val2}}$ could be applicable: rule ${\sf {Field\_Heap\_Val}}$
+will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf {Field\_Ghost\_Val}}$
+will be applied if \prg{f} is a ghost field of the object at \prg{e}. We expect the set of fields and ghost fields in a 
+given class to be disjoint.
+This allows a specification to be agnostic over whether a field is a physical field or just ghost information.
+For example, assertions (1) and (2) from  section  \ref{sect:motivate:Bank}
+ talk about the \prg{balance} of an \prg{Account}. 
+In module $\M_{BA1}$ (Appendix~\ref{Bank:appendix}), where we keep the balances in the account objects, this is a physical field. 
+In $\M_{BA2}$ (also in Appendix~\ref{Bank:appendix}), where we keep the
+balances in a ledger, this is ghost information.  
+
+\begin{figure*}
+{
+$\begin{array}{l}
+\begin{array}{llll}
+\inferenceruleN {True\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{true} \ \hookrightarrow\  \kwN{true}
+}
+& 
+\inferenceruleN {False\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{false} \ \hookrightarrow\  \kwN{false}
+}
+&
+\inferenceruleN  {Null\_Val} {
+}
+{
+ \M,\, \sigma, \kwN{null} \ \hookrightarrow\  \kwN{null}
+}
+&
+\inferenceruleN {Addr\_Val %{Had to switch old \textit{Var_Val} rule for \textit{Addr_Val}}
+} {
+\alpha : \text{Address}
+}
+{
+ \M,\,  \sigma, \alpha \ \hookrightarrow\   \alpha
+}
+\end{array}
+\\ \\
+\begin{array}{lll}
+\begin{array}{l}
+\begin{array}{ll}
+\inferenceruleExact{\SP\SP\SP}{Var\_val} {
+ \interp {\x}{\sigma} = v
+}
+{
+ \M,\, \sigma, \x  \ \hookrightarrow\   v
+}
+
+&
+\inferenceruleExact{\SP}{Field\_Ghost\_Val2} {
+ \M,\, \sigma, \SE.\f \lp \rp \ \hookrightarrow\   v
+}
+{
+ \M,\, \sigma, \SE.\f   \ \hookrightarrow\   v
+}
+\end{array}
+\\
+\\
+\inferenceruleNM{Field\_Heap\_Val} {
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha \hspace{1.5cm} 
+ \sigma(\alpha,\f)=v
+}
+{
+ \M,\, \sigma, \SE.\f  \ \hookrightarrow\   v
+}
+\end{array}
+& &
+\inferenceruleNM{Field\_Ghost\_Val}
+{
+%~ \\
+ \M,\, \sigma, \SE_0   \ \hookrightarrow\  \alpha \hspace{1.9cm} \sigma = (\_, \chi) 
+\\
+ \M,\, \sigma, \SE_i  \ \hookrightarrow\   v_i\ \ \ \ i\in\{1..n\}
+ \\
+{\mathcal{G}}
+(\M, {\ClassOf {\alpha} {\sigma}}, {\f}) \  =  
+\ \f\lp \p_1, \ldots \p_n \rp \lb\ \SE \ \rb
+  \\
+
+\phi = (\_, (\this\mapsto\alpha, \p_1\mapsto v_1, .... \p_n\mapsto v_n))\\  
+  
+  \M,\,(\phi, \chi), \SE'    \hookrightarrow\   v  \hspace{1.2cm} \SE' = f_{\mathcal G}(\SE)
+ }
+{
+ \M,\,  \sigma, \ \SE_0.\f \lp \SE_1,....\SE_n\rp \hookrightarrow   \ v
+}
+\\ \\
+\inferenceruleNM{If\_True\_Val} 
+{
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}  \\
+   \M,\,  \sigma, \SE_1 \ \hookrightarrow\   v  
+}
+{
+ \M,\, \sigma, \kwN{if}\ \SE\  \kwN{then} \ \SE_1 \ \kwN{else} \ \SE_2\  \hookrightarrow  \ v
+}
+& &
+\inferenceruleNM {If\_False\_Val} 
+{
+ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{false}  \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\   v  }
+{
+ \M,\, \sigma, \kwN{if}\ \SE\  \kwN{then} \ \SE_1 \ \kwN{else} \ \SE_2\  \hookrightarrow\  v
+}
+\\ \\ 
+\inferenceruleNM {Equals\_True\_Val} 
+{
+ \M,\,  \sigma, \SE_1 \ \hookrightarrow\    v \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\     v 
+}
+{
+ \M,\, \sigma, \SE_1 =  \SE_2 \hookrightarrow \prg{true}
+}
+& &
+\inferenceruleNM {Equals\_False\_Val} 
+{
+ \M,\,  \sigma, \SE_1 \ \hookrightarrow\    v \\
+   \M,\,  \sigma, \SE_2 \ \hookrightarrow\     v' \hspace{2cm}  v\neq v'
+}
+{
+ \M,\, \sigma, \SE_1 =  \SE_2 \hookrightarrow \ \prg{false}
+}
+\end{array}
+\end{array}
+$}
+\caption{Value of  Expressions}
+\label{fig:ValueSimpleExpressions}
+\end{figure*}
+
+\subsection{Satisfaction of Assertions - Standard}
+\label{sect:standard}
+\sd{
+We now define the semantics of assertions involving expressions, the heap/stack, and logical connectives.
+The semantics are unsurprising, except, perhaps the relation between validity of assertions and the values of
+expressions.
+}
+
+
+ \begin{definition}[Interpretations for simple expressions]
+
+For a runtime configuration, $\sigma$,    variables $\x$ or \SF, we define its interpretation as follows:
+
+\begin{itemize}
+  \item
+  $\interp {\x}{\sigma}$ $ \triangleq$ $\phi(\x)$  \ \ if \ \ $\sigma$=$(\phi\cdot\_,\_)$
+  \item
+    $\interp {\x.\f}{\sigma}$ $ \triangleq$ $\chi(\interp {\x}{\sigma},\f)$  \ \ if \ \ $\sigma$=$(\_,\chi)$
+   \end{itemize}
+\end{definition}   
+
+
+\begin{definition}[ Basic Assertions] For modules $\M$, $\M'$,  configuration $\sigma$,  we define$:$
+%validity of basic assertions: 
+\label{def:valid:assertion:basic}
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma_0 ,\sigma \models\SE$ \IFF   $ \M,\,  \sigma, \SE \ \hookrightarrow\   \prg{true}$ 
+\item
+$\M\mkpair \M',\sigma_0 , \sigma \models\SE=\SEPrime$ \IFF there exists a value $v$ such that  $\M,\,  \sigma, \SE \ \hookrightarrow\   v$  and $ \M,\,  \sigma, \SEPrime \ \hookrightarrow\   v$.
+           \item
+$\M\mkpair \M',\sigma_0 , \sigma \models\SE:\prg{ClassId}$ \IFF there exists an address $\alpha$ such that \\
+$\strut ~ $ \hspace{2in} \hfill   
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   \alpha$, and $\ClassOf{\alpha}{\sigma}$ = \prg{ClassId}.
+\item
+$\M\mkpair \M',\sigma_0 , \sigma \models \SE\in \prg{S}$ \IFF there exists a value $v$ such that 
+ $ \M,\,  \sigma, \SE \ \hookrightarrow\   v$, and $v \in \interp{\prg{S}}{\sigma}$.
+\end{itemize}
+\end{definition}
+
+Satisfaction of assertions which contain expressions is predicated on termination of these expressions.
+Continuing our earlier example, given any initial configuration $\sigma_0$,  
+$\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{acyc.acyclic}$ holds for any $\M'$, while $\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{cyc.acyclic}$
+does not hold, and $\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{cyc.acyclic}=\prg{false}$ does not hold either.
+In general, when $\M\mkpair \M', \sigma  \models \prg{e}$ holds,  then $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too.
+But when $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
+Finally, an assertion of the form $\e_0=\e_0$ does not always hold; for example,   $\M_A\mkpair \M', \sigma_A \models \prg{cyc.last}=\prg{cyc.last}$ does not hold.
+
+% \subsubsection{Logical connectives, quantifiers, space and control} 
+We now define satisfaction of assertions which involve logical connectives and existential or universal quantifiers, in the standard way:
+
+
+\begin{definition}[Assertions with logical connectives and quantifiers]  
+%We now consider 
+\label{def:valid:assertion:logical}
+For modules $\M$, $\M'$, assertions $\A$, $\A'$, variables \prg{x}, \prg{y}, \prg{S},  and configurations $\sigma_0$ $\sigma$, we define$:$
+\begin{itemize}
+\item
+$\M\mkpair \M',\sigma_0 ,  \sigma \models \forall \prg{S}:\prg{SET}.\A$ \IFF  $\M\mkpair \M', \sigma_0 ,  \sigma \models  \A[\prg{S}/\prg{R}]$ \\
+$\strut ~ $ \hfill for all sets of addresses $R\subseteq dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 ,\sigma \models \exists \prg{S}:\prg{SET}\!.\,\A$ \IFF  $\M\mkpair \M', \sigma_0  ,  \sigma \models  \A[\prg{S}/\prg{R}]$ \\
+ $\strut ~ $ \hfill  for some set of addresses $R\subseteq dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 ,\sigma \models \forall \alpha.\A$ \IFF
+$\M\mkpair \M',\sigma_0 ,\sigma \models  \A[\alpha/\alpha']$ \ for all  $\alpha'\in dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 , \sigma \models \exists \alpha.\A$ \IFF
+$\M\mkpair \M', \sigma_0 , \sigma \models  \A[\alpha/\alpha']$\ for some  $\alpha
+\in dom(\sigma)$.
+\item
+$\M\mkpair \M',\sigma_0 , \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M',\sigma_0 ,   \sigma \models \A $ implies $\M\mkpair \M',\sigma_0 ,   \sigma \models \A' $
+\item
+$\M\mkpair \M',\sigma_0 ,  \sigma \models  \A \wedge \A'$   \IFF  $\M\mkpair \M',\sigma_0 ,   \sigma \models  \A $
+and $\M\mkpair \M',\sigma_0 ,   \sigma \models  \A'$.
+\item
+$\M\mkpair \M',\sigma_0 ,  \sigma \models  \A \vee \A'$   \IFF  $\M\mkpair \M', \sigma_0 , \sigma \models  \A $
+or $\M\mkpair \M',\sigma_0 ,  \sigma \models  \A'$.
+\item
+$\M\mkpair \M',\sigma_0 ,  \sigma \models  \neg\A$   \IFF  $\M\mkpair \M',\sigma_0 ,  \sigma \models  \A $
+does not hold.
+\end{itemize}
+\end{definition}
+
+
+Satisfaction is not preserved with growing configurations; for example, the assertion $\forall \x. [\ \x : \prg{Account} \rightarrow \x.\prg{balance}>100\ ]$ 
+may hold in a smaller configuration, but not hold in an extended configuration. 
+Nor is it preserved with configurations getting smaller; consider \eg $\exists \x. [\ \x : \prg{Account} \wedge \x.\prg{balance}>100\ ]$.
+
+\noindent
+Again, with our earlier example,  
+$\M_A\mkpair \M', \sigma_0 , \sigma_A \models \neg (\prg{cyc.acyclic}=\prg{true})$    and  
+$\M_A\mkpair \M', \sigma_0 , \sigma_A \models  \neg (\prg{cyc.acyclic}=\prg{false})$, 
+and also 
+$\M_A\mkpair \M', \sigma_0 , \sigma_A \models  \neg (\prg{cyc.last}=\prg{cyc.last})$
+hold.
+
+\Chainmail quantifies over addresses instead of local variables, thereby referring directly to objects. Since \Chainmail assertions are invariants over modules, local variable names have no consistent meaning. Previous work on \Chainmail exclusively used variables in assertions, including for quantification \cite{FASE}. Aside from being less clear, as assertions generally refer to objects meeting some property, rather than the value at a certain name, using local variables also complicated the handling of temporal assertions, as discussed in section~\ref{sect:time}.
+
+\subsection{Satisfaction of Assertions - Access, Control, Space, Viewpoint}
+\label{sect:pcsv} 
+%We now consider the assertions which involve access:
+
+\textit{Permission} expresses that an object has the potential to call
+methods on another object, and to do so directly, without  help from any
+intermediary object. This is the case when both are the same instance---the addresses therefore being identical; or the first object has a field pointing to the second object; or
+the first object is the receiver of the currently executing method and the second object is one of the 
+arguments or a local variable. Interpretations of variables and paths, $\interp {...} {\sigma}$, are defined
+in the usual way (appendix Def.~\ref{def:interp}).
+
+
+\begin{definition}[%Satisfaction of  Assertions about 
+Permission]  \label{def:valid:assertion:access}
+\Mrr{For any modules $\M$, $\M'$,  addresses $\alpha$ and $alpha'$, we define:}
+\begin{itemize}
+\item
+$\M\mkpair \M', \sigma_0 , \sigma \models  \CanAccess{\alpha_1}{\alpha_2}$  \IFF  
+%\begin{itemize}
+%\item
+%$\alpha_1$=$\alpha_{2}$, \ \ or
+%\item
+%$\interp {\x.\f} {\sigma}$=$\interp {\y} {\sigma}$, \  \ for some field \prg{f},  \ \ or
+%\item
+%$\interp {\x} {\sigma}$=$\interp {\this} {\sigma}$ and
+%  $\interp {\y} {\sigma}$=$\interp {\z} {\sigma}$,\ \ \ 
+%for some variable \z\ and  \z\ appears in  $\sigma$.\prg{contn}.
+% \end{itemize}
+%$\M\mkpair \M', \sigma_0 , \sigma \models  \CanAccess{\alpha_1}{\alpha_2}$   \IFF   
+\begin{itemize}
+\item
+$\alpha_1$=$\alpha_{2}$, \ \ or
+\item
+$\sigma(\alpha_1,\f) $=${\alpha_2}$, \  \ for some field \prg{f},  \ \ or
+\item
+${\alpha_1}$=$\interp {\this} {\sigma}$ and
+  ${\alpha_2}$=$\interp {\x} {\sigma}$, \ \ for some variable \x
+  %,\ \ \ 
+%for some variable \x\ and  \x\ appears in  $\sigma$.\prg{contn}.
+\end{itemize}
+\end{itemize}
+\end{definition}
+
+
+
+\noindent 
+%Therefore, $\CanAccess{\prg{x}}{\prg{y}}$ expresses that \x\, has a {\em direct} path to \y.
+%It says that in the current frame,
+%either \x~and \y\ are  aliases, or \x~points to an object which has a field
+% whose value is the same as that of \y, or \x\, is the currently executing object and \y\, is
+In the last disjunct the interpretation of \x\ in the configuration ensures it is a parameter or local variable.
+
+\vspace{.2cm} \noindent
+\textit{Control} expresses which object is the process of making a function call on another object and
+with what arguments. The relevant information
+\sophia{is} stored in the continuation (\prg{cont}) on the top frame.
+
+\begin{definition}[%Satisfaction of  Assertions about 
+Control]  \label{def:valid:assertion:control}
+For any modules $\M$, $\M'$,  \Mrr{addresses $\alpha$, $\alpha'$, $\alpha_1,...\alpha_n$}, we define$:$
+\begin{itemize}
+   \item
+$\M\mkpair \M', \sigma_0 , \sigma \models  \Calls {\alpha}  {\prg{m}} {\alpha'}  {\alpha_1,...\alpha_n}$ \IFF \ \ \ 
+\begin{itemize}
+\item
+$\interp{\prg{this}}{\sigma}$=$\alpha$, \ and
+\item
+% $\strut ~ \hspace{2.1in} $  
+$\sigma.\prg{contn}$=${\x.\m(\y_1,..\y_n);\_}$,\ \ \ for some  $\x$,$\y_1$,... $\y_n$, \ and
+\item
+%  $\strut ~ \hspace{2.1in} $ 
+ $\interp{\prg{x}}{\sigma}$=$\alpha'$,\ \ \ and \ \ \ 
+  $\interp{{\prg{y}_i}}{\sigma}=\alpha_i$, for all  $i$.
+ \end{itemize}
+  \end{itemize}
+\end{definition}
+
+\noindent 
+Thus, $\Calls {\alpha}  {\prg{m}} {\alpha'}  {{\alpha_1,...\alpha_n}}$ expresses that there is about to be a call from $\alpha_1$ to the method \m\ on object $\alpha'$ , given objects $\alpha_1,...\alpha_n$. If these are named \y, and $\z_1,...\z_n$ respectively, then $\y.\m(\z_1,...\z_n)$ will be executed next, and the current caller \this\ is $\alpha$.
+ 
+
+\vspace{.2cm} \noindent
+\textit{Viewpoint} concerns whether an object is viewed as belonging to the internal module, determined by the class of the object.
+
+ \begin{definition}[%Satisfaction of  Assertions about 
+Viewpoint]  \label{def:valid:assertion:view}
+For any modules $\M$, $\M'$, and addresses $\alpha$, $\alpha'$, we define
+\begin{itemize}
+ \item
+$\M\mkpair \M', \sigma_0 , \sigma \models \External {\alpha}$ 
+  \IFF
+ $\ClassOf {\alpha} {\sigma} \notin dom(\M)$
+\item
+$\M\mkpair \M',\sigma_0 ,  \sigma \models \Internal {\alpha}$ 
+  \IFF
+  $\ClassOf {\alpha} {\sigma} \in dom(\M)$
+%\item
+%$\M\mkpair \M',\sigma_0 ,  \sigma \models \prg{private} \langle {\alpha, \alpha'} \rangle$ 
+%  \IFF
+%  $\M\mkpair \M',\sigma_0 , \sigma \models \alpha.\texttt{private}\prg{(}\alpha'{)}$
+\end{itemize}
+\end{definition}
+\noindent 
+
+
+ 
+\vspace{.2cm} 
+
+\noindent
+\textit{Space} asserts that some property \A\ holds in a configuration whose objects are restricted to those
+from a given set \SF. This way we can express that the objects from the set \SF\ have authority over the assertion \A.
+
+In order to define validity of $\Using {\A} {\prg{S}}$ in a configuration $\sigma$, 
+we first define a restriction operation,  $\restrct {\sigma}{\prg{S}}$ which restricts the objects from $\sigma$ to only those
+from $\SF$.
+
+\begin{definition}[Restriction of Runtime Configurations]  \label{def:restrict}
+The restriction operator~$\;\restrct{} {} $ applied to a runtime configuration $\sigma$ and a variable  \prg{S} is defined as follows:
+ \label{def:config:restrct}
+ $~ $
+\begin{itemize}
+\item
+$\restrct {\sigma}{\prg{S}}  \triangleq  (\sd{\psi}, \chi')$, \ if \  $\sigma$=$(\psi,\chi)$, \    $dom(\chi')=\prg{S}$, and   
+% \\ $\ \strut \ \ \hspace{1.2in} $
+ $\forall \alpha\!\in\!dom(\chi').\chi(\alpha)=\chi'(\alpha)$.
+\end{itemize}
+\end{definition}
+
+\begin{tabular}{cc}
+ \begin{minipage}{0.45\textwidth}
+\sd{For example, if we take $\sigma_2$ from Fig.~\ref{fig:BankAccountDiagrams} in Section \ref{sect:motivate:Bank},
+and restrict it with some set $\SF_4$ such that $\SF_4=\{ 91, 1, 2, 3, 4, 11 \}$,
+then the restriction $\restrct {\sigma_2}{\prg{S}_4}$ will look as on the right.}
+  \end{minipage}
+ &  
+ \begin{minipage}{0.45\textwidth}
+% $\restrct {\sigma_2}{\prg{S}_4}$\\
+  \includegraphics[width=\linewidth, trim=55  330 320 60,clip]{diagrams/BankAccount_version_2a.pdf}
+  \Description{A green zone with 5 nodes in it: one bank object, 3 account objects, and one list node, labelled 11. A further node is outside the green zone, labelled 91.}
+   \end{minipage}
+\end{tabular}
+ 
+\sd{Note in the diagram above the dangling pointers at objects $1$,  $11$, and $91$ - reminiscent of the separation
+of heaps into disjoint subheaps, as provided by the 
+$*$ operator in separation logic \cite{Reynolds02}. The difference is that in separation logic, the 
+separation is provided through the assertions, where $\A * \A'$ holds in any heap  which can be split into
+disjoint $\chi$ and $\chi'$ where $\chi$ satisfies $\A$ and $\chi'$ satisfies $\A'$. That is, in $\A * \A'$  the split of the 
+heap is determined by the assertions   $\A$ and $\A'$ and there is an implicit requirement of disjointness, while in $\restrct {\sigma}{\prg{S}}$ the split is
+determined by \SF, and no disjointness is required.
+}
+
+We now define the semantics of $\Using {\A} {\prg{S}}$.
+
+
+
+\begin{definition}[Space]  \label{def:valid:assertion:space} 
+For any modules $\M$, $\M'$, assertions $\A$ and variable \prg{S}, we define$:$
+\begin{itemize}
+\item
+ $\M\mkpair \M', \sigma_0 , \sigma \models \Using {\A} {\prg{S}}$
+ \IFF
+ $\M\mkpair \M', \sigma_0 , \restrct \sigma {\prg{S}} \models  \A  $.
+\end{itemize}
+\end{definition}
+
+The set \SF\ in the assertion $\Using {\A} {\prg{S}}$ is related to  framing  from implicit dynamic frames \cite{IDF}:
+ in an implicit dynamic frames assertion  \ $\textbf{acc}\, \prg{x.f}  * \A$, the frame $\prg{x.f}$ prescribes which locations
+ may be used to determine validity of $\A$.
+The difference is that frames are sets of locations (pairs of address and field), while our \prg{S}-es are sets of addresses.
+ More  importantly,   implicit dynamic frames assertions whose frames are not large enough are badly formed, 
+ while in our work, such assertions
+are allowed and may   hold %(\eg $\M_{BA2}\mkpair \M', \sigma  \models \Using {(\not(\exists n.\acc_2.\prg{balance}=n))} {\prg{S}_4}$),  
+or not, \eg   %$\M_{BA2}\mkpair \M', \sigma   \models \exists n.\acc_2.\prg{balance}=n$, while 
+ $\M_{BA2}\mkpair \M', \sigma_0 , \sigma  \models \neg\ \Using {(\exists n.\acc_2.\prg{balance}=n)} {\prg{S}_4}$,
+where \prg{S}$_4$ is as defined previously.
+ 
+ 
+
+\subsection{Satisfaction of Assertions - Time}
+\label{sect:time} 
+\sd{To deal with time, we are faced with three challenges: (a) the current configuration needs to store the code being executed, so
+as to be able to calculate future configurations, (b) when considering the future, we do not want to observe 
+configurations which go beyond the frame currently at the top of the stack, (c) there is no "undo" operator to deterministically enumerate
+each of the previous configurations.} 
+
+We address challenge (a) by storing the remaining code to be executed in \prg{cntn} in each frame. 
+We address challenge (b) by defining constrained reduction, where we only take the top of the frame when considering future executions.
+Finally, we address challenge (c) by introducing an explicit initial configuration, and only considering configurations which arise from it and lead to the current configuration.
+
+\begin{definition}[Constrained Reduction]  \label{def:constrained_reduction}
+For any modules $\M$, $\M'$, and configurations $\sigma_1$, $\sigma_2$
+\begin{itemize}
+\item
+$\M\mkpair \M',  \sigma_1\lceil\leadsto\rceil \sigma_2$ 
+\IFF
+$\M\mkpair \M',  (\phi, \chi_1) \leadsto(\psi, \chi_2)$\\
+$\strut ~ \hspace{1.4in} $ \hfill 
+where
+$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
+and
+\item
+$\M\mkpair \M',  \sigma_1\lceil\leadsto^*\rceil \sigma_2$ 
+\IFF
+$\M\mkpair \M',  (\phi, \chi_1) \leadsto^* (\psi, \chi_2)$\\
+$\strut ~ \hspace{1.4in} $ \hfill 
+where
+$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
+\end{itemize}
+\end{definition}
+\begin{definition}[Time Assertions]  \label{def:valid:assertion:time}
+For any modules $\M$, $\M'$, and assertion  $\A$ we define
+\begin{itemize}
+% \item
+% $\M\mkpair \M', \sigma \models   \Changes{\prg{e}}$  \IFF
+% $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \leadsto \sigma' \ \wedge \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$.
+ \item
+  $\M\mkpair \M', \sigma_0 , \sigma \models  \Next \A $
+  \IFF
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto\rceil \sigma' \ \wedge \M\mkpair \M',\sigma_0 , \sigma' \models \A \ \  ]$
+  \item
+  $\M\mkpair \M', \sigma_0 , \sigma \models  \Future \A $
+  \ \IFF
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto^*\rceil \sigma' \ \wedge \M\mkpair \M',\sigma_0 , \sigma' \models \A \ \  ]$
+  \item
+ $\M\mkpair \M', \sigma_0 , \sigma \models  \Prev \A $\IFF
+$\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpair \M',\sigma' \leadsto \sigma \longrightarrow $\\
+ $\strut ~ \hspace{0.1in} $   \hfill 
+$ \M\mkpair \M', \sigma_0 , \sigma'  \models \A\ \ 
+ ]$ 
+ \item
+ $\M\mkpair \M',\sigma_0 ,  \sigma \models  \Past \A $ \IFF
+$\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpair \M',\sigma' \leadsto^* \sigma \longrightarrow $\\
+ $\strut ~ \hspace{0.1in} $   \hfill   
+ $\M\mkpair \M', \sigma_0 , \sigma'  \models \A\ \ 
+ ]$ 
+\end{itemize}
+\end{definition}
+
+%Thus,  $\M\mkpair \M', \sigma \models  \Future \A $ holds if
+%$\A$ holds in some configuration $\sigma'$ which arises from execution of $\phi$, where $\phi$ is the top frame of $\sigma$. By requiring that $\phi \leadsto^* \sigma' $ rather than
+%$\sigma \leadsto^* \sigma' $ we are restricting the set of possible future configurations to
+%just those that are caused by the top frame;
+%that is, we do not want to consider the effect of  enclosing function calls.
+%
+%This allows us to write more natural specifications
+%when giving necessary conditions for some future effect.
+ 
+ In general, $\Using {\Future {\A}} {\SF}$ is different from
+  $\Future {\Using {\A} {\SF}}$. In the former assertion, $\SF$ must contain
+   every extant object involved in reaching the future configuration, whilst in the latter, 
+     $\SF$ needs instead to contain the objects needed to establish $\A$ in that future configuration.
+    % chopped as the example no longer works.
+  For example, revisit Fig. \ref{fig:BankAccountDiagrams}, and take $\SF_1$ to consist of objects \prg{1}, \prg{2},   \prg{4}, \prg{93}, and \prg{94},
+  and $\SF_2$ to consist of objects \prg{1}, \prg{2},   \prg{4}.  Assume that 
+   $\sigma_5$ is like $\sigma_1$, except that the next call in $\sigma_5$ is a method on $\prg{u}_{94}$, whose  body obtains the
+  address of $\acc_4$ (by making a call on \prg{93} to which it has access), and the address of $\acc_2$ (to which it has access),
+  and then makes the call $\acc_2.\prg{deposit}(\acc_4,360)$. Assume also     that $\prg{a}_4$'s balance is \prg{380}.
+  %Assume   that $\sigma_1$ contains the
+  % call $\prg{m()}$ with receiver $\pu_{94}$ and that the code of \prg{m} and \prg{m2} is as above. 
+  Then\\
+  $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_5 \ \models \ \Using {\Future{ \Changes {\acc_2.\bal}}} {\SF_1}$\\
+   $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_5 \ \not\models \ \Using {\Future{ \Changes {\acc_2.\bal}}} {\SF_2}$\\
+ $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_5 \ \models \ \Future{ \Using {\Changes {\acc_2.\bal}} {\SF_2}}$\
+
+Whilst the above shows that from $\Future { \Using{A}{\SF} }$ we cannot conclude $\Using { \Future{A} }{\SF}$, it is also worth noting that in general the inverse does not hold either. $\Future { \Using{A}{\SF} }$ restricts $A$ in the future, meaning any objects instantiated in the between the present and then are excluded, whereas $\Using { \Future{A} }{\SF}$ restricts the space in the present, so the objects are considered in A. Taking a new configuration $\sigma_6$  with continuation \prg{x := new Account(100, null)} and otherwise similar to $\sigma_1$, and $\SF = \emptyset$, the assertion $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Future{ \Using { \prg{x.bank} = \prg{null} } {\SF}}$  does not hold, as \prg{x} is not in $S$. However, we can prove $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Using { \Future{ \prg{x.bank} = \prg{null} } } {\SF}$, since the restriction of the configuration to $\SF$ in the present doesn't exclude the new \prg{Account} with field $\prg{bank} = \prg{null}$, created in the next statement, being considered by \Future{\_}.
+
+Using local variables in a past or future context allows specifications to use their past or future values. For example, that at some point in the future the receiver will have access to an object at $\alpha$ can be asserted with $\forall r . \Future {\prg{this} = r \wedge \CanAccess{r}{\alpha}}$. However, to state some future or past property of the current value of a variable, it must be connected to its address in the present, $\forall \alpha_x. (\alpha_x = \x \rightarrow \dots)$. Local variables referring to their past or future values in temporal connectives differers from previous formalisations of \Chainmail, where past and future configurations were adapted to use the current configuration's bindings \cite{FASE}. This allowed past and future assertions to directly refer to current variable bindings, however, it prevented using the past or future value of a name, and required more a complicated formalisation for minimal benefit.
+
+\subsection{Properties of Assertions}
+
+ 
+\label{sect:classical} 
+We define equivalence of   assertions in the usual way: assertions $\A$ and $\A'$are equivalent if they are satisfied  in
+the context of the same configurations and module pairs -- \ie\\
+ \strut \hspace{1.1cm} $\A \equiv \A'\  \IFF\    \forall \sigma_0, \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma_0,\sigma \models \A\ \mbox{ if and only if }\ \M\mkpair \M', \sigma_0,\sigma \models \A'\ \ ].$\\
+We can then prove that the usual equivalences hold, \eg\  $ \A \vee \A' \ \equiv \  \A' \vee \A$, and\   $\neg (\exists \prg{x}.\A )  \  \ \equiv \  \forall \prg{x}.(\neg  \A)$.
+%
+Our assertions are classical, \eg  $ \A \wedge\neg \A \ \equiv \  \prg{false}$, and $\M\mkpair \M', \sigma_0 , \sigma  \models \A$ and  $\M\mkpair \M', \sigma_0 , \sigma  \models \A \rightarrow \A'$  implies
+$\M\mkpair \M', \sigma_0 , \sigma  \models \A '$. 
+ \sd{This desirable property comes at the loss of some expected equivalences, \eg, in general, 
+ $\e = \prg{false}$ and $\neg\e$ are not equivalent.}
+
+\input{assertionsAppendix}
+
+\subsection{\mrrz{Connectivity}}
+\mrr[Not sure if this is where we want it, but just trying it for now]{
+Many programs are only allowed to pass on objects under certain conditions. This is to keep these objects safe from code that shouldn't have access to them, such as malicious external modules, or even other internal objects that were not expecting them, and whose actions may have unintended consequences. In \Chainmail restricting access is expressible: assertions can ensure that objects which will need access have a means to gain it. Alternatively, they can ensure that when an object's state changes, some other object could have had access to cause that change.
+}
+
+\mrr{However, to ensure these assertions are sound, we need to ensure that code only has access to objects it is directly passed, thereby ensuring that checking direct connections is sufficient for checking these assertions. To check code only has access to what it is passed, we can ensure any method call---the barrier between \Mrr{the private state of different objects}---only \emph{connects} to what its parameters \Mrr{can obtain} access to. This can be expressed formally as:
+}
+
+
+\mrr[We don't need to create a separate ``connected'' predicate since we're not dealing the return step in the main lemma]{
+\begin{lemma}[Method call connectivity]
+\label{lemma:method_call_connectivity}
+\vspace{-0.15in}
+\begin{align*}
+\forall M . \forall \sigma, \sigma'. &\forall \alpha, \alpha' \in \chi. [\\
+&\sigma\text{.cont} = \x_0.\m(\x_1,\dots\x_n) \wedge \M,\sigma\leadsto^\text{call} \sigma' \wedge \text{access}_{\sigma'}\langle \alpha,\alpha'\rangle 
+\longrightarrow\\
+&\text{access}_\sigma\langle\alpha,\alpha'\rangle
+\\&\quad \vee\Mrrz{
+\exists \alpha'' \alpha'''. (\exists k. (\x_k = \alpha'') \wedge \exists k. (\x_k = \alpha''') \wedge 
+\text{access}^*_\sigma\langle \alpha'',\alpha\rangle \wedge 
+\text{access}^*_\sigma\langle \alpha''',\alpha'\rangle)}\\
+&]
+\end{align*}
+\end{lemma}
+}
+
+\mrr{This states that for any method call, if two objects are connected in the configuration when the call has completed, then either they were originally connected, or an object explicitly passed to the call could \Mrr{obtain access} to both.
+}
+
+\mrr{To evaluate the entire call, we define a new reduction operator, $\leadsto^\text{call}$, which executes function calls in one step. It does this by skipping any intermediate reduction steps with the additional frames for the method call and its child calls in the stack.
+}
+
+\begin{definition}[\mrrz{Call-as-step execution}]
+\label{def:call_execution} 
+\mrr{Given runtime configurations $\sigma$,  $\sigma'$,  and a module $\M$ we define call-as-step execution as follows:}
+ 
+\begin{itemize}
+\item\Mrr[This definition has been updated]{
+$\M, \sigma \leadsto^\text{call} \sigma'$ \IFF
+there exist $n\geq 2$, runtime configurations $\sigma_1$ ... $\sigma_n$,
+frames~$\phi$,~$\phi'$, and heaps~$\chi$,~$\chi'$, such that}
+\begin{itemize}
+\item
+$\sigma = (\phi \cdot \psi, \chi)$, \ \ \ \ and\ \ \ \
+$\sigma' = (\phi' \cdot \psi, \chi')$, for some stack $\psi$
+\item
+$\sigma_1=(\phi, \chi)$,\ \ \ \ \ \ \ \ and\ \ \ \ $\sigma_n=(\phi', \chi')$.
+\item
+$\M, \sigma_i \leadsto \sigma_{i+1}$,\ \ \ \ \ \ \ for $1\leq i \leq n\!-\!1$,
+\item
+ $\sigma_i = (\psi'\cdot\phi'', \_)$,\ \ \ \ for $2\leq i \leq n\!-\!1$, some frame $\phi''$, and some non-empty stack $\psi'$ 
+\end{itemize}
+\end{itemize}
+\end{definition}
+
+\mrr[I don't know if we should include definitions, or elide them?]{We define a connective $\text{access}\langle\_,\_\rangle$ similar to $\CanAccess{\_}{\_}$ in \Chainmail, to encode when two objects are connected. However, the receiver and parameters can gain access to any object they initially only have indirect access to. If one of their fields has access to an object, this object could be passed up, either directly if they are of the same class, or otherwise by a method invocation. This could happen to any depth, and so any $n^\text{th}$ child field must be considered. We therefore define a transitive access predicate, $\text{access}^*\langle\_,\_\rangle$, to encode this property.}
+
+\begin{definition}[\Mrrz{Access relations}]
+\label{def:access_rel} \Mrr[Defintion now given]{Given runtime configuration $\sigma$, and addresses $\alpha$ and $\alpha'$, we define access and transitive access as:}
+
+\begin{itemize}
+\item $\text{access}_{\sigma}\langle\alpha,\alpha'\rangle \triangleq \alpha = \alpha' \vee \exists f. (\sigma(\alpha, \f) = \alpha') \vee \alpha = \interp{\prg{this}}{\sigma} \wedge \exists x. (\alpha' = \interp{\x}{\sigma})$
+\item \Mrr[I have written up the formal definition for this, but left it out as it's obvious and takes up space]{$\text{access}^*_{\sigma}\langle\alpha,\alpha'\rangle$ is the transitive closure of $\text{access}_\sigma\langle\alpha,\alpha'\rangle$}
+%\item $\text{access}^*_{\sigma}\langle\alpha,\alpha'\rangle \triangleq \exists k (\text{access}^k_\sigma\langle\alpha,\alpha'\rangle)$ \IFF $\text{access}^n_\sigma\langle\alpha, \alpha'\rangle$, $n \ge 1$ such that
+%\begin{itemize}
+%\item $\text{access}^n_\sigma\langle\alpha,\alpha'\rangle = \begin{cases}
+%\text{access}_\sigma\langle\alpha,\alpha'\rangle & n = 1\\
+%\exists\alpha''.(\text{access}_\sigma^{(n-1)}\langle\alpha,\alpha''\rangle \wedge \text{access}\langle\alpha'',\alpha'\rangle) & n \ge 1
+%\end{cases}$
+%\end{itemize}
+\end{itemize}
+\end{definition}
+
+\Mrr{An example of where the lemma is useful is for assertion (3) in the Bank example, as given in section~\ref{sect:motivate:Bank}. Here, the assertion states if someone external will have access to an account, then someone external must have had access to it originally. Lemma~\ref{lemma:method_call_connectivity} renders it sufficient to check the values passed at the boundaries---method calls, parameters, and returns---to prove that a given program doesn't leak information. From an internal method, an external call can only access the objects it is given. From an external method, and internal call will either pass in the object at a boundary, or, as per the disjunction in lemma~\ref{lemma:method_call_connectivity}, the external object must have originally had access before the the internal code began executing.  Whilst checking the boundaries may be the expected requirement for proving the validity of assertion (3), lemma~\ref{lemma:method_call_connectivity} is important to prove to ensure the soundness of this approach.
+}
+
+\mrr{To prove lemma~\ref{lemma:method_call_connectivity}, we use a series of auxiliary lemmas. The first, lemma~\ref{lemma:local_variable_connectivity}, concerns local variables, and says \Mrr{under constrained reduction,} that if an object is referred to by a local variable in any frame, then the initial receiver, \prg{this}, was transitively connected to it. The strengthening of this lemma to all frames of the stack, instead of simply the top frame, enables its inductive proof to handle the \prg{return} case. In this case we need to prove that the initial receiver can access the variables in the new top frame, which was previously the second top frame. Knowing \Mrr{the receiver can access local variables in all frames inductively renders this step} straightforward.} \Mrr{We use constrained reduction to prevent the computation from returning from the initial method, which would render the initial receiver irrelevant.}
+\Mrr{
+\begin{lemma}[Local variable connectivity]
+\label{lemma:local_variable_connectivity}
+$$\forall M. \forall \sigma \forall \phi. \forall \psi.\forall \x. \forall \alpha \in \sigma. (M,\sigma \lceil\leadsto^*\rceil (\psi, \_) \wedge \phi \in \psi \wedge \interp{\x}{\phi} = \alpha \longrightarrow \text{access}^*_{\sigma}\langle \interp{\prg{this}}{\sigma}, \alpha\rangle)$$
+\end{lemma}
+}
+
+\mrr{
+We then prove that if two objects are connected by the final configuration, either the inital \prg{this} had access to both, or they were initially connected. This follows intuitively from lemma~\ref{lemma:local_variable_connectivity}, since any connections made must occur through local variables by the grammar of \LangOO.
+}
+
+\Mrr{
+\begin{lemma}[Receiver connectivity]
+\label{lemma:receiver_connectivity}
+\vspace{-0.15in}
+\begin{align*}
+\forall M. \forall \sigma, \sigma' \forall \alpha, \alpha' \in \sigma. &\ (M,\sigma \lceil\leadsto^*\rceil \sigma' \wedge \text{access}_{\sigma'}\langle \alpha, \alpha'\rangle \longrightarrow\\
+&\quad \text{access}^*_\sigma \langle \interp{\prg{this}}{\sigma}, \alpha\rangle \vee \text{access}_\sigma\langle{\alpha, \alpha'}\rangle)
+\end{align*}
+\end{lemma}
+}
+
+\mrr{From here we can prove the original lemma~\ref{lemma:method_call_connectivity} by noticing in the next step, the receiver will have access to the parameters, and so lemma~\ref{lemma:receiver_connectivity} applies.
+}
+
+\subsection{Modules satisfying assertions}
+
+Finally, we define satisfaction of assertions by modules: a module
+$\M$ satisfies an assertion $\A$ if for all other potential modules $\M'$, in all configurations arising from executions of $\M\mkpair\M'$, the assertion $\A$ holds.
+
+\begin{definition}
+\label{def:module_satisfies}
+For any module $\M$, and  assertion $\A$, we define:
+\begin{itemize}
+\item
+$\M \models \A \ \ \  \ \ \ \ \ \mbox{
+if               } \ \ \  \ \ \  \  \forall \M'.\forall \sigma_0 \in \Initial{\M \mkpair \M'}.\forall\sigma\in\Arising{\M \mkpair  {\M'}, \sigma_0}. [\ \M \mkpair  {\M'}, \sigma_0 , \sigma \models \A\ ]$
+\end{itemize}
+\end{definition}

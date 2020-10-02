@@ -38,28 +38,28 @@ Program Instance eqbFld : Eq fld :=
              end
   }.
 Next Obligation.
-  intros; destruct a; apply Nat.eqb_refl.
+  intros. destruct a. apply Nat.eqb_refl.
 Defined.
 Next Obligation.
-  intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  intros. destruct a1. destruct a2. apply Nat.eqb_sym.
 Defined.
 Next Obligation.
-  intros;
-    destruct a1;
-    destruct a2;
-    symmetry in H;
-    apply beq_nat_eq in H;
-    subst; auto.
+  intros.
+    destruct a1.
+    destruct a2.
+    symmetry in H.
+    apply beq_nat_eq in H.
+    subst. auto.
 Defined.
 Next Obligation.
-  intros;
-    destruct a1;
-    destruct a2;
-    rewrite Nat.eqb_neq in H;
+  intros.
+    destruct a1.
+    destruct a2.
+    rewrite Nat.eqb_neq in H.
     crush.
 Defined.
 Next Obligation.
-  intros;
+  intros.
     destruct a1;
     destruct a2;
     rewrite Nat.eqb_neq;
@@ -473,7 +473,7 @@ Hint Constructors ref : loo_db.
 Inductive stmt : Type :=
 | s_asgn : ref -> ref -> stmt
 | s_meth : var -> var -> mth -> partial_map var var -> stmt
-| s_new  : var -> cls -> partial_map fld var -> stmt
+| s_new  : var -> cls -> partial_map var var -> stmt
 | s_if : exp -> stmt -> stmt -> stmt
 | s_stmts : stmt -> stmt -> stmt
 | s_rtrn : var -> stmt.
@@ -486,25 +486,44 @@ Notation "s1 ';;' s2" := (s_stmts s1 s2)(at level 40).
 Notation "r1 '≔' r2" := (s_asgn r1 r2)(at level 40).
 Notation "x '≔′' e" := (s_asgn (r_var x) (r_exp e))(at level 40).
 
+Definition stmts (xs : list stmt) dflt : stmt := fold_right s_stmts (last xs dflt) (removelast xs).
+
 Inductive continuation : Type :=
 | c_stmt : stmt -> continuation
 | c_hole : var -> stmt -> continuation.
 
 Hint Constructors continuation : loo_db.
 
-(*methods is a mapping from method names to statements*)
-Definition methods := partial_map mth ((list var) * stmt).
+(* A method is arguments and a body *)
+Definition method := ((list var) * stmt)%type.
+
+(*methods is a mapping from method names to a method*)
+Definition methods := partial_map mth method.
 
 (*ghost_fields is a mapping from ghost field names to expressions*)
 Definition ghost_fields := partial_map gfld (var * exp).
 
 Definition private := gFieldID 0.
 
-Record classDef := clazz{c_name : cls;
-                         c_flds : list fld;
-                         c_intrn : list fld;
-                         c_meths : methods;
-                         c_g_fields : ghost_fields}.
+Record classDef := clazz'{c_name : cls;
+                          c_flds : list fld;
+                          c_intrn : list fld;
+                          c_constructor: option method;
+                          c_meths : methods;
+                          c_g_fields : ghost_fields}.
+
+Definition clazz c_name c_flds c_intrn := clazz' c_name c_flds c_intrn None.
+
+(* Useful for calling 'default constructors', if the fields have existing names *)
+Definition field_param field := match field with fieldID k => bnd (S k) end.
+
+Definition constructor cDef := match c_constructor cDef with
+  | Some c => c
+  | None   => let vars := map field_param (c_flds cDef) in
+              let mkAssign field := s_asgn (r_fld this field) (r_var (field_param field)) in
+              let assignments := stmts (map mkAssign (c_flds cDef)) (s_asgn (r_var this) (r_var this)) in
+              (vars, assignments)
+  end.
 
 Record obj := new{cname : cls;
                   flds : fields}.
@@ -612,6 +631,7 @@ Reserved Notation "σ1 '↓' Σ '≜' σ2" (at level 80).
 
 Inductive restrict : config -> list var -> config -> Prop :=
 | rstrct : forall Σ σ As χ χ', ⌊ Σ ⌋ σ ≜′ As ->
+                          fst σ = χ ->
                           (forall α o, χ' α = Some o ->
                                   χ α = Some o) ->
                           (forall α o, χ' α = Some o ->
@@ -1009,6 +1029,16 @@ Inductive max_χ {B : Type} : partial_map addr B -> addr -> Prop :=
 
 Hint Constructors max_χ : loo_db.
 
+Lemma max_χ_injective : forall b (χ : partial_map addr b) α α', max_χ χ α -> max_χ χ α' -> α = α'.
+Proof.
+  intros b χ α α' Hα Hα'.
+  inversion Hα; subst. destruct H as [v Hαv].
+  inversion Hα'; subst. destruct H as [v' Hα'v].
+  apply H1 in Hαv as Hα'le. apply H0 in Hα'v as Hαle.
+  inversion Hαle. inversion Hα'le. subst. 
+  inversion H5. inversion H6. subst. crush.
+Qed.
+
 Inductive fresh_χ : heap -> addr -> Prop :=
 | frsh_heap : forall χ α, max_χ χ α ->
                      fresh_χ χ (S_α α).
@@ -1139,26 +1169,33 @@ Inductive reduction : mdl -> config -> config -> Prop :=
     σ' = (χ', ϕ' :: ψ) ->
     M ∙ σ ⤳ σ'
 
-    (** ψ = ϕ : ψ' *)
-    (** ϕ.contn = x := new C(fMap); s *)
+    (** σ = (χ, ϕ : ψ) *)
+    (** ϕ.contn = x := new C(...x_n); s *)
+    (** α fresh in χ *)
     (** M C = CDef *)
-    (** dom(fMap) = flds of C *)
-    (** ϕ' = update ϕ with (x ↦ α) and (contn ↦ s)*)
-    (** σ' = (update χ with (α ↦ o), ϕ' : ψ') *)
+    (** constructor(CDef) = constructor(...p_n) { Stmts' } *)
+    (** ϕ'  = ϕ❲contn ↦ x:=∙; s'❳ *)
+    (** o   = new C ()    (all class fields set to null to allow reassignment) *)
+    (** ϕ'' = (Stmts'; return this, (this ↦ α, (...p_n ↦ ⌊x_n⌋) = ps ∘ xs)) *)
+    (** σ'  = (update χ with (α ↦ o), ϕ'' : ϕ' : ψ') *)
     (** ------------------------------------------------ (objCreate_OS) *)
     (** M, σ ⤳ σ' *)
-| r_new : forall M σ σ' χ ψ ϕ ϕ' α x C fMap s o CDef,
-    x <> this ->
-    σ = (χ, ϕ :: ψ) ->
-    ϕ.(contn) = (c_stmt (s_stmts (s_new x C fMap) s)) ->
-    fresh_χ χ α ->
-    M C = Some CDef ->
-    dom fMap (c_flds CDef) ->
-    (forall f x, fMap f = Some x ->
-            exists v, (vMap ϕ) x = Some v) ->
-    o = new C (fMap ∘ (vMap ϕ))->
-    ϕ' = frm (update x (v_addr α) (vMap ϕ)) (c_stmt s) ->
-    σ' = (update α o χ, ϕ' :: ψ) ->
+| r_new : forall M σ σ' χ ψ ϕ ϕ' ϕ'' α x C fMap zs s s' o CDef ps,
+    x <> this ->                                              (* If the target is not `this` *)
+    σ = (χ, ϕ :: ψ) ->                                        (* with configuration (χ, ϕ :: ψ) *)
+    ϕ.(contn) = (c_stmt (s_stmts (s_new x C ps) s')) ->       (* Where new C(ps) is the next statement *)
+    fresh_χ χ α ->                                            (* α is fresh in χ *)
+    M C = Some CDef ->                                        (* M(C) = CDef = class { ... } *)
+    (zs, s) = constructor CDef ->                             (* constructor(CDef) = constructor(zs) { s } *)
+    (forall p x, ps p = Some x ->                             (* All variables passed in for a parameter *)
+            exists v, (vMap ϕ) x = Some v) ->                 (*    exist in the variable map *)
+    dom ps zs ->                                              (* ps = (z_1 ↦ p_1, ..., z_n ↦ p_n); the arguments match the constructor *)
+    dom fMap (c_flds CDef) ->                                 (* let domain(fMap) = fields(CDef) *)
+    (forall f x, fMap f = Some x -> x = v_null) ->            (* fMap maps to v_nil; fMap = (f_1 ↦ v_nil, ..., f_n ↦ v_nil) *)
+    ϕ' = frm (vMap ϕ) (c_hole x s') ->                        (* ϕ' is ϕ with a hole assignment in place of the new *) (* was originally (update x (v_addr α) (vMap ϕ)) but this isn't right *)
+    o = new C fMap ->                                         (* o = (C, fMap) *)
+    ϕ'' = frm (update this (v_addr α) (ps ∘ (vMap ϕ))) (c_stmt (merge s (s_rtrn this))) -> (* ϕ'' = (this ↦ α, z_1 ↦ p_1 ↦ x_1, ...) *)
+    σ' = (update α o χ, ϕ'' :: ϕ' :: ψ) ->                    (* End up with o at α in the heap, executing ϕ'', with ϕ' to come back to *)
     M ∙ σ ⤳ σ'
     
 
