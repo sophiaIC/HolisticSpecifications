@@ -8,9 +8,9 @@ This means we need our software to be \emph{robust}:
 to behave correctly even if  used 
 by erroneous or malicious third parties.
 We expect that our bank will only make payments 
-from our account if instructed by us, or by somebody we have authorised, 
+from our account if instructed by us, or by somebody we have authorised; 
 that space on a website given to an advertiser will not be used
-to obtain access to our bank details \cite{cwe}, or that a
+to obtain access to our bank details \cite{cwe}; or that a
 concert hall will not book the same seat more than once.
 
 
@@ -39,6 +39,7 @@ To ensure robustness, we need ways to specify what robustness means for a
 particular program, and ways to demonstrate that the particular program 
 adheres to its specific robustness requirements.
 
+\jm[removed myBank fields]{}
   \vspace*{-0.2cm}
  \begin{figure}[htb]
  \begin{tabular}{lll} % {lll}
@@ -49,7 +50,7 @@ class Account {
     field myBank
     
     method deposit(src,amt){
-       if (amt>=0 && src.myBank=this.myBank && src.balance>=amt) then {
+       if (amt>=0 && src.MyBank = this.myBank && src.balance>=amt) then {
            this.balance = this.balance + amt
            src.balance = src.balance - amt
    }   }
@@ -127,10 +128,10 @@ class Account {
 % \label{fig:ExampleWallet}
 % \end{figure}
 
-Consider the code snippets from Fig.~\ref{fig:ExampleBank}. Objects of
- class \prg{Account} hold a reference to \prg{myBank}, and only the holders of the references to accounts can move money between them, given the accounts are at the same bank.
+Consider the code snippets from fig.~\ref{fig:ExampleBank}. Objects of
+ class \prg{Account} hold \jm{money in the field \prg{balance}}, and only the holders of the references to accounts can move money between them, given the accounts are at the same bank.
 
- We show the code in two versions; both have the same method \prg{deposit}, and the last version 
+ We show the code in two versions; both have the same method \prg{deposit}, and the \jm{right} version 
  has an additional method \prg{freeMoney}.
   We use a Java-like syntax, and assume an untyped language (as we are in the open world setting).
  \sd{We assume that fields are private in the sense of C++ or Java, \ie only methods of that class may read or write these fields,
@@ -138,18 +139,19 @@ Consider the code snippets from Fig.~\ref{fig:ExampleBank}. Objects of
  Thus, the classical Hoare triple describing the behaviour of \prg{deposit} would be:
  
  \vspace{0.1in}
+ \jm[removed myBank field]{}
 (ClassicalSpec)\ \  $\triangleq$\\ 
 \vspace{-0.22in}
 \begin{lstlisting}
    method deposit(src, amt)
-   PRE:  this,src:Account $\wedge$  this$\neq$src $\wedge$ this.myBank=src.myBank $\wedge$ 
-         amt:$\mathbb{N}$  $\wedge$   src.balance$\geq$amt
+   PRE:  this,src:Account $\wedge$  this$\neq$src $\wedge$  this.myBank = src.myBank
+   			 amt:$\mathbb{N}$  $\wedge$   src.balance$\geq$amt
    POST: src.balance=src.balance$\pre$-amt $\wedge$ this.balance=this.balance$\pre$+amt
 \end{lstlisting}
 \vspace{-0.1in}
 %SD changed function to method, to fir what comes later.
 
-Our (ClassicSpec) expresses that knowledge of the \prg{src} account, and the accounts sharing the same bank, is \emph{sufficient}, %condition 
+Our (ClassicSpec) expresses that knowledge of the \prg{src} account, and \jm{that} the accounts \jm{share} the same bank, is \emph{sufficient}, %condition 
 and that  % from the safe.
 %make payments. 
 %But it does not show that it is a \emph{necessary} condition. 
@@ -169,7 +171,8 @@ and that  % from the safe.
  \prg{deposit} must maintain the same total balance for the two accounts.\footnote{We take that there must be no effects if (ClassicSpec)'s precoditions aren't satisfied. This is simple to state in a holistic specification, but has been omitted for brevity.}
 %
 But it cannot preclude that \prg{Account} -- or some other class, for that matter -- contains more methods 
-which might make it possible to create "free" money, as shown with \prg{freeMoney} on the right in Fig.~\ref{fig:ExampleBank}, a situation any sensible bank implementation should avoid. In fact it would be impossible to express such a restriction using a classical specification. For this, we propose \emph{holistic specifications}, and require that:
+which might make it possible to create "free" money, as shown with \prg{freeMoney} on the right in fig.~\ref{fig:ExampleBank}, a situation any sensible bank implementation should avoid. In fact it would be impossible to express such a restriction using a classical specification. 
+\jm{Thus, in addition to classical specifications}, we propose \emph{holistic specifications}, and require that:
  
   \vspace{.01in}
 (HolisticSpec)\ \  $\triangleq$\\ 
@@ -277,9 +280,10 @@ semantics of \Chainmail's assertions.
 %full details are relegated toappendices.   
 Section~\ref{sect:discussion}
 discusses our design, section~\ref{sect:problemdriven} shows how key points of 
-exemplar problems can be specified in \Chainmail. Section~\ref{sect:model} discusses the Coq model, section~\ref{sect:related} considers related
-work, and section~\ref{sect:conclusion} concludes.
+exemplar problems can be specified in \Chainmail. 
+\jm{The semantics of \Chainmail, along with the underlying language \LangOO, have been formalised in Coq. Further, we have used Coq to prove that \Chainmail assertions are classical, and satisfaction of specific examples can be proven.} Section~\ref{sect:model} discusses the Coq model, \jm[``section'' -> ``Section'']{Section}~\ref{sect:related} considers related
+work, and \jm[do we want to capitalize Section? This would be in line with capitalisation of ``Fig'']{Section}~\ref{sect:conclusion} concludes.
 We relegate various details to appendices. 
 
-An earlier version of this work appeared at FASE 2020. The main extensions of this paper are linearising the logic for temporal connectives, an expanded specification of \LangOO, and simplifications to name-binding with respect to quantification and time. This paper also introduces an expanded implementation of the mechanised model, and a deeper understanding of many of the properties of \Chainmail. Differences between the formalisations are discussed where relevant throughout the paper.
+An earlier version of this work appeared at FASE 2020 \cite{FASE}. The main extensions of this paper are linearising the logic for temporal connectives, an expanded specification of \LangOO, and simplifications to name-binding with respect to quantification and time. \jm{The current} paper also introduces an expanded implementation of the mechanised model, and a deeper understanding of many of the properties of \Chainmail. Differences between the \jm{current work and that of FASE 2020~\cite{FASE}} are discussed where relevant throughout the paper.
 %Further study discovered intricacies to this problem, which made it unnecessarily complex for a simple introduction.

@@ -61,8 +61,8 @@ recursion at the level of assertions, assertions form a classical logic (\eg $\A
 We will discuss evaluation of expressions in section \ref{sect:expressions}, standard assertions about heap/stack and logical
  connectives in \ref{sect:standard}. 
  We will discuss the treatment of  permission, control, space, and viewpoint  in 
-the main text in  Defs.~\ref{def:valid:assertion:access}-\ref{def:valid:assertion:space}  in section \ref{sect:pcsv} %HARD
-the treatment of time in Defs. \ref{def:reduction:constrained}, \ref{def:valid:assertion:time} in the main text, section \ref{sect:time},
+the main text in the  Definitions 3-7  in section \ref{sect:pcsv} %HARD
+the treatment of time in  Definitions 8,9 in the main text, section \ref{sect:time},
 We will discuss properties of assertions in Lemmas \ref{lemma:classic}-\ref{lemma:classic:two}.
  The judgement $\M\mkpair \M', \sigma_0 ,  \sigma  \models \A$ expresses that $\A$ holds in  $\M\mkpair \M'$ and $\sigma$, and 
 while $\M\mkpair \M', \sigma_0 , \sigma  \not\models \A$  expresses that $\A$ does not hold  in  $\M\mkpair \M'$ and $\sigma_0,\sigma$.
@@ -71,7 +71,7 @@ while $\M\mkpair \M', \sigma_0 , \sigma  \not\models \A$  expresses that $\A$ do
 \label{sect:expressions}
 
 The value  of  an expression  is described through judgment $ \M,\, \sigma, \SE \ \hookrightarrow\  v$,
-defined in Fig.~\ref{fig:ValueSimpleExpressions}.
+defined in  Figure \ref{fig:ValueSimpleExpressions}.
 We use the configuration, $\sigma$, to read the contents of the top stack frame
 % value of variables defined in the stack frame
 (rule ${\sf {Var\_Val}}$) or the contents of the heap (rule
@@ -83,7 +83,7 @@ ${\sf {Field\_Ghost\_Val2}}$.  If the field \f~ exists in the heap, then its val
 Ghost field reads, on the other hand, have the form $\e_0.\f(\e_1,...\e_n)$, and their value is
 described in rule ${\sf {Field\_Ghost\_Val}}$:
 %
-The lookup function $\mathcal G$  (defined in the obvious way in the Appendix, Def.~\ref{def:lookup})
+The lookup function $\mathcal G$  (defined in the obvious way in the Appendix, Def.\ref{def:lookup})
 returns the expression constituting the body for that ghost field, as defined in the class of $\e_0$.
 We return  that expression
 evaluated in a configuration where the formal parameters have been substituted by the values of the actual
@@ -528,7 +528,7 @@ We address challenge (a) by storing the remaining code to be executed in \prg{cn
 We address challenge (b) by defining constrained reduction, where we only take the top of the frame when considering future executions.
 Finally, we address challenge (c) by introducing an explicit initial configuration, and only considering configurations which arise from it and lead to the current configuration.
 
-\begin{definition}[Constrained Reduction]  \label{??}
+\begin{definition}[Constrained Reduction]  \label{def:constrained_reduction}
 For any modules $\M$, $\M'$, and configurations $\sigma_1$, $\sigma_2$
 \begin{itemize}
 \item
@@ -548,6 +548,29 @@ where
 $\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
 \end{itemize}
 \end{definition}
+\jm{Constrained reduction (defined in Definition \ref{def:constrained_reduction}) is a form of reduction
+that is restricted only to reduction steps that arise from the top frame of the stack, and does not consider 
+reduction steps that result as a method return from the top frame. As stated above, this addresses challenge (b).
+Constrained reduction is a strict subset of reduction, and for all modules $\M$ and $\M'$, and configurations $\sigma_1$ and $\sigma_2$, 
+if $\M\mkpair \M',  \sigma_1\lceil\leadsto\rceil \sigma_2$ (or $\M\mkpair \M',  \sigma_1\lceil\leadsto*\rceil \sigma_2$), then 
+it follows that $\M\mkpair \M',  \sigma_1 \leadsto \sigma_2$ (or $\M\mkpair \M',  \sigma_1\leadsto* \sigma_2$). 
+The reverse however is not true. Reduction does not imply constrained reduction.
+Since constrained reduction does not consider any frames in the stack preceding the top frame of $\sigma_1$, 
+$\sigma_2$ may only arise from the execution of the current method. For example, if the top frame of $\sigma_1$ 
+is the result of a method call to some method $\prg{m}$, then constrained reduction is restricted to only intermediate 
+configurations that arise from the evaluation of $\prg{m}$, and not beyond that.}
+
+\jm{Constrained reduction is used in the satisfaction of the temporal operators $\Future{A}$ and $\Next{A}$, defined in Definition \ref{def:valid:assertion:time}.
+This restriction is necessary for the definition the future temporal operators, as satisfaction of Chainmail assertions are generally 
+concerned with the current state of the program, and are not able to peel back the stack to inspect underlying frames. As an example, 
+specification (2) of the introductory bank account example asserts that future changes to a bank account implies the current object has access to that account.
+If the reduction implied by future assertions were not constrained, this would not necessarily be true unless we inspected every frame in the stack to check access.
+Further, the use of constrained reduction is necessary in maintaining some expected properties of the temporal operators. 
+While the underlying language \LangOO is deterministic and linear in its reduction, and thus there is exactly one path from the initial configuration of the program to any 
+future configuration that must pass through the current configuration, this is not generally true of languages with potentially branching reduction. If
+reduction of \LangOO were non-linear, and satisfaction of $\Future{\A}$ (or $\Next{\A}$) were not defined with constrained reduction, 
+the satisfaction of $\A$ would not generally imply the satisfaction of $\Future{\Past{A}}$ as $\A$ would not necessarily be satisfied by every branch of the program leading to the future configuration.
+The inverse however does hold, i.e. due to the use of an initial configuration it always holds that satisfaction of $\A$ implies satisfaction of $\Past{\Future{\A}}.$}
 \begin{definition}[Time Assertions]  \label{def:valid:assertion:time}
 For any modules $\M$, $\M'$, and assertion  $\A$ we define
 \begin{itemize}
@@ -623,13 +646,19 @@ $\M\mkpair \M', \sigma_0 , \sigma  \models \A '$.
 
 \input{assertionsAppendix}
 
-\subsection{Connectivity}
+\subsection{\mrrz{Connectivity}}
+\mrr[Not sure if this is where we want it, but just trying it for now]{
 Many programs are only allowed to pass on objects under certain conditions. This is to keep these objects safe from code that shouldn't have access to them, such as malicious external modules, or even other internal objects that were not expecting them, and whose actions may have unintended consequences. In \Chainmail restricting access is expressible: assertions can ensure that objects which will need access have a means to gain it. Alternatively, they can ensure that when an object's state changes, some other object could have had access to cause that change.
+}
 
-However, to ensure these assertions are sound, we need to ensure that code only has access to objects it is directly passed, thereby ensuring that checking direct connections is sufficient for checking these assertions. To check code only has access to what it is passed, we can ensure any method call---the barrier between \Mrr{the private state of different objects}---only \emph{connects} to what its parameters \Mrr{can obtain} access to. This can be expressed formally as:
+\mrr{However, to ensure these assertions are sound, we need to ensure that code only has access to objects it is directly passed, thereby ensuring that checking direct connections is sufficient for checking these assertions. To check code only has access to what it is passed, we can ensure any method call---the barrier between \Mrr{the private state of different objects}---only \emph{connects} to what its parameters \Mrr{can obtain} access to. This can be expressed formally as:
+}
 
+
+\mrr[We don't need to create a separate ``connected'' predicate since we're not dealing the return step in the main lemma]{
 \begin{lemma}[Method call connectivity]
 \label{lemma:method_call_connectivity}
+\vspace{-0.15in}
 \begin{align*}
 \forall M . \forall \sigma, \sigma'. &\forall \alpha, \alpha' \in \chi. [\\
 &\sigma\text{.cont} = \x_0.\m(\x_1,\dots\x_n) \wedge \M,\sigma\leadsto^\text{call} \sigma' \wedge \text{access}_{\sigma'}\langle \alpha,\alpha'\rangle 
@@ -642,14 +671,17 @@ However, to ensure these assertions are sound, we need to ensure that code only 
 &]
 \end{align*}
 \end{lemma}
+}
 
-This states that for any method call, if two objects are connected in the configuration when the call has completed, then either they were originally connected, or an object explicitly passed to the call could \Mrr{obtain access} to both.
+\mrr{This states that for any method call, if two objects are connected in the configuration when the call has completed, then either they were originally connected, or an object explicitly passed to the call could \Mrr{obtain access} to both.
+}
 
-To evaluate the entire call, we define a new reduction operator, $\leadsto^\text{call}$, which executes function calls in one step. It does this by skipping any intermediate reduction steps with the additional frames for the method call and its child calls in the stack.
+\mrr{To evaluate the entire call, we define a new reduction operator, $\leadsto^\text{call}$, which executes function calls in one step. It does this by skipping any intermediate reduction steps with the additional frames for the method call and its child calls in the stack.
+}
 
-\begin{definition}[Call-as-step execution]
+\begin{definition}[\mrrz{Call-as-step execution}]
 \label{def:call_execution} 
-Given runtime configurations $\sigma$,  $\sigma'$,  and a module $\M$ we define call-as-step execution as follows:
+\mrr{Given runtime configurations $\sigma$,  $\sigma'$,  and a module $\M$ we define call-as-step execution as follows:}
  
 \begin{itemize}
 \item\Mrr[This definition has been updated]{
@@ -670,7 +702,7 @@ $\M, \sigma_i \leadsto \sigma_{i+1}$,\ \ \ \ \ \ \ for $1\leq i \leq n\!-\!1$,
 \end{itemize}
 \end{definition}
 
-We define a connective $\text{access}\langle\_,\_\rangle$ similar to $\CanAccess{\_}{\_}$ in \Chainmail, to encode when two objects are connected. However, the receiver and parameters can gain access to any object they initially only have indirect access to. If one of their fields has access to an object, this object could be passed up, either directly if they are of the same class, or otherwise by a method invocation. This could happen to any depth, and so any $n^\text{th}$ child field must be considered. We therefore define a transitive access predicate, $\text{access}^*\langle\_,\_\rangle$, to encode this property.
+\mrr[I don't know if we should include definitions, or elide them?]{We define a connective $\text{access}\langle\_,\_\rangle$ similar to $\CanAccess{\_}{\_}$ in \Chainmail, to encode when two objects are connected. However, the receiver and parameters can gain access to any object they initially only have indirect access to. If one of their fields has access to an object, this object could be passed up, either directly if they are of the same class, or otherwise by a method invocation. This could happen to any depth, and so any $n^\text{th}$ child field must be considered. We therefore define a transitive access predicate, $\text{access}^*\langle\_,\_\rangle$, to encode this property.}
 
 \begin{definition}[\Mrrz{Access relations}]
 \label{def:access_rel} \Mrr[Defintion now given]{Given runtime configuration $\sigma$, and addresses $\alpha$ and $\alpha'$, we define access and transitive access as:}
@@ -691,14 +723,17 @@ We define a connective $\text{access}\langle\_,\_\rangle$ similar to $\CanAccess
 \Mrr{An example of where the lemma is useful is for assertion (3) in the Bank example, as given in section~\ref{sect:motivate:Bank}. Here, the assertion states if someone external will have access to an account, then someone external must have had access to it originally. Lemma~\ref{lemma:method_call_connectivity} renders it sufficient to check the values passed at the boundaries---method calls, parameters, and returns---to prove that a given program doesn't leak information. From an internal method, an external call can only access the objects it is given. From an external method, and internal call will either pass in the object at a boundary, or, as per the disjunction in lemma~\ref{lemma:method_call_connectivity}, the external object must have originally had access before the the internal code began executing.  Whilst checking the boundaries may be the expected requirement for proving the validity of assertion (3), lemma~\ref{lemma:method_call_connectivity} is important to prove to ensure the soundness of this approach.
 }
 
-To prove lemma~\ref{lemma:method_call_connectivity}, we use a series of auxiliary lemmas. The first, lemma~\ref{lemma:local_variable_connectivity}, concerns local variables, and says \Mrr{under constrained reduction,} that if an object is referred to by a local variable in any frame, then the initial receiver, \prg{this}, was transitively connected to it. The strengthening of this lemma to all frames of the stack, instead of simply the top frame, enables its inductive proof to handle the \prg{return} case. In this case we need to prove that the initial receiver can access the variables in the new top frame, which was previously the second top frame. Knowing \Mrr{the receiver can access local variables in all frames inductively renders this step} straightforward. \Mrr{We use constrained reduction to prevent the computation from returning from the initial method, which would render the initial receiver irrelevant.}
-
+\mrr{To prove lemma~\ref{lemma:method_call_connectivity}, we use a series of auxiliary lemmas. The first, lemma~\ref{lemma:local_variable_connectivity}, concerns local variables, and says \Mrr{under constrained reduction,} that if an object is referred to by a local variable in any frame, then the initial receiver, \prg{this}, was transitively connected to it. The strengthening of this lemma to all frames of the stack, instead of simply the top frame, enables its inductive proof to handle the \prg{return} case. In this case we need to prove that the initial receiver can access the variables in the new top frame, which was previously the second top frame. Knowing \Mrr{the receiver can access local variables in all frames inductively renders this step} straightforward.} \Mrr{We use constrained reduction to prevent the computation from returning from the initial method, which would render the initial receiver irrelevant.}
+\Mrr{
 \begin{lemma}[Local variable connectivity]
 \label{lemma:local_variable_connectivity}
 $$\forall M. \forall \sigma \forall \phi. \forall \psi.\forall \x. \forall \alpha \in \sigma. (M,\sigma \lceil\leadsto^*\rceil (\psi, \_) \wedge \phi \in \psi \wedge \interp{\x}{\phi} = \alpha \longrightarrow \text{access}^*_{\sigma}\langle \interp{\prg{this}}{\sigma}, \alpha\rangle)$$
 \end{lemma}
+}
 
-We then prove that if two objects are connected by the final configuration, either the initial \prg{this} had access to both, or they were initially connected. This follows intuitively from lemma~\ref{lemma:local_variable_connectivity}, since any connections made must occur through local variables by the grammar of \LangOO.
+\mrr{
+We then prove that if two objects are connected by the final configuration, either the inital \prg{this} had access to both, or they were initially connected. This follows intuitively from lemma~\ref{lemma:local_variable_connectivity}, since any connections made must occur through local variables by the grammar of \LangOO.
+}
 
 \Mrr{
 \begin{lemma}[Receiver connectivity]
@@ -711,7 +746,8 @@ We then prove that if two objects are connected by the final configuration, eith
 \end{lemma}
 }
 
-From here we can prove the original lemma~\ref{lemma:method_call_connectivity} by noticing in the next step, the receiver will have access to the parameters, and so lemma~\ref{lemma:receiver_connectivity} applies.
+\mrr{From here we can prove the original lemma~\ref{lemma:method_call_connectivity} by noticing in the next step, the receiver will have access to the parameters, and so lemma~\ref{lemma:receiver_connectivity} applies.
+}
 
 \subsection{Modules satisfying assertions}
 
@@ -727,3 +763,8 @@ $\M \models \A \ \ \  \ \ \ \ \ \mbox{
 if               } \ \ \  \ \ \  \  \forall \M'.\forall \sigma_0 \in \Initial{\M \mkpair \M'}.\forall\sigma\in\Arising{\M \mkpair  {\M'}, \sigma_0}. [\ \M \mkpair  {\M'}, \sigma_0 , \sigma \models \A\ ]$
 \end{itemize}
 \end{definition}
+\jm{Satisfaction of assertions by modules differs to prior work on Chainmail in the use of initial configurations.
+As noted in Section \ref{sect:PL}, the definition of arising configurations has changed from any configuration arising 
+from any initial configuration to any configuration arising from a specific configuration. This means that the definition
+of satisfaction by modules must be quantified over initial configurations. This introduces linearity to \Chainmail by 
+restriction questions of satisfaction to single execution paths.}
