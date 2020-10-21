@@ -1,10 +1,10 @@
 Require Export Arith.
 Require Import List.
 
-Require Import com.chainmail.CpdtTactics.
-Require Import com.chainmail.common.
-Require Import com.chainmail.defs.
-Require Import com.chainmail.L_def.
+Require Import chainmail.CpdtTactics.
+Require Import chainmail.common.
+Require Import chainmail.defs.
+Require Import chainmail.L_def.
 
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.

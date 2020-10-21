@@ -482,7 +482,7 @@ Ltac unique_restriction :=
                                             (subst_list s a)
                                             (subst_list s a0)
                                             (subst_list s a1)
-                                            (subst_list s l)));
+                                            (subst_list s p)));
         auto with chainmail_db.
 
     - (* next *)
@@ -1239,5 +1239,3 @@ Ltac unique_restriction :=
   Close Scope chainmail_scope.
   Close Scope reduce_scope.
 End ClassicalProperties.
-
-

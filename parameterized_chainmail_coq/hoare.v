@@ -67,6 +67,9 @@ Module Hoare(L : LanguageDef).
 
   Hint Constructors contn_is : hoare_db.
 
+  Notation "M1 '⦂' M2 '◎' σ0 '…s' '⊨' '{pre:' A1 '}' s '{post:' A2 '}'" :=
+    (forall σ c, contn_is (s ;; c) σ -> (M1 ⦂ M2 ◎ σ0 … ̱ ⊨ {pre: A1 } σ {post: A2 }))(at level 40).
+
   Definition is_skip : config -> Prop :=
     fun σ => exists b, contn_is (skip ;; b) σ.
 
@@ -77,7 +80,7 @@ Module Hoare(L : LanguageDef).
     fun σ => (exists v b, contn_is (rtrn v ;; b) σ) \/ (exists v, contn_is (c_rtrn v) σ).
 
   Definition is_acc : config -> Prop :=
-    fun σ => exists v b, contn_is (acc v ;; b) σ.
+    fun σ => exists x v b, contn_is (acc x v ;; b) σ.
 
   Definition is_mut : config -> Prop :=
     fun σ => exists α f v b, contn_is (mut α f v ;; b) σ.
@@ -85,48 +88,6 @@ Module Hoare(L : LanguageDef).
   Definition is_new : config -> Prop :=
     fun σ => exists C args b, contn_is (new C args ;; b) σ.
 
-  Definition ctxUpdated : config ->  var -> value -> config -> Prop :=
-    fun σ1 x v σ2 => exists ϕ1 ϕ2 ψ, snd σ1 = ϕ1 :: ψ /\
-                             snd σ2 = ϕ2 :: ψ /\
-                             vMap ϕ2 = update x v (vMap ϕ1).
-
-  Definition heapUpdated : config -> addr -> obj -> config -> Prop :=
-    fun σ1 α o σ2 => fst σ2 = (update α o (fst σ1)).
-
-  Definition fieldHeapUpdated : config -> addr -> fld -> value -> config -> Prop :=
-    fun σ1 α f v σ2 => exists o' v', ⟦ α ↦ o' ⟧ ∈ σ1 /\
-                             flds o' f = Some v' /\
-                             heapUpdated σ1 α (new (cname o') (update f v (flds o'))) σ2.
-
-  Definition fieldUpdated : config -> var -> fld -> var -> config -> Prop :=
-    fun σ1 x f y σ2 => exists α v, ⌊ x ⌋ σ1 ≜ (v_addr α) /\
-                           ⌊ y ⌋ σ2 ≜ v /\
-                           fieldHeapUpdated σ1 α f v σ2.
-
-  Definition fieldUpdatedValue : config -> var -> fld -> value -> config -> Prop :=
-    fun σ1 x f v σ2 => exists α, ⌊ x ⌋ σ1 ≜ (v_addr α) /\
-                         fieldHeapUpdated σ1 α f v σ2.
-
-  Definition fieldMapsTo : config -> var -> fld -> value -> Prop :=
-    fun σ x f v => exists α o, ⌊ x ⌋ σ ≜ (v_addr α) /\
-                       ⟦ α ↦ o ⟧ ∈ σ /\
-                       flds o f = Some v.
-
-  Definition new_object_created : config -> var -> cls -> partial_map fld var -> config -> Prop :=
-    fun σ x C ps σ' =>  exists χ ϕ ψ α s, σ = (χ, ϕ :: ψ) /\
-                                  contn ϕ = c_stmt (s_new x C ps ;; s) /\
-                                  fresh_χ χ α /\
-                                  heapUpdated σ α (new C (ps ∘ (vMap ϕ))) σ' /\
-                                  ctxUpdated σ x (v_addr α) σ'.
-
-  Definition heapUnchanged : config -> config -> Prop :=
-    fun σ1 σ2 => fst σ1 = fst σ2.
-
-  Definition ctxUnchanged : config -> config -> Prop :=
-    fun σ1 σ2 => exists ϕ1 ϕ2 ψ, snd σ1 = ϕ1 :: ψ /\
-                         snd σ2 = ϕ2 :: ψ /\
-                         vMap ϕ1 = vMap ϕ2.
-
-  Close Scope chainamil_scope.
+  Close Scope chainmail_scope.
   Close Scope reduce_scope.
 End Hoare.

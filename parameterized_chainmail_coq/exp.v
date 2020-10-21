@@ -34,7 +34,8 @@ Instance substExpVal : Subst exp nat value :=
     | e_if e1 e2 e3  => e_if (sbst' e1 n v) (sbst' e2 n v) (sbst' e3 n v)
     | e_acc_f e' f   =>  e_acc_f (sbst' e' n v) f
     | e_acc_g e1 g e2 => e_acc_g (sbst' e1 n v) g (sbst' e2 n v)
-    | e_val v => e
+    | e_val _ => e
+    | e_var _ => e
     end
   }.
 
@@ -58,6 +59,11 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
 (** further extends the val to include evaluation of addresses *)
 (** M, σ v ↪ v     (Var_Value) *)
 | v_value     : forall M σ v, M ∙ σ ⊢ e_val v ↪ v
+
+| v_local : forall M χ ϕ ψ x v, local ϕ x = Some v ->
+                           M ∙ (χ, ϕ :: ψ) ⊢ e_var (x_ x) ↪ v
+
+| v_this : forall M χ ϕ ψ, M ∙ (χ, ϕ :: ψ) ⊢ e_var (x_this) ↪ (v_addr (this ϕ))
 
 (** M, σ e.f() ↪ α *)
 (** σ(α, f) = v*)

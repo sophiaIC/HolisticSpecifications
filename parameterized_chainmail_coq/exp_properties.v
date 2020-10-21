@@ -50,6 +50,10 @@ Ltac unfold_eval :=
     inversion H;
     subst;
     clear H
+  | [H : _ ∙ _ ⊢ (e_var _) ↪ _ |- _] =>
+    inversion H;
+    subst;
+    clear H
   end.
 
 Theorem eval_unique :

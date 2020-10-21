@@ -187,7 +187,7 @@ Module Chainmail(L : LanguageDef).
   | a_acc   : a_val -> a_val -> asrt
 
   (** Control: *)
-  | a_call  : a_val -> a_val -> a_mth -> list a_val  -> asrt
+  | a_call  : a_val -> a_val -> a_mth -> partial_map name a_val  -> asrt
 
   (** Time: *)
   | a_next  : asrt -> asrt
@@ -263,9 +263,9 @@ Module Chainmail(L : LanguageDef).
       end
     }.
 
-  Instance substAVarMap : Subst (list a_val) nat a_var :=
+  Instance substAVarMap : Subst (partial_map name a_val) nat a_var :=
     {
-    sbst l n x := map (fun y => ⟦ x /s n ⟧ y) l
+    sbst m n x := fun y => bind (m y) (fun a => Some (⟦x /s n⟧ a))
     }.
 
   Instance substExp : Subst exp nat a_var :=
@@ -433,7 +433,7 @@ Instance substΣA : Subst asrt nat (set a_val) :=
 
   Definition initial (σ : config) : Prop :=
     exists c, σ = ([address 0 ↦ ObjectInstance] empty,
-                   frm (address 0) nil c :: nil).
+                   frm (address 0) empty c :: nil).
 
   Inductive has_type : config -> a_var -> a_type -> Prop :=
   | t_val : forall σ v, has_type σ (ax_val v) a_Val
@@ -453,10 +453,14 @@ Instance substΣA : Subst asrt nat (set a_val) :=
 
   Hint Constructors has_access_aval : chainmail_db.
 
-  Inductive makes_call : config -> a_val -> a_val -> a_mth -> list a_val ->
+  Inductive makes_call : config -> a_val -> a_val -> a_mth -> partial_map name a_val ->
                          Prop :=
   | method_call : forall χ lcl b ψ m args α1 α2,
-      makes_call (χ, frm α1 lcl (call α2 m args ;; b) :: ψ) (a_ α1) (a_ α2) (am_ m) (map av_bnd args).
+      makes_call (χ, frm α1 lcl (call α2 m args ;; b) :: ψ)
+                 (a_ α1)
+                 (a_ α2)
+                 (am_ m)
+                 (fun x => bind (args x) (fun v => Some (av_bnd v))).
 
   Hint Constructors makes_call : chainmail_db.
 

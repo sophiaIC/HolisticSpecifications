@@ -19,6 +19,9 @@ Inductive cls : Type := classID : nat -> cls.
 
 Inductive addr : Type := address : nat -> addr.
 
+Inductive name : Type := n_ : nat -> name.
+
+Inductive var : Type := x_this : var | x_ : name -> var.
 
 Inductive value : Type :=
 | v_true  : value
@@ -427,20 +430,189 @@ Next Obligation.
   right; crush.*)
 Defined.
 
+Program Instance eqbName : Eq name :=
+  {
+  eqb := fun l1 l2 =>
+           match l1, l2 with
+           | n_ n, n_ m => n =? m
+           end
+  }.
+Next Obligation.
+  destruct a;
+    try (rewrite Nat.eqb_refl);
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    try (rewrite Nat.eqb_sym);
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    try solve [crush];
+    match goal with
+    | [H : (?x =? ?y) = true |- _ ] =>
+      apply (Nat.eqb_eq) in H
+    end;
+    subst;
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    match goal with
+    | [H : (?x =? ?y) = false |- _ ] =>
+      apply (Nat.eqb_neq) in H
+    end;
+    intro Hcontra;
+    match goal with
+    | [H : n_ _ = n_ _ |- _ ] =>
+      inversion H;
+        subst
+    end;
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    try solve [crush].
+  apply Nat.eqb_neq;
+    intro Hcontra;
+    subst;
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    try solve [right; crush].
+  match goal with
+  | [|- {n_ ?n = n_ ?m} + {_}] =>
+    destruct (Nat.eq_dec n m);
+      subst;
+      auto
+  end.
+  right;
+    intro Hcontra;
+    match goal with
+    | [H : n_ _ = n_ _ |- _ ] =>
+      inversion H;
+        subst;
+        auto
+    end.
+Defined.
+
+Program Instance eqbVar : Eq var :=
+  {
+  eqb := fun x y =>
+           match x, y with
+           | x_ n, x_ m => eqb n m
+           | x_this, x_this => true
+           | _, _ => false
+           end
+  }.
+Next Obligation.
+  split;
+    intros;
+    try intro Hcontra;
+    andDestruct;
+    crush.
+Defined.
+Next Obligation.
+  split;
+    intros;
+    try intro Hcontra;
+    andDestruct;
+    crush.
+Defined.
+Next Obligation.
+  destruct a;
+    auto.
+  destruct n;
+    try (rewrite Nat.eqb_refl);
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    destruct n, n0;
+    try (rewrite Nat.eqb_sym);
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    try solve [crush].
+  destruct n, n0;
+    match goal with
+    | [H : (?x =? ?y) = true |- _ ] =>
+      apply (Nat.eqb_eq) in H
+    end;
+    subst;
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    try solve [crush].
+  destruct n, n0;
+    match goal with
+    | [H : (?x =? ?y) = false |- _ ] =>
+      apply (Nat.eqb_neq) in H
+    end;
+    intro Hcontra;
+    match goal with
+    | [H : x_ _ = x_ _ |- _ ] =>
+      inversion H;
+        subst
+    end;
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    try solve [crush].
+  destruct n, n0.
+  apply Nat.eqb_neq;
+    intro Hcontra;
+    subst;
+    auto.
+Defined.
+Next Obligation.
+  destruct a1, a2;
+    auto;
+    try solve [right; crush].
+  destruct n, n0;
+    match goal with
+    | [|- {x_ (n_ ?n) = x_ (n_ ?m)} + {_}] =>
+      destruct (Nat.eq_dec n m);
+        subst;
+        auto
+    end.
+  right;
+    intro Hcontra;
+    match goal with
+    | [H : x_ _ = x_ _ |- _ ] =>
+      inversion H;
+        subst;
+        auto
+    end.
+Defined.
+
 Inductive stmt : Type :=
 | skip : stmt
-| call : addr -> mth -> list value -> stmt
+| call : addr -> mth -> partial_map name value -> stmt
 | rtrn : value -> stmt
-| acc  : value -> stmt
+| acc  : name -> value -> stmt
+| drop : name -> stmt
 | mut  : addr -> fld -> value -> stmt
-| drop : value -> stmt
 | new  : cls -> partial_map fld value -> stmt.
 
 Notation "α '∙' f '≔' v" := (mut α f v)(at level 40).
-Notation "α '▸' m '⟨' vs '⟩'" := (call α m vs)(at level 40).
+Notation "α '▸' m '⟨' args '⟩'" := (call α m args)(at level 40).
 Notation "'constr' C '⟨' fs '⟩'" := (new C fs)(at level 40).
 
 Inductive continuation : Type :=
+| c_hole : name -> continuation -> continuation
 | c_rtrn : value -> continuation
 | c_stmt : stmt -> continuation -> continuation.
 
@@ -453,7 +625,7 @@ Record object := obj{cname : cls;
                      flds : fields}.
 
 Record frame := frm{this : addr;
-                    local : set value;
+                    local : partial_map name value;
                     contn : continuation}.
 
 Definition stack := list frame.
@@ -464,6 +636,7 @@ Definition config : Type := (heap * stack).
 
 Inductive exp : Type :=
 | e_val   : value -> exp
+| e_var   : var -> exp
 | e_hole  : nat -> exp
 | e_eq    : exp -> exp -> exp
 | e_lt    : exp -> exp -> exp
@@ -683,3 +856,78 @@ Ltac cleanup :=
   | [Ha : ?P, Hb : ?P |- _] =>
     clear Hb
   end.
+
+Definition stack_append (σ : config)(ψ : stack):=
+  (fst σ, (snd σ)++ψ).
+
+Notation "σ '◁' ψ" := (stack_append σ ψ)(at level 40).
+
+Definition is_internal (M1 M2 : mdl)(σ : config)(α : addr) :=
+  (exists o CDef, fst σ α = Some o  /\
+             M1 (cname o) = Some CDef).
+
+Definition is_external (M1 M2 : mdl)(σ : config)(α : addr) :=
+  (exists o, fst σ α = Some o /\
+        (cname o) ∉ M1).
+
+Definition internal_self (M1 M2 : mdl)(σ : config) :=
+  exists χ ϕ ψ, σ = (χ, ϕ :: ψ) /\
+           is_internal M1 M2 σ (this ϕ).
+
+Definition external_self (M1 M2 : mdl)(σ : config) :=
+  exists χ ϕ ψ, σ = (χ, ϕ :: ψ) /\
+           is_external M1 M2 σ (this ϕ).
+
+Lemma is_internal_stack_append :
+  forall M1 M2 σ α, is_internal M1 M2 σ α ->
+               forall ψ, is_internal M1 M2 (σ ◁ ψ) α.
+Proof.
+  intros;
+    unfold is_internal, stack_append in *;
+    repeat destruct_exists_loo;
+    andDestruct.
+  repeat eexists;
+    eauto.
+Qed.
+
+Lemma is_external_stack_append :
+  forall M1 M2 σ α, is_external M1 M2 σ α ->
+               forall ψ, is_external M1 M2 (σ ◁ ψ) α.
+Proof.
+  intros;
+    unfold is_external, stack_append in *;
+    repeat destruct_exists_loo;
+    andDestruct.
+  repeat eexists;
+    eauto.
+Qed.
+
+Lemma internal_self_stack_append :
+  forall M1 M2 σ, internal_self M1 M2 σ ->
+             forall ψ, internal_self M1 M2 (σ ◁ ψ).
+Proof.
+  intros;
+    unfold internal_self, is_internal, stack_append in *;
+    repeat destruct_exists_loo;
+    andDestruct;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst.
+  repeat eexists;
+    eauto.
+Qed.
+
+Lemma external_self_stack_append :
+  forall M1 M2 σ, external_self M1 M2 σ ->
+             forall ψ, external_self M1 M2 (σ ◁ ψ).
+Proof.
+  intros;
+    unfold external_self, is_external, stack_append in *;
+    repeat destruct_exists_loo;
+    andDestruct;
+    repeat destruct_exists_loo;
+    andDestruct;
+    subst.
+  repeat eexists;
+    eauto.
+Qed.

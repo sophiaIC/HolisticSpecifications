@@ -18,11 +18,8 @@ Module AbstractOperationalSemantics(L : LanguageDef).
 
   Reserved Notation "M '∙' σ1 '⤳' σ2" (at level 40).
 
-  Definition add{A : Type}`{Eq A}(a : A)(s : set A) :=
-    set_add eq_dec a s.
-
-  Definition remove{A : Type}`{Eq A}(a : A)(s : set A) :=
-    set_remove eq_dec a s.
+  Definition remove{A B : Type}`{Eq A}(a : A)(m : partial_map A B) :=
+    t_update m a None.
 
   Inductive reduction : mdl -> config -> config -> Prop :=
   | r_skip : forall M χ self lcl c ψ,
@@ -31,50 +28,49 @@ Module AbstractOperationalSemantics(L : LanguageDef).
         ⤳
         (χ, frm self lcl c :: ψ)
 
-  | r_call : forall M χ self lcl c α m vs ψ o C CDef b,
+  | r_call : forall M χ self lcl c α m args ψ o C CDef b,
       χ α = Some o ->
       cname o = C ->
       M C = Some CDef ->
       c_meths CDef m = Some b ->
-      (forall v, In v vs -> visible_r (χ, frm self lcl (α ▸ m ⟨ vs ⟩ ;; c) :: ψ) self v) ->
-      visible_r (χ, frm self lcl (α ▸ m ⟨ vs ⟩ ;; c) :: ψ) self (v_addr α) ->
-      visible_m (χ, frm self lcl (α ▸ m ⟨ vs ⟩ ;; c) :: ψ) self α m ->
+      (forall x v, args x = Some v -> visible_r M (χ, frm self lcl (α ▸ m ⟨ args ⟩ ;; c) :: ψ) self v) ->
+      visible_r M (χ, frm self lcl (α ▸ m ⟨ args ⟩ ;; c) :: ψ) self (v_addr α) ->
+      visible_m M (χ, frm self lcl (α ▸ m ⟨ args ⟩ ;; c) :: ψ) self α m ->
       M ∙
-        (χ, (frm self lcl (α ▸ m ⟨ vs ⟩ ;; c)) :: ψ)
+        (χ, (frm self lcl (α ▸ m ⟨ args ⟩ ;; c)) :: ψ)
         ⤳
-        (χ, (frm α vs b) :: (frm self lcl c :: ψ))
+        (χ, (frm self args b) :: (frm self lcl c :: ψ))
 
-  | r_rtrn_1 : forall M χ self1 lcl1 v self2 lcl2 c ψ,
-      visible_r (χ, frm self1 lcl1 (c_rtrn v) :: frm self2 lcl2 c :: ψ) self1 v ->
+  | r_rtrn_1 : forall M χ self1 lcl1 v self2 lcl2 x c ψ,
+      visible_r M (χ, frm self1 lcl1 (c_rtrn v) :: frm self2 lcl2 (c_hole x c) :: ψ) self1 v ->
       M ∙
-        (χ, (frm self1 lcl1 (c_rtrn v)) :: (frm self2 lcl2 c) :: ψ)
+        (χ, (frm self1 lcl1 (c_rtrn v)) :: (frm self2 lcl2 (c_hole x c)) :: ψ)
         ⤳
-        (χ, (frm self2 (add v lcl2) c) :: ψ)
+        (χ, (frm self2 (update x v lcl2) c) :: ψ)
 
-  | r_rtrn_2 : forall M χ self1 lcl1 v c1 self2 lcl2 c2 ψ,
-      visible_r (χ, frm self1 lcl1 (rtrn v ;; c1) :: frm self2 lcl2 c2 :: ψ) self1 v ->
+  | r_rtrn_2 : forall M χ self1 lcl1 v c1 self2 lcl2 x c2 ψ,
+      visible_r M (χ, frm self1 lcl1 (rtrn v ;; c1) :: frm self2 lcl2 c2 :: ψ) self1 v ->
       M ∙
-        (χ, (frm self1 lcl1 (rtrn v ;; c1)) :: (frm self2 lcl2 c2) :: ψ)
+        (χ, (frm self1 lcl1 (rtrn v ;; c1)) :: (frm self2 lcl2 (c_hole x c2)) :: ψ)
         ⤳
-        (χ, (frm self2 (add v lcl2) c2) :: ψ)
+        (χ, (frm self2 (update x v lcl2) c2) :: ψ)
 
-  | r_acc : forall M χ self lcl v c ψ,
-      visible_r (χ, frm self lcl (acc v ;; c) :: ψ) self v ->
+  | r_acc : forall M χ self lcl x v c ψ,
+      visible_r M (χ, frm self lcl (acc x v ;; c) :: ψ) self v ->
       M ∙
-        (χ, frm self lcl (acc v ;; c) :: ψ)
+        (χ, frm self lcl (acc x v ;; c) :: ψ)
         ⤳
-        (χ, frm self (add v lcl) c :: ψ)
+        (χ, frm self (update x v lcl) c :: ψ)
 
-  | r_drop : forall M χ self lcl v c ψ,
-      visible_r (χ, frm self lcl c :: ψ) self v ->
+  | r_drop : forall M χ self lcl x c ψ,
       M ∙
-        (χ, frm self lcl (drop v ;; c) :: ψ)
+        (χ, frm self lcl (drop x ;; c) :: ψ)
         ⤳
-        (χ, frm self (remove v lcl) c :: ψ)
+        (χ, frm self (remove x lcl) c :: ψ)
 
   | r_mut : forall M χ self lcl α f v c ψ o,
-      visible_w (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ) self α f ->
-      visible_r (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ) self v ->
+      visible_w M (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ) self α f ->
+      visible_r M (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ) self v ->
       χ α = Some o ->
       M ∙
         (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ)
@@ -82,7 +78,7 @@ Module AbstractOperationalSemantics(L : LanguageDef).
         ([α ↦ obj (cname o) ([f ↦ v] (flds o))] χ, frm self lcl c :: ψ)
 
   | r_new : forall M χ self lcl c α C fs ψ,
-      visible_c (χ, frm self lcl (constr C ⟨ fs ⟩ ;; c) :: ψ) self C ->
+      visible_c M (χ, frm self lcl (constr C ⟨ fs ⟩ ;; c) :: ψ) self C ->
       max_χ χ α ->
       M ∙
         (χ, frm self lcl (constr C ⟨ fs ⟩ ;; c) :: ψ)
@@ -92,22 +88,6 @@ Module AbstractOperationalSemantics(L : LanguageDef).
   where "M '∙' σ1 '⤳' σ2" := (reduction M σ1 σ2) : reduce_scope.
 
   Hint Constructors reduction : reduce_db.
-
-  Definition is_internal (M1 M2 : mdl)(σ : config)(α : addr) :=
-    (exists o CDef, fst σ α = Some o  /\
-                    M1 (cname o) = Some CDef).
-
-  Definition is_external (M1 M2 : mdl)(σ : config)(α : addr) :=
-    (exists o, fst σ α = Some o /\
-               (cname o) ∉ M1).
-
-  Definition internal_self (M1 M2 : mdl)(σ : config) :=
-    exists χ ϕ ψ, σ = (χ, ϕ :: ψ) /\
-                  is_internal M1 M2 σ (this ϕ).
-
-  Definition external_self (M1 M2 : mdl)(σ : config) :=
-    exists χ ϕ ψ, σ = (χ, ϕ :: ψ) /\
-                  is_external M1 M2 σ (this ϕ).
 
   Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳…' σ'" (at level 40).
 
@@ -160,11 +140,6 @@ Module AbstractOperationalSemantics(L : LanguageDef).
   where "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" := (pair_reductions M1 M2 σ σ') : reduce_scope.
 
   Hint Constructors pair_reductions : reduce_db.
-
-  Definition stack_append (σ : config)(ψ : stack):=
-    (fst σ, (snd σ)++ψ).
-
-  Notation "σ '◁' ψ" := (stack_append σ ψ)(at level 40) : reduce_scope.
 
   Open Scope reduce_scope.
   Definition constrained_pair_reduction (M1 M2 : mdl)(σ1 σ2 : config):=
