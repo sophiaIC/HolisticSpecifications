@@ -431,10 +431,6 @@ Instance substΣA : Subst asrt nat (set a_val) :=
     sbst A n x := sbstA A n x
     }.
 
-  Definition initial (σ : config) : Prop :=
-    exists c, σ = ([address 0 ↦ ObjectInstance] empty,
-                   frm (address 0) empty c :: nil).
-
   Inductive has_type : config -> a_var -> a_type -> Prop :=
   | t_val : forall σ v, has_type σ (ax_val v) a_Val
   | t_obj : forall χ ψ α o, χ α = Some o ->
@@ -455,8 +451,8 @@ Instance substΣA : Subst asrt nat (set a_val) :=
 
   Inductive makes_call : config -> a_val -> a_val -> a_mth -> partial_map name a_val ->
                          Prop :=
-  | method_call : forall χ lcl b ψ m args α1 α2,
-      makes_call (χ, frm α1 lcl (call α2 m args ;; b) :: ψ)
+  | method_call : forall χ lcl b ψ x m args α1 α2,
+      makes_call (χ, frm α1 lcl (c_ call x α2 m args ;; b) :: ψ)
                  (a_ α1)
                  (a_ α2)
                  (am_ m)

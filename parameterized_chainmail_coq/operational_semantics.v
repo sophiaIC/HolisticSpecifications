@@ -12,7 +12,7 @@ Require Export ZArith.
 
 Module AbstractOperationalSemantics(L : LanguageDef).
 
-  Import L.
+  Export L.
 
   Declare Scope reduce_scope.
 
@@ -22,68 +22,68 @@ Module AbstractOperationalSemantics(L : LanguageDef).
     t_update m a None.
 
   Inductive reduction : mdl -> config -> config -> Prop :=
-  | r_skip : forall M χ self lcl c ψ,
+  | r_skip : forall M χ self lcl b ψ,
       M ∙
-        (χ, frm self lcl (skip ;; c) :: ψ)
+        (χ, frm self lcl (c_ skip ;; b) :: ψ)
         ⤳
-        (χ, frm self lcl c :: ψ)
+        (χ, frm self lcl (c_ b) :: ψ)
 
-  | r_call : forall M χ self lcl c α m args ψ o C CDef b,
+  | r_call : forall M χ self lcl b n α m args ψ o C CDef body,
       χ α = Some o ->
       cname o = C ->
       M C = Some CDef ->
-      c_meths CDef m = Some b ->
-      (forall x v, args x = Some v -> visible_r M (χ, frm self lcl (α ▸ m ⟨ args ⟩ ;; c) :: ψ) self v) ->
-      visible_r M (χ, frm self lcl (α ▸ m ⟨ args ⟩ ;; c) :: ψ) self (v_addr α) ->
-      visible_m M (χ, frm self lcl (α ▸ m ⟨ args ⟩ ;; c) :: ψ) self α m ->
+      c_meths CDef m = Some body ->
+      (forall x v, args x = Some v -> visible_r M (χ, frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b) :: ψ) self v) ->
+      visible_r M (χ, frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b) :: ψ) self (v_addr α) ->
+      visible_m M (χ, frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b) :: ψ) self α m ->
       M ∙
-        (χ, (frm self lcl (α ▸ m ⟨ args ⟩ ;; c)) :: ψ)
+        (χ, (frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b)) :: ψ)
         ⤳
-        (χ, (frm self args b) :: (frm self lcl c :: ψ))
+        (χ, (frm α args (c_ body)) :: (frm self lcl (n ≔♢ ;; b) :: ψ))
 
-  | r_rtrn_1 : forall M χ self1 lcl1 v self2 lcl2 x c ψ,
-      visible_r M (χ, frm self1 lcl1 (c_rtrn v) :: frm self2 lcl2 (c_hole x c) :: ψ) self1 v ->
+  | r_rtrn_1 : forall M χ self1 lcl1 v self2 lcl2 x b ψ,
+      visible_r M (χ, frm self1 lcl1 (c_rtrn v) :: frm self2 lcl2 (x ≔♢ ;; b) :: ψ) self1 v ->
       M ∙
-        (χ, (frm self1 lcl1 (c_rtrn v)) :: (frm self2 lcl2 (c_hole x c)) :: ψ)
+        (χ, (frm self1 lcl1 (c_rtrn v)) :: (frm self2 lcl2 (x ≔♢ ;; b)) :: ψ)
         ⤳
-        (χ, (frm self2 (update x v lcl2) c) :: ψ)
+        (χ, (frm self2 (update x v lcl2) (c_ b)) :: ψ)
 
-  | r_rtrn_2 : forall M χ self1 lcl1 v c1 self2 lcl2 x c2 ψ,
-      visible_r M (χ, frm self1 lcl1 (rtrn v ;; c1) :: frm self2 lcl2 c2 :: ψ) self1 v ->
+  | r_rtrn_2 : forall M χ self1 lcl1 v b1 self2 lcl2 x b2 ψ,
+      visible_r M (χ, frm self1 lcl1 (c_ rtrn v ;; b1) :: frm self2 lcl2 (x ≔♢ ;; b2) :: ψ) self1 v ->
       M ∙
-        (χ, (frm self1 lcl1 (rtrn v ;; c1)) :: (frm self2 lcl2 (c_hole x c2)) :: ψ)
+        (χ, (frm self1 lcl1 (c_ rtrn v ;; b1)) :: (frm self2 lcl2 (x ≔♢ ;; b2)) :: ψ)
         ⤳
-        (χ, (frm self2 (update x v lcl2) c2) :: ψ)
+        (χ, (frm self2 (update x v lcl2) (c_ b2)) :: ψ)
 
-  | r_acc : forall M χ self lcl x v c ψ,
-      visible_r M (χ, frm self lcl (acc x v ;; c) :: ψ) self v ->
+  | r_acc : forall M χ self lcl x v b ψ,
+      visible_r M (χ, frm self lcl (c_ acc x v ;; b) :: ψ) self v ->
       M ∙
-        (χ, frm self lcl (acc x v ;; c) :: ψ)
+        (χ, frm self lcl (c_ acc x v ;; b) :: ψ)
         ⤳
-        (χ, frm self (update x v lcl) c :: ψ)
+        (χ, frm self (update x v lcl) (c_ b) :: ψ)
 
-  | r_drop : forall M χ self lcl x c ψ,
+  | r_drop : forall M χ self lcl x b ψ,
       M ∙
-        (χ, frm self lcl (drop x ;; c) :: ψ)
+        (χ, frm self lcl (c_ drop x ;; b) :: ψ)
         ⤳
-        (χ, frm self (remove x lcl) c :: ψ)
+        (χ, frm self (remove x lcl) (c_ b) :: ψ)
 
-  | r_mut : forall M χ self lcl α f v c ψ o,
-      visible_w M (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ) self α f ->
-      visible_r M (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ) self v ->
+  | r_mut : forall M χ self lcl α f v b ψ o,
+      visible_w M (χ, frm self lcl (c_ α ∙ f ≔ v ;; b) :: ψ) self α f ->
+      visible_r M (χ, frm self lcl (c_ α ∙ f ≔ v ;; b) :: ψ) self v ->
       χ α = Some o ->
       M ∙
-        (χ, frm self lcl (α ∙ f ≔ v ;; c) :: ψ)
+        (χ, frm self lcl (c_ α ∙ f ≔ v ;; b) :: ψ)
         ⤳
-        ([α ↦ obj (cname o) ([f ↦ v] (flds o))] χ, frm self lcl c :: ψ)
+        ([α ↦ obj (cname o) ([f ↦ v] (flds o))] χ, frm self lcl (c_ b) :: ψ)
 
-  | r_new : forall M χ self lcl c α C fs ψ,
-      visible_c M (χ, frm self lcl (constr C ⟨ fs ⟩ ;; c) :: ψ) self C ->
+  | r_new : forall M χ self lcl b α C fs ψ,
+      visible_c M (χ, frm self lcl (c_ constr C ⟨ fs ⟩ ;; b) :: ψ) self C ->
       max_χ χ α ->
       M ∙
-        (χ, frm self lcl (constr C ⟨ fs ⟩ ;; c) :: ψ)
+        (χ, frm self lcl (c_ constr C ⟨ fs ⟩ ;; b) :: ψ)
         ⤳
-        ([inc α ↦ obj C fs] χ, frm self lcl c :: ψ)
+        ([inc α ↦ obj C fs] χ, frm self lcl (c_ b) :: ψ)
 
   where "M '∙' σ1 '⤳' σ2" := (reduction M σ1 σ2) : reduce_scope.
 

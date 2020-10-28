@@ -600,7 +600,7 @@ Defined.
 
 Inductive stmt : Type :=
 | skip : stmt
-| call : addr -> mth -> partial_map name value -> stmt
+| call : name -> addr -> mth -> partial_map name value -> stmt
 | rtrn : value -> stmt
 | acc  : name -> value -> stmt
 | drop : name -> stmt
@@ -608,15 +608,21 @@ Inductive stmt : Type :=
 | new  : cls -> partial_map fld value -> stmt.
 
 Notation "α '∙' f '≔' v" := (mut α f v)(at level 40).
-Notation "α '▸' m '⟨' args '⟩'" := (call α m args)(at level 40).
+Notation "n '≔m' α '▸' m '⟨' args '⟩'" := (call n α m args)(at level 40).
 Notation "'constr' C '⟨' fs '⟩'" := (new C fs)(at level 40).
 
-Inductive continuation : Type :=
-| c_hole : name -> continuation -> continuation
-| c_rtrn : value -> continuation
-| c_stmt : stmt -> continuation -> continuation.
+Inductive block : Type :=
+| b_rtrn : value -> block
+| b_stmt : stmt -> block -> block.
 
-Notation "s ';;' b" := (c_stmt s b)(at level 40).
+Inductive continuation :=
+| c_hole : name -> block -> continuation
+| c_block : block -> continuation.
+
+Notation "s ';;' b" := (b_stmt s b)(at level 40).
+Notation "n '≔♢' ';;' b" := (c_hole n b)(at level 41).
+Notation "'c_' b" := (c_block b)(at level 41).
+Notation "'c_rtrn' v" := (c_ b_rtrn v)(at level 40).
 
 (*fields are a mapping from field names to locations in the heap*)
 Definition fields := partial_map fld value.
@@ -673,7 +679,7 @@ Notation "e1 '⩾' e2" := ((e1 ⩼ e2) ⩒ (e1 ⩵ e2))(at level 40).
 Definition ghost_fields := partial_map gfld exp.
 
 Record classDef := clazz{c_name : cls;
-                         c_meths : partial_map mth continuation;
+                         c_meths : partial_map mth block;
                          c_g_fields : ghost_fields}.
 
 Definition mdl := partial_map cls classDef.
@@ -697,49 +703,39 @@ Inductive max_χ {B : Type} : partial_map addr B -> addr -> Prop :=
 
 Hint Constructors max_χ : L_db.
 
+Lemma max_χ_neq :
+  forall {B : Type} χ α, max_χ χ α ->
+                    forall α' (b : B), χ α' = Some b ->
+                                  inc α <> α'.
+Proof.
+  intros B χ α Hmax;
+    inversion Hmax;
+    subst;
+    clear Hmax;
+    intros;
+    intro Hcontra;
+    subst.
+  match goal with
+  | [Ha : forall _ _, ?m _ = Some _ -> _,
+       Hb : ?m _ = Some _ |- _] =>
+    apply Ha in Hb;
+      inversion Hb;
+      subst;
+      simpl in *;
+      clear Hb
+  end.
+  match goal with
+  | [H : address _ = address _ |- _] =>
+    inversion H;
+      subst;
+      clear H
+  end.
+  crush.
+Qed.
+
 Inductive classOf : config -> addr -> cls -> Prop :=
 | cls_of : forall χ ψ α o, χ α = Some o ->
                       classOf (χ, ψ) α (cname o).
-
-Ltac simpl_crush :=
-  match goal with
-  | [ H : (_, _) = (_, _) |- _] =>
-    inversion H; subst;
-    clear H
-  | [ H : _::_ = _::_ |- _] =>
-    inversion H; subst;
-    clear H
-  | [ H : Some _ = Some _ |- _] =>
-    inversion H; subst;
-    clear H
-  | [ Ha : ?x = ?y,
-           Hb : ?M ?x = Some _ |- _] =>
-    rewrite Ha in Hb
-  | [ Ha : ?M ?x = None,
-           Hb : ?M ?x = Some _ |- _] =>
-    rewrite Ha in Hb;
-    inversion Hb
-  | [ H : v_addr _ = v_addr _ |- _] =>
-    inversion H; subst;
-    clear H
-  | [ Ha : contn ?ϕ = _, Hb : contn ?ϕ = _ |- _] =>
-    rewrite Ha in Hb;
-    inversion Hb;
-    subst;
-    clear Hb
-  | [Ha : ?m ?a = _, Hb : ?m ?a = _ |- _] =>
-    rewrite Ha in Hb;
-    inversion Hb;
-    subst;
-    clear Hb
-  | [H : true = false |- _] =>
-    inversion H
-  | [H : false = true |- _] =>
-    inversion H
-  | [H : ?x <> ?x |- _] =>
-    contradiction H;
-    auto
-  end.
 
 Definition Object := classID 0.
 
@@ -749,6 +745,10 @@ Definition ObjectDefn := clazz Object
 
 Definition ObjectInstance := obj Object
                                  empty.
+
+Definition initial (σ : config) : Prop :=
+  exists c, σ = ([address 0 ↦ ObjectInstance] empty,
+            frm (address 0) empty c :: nil).
 
 Reserved Notation "M1 '⋄' M2 '≜' M"(at level 40).
 
@@ -786,6 +786,8 @@ Ltac auto_specialize :=
   match goal with
   | [H : ?P -> ?Q,
          H' : ?P |- _ ] => specialize (H H')
+  | [H : ?x = ?x -> _ |- _] =>
+    specialize (H eq_refl)
   end.
 
 Ltac notHyp P :=
@@ -931,3 +933,234 @@ Proof.
   repeat eexists;
     eauto.
 Qed.
+
+
+Ltac eq_auto :=
+  match goal with
+
+  | [Heqb : context[eqb ?a ?a]|- _] => rewrite eqb_refl in Heqb; auto
+  | [|- context[eqb ?a ?a]] => rewrite eqb_refl; auto
+
+  | [Heq : ?a1 <> ?a2, Heqb : context[eqb ?a1 ?a2]|- _] => rewrite neq_eqb in Heqb; auto
+  | [Heq : ?a1 <> ?a2, Heqb : context[eqb ?a2 ?a1]|- _] => rewrite eqb_sym in Heqb;
+                                                        rewrite neq_eqb in Heqb; auto
+  | [Heq : ?a1 <> ?a2 |- context[eqb ?a1 ?a2]] => rewrite neq_eqb; auto
+  | [Heq : ?a1 <> ?a2 |- context[eqb ?a2 ?a1]] => rewrite eqb_sym;
+                                               rewrite neq_eqb; auto
+
+  | [H : eqb ?a1 ?a2 = true |- _] =>
+    let Hnew := fresh in
+    assert (Hnew : a1 = a2);
+    [eapply eqb_eqp in H; auto|subst; auto]
+  | [H : eqb ?a1 ?a2 = false |- _] =>
+    let Hnew := fresh in
+    assert (Hnew : a1 <> a2);
+    [eapply eqb_neq in H; auto|auto]
+
+  | [H : Some ?a1 <> Some ?a2 |- _] =>
+    notHyp (a1 <> a2);
+    assert (a1 <> a2);
+    [intro Hcontra; subst; crush|auto]
+  end.
+
+Ltac map_rewrite :=
+  match goal with
+  | [H : context[update _ _] |-_] => unfold update in H; repeat eq_auto
+  | [|- context[update _ _]] => unfold update; repeat eq_auto
+  | [H : context[t_update _ _] |-_] => unfold t_update in H; repeat eq_auto
+  | [|- context[t_update _ _]] => unfold t_update; repeat eq_auto
+  | [H : context[empty] |-_] => unfold empty in H; repeat eq_auto
+  | [|- context[empty]] => unfold empty; repeat eq_auto
+  | [H : context[t_empty] |-_] => unfold t_empty in H; repeat eq_auto
+  | [|- context[t_empty]] => unfold t_empty; repeat eq_auto
+  | [H : context[fst (_, _)] |- _] => unfold fst in H; repeat eq_auto
+  | [|- context[fst (_, _)]] => unfold fst; repeat eq_auto
+  | [H : context[snd (_, _)] |- _] => unfold snd in H; repeat eq_auto
+  | [|- context[snd (_, _)]] => unfold snd; repeat eq_auto
+  end.
+
+Lemma partial_map_in_not_in_contra :
+  forall {A B : Type}`{Eq A}{m : partial_map A B} {a} {b},
+    m a = Some b ->
+    a ∉ m ->
+    False.
+Proof.
+  intros A B Heq m a b;
+    intros.
+  crush.
+Qed.
+
+Inductive contn_is : continuation -> config -> Prop :=
+| is_stmt : forall self lcl c χ ψ,
+    contn_is c (χ, frm self lcl c :: ψ).
+
+Hint Constructors contn_is : L_db.
+
+Lemma le_α_eq :
+  forall α1 α2, le_α α1 α2 ->
+           le_α α2 α1 ->
+           α1 = α2.
+Proof.
+  intros.
+  repeat match goal with
+         | [H : le_α ?α1 ?α2 |- _] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+  crush.
+Qed.
+
+Lemma max_χ_unique :
+  forall {B : Type} (χ : partial_map addr B) α1,
+    max_χ χ α1 ->
+    forall α2, max_χ χ α2 ->
+          α2 = α1.
+Proof.
+  intros.
+  repeat match goal with
+         | [H : max_χ ?χ ?α |- _] =>
+           inversion H;
+             subst;
+             clear H
+         end.
+  repeat destruct_exists_loo.
+  repeat match goal with
+         | [Ha : forall _ _, ?m _ = Some _ -> le_α _ ?α1,
+              Hb : forall _ _, ?m _ = Some _ -> le_α _ ?α2,
+              Hc : ?m ?α2 = Some _ |- _] =>
+           apply Ha in Hc
+         end.
+  apply le_α_eq;
+    auto.
+Qed.
+
+Lemma nil_app_contra :
+  forall {A : Type} l1 (a : A) l2,
+    nil = l1 ++ a :: l2 ->
+    False.
+Proof.
+  intros A l1;
+    induction l1;
+    intros;
+    simpl in *;
+    crush.
+Qed.
+
+Lemma cons_app_contra :
+  forall {A : Type} l1 (a1 a2 a3 : A) l2,
+    a1 :: nil = l1 ++ a2 :: a3 :: l2 ->
+    False.
+Proof.
+  intros A l1;
+    induction l1;
+    intros;
+    simpl in *;
+    crush.
+  apply nil_app_contra in H;
+    auto.
+Qed.
+
+Lemma length_neq :
+  forall {A : Type}{l1 l2 : list A},
+    length l1 <> length l2 ->
+    l1 <> l2.
+Proof.
+  intros A l1;
+    induction l1;
+    intros;
+    destruct l2;
+    simpl in *;
+    crush.
+Qed.
+
+Ltac simpl_crush :=
+  match goal with
+  | [ H : (_, _) = (_, _) |- _] =>
+    inversion H; subst;
+    clear H
+  | [ H : _::_ = _::_ |- _] =>
+    inversion H; subst;
+    clear H
+  | [ H : Some _ = Some _ |- _] =>
+    inversion H; subst;
+    clear H
+  | [ Ha : ?x = ?y,
+           Hb : ?M ?x = Some _ |- _] =>
+    rewrite Ha in Hb
+  | [ Ha : ?M ?x = None,
+           Hb : ?M ?x = Some _ |- _] =>
+    rewrite Ha in Hb;
+    inversion Hb
+  | [ H : v_addr _ = v_addr _ |- _] =>
+    inversion H; subst;
+    clear H
+  | [ Ha : contn ?ϕ = _, Hb : contn ?ϕ = _ |- _] =>
+    rewrite Ha in Hb;
+    inversion Hb;
+    subst;
+    clear Hb
+  | [Ha : ?m ?a = _, Hb : ?m ?a = _ |- _] =>
+    rewrite Ha in Hb;
+    inversion Hb;
+    subst;
+    clear Hb
+  | [H : true = false |- _] =>
+    inversion H
+  | [H : false = true |- _] =>
+    inversion H
+  | [H : ?x <> ?x |- _] =>
+    contradiction H;
+    auto
+  | [Ha : ?χ ?α = Some _,
+          Hb : max_χ ?χ ?α' |- _ ] =>
+    notHyp (inc α' <> α);
+    assert (inc α' <> α);
+    [eapply max_χ_neq; eauto|]
+  | [Ha : ?m ?a = Some ?b,
+          Hb : ?a ∉ ?m |- _] =>
+    contradiction (partial_map_in_not_in_contra Ha Hb)
+  | [H : contn_is _ _ |- _] =>
+    inversion H;
+    subst;
+    clear H
+  | [Ha : max_χ ?χ ?α1,
+          Hb : max_χ ?χ ?α2 |- _ ] =>
+    assert (α1 = α2);
+    [eapply max_χ_unique; eauto|subst; clear Ha]
+
+  | [H : _ ≔♢ ;; _ = _ ≔♢ ;; _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+  | [H : c_ _ = c_ _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+
+  | [H : _ ;; _ = _ ;; _ |- _ ] =>
+    inversion H;
+    subst;
+    clear H
+
+  | [H : nil = _ :: _ |- _ ] =>
+    inversion H
+  | [H : _ :: _ = nil |- _ ] =>
+    inversion H
+
+  | [H : nil = _ ++ _ :: _ |- _ ] =>
+    apply nil_app_contra in H;
+    crush
+  | [H : _ ++ _ :: _ = nil |- _ ] =>
+    symmetry in H;
+    apply nil_app_contra in H;
+    crush
+
+  | [H : _ :: nil = _ ++ _ :: _ :: _ |- _ ] =>
+    apply cons_app_contra in H;
+    crush
+  | [H : _ ++ _ :: _ :: _ = _ :: nil |- _ ] =>
+    symmetry in H;
+    apply cons_app_contra in H;
+    crush
+  end.

@@ -111,12 +111,6 @@ Ltac unique_restriction :=
     [eapply restrict_unique; eauto|subst; clear Hb]
   end.
 
-  Ltac disj_split :=
-    match goal with
-    | [H : _ \/ _ |- _ ] =>
-      destruct H
-    end.
-
   (** Lemma 5: Classical (4) *)
   Theorem sat_implies_not_nsat_mutind :
     (forall M1 M2 σ0 σ A, M1 ⦂ M2 ◎ σ0 … σ ⊨ A ->

@@ -61,32 +61,42 @@ Module Hoare(L : LanguageDef).
   Notation "M1 '⦂' M2 '◎' σ0 '…' '̱' '⊨' '{pre:' A1 '}' σ '{post:' A2 '}'" :=
     (M1 ⦂ M2 ⦿ {pre: fun σ => M1 ⦂ M2 ◎ σ0 … σ ⊨ A1} σ {post: fun σ' => M1 ⦂ M2 ◎ σ0 … σ' ⊨ A2})(at level 40).
 
-  Inductive contn_is : continuation -> config -> Prop :=
-  | is_stmt : forall self lcl c χ ψ,
-      contn_is c (χ, frm self lcl c :: ψ).
-
-  Hint Constructors contn_is : hoare_db.
-
   Notation "M1 '⦂' M2 '◎' σ0 '…s' '⊨' '{pre:' A1 '}' s '{post:' A2 '}'" :=
     (forall σ c, contn_is (s ;; c) σ -> (M1 ⦂ M2 ◎ σ0 … ̱ ⊨ {pre: A1 } σ {post: A2 }))(at level 40).
 
   Definition is_skip : config -> Prop :=
-    fun σ => exists b, contn_is (skip ;; b) σ.
+    fun σ => exists b, contn_is (c_ skip ;; b) σ.
 
   Definition is_call : config -> Prop :=
-    fun σ => exists α m args b, contn_is (call α m args ;; b) σ.
+    fun σ => exists x α m args b, contn_is (c_ call x α m args ;; b) σ.
 
   Definition is_rtrn : config -> Prop :=
-    fun σ => (exists v b, contn_is (rtrn v ;; b) σ) \/ (exists v, contn_is (c_rtrn v) σ).
+    fun σ => (exists v b, contn_is (c_ rtrn v ;; b) σ) \/ (exists v, contn_is (c_rtrn v) σ).
 
   Definition is_acc : config -> Prop :=
-    fun σ => exists x v b, contn_is (acc x v ;; b) σ.
+    fun σ => exists x v b, contn_is (c_ acc x v ;; b) σ.
 
   Definition is_mut : config -> Prop :=
-    fun σ => exists α f v b, contn_is (mut α f v ;; b) σ.
+    fun σ => exists α f v b, contn_is (c_ mut α f v ;; b) σ.
 
   Definition is_new : config -> Prop :=
-    fun σ => exists C args b, contn_is (new C args ;; b) σ.
+    fun σ => exists C args b, contn_is (c_ new C args ;; b) σ.
+
+  Definition empty_condition := (fun (_ : config) => True).
+  Notation "∅" := (empty_condition)(at level 40).
+
+  Definition waiting_frame_is :=
+    fun (f : config -> Prop) σ => exists ϕ1 ϕ2 ψ, snd σ = ϕ1 :: ϕ2 :: ψ /\
+                                                  f (fst σ, ϕ2 :: ψ).
+
+  Definition is_return_to :=
+    fun (f : config -> Prop) σ => is_rtrn σ /\
+                           waiting_frame_is f σ.
+
+  Definition is_call_to :=
+    fun (f : config -> addr -> Prop) σ =>
+      exists α, (exists x m args c, contn_is (c_ x ≔m α ▸ m ⟨ args ⟩ ;; c) σ) /\
+           f σ α.
 
   Close Scope chainmail_scope.
   Close Scope reduce_scope.

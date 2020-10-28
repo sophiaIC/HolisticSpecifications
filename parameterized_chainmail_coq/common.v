@@ -116,22 +116,6 @@ Inductive finite {A B : Type}`{Eq A} : partial_map A B -> Prop :=
 
 Hint Constructors finite : map_db.
 
-Ltac andDestruct :=
-  repeat match goal with
-         | [H : ?P /\ ?Q |- _] => let Ha := fresh "Ha" in
-                               let Hb := fresh "Hb" in
-                               destruct H as [Ha Hb]
-         end.
-
-Ltac eqbNatAuto :=
-  match goal with
-  | [|- context[?n =? ?m]] => let Heq := fresh "Heq" in
-                            destruct (Nat.eq_dec n m) as [Heq|Heq];
-                            [subst; rewrite Nat.eqb_refl
-                            |apply Nat.eqb_neq in Heq;
-                             rewrite Heq]
-  end.
-
 Create HintDb closed_db.
 
 
@@ -161,3 +145,27 @@ Definition fresh_in_map {A B : Type}`{Eq A} (a : A) (m : partial_map A B) : Prop
   m a = None.
 
 Notation "a '∉' m" := (fresh_in_map a m)(at level 40).
+
+(** Tactics *)
+
+Ltac disj_split :=
+  match goal with
+  | [H : _ \/ _ |- _ ] =>
+    destruct H
+  end.
+
+Ltac andDestruct :=
+  repeat match goal with
+         | [H : ?P /\ ?Q |- _] => let Ha := fresh "Ha" in
+                               let Hb := fresh "Hb" in
+                               destruct H as [Ha Hb]
+         end.
+
+Ltac eqbNatAuto :=
+  match goal with
+  | [|- context[?n =? ?m]] => let Heq := fresh "Heq" in
+                            destruct (Nat.eq_dec n m) as [Heq|Heq];
+                            [subst; rewrite Nat.eqb_refl
+                            |apply Nat.eqb_neq in Heq;
+                             rewrite Heq]
+  end.
