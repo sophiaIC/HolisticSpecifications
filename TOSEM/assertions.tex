@@ -1,5 +1,5 @@
 
-\Chainmail assertions (details in appendix \ref{sect:standard}) consist of (pure) expressions \e, comparisons between expressions, classical
+\Chainmail assertions (details in \jm{Section} \ref{sect:standard}) consist of (pure) expressions \e, comparisons between expressions, classical
 assertions about the contents of heap and stack, the usual logical
 connectives, as well as our holistic concepts.
 In this section we focus on the novel,
@@ -33,9 +33,9 @@ challenges, which we discuss in this section.}
  \[
  \begin{array}{lcl}
   ~  \\
- \prg{v}  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \alpha ~\SOR~ \prg{x} \\
+ \prg{v}  &\BBC&    \kwN{true}   ~\SOR~  \kwN{false}   ~\SOR~  \kwN{null}  ~\SOR~  \alpha \\
   ~  \\
- \SE  &\BBC&    \prg{v}\ ~\SOR~ \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp\\
+ \SE  &\BBC&    \prg{v}\ ~\SOR~ \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp ~\SOR~ \prg{x} \\
      \\
  \A &\ \BBC   &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
     \SE\in\prg{S}   \mid  \  \\
@@ -548,6 +548,29 @@ where
 $\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
 \end{itemize}
 \end{definition}
+\jm{Constrained reduction (defined in Definition \ref{def:constrained_reduction}) is a form of reduction
+that is restricted only to reduction steps that arise from the top frame of the stack, and does not consider 
+reduction steps that result as a method return from the top frame. As stated above, this addresses challenge (b).
+Constrained reduction is a strict subset of reduction, and for all modules $\M$ and $\M'$, and configurations $\sigma_1$ and $\sigma_2$, 
+if $\M\mkpair \M',  \sigma_1\lceil\leadsto\rceil \sigma_2$ (or $\M\mkpair \M',  \sigma_1\lceil\leadsto*\rceil \sigma_2$), then 
+it follows that $\M\mkpair \M',  \sigma_1 \leadsto \sigma_2$ (or $\M\mkpair \M',  \sigma_1\leadsto* \sigma_2$). 
+The reverse however is not true. Reduction does not imply constrained reduction.
+Since constrained reduction does not consider any frames in the stack preceding the top frame of $\sigma_1$, 
+$\sigma_2$ may only arise from the execution of the current method. For example, if the top frame of $\sigma_1$ 
+is the result of a method call to some method $\prg{m}$, then constrained reduction is restricted to only intermediate 
+configurations that arise from the evaluation of $\prg{m}$, and not beyond that.}
+
+\jm{Constrained reduction is used in the satisfaction of the temporal operators $\Future{A}$ and $\Next{A}$, defined in Definition \ref{def:valid:assertion:time}.
+This restriction is necessary for the definition the future temporal operators, as satisfaction of Chainmail assertions are generally 
+concerned with the current state of the program, and are not able to peel back the stack to inspect underlying frames. As an example, 
+specification (2) of the introductory bank account example asserts that future changes to a bank account implies the current object has access to that account.
+If the reduction implied by future assertions were not constrained, this would not necessarily be true unless we inspected every frame in the stack to check access.
+Further, the use of constrained reduction is necessary in maintaining some expected properties of the temporal operators. 
+While the underlying language \LangOO is deterministic and linear in its reduction, and thus there is exactly one path from the initial configuration of the program to any 
+future configuration that must pass through the current configuration, this is not generally true of languages with potentially branching reduction. If
+reduction of \LangOO were non-linear, and satisfaction of $\Future{\A}$ (or $\Next{\A}$) were not defined with constrained reduction, 
+the satisfaction of $\A$ would not generally imply the satisfaction of $\Future{\Past{A}}$ as $\A$ would not necessarily be satisfied by every branch of the program leading to the future configuration.
+The inverse however does hold, i.e. due to the use of an initial configuration it always holds that satisfaction of $\A$ implies satisfaction of $\Past{\Future{\A}}.$}
 \begin{definition}[Time Assertions]  \label{def:valid:assertion:time}
 For any modules $\M$, $\M'$, and assertion  $\A$ we define
 \begin{itemize}
@@ -605,9 +628,15 @@ $\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpa
 
 Whilst the above shows that from $\Future { \Using{A}{\SF} }$ we cannot conclude $\Using { \Future{A} }{\SF}$, it is also worth noting that in general the inverse does not hold either. $\Future { \Using{A}{\SF} }$ restricts $A$ in the future, meaning any objects instantiated in the between the present and then are excluded, whereas $\Using { \Future{A} }{\SF}$ restricts the space in the present, so the objects are considered in A. Taking a new configuration $\sigma_6$  with continuation \prg{x := new Account(100, null)} and otherwise similar to $\sigma_1$, and $\SF = \emptyset$, the assertion $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Future{ \Using { \prg{x.bank} = \prg{null} } {\SF}}$  does not hold, as \prg{x} is not in $S$. However, $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Using { \Future{ \prg{x.bank} = \prg{null} } } {\SF}$ does hold, since the restriction of the configuration to $\SF$ in the present doesn't exclude the new \prg{Account} with field $\prg{bank} = \prg{null}$, created in the next statement, being considered by \Future{\_}.
 
-\sdf{One interesting implication of your definitions is that the denotation of a local variable inside a temporal connective may be different to that outside. For example, in a configuration $\sigma$ where the current receiver belonged to class \prg{A}, and where the current continuation contained a call to an object of class \prg{B}, we would have that $..,..,\sigma \models \prg{this}:\prg{A} \wedge \Future{ \prg{this}:\prg{B}}$. This raises the question as to how we can assert future properties of an object which is currently denoted by a local variable, when that local variable may change denotation, or even get our of scope. The answer is to use universally quantified addresses. For example,  $\forall \alpha_t.\ [ \ \alpha_t  = \prg{this}\ \rightarrow\ \Future{\alpha_t.\prg{balance}=300}\ ]$ asserts that in some future configuration, the object currently denoted by  \prg{this} will have a \prg{balance} of 300.}
-\footnote{\sdf{This is how it was}:\ \ 
-Using local variables in a past or future context allows specifications to use their past or future values.  \mrr[]{However, this means a variable used in an assertion may not refer to its current value, or event to the same value inside different temporal connectives in the assertion.} For example, that at some point in the future the receiver will have access to an object at $\alpha$ can be asserted with $\forall r . \Future {\prg{this} = r \rightarrow \CanAccess{r}{\alpha}}$, where \prg{this} refers to the future value of \prg{this}. However, to state some future or past property about the current value of a variable, it must be equated with its address in the present, $\forall \alpha_x. (\alpha_x = \x \rightarrow \dots)$. \mrr[What about garbage collection arenas]{Since in the formalisation addresses do not vary over time, the address name referenced in the present refers to the same object in the past or future.}}
+\sdf{One interesting implication of your definitions is that the denotation of a local variable inside a temporal connective may be different to that outside. For example, in a configuration $\sigma$ where the current receiver \jm{belongs} to class \prg{A}, and where the current continuation \jm{contains} a call to an object of class \prg{B}, we would have that $..,..,\sigma \models \prg{this}:\prg{A} \wedge \Future{ \prg{this}:\prg{B}}$. This raises the question as to how we can assert future properties of an object which is currently denoted by a local variable, when that local variable may change denotation, or even \jm{go out} of scope. The answer is to use universally quantified addresses. For example,  $\forall \alpha_t.\ [ \ \alpha_t  = \prg{this}\ \rightarrow\ \Future{\alpha_t.\prg{balance}=300}\ ]$ asserts that in some future configuration, the object currently denoted by  \prg{this} will have a \prg{balance} of 300.}
+\footnote{
+\color{dkgreen}{This is how it was:}\color{black}\\
+Using local variables in a past or future context allows specifications to use their past or future values.  
+\textcolor{offblue}{{However, this means a variable used in an assertion may not refer to its current value, or event to the same value inside different temporal connectives in the assertion.}}
+For example, that at some point in the future the receiver will have access to an object at $\alpha$ can be asserted with $\forall r . \Future {\prg{this} = r \rightarrow \CanAccess{r}{\alpha}}$, where \prg{this} refers to the future value of \prg{this}. However, to state some future or past property about the current value of a variable, it must be equated with its address in the present, $\forall \alpha_x. (\alpha_x = \x \rightarrow \dots)$.
+\textcolor{offblue}{{Since in the formalisation addresses do not vary over time, the address name referenced in the present refers to the same object in the past or future.}}
+}
+\mrr[footnote: What about garbage collection arenas]{}
 
 %Local variables referring to their past or future values in temporal connectives 
 \sdf{Our treatment of the meaning of local variables inside} temporal connectives 

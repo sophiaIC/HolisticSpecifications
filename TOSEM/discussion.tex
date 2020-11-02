@@ -13,7 +13,7 @@ This is why we support bi-directional temporal operators (``will'',
 ``was'' etc) rather than just one temporal direction. Some assertions
 are easier to express looking forwards (if a vending machine takes a
 coin it will eventually dispense a chocolate bar) while other
-assertions as easier to express looking backwards (if a vending
+assertions \jm{are} easier to express looking backwards (if a vending
 machine dispenses a chocolate bar, it has already accepted the coin
 to pay for it).
 
@@ -47,7 +47,7 @@ Our solutions is based on a two-tier approach: We distinguish between expression
 where expressions may appear in assertions, and where 
 we allow unrestricted recursion in expressions.
 Thus we do not support user-defined, recursive predicates, but do allow
-suer-defined recursive functions in the form of ghost fields.
+\jm{user}-defined recursive functions in the form of ghost fields.
 An assertion which consists of an expression has the value of that
 expression, if the  expression has a  finite expansion returning  that a value,
 and otherwise is $\false.$ 
@@ -99,6 +99,107 @@ whether it is split into many multiply-inherited superclasses, traits,
 default methods in interfaces or protocols, etc.\ is irrelevant,
 provided we can model the resulting (flattened) behaviour of such a
 composition as a single logical \LangOO\ class.
+
+\jm{
+\paragraph{Linearity}
+Earlier work on \Chainmail~\cite{FASE} featured a non-linear temporal logic
+where all possible executions through a program were considered simultaneously.
+In considering the past, all possible branches stemming from all possible 
+initial configurations that might have preceded the current configuration
+were considered. Similarly, when considering the future, all possible branches 
+that might arise from the current configuration were considered. In this paper we
+constrain satisfaction of temporal operators to consider only a single execution 
+path at a time. This is done by (a) designing the underlying language such that its
+execution is deterministic, thereby ensuring the future is linear, and  (b) considering 
+satisfaction in relation to only a single initial configuration at a time, thereby 
+ensuring the past is linear.
+}
+
+\jm{
+A linear temporal logic provides \Chainmail with several useful properties that 
+were previously not present. Lemma \ref{lemma:past_disj_distributive} states that 
+disjunctions are distributive over the past.
+\begin{lemma}[Past Distributivity]\label{lemma:past_disj_distributive} 
+For assertions $\A_1$ and $\A_2$, 
+disjunctions are distributive over the past.
+\begin{enumerate}
+\item
+$\Prev{\A_1\ \vee\ \A_2}\ \equiv\ \Prev{\A_1}\ \vee\ \Prev{\A_2}$
+\item
+$\Past{\A_1\ \vee\ \A_2}\ \equiv\ \Past{\A_1}\ \vee\ \Past{\A_2}$
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+Proofs of both  (1) and (2) follow similar strategies, and for simplicity we only show the 
+proof of (1).
+Since the past (both $\Prev{}$ and $\Past{}$) is restricted to  a single branch,
+it follows that for all $\M_1$, $\M_2$, $\sigma_0$, and $\sigma$ such that 
+$\M_1\ \mkpair\ \M_2, \sigma_0, \sigma\ \models\ \Prev{\A_1\ \vee\ \A_2}$ 
+(or $\M_1\ \mkpair\ \M_2, \sigma_0, \sigma\ \models\ \Past{\A_1\ \vee\ \A_2}$),
+there exists some $\sigma'$ such that 
+$$
+\M_1\ \mkpair\ \M_2 \bullet \sigma_0\ \leadsto^*\ \sigma'
+$$
+and
+$$\M_1\ \mkpair\ \M_2 \bullet \sigma'\ \leadsto\ \sigma$$
+and
+$$\M_1\ \mkpair\ \M_2, \sigma_0, \sigma'\ \models\ \A_1\ \vee\ \A_2$$
+It is then easy to demonstrate that either $\A_1$ or $\A_2$ must be 
+satisfied by $\sigma'$, fulfilling the requirements to prove satisfaction of
+$$\M_1\ \mkpair\ \M_2, \sigma_0, \sigma\ \models\ \Prev{\A_1}\ \vee\ \Prev{\A_2}$$
+\end{proof}
+It is perhaps not immediately clear why linearity is required for Lemma \ref{lemma:past_disj_distributive}.
+If the past is not linear, then a configuration might have many previous configurations (in the case of $\Prev{}$),
+each of which satisfy either $\A_1$ or $\A_2$, but some that don't satisfy one of $\A_1$ or $\A_2$.
+}
+
+\jm{
+Lemma \ref{lemma:change_sat} states that if satisfaction differs over time, then 
+there is a specific moment in time when that change occurs.
+\begin{lemma}[Change of Satisfaction]\label{lemma:change_sat}
+If satisfaction of an assertion changes over time, then there is a specific moment when that change occurs.
+\begin{enumerate}
+\item
+$\A\ \wedge\ \Future{\neg \A}\ \subseteqq\ \Future{\Prev{\A}\ \wedge\ \neg \A}$
+\item
+$\A\ \wedge\ \Past{\neg \A}\ \subseteqq\ \Prev{\neg \A}\ \vee\ \Past{\Prev{\neg \A}\ \wedge\ \A}$
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+We do not provide the complete proof, but rather a proof sketch.
+The proof of both proceeds by induction on the pair reduction implied by $\Future{\neg \A}$ and $\Past{\neg \A}$, 
+the base case being a single pair reduction step.
+\end{proof}
+Lemma \ref{lemma:change_sat} is particularly useful in constructing proofs of satisfaction 
+in cases where quantities change over time. For example, the Bank Account example of 
+Section \ref{sect:motivate:Bank} asserts that if the \prg{balance} changes, then it must happen 
+as a result of a call to the \prg{deposit} method. Lemma \ref{lemma:change_sat} is required 
+to identify the moment of change.}
+
+\jm{
+The difference between a linear and non-linear formulation of \Chainmail that grants the properties 
+expressed in Lemmas \ref{lemma:past_disj_distributive} and \ref{lemma:change_sat} 
+is in the semantics of the temporal operators. As an example, consider the result of Lemma \ref{lemma:change_sat}
+in a non-linear \Chainmail where multiple possible branches are considered during satisfaction. 
+While it is certainly true that if satisfaction of an assertion 
+changes over time, then it follows that there is some moment when that change 
+occurs, it does not mean that that change occurs at the same configuration in all
+execution paths.
+}
+
+\jm{
+The \Chainmail presented in this paper is linear in part because of the non-determinism
+of \LangOO, the underlying language.
+Linearity is much easier to achieve if the underlying language is deterministic, 
+as this means that the future is guaranteed to be linear, and only the initial configuration 
+needs to be fixed. The obvious downside of this approach is that language semantics are 
+not generally deterministic, and if the underlying language were not deterministic, 
+the definition of satisfaction would have to be extended to account for a non-linear 
+future. This could perhaps be done by dividing execution into discrete paths, and
+determining satisfaction on a per-path basis, however this would likely be fairly complex.
+An alternative 
+}
+
 
 % Julian: below is some discussion about the coq proofs.
 
