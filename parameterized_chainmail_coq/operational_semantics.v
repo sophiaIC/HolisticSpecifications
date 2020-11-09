@@ -92,17 +92,17 @@ Module AbstractOperationalSemantics(L : LanguageDef).
   Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳…' σ'" (at level 40).
 
   Inductive internal_reductions : mdl -> mdl -> config -> config -> Prop :=
-  | pr_single : forall M1 M2 M σ σ', M1 ⋄ M2 ≜ M ->
-                                     M ∙ σ ⤳ σ' ->
-                                     external_self M1 M2 σ ->
-                                     internal_self M1 M2 σ' ->
-                                     M1 ⦂ M2 ⦿ σ ⤳… σ'
+  | intr_single : forall M1 M2 M σ σ', M1 ⋄ M2 ≜ M ->
+                                       M ∙ σ ⤳ σ' ->
+                                       external_self M1 M2 σ ->
+                                       internal_self M1 M2 σ' ->
+                                       M1 ⦂ M2 ⦿ σ ⤳… σ'
 
-  | pr_trans : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
-                                       M1 ⋄ M2 ≜ M ->
-                                       M ∙ σ ⤳ σn ->
-                                       internal_self M1 M2 σn ->
-                                       M1 ⦂ M2 ⦿ σ1 ⤳… σn
+  | intr_trans : forall M1 M2 M σ1 σ σn, M1 ⦂ M2 ⦿ σ1 ⤳… σ ->
+                                         M1 ⋄ M2 ≜ M ->
+                                         M ∙ σ ⤳ σn ->
+                                         internal_self M1 M2 σn ->
+                                         M1 ⦂ M2 ⦿ σ1 ⤳… σn
 
   where "M1 '⦂' M2 '⦿' σ '⤳…' σ'" := (internal_reductions M1 M2 σ σ') : reduce_scope.
 
