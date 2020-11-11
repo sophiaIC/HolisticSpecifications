@@ -1,0 +1,462 @@
+\title{Model Outline}	
+
+\documentclass[12pt]{article}
+
+\usepackage{mathpartir}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{color,soul}
+\usepackage{oz}
+\usepackage{listings}
+\usepackage{color}
+
+\newtheorem{definition}{Definition}
+
+\renewcommand\lstlistingname{Quelltext} % Change language of section name
+
+\lstset{ % General setup for the package
+	language=Java,
+	basicstyle=\small\sffamily,
+	numbers=left,
+ 	numberstyle=\tiny,
+	frame=tb,
+	tabsize=4,
+	columns=fixed,
+	showstringspaces=false,
+	showtabs=false,
+	keepspaces,
+	morekeywords={field, method},
+	commentstyle=\color{red},
+	keywordstyle=\color{blue}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Syntax}
+\begin{figure}[h]
+$$
+\begin{array}{llr}
+s & ::= &\\ 
+| & \texttt{skip} &\\
+| & \texttt{call}\ \alpha.\texttt{m}(\overline{\texttt{x} \mapsto v}) &\\ 
+| & \texttt{acc}\ \texttt{x}\ v &\\
+| & \texttt{drop}\ \texttt{x} &\\
+| & \texttt{mut}\ \alpha.\texttt{f} := v &\\
+| & \texttt{new}	\ \texttt{C}(\overline{\texttt{f} \mapsto v}) &\\
+| & \texttt{return}\ v
+\end{array}
+\begin{array}{llr}
+p & ::= &\\ 
+| & \texttt{true} &\\
+| & \texttt{false} &\\
+| & i & \textit{where}\ i \in \mathbb{Z}
+\end{array}
+\begin{array}{llr}
+v & ::= &\\ 
+| & p &\\
+| & \alpha\\
+| & \texttt{null}
+\end{array}
+\begin{array}{llr}
+b & ::= &\\ 
+| & \texttt{return}\ v &\\
+| & \texttt{x} := \bigcirc\ ; b&\\
+| & s\ ; b\\
+\end{array}
+$$
+\[
+\phi\ ::=\ (\texttt{this:=}\alpha\; ;\texttt{local:=}\overline{v}\; ; \texttt{contn:=}\{b\})\\
+\psi\ ::=\ \phi\ |\ \phi : \psi\\
+o\ ::=\ (\texttt{class:=C}\; ; \texttt{fields:=}\overline{\texttt{f}\mapsto v})\\
+\chi\ ::=\ \overline{\alpha \mapsto o}\\
+\sigma\ ::=\ (\chi, \psi)\\
+\mathcal{B} : \overline{\texttt{x} \mapsto v}\ \rightarrow\ b \\
+\texttt{CDef}_\texttt{E}\ ::=\ \texttt{class}\ \texttt{C} \{ 
+	\overline{\texttt{f}}\; ; 
+	\overline{\texttt{m} \mapsto \{ \mathcal{B}\}}
+\}\\
+\mathcal{M} : \sigma\ \rightarrow\ \sigma \\
+\mathcal{H} : \{P\}\ \_\ \{Q\}  \\
+\texttt{CDef}_\texttt{I}\ ::=\ \texttt{class}\ \texttt{C} \{ 
+	\overline{\texttt{f}}\; ; 
+	\overline{\texttt{m} \mapsto \overline{\mathcal{H}};\ \{\mathcal{M}\}}
+\}\\
+M_{\texttt{E}}\ ::=\ \overline{\texttt{C} \mapsto \texttt{CDef}_\texttt{E}}\\
+M_{\texttt{I}}\ ::=\ \overline{\texttt{C} \mapsto \texttt{CDef}_\texttt{I}}
+\]
+\caption{Syntax}
+\label{f:syntax}
+\end{figure}
+
+
+\section{Operational Semantics}
+
+\begin{figure}[h]
+\hfill \fbox{$M_\texttt{I}\ \fcmp\ M_\texttt{E}\ \bullet\ \sigma_1\ \leadsto\ \sigma_2$}
+\begin{mathpar}
+\infer
+	{
+	\alpha.\texttt{f},\ v\ \in\ visible((\chi, \psi), (\chi, \psi).\texttt{this}) \\
+	(\chi, \psi).\texttt{contn:=}\ \{\texttt{mut}\ \alpha.\texttt{f}\ \texttt{:=}\ v\ ; \ b\}
+	}
+	{
+	M_\texttt{I}\ \fcmp\ M_\texttt{E}\ \bullet\ 
+		(\chi, \psi)\ 
+		\leadsto\ 
+		(\chi[\alpha.\texttt{f} \mapsto v], \psi[\texttt{contn:=\{b\}}])
+	}
+	\quad (\textsc{Mut})
+	\and
+\infer
+	{
+	\overline{v}\ \in\ visible((\chi, \psi), (\chi, \psi).\texttt{this}) \\
+	\phi.\texttt{contn:=}\ \{\texttt{x}\ :=\ \texttt{new}\ \texttt{C}(\overline{f\ \mapsto\ v})\ ; \ b\} \\
+	\phi' = \phi[\texttt{local:=}[x \mapsto \alpha]\phi.\texttt{local}\ ;\ \texttt{contn:=}\{b\}] \\
+	\alpha\ \textit{fresh in}\ \chi \\
+	o = (\texttt{class:=C}\ ;\ \texttt{fields:=}\overline{\texttt{f}\ \mapsto\ v})
+	}
+	{
+	M_1\ \fcmp\ M_2\ \bullet\ 
+		(\chi, \phi:\psi)\ 
+		\leadsto\ 
+		((\chi)[\alpha \mapsto o], \phi\ :\ \psi)
+	}
+	\quad (\textsc{New})
+	\and
+\infer
+	{
+	\alpha_\texttt{this} = (\chi, \psi).\texttt{this} \\
+	\alpha, \overline{v}\ \in\ visible((\chi, \psi), \alpha_\texttt{this}) \\
+	classOf((\chi, \psi), \alpha) = \texttt{C} \\
+	M_2(C).m = \{b\}\\
+	(\chi, \psi)\texttt{.contn} = \{\texttt{x}\ :=\ \texttt{call}\ \alpha.\texttt{m}(\overline{v})\}
+	}
+	{
+	M_1\ \fcmp\ M_2\ \bullet\ 
+		(\chi, \psi)\ 
+		\leadsto\ 
+		(\chi, (\texttt{this:=}\alpha_\texttt{this}\ ;\ \texttt{local:=}\overline{v}\ ;\ \texttt{contn:=}\{b\})\ :\ \psi)
+	}
+	\quad (\textsc{Call})
+	\and
+\infer
+	{ 
+	\sigma_1 = (\chi, \phi_1\ :\ \phi_2 \ :\ \psi) \\
+	v\ \in\ visible(\sigma_1, \sigma_1.\texttt{this}) \\
+	\phi_1.\texttt{contn:=}\ \{\texttt{return}\ v\ ; \ b\} \\
+	\phi = \phi_2[\texttt{local:=}\phi_2.\texttt{local}\cup\{v\}] 
+	}
+	{
+	M_1\ \fcmp\ M_2\ \bullet\ 
+		\sigma_1\ 
+		\leadsto\ 
+		(\chi, \phi\ :\ \psi)
+	}
+	\quad (\textsc{Rtrn$^1$})
+	\and
+\infer
+	{ 
+	v\ \in\ visible((\chi, \phi_1\ :\ \phi_2 \ :\ \psi) , \phi_1.\texttt{this}) \\
+	\phi_1.\texttt{contn:=}\ \{\texttt{return}\ v\} \\
+	\phi = \phi_2[\texttt{local:=}[\texttt{x}\ \mapsto\ v]\phi_2.\texttt{local}] 
+	}
+	{
+	M_1\ \fcmp\ M_2\ \bullet\ 
+		(\chi, \phi_1\ :\ \phi_2 \ :\ \psi) \ 
+		\leadsto\ 
+		(\chi, \phi\ :\ \psi)
+	}
+	\quad (\textsc{Rtrn$^2$})
+\end{mathpar}
+\caption{Pair Reduction.}
+\label{f:pair_reduction}
+\end{figure}
+
+
+\section{External and Internal Steps}
+
+Pair reduction consists of a series of either external or internal steps. That is any pair reduction step of the form
+$$M_1\ \fcmp\ M_2\ \bullet\ \sigma_1\ \leadsto\ \sigma_2$$
+is either
+\begin{enumerate}
+\item
+An external step: i.e. a single reduction step purely between external frames. Only external objects can be modified in an external step.
+\item
+an internal step: a series of internal steps between two external frames that takes one of the following forms:
+\begin{enumerate}
+\item \texttt{call-call}: a method call on an internal object that in its execution makes an external method call. The resulting stack introduces a continuous block of internal frames  to the top of the stack.
+\item \texttt{call-return}: a method call on an internal object that returns without making any external method calls. 
+The resulting stack is more or less equal to to the initial stack (not including modifications to the local environment and continuation of the top frame).
+\item \texttt{return-call}: a return from a prior internal to external method call, followed by another method call. The resulting stack is  a single external frame on top of a continuous block of internal frames.
+\item \texttt{return-return}: a return from a prior internal to external method call, followed by a return from a prior external to internal method call. The resulting stack removes a continuous block of internal frames from the stack.
+\end{enumerate}
+\end{enumerate}
+
+The distinction between internal and external steps is important because it determines which objects in the heap might be modified during a particular pair reduction step, and what kind of internal reduction step is important because it is required to determine to which possible internal execution path might be 
+
+
+\section{Changes}
+
+In proving satisfaction of different specifications, it is useful to investigate when different portions of the heap is modified.
+Many specifications assert that certain portions of the heap can only be modified under certain conditions, and this is often 
+done using temporal operators. As a simple example, the bank account example from the paper:
+ 
+  \vspace{.01in}
+(BankSpec)\ \  $\triangleq$\\ 
+$\forall \texttt{a}.[\ \ \texttt{a}:\texttt{Account} \wedge \texttt{changes}\langle{\texttt{a.balance}}\rangle  \ \    
+    \longrightarrow \ \    \hfill$ \\
+  $\strut \hspace{2.3cm} 
+% TODO explain:
+% we no longer need Past here, as we are ion visible states 
+  \exists \texttt{o}. [\    \texttt{o}\ \texttt{calls}\ {\texttt{a.}}{\texttt{deposit}}({\_,\_}) \vee\  \texttt{o}\ \texttt{calls}\ {\_.}{\texttt{deposit}}({\texttt{a},\_})\rangle\  \ ] \ \ \ \ ] \hfill $
+\vspace{.05in}
+
+Currently there is no \texttt{changes} assertion in  chainmail, however one might encode \texttt{changes} using \texttt{next}:
+$$\texttt{changes}\langle \texttt{x.f} \rangle = \exists \texttt{i}. [\texttt{x.f} = i\ \wedge\ \texttt{next}\langle \texttt{x.f}\neq \texttt{i} \rangle]$$
+The above encoding does not generally capture \texttt{changes} because \texttt{next} has no concept of the future if 
+the current configuration is a method return statement. This does not technically matter for \texttt{changes} because 
+method return does not modify fields. This arises more problematically if we need to assert that a reduction step 
+changes \texttt{access}, as this *can* be changed by method return (i.e. via the local enviroment).
+
+Of the 4 kinds of internal steps, a version of \texttt{changes} that is defined using \texttt{next} can only 
+capture internal steps of the form of (a) and (b), and not internal steps of the form of (c) and (d).
+
+\subsection{Hoare Logic}
+Define a Hoare triple as 
+$$M_1\ \fcmp\ M_	2, \sigma_0 \vDash \{A_1\}\ \sigma\ \{ A_2\}$$
+That is, for modules $M_1$ and $M_2$, initial configuration $\sigma_0$, current configuration $\sigma$, and assertions $A_1$ and $A_2$, 
+if $A_1$ is satisfied before reduction of $\sigma$ then $A_2$ will be satisfied afterward.
+
+Using such a hoare triple, we can define \texttt{changes} as such:
+$$M_1\ \fcmp\ M_	2, \sigma_0, \sigma \vDash \texttt{changes}\langle A \rangle\ \equiv\ M_1\ \fcmp\ M_2, \sigma_0 \vDash \{A\}\ \sigma\ \{ \neg A\}$$
+In most cases (I think, ..., probably, ..., not sure) we are concerned with changes that require an internal step, and not an external one. For this purpose, 
+it is helpful if we assume that the internal module $M_1$ is fully specified with classical specs. That is, for every possible pass through internal code 
+(of the forms listed (a), (b), (c), and (d) above) that internal step is fully specified with regards to modifications to the heap. In the bank account example
+this means that we are able to identify all possible internal methods that might modify the balance of an account, and thus determine that the only 
+possible step that might result in such a change is a call to \texttt{deposit}.
+
+\section{Examples}
+
+We classify pair reduction steps in the following way.
+\begin{definition}
+\begin{mathpar}
+\infer
+	{(M_1\ \circ\ M_2)\ \bullet\ \sigma\ \leadsto\ \sigma_1\ \leadsto\ \ldots\ 
+	\leadsto\ \sigma_n\ \leadsto\ \sigma'\\
+	(\forall \sigma_i.\ M_1\ \fcmp\ M_2, \sigma_0, \sigma_i\ \vDash \texttt{internal}\langle \sigma_i.(\texttt{self}) \rangle)\\
+	M_2, \sigma_0, \sigma\ \vDash \texttt{external}\langle \sigma.(\texttt{self}) \rangle\\
+	M_2, \sigma_0, \sigma'\ \vDash \texttt{external}\langle \sigma'.(\texttt{self}) \rangle}
+	{M_1\ \fcmp\ M_2\ \bullet\ \sigma\ \leadsto^\texttt{int}\ \sigma'}
+	\quad(\textsc{Int})
+	\and
+\infer
+	{(M_1\ \circ\ M_2)\ \bullet\ \sigma\ \leadsto\ \sigma'\\
+	M_2, \sigma_0, \sigma\ \vDash \texttt{external}\langle \sigma.(\texttt{self}) \rangle\\
+	M_2, \sigma_0, \sigma'\ \vDash \texttt{external}\langle \sigma'.(\texttt{self}) \rangle}
+	{M_1\ \fcmp\ M_2\ \bullet\ \sigma\ \leadsto^\texttt{ext}\ \sigma'}
+	\quad(\textsc{Ext})
+\end{mathpar}
+\end{definition}
+\begin{definition}
+$$M_1\ \fcmp\ M_2\ \bullet\ \sigma\ \leadsto\ \sigma'$$
+if and only if
+\begin{itemize}
+\item
+$M_1\ \fcmp\ M_2\ \bullet\ \sigma\ \leadsto^\texttt{int}\ \sigma'$ or
+\item
+$M_1\ \fcmp\ M_2\ \bullet\ \sigma\ \leadsto^\texttt{ext}\ \sigma'$
+\end{itemize}
+\end{definition}
+
+Next we define some useful properties.
+
+$$\texttt{changes}\langle A \rangle\ \equiv\ A\ \wedge\ \texttt{next}\langle \neg A \rangle$$
+$$\texttt{changed}\langle A \rangle\ \equiv\ \neg A\ \wedge\ \texttt{prev}\langle A \rangle$$
+
+\begin{mathpar}
+\infer
+	{
+	\sigma\ \vDash\ \texttt{changes}\langle A \rangle
+	}
+	{
+	\sigma\ \vDash\ \texttt{next}\langle\texttt{changed}\langle A \rangle \rangle
+	}
+	\and
+\infer
+	{
+	\sigma\ \vDash\ A \\
+	\sigma\ \vDash\ \texttt{will}\langle \neg A \rangle
+	}
+	{
+	\sigma\ \vDash\ \texttt{will}\langle\texttt{changed}\langle A \rangle\rangle
+	}
+	\and
+\infer
+	{
+	\sigma\ \vDash\ A_1\ \longrightarrow\ A_2 \\
+	\sigma\ \vDash\ \texttt{will}\langle A_1 \rangle
+	}
+	{
+	\sigma\ \vDash\ \texttt{will}\langle A_2 \rangle
+	}
+	\and
+\infer
+	{
+	\sigma\ \vDash\ \texttt{changed}\langle A \rangle
+	}
+	{
+	\sigma\ \vDash\ \texttt{prev}\langle A \rangle
+	}
+	\and
+\infer
+	{
+	\sigma\ \vDash\ \texttt{changed}\langle A \rangle
+	}
+	{
+	\sigma\ \vDash\ \neg A
+	}
+\end{mathpar}
+
+
+\begin{definition}
+For an initial configuration $\sigma_0$, internal module $M_1$, and external module $M_2$, we define the following:
+\begin{itemize}
+\item
+$\Sigma(\sigma_0) = \{\sigma_0\} \cup\ \{\sigma | M_1\ \fcmp\ M_2\ \bullet\ \sigma_0 \leadsto^*\ \sigma\}$
+\item
+$\mathcal{L}(\sigma) = \{p | p\ \text{is primitive}\ \wedge\ \sigma\ \in\ \Sigma(\sigma_0)\ \wedge\ M_1\ \fcmp\ M_2\ \bullet\ \sigma_0, \sigma \vDash p\}$
+\item
+$\mathcal{H} = \{\ \{P\}\ \_\ \{Q\}\ |\ \sigma\ \sigma'\ \in\ \Sigma(\sigma_0)\ \wedge\ M_1\ \fcmp\ M_2\ \bullet\ \sigma\ \leadsto^\texttt{int}\ \sigma'\ \longrightarrow\ P(\sigma)\ \wedge\ Q(\sigma') \}$
+\end{itemize}
+\end{definition}
+
+\begin{definition}
+We define the set of internally changeable assertions as
+\begin{mathpar}
+\infer
+	{}
+	{v\ \in\ \mathcal{P}(\sigma)}
+	\and
+\infer
+	{e_1, e_2\ \in\ \mathcal{P}(\sigma)}
+	{e_1\ =\ e_2\ \in\ \mathcal{P}(\sigma)}
+	\and
+\infer
+	{\sigma\ \vDash\texttt{internal}\langle \alpha \rangle}
+	{\alpha.f \in\ \mathcal{P}(\sigma)}
+	\and
+\infer
+	{\sigma\ \vDash\texttt{internal}\langle \alpha \rangle}
+	{\texttt{access}\langle \alpha, \_ \rangle \in\ \mathcal{P}(\sigma)}
+	\and
+\infer
+	{A\ \in\ \mathcal{P}(\sigma)}
+	{\neg A \in\ \mathcal{P}(\sigma)}
+	\and
+\infer
+	{A_1, A_2\ \in\ \mathcal{P}(\sigma)}
+	{A_1\ \wedge\ A_2 \in\ \mathcal{P}(\sigma)}
+	\and
+\infer
+	{A_1, A_2\ \in\ \mathcal{P}(\sigma)}
+	{A_1\ \vee\ A_2 \in\ \mathcal{P}(\sigma)}
+\end{mathpar}
+\end{definition}
+Finally we state the following properties.
+\begin{mathpar}
+\infer
+	{
+	\sigma\ \vDash\ A \\ 
+	\sigma\ \leadsto^\texttt{ex}\ \sigma' \\
+	A\ \in\ \mathcal{P}(\sigma)
+	}
+	{
+	\sigma'\ \vDash\ A
+	}
+	\and
+\infer
+	{
+	\sigma\ \vDash\ A \\
+	\sigma'\ \vDash\ \neg A \\
+	A\ \in\ \mathcal{P}(\sigma)
+	}
+	{
+	\sigma\ \leadsto^\texttt{int}\ \sigma'
+	}
+	\and
+\infer
+	{
+	\sigma\ \leadsto^\texttt{int}\ \sigma'
+	}
+	{
+	\exists\ P\ Q. [\{P\}\_\{Q\}\in\ \mathcal{H}\ \wedge\ P (\sigma)\ \wedge\ Q(\sigma')]
+	}
+\end{mathpar}
+
+\subsection{Bank Account Example}
+
+\begin{lstlisting}[mathescape=true]
+class Account{
+	field balance
+	method deposit(from, amt){
+		...
+	}Pre:  $\exists$ b$_1$, this.balance = b$_1$
+	       $\exists$ b$_2$, from.balance = b$_2$
+	 Post: this.balance = b$_1$ + amt
+	       from.balance = b$_2$ + amt
+}
+\end{lstlisting}
+ 
+  \vspace{.01in}
+(BankSpec)\ \  $\triangleq$\\ 
+$\forall \texttt{a}.[\ \ \texttt{a}:\texttt{Account} \wedge \texttt{changes}\langle{\texttt{a.balance}}\rangle  \ \    
+    \longrightarrow \ \    \hfill$ \\
+  $\strut \hspace{2.3cm} 
+% TODO explain:
+% we no longer need Past here, as we are ion visible states 
+  \exists \texttt{o}. [\    \texttt{o}\ \texttt{calls}\ {\texttt{a.}}{\texttt{deposit}}({\_,\_}) \vee\  \texttt{o}\ \texttt{calls}\ {\_.}{\texttt{deposit}}({\texttt{a},\_})\rangle\  \ ] \ \ \ \ ] \hfill $
+\vspace{.05in}
+
+\noindent
+let the current configuration be $\sigma$. Thus we have
+$$(\texttt{a.balance}\ = \ \texttt{b})\ \in\ \mathcal{P}(\sigma)$$ and 
+$$\sigma \vDash \texttt{changes}\langle\texttt{a.balance}\ = \ \texttt{b})\rangle$$
+It follows that $\sigma$ must be an internal step, and that there must be a specified 
+internal path that modifies \texttt{a.balance}.
+It follows that the only possible path is a \texttt{deposit} call to either \texttt{a}
+or some other \texttt{Account} with \texttt{a} as the first argument.
+
+%\subsection{Safe Example}
+%In the example below we assume that \texttt{secret} cannot be internal to another safe.
+% 
+%  \vspace{.01in}
+%(SafeSpec)\ \  $\triangleq$\\ 
+%$\forall \texttt{s}.[\ \ \texttt{s}:\texttt{Safe} \wedge\ \neg \texttt{s.treasure = null}\ \wedge\ \texttt{will}\langle \texttt{s.treasure = null} \rangle  \ \    
+%    \longrightarrow \ \    \hfill$ \\
+%  $\strut \hspace{2.3cm} 
+%  \exists \texttt{o}. [\    \texttt{access}\langle \texttt{o}, \texttt{s.secret} \rangle\  \ ] \ \ \ \ ] \hfill $
+%\vspace{.05in}
+%
+%$$\neg \texttt{s.treasure = null}$$
+%$$\texttt{will}\langle\neg \neg \texttt{s.treasure = null}\rangle$$
+%$$\texttt{will}\langle \texttt{changed}\langle \neg \texttt{s.treasure = null} \rangle \rangle$$
+%$$\texttt{will}\langle \texttt{changed}\langle \neg \texttt{s.treasure = null} \rangle \rangle$$
+
+
+
+
+
+
+
+
+
+
+
+\bibliographystyle{abbrv}
+\bibliography{main}
+
+\end{document}

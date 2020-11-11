@@ -753,7 +753,9 @@ Definition initial (σ : config) : Prop :=
 Reserved Notation "M1 '⋄' M2 '≜' M"(at level 40).
 
 Inductive link : mdl -> mdl -> mdl -> Prop :=
-| m_link : forall M1 M2, (forall C def, C <> Object ->
+| m_link : forall M1 M2, (M1 Object = Some ObjectDefn) ->
+                    (M2 Object = Some ObjectDefn) ->
+                    (forall C def, C <> Object ->
                               M1 C = Some def ->
                               C ∉ M2) ->
                     (forall C def, C <> Object ->
