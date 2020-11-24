@@ -40,7 +40,7 @@ challenges, which we discuss in this section.}
  \A &\ \BBC   &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
     \SE\in\prg{S}   \mid  \  \\
     &
-  &  \A \rightarrow \A  \ \mid\  \     \A \wedge \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
+  &  \A \rightarrow \A  \ \mid\  \     \A \wedge\ \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
   & &  \forall \alpha.\A  \ \mid \  \forall \prg{S}:SET.\A  \ \mid  \  \exists \alpha.\A  \ \mid \  \exists \prg{S}:SET.\A  \  \ \mid \\
  &    &  \CanAccess {\alpha_1} {\alpha_2} \ \mid\  \ \Changes e 
            \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\mid\\          
@@ -281,8 +281,8 @@ $\M\mkpair \M',\sigma_0 , \sigma \models \SE\in \prg{S}$ \IFF there exists a val
 \end{definition}
 
 Satisfaction of assertions which contain expressions is predicated on termination of these expressions.
-Continuing our earlier example, given any initial configuration $\sigma_0$,  
-$\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{acyc.acyclic}$ holds for any $\M'$, while $\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{cyc.acyclic}$
+Continuing our earlier example, given any initial configuration $\sigma_0$ and module $\M'$, it holds that  
+$\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{acyc.acyclic}$, while $\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{cyc.acyclic}$
 does not hold, and $\M_A\mkpair \M', \sigma_0,\sigma_A \models \prg{cyc.acyclic}=\prg{false}$ does not hold either.
 In general, when $\M\mkpair \M', \sigma  \models \prg{e}$ holds,  then $\M\mkpair \M', \sigma  \models \prg{e}=\prg{true}$ holds too.
 But when $\M\mkpair \M', \sigma  \models \prg{e}$ does not hold, this does \emph{not} imply that $\M\mkpair \M', \sigma  \models \prg{e}=\prg{false}$ holds.
@@ -313,7 +313,7 @@ $\M\mkpair \M', \sigma_0 , \sigma \models  \A[\alpha/\alpha']$\ for some  $\alph
 \item
 $\M\mkpair \M',\sigma_0 , \sigma \models \A \rightarrow \A' $ \IFF  $\M\mkpair \M',\sigma_0 ,   \sigma \models \A $ implies $\M\mkpair \M',\sigma_0 ,   \sigma \models \A' $
 \item
-$\M\mkpair \M',\sigma_0 ,  \sigma \models  \A \wedge \A'$   \IFF  $\M\mkpair \M',\sigma_0 ,   \sigma \models  \A $
+$\M\mkpair \M',\sigma_0 ,  \sigma \models  \A \wedge\ \A'$   \IFF  $\M\mkpair \M',\sigma_0 ,   \sigma \models  \A $
 and $\M\mkpair \M',\sigma_0 ,   \sigma \models  \A'$.
 \item
 $\M\mkpair \M',\sigma_0 ,  \sigma \models  \A \vee \A'$   \IFF  $\M\mkpair \M', \sigma_0 , \sigma \models  \A $
@@ -324,10 +324,12 @@ does not hold.
 \end{itemize}
 \end{definition}
 
+\jm{Note that \Chainmail quantifies over addresses instead of local variables. Since \Chainmail assertions are invariants over modules, local variable names have no consistent denotation as the stack frame changes during execution. Previous work on \Chainmail exclusively used variables in assertions, including for quantification \cite{FASE}. Aside from being less clear, as assertions generally refer to objects meeting some property, rather than the value at a certain name, using local variables also complicated the handling of temporal assertions, as discussed in section~\ref{sect:time}.}
+
 
 Satisfaction is not preserved with growing configurations; for example, the assertion $\forall \x. [\ \x : \prg{Account} \rightarrow \x.\prg{balance}>100\ ]$ 
 may hold in a smaller configuration, but not hold in an extended configuration. 
-Nor is it preserved with configurations getting smaller; consider \eg $\exists \x. [\ \x : \prg{Account} \wedge \x.\prg{balance}>100\ ]$.
+Nor is it preserved with configurations getting smaller; consider \eg $\exists \x. [\ \x : \prg{Account} \wedge\ \x.\prg{balance}>100\ ]$.
 
 \noindent
 Again, with our earlier example,  
@@ -337,8 +339,6 @@ and also
 $\M_A\mkpair \M', \sigma_0 , \sigma_A \models  \neg (\prg{cyc.last}=\prg{cyc.last})$
 hold.
 
-\Chainmail quantifies over addresses instead of local variables. Since \Chainmail assertions are invariants over modules, local variable names have no consistent denotation as the stack frame changes during execution. Previous work on \Chainmail exclusively used variables in assertions, including for quantification \cite{FASE}. Aside from being less clear, as assertions generally refer to objects meeting some property, rather than the value at a certain name, using local variables also complicated the handling of temporal assertions, as discussed in section~\ref{sect:time}.
-
 \subsection{Satisfaction of Assertions - Access, Control, Space, Viewpoint}
 \label{sect:pcsv} 
 %We now consider the assertions which involve access:
@@ -347,8 +347,9 @@ hold.
 methods on another object, and to do so directly, without  help from any
 intermediary object. This is the case when both are the same instance---the addresses therefore being identical; or the first object has a field pointing to the second object; or
 the first object is the receiver of the currently executing method and the second object is one of the 
-arguments or a local variable. Interpretations of variables and paths, $\interp {...} {\sigma}$, are defined
-in the usual way (appendix Def.~\ref{def:interp}).
+arguments or a local variable. 
+%Interpretations of variables and paths, $\interp {...} {\sigma}$, are defined
+%in the usual way (appendix Def.~\ref{def:interp}).
 
 
 \begin{definition}[%Satisfaction of  Assertions about 
@@ -456,7 +457,7 @@ we first define a restriction operation,  $\restrct {\sigma}{\prg{S}}$ which res
 from $\SF$.
 
 \begin{definition}[Restriction of Runtime Configurations]  \label{def:restrict}
-The restriction operator~$\;\restrct{} {} $ applied to a runtime configuration $\sigma$ and a variable  \prg{S} is defined as follows:
+The restriction operator~$\;\restrct{} {} $ applied to a runtime configuration $\sigma$ and a \jm{set}  \prg{S} is defined as follows:
  \label{def:config:restrct}
  $~ $
 \begin{itemize}
@@ -525,14 +526,14 @@ configurations which go beyond the frame currently at the top of the stack, (c) 
 each of the previous configurations. 
 
 We address challenge (a) by storing the remaining code to be executed in \prg{cntn} in each frame. 
-We address challenge (b) by defining constrained reduction, \sdf{$\lceil\leadsto\rceil$ defined below}, where we only take the top of the frame when considering future executions.
+We address challenge (b) by defining constrained reduction, \jm{$\constrained$ defined below}, where we only take the top of the frame when considering future executions.
 Finally, we address challenge (c) by introducing an explicit initial configuration, and only considering configurations which arise from it and lead to the current configuration.
 
 \begin{definition}[Constrained Reduction]  \label{def:reduction:constrained}
 For any modules $\M$, $\M'$, and configurations $\sigma_1$, $\sigma_2$
 \begin{itemize}
 \item
-$\M\mkpair \M',  \sigma_1\lceil\leadsto\rceil \sigma_2$ 
+$\M\mkpair \M',  \constrained \sigma_2$ 
 \IFF
 $\M\mkpair \M',  (\phi, \chi_1) \leadsto(\psi, \chi_2)$\\
 $\strut ~ \hspace{1.4in} $ \hfill 
@@ -540,7 +541,7 @@ where
 $\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
 and
 \item
-$\M\mkpair \M',  \sigma_1\lceil\leadsto^*\rceil \sigma_2$ 
+$\M\mkpair \M',  \sigma_1\constrained^* \sigma_2$ 
 \IFF
 $\M\mkpair \M',  (\phi, \chi_1) \leadsto^* (\psi, \chi_2)$\\
 $\strut ~ \hspace{1.4in} $ \hfill 
@@ -552,8 +553,8 @@ $\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \ch
 that is restricted only to reduction steps that arise from the top frame of the stack, and does not consider 
 reduction steps that result as a method return from the top frame. As stated above, this addresses challenge (b).
 Constrained reduction is a strict subset of reduction, and for all modules $\M$ and $\M'$, and configurations $\sigma_1$ and $\sigma_2$, 
-if $\M\mkpair \M',  \sigma_1\lceil\leadsto\rceil \sigma_2$ (or $\M\mkpair \M',  \sigma_1\lceil\leadsto*\rceil \sigma_2$), then 
-it follows that $\M\mkpair \M',  \sigma_1 \leadsto \sigma_2$ (or $\M\mkpair \M',  \sigma_1\leadsto* \sigma_2$). 
+if $\M\mkpair \M',  \sigma_1\constrained \sigma_2$ (or $\M\mkpair \M',  \sigma_1\constrained^* \sigma_2$), then 
+it follows that $\M\mkpair \M',  \sigma_1 \leadsto \sigma_2$ (or $\M\mkpair \M',  \sigma_1\leadsto^* \sigma_2$). 
 The reverse however is not true. Reduction does not imply constrained reduction.
 Since constrained reduction does not consider any frames in the stack preceding the top frame of $\sigma_1$, 
 $\sigma_2$ may only arise from the execution of the current method. For example, if the top frame of $\sigma_1$ 
@@ -576,24 +577,24 @@ For any modules $\M$, $\M'$, and assertion  $\A$ we define
 \begin{itemize}
 % \item
 % $\M\mkpair \M', \sigma \models   \Changes{\prg{e}}$  \IFF
-% $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \leadsto \sigma' \ \wedge \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$.
+% $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \leadsto \sigma' \ \wedge\ \interp{e}{\sigma} \neq \interp{e}{\sigma\triangleleft \sigma'} \ \  ]$.
  \item
   $\M\mkpair \M', \sigma_0 , \sigma \models  \Next \A $
   \IFF
-  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto\rceil \sigma' \ \wedge \M\mkpair \M',\sigma_0 , \sigma' \models \A \ \  ]$
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto\rceil \sigma' \ \wedge\ \M\mkpair \M',\sigma_0 , \sigma' \models \A \ \  ]$
   \item
   $\M\mkpair \M', \sigma_0 , \sigma \models  \Future \A $
   \ \IFF
-  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto^*\rceil \sigma' \ \wedge \M\mkpair \M',\sigma_0 , \sigma' \models \A \ \  ]$
+  $\exists \sigma'.\, [\ \ \M\mkpair \M',\sigma \lceil\leadsto^*\rceil \sigma' \ \wedge\ \M\mkpair \M',\sigma_0 , \sigma' \models \A \ \  ]$
   \item
  $\M\mkpair \M', \sigma_0 , \sigma \models  \Prev \A $\IFF
-$\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpair \M',\sigma' \leadsto \sigma \longrightarrow $\\
+$\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma'\ \wedge\ \M\mkpair \M',\sigma' \leadsto \sigma\ \longrightarrow\ $\\
  $\strut ~ \hspace{0.1in} $   \hfill 
 $ \M\mkpair \M', \sigma_0 , \sigma'  \models \A\ \ 
  ]$ 
  \item
  $\M\mkpair \M',\sigma_0 ,  \sigma \models  \Past \A $ \IFF
-$\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpair \M',\sigma' \leadsto^* \sigma \longrightarrow $\\
+$\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma'\ \wedge\ \M\mkpair \M',\sigma' \leadsto^* \sigma\ \longrightarrow\ $\\
  $\strut ~ \hspace{0.1in} $   \hfill   
  $\M\mkpair \M', \sigma_0 , \sigma'  \models \A\ \ 
  ]$ 
@@ -628,7 +629,7 @@ $\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma' \wedge \M\mkpa
 
 Whilst the above shows that from $\Future { \Using{A}{\SF} }$ we cannot conclude $\Using { \Future{A} }{\SF}$, it is also worth noting that in general the inverse does not hold either. $\Future { \Using{A}{\SF} }$ restricts $A$ in the future, meaning any objects instantiated in the between the present and then are excluded, whereas $\Using { \Future{A} }{\SF}$ restricts the space in the present, so the objects are considered in A. Taking a new configuration $\sigma_6$  with continuation \prg{x := new Account(100, null)} and otherwise similar to $\sigma_1$, and $\SF = \emptyset$, the assertion $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Future{ \Using { \prg{x.bank} = \prg{null} } {\SF}}$  does not hold, as \prg{x} is not in $S$. However, $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Using { \Future{ \prg{x.bank} = \prg{null} } } {\SF}$ does hold, since the restriction of the configuration to $\SF$ in the present doesn't exclude the new \prg{Account} with field $\prg{bank} = \prg{null}$, created in the next statement, being considered by \Future{\_}.
 
-\sdf{One interesting implication of your definitions is that the denotation of a local variable inside a temporal connective may be different to that outside. For example, in a configuration $\sigma$ where the current receiver \jm{belongs} to class \prg{A}, and where the current continuation \jm{contains} a call to an object of class \prg{B}, we would have that $..,..,\sigma \models \prg{this}:\prg{A} \wedge \Future{ \prg{this}:\prg{B}}$. This raises the question as to how we can assert future properties of an object which is currently denoted by a local variable, when that local variable may change denotation, or even \jm{go out} of scope. The answer is to use universally quantified addresses. For example,  $\forall \alpha_t.\ [ \ \alpha_t  = \prg{this}\ \rightarrow\ \Future{\alpha_t.\prg{balance}=300}\ ]$ asserts that in some future configuration, the object currently denoted by  \prg{this} will have a \prg{balance} of 300.}
+\sdf{One interesting implication of your definitions is that the denotation of a local variable inside a temporal connective may be different to that outside. For example, in a configuration $\sigma$ where the current receiver \jm{belongs} to class \prg{A}, and where the current continuation \jm{contains} a call to an object of class \prg{B}, we would have that $..,..,\sigma \models \prg{this}:\prg{A}\ \wedge\ \Future{ \prg{this}:\prg{B}}$. This raises the question as to how we can assert future properties of an object which is currently denoted by a local variable, when that local variable may change denotation, or even \jm{go out} of scope. The answer is to use universally quantified addresses. For example,  $\forall \alpha_t.\ [ \ \alpha_t  = \prg{this}\ \rightarrow\ \Future{\alpha_t.\prg{balance}=300}\ ]$ asserts that in some future configuration, the object currently denoted by  \prg{this} will have a \prg{balance} of 300.}
 \footnote{
 \color{dkgreen}{This is how it was:}\color{black}\\
 Using local variables in a past or future context allows specifications to use their past or future values.  
@@ -659,7 +660,7 @@ the context of the same configurations and module pairs -- \ie\\
  \strut \hspace{1.1cm} $\A \equiv \A'\  \IFF\    \forall \sigma_0, \sigma.\, \forall \M, \M'. \ [\ \ \M\mkpair \M', \sigma_0,\sigma \models \A\ \mbox{ if and only if }\ \M\mkpair \M', \sigma_0,\sigma \models \A'\ \ ].$\\
 We can then prove that the usual equivalences hold, \eg\  $ \A \vee \A' \ \equiv \  \A' \vee \A$, and\   $\neg (\exists \prg{x}.\A )  \  \ \equiv \  \forall \prg{x}.(\neg  \A)$.
 %
-Our assertions are classical, \eg  $ \A \wedge\neg \A \ \equiv \  \prg{false}$, and $\M\mkpair \M', \sigma_0 , \sigma  \models \A$ and  $\M\mkpair \M', \sigma_0 , \sigma  \models \A \rightarrow \A'$  implies
+Our assertions are classical, \eg  $ \A\ \wedge\ \neg \A \ \equiv \  \prg{false}$, and $\M\mkpair \M', \sigma_0 , \sigma  \models \A$ and  $\M\mkpair \M', \sigma_0 , \sigma  \models \A \rightarrow \A'$  implies
 $\M\mkpair \M', \sigma_0 , \sigma  \models \A '$. 
  \sd{This desirable property comes at the loss of some expected equivalences, \eg, in general, 
  $\e = \prg{false}$ and $\neg\e$ are not equivalent.}
