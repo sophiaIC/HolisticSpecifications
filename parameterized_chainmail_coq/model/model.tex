@@ -10,6 +10,8 @@
 	\usepackage{oz}
 	\usepackage{listings}
 	\usepackage{color}
+	\usepackage{csquotes}	
+
 	
 	\newtheorem{definition}{Definition}
 	
@@ -17,7 +19,7 @@
 	
 	\lstset{ % General setup for the package
 		language=Java,
-		basicstyle=\small\sffamily,
+		basicstyle=\scriptsize\sffamily,
 		numbers=left,
 	 	numberstyle=\tiny,
 		frame=tb,
@@ -26,7 +28,7 @@
 		showstringspaces=false,
 		showtabs=false,
 		keepspaces,
-		morekeywords={field, method},
+		morekeywords={field, method, module, calls, presumes, achieves, external, internal, access},
 		commentstyle=\color{red},
 		keywordstyle=\color{blue}
 	}
@@ -661,6 +663,198 @@
 
 
 	
+	\newpage
+	
+	\section{Hoare Logic and Reverse Hoare Logic}
+	
+	In order to simplify proof construction for satisfaction of Chainmail assertions we define a logic for reasoning about single
+	internal steps for a module. To do this I make use of traditional Hoare triples, along with the reverse Hoare triples defined by 
+	de Vries and Koutavas.
+	
+	In Chainmail we are not concerned with the effects that a statement or specific method has on the program state, but rather 
+	what effects an entire module might have on the program state. As an intermediate step to constructing proofs about full Chainmail
+	it is useful to be able to prove simpler specifications on a module, and the ways it might change the program state. That is, if we were able
+	to prove limited specifications on how a single execution path through only module-internal code modifies 
+	program state, it would assist in the proof of more general Chainmail specifications. Below I present a Hoare-like triple that 
+	places a module in the middle rather that a single statement to be evaluated.
+	$$\{A_1\}\ M\ \{A_2\}$$
+	$A_1$ and $A_2$ are Chainmail assertions, and $M$ denotes some module. Thus, the above specification can be read as
+	\begin{displayquote}
+	\textit{for any purely module-internal execution path through $M$, if $A_1$ is true beforehand, $A_2$ will be true afterward}
+	\end{displayquote}
+	
+	We are also not only concerned with constructing proofs about
+	programs in a traditional forward style. We don't always need to reason about the program state after the execution
+	of a program based on what is true before, but also the inverse, i.e. we often need to infer the program state before the 
+	execution of a program based on the program state after evaluation. For this reason it is useful to include specifications
+	of the form of de Vries and Koutavas' Reverse Hoare Logic.
+	$$[A_1]\ M\ [A_2]$$
+	Above I use the notation used by O'Hearn in his related paper on Incorrectness Logic, and the above specification can be read as
+	\begin{displayquote}
+	\textit{for any purely module-internal execution path through $M$, if $A_2$ is true afterward, $A_1$ will be true before}
+	\end{displayquote}
+	This is not exactly how de Vries and Koutavas phrase it. They might rather say that $A_1$ represents the a super set of the
+	states from which $A_2$ is reachable. This is in contrast to saying that for a traditional Hoare triple $\{A_1\}\ M\ \{A_2\}$,
+	$A_2$ represents a super set of the states that are reachable from $A_1$.
+	
+	It should be noted that these definitions can not be encoded in Chainmail currently. In fact the following equivalences do not generally hold:
+	$$\{A_1\}\ M\ \{A_2\}\ \not\equiv\ M\ \vDash\ \texttt{prev}\langle A_1 \rangle\ \longrightarrow\ A_2$$
+	$$[A_1]\ M\ [A_2]\ \not\equiv\ M\ \vDash\ A_2\ \longrightarrow\ \texttt{prev}\langle A_1 \rangle$$
+	This is because the left hand sides of the above equivalences imply only internal steps, while satisfaction of the right hand sides 
+	is determined for all possible steps, including external steps. While the above does not hold, the following do hold:
+	$$M\ \vDash\ \texttt{prev}\langle A_1 \rangle\ \longrightarrow\ A_2\ \Rightarrow\ \{A_1\}\ M\ \{A_2\}$$
+	$$M\ \vDash\ A_2\ \longrightarrow\ \texttt{prev}\langle A_1 \rangle\ \Rightarrow\ [A_1]\ M\ [A_2]$$
+	The above hold because Chainmail satisfaction considers all potential pair reduction steps, including internal steps.
+	
+	Another note is that there does not seem to be anything stopping us from writing quite complex Chainmail specifications 
+	in the above form. For this reason, if we actually intend these specifications to be a simpler, intermediate step then they 
+	must be simpler. Thus, we restrict specifications to only those concerned with a single internal step. This is shown in Figure \ref{f:specs}.
+	
+	\begin{figure}[h]
+	\footnotesize
+	\[
+	\begin{array}{lll}
+	\begin{array}{llr}
+	R & ::= &\textit{Simple Assertion}\\ 
+	| & a & \\
+	| & \neg R & \\
+	| & R\ \wedge\ R & \\
+	| & R\ \vee\ R & \\
+	| & R\ \longrightarrow\ R & \\
+	| & \forall\ x.\ R & \\
+	| & \exists\ x.\ R & \\
+	| & \forall\ S.\ R & \\
+	| & \exists\ S.\ R & \\
+	\end{array}&
+	\begin{array}{llr}
+	P & ::= &\textit{Pre}\\ 
+	| & R & \\
+	| & \texttt{next}\langle  R \rangle& \\
+	| & \texttt{changes}\langle  R \rangle& \\
+	| & \neg P & \\
+	| & P\ \wedge\ P & \\
+	| & P\ \vee\ P & \\
+	| & P\ \longrightarrow\ P & \\
+	| & \forall\ x.\ P & \\
+	| & \exists\ x.\ P & \\
+	| & \forall\ S.\ P & \\
+	| & \exists\ S.\ P & \\
+	\end{array}&
+	\begin{array}{llr}
+	Q & ::= & \textit{Post}\\ 
+	| & R & \\
+	| & \texttt{prev}\langle  R \rangle& \\
+	| & \texttt{changed}\langle  R \rangle& \\
+	| & \neg Q & \\
+	| & Q\ \wedge\ Q & \\
+	| & Q\ \vee\ Q & \\
+	| & Q\ \longrightarrow\ Q & \\
+	| & \forall\ x.\ Q & \\
+	| & \exists\ x.\ Q & \\
+	| & \forall\ S.\ Q & \\
+	| & \exists\ S.\ Q & \\
+	\end{array}
+	\end{array}
+	\]
+	\normalsize
+	\caption{Specification Syntax}
+	\label{f:specs}
+	\end{figure}
+	
+		I use $a$ to represent \emph{atomic} assertions as indicated in Figure \ref{f:assertions}, with the single modification that I replace $ \langle x\ \texttt{makes step}\ p \rangle$ 
+		with  $\langle x\ \texttt{calls}\ y.m(x_1, ...) \rangle$, in line with the definition of chainmail specifications in the FASE 2020 paper. Further, the only temporal operators that may 
+		be used are ones that refer to the other side of the triple, i.e. preconditions may use \texttt{next} or \texttt{changes} to refer to the state after evaluation, and postconditions 
+		may use \texttt{prev} or \texttt{changed} to refer to the program state before evaluation.
+		This syntax is chosen as satisfaction of assertions of this form can be checked by considering only those program states that abut an internal execution.
+		
+		We require specifications on modules take the following syntactic forms:
+	$$\{P\}\ M\ \{Q\}$$
+	$$[P]\ M\ [Q]$$
+
+	\subsection{Examples}
+	
+	\subsubsection{Bank Account}
+
+	
+	In the following code examples I borrow O'Hearn's keywords \texttt{presumes} and \texttt{achieves} to indicate 
+	the distinction between what is presumed to be true before execution, and what is achieved after execution.
+
+	
+	Below is the definition for the module \texttt{Bank}. \texttt{Bank} contains a single class, \texttt{Account}, which has a 
+	\texttt{balance} field and a \texttt{deposit} method. \texttt{deposit} transfers a positive amount (\texttt{amt}) from some 
+	account (\texttt{from}) 	to the reciever account. If \texttt{amt} is negative, or \texttt{from.balance} is less than or equal 
+	to \texttt{0}, then neither balance is changed.
+\begin{lstlisting}[mathescape=true]
+module Bank {
+	class Account {
+		{presumes: $\exists$ x y acc.[ $\langle$ x calls this.deposit(acc, y) $\rangle$ $\vee$ 
+							   $\langle$ x calls acc.deposit(this, y) $\rangle$ ]
+		 achieves: $\exists$ b.[ changed$\langle$ this.balance = b $\rangle$ ]}
+		 
+		{presumes: x access this
+		 achieves: x access this}
+	
+		field balance
+		method deposit(from, amt) {
+			...
+		}
+}
+\end{lstlisting}
+	As part of the definition of \texttt{Account}, I include some specifications in the form of \texttt{presumes} and \texttt{achieves}. The first can be
+	read as: if an internal \texttt{Bank} execution step is made, and 
+	$$\texttt{$\exists$ b.[ changed$\langle$ this.balance = b $\rangle$ ]} $$
+	is achieved, then 
+	$$\texttt{$\exists$ x y acc.[$\langle$ x calls this.deposit(acc, y) $\rangle$ $\vee$ $\langle$ x calls acc.deposit(this, y) $\rangle$]}$$
+	was true beforehand. In other words, 
+	\begin{displayquote}
+	if the balance of an account changes then it was as a result of a call to \texttt{deposit} where the changed
+	account was either the reciever or the \texttt{from} account
+	\end{displayquote}
+	I place the specifications within the \texttt{Account} class only so we might use the \texttt{this} keyword. A similar specification
+	could be written outside of \texttt{Account} by replaceing \texttt{this} with \texttt{acc'} and including \texttt{acc' : Account} as part of the specification.
+	
+	The second states that all \texttt{Bank} operations do not grant access to \texttt{Account}s.
+	
+	The Chainmail specifications for the \texttt{Bank} as they are written in the TOSEM paper are as follows:
+	
+\begin{lstlisting}[mathescape=true]
+(1) $\triangleq$ $\forall$ a. [ a : Account $\wedge$ changes$\langle$ a.balance $\rangle$ $\longrightarrow$
+               $\exists$ o.[ $\langle$ o calls a.deposit(_, _) $\rangle$ $\vee$
+                     $\langle$ o calls _.deposit(a, _) $\rangle$ ] ] 
+                     
+(2) $\triangleq$ $\forall$ a. $\forall$ S : Set. [ a : Account $\wedge$ $\langle$ will $\langle$ changes$\langle$ a.balance $\rangle\rangle$ in S $\rangle$ 
+                           $\longrightarrow$
+               $\exists$ o.[ o $\in$ S $\wedge$ external$\langle$ o $\rangle$ $\wedge$ $\langle$ o access a $\rangle$] ] 
+                     
+(3) $\triangleq$ $\forall$ a. $\forall$ S : Set. [ a : Account $\wedge$ $\langle$ will $\langle$ $\exists$o.[ external$\langle$ o $\rangle$ $\wedge$ $\langle$ o access a $\rangle$ ] $\rangle$ in S $\rangle$ 
+                           $\longrightarrow$
+               $\exists$ o'.[ o' $\in$ S $\wedge$ external$\langle$ o' $\rangle$ $\wedge$ $\langle$ o' access a $\rangle$] ] 
+\end{lstlisting}
+
+\texttt{(1)}
+The first of the the three specifications follows simply from the presumption and result of the \texttt{Account} class.
+
+\texttt{(2)}
+The second specification uses the following rule for reverse Hoare logic:
+\begin{mathpar}
+\infer
+	{
+	P \Rightarrow P' \\
+	[P]\ M\ [Q]
+	}
+	{
+	[P']\ M\ [Q]
+	}
+\end{mathpar}
+Since a change to the \texttt{balance} of \texttt{a} implies a call involving \texttt{a}, and 
+a call involving \texttt{a} implies \texttt{access} to \texttt{a}, it follows that there must exist
+some \texttt{o} with \texttt{access} to \texttt{a}.
+Satisfaction then follows the argument that either there is some current \texttt{external} object that has \texttt{access} 
+to the \texttt{a}, or \texttt{Bank} can give access to \texttt{a}. Following the second specification, we
+know that the latter cannot be true, and we arrive at the result.
+
+\texttt{(3)}
+The proof of \texttt{(3)} follows a similar argument to that of \texttt{(2)}.
 	
 	
 	
