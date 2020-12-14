@@ -50,26 +50,26 @@ frame, and a map from
 variables to values. Values are either addresses or sets of addresses; sets 
 are needed to deal with assertions which quantify over sets of
 objects, such as assertions
-(1) and (2) from section \ref{sect:motivate:Bank}.
+(1) and (2) from Section \ref{sect:motivate:Bank}.
 % 
 We define \emph{one-module} execution  through a judgment of the form $\M, \sigma \leadsto \sigma'$ in Appendix~\ref{app:LangOO}, Fig.~\ref{fig:Execution}. 
 %
   
 
-\subsection{\sdf{Modules satisfying assertions}}
+%\subsection{\sdf{Modules satisfying assertions}}
+%
+%Finally, we define satisfaction of assertions by modules: a module
+%$\M$ satisfies an assertion $\A$ if for all other potential modules $\M'$, in all configurations arising from executions of $\M\mkpair\M'$, the assertion $\A$ holds.
 
-Finally, we define satisfaction of assertions by modules: a module
-$\M$ satisfies an assertion $\A$ if for all other potential modules $\M'$, in all configurations arising from executions of $\M\mkpair\M'$, the assertion $\A$ holds.
-
-\begin{definition}
-\label{def:module_satisfies}
-For any module $\M$, and  assertion $\A$, we define:
-\begin{itemize}
-\item
-$\M \models \A \ \ \  \ \ \ \ \ \mbox{
-if               } \ \ \  \ \ \  \  \forall \M'.\forall \sigma_0 \in \Initial{\M \mkpair \M'}.\forall\sigma\in\Arising{\M \mkpair  {\M'}, \sigma_0}. [\ \M \mkpair  {\M'}, \sigma_0 , \sigma \models \A\ ]$
-\end{itemize}
-\end{definition}
+%\begin{definition}
+%\label{def:module_satisfies}
+%For any module $\M$, and  assertion $\A$, we define:
+%\begin{itemize}
+%\item
+%$\M \models \A \ \ \  \ \ \ \ \ \mbox{
+%if               } \ \ \  \ \ \  \  \forall \M'.\forall \sigma_0 \in \Initial{\M \mkpair \M'}.\forall\sigma\in\Arising{\M \mkpair  {\M'}, \sigma_0}. [\ \M \mkpair  {\M'}, \sigma_0 , \sigma \models \A\ ]$
+%\end{itemize}
+%\end{definition}
   
   
 
@@ -78,7 +78,7 @@ if               } \ \ \  \ \ \  \  \forall \M'.\forall \sigma_0 \in \Initial{\M
 We define a module linking operator \  $\link$ \  so that
 $\M\link\M'$ is the union of the two modules, provided that their domains are disjoint\appref{def:link}.
  %
-As we said in section \ref{sect:overviewmodel}, we distinguish  between the internal and external module. \sophia{We consider execution  from the view of the
+As we said in Section \ref{sect:overviewmodel}, we distinguish  between the internal and external module. \sophia{We consider execution  from the view of the
 external module, and treat}  execution of 
 methods from the internal module as atomic. For this, we define \emph{two-module execution}  based on
 one-module execution as follows:
@@ -185,3 +185,54 @@ adherence to an assertion.
 \jm{Arising configurations differ in their definition to that of previous work published at FASE 2020~\cite{FASE} in the usage of an initial configuration. In prior work
 an arising configuration was defined as any configuration that might arise from {\em any} initial configuration. In linearizing Chainmail, we specify a specific initial 
 configuration.}
+
+\jm{We define a specialized form of two-module execution, \emph{constrained execution}.}
+\begin{definition}[Constrained execution]  \label{def:reduction:constrained}
+For any modules $\M$, $\M'$, and configurations $\sigma_1$, $\sigma_2$
+\begin{itemize}
+\item
+$\M\mkpair \M',  \constrained \sigma_2$ 
+\IFF
+$\M\mkpair \M',  (\phi, \chi_1) \leadsto(\psi, \chi_2)$\\
+$\strut ~ \hspace{1.4in} $ \hfill 
+where
+$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
+and
+\item
+$\M\mkpair \M',  \sigma_1\constrained^* \sigma_2$ 
+\IFF
+$\M\mkpair \M',  (\phi, \chi_1) \leadsto^* (\psi, \chi_2)$\\
+$\strut ~ \hspace{1.4in} $ \hfill 
+where
+$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
+\end{itemize}
+\end{definition}
+\jm{Constrained execution (Definition \ref{def:reduction:constrained}) is a form of two-module execution
+that is restricted to only those execution steps that arise from the top frame of the stack, and does not consider 
+execution steps beyond a method return from the top frame.}
+
+\jm{Constrained execution is a strict subset of two-module execution, and for all modules $\M$ and $\M'$, and configurations $\sigma_1$ and $\sigma_2$, 
+if $\M\mkpair \M',  \sigma_1\constrained \sigma_2$ (or $\M\mkpair \M',  \sigma_1\constrained^* \sigma_2$), then 
+it follows that $\M\mkpair \M',  \sigma_1 \leadsto \sigma_2$ (or $\M\mkpair \M',  \sigma_1\leadsto^* \sigma_2$). 
+The reverse however is not true. Two-module execution does not imply constrained execution.
+Since constrained execution does not consider any frames in the stack preceding the top frame of $\sigma_1$, 
+$\sigma_2$ may only arise from the execution of the current method. For example, if the top frame of $\sigma_1$ 
+is the result of a method call to some method $\prg{m}$, then constrained reduction is restricted to only intermediate 
+configurations that arise from the evaluation of $\prg{m}$, and not beyond that.}
+
+\jm{Constrained execution is used in the definition of satisfaction of the temporal operators $\Future{A}$ and $\Next{A}$ (defined in Section~\ref{sect:assertions}).
+This restriction is necessary when considering the future, 
+as \Chainmail is generally 
+concerned with the current state of the program, and those states that 
+might arise as a result. As an example, 
+specification (2) of the introductory bank account example asserts that future changes to a bank account implies the current object has access to that account.
+If the execution implied by future assertions were not constrained, this would not necessarily be true unless we inspected every frame in the stack to check access.
+Further, future satisfaction of assertions beyond the present frame
+would have no relation to the present scope. }
+
+%\jm{Further, the use of constrained reduction is necessary in maintaining some expected properties of the temporal operators. 
+%While the underlying language \LangOO is deterministic and linear in its reduction, and thus there is exactly one path from the initial configuration of the program to any 
+%future configuration that must pass through the current configuration, this is not generally true of languages with potentially branching reduction. If
+%reduction of \LangOO were non-linear, and satisfaction of $\Future{\A}$ (or $\Next{\A}$) were not defined with constrained reduction, 
+%the satisfaction of $\A$ would not generally imply the satisfaction of $\Future{\Past{A}}$ as $\A$ would not necessarily be satisfied by every branch of the program leading to the future configuration.
+%The inverse however does hold, i.e. due to the use of an initial configuration it always holds that satisfaction of $\A$ implies satisfaction of $\Past{\Future{\A}}.$}

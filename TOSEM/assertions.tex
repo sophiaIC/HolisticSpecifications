@@ -37,7 +37,7 @@ challenges, which we discuss in this section.}
   ~  \\
  \SE  &\BBC&    \prg{v}\ ~\SOR~ \SE=\SE    ~\SOR~ \kwN{if}\, \SE\,   \kwN{then}\,  \SE\,    \kwN{else}\, \SE    ~\SOR~  \SE.\f\lp\ \SE^* \ \rp ~\SOR~ \prg{x} \\
      \\
- \A &\ \BBC   &   \SE \   \mid \  \SE=\SE  \mid \   \SE:\prg{ClassId}  \ \mid \
+ \A &\ \BBC   &   \SE \   \mid \   \SE:\prg{ClassId}  \ \mid \
     \SE\in\prg{S}   \mid  \  \\
     &
   &  \A \rightarrow \A  \ \mid\  \     \A \wedge\ \A  \ \mid\  \  \A \vee \A  \ \mid\  \ \neg A   \ \mid \ \\
@@ -45,12 +45,13 @@ challenges, which we discuss in this section.}
  &    &  \CanAccess {\alpha_1} {\alpha_2} \ \mid\  \ \Changes e 
            \ \mid\  \Calls {\alpha_1}  {\prg{m}} {\alpha_2}  {\prg{v}^*}\mid\\          
 &    &  \Next \A  \ \mid \   \Future \A \ \mid \  \Prev \A   \ \mid \ \Past \A \ \mid \\  
- &    &        \Using \SF  \A  \ \mid \  \External \alpha\\
+ &    &        \Using \SF  \A  \ \mid \  \External \alpha\ \mid \  \Internal \alpha\\
  \\
  \x, \f, \m &\BBC&  \prg{Identifier}  ~ \\
 \end{array}
 \]
 \end{definition}
+\jm[added $\Internal \alpha$, removed $e = e$]{}
  
 Expressions support calls with parameters  ($\e.\f(\e^*)$); these are calls to ghostfield
 functions. This  supports recursion at the level of expressions; therefore, the value of  an expression  may be
@@ -58,11 +59,11 @@ undefined (either because of infinite recursion, or because the expression acces
 Assertions of the form   $\e$=$\e'$ are satisfied only if both $\e$ and $\e'$ are defined. Because we do not support 
 recursion at the level of assertions, assertions form a classical logic (\eg $\A \vee \neg\A$ is a tautology).
  
-We will discuss evaluation of expressions in section \ref{sect:expressions}, standard assertions about heap/stack and logical
+We will discuss evaluation of expressions in Section \ref{sect:expressions}, standard assertions about heap/stack and logical
  connectives in \ref{sect:standard}. 
  We will discuss the treatment of  permission, control, space, and viewpoint  in 
-the main text in  Defs.~\ref{def:valid:assertion:access}-\ref{def:valid:assertion:space}  in section \ref{sect:pcsv} %HARD
-the treatment of time in Defs. \ref{def:reduction:constrained}, \ref{def:valid:assertion:time} in the main text, section \ref{sect:time},
+the main text in  Defs.~\ref{def:valid:assertion:access}-\ref{def:valid:assertion:space}  in Section \ref{sect:pcsv} %HARD
+the treatment of time in Defs. \ref{def:reduction:constrained}, \ref{def:valid:assertion:time} in the main text, Section \ref{sect:time},
 We will discuss properties of assertions in Lemmas \ref{lemma:classic}-\ref{lemma:classic:two}.
  The judgement $\M\mkpair \M', \sigma_0 ,  \sigma  \models \A$ expresses that $\A$ holds in  $\M\mkpair \M'$ and $\sigma$, and 
 while $\M\mkpair \M', \sigma_0 , \sigma  \not\models \A$  expresses that $\A$ does not hold  in  $\M\mkpair \M'$ and $\sigma_0,\sigma$.
@@ -113,7 +114,7 @@ will be applied if \prg{f} is a field of the object at \prg{e}, while rule ${\sf
 will be applied if \prg{f} is a ghost field of the object at \prg{e}. We expect the set of fields and ghost fields in a 
 given class to be disjoint.
 This allows a specification to be agnostic over whether a field is a physical field or just ghost information.
-For example, assertions (1) and (2) from  section  \ref{sect:motivate:Bank}
+For example, assertions (1) and (2) from  Section  \ref{sect:motivate:Bank}
  talk about the \prg{balance} of an \prg{Account}. 
 In module $\M_{BA1}$ (Appendix~\ref{Bank:appendix}), where we keep the balances in the account objects, this is a physical field. 
 In $\M_{BA2}$ (also in Appendix~\ref{Bank:appendix}), where we keep the
@@ -324,7 +325,7 @@ does not hold.
 \end{itemize}
 \end{definition}
 
-\jm{Note that \Chainmail quantifies over addresses instead of local variables. Since \Chainmail assertions are invariants over modules, local variable names have no consistent denotation as the stack frame changes during execution. Previous work on \Chainmail exclusively used variables in assertions, including for quantification \cite{FASE}. Aside from being less clear, as assertions generally refer to objects meeting some property, rather than the value at a certain name, using local variables also complicated the handling of temporal assertions, as discussed in section~\ref{sect:time}.}
+\jm{Note that \Chainmail quantifies over addresses instead of local variables. Since \Chainmail assertions are invariants over modules, local variable names have no consistent denotation as the stack frame changes during execution. Previous work on \Chainmail exclusively used variables in assertions, including for quantification \cite{FASE}. Aside from being less clear, as assertions generally refer to objects meeting some property, rather than the value at a certain name, using local variables also complicated the handling of temporal assertions, as discussed in Section~\ref{sect:time}.}
 
 
 Satisfaction is not preserved with growing configurations; for example, the assertion $\forall \x. [\ \x : \prg{Account} \rightarrow \x.\prg{balance}>100\ ]$ 
@@ -529,49 +530,6 @@ We address challenge (a) by storing the remaining code to be executed in \prg{cn
 We address challenge (b) by defining constrained reduction, \jm{$\constrained$ defined below}, where we only take the top of the frame when considering future executions.
 Finally, we address challenge (c) by introducing an explicit initial configuration, and only considering configurations which arise from it and lead to the current configuration.
 
-\begin{definition}[Constrained Reduction]  \label{def:reduction:constrained}
-For any modules $\M$, $\M'$, and configurations $\sigma_1$, $\sigma_2$
-\begin{itemize}
-\item
-$\M\mkpair \M',  \constrained \sigma_2$ 
-\IFF
-$\M\mkpair \M',  (\phi, \chi_1) \leadsto(\psi, \chi_2)$\\
-$\strut ~ \hspace{1.4in} $ \hfill 
-where
-$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
-and
-\item
-$\M\mkpair \M',  \sigma_1\constrained^* \sigma_2$ 
-\IFF
-$\M\mkpair \M',  (\phi, \chi_1) \leadsto^* (\psi, \chi_2)$\\
-$\strut ~ \hspace{1.4in} $ \hfill 
-where
-$\sigma_1 = (\phi \cdot \psi_1, \chi_1)$ and $\sigma_2 = (\psi \cdot \psi_1, \chi_2)$
-\end{itemize}
-\end{definition}
-\jm{Constrained reduction (defined in Definition \ref{def:reduction:constrained}) is a form of reduction
-that is restricted only to reduction steps that arise from the top frame of the stack, and does not consider 
-reduction steps that result as a method return from the top frame. As stated above, this addresses challenge (b).
-Constrained reduction is a strict subset of reduction, and for all modules $\M$ and $\M'$, and configurations $\sigma_1$ and $\sigma_2$, 
-if $\M\mkpair \M',  \sigma_1\constrained \sigma_2$ (or $\M\mkpair \M',  \sigma_1\constrained^* \sigma_2$), then 
-it follows that $\M\mkpair \M',  \sigma_1 \leadsto \sigma_2$ (or $\M\mkpair \M',  \sigma_1\leadsto^* \sigma_2$). 
-The reverse however is not true. Reduction does not imply constrained reduction.
-Since constrained reduction does not consider any frames in the stack preceding the top frame of $\sigma_1$, 
-$\sigma_2$ may only arise from the execution of the current method. For example, if the top frame of $\sigma_1$ 
-is the result of a method call to some method $\prg{m}$, then constrained reduction is restricted to only intermediate 
-configurations that arise from the evaluation of $\prg{m}$, and not beyond that.}
-
-\jm{Constrained reduction is used in the satisfaction of the temporal operators $\Future{A}$ and $\Next{A}$, defined in Definition \ref{def:valid:assertion:time}.
-This restriction is necessary for the definition the future temporal operators, as satisfaction of Chainmail assertions are generally 
-concerned with the current state of the program, and are not able to peel back the stack to inspect underlying frames. As an example, 
-specification (2) of the introductory bank account example asserts that future changes to a bank account implies the current object has access to that account.
-If the reduction implied by future assertions were not constrained, this would not necessarily be true unless we inspected every frame in the stack to check access.
-Further, the use of constrained reduction is necessary in maintaining some expected properties of the temporal operators. 
-While the underlying language \LangOO is deterministic and linear in its reduction, and thus there is exactly one path from the initial configuration of the program to any 
-future configuration that must pass through the current configuration, this is not generally true of languages with potentially branching reduction. If
-reduction of \LangOO were non-linear, and satisfaction of $\Future{\A}$ (or $\Next{\A}$) were not defined with constrained reduction, 
-the satisfaction of $\A$ would not generally imply the satisfaction of $\Future{\Past{A}}$ as $\A$ would not necessarily be satisfied by every branch of the program leading to the future configuration.
-The inverse however does hold, i.e. due to the use of an initial configuration it always holds that satisfaction of $\A$ implies satisfaction of $\Past{\Future{\A}}.$}
 \begin{definition}[Time Assertions]  \label{def:valid:assertion:time}
 For any modules $\M$, $\M'$, and assertion  $\A$ we define
 \begin{itemize}
