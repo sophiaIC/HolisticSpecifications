@@ -11,9 +11,25 @@
 	\usepackage{listings}
 	\usepackage{color}
 	\usepackage{csquotes}	
+	\usepackage{relsize}
+
+%constrained reduction
+\newcommand{\constrained}{\mathrel{\leadsto\ \!\!\!\!{\raisebox{1pt}{$\mathsmaller{\mathsmaller{\mathsmaller{\mathsmaller\rvert}}}$}}}}
+
+	
+	\newcommand\trans[1]{\overset{#1}{\mathlarger{\mathlarger \leadsto}}}
+	\newcommand\mut[3]{#1\ \texttt{mut}\ #2.#3}
+	\newcommand\gives[3]{#1\ \texttt{gives}\ #2\ \texttt{to}\ #3}
+	\newcommand\exposes[2]{#1\ \texttt{exposes}\ #2}
+	\newcommand\univ{U}
+	\newcommand\onlyIf[3]{\{#1\}\ \trans{}\ \{#2\}\ \texttt{only if} [#3]}
+	\newcommand\onlyBy[3]{\{#1\}\ \trans{}\ \{#2\}\ \texttt{only by}\ [#3]}
+	\newcommand\onlyThrough[3]{\{#1\}\ \trans{}\ \{#2\}\ \texttt{only through}\ [#3]}
 
 	
 	\newtheorem{definition}{Definition}
+	\newtheorem{theorem}{Theorem}
+	\newtheorem{lemma}{Lemma}
 	
 	\renewcommand\lstlistingname{Quelltext} % Change language of section name
 	
@@ -30,7 +46,8 @@
 		keepspaces,
 		morekeywords={field, method, module, calls, presumes, achieves, external, internal, access},
 		commentstyle=\color{red},
-		keywordstyle=\color{blue}
+		keywordstyle=\color{blue},
+		deletekeywords={if}
 	}
 	
 	\date{}
@@ -854,16 +871,1731 @@ to the \texttt{a}, or \texttt{Bank} can give access to \texttt{a}. Following the
 know that the latter cannot be true, and we arrive at the result.
 
 \texttt{(3)}
-The proof of \texttt{(3)} follows a similar argument to that of \texttt{(2)}.
+The proof of \texttt{(3)} follows a similar argument to that of \texttt{(2)}. 
+
+\newpage
+
+\section{Modelleing Temporal Assertions and their Implied Effects in Chainmail}
+
+In order to develop a logic that can reason about the temporal 
+aspects of Chainmail at a level above the details of execution paths 
+of L$_{oo}$, I examine the possibility of using effects.
+
+In Figure \ref{f:effects} I define the possible effects in L$_{oo}$ that might occur to the heap 
+through the execution of a program.	
+\begin{figure}[h]
+\footnotesize
+\[
+\begin{array}{llr}
+	\epsilon & ::= &\textit{Effects}\\ 
+	| & \texttt{x mut y.f} & \\
+	| & \texttt{x gives y to z} & \\
+\end{array}
+\]
+\normalsize
+\caption{Effects Syntax}
+\label{f:effects}
+\end{figure}
+For any step of execution, an object might be mutated by another object, or access to an object might
+be granted to another object by some third object. These effects are associated with some execution
+step. i.e. either field access, method call, or method return are required for a \texttt{give} effect, while 
+field assignment is required for a \texttt{mut} effect. Technically, the other effect  is the construction 
+of new objects, but I won't deal with this yet.
+
+For any program configuration with internal module $M_1$ and external module $M_2$ 
+there is a set of possible effects. While it is not possible to define this set, is possible to 
+approximate it if $M_1$ is known. Informally that is, the possible effects in the execution of any 
+program configuration is a subset of 
+$$E_{M_1}\ =\ E_\texttt{mut}\ \cup\ E_\texttt{gives}\ \cup\ E_{\texttt{Int}}$$
+where $E_\texttt{mut}$ is the set of all possible mutations on external objects,
+$E_\texttt{gives}$ is the set of all possible effects where one external object gives
+ access to some object to another external object, and $E_{\texttt{Int}}$ is the set of all internal
+ effects possible via $M_1$. To simplify matters, we can assume that all methods 
+ defined by $M_1$ are free from external calls.
+
+\begin{figure}[h]
+\begin{mathpar}
+\infer
+	{}
+	{
+	M, \sigma \ \vdash\ \texttt{x.f := \_ }\ :\ \sigma.(\texttt{this})\ \texttt{mut}\ \texttt{x.f}
+	}
+	\and
+\infer
+	{
+	[\texttt{x.f}\ \mapsto\ y] \in \sigma
+	}
+	{
+	M, \sigma \ \vdash\ \texttt{\_ := x.f }\ :\ \sigma.(\texttt{this})\ \texttt{gives y to}\ \sigma.(\texttt{this})
+	}
+	\and
+\infer
+	{}
+	{
+	M, \sigma \ \vdash\ \texttt{\_ := x.m(..., y, ..)}\ :\ \sigma.(\texttt{this})\ \texttt{gives y to x}
+	}
+	\and
+\infer
+	{}
+	{
+	M, (\chi, \phi_1 : \phi_2 : \psi) \ \vdash\ \texttt{return x}\ :\ \phi_1.(\texttt{this})\ \texttt{gives x to}\ \phi_2.(\texttt{this})
+	}
+	\and
+\infer
+	{
+	classOf\ \sigma\ \texttt{x}\ \texttt{C} \\
+	\texttt{x := y.m(args)}\ :\ \texttt{y mut z.f}\ \in\ M.(\texttt{C})
+	}
+	{
+	M, \sigma \ \vdash\ \texttt{x := y.m(args)}\ :\ \texttt{y mut z.f}
+	}
+	\and
+\infer
+	{
+	classOf\ \sigma\ \texttt{x}\ \texttt{C} \\
+	\texttt{x := y.m(args)}\ :\ \texttt{y gives z$_1$ to z$_2$}\ \in\ M.(\texttt{C})
+	}
+	{
+	M, \sigma \ \vdash\ \texttt{x := y.m(args)}\ :\ \texttt{y gives z$_1$ to z$_2$}
+	}
+\end{mathpar} 
+\caption{Statement Effects}
+\label{f:effectAssign}
+\end{figure}
+
+Figure \ref{f:effectAssign} covers the assignment of effects to statements.
+This is designed in the context of two module execution, and thus all
+internal calls are treated as atomic, and effects are given per method.
+All the effects are unsurprising, 
+\begin{itemize}
+\item
+assignments mutate the heap, 
+\item
+field accesses, external method calls, and external method returns give access to external objects from other external objects
+\item
+effects of internal methods are defined by the internal module
+\end{itemize}
+Note, in Figure \ref{f:effectAssign}, only internal operations may expose or mutate internal data. 
+Generally we are only interested in the last two rules for this reason.
+
+We can also represent the relationships implied by Chainmail temporal assertions in the following manner:
+$$A_1\ \trans{E}\ A_2$$
+Where $A_1$ is some assertion that is true in the current moment, and $A_2$
+is some assertion that is true in some moment in the future, and
+$E_1$ is the set of effects on the heap necessary for those two assertions to be true.
+
+For some internal module $M$, Chainmail proofs of satisfaction often take one of the following forms:
+\begin{enumerate}
+\item
+From $A_1$ and $E_M$ we want to prove $A_2$ will necessarily hold:\\
+eg. the secret to a safe will never change (assuming there is no internal method to change it)
+\item
+From $A_2$ and $E_M$ we want to prove $A_1$ does necessarily hold\\
+eg. if an external object will have access to a bank account in the future, then there must be an external access with access to that account now.
+\item
+From $A_1$ and $A_2$ we want to prove that $E$ was necessary to go from $A_1$ to $A_2$\\
+eg. if the balance of our account ever changes in the future, then there must have been an intervening execution step that caused 
+that change
+\end{enumerate}
+It is (3) that the rest of this section is concerned with, i.e. identifying necessary effects that must occur for certain 
+assertions to be true. Note, knowing the necessary effects is not enough to prove satisfaction of Chainmail 
+assertions, generally we want to know which internal methods are implied by those effects. For 
+example, we want to use the effects implied by a change in balance to prove that it was 
+\texttt{deposit} that was called. 
+
+\begin{figure}[t]
+\small
+\begin{mathpar}
+\infer
+	{}
+	{
+	\texttt{x.f}\ =\ \texttt{y}\ \trans{\{\texttt{\_ mut x.f}\}} \ \texttt{x.f}\ \neq\ \texttt{y}
+	}
+	\and
+\infer
+	{}
+	{
+	\neg \langle \texttt{x}\ \texttt{access}\ \texttt{y} \rangle\ \trans{ \{\texttt{\_ gives y to x}\}}\ \langle \texttt{x}\ \texttt{access}\ \texttt{y} \rangle
+	}
+	\and
+\infer
+	{
+	A_1\ \trans{\{\texttt{\_ mut x.f}\}} \ A_2
+	}
+	{
+	\texttt{internal}\langle x \rangle\ \wedge\ A_1\ \trans{\{M\ \texttt{mut x.f}\}} \ A_2
+	}
+	\and
+\infer
+	{
+	A_1\ \trans{ \{\_\ \texttt{gives y to x}\}}\ A_2
+	}
+	{
+	\forall \texttt{z}.[\texttt{internal} \langle \texttt{z} \rangle\ \vee\ \neg\ \langle\texttt{z}\ \texttt{access}\ \texttt{y} \rangle] \ \wedge\ A_1\ \trans{ \{M\ \texttt{gives y to x}\}}\ A_2
+	}
+	\and
+\infer
+	{
+	A\ \trans{E}\ A_1 \\
+	A\ \trans{E^\prime}\ A_2
+	}
+	{
+	A\ \trans{E\ \cup\ E^\prime}\ A_1\ \wedge\ A_2
+	}
+	\and
+\infer
+	{
+	A_1\ \trans{E}\ A \\
+	A_2\ \trans{E^\prime}\ A
+	}
+	{
+	A_1\ \wedge\ A_2\ \trans{E\ \cup\ E^\prime}\ A
+	}
+	\and
+\infer
+	{
+	A\ \trans{E}\ A_1 \\
+	A\ \trans{E^\prime}\ A_2
+	}
+	{
+	A\ \trans{E\ \cap\ E^\prime}\ A_1\ \vee\ A_2
+	}
+	\and
+\infer
+	{
+	A_1\ \trans{E}\ A \\
+	A_2\ \trans{E^\prime}\ A
+	}
+	{
+	A_1\ \vee\ A_2\ \trans{E\ \cap\ E^\prime}\ A
+	}
+	\and
+\infer
+	{
+	A_1\ \longrightarrow\ A \\
+	A\ \trans{E}\ A_2
+	}
+	{
+	A_1\ \trans{E}\ A_2
+	}
+	\and
+\infer
+	{
+	A_2\ \longrightarrow\ A \\
+	A_1\ \trans{E}\ A
+	}
+	{
+	A_1\ \trans{E}\  A_2
+	}
+	\and
+%\infer
+%	{
+%	A_1\ \trans{E}\ A_2\\
+%	A_1\ \trans{E^\prime}\ A_2
+%	}
+%	{
+%	A_1\ \trans{E\ \cup\ E^\prime}\ A_2
+%	}
+\end{mathpar} 
+\caption{Deriving Necessary Effects From Temporal Assertions}
+\label{f:effectInference}
+\end{figure}
+
+Figure \ref{f:effectInference} defines rules for proving necessary effects. We read $A_1\ \trans{E}\ A_2$,
+as \emph{``any path starting at a program state $A_1$ and ending at a program state $A_2$ must have at minimum the
+resulting effects $E$''}. Thus $E$ is subset of the effects that might occur in the transition from $A_1$ to $A_2$. 
+Note that we extend the effect syntax to include $M\ \texttt{mut x.f}$ and $M\ \texttt{gives x to y}$ to indicate 
+that the effect must happen internal to the module $M$.
+
+\paragraph{Bank Account Example:} We revisit the \texttt{Bank Account} example from the last section:
+\begin{lstlisting}[mathescape=true]
+module Bank {
+	class Account {
 	
+		field balance
+		method deposit(from, amt) : {this mut this.balance, 
+		                             this mut from.balance} {
+			...
+		}
+}
+\end{lstlisting}
+We address the first specification:
+\begin{lstlisting}[mathescape=true]
+(1) $\triangleq$ $\forall$ a. [ a : Account $\wedge$ changes$\langle$ a.balance $\rangle$ $\longrightarrow$
+               $\exists$ o.[ $\langle$ o calls a.deposit(_, _) $\rangle$ $\vee$
+                     $\langle$ o calls _.deposit(a, _) $\rangle$ ] ] 
+\end{lstlisting}
+$\texttt{changes}\langle \texttt{a.balance} \rangle$ can be rewritten as  such
+\begin{lstlisting}[mathescape=true] 
+changes $\langle$ a.balance $\rangle$ = $\exists$ x. [a.balance = x $\wedge$ next$\langle$ a.balance $\neq$ x $\rangle$]
+\end{lstlisting}
+Using the first rule from Figure \ref{f:effectInference} we get 
+$$\texttt{a.balance}\ =\ \texttt{x}\ \trans{\{\texttt{\_ mut a.balance}\}} \ \texttt{a.balance}\ \neq\ \texttt{x}$$
+Since \texttt{a : Account}, we are able to show that 
+$$\texttt{internal}\langle \texttt{x} \rangle$$
+and subsequently by the third rule in Figure \ref{f:effectInference} we get
+$$\texttt{internal}\langle x \rangle\ \wedge\  \texttt{a.balance}\ =\ \texttt{x}\ \trans{\{\texttt{Bank mut a.balance}\}} \ \texttt{a.balance}\ \neq\ \texttt{x}$$
+It then follows that there must be some call to \texttt{deposit}.
+
+\paragraph{Safe Example:} The safe example features a \texttt{Safe} class defined in the following way:
+\begin{lstlisting}[mathescape=true]
+module SafeModule {
+	class Safe {
 	
+		field secret
+		field treasure
+		
+		method take(scr) : this mut this.treasure {
+			...
+		}
+}
+\end{lstlisting}
+A safe contains a \texttt{secret}, a \texttt{treasure}, and a method \texttt{take} that allows for the removal 
+of the \texttt{treasure} if the caller knows the \texttt{secret}. We specify \texttt{SafeModule} with the following holistic specification:
+\begin{lstlisting}[mathescape=true]
+(SafeSpec) $\triangleq$ $\forall$ s. [ s : Safe $\wedge$ s.treasure $\neq$ null $\wedge$ wil$\langle$ s.treasue = null $\rangle$ $\longrightarrow$
+               $\exists$ o.[ external $\langle$ s, o $\rangle$ $\wedge$ $\langle$ o access s.secret $\rangle$ ] ] 
+\end{lstlisting}
+This specification does not hold in the case where \texttt{internal} and \texttt{external} are defined module wide, 
+but rather when they are defined per data structure. We can prove satisfaction we modify the rules in Figure \ref{f:effectInference} with the following two
+rules:
+\begin{mathpar}
+\infer
+	{
+	A_1\ \trans{\{\texttt{\_ mut y.f}\}} \ A_2
+	}
+	{
+	\texttt{internal}\langle \texttt{x}, \texttt{y} \rangle\ \wedge\ A_1\ \trans{\{\texttt{x mut y.f}\}} \ A_2
+	}
+	\and
+\infer
+	{
+	A_1\ \trans{ \{\_\ \texttt{gives y to x}\}}\ A_2
+	}
+	{
+	\forall \texttt{o}.[\texttt{internal} \langle \texttt{z}, \texttt{o} \rangle\ \vee\ \neg\ \langle\texttt{o}\ \texttt{access}\ \texttt{y} \rangle] \ \wedge\ A_1\ \trans{ \{\texttt{z gives y to x}\}}\ A_2
+	}
+\end{mathpar}
+These two rules above correspond to the datastructure notion of \texttt{internal} and external.
+Now we can proceed by first noting that the first rule in Figure \ref{f:effectInference} gives us
+$$\texttt{s.treasure}\ \neq\ \texttt{null}\ \trans{\{\texttt{\_ mut s.treasure}\}} \ \texttt{s.treasure}\ =\ \texttt{null}$$
+then by noting that trivially \texttt{internal $\langle$s, s$\rangle$} and the first rule directly above
+$$\texttt{internal}\langle \texttt{s}, \texttt{s} \rangle \wedge \texttt{s.treasure}\ \neq\ \texttt{null}\ \trans{\{\texttt{s mut s.treasure}\}} \ \texttt{s.treasure}\ =\ \texttt{null}$$
+for \texttt{s mut s.treasure} to be a necessary effect we must have 
+$$\texttt{internal}\langle \texttt{s}, \texttt{s} \rangle \wedge \texttt{s.treasure}\ \neq\ \texttt{null}\ \trans{\{\}} \ \texttt{o calls s.take(s.secret)}$$
+Further, we can show that 
+$$\texttt{internal}\langle \texttt{s}, \texttt{s} \rangle \wedge \texttt{s.treasure}\ \neq\ \texttt{null}\ \trans{\{\}}\ \ \langle\texttt{o access s.secret}\rangle$$
+From here we need rules that haven't been written yet, i.e. we need to infer that given $\langle\texttt{o access s.secret}\rangle$, and the set of 
+\emph{possible} effects, there must be some external access to \texttt{s.secret} in the present.
+
+\newpage
+
+\section{Proposed Triples}
+
+Consider two program states that are connected by some program execution:
+$$A_1\ \trans{}\ A_2$$
+That is, a program starts at state $A_1$, and after some execution arrives at
+$A_2$. This \textbf{hopefully} allows for the representation of temporal properties without the 
+need for referring to explicit program states.
+For this purpose we define a restricted subset of Chainmail assertions that
+do not include temporal operators in Figure \ref{f:assertions_triple}.
 	
+	\begin{figure}[h]
+	\[
+	\begin{array}{llr}
+	A & ::= & \textit{Assertions}\\  
+	| & e & \\
+	| & e\ :\ C & \\
+	| & e\ \in\ S & \\
+	| & \langle x\ \texttt{access}\ y \rangle &\\
+	| & \langle \texttt{internal}x \rangle &\\
+	| & \langle \texttt{external}y \rangle &\\
+	| & \langle x\ \texttt{calls}\ y.m(args)\rangle & \\
+	| & \neg A & \\
+	| & A\ \wedge\ A & \\
+	| & A\ \vee\ A & \\
+	| & A\ \longrightarrow\ A & \\
+	| & \forall\ x.\ A & \\
+	| & \exists\ x.\ A & \\
+	| & \forall\ S.\ A & \\
+	| & \exists\ S.\ A &
+	\end{array}
+	\]
+	\caption{Assertions}
+	\label{f:assertions_triple}
+	\end{figure}
 	
+In order to help reason about temporal properties in a way that does not explicitly require details of the program 
+configuration, we propose three triples: 
+
+\begin{enumerate}
+\item
+\emph{Only If} [$\onlyIf{A_1}{A_2}{A}$]: If program execution starts at some $A_1$ state, and reaches some $A_2$ state, 
+then the original program state must have also satisfied $A$.\\
+e.g. if the balance of a bank account changes over time, then there must be some external object in the current 
+program state that has access to the account.
+\item
+\emph{Only By} [$\onlyBy{A_1}{A_2}{\epsilon}$]:  If a program execution starts at some $A_1$ state, and reaches some $A_2$ state, then the execution path that connects the two states must have had the effect $\epsilon$. Note, $\epsilon$ is an under-approximation of 
+both the total effects and the necessary effects of a path connecting $A_1$ to $A_2$.\\
+e.g. if the balance of the bank account changes over time, then the paths connecting the two states can be generally described as 
+mutating the account object.
+\item
+\emph{Only Through} [$\onlyThrough{A_1}{A_2}{A}$]: If a program execution starts at some $A_1$ state, and reaches some $A_2$ state, then program execution must have passed through some $A$ state.
+As in (2), $A$ is an under-approximation of 
+both the states that must and will be passed through by a path connecting $A_1$ to $A_2$.\\
+e.g.if the balance of the bank account changes over time, then the paths connecting the two states must contain 
+an intermediate program state where the balance is changed.
+\end{enumerate}
+
+I will first discuss (2) and (3).
+
+\subsection{Only By}
+\begin{figure}[t]
+\footnotesize
+\[
+\begin{array}{lcr}
+\begin{array}{llr}
+	\epsilon & ::= &\textit{Effects}\\ 
+	| & \mut{s}{x}{f} & \\
+	| & \gives{s}{x}{y} & \\
+	| & \exposes{s}{x} & \\
+	| & \epsilon\ \cap\ \epsilon & \\
+	| & \epsilon\ \cup\ \epsilon & \\
+	| & \univ & \\
+	| & \emptyset & \\
+\end{array} &
+~~~~~~~~&
+\begin{array}{llr}
+s & ::= &\textit{Source}\\ 
+	| & \_ & \\
+	| & M & \\
+\end{array}
+\end{array}
+\]
+\normalsize
+\caption{Effects Syntax}
+\label{f:effect_syntax_triple}
+\end{figure}
+\begin{figure}[p]
+\footnotesize
+\begin{mathpar}
+\infer
+	{}
+	{
+	M\ \vdash\ \onlyBy{A_1}{A_2}{\univ}
+	}
+	\quad(\textsc{Universal})
+	\and
+\infer
+	{}
+	{
+	M\ \vdash\ \onlyBy{x.f\ =\ y}{x.f\ \neq\ y}{\mut{\_}{x}{f}}
+	}
+	\quad(\textsc{Mut})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyBy{A_1}{A_2}{\texttt{\_ mut x.f}}
+	}
+	{
+	M\ \vdash\ \onlyBy{\texttt{internal}\langle x \rangle\ \wedge\ A_1}
+		{A_2}
+		{M\ \texttt{mut x.f}}
+	}
+	\quad(\textsc{Mut-Int})
+	\and
+\infer
+	{}
+	{
+	M\ \vdash\ \onlyBy{\neg \langle x\ \texttt{access}\ y \rangle}
+		{\langle x\ \texttt{access}\ y \rangle}
+		{\gives \_ y x}
+	}
+	\quad(\textsc{Give})
+%	\and
+%\infer
+%	{
+%	M\ \vdash\ \onlyBy{A_1}{A_2}{\gives \_ x y}
+%	}
+%	{
+%	M\ \vdash\ \onlyBy{\forall \texttt{z}.[\langle \texttt{internal}\ \texttt{z} \rangle\ \vee\ \neg\ \langle\texttt{z}\ \texttt{access}\ \texttt{x} \rangle] \ \wedge\ A_1}
+%	  {\langle \texttt{external}\ y \rangle\ \wedge\ A_2}
+%	  {\exposes{M}{x}}
+%	}
+%	\quad(\textsc{Expose})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyBy{A_1}{A_2}{\gives \_ x y}
+	}
+	{
+	M\ \vdash\ \onlyBy
+		{\langle \texttt{encapsulated}\ x\rangle \ \wedge\ A_1}
+	  	{\langle \texttt{external}\ y \rangle\ \wedge\ A_2}
+	  	{\exposes{M}{x}}
+	}
+	\quad(\textsc{Expose})
+	\and
+\infer
+	{
+	A_1'\ \supseteq\ A_1 \\
+	A_2'\ \supseteq\ A_2 \\
+	M\ \vdash\ \onlyBy{A_1}{A_2}{\epsilon}
+	}
+	{
+	M\ \vdash\ \onlyBy{A_1'}{A_2'}{\epsilon}
+	}
+	\quad(\textsc{Consequence})
+%	\and
+%\infer
+%	{
+%	A_2\ \longrightarrow\ A \\
+%	\onlyBy{A_1}{\epsilon}{A}
+%	}
+%	{
+%	\onlyBy{A_1}{\epsilon}{A_2}
+%	}
+%	\quad(\textsc{Consequence-2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyBy{A_1}{A}{\epsilon_1} \\
+	M\ \vdash\ \onlyBy{A_2}{A}{\epsilon_2}
+	}
+	{
+	M\ \vdash\ \onlyBy{A_1\ \wedge\ A_2}{A}{\epsilon_1\ \cap\ \epsilon_2}
+	}
+	\quad(\textsc{Conjunction-1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyBy{A}{A_1}{\epsilon_1} \\
+	M\ \vdash\ \onlyBy{A}{A_1}{\epsilon_2}
+	}
+	{
+	M\ \vdash\ \onlyBy{A}{A_1\ \wedge\ A_2}{\epsilon_1\ \cap\ \epsilon_2}
+	}
+	\quad(\textsc{Conjunction-2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyBy{A_1}{A}{\epsilon_1} \\
+	M\ \vdash\ \onlyBy{A_2}{A}{\epsilon_2}
+	}
+	{
+	M\ \vdash\ \onlyBy{A_1\ \vee\ A_2}{A}{\epsilon_1\ \cup\ \epsilon_2}
+	}
+	\quad(\textsc{Disjunction-1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyBy{A}{A_2}{\epsilon_1} \\
+	M\ \vdash\ \onlyBy{A}{A_1}{\epsilon_2}
+	}
+	{
+	M\ \vdash\ \onlyBy{A}{A_1\ \vee\ A_2}{\epsilon_1\ \cup\ \epsilon_2}
+	}
+	\quad(\textsc{Disjunction-2})
+\end{mathpar} 
+\caption{Only By}
+\label{f:effect_infer_triple}
+\end{figure}
+
+The intent of (2) is to be able to generally describe the program that must exist connecting two states. 
+In Hoare Logic we take a precondition and a program, and try to infer what the resulting program state must 
+satisfy. In Chainmail we often start with both the precondition and the postcondition, and try to infer
+what the intervening program must look like for those two conditions to hold.
+
+There are often many different programs that can connect two program states, but we want to be able to 
+identify their commonalities. i.e. there are many different programs that might change the balance of an 
+account from \$50 to \$100, but they must all have the effect of assigning to \verb|a.balance|.
+
+The design of ``Only By'' is much like that of Section 8. i.e. the effect syntax is given in Figure \ref{f:effect_syntax_triple}
+and the rules for deriving effects are in Figure \ref{f:effect_infer_triple} (note, while not explicitly 
+referenced, for now it is assumed that there is some internal module $M$).
+
+ An effect indicates 
+the set of possible paths connecting two program states. An effect may be either a field assignment (\texttt{mut}) or
+the gaining of access (\texttt{gives}). Further, effects may also indicate the intersection of two effects ($\epsilon_1\ \cap\ \epsilon_2$)
+indicating the set of paths that have both the effect $\epsilon_1$ and $\epsilon_2$. Effects may also
+represent the union of paths ($\epsilon_1\ \cup\ \epsilon_2$), that is all paths that either have the effect 
+$\epsilon_1$ or $\epsilon_2$. For now \texttt{x} and \texttt{y} refer to objects, but it is conceivable that they
+could also refer to field accesses.
+Every effect has a source (\texttt{X}) that is either unspecified (\_) or 
+the internal module ($M$).
+
+The difference between Figure \ref{f:effect_infer_triple} and that of Figure \ref{f:effectInference}
+is that the later uses a set of necessary effects, while the former only references a specific effect
+and includes intersections and unions as part of the effect syntax.
+The rules for deriving effects is given in Figure \ref{f:effect_infer_triple},
+and differs in similar ways to that of Section 8. 
+Note that we define (see \textsc{Expose}) the following Chainmail predicate.
+$$\langle \texttt{encapsulated}\ x\rangle\ \triangleq\ 
+\forall y.[\neg\langle y\ \texttt{access}\ x \rangle\ \vee\ \langle \texttt{internal}\ y \rangle]$$
+
+The problem with (2) is that we are not actually interested showing what effects must occur to 
+connect two different program states, but rather which steps must be taken to give those effects.
+i.e. if the balance of an account changes from \$50 to \$100, it must come as a result of a call to 
+\verb|a.deposit|. For this reason, (3) more directly describes the specifications we intend.
+
+\subsection{Only Through}
+
+(2) and (3) are connected in intent. I believe that ``only through'' is really what we would like to be able to write, 
+but would at least need something corresponding to ``only by'' to connect the dots. That is, often before we can say that a program 
+state must occur (i.e. $A_3$ in ``only through'') we need to be able say what $A_3$ is implied by some set of effects 
+that $A_3$ has on the program state. Thus, to use ``only by'' to express ``only through'', we need a judgment 
+that connects the set of paths defined by an effect $\epsilon$ to an assertion. We express this below
+$$M, \epsilon \vDash\ A$$
+Informally, this is read as ``the program state $A$ sastisfies the path defined by $\epsilon$''.
+This does not mean that $A$ is the only possible program state that satisfies $\epsilon$, 
+and so this is an under-approximation of the necessary program states implied by $\epsilon$.
+
+In order to define effect/path satisfaction, we give the following definitions.
+$$M\ ::=\ \overline{C}$$
+$$C\ ::=\ \overline{m\ :\overline{\{A\}\ \_\ \{\epsilon\})}}$$
+We define a module as a set of class definitions, and class definitions as a set of method names
+coupled with a set of precondition/effect pairs. We then define the following triple:
+$$\{A\}\ \texttt{y.m(args)}\ \{\epsilon\}$$
+This triple is interpreted as the method call \texttt{y.m(args)}
+will have effect $\epsilon$ if the precondition $A$ is satisfied.
+Note: both $A$ and $\epsilon$ may be dependent on \texttt{y} and \texttt{args}.
+We can use this triple to now define effect/path satisfaction.
+
+\begin{mathpar}
+\infer
+	{
+	\textit{sourceOf}\ \epsilon\ \textit{is}\ M\\
+	C\ \in\ M\\
+	\{A\}\ \texttt{y.m(args)}\ \{\epsilon\}\ \in\ C
+	}
+	{
+	M, \epsilon \vdash\ A\ \wedge\ \exists \texttt{o}.[\langle \texttt{o external} \rangle\ \wedge \langle \texttt{o calls y(args)} \rangle]
+	\wedge (\texttt{y}\ :\ C)
+	}
+	\and
+\infer
+	{
+	M, \epsilon_1 \vdash\ A_1\\
+	M, \epsilon_2 \vdash\ A_2\\
+	}
+	{M, \epsilon_1\ \cap\ \epsilon_2 \vdash\ A_1\ \wedge\ A_2}
+	\and
+\infer
+	{
+	M, \epsilon_1 \vdash\ A_1\\
+	M, \epsilon_2 \vdash\ A_2\\
+	}
+	{M, \epsilon_1\ \cup\ \epsilon_2 \vdash\ A_1\ \vee\ A_2}
+\end{mathpar}
+While the above judgment defines possible program states
+that satisfy an effect, we are actually interested in 
+defining all possible program states that satisfy an 
+effect. For this we define $A_\epsilon$
+$$A_\epsilon\ \triangleq\ \texttt{false}\vee(\underset{M, \epsilon\ \vDash\ A}{\bigvee}A)$$
+Note, that if there is no possible program state that can 
+satsify an effect $\epsilon$ then $A_\epsilon = \texttt{false}$, an impossible state.
+This could potentially be usefull for proofs by contradiction.
+
+We can now use the above definitions to arrive at rules for defining ``only through'' in Figure \ref{f:only_through}.
+\begin{figure}[p]
+\footnotesize
+\begin{mathpar}
+%\infer
+%	{
+%	M\ \vdash\ \onlyBy{A_1}{A_2}{\epsilon}
+%	}
+%	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A_\epsilon}}
+%	\quad(\textsc{OT-Effect})
+%	\and
+\infer
+	{}
+	{
+	M\ \vdash\ \onlyThrough{x.f\ =\ y}{x.f\ \neq\ y}{\exists z.[\mut{z}{x}{f}]}
+	}
+	\quad(\textsc{OT-Mut})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists z.[\mut{z}{x}{f}]}
+	}
+	{
+	M\ \vdash\ \onlyThrough
+					{A_1\ \wedge\ \langle \texttt{internal}\ x \rangle}
+					{A_2}
+					{\exists z.[\mut{z}{x}{f}\ \wedge\ \langle \texttt{internal}\ z \rangle]}
+	}
+	\quad(\textsc{OT-Mut-Int})
+	\and
+\infer
+	{}
+	{M\ \vdash\ \onlyThrough{\neg \langle x\ \texttt{access}\ y \rangle}{\langle x\ \texttt{access}\ y \rangle}{\exists z.[\gives{z}{x}{y}]}}
+	\quad(\textsc{OT-Give})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists z.[\gives{z}{x}{y}]}
+	}
+	{
+	M\ \vdash\ \onlyThrough
+		{A_1\ \wedge\ \langle \texttt{encapsulated}\ x \rangle }
+		{A_2}
+		{\exists z\ y'.[\gives{z}{x}{y'}\ \wedge\ \langle \texttt{internal}\ z\rangle]}
+	}
+	\quad(\textsc{OT-Give-Int1})
+	\and
+\infer
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists z\ y'.[\gives{z}{x}{y'}\ \wedge\ \langle \texttt{internal}\ z\rangle]}}
+	{
+	M\ \vdash\ \onlyThrough
+		{A_1}
+		{A_2\ \wedge\ \langle \texttt{external}\ y \rangle}
+		{\exists z\ y'.[\gives{z}{x}{y'}\ \wedge\ \langle \texttt{internal}\ z\rangle\
+		\wedge\ \langle \texttt{external}\ y' \rangle]}
+	}
+	\quad(\textsc{OT-Give-Int2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_3}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{OT-Trans1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
+	M\ \vdash\ \onlyThrough{A_3}{A_2}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{OT-Trans2})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyThrough{A'}{A_1}{A_2}
+	}
+	{M\ \vdash\ \onlyThrough{A}{A_1}{A_2}}
+	\quad(\textsc{OT-Consequence1})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyThrough{A_1}{A'}{A_2}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A}{A_2}}
+	\quad(\textsc{OT-Consequence2})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A'}}
+	\quad(\textsc{OT-Consequence3})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1\ \vee\ A_	1'}{A_2}{A\ \vee\ A'}}
+	\quad(\textsc{OT-Disj1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2\ \vee\ A_2'}{A\ \vee\ A'}}
+	\quad(\textsc{OT-Disj2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1\ \wedge\ A_	1'}{A_2}{A\ \wedge\ A'}}
+	\quad(\textsc{OT-Conj1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2\ \wedge\ A_2'}{A\ \wedge\ A'}}
+	\quad(\textsc{OT-Conj2})
+\end{mathpar}
+\caption{Only Through}
+\label{f:only_through}
+\end{figure}
+Given a starting point $A_1$ and an end point $A_2$, along with an effect $\epsilon$, we can derive a necessary intermediate program state
+that all paths must pass through.
+
+\subsection{Soundness and Completeness of the Proposed Proof Rules}
+For us to derive a proof of soundness or completeness for our proof rules, 
+we need to define exactly what we are attempting to prove.
+
+The effect $\epsilon$ is not in fact an effect, rather it is shorthand for a set of execution paths.
+For example, $\mut{\_}{x}{f}$ denotes the set of execution paths that 
+at least mutate the field $f$ in the object referenced by $x$, but may 
+have other effects too. For this reason I will also refer to $\epsilon$ 
+as an ``execution set''.
+Thus, $\epsilon$ is an upper-bound on the set of execution paths
+connecting two program states.
+In other words: if $\onlyBy{A}{A'}{\epsilon}$, then for all
+executions paths:
+$$p\ =\ \sigma_1\ \leadsto\ \ldots\ \leadsto\ \sigma_n$$
+where $M, \sigma_1\ \vDash\ A$ and $M,\ \sigma_n\ \vDash\ A'$
+$$p\ \in\ \epsilon$$
+That is $\epsilon$ is an over-approximation of the set of execution
+paths that begin at a program state $A$ and end at a program state
+$A'$. We state this judgment as $M,\ p\ \vDash\ \epsilon$.
+
+Before I give the formal definition for the above property we 
+first define what it means for a single reduction step to 
+belong to an execution set. 
+We do this in Figure \ref{f:effect_step}.
+
+\begin{figure}[h]
+\footnotesize
+\begin{mathpar}
+\infer
+	{}
+	{M\ \vDash \sigma_1\ \leadsto\ \sigma_2\ \in\ U}
+	\quad(\textsc{Universal})
+	\and
+%\infer
+%	{
+%	(\forall\ x\ f\ y, M,\ \sigma_1\ \vDash\ x.f\ =\ y\ \Rightarrow\ M,\ \sigma_2\ \vDash\ x.f\ =\ y)\\
+%	(\forall\ x\ y, M,\ \sigma_2\ \vDash\ \langle x\ \texttt{access}\ y\rangle\ \Rightarrow\ M,\ \sigma_1\ \vDash\ \langle x\ \texttt{access}\ y\rangle)
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \emptyset}
+%	\quad(\textsc{Empty})
+%	\and
+\infer
+	{
+	M,\ \sigma_1\ \vDash\ x.f\ =\ y\\
+	M,\ \sigma_2\ \vDash\ x.f\ \neq\ y
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \mut{\_}{x}{f}}
+	\quad(\textsc{Mut})
+	\and
+\infer
+	{
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \mut{\_}{x}{f}\\
+	M,\ \sigma_1\ \vDash\ \exists\ y\ m,[\langle \sigma_1.(\texttt{this})\ \texttt{calls}\ y.m(\_) \rangle\ \wedge\ \langle \texttt{internal}\ y\rangle]
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \mut{M}{x}{f}}
+	\quad(\textsc{Mut-Int})
+	\and
+\infer
+	{
+	M,\ \sigma_1\ \vDash\ \neg\langle x\ \texttt{access}\ y \rangle\\
+	M,\ \sigma_2\ \vDash\ \langle x\ \texttt{access}\ y \rangle
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \gives{\_}{x}{y}}
+	\quad(\textsc{Gives})
+	\and
+\infer
+	{
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \gives{\_}{x}{y}\\
+	M,\ \sigma_1\ \vDash\ \exists\ z\ m,[\langle \sigma_1.(\texttt{this})\ \texttt{calls}\ z.m(\_) \rangle\ \wedge\ \langle \texttt{internal}\ z\rangle]
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \gives{M}{x}{y}}
+	\quad(\textsc{Gives-Int})
+	\and
+\infer
+	{
+	\alpha\ \in\ \sigma_1.(\chi) \\
+	M,\ \sigma_1\ \vDash\ [\alpha/x]A\\
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ [\alpha/x]\epsilon
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \exists (x \vDash\ A).\epsilon}
+	\quad(\textsc{Exists})
+	\and
+\infer
+	{
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \epsilon \\
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \epsilon'
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \epsilon\ \cap\ \epsilon'}
+	\quad(\textsc{Intersection})
+	\and
+\infer
+	{
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \epsilon
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \epsilon\ \cup\ \epsilon'}
+	\quad(\textsc{Union-1})
+	\and
+\infer
+	{
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \epsilon'
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \epsilon\ \cup\ \epsilon'}
+	\quad(\textsc{Union-2})
+\end{mathpar}
+\caption{Execution Sets of a Single Execution Step}
+\label{f:effect_step}
+\end{figure}
+
+\begin{figure}[h]
+\footnotesize
+\begin{mathpar}
+\infer
+	{}
+	{M\ \vDash p\ \in\ U}
+	\quad(\textsc{Universal})
+	\and
+%\infer
+%	{
+%	(\forall\ x\ f\ y, M,\ \sigma_1\ \vDash\ x.f\ =\ y\ \Rightarrow\ M,\ \sigma_2\ \vDash\ x.f\ =\ y)\\
+%	(\forall\ x\ y, M,\ \sigma_2\ \vDash\ \langle x\ \texttt{access}\ y\rangle\ \Rightarrow\ M,\ \sigma_1\ \vDash\ \langle x\ \texttt{access}\ y\rangle)
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \emptyset}
+%	\quad(\textsc{Empty})
+%	\and
+\infer
+	{
+	\sigma_1\ \leadsto\ \sigma_2\ \in\ p\\
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \mut{s}{x}{f}
+	}
+	{
+	M\ \vDash\ p\ \in\ \mut{s}{x}{f}
+	}
+	\quad(\textsc{Mut})
+	\and
+\infer
+	{
+	\sigma_1\ \leadsto\ \sigma_2\ \in\ p\\
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \gives{s}{x}{y}
+	}
+	{M\ \vDash\ p\ \in\ \gives{s}{x}{y}}
+	\quad(\textsc{Gives})
+	\and
+\infer
+	{
+	\sigma_1\ \leadsto\ \sigma_2\ \in\ p\\
+	M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \exists (x \vDash\ A).\epsilon
+	}
+	{M\ \vDash\ \sigma_1\ \leadsto\ \sigma_2\ \in\ \exists (x \vDash\ A).\epsilon}
+	\quad(\textsc{Exists})
+	\and
+\infer
+	{
+	M\ \vDash\ p\ \in\ \epsilon \\
+	M\ \vDash\ p\ \in\ \epsilon'
+	}
+	{M\ \vDash\ p\ \in\ \epsilon\ \cap\ \epsilon'}
+	\quad(\textsc{Intersection})
+	\and
+\infer
+	{
+	M\ \vDash\ p\ \in\ \epsilon
+	}
+	{M\ \vDash\ p\ \in\ \epsilon\ \cup\ \epsilon'}
+	\quad(\textsc{Union-1})
+	\and
+\infer
+	{
+	M\ \vDash\ p\ \in\ \epsilon'
+	}
+	{M\ \vDash\ p\ \in\ \epsilon\ \cup\ \epsilon'}
+	\quad(\textsc{Union-2})
+\end{mathpar}
+\caption{Execution Sets of Execution Paths}
+\label{f:effect_path}
+\end{figure}
+Figure \ref{f:effect_path} defines what it means for a path to belong to an execution set.
+We now define $\onlyBy{A_1}{A_2}{\epsilon}$
+\begin{definition}[\textsc{Only By}]
+$M\ \vDash\ \onlyBy{A_1}{A_2}{\epsilon}$ 
+iff 
+$\forall\ M'\ \sigma_0\ \sigma_n$, 
+such that
+$M\ \fcmp\ M'\ \bullet\ \sigma_0\ \leadsto\ \ldots\ \leadsto\ \sigma_n$
+it follows that 
+$M\ \vDash\ \sigma_0\ \leadsto\ \ldots\ \leadsto\ \sigma_n\ \in\ \epsilon$.
+\end{definition}
+We are now able to state both soundness and completeness.
+\begin{theorem}[Soundness]
+If $M\ \vdash\ \onlyBy{A_1}{A_2}{\epsilon}$ then 
+$M\ \vDash\ \onlyBy{A_1}{A_2}{\epsilon}$.
+\end{theorem}
+\begin{proof}
+The proof proceeds by induction on the derivation of $M\ \vdash\ \onlyBy{A_1}{A_2}{\epsilon}$.
+\end{proof}\hfill\qed
+\begin{theorem}[Completeness]
+If $M\ \vDash\ \onlyBy{A_1}{A_2}{\epsilon}$ then 
+$M\ \vdash\ \onlyBy{A_1}{A_2}{\epsilon}$.
+\end{theorem}
+\begin{proof}
+({\color{red}Julian: The proof of completeness needs to probably be based on a specific form of
+the proof designed for single step execution. I'm not 100\% sure that the proof rules are complete, but they are probably sound.})
+\end{proof}\hfill\qed
+
+
+%\footnotesize
+%\begin{itemize}
+%\item
+%$M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \mut{\_}{x}{f}\ iff$
+%\begin{itemize}
+%\item
+%$\exists\ z,\ M,\ \sigma_1\ \vDash\ x.f\ =\ z$, $M,\sigma_2\ \vDash\ x.f\ \neq\ z$
+%\end{itemize}
+%
+%\item
+%$M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \mut{M}{x}{f}\ iff$
+%\begin{itemize}
+%\item
+%$\exists\ z,\ M,\ \sigma_1\ \vDash\ x.f\ =\ z$, $M,\sigma_2\ \vDash\ x.f\ \neq\ z$
+%\item
+%$M,\ \sigma_1\ \vDash\ \exists\ y\ m.[\langle \sigma_1.(\texttt{this})\ \texttt{calls}\ y.m(\_) \rangle\ \wedge\ \langle \texttt{internal}\ y\rangle]$
+%\end{itemize}
+%
+%\item
+%$M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \gives{\_}{x}{y}\ iff$
+%\begin{itemize}
+%\item
+%$M,\ \sigma_1\ \vDash\ $
+%\end{itemize}
+%\end{itemize}
+%\normalsize
+
+%\begin{figure}[h]
+%\footnotesize
+%\begin{mathpar}
+%\infer
+%	{}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ u}
+%	\quad(\textsc{Universal})
+%	\and
+%\infer
+%	{\sigma_1.(\texttt{contn}) = x.f\ \texttt{:=}\ y  \\
+%	M,\ \sigma_1\ \vDash\ x.f\ \neq\ y}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \mut{\_}{x}{f}}
+%	\quad(\textsc{Mut-Ext})
+%	\and
+%\infer
+%	{
+%	\sigma_1.(\texttt{contn}) = \_\ \texttt{:=}\ x.f \\
+%	M,\ \sigma_1\ \vDash\ \neg \langle \sigma_1.(\texttt{this})\ \texttt{access}\ x.f \rangle
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \gives{\_}{x.f}{\sigma_1.(\texttt{this})}}
+%	\quad(\textsc{Give-FAccess})
+%	\and
+%\infer
+%	{\sigma_1.(\texttt{contn}) = x.f\ \texttt{:=}\ y}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \gives{\_}{y}{x}}
+%	\quad(\textsc{Give-FAssign})
+%	\and
+%\infer
+%	{
+%	\sigma_1.(\texttt{contn}) = \texttt{return}\ x
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \gives{\_}{x}{\sigma_2.(\texttt{this})}}
+%	\quad(\textsc{Give-Return})
+%	\and	
+%\infer
+%	{
+%	\sigma_1.(\texttt{contn}) = \_\ =\ \texttt{x.m(args)} \\
+%	M,\ \sigma_1\ \vDash\ \langle \texttt{internal}\ x \rangle \\
+%	M\ \vDash\ \sigma_1.(\texttt{this})\ \texttt{calls x.m(args)}\ :\ \epsilon
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon}
+%	\quad(\textsc{Internal})
+%	\and
+%\infer
+%	{
+%	\alpha\ \in\ \sigma_1.(\chi) \\
+%	M,\ \sigma_1\ \vDash\ [\alpha/x]A\\
+%	M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ [\alpha/x]\epsilon
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \exists (x \vDash\ A).\epsilon}
+%	\quad(\textsc{Exists})
+%	\and
+%\infer
+%	{
+%	M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon \\
+%	M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon'
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon\ \cap\ \epsilon'}
+%	\quad(\textsc{Intersection})
+%	\and
+%\infer
+%	{
+%	M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon\ \cup\ \epsilon'}
+%	\quad(\textsc{Union-1})
+%	\and
+%\infer
+%	{
+%	M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon'
+%	}
+%	{M,\ \sigma_1\ \leadsto\ \sigma_2\ \vDash\ \epsilon\ \cup\ \epsilon'}
+%	\quad(\textsc{Union-2})
+%\end{mathpar}
+%\caption{Effect of a Single Execution Step ({\color{red}Julian: I haven't figured out the last premise in \textsc{Internal} yet})}
+%\label{f:effect_step}
+%\end{figure}  
+\newpage
+\section{``Only Through'' and ``Only If'' Defined without Effects}
+
+In this Section I try to define ``Only Through'' and ``Only If'' without using the intermediate of ``Only By''.
+To do this I extend the assertion syntax to include two assertion forms that describe program behaviour
+and side effects:
+\begin{itemize}
+\item
+$\langle \mut{x}{y}{f} \rangle$: 
+This can be interpreted as essentially the same as $\texttt{changes}\langle y.f \rangle$, but with including the fact that either $x$ was the object that changed $y.f$, or $y.f$ 
+changed as a result of a call from client code to the internal object $x$.
+\item
+$\langle \gives{x}{y}{z} \rangle$: object $z$ gains access to $y$, where $x$ is either the object that performed the operation that gave that access, or $z$ gained
+access to $y$ as a result of a call from client code tothe internal object $x$.
+\end{itemize}
+Thus, we give the new assertion syntax in Figure \ref{f:assertions_triple2}.
 	
+	\begin{figure}[h]
+	\[
+	\begin{array}{llr}
+	A & ::= & \textit{Assertions}\\  
+	| & e & \\
+	| & e\ :\ C & \\
+	| & e\ \in\ S & \\
+	| & \langle x\ \texttt{access}\ y \rangle &\\
+	| & \langle \texttt{internal}\ x \rangle &\\
+	| & \langle \texttt{external}\ y \rangle &\\
+	| & \langle \mut x y f \rangle &\\
+	| & \langle \gives x y z \rangle &\\
+	| & \langle x\ \texttt{calls}\ y.m(args)\rangle & \\
+	| & \neg A & \\
+	| & A\ \wedge\ A & \\
+	| & A\ \vee\ A & \\
+	| & A\ \longrightarrow\ A & \\
+	| & \forall\ x.\ A & \\
+	| & \exists\ x.\ A & \\
+	| & \forall\ S.\ A & \\
+	| & \exists\ S.\ A &
+	\end{array}
+	\]
+	\caption{Assertions}
+	\label{f:assertions_triple2}
+	\end{figure}
 	
-	
-	
-	\bibliographystyle{abbrv}
-	\bibliography{main}
+Formally, the semantics of these two new assertions are as follows:
+\begin{itemize}
+\item
+$M,\ \sigma \vDash\ \mut{x}{y}{f}$ iff $\forall\ v\ \sigma',$ such that $M\ \sigma\ \vDash\ y.f\ =\ v$ and $M\, \sigma\ \vDash\ \sigma\ \constrained\ \sigma'$ then 
+\begin{itemize}
+\item
+$M\ \sigma'\ \vDash\ y.f\ \neq\ v$ and
+\item
+either
+\begin{itemize}
+\item
+$\lfloor this \rfloor_\sigma\ = x$ and $\sigma.(\texttt{contn})$  is not an internal method call or
+\item
+$M,\ \sigma\ \vDash\ \exists x'\ m\ args,[\langle x'\ \texttt{calls}\ x.m(args)\rangle\ \wedge\ \langle \texttt{internal}\ x\rangle]$
+\end{itemize}
+\end{itemize}
+\item
+$M,\ \sigma\ \vDash\ \gives{x}{y}{z}$ iff $\forall\ \sigma',$ such that $M\, \sigma\ \vDash\ \sigma\ \constrained\ \sigma'$ then 
+\begin{itemize}
+\item
+$M,\ \sigma\ \vDash\ \neg\langle z\ \texttt{access}\ y  \rangle$ and
+\item
+$M,\ \sigma'\ \vDash\ \langle z\ \texttt{access}\ y  \rangle$ and 
+\item
+either
+\begin{itemize}
+\item
+$\lfloor this \rfloor_\sigma\ = x$ and $\sigma.(\texttt{contn})$  is not an internal method call or
+\item
+$M,\ \sigma\ \vDash\ \exists x'\ m\ args,[\langle x'\ \texttt{calls}\ x.m(args)\rangle\ \wedge\ \langle \texttt{internal}\ x\rangle]$
+\end{itemize}
+\end{itemize}
+\end{itemize}
+Now to simplify the following definitions, I introduce a chainmail predicate.
+$$\langle\texttt{encapsulated}\ x\rangle\ \equiv\ \forall y.[\neg\langle y\ \texttt{access}\ x \rangle\ \vee\ \langle\texttt{internal}\ y\rangle]$$
+Now I introduce proof rules for ``Only Through'' in Figures \ref{f:only_through_base} and \ref{f:only_through_connective}. 
+
+\begin{figure}[p]
+\footnotesize
+\begin{mathpar}
+%\infer
+%	{
+%	M\ \vdash\ \onlyBy{A_1}{A_2}{\epsilon}
+%	}
+%	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A_\epsilon}}
+%	\quad(\textsc{OT-Effect})
+%	\and
+\infer
+	{}
+	{
+	M\ \vdash\ \onlyThrough{x.f\ =\ y}{x.f\ \neq\ y}{\exists z.[\mut{z}{x}{f}]}
+	}
+	\quad(\textsc{OT-Mut})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists z.[\mut{z}{x}{f}]}
+	}
+	{
+	M\ \vdash\ \onlyThrough
+					{A_1\ \wedge\ \langle \texttt{internal}\ x \rangle}
+					{A_2}
+					{\exists z.[\mut{z}{x}{f}\ \wedge\ \langle \texttt{internal}\ z \rangle]}
+	}
+	\quad(\textsc{OT-Mut-Int})
+	\and
+\infer
+	{}
+	{M\ \vdash\ \onlyThrough{\neg \langle x\ \texttt{access}\ y \rangle}{\langle x\ \texttt{access}\ y \rangle}{\exists z.[\gives{z}{x}{y}]}}
+	\quad(\textsc{OT-Give})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists z.[\gives{z}{x}{y}]}
+	}
+	{
+	M\ \vdash\ \onlyThrough
+		{A_1\ \wedge\ \langle \texttt{encapsulated}\ x \rangle }
+		{A_2}
+		{\exists z\ y'.[\gives{z}{x}{y'}\ \wedge\ \langle \texttt{internal}\ z\rangle]}
+	}
+	\quad(\textsc{OT-Give-Int1})
+	\and
+\infer
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists z\ y'.[\gives{z}{x}{y'}\ \wedge\ \langle \texttt{internal}\ z\rangle]}}
+	{
+	M\ \vdash\ \onlyThrough
+		{A_1}
+		{A_2\ \wedge\ \langle \texttt{external}\ y \rangle}
+		{\exists z\ y'.[\gives{z}{x}{y'}\ \wedge\ \langle \texttt{internal}\ z\rangle\
+		\wedge\ \langle \texttt{external}\ y' \rangle]}
+	}
+	\quad(\textsc{OT-Give-Int2})
+\end{mathpar}
+\caption{Only Through Base Rules}
+\label{f:only_through_base}
+\end{figure}
+\begin{figure}[p]
+\footnotesize
+\begin{mathpar}
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_3}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{OT-Trans1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
+	M\ \vdash\ \onlyThrough{A_3}{A_2}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{OT-Trans2})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyThrough{A'}{A_1}{A_2}
+	}
+	{M\ \vdash\ \onlyThrough{A}{A_1}{A_2}}
+	\quad(\textsc{OT-Consequence1})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyThrough{A_1}{A'}{A_2}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A}{A_2}}
+	\quad(\textsc{OT-Consequence2})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A'}}
+	\quad(\textsc{OT-Consequence3})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1\ \vee\ A_	1'}{A_2}{A\ \vee\ A'}}
+	\quad(\textsc{OT-Disj1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2\ \vee\ A_2'}{A\ \vee\ A'}}
+	\quad(\textsc{OT-Disj2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1\ \wedge\ A_	1'}{A_2}{A\ \wedge\ A'}}
+	\quad(\textsc{OT-Conj1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2\ \wedge\ A_2'}{A\ \wedge\ A'}}
+	\quad(\textsc{OT-Conj2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{OT-Contra1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A'}{A_2}{\texttt{false}} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{OT-Contra2})
+\end{mathpar}
+\caption{Only Through Connective Rules}
+\label{f:only_through_connective}
+\end{figure}
+
+Figure \ref{f:only_if2} provides the proof rules for ``Only If''.
+
+\begin{figure}[p]
+\footnotesize
+\begin{mathpar}
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyIf{A'}{A_1}{A_2}
+	}
+	{M\ \vdash\ \onlyIf{A}{A_1}{A_2}}
+	\quad(\textsc{OI-Consequence1})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyIf{A_1}{A'}{A_2}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A}{A_2}}
+	\quad(\textsc{OI-Consequence2})
+	\and
+\infer
+	{
+	M\ \vdash\ A \longrightarrow A'\\
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A'}}
+	\quad(\textsc{OI-Consequence3})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyIf{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyIf{A_1\ \vee\ A_	1'}{A_2}{A\ \vee\ A'}}
+	\quad(\textsc{OI-Disj1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyIf{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2\ \vee\ A_2'}{A\ \vee\ A'}}
+	\quad(\textsc{OI-Disj2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyIf{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyIf{A_1\ \wedge\ A_	1'}{A_2}{A\ \wedge\ A'}}
+	\quad(\textsc{OI-Conj1})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\
+	M\ \vdash\ \onlyIf{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2\ \wedge\ A_2'}{A\ \wedge\ A'}}
+	\quad(\textsc{OI-Conj2})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_2}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_2}}
+	\quad(\textsc{OI-Invariant)}
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
+	M\ \vdash\ \onlyIf{A_1}{A_3}{A}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
+	\quad(\textsc{OI-Trans)}
+\end{mathpar}
+\caption{Only if}
+\label{f:only_if2}
+\end{figure}
+
+\newpage
+
+\subsection{Bank Account Example}
+
+Now, to demonstrate the use of the rules in Figures \ref{f:only_through_base}, \ref{f:only_through_connective}, and \ref{f:only_if2}, we construct 
+a proof of the bank account example. First we rewrite the bank account example using the triples define here.
+The original specification is written below.
+\begin{lstlisting}[mathescape=true]
+Spec $\triangleq$ $\forall$ a b. [ a : Account $\wedge$ a.balance = b $\wedge$
+               will $\langle\ \neg$ a.balance $\neq$ b $\rangle$
+               $\longrightarrow$
+               $\exists$ o.[$\langle$ external o $\rangle$ $\wedge$ $\langle$ o access a $\rangle$]
+\end{lstlisting}
+We now rewrite it as this
+\begin{lstlisting}[mathescape=true]
+Spec $\triangleq$  { a : Account $\wedge$ a.balance = b } $\trans{}$ { $\langle\ \neg$ a.balance $\neq$ b $\rangle$ }
+               only if
+          [ $\langle$ external o $\rangle$ $\wedge$ $\langle$ o access a $\rangle$ ]
+\end{lstlisting}
+Proof:
+\vspace{3mm}
+\footnotesize
+\hrule
+\vspace{3mm}
+$$
+	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\}
+$$
+$$\trans{}$$
+$$
+	\{\neg\ a.\texttt{balance} \neq b\}
+$$
+$$\texttt{only through}$$
+$$
+	\exists x.[\mut{x}{a}{\texttt{balance}}]
+$$
+\hfill by \textsc{OT-Mut}
+\hrule
+\vspace{3mm}
+$$
+	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\ \wedge\  \langle \texttt{internal}\ a \rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\neg\ a.\texttt{balance} \neq b\}
+$$
+$$\texttt{only through}$$
+$$
+	{\exists x.[\mut{x}{a}{\texttt{balance}}]}
+$$
+\hfill by \textsc{OT-Consequence1}
+\hrule
+\vspace{3mm}
+$$
+	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\ \wedge\  \langle \texttt{internal}\ a \rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\neg\ a.\texttt{balance} \neq b\}
+$$
+$$\texttt{only through}$$
+$$
+	{\exists x.[\mut{x}{a}{\texttt{balance}}\ \wedge\ \langle \texttt{internal}\ x \rangle]}
+$$
+\hfill by \textsc{OT-Mut-Int}
+\hrule
+\vspace{3mm}
+$$
+	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\ \wedge\  \langle \texttt{internal}\ a \rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\neg\ a.\texttt{balance} \neq b\}
+$$
+$$\texttt{only through}$$
+$$
+	{\exists o.[\langle o\ \texttt{calls}\ a.\texttt{deposit}(\_, \_) \rangle\ \vee\ \langle o\ \texttt{calls}\ \_.\texttt{deposit}(a, \_) \rangle]}
+$$
+\hfill by \textsc{OT-Consequence3}
+\hrule
+\vspace{3mm}
+(a)
+$$
+	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\ \wedge\  \langle \texttt{internal}\ a \rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\neg\ a.\texttt{balance} \neq b\}
+$$
+$$\texttt{only through}$$
+$$
+	{\exists o.[\langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle]}
+$$
+\hfill by \textsc{OT-Consequence3}
+\hrule
+\vspace{3mm}
+\normalsize
+\noindent now we show that access to bank accounts cannot be leaked:
+\vspace{3mm}
+\footnotesize
+\hrule
+\vspace{3mm}
+$$
+	\{\neg\ \langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\}
+$$
+$$\texttt{only through}$$
+$$
+	\exists x.[\gives{x}{o}{a}]
+$$
+\hfill by \textsc{OT-Gives}
+\hrule
+\vspace{3mm}
+$$
+	\{\neg\ \langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\ \wedge\ \langle \texttt{encapsulated}\ a\rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\}
+$$
+$$\texttt{only through}$$
+$$
+	\exists x.[\gives{x}{o}{a}\ \wedge\ \langle \texttt{internal}\ x\rangle]
+$$
+\hfill by \textsc{OT-Gives-Int}
+\hrule
+\vspace{3mm}
+$$
+	\{\neg\ \langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\ \wedge\ \langle \texttt{encapsulated}\ a\rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\}
+$$
+$$\texttt{only through}$$
+$$
+	\texttt{false}
+$$
+\hfill by \textsc{OT-Consequence3}
+\hrule
+\vspace{3mm}
+$$
+	\{\neg\ \langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\ \wedge\ \langle \texttt{encapsulated}\ a\rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\neg(\neg\ \langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle\ \wedge\ \langle \texttt{encapsulated}\ a\rangle)\}
+$$
+$$\texttt{only through}$$
+$$
+	\texttt{false}
+$$
+\hfill by \textsc{OT-Consequence2}
+\hrule
+\vspace{3mm}
+\normalsize
+{\noindent\color{red} Julian: There are still some lumps that need ironing out here, or maybe i'm just struggling to think through the proof.
+I think some proof rules are needed for quantified assertions.
+Ultimately we hope to end up here:}
+\vspace{3mm}
+\hrule
+\vspace{3mm}
+(b)
+$$
+	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\ \wedge\  \langle \texttt{internal}\ a \rangle\}
+$$
+$$\trans{}$$
+$$
+	\{\exists o.[\langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle]\}
+$$
+$$\texttt{only through}$$
+$$
+	{\exists o.[\langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle]}
+$$
+\vspace{3mm}
+\hrule
+\vspace{3mm}
+\noindent{\color{red}Julian: then we use (a) and (b) to give us:}
+\vspace{3mm}
+\hrule
+\vspace{3mm}
+$$
+	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\}
+$$
+$$\trans{}$$
+$$
+	\{\neg\ a.\texttt{balance} \neq b\}
+$$
+$$\texttt{only through}$$
+$$
+	{\exists o.[\langle o\ \texttt{access}\ a\rangle\ \wedge\ \langle \texttt{external}\ o \rangle]}
+$$
+\hfill by \textsc{OI-Invariant}
+\hrule
+\vspace{3mm}
+
+\newpage
+
+\subsection{Safe Example}
+
+We recall the original Safe specification:
+\begin{lstlisting}[mathescape=true]
+Spec $\triangleq$ $\forall$ s scr. [ s : Safe $\wedge$ s.treasure $\neq$ null $\wedge$
+               will $\langle$ s.treasure = null $\rangle$
+               $\longrightarrow$
+               $\exists$ o.[$\langle$ external o $\rangle$ $\wedge$ $\langle$ o access s.secret $\rangle$]
+\end{lstlisting}
+We now rewrite it as this
+\begin{lstlisting}[mathescape=true]
+Spec $\triangleq$  { s : Safe $\wedge$ s.treasure $\neq$ null } $\trans{}$ { s.treasure = null}
+               only if
+          [$\exists$ o.[ $\neg$ s.is_internal(o) $\wedge$ $\langle$ o access s.secret $\rangle$ ]]
+\end{lstlisting}
+Note, this is the modified version of the Safe that uses a ghost field to define what is internal to Safe. 
+In this case, this is the safe, and the secret.
+
+\noindent Proof:
+\vspace{3mm}
+\footnotesize
+\hrule
+\vspace{3mm}
+$$
+	\{s : \texttt{Safe} \wedge s.\texttt{treasure} \neq \texttt{null}\}
+$$
+$$\trans{}$$
+$$
+	\{s.\texttt{treasure} = \texttt{null} \}
+$$
+$$\texttt{only through}$$
+$$
+	\exists x.[\mut{x}{s}{\texttt{treasure}}]
+$$
+\hfill by \textsc{OT-Mut}
+\hrule
+\vspace{3mm}
+$$
+	\{s : \texttt{Safe} \wedge s.\texttt{treasure} \neq \texttt{null}\}
+$$
+$$\trans{}$$
+$$
+	\{s.\texttt{treasure} = \texttt{null} \}
+$$
+$$\texttt{only through}$$
+$$
+	\exists o. [\langle \texttt{external}\ o \rangle\ \wedge\ \langle o\ \texttt{calls}\ s.\texttt{take}(s.\texttt{secret}) \rangle]
+$$
+\hfill by \textsc{OT-Consequence3}
+\hrule
+\vspace{3mm}
+(a)
+$$
+	\{s : \texttt{Safe} \wedge s.\texttt{treasure} \neq \texttt{null}\}
+$$
+$$\trans{}$$
+$$
+	\{s.\texttt{treasure} = \texttt{null} \}
+$$
+$$\texttt{only through}$$
+$$
+	\exists o. [\langle \texttt{external}\ o \rangle\ \wedge\ \langle o\ \texttt{access}\ s.\texttt{secret} \rangle]
+$$
+\hfill by \textsc{OT-Consequence3}
+\hrule
+\vspace{3mm}
+\normalsize
+\noindent{\color{red}Julian:We need to prove the following invariant:}
+\vspace{3mm}
+\footnotesize
+\hrule
+\vspace{3mm}
+(b)
+$$
+	\{s : \texttt{Safe} \}
+$$
+$$\trans{}$$
+$$
+	\{\exists o. [\langle \texttt{external}\ o \rangle\ \wedge\ \langle o\ \texttt{access}\ s.\texttt{secret} \rangle]\}
+$$
+$$\texttt{only through}$$
+$$
+	\exists o. [\langle \texttt{external}\ o \rangle\ \wedge\ \langle o\ \texttt{access}\ s.\texttt{secret} \rangle]
+$$
+\hrule
+\vspace{3mm}
+\normalsize
+\noindent{\color{red}Julian: Then by (a) and (b) we have:}
+\vspace{3mm}
+\footnotesize
+\hrule
+\vspace{3mm}
+(b)
+$$
+	\{s : \texttt{Safe}  \wedge s.\texttt{treasure} \neq \texttt{null}\}
+$$
+$$\trans{}$$
+$$
+	\{\exists o. [\langle \texttt{external}\ o \rangle\ \wedge\ \langle o\ \texttt{access}\ s.\texttt{secret} \rangle]\}
+$$
+$$\texttt{only if}$$
+$$
+	\exists o. [\langle \texttt{external}\ o \rangle\ \wedge\ \langle o\ \texttt{access}\ s.\texttt{secret} \rangle]
+$$
+\hfill by \textsc{OI-Invariant} and \textsc{OI-Trans}
+\hrule
+\vspace{3mm}
+\normalsize
+
+\newpage
+
+\subsection{Temporal Invariants}
+Both the proof of Bank Account and the Safe examples rely on the invariant of encapsulation over time.
+In the bank account proof, we rely on the fact that it is not possible for internal components to 
+expose access to an account, and thus that if an external object has access to an account in the future, then 
+some external object must have access to the account in the present moment. 
+i.e.
+$$\neg\langle \texttt{encapsulated}\ a  \rangle$$
+is invariant. Specifically the following triple must be true:
+$$\onlyThrough{a\ :\ \texttt{Account}}{\neg\langle \texttt{encapsulated}\ a  \rangle}{\neg\langle \texttt{encapsulated}\ a  \rangle}$$
+We then use the rule \textsc{OI-Invariant} to arrive at 
+$$\onlyIf{a\ :\ \texttt{Account}}{\neg\langle \texttt{encapsulated}\ a  \rangle}{\neg\langle \texttt{encapsulated}\ a  \rangle}$$
+
+In the Safe example, we rely on the fact that the safe does not expose
+its secret. Define the following predicate:
+$$\langle x\ \texttt{encapsulated\_in}\ y\rangle\ =\ \forall\ z.[\neg \langle z\ \texttt{access}\ x \rangle\ \vee\ y.\texttt{is\_internal}(z)]$$
+Now the following invariant is required to hold for the specification to be satisfied:
+\small
+$$\onlyThrough{s\ :\ \texttt{Safe}}{\neg\langle s.\texttt{secret}\ \texttt{encapsulated\_in}\ s  \rangle}{\neg\langle s.\texttt{secret}\ \texttt{encapsulated\_in}\ s  \rangle}$$
+\normalsize
+We then use \textsc{OI-Invariant} to get
+\small
+$$\onlyIf{s\ :\ \texttt{Safe}}{\neg\langle s.\texttt{secret}\ \texttt{encapsulated\_in}\ s  \rangle}{\neg\langle s.\texttt{secret}\ \texttt{encapsulated\_in}\ s  \rangle}$$
+\normalsize
+
+It isn't immediately clear how to deal with these invariants, as they both involve quantification, but they both form key parts of the proof 
+of satisfaction in their respective examples.
+
+
+\bibliographystyle{abbrv}
+\bibliography{main}
 	
 	\end{document}

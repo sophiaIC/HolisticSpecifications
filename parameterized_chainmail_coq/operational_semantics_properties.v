@@ -1484,7 +1484,11 @@ Module OperationalSemanticsProperties(L : LanguageDef).
             unfold_existentials;
             auto.
 
-        *
+        * unfold_existentials.
+          match goal with
+          | [] =>
+            rewrite 
+          end.
 
 
   Qed.

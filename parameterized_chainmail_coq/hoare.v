@@ -58,6 +58,28 @@ Module Hoare(L : LanguageDef).
 
   Hint Constructors hoare_triple hoare_triples hoare_triple_pr : hoare_db.
 
+  Reserved Notation "M '∙' '[pre:' P ']' σ '[post:' Q ']'" (at level 40).
+  Reserved Notation "M1 '⦂' M2 '⦿' '[pre:' P ']' σ '[post:' Q ']'" (at level 40).
+
+  Inductive necessary_triple : mdl -> (config -> Prop) -> config -> (config -> Prop) -> Prop :=
+  | nt_r : forall M σ (P Q : config -> Prop), (forall σ', Q σ' ->
+                                            M ∙ σ ⤳ σ' ->
+                                            P σ) ->
+                                     M ∙ [pre: P] σ [post: Q]
+
+  where "M '∙' '[pre:' P ']' σ '[post:' Q ']'"
+          := (necessary_triple M P σ Q).
+
+  Inductive necessary_triple_pr : mdl -> mdl -> (config -> Prop) -> config -> (config -> Prop) -> Prop :=
+  | nt_pr : forall M1 M2 σ (P Q : config -> Prop), (forall σ', Q σ' ->
+                                                 M1 ⦂ M2 ⦿ σ ⤳ σ' ->
+                                                 P σ) ->
+                                          M1 ⦂ M2 ⦿ [pre: P ] σ [post: Q]
+
+  where "M1 '⦂' M2 '⦿' '[pre:' P ']' σ '[post:' Q ']'" := (necessary_triple_pr M1 M2 P σ Q).
+
+  Hint Constructors necessary_triple necessary_triple_pr : hoare_db.
+
   Notation "M1 '⦂' M2 '◎' σ0 '…' '̱' '⊨' '{pre:' A1 '}' σ '{post:' A2 '}'" :=
     (M1 ⦂ M2 ⦿ {pre: fun σ => M1 ⦂ M2 ◎ σ0 … σ ⊨ A1} σ {post: fun σ' => M1 ⦂ M2 ◎ σ0 … σ' ⊨ A2})(at level 40).
 

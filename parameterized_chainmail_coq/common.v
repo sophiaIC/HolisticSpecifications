@@ -67,17 +67,7 @@ Instance optionMonad : Monad option :=
 
   }.
 
-(*
-This feels monadish
-Would be nice to do top level binds
-Not actually possible because we only 
-
-Instance partial_map_Monad {A : Type}`{Eq A} : Monad (partial_map A) :=
-  {
-    ret T x := ???
-  }.*)
-
-Notation "f1 '∘' f2" := (fun x => bind (f2 x) f1)(at level 40).
+Notation "f1 '∘' f2" := (fun x => bind (f1 x) f2)(at level 40).
 
 (*Definition compose
            {A B C : Type} `{Eq A} `{Eq B}

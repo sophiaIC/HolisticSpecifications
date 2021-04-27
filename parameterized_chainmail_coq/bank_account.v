@@ -5,6 +5,7 @@ Require Import L_def.
 Require Import exp.
 Require Import exp_properties.
 Require Import chainmail.
+Require Import hoare.
 Require Import List.
 Require Import String.
 Open Scope string_scope.
@@ -31,7 +32,7 @@ Module BankAccount(L : LanguageDef).
 
   Definition deposit := methID 0.
 
-  Parameter deposit_body : continuation.
+  Parameter deposit_body : block.
 
   Definition AccountDef := clazz Account
                                  (update deposit deposit_body empty)

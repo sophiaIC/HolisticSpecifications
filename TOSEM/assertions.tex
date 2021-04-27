@@ -1,6 +1,6 @@
 
 \Chainmail assertions (details in \jm{Section} \ref{sect:standard}) consist of (pure) expressions \e, comparisons between expressions, classical
-assertions about the contents of heap and stack, the usual logical
+assertions about the contents of \jm{the} heap and stack, the usual logical
 connectives, as well as our holistic concepts.
 In this section we focus on the novel,
  holistic, features of \Chainmail (permission, control, time, space, and viewpoint),
@@ -28,7 +28,7 @@ challenges, which we discuss in this section.}
 
  \subsection{Syntax of Assertions}
 
-\begin{definition}[Assertions]  Assertions consist of (pure) expressions \e, classical assertions about the contents of heap/stack, the usual logical  connectives, as well as our holistic concepts.
+\begin{definition}[Assertions]  Assertions consist of (pure) expressions \e, classical assertions about the contents of \jm{the} heap/stack, the usual logical  connectives, as well as our holistic concepts.
 \label{def:assertions}
  \[
  \begin{array}{lcl}
@@ -59,11 +59,12 @@ undefined (either because of infinite recursion, or because the expression acces
 Assertions of the form   $\e$=$\e'$ are satisfied only if both $\e$ and $\e'$ are defined. Because we do not support 
 recursion at the level of assertions, assertions form a classical logic (\eg $\A \vee \neg\A$ is a tautology).
  
-We will discuss evaluation of expressions in Section \ref{sect:expressions}, standard assertions about heap/stack and logical
+We will discuss evaluation of expressions in Section \ref{sect:expressions}, \jm{and} standard assertions about heap/stack and logical
  connectives in \ref{sect:standard}. 
  We will discuss the treatment of  permission, control, space, and viewpoint  in 
-the main text in  Defs.~\ref{def:valid:assertion:access}-\ref{def:valid:assertion:space}  in Section \ref{sect:pcsv} %HARD
-the treatment of time in Defs. \ref{def:reduction:constrained}, \ref{def:valid:assertion:time} in the main text, Section \ref{sect:time},
+the main text in  Defs.~\ref{def:valid:assertion:access}-\ref{def:valid:assertion:space}  in Section \ref{sect:pcsv}, and  %HARD
+the treatment of time in Def. \ref{def:valid:assertion:time}.
+% in the main text, Section \ref{sect:time},
 We will discuss properties of assertions in Lemmas \ref{lemma:classic}-\ref{lemma:classic:two}.
  The judgement $\M\mkpair \M', \sigma_0 ,  \sigma  \models \A$ expresses that $\A$ holds in  $\M\mkpair \M'$ and $\sigma$, and 
 while $\M\mkpair \M', \sigma_0 , \sigma  \not\models \A$  expresses that $\A$ does not hold  in  $\M\mkpair \M'$ and $\sigma_0,\sigma$.
@@ -325,7 +326,7 @@ does not hold.
 \end{itemize}
 \end{definition}
 
-\jm{Note that \Chainmail quantifies over addresses instead of local variables. Since \Chainmail assertions are invariants over modules, local variable names have no consistent denotation as the stack frame changes during execution. Previous work on \Chainmail exclusively used variables in assertions, including for quantification \cite{FASE}. Aside from being less clear, as assertions generally refer to objects meeting some property, rather than the value at a certain name, using local variables also complicated the handling of temporal assertions, as discussed in Section~\ref{sect:time}.}
+\jm{Note that \Chainmail quantifies over addresses instead of local variables. Since \Chainmail assertions are invariant over modules, local variable names have no consistent denotation as the stack frame changes during execution. Previous work on \Chainmail exclusively used variables in assertions, including for quantification \cite{FASE}. Aside from being less clear, as assertions generally refer to objects meeting some property, rather than the value at a certain name, using local variables also complicated the handling of temporal assertions, as discussed in Section~\ref{sect:time}.}
 
 
 Satisfaction is not preserved with growing configurations; for example, the assertion $\forall \x. [\ \x : \prg{Account} \rightarrow \x.\prg{balance}>100\ ]$ 
@@ -394,7 +395,7 @@ ${\alpha_1}$=$\interp {\this} {\sigma}$ and
 In the last disjunct the interpretation of \x\ in the configuration ensures it is a parameter or local variable.
 
 \vspace{.2cm} \noindent
-\textit{Control} expresses which object is the process of making a function call on another object and
+\textit{Control} expresses which object is making a function call on another object and
 with what arguments. The relevant information
 \sophia{is} stored in the continuation (\prg{cont}) on the top frame.
 
@@ -523,11 +524,11 @@ where \prg{S}$_4$ is as defined previously.
 \label{sect:time} 
 To deal with time, we are faced with three challenges: (a) the current configuration needs to store the code being executed, so
 as to be able to calculate future configurations, (b) when considering the future, we do not want to observe 
-configurations which go beyond the frame currently at the top of the stack, (c) there is no "undo" operator to deterministically enumerate
+configurations which go beyond the frame currently at the top of the stack, (c) there is no ``undo'' operator to deterministically enumerate
 each of the previous configurations. 
 
 We address challenge (a) by storing the remaining code to be executed in \prg{cntn} in each frame. 
-We address challenge (b) by defining constrained reduction, \jm{$\constrained$ defined below}, where we only take the top of the frame when considering future executions.
+We address challenge (b) by defining constrained \jm[was ``reduction'']{execution}, (defined in Section~\ref{sect:PL}), where we only take the top \jm{frame of the stack} when considering future executions.
 Finally, we address challenge (c) by introducing an explicit initial configuration, and only considering configurations which arise from it and lead to the current configuration.
 
 \begin{definition}[Time Assertions]  \label{def:valid:assertion:time}
@@ -587,14 +588,8 @@ $\exists \sigma'. [\ \  \M\mkpair \M',\sigma_0 \leadsto^* \sigma'\ \wedge\ \M\mk
 
 Whilst the above shows that from $\Future { \Using{A}{\SF} }$ we cannot conclude $\Using { \Future{A} }{\SF}$, it is also worth noting that in general the inverse does not hold either. $\Future { \Using{A}{\SF} }$ restricts $A$ in the future, meaning any objects instantiated in the between the present and then are excluded, whereas $\Using { \Future{A} }{\SF}$ restricts the space in the present, so the objects are considered in A. Taking a new configuration $\sigma_6$  with continuation \prg{x := new Account(100, null)} and otherwise similar to $\sigma_1$, and $\SF = \emptyset$, the assertion $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Future{ \Using { \prg{x.bank} = \prg{null} } {\SF}}$  does not hold, as \prg{x} is not in $S$. However, $\M_{BA1}\mkpair ..., \sigma_0 , \sigma_6 \ \models \ \Using { \Future{ \prg{x.bank} = \prg{null} } } {\SF}$ does hold, since the restriction of the configuration to $\SF$ in the present doesn't exclude the new \prg{Account} with field $\prg{bank} = \prg{null}$, created in the next statement, being considered by \Future{\_}.
 
-\sdf{One interesting implication of your definitions is that the denotation of a local variable inside a temporal connective may be different to that outside. For example, in a configuration $\sigma$ where the current receiver \jm{belongs} to class \prg{A}, and where the current continuation \jm{contains} a call to an object of class \prg{B}, we would have that $..,..,\sigma \models \prg{this}:\prg{A}\ \wedge\ \Future{ \prg{this}:\prg{B}}$. This raises the question as to how we can assert future properties of an object which is currently denoted by a local variable, when that local variable may change denotation, or even \jm{go out} of scope. The answer is to use universally quantified addresses. For example,  $\forall \alpha_t.\ [ \ \alpha_t  = \prg{this}\ \rightarrow\ \Future{\alpha_t.\prg{balance}=300}\ ]$ asserts that in some future configuration, the object currently denoted by  \prg{this} will have a \prg{balance} of 300.}
-\footnote{
-\color{dkgreen}{This is how it was:}\color{black}\\
-Using local variables in a past or future context allows specifications to use their past or future values.  
-\textcolor{offblue}{{However, this means a variable used in an assertion may not refer to its current value, or event to the same value inside different temporal connectives in the assertion.}}
-For example, that at some point in the future the receiver will have access to an object at $\alpha$ can be asserted with $\forall r . \Future {\prg{this} = r \rightarrow \CanAccess{r}{\alpha}}$, where \prg{this} refers to the future value of \prg{this}. However, to state some future or past property about the current value of a variable, it must be equated with its address in the present, $\forall \alpha_x. (\alpha_x = \x \rightarrow \dots)$.
-\textcolor{offblue}{{Since in the formalisation addresses do not vary over time, the address name referenced in the present refers to the same object in the past or future.}}
-}
+\sdf{One interesting implication of \jm{the new} definitions is that the denotation of a local variable inside a temporal connective may be different to that outside. For example, in a configuration $\sigma$ where the current receiver \jm{belongs} to class \prg{A}, and where the current continuation \jm{contains} a call to an object of class \prg{B}, we would have that $..,..,\sigma \models \prg{this}:\prg{A}\ \wedge\ \Future{ \prg{this}:\prg{B}}$. This raises the question as to how we can assert future properties of an object which is currently denoted by a local variable, when that local variable may change denotation, or even \jm{go out} of scope. The answer is to use universally quantified addresses. For example,  $\forall \alpha_t.\ [ \ \alpha_t  = \prg{this}\ \rightarrow\ \Future{\alpha_t.\prg{balance}=300}\ ]$ asserts that in some future configuration, the object currently denoted by  \prg{this} will have a \prg{balance} of 300.}
+
 \mrr[footnote: What about garbage collection arenas]{}
 
 %Local variables referring to their past or future values in temporal connectives 

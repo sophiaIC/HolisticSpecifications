@@ -28,18 +28,20 @@ Module AbstractOperationalSemantics(L : LanguageDef).
         ⤳
         (χ, frm self lcl (c_ b) :: ψ)
 
-  | r_call : forall M χ self lcl b n α m args ψ o C CDef body,
+  | r_call : forall M χ self lcl b n x α m args ψ o C CDef body,
+      lcl x = Some (v_addr α) ->
       χ α = Some o ->
       cname o = C ->
       M C = Some CDef ->
       c_meths CDef m = Some body ->
-      (forall x v, args x = Some v -> visible_r M (χ, frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b) :: ψ) self v) ->
-      visible_r M (χ, frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b) :: ψ) self (v_addr α) ->
-      visible_m M (χ, frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b) :: ψ) self α m ->
+      (forall x v, (args ∘ lcl) x = Some v ->
+              visible_r M (χ, frm self lcl (c_ n ≔m x ▸ m ⟨ args ⟩ ;; b) :: ψ) self v) ->
+      visible_r M (χ, frm self lcl (c_ n ≔m x ▸ m ⟨ args ⟩ ;; b) :: ψ) self (v_addr α) ->
+      visible_m M (χ, frm self lcl (c_ n ≔m x ▸ m ⟨ args ⟩ ;; b) :: ψ) self α m ->
       M ∙
-        (χ, (frm self lcl (c_ n ≔m α ▸ m ⟨ args ⟩ ;; b)) :: ψ)
+        (χ, (frm self lcl (c_ n ≔m x ▸ m ⟨ args ⟩ ;; b)) :: ψ)
         ⤳
-        (χ, (frm α args (c_ body)) :: (frm self lcl (n ≔♢ ;; b) :: ψ))
+        (χ, (frm α (args ∘ lcl) (c_ body)) :: (frm self lcl (n ≔♢ ;; b) :: ψ))
 
   | r_rtrn_1 : forall M χ self1 lcl1 v self2 lcl2 x b ψ,
       visible_r M (χ, frm self1 lcl1 (c_rtrn v) :: frm self2 lcl2 (x ≔♢ ;; b) :: ψ) self1 v ->
@@ -48,15 +50,16 @@ Module AbstractOperationalSemantics(L : LanguageDef).
         ⤳
         (χ, (frm self2 (update x v lcl2) (c_ b)) :: ψ)
 
-  | r_rtrn_2 : forall M χ self1 lcl1 v b1 self2 lcl2 x b2 ψ,
-      visible_r M (χ, frm self1 lcl1 (c_ rtrn v ;; b1) :: frm self2 lcl2 (x ≔♢ ;; b2) :: ψ) self1 v ->
+  | r_rtrn_2 : forall M χ self1 lcl1 v b1 self2 lcl2 x y b2 ψ,
+      lcl1 x = Some v ->
+      visible_r M (χ, frm self1 lcl1 (c_ rtrn x ;; b1) :: frm self2 lcl2 (y ≔♢ ;; b2) :: ψ) self1 v ->
       M ∙
-        (χ, (frm self1 lcl1 (c_ rtrn v ;; b1)) :: (frm self2 lcl2 (x ≔♢ ;; b2)) :: ψ)
+        (χ, (frm self1 lcl1 (c_ rtrn x ;; b1)) :: (frm self2 lcl2 (x ≔♢ ;; b2)) :: ψ)
         ⤳
-        (χ, (frm self2 (update x v lcl2) (c_ b2)) :: ψ)
+        (χ, (frm self2 (update y v lcl2) (c_ b2)) :: ψ)
 
   | r_acc : forall M χ self lcl x v b ψ,
-      visible_r M (χ, frm self lcl (c_ acc x v ;; b) :: ψ) self v ->
+      visible_r M (χ, frm self lcl (c_ acc x y f ;; b) :: ψ) self v ->
       M ∙
         (χ, frm self lcl (c_ acc x v ;; b) :: ψ)
         ⤳

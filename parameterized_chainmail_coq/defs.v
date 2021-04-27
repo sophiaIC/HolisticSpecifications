@@ -598,14 +598,46 @@ Next Obligation.
     end.
 Defined.
 
+Inductive exp : Type :=
+| e_val   : value -> exp
+| e_var   : var -> exp
+| e_hole  : nat -> exp
+| e_eq    : exp -> exp -> exp
+| e_lt    : exp -> exp -> exp
+| e_plus  : exp -> exp -> exp
+| e_minus : exp -> exp -> exp
+| e_mult  : exp -> exp -> exp
+| e_div   : exp -> exp -> exp
+| e_if    : exp -> exp -> exp -> exp
+| e_acc_f : exp -> fld -> exp
+| e_acc_g : exp -> gfld -> exp -> exp.
+
+Hint Constructors exp : L_db.
+
+Notation "'e_true'" := (e_val v_true)(at level 40).
+Notation "'e_false'" := (e_val v_false)(at level 40).
+Notation "'e_null'" := (e_val v_null)(at level 40).
+Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
+Notation "'e_int' i" := (e_val (v_int i))(at level 40).
+Notation "e1 '⩵' e2" := (e_eq e1 e2)(at level 40).
+Notation "e1 '⩵̸' e2" := ((e1 ⩵ e2) ⩵ e_false)(at level 40).
+Notation "e1 '⩻' e2" := (e_lt e1 e2)(at level 40).
+Notation "e1 '⩑' e2" := (e_if e1 (e_if e2 (e_true) (e_false)) (e_false))(at level 40).
+Notation "e1 '⩒' e2" := (e_if e1 (e_true) (e_if e2 (e_true) (e_false)))(at level 40).
+Notation "e1 '⩽' e2" := ((e1 ⩻ e2) ⩒ (e1 ⩵ e2))(at level 40).
+Notation "'neg' e" := (e ⩵ (e_false))(at level 40).
+Notation "e1 '⩼' e2" := (neg (e1 ⩽ e2))(at level 40).
+Notation "e1 '⩾' e2" := ((e1 ⩼ e2) ⩒ (e1 ⩵ e2))(at level 40).
+
 Inductive stmt : Type :=
-| skip : stmt
-| call : name -> addr -> mth -> partial_map name value -> stmt
-| rtrn : value -> stmt
-| acc  : name -> value -> stmt
-| drop : name -> stmt
-| mut  : addr -> fld -> value -> stmt
-| new  : cls -> partial_map fld value -> stmt.
+| skip  : stmt
+| call  : name -> name -> mth -> partial_map name name -> stmt
+| rtrn  : name -> stmt
+| acc   : name -> name -> fld -> stmt
+| store : name -> exp -> stmt
+| drop  : name -> stmt
+| mut   : name -> fld -> name -> stmt
+| new   : cls -> partial_map fld name -> stmt.
 
 Notation "α '∙' f '≔' v" := (mut α f v)(at level 40).
 Notation "n '≔m' α '▸' m '⟨' args '⟩'" := (call n α m args)(at level 40).
@@ -639,37 +671,6 @@ Definition stack := list frame.
 Definition heap := partial_map addr object.
 
 Definition config : Type := (heap * stack).
-
-Inductive exp : Type :=
-| e_val   : value -> exp
-| e_var   : var -> exp
-| e_hole  : nat -> exp
-| e_eq    : exp -> exp -> exp
-| e_lt    : exp -> exp -> exp
-| e_plus  : exp -> exp -> exp
-| e_minus : exp -> exp -> exp
-| e_mult  : exp -> exp -> exp
-| e_div   : exp -> exp -> exp
-| e_if    : exp -> exp -> exp -> exp
-| e_acc_f : exp -> fld -> exp
-| e_acc_g : exp -> gfld -> exp -> exp.
-
-Hint Constructors exp : L_db.
-
-Notation "'e_true'" := (e_val v_true)(at level 40).
-Notation "'e_false'" := (e_val v_false)(at level 40).
-Notation "'e_null'" := (e_val v_null)(at level 40).
-Notation "'e_addr' r" := (e_val (v_addr r))(at level 40).
-Notation "'e_int' i" := (e_val (v_int i))(at level 40).
-Notation "e1 '⩵' e2" := (e_eq e1 e2)(at level 40).
-Notation "e1 '⩵̸' e2" := ((e1 ⩵ e2) ⩵ e_false)(at level 40).
-Notation "e1 '⩻' e2" := (e_lt e1 e2)(at level 40).
-Notation "e1 '⩑' e2" := (e_if e1 (e_if e2 (e_true) (e_false)) (e_false))(at level 40).
-Notation "e1 '⩒' e2" := (e_if e1 (e_true) (e_if e2 (e_true) (e_false)))(at level 40).
-Notation "e1 '⩽' e2" := ((e1 ⩻ e2) ⩒ (e1 ⩵ e2))(at level 40).
-Notation "'neg' e" := (e ⩵ (e_false))(at level 40).
-Notation "e1 '⩼' e2" := (neg (e1 ⩽ e2))(at level 40).
-Notation "e1 '⩾' e2" := ((e1 ⩼ e2) ⩒ (e1 ⩵ e2))(at level 40).
 
 (*)Inductive var : Type :=
 | hole : nat -> var

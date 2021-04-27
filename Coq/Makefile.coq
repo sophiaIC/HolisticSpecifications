@@ -4,7 +4,7 @@
 ##   \VV/  #                                                                 ##
 ##    //   #                                                                 ##
 ###############################################################################
-## GNUMakefile for Coq 8.11.2
+## GNUMakefile for Coq 8.11.0
 
 # For debugging purposes (must stay here, don't move below)
 INITIAL_VARS := $(.VARIABLES)
@@ -191,7 +191,7 @@ COQDOCLIBS?=$(COQLIBS_NOML)
 # The version of Coq being run and the version of coq_makefile that
 # generated this makefile
 COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
-COQMAKEFILE_VERSION:=8.11.2
+COQMAKEFILE_VERSION:=8.11.0
 
 COQSRCLIBS?= $(foreach d,$(COQ_SRC_SUBDIRS), -I "$(COQLIB)/$(d)")
 
@@ -627,9 +627,9 @@ $(filter %.cmx, $(MLFILES:.ml=.cmx) $(MLGFILES:.mlg=.cmx)): %.cmx: %.ml
 
 
 $(MLLIBFILES:.mllib=.cmxs): %.cmxs: %.cmxa
-	$(SHOW)'CAMLOPT -shared -g -o $@'
+	$(SHOW)'CAMLOPT -shared -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
-		-linkall -shared -g -o $@ $<
+		-linkall -shared -o $@ $<
 
 $(MLLIBFILES:.mllib=.cma): %.cma: | %.mllib
 	$(SHOW)'CAMLC -a -o $@'
@@ -641,9 +641,9 @@ $(MLLIBFILES:.mllib=.cmxa): %.cmxa: | %.mllib
 
 
 $(MLPACKFILES:.mlpack=.cmxs): %.cmxs: %.cmxa
-	$(SHOW)'CAMLOPT -shared -g -o $@'
+	$(SHOW)'CAMLOPT -shared -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
-		-shared -g -linkall -o $@ $<
+		-shared -linkall -o $@ $<
 
 $(MLPACKFILES:.mlpack=.cmxa): %.cmxa: %.cmx
 	$(SHOW)'CAMLOPT -a -o $@'
@@ -663,9 +663,9 @@ $(MLPACKFILES:.mlpack=.cmx): %.cmx: | %.mlpack
 
 # This rule is for _CoqProject with no .mllib nor .mlpack
 $(filter-out $(MLLIBFILES:.mllib=.cmxs) $(MLPACKFILES:.mlpack=.cmxs) $(addsuffix .cmxs,$(PACKEDFILES)) $(addsuffix .cmxs,$(LIBEDFILES)),$(MLFILES:.ml=.cmxs) $(MLGFILES:.mlg=.cmxs)): %.cmxs: %.cmx
-	$(SHOW)'[deprecated,use-mllib-or-mlpack] CAMLOPT -shared -g -o $@'
+	$(SHOW)'[deprecated,use-mllib-or-mlpack] CAMLOPT -shared -o $@'
 	$(HIDE)$(CAMLOPTLINK) $(CAMLDEBUG) $(CAMLFLAGS) $(CAMLPKGS) \
-		-shared -g -o $@ $<
+		-shared -o $@ $<
 
 ifneq (,$(TIMING))
 TIMING_EXTRA = > $<.$(TIMING_EXT)
