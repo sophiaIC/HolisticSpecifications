@@ -59,6 +59,7 @@
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{listings}
+\usepackage{tcolorbox}
 
 
 %constrained reduction
@@ -104,18 +105,16 @@
 \lstset{ % General setup for the package
 	language=Java,
 	basicstyle=\scriptsize\sffamily,
-	numbers=left,
  	numberstyle=\tiny,
-	frame=tb,
+ 	frame = bottomline,
 	tabsize=4,
 	columns=fixed,
 	showstringspaces=false,
 	showtabs=false,
 	keepspaces,
-	morekeywords={field, method, module, calls, presumes, achieves, external, internal, access, requires, ensures, PRE, POST, only, through, if, to},
+	morekeywords={field, method, module, calls, presumes, achieves, external, internal, access, requires, ensures, PRE, POST, onlyThrough, onlyIf, to},
 	commentstyle=\color{red},
-	keywordstyle=\color{blue},
-	deletekeywords={if}
+	keywordstyle=\color{blue}
 }
 
 
@@ -231,197 +230,6 @@ Text of abstract \ldots.
 %% environment and commands, and keywords command.
 \maketitle
 
-
-\section{Introduction}
-
-\section{Robust Specifications}
-
-\subsection{A Motivating Banking Example}
-To illustrate robust specifications, we introduce an example 
-of a bank account:
-\begin{lstlisting}[mathescape=true]
-module Bank
-	class Account
-		field pass, bal
-	
-		method transfer(pwd, from, amt)
-			if (pwd == pass)
-				from.bal := from.bal - amt
-				this.bal := this.bal + amt
-
-		method changePassword(pwd, newPwd)
-			if pwd == this.pass
-				this.pass := newPwd
-\end{lstlisting}
-Traditionally we are able to write the following specifications
-\begin{lstlisting}[mathescape=true]
-(TraditionalSpec) $\triangleq$
-	method transfer(from, amt, pwd)
-		PRE: pwd == pass
-		POST: from.balance == from.bal$_{\textit{pre}}$ - amt && this.bal == this.bal$_{\textit{pre}}$ + amt
-	method transfer(from, amt, pwd)
-		PRE: pwd != pass
-		POST: from.bal == from.bal$_{\textit{pre}}$ && this.bal == this.bal$_{\textit{pre}}$
-
-	method changePassword(pwd, newPwd)
-		PRE: pwd == pass
-		POST: this.pass == pwd
-	method changePassword(pwd, newPwd)
-		PRE: pwd != pass
-		POST: this.pass == this.pass$_{\textit{pre}}$
-\end{lstlisting}
-(Traditional Spec) states the expected behavior of each of the composite methods of the 
-Account class. Firstly, if the \texttt{transfer} method is called with the correct password,
-then the balances of both accounts will be correctly modified, and if the password is incorrect, 
-then the balances will remain unchanged. Secondly, the password may only be changed if the 
-existing password is known. 
-
-Unfortunately, there is an bug in the \texttt{transfer} method, 
-i.e. the password of the \texttt{from} account is not required. Any user may transfer any amount 
-from any account to their account, and all they need is their password. This violates our notion 
-of what a robust Account is. Ideally we would like the balance of our account to only decrease 
-if we authorize it.
-Part of the problem is that 
-it is difficult to specify exactly what is expected behavior at the method level. Ideally 
-we would like to be able to specify the behavior of the entire module. We can attempt to 
-fix the bug in the \texttt{transfer} method:
-\begin{lstlisting}[mathescape=true]
-method transfer(pwd, to, amt)
-	if (pwd == pass && amt >= 0 && this.balance >= amt)
-		this.bal := this.bal - amt
-		to.bal := to.bal + amt
-\end{lstlisting}
-Now \texttt{transfer} only decreases an account's balance if the password is known, and
-we could update (TraditionalSpec) to reflect this. There is still a potential problem 
-with our specification: we do not necessarily know if all other methods observe this
-property. This uncertainty is even more problematic when we consider that \texttt{Account}'s
-interface may be extended. We would not only like all existing methods to require 
-the correct password to transfer money from our account, but also any future extensions
-to \texttt{Account} to observe this property too.
-
-\citeauthor{FASE} introduced \emph{holistic specifications}; i.e. specifications of
-not just what is \emph{sufficient} to achieve an outcome (eg. \texttt{transfer} may 
-decrease our \texttt{Account}'s balance), but what is \emph{necessary} (eg. \emph{only} 
-\texttt{transfer} may decrease the balance of our account). Informally we might say 
-that we want the \texttt{Account} interface to ensure the following behavior
-\begin{enumerate}
-\item
-\label{prop:transfer}
-The \emph{only} way to reduce the balance of account \texttt{a} is through a method call
-to \texttt{transfer} on \texttt{a} with the correct password.
-\item
-\label{prop:noLeaking}
-The balance of account \texttt{a} may be reduced \emph{only if} the password is presently
-known.
-\end{enumerate}
-Property \ref{prop:transfer} and \ref{prop:noLeaking} above say that no matter the 
-future modifications to \texttt{Account} nor the use by unknown parties, an account 
-can not be coerced to modify it's balance improperly or leak it's secret. While 
-\citeauthor{FASE} defined a model for such specifications, they did not design an
-inference system for proof construction. In this paper we build on the work of 
-\citeauthor{FASE}, presenting a more streamlined syntax and semantics for Chainmail, 
-along with an inference system for constructing proofs of satisfaction. 
-
-We define two triples that allow us to
-capture the robustness properties \ref{prop:transfer} and \ref{prop:noLeaking}: \texttt{only if}
-and \texttt{only through}.
-\begin{lstlisting}[mathescape=true]
-(HolisticSpec) $\triangleq$
-	a : Account && a.bal == b to a.bal < b 
-		only through $\exists$ o.[o calls a.transfer(a.pass, _, _)]
-	a : Account to <o access a.pass> && <o external> 
-		only if $\exists$ o'.[<o' access a.pass> && <o' external>]
-\end{lstlisting}
-(HolisticSpec) states that any execution path from a state where the balance of account \texttt{a}
-is \texttt{b} to some state where the balance of \texttt{a} is less than \texttt{b} 
-must pass \emph{through} some intermediate state where an object external to the \texttt{Bank} module 
-called \texttt{transfer} on \texttt{a} with the correct password. Further, any execution
-path from a state with some \texttt{Account} \texttt{a}, to another state where some object external 
-to \texttt{Bank} has access to the password of \texttt{a} necessitates that some object external to 
-\texttt{Bank} must know the password in the initial state.
-
-
-\subsection{Only If/Only Through}
-To capture necessary specifications, introduce two triples: \emph{Only If} and \emph{Only Through}.
-Here we introduce the formal semantics of these triples.
-\begin{definition}[Only If]
-$M\ \vDash\ \onlyIf{A_1}{A_2}{A}$\ iff 
-$\forall M,\ \sigma_1,\ \sigma_2$ such that 
-$M; M', \sigma_1\ \constrained^*\ \sigma_2$
-$M; M', \sigma_1\ \vDash\ A_1$ and 
-$M; M', \sigma_2\ \vDash\ A_2$ then
-$M; M', \sigma_1\ \vDash\ A$.
-\end{definition}
-\begin{definition}[Only Through]
-$M\ \vDash\ \onlyThrough{A_1}{A_2}{A}$\ iff 
-$\forall M,\ \sigma_1,\ \sigma_2$ such that 
-$M; M', \sigma_1\ \constrained^*\ \sigma_2$, 
-$M; M', \sigma_1\ \vDash\ A_1$, and 
-$M; M', \sigma_2\ \vDash\ A_2$ then
-$\exists\ \sigma$ such that 
-\begin{itemize}
-\item
-$M; M,\ \sigma_1\ \constrained^*\ \sigma$ or $\sigma = \sigma_1$ and
-\item
-$M; M,\ \sigma\ \leadsto^*\ \sigma_2$ and 
-\item
-$M; M', \sigma\ \vDash\ A$.
-\end{itemize}
-\end{definition}
-Informaly we have 
-\begin{itemize}
-\item
-$M\ \vDash\ \onlyIf{A_1}{A_2}{A}$ requires that execution starting at $A_1$ may reach $A_2$ \emph{only if} $A$ was true at the start
-\item
-$M\ \vDash\ \onlyThrough{A_1}{A_2}{A}$ requires that execution starting at $A_1$ may reach $A_2$ \emph{only through} some intermediate state $A$
-\end{itemize}
-
-\section{Chainmail}
-
-The Chainmail defined by \citeauthor{FASE} incorporated assertion forms for 
-specifying several different aspects of a program: \emph{viewpoint}, \emph{space}, 
-\emph{control}, \emph{permission}, and \emph{time}. In this work we use express
-temporal properties using the triples \emph{only if} and \emph{only through}, 
-and as a result Chainmail assertions are largely non-temporal 
-(except in a single restricted case), and do not specify the program state
-of the past, or the future.
-
-The syntax of Chainmail assertions is given in Fig. \ref{f:chainmail_assertions}.
-Assertions may be 
-
-\begin{figure}[h]
-\[
-\begin{array}{llr}
-A\;\;\;\; ::= &   
-e                        		\;\;  
-|\;\; e\ :\ C                 \;\;
-|\;\; e\ \in\ S               \;\;
-|\;\; \neg A 				\;\;
-|\;\; A\ \wedge\ A 			\;\;
-|\;\; A\ \vee\ A 				\;\;
-|\;\; A\ \longrightarrow\ A 	\;\;
-|
-&
-\textit{Assertions}\\
-&
-\forall\ x.\ [A] 				\;\;
-|\;\; \exists\ x.\ [A] 		\;\;
-|\;\; \forall\ S.\ [A] 		\;\;
-|\;\; \exists\ S.\ [A] 		\;\;
-|\;\; A\ \texttt{in}\ S     	\;\;
-|\;\; \access{x}{y}           \;\;
-|							\\
-&
-\internal{x}            		\;\;
-|\;\; \external{x}            \;\;
-|\;\; \calls{x}{y}{m}{args} 	\;\;
-|\;\; \changes{S}{A} 			
-\end{array}
-\]
-\caption{Chainmail Syntax}
-\label{f:chainmail_assertions}
-\end{figure}
-
 \section{Inference System}
 
 
@@ -429,14 +237,16 @@ e                        		\;\;
 For modules $M$ and $M'$, program configuration $\sigma$, set $S$, and assertion $A$ $M;\ M',\ \sigma\ \vDash\ \encapsulates{S}{A}$ iff
 \begin{itemize}
 \item
-$\exists x,\ f,\ y$ such that $x.f\ =\ y$
+$\exists\ x,\ f,\ y$ such that $M\ \vDash\ \encapsulates{S}{x.f}$ and $M\ \vDash\ x.f\ =\ y\ \longrightarrow\ A$ or
+\item
+$\exists\ x,\ y$ such that $M\ \vDash\ \encapsulates{S}{y}$ and $M\ \vDash \neg \access{x}{y}\ \longrightarrow\ A$
 \end{itemize}
 \end{definition}
 
-\begin{definition}[Class Set]
-For set $S$, we define the class set of $S$ as
-$$\texttt{C}_S \equiv\ \{x\ |\ \exists y.[y\ \in\ S\ \wedge\ y : C\ \wedge\ x : C]\}$$
-\end{definition}
+%\begin{definition}[Class Set]
+%For set $S$, we define the class set of $S$ as
+%$$\texttt{C}_S \equiv\ \{x\ |\ \exists y.[y\ \in\ S\ \wedge\ y : C\ \wedge\ x : C]\}$$
+%\end{definition}
 
 \begin{definition}[Internal Set]
 We define the set of all internal objects as
@@ -508,7 +318,15 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
 	}
 	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
-	\quad(\textsc{$\vee$E})
+	\quad(\textsc{$\vee$E$_1$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}} \\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{$\vee$E$_2$})
 	\and
 \infer
 	{
@@ -535,9 +353,6 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 \end{mathpar}
 \caption{\emph{Only Through}}
 \label{f:only_through}
-\end{figure}
-
-\begin{figure}[p]
 \footnotesize
 \begin{mathpar}
 \infer
@@ -574,10 +389,18 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 \infer
 	{
 	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\
+	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
+	\quad(\textsc{If-$\vee$E$_1$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\
 	M\ \vdash\ \onlyThrough{A'}{A_2}{\texttt{false}}
 	}
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
-	\quad(\textsc{If-$\vee$E$$})
+	\quad(\textsc{If-$\vee$E$_2$})
 	\and
 \infer
 	{}
@@ -603,8 +426,8 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 \label{f:only_if}
 \end{figure}
 
-\begin{figure}[p]
-\small
+\begin{figure}[t]
+\footnotesize
 \begin{mathpar}
 \infer
 		{}
@@ -619,11 +442,11 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 		M\ \vdash\ \calls{x}{y}{m}{\ldots,z,\ldots}\ \longrightarrow\ \access{x}{z}
 		}
 		\quad(\textsc{Calls-Args})
-		\and
-\infer
-		{C\ \in\ M}
-		{M\ \vdash\ x : C \longrightarrow\ \internal{x}}
-		\quad(\textsc{Class-Int})
+%		\and
+%\infer
+%		{C\ \in\ M}
+%		{M\ \vdash\ x : C \longrightarrow\ \internal{x}}
+%		\quad(\textsc{Class-Int})
 		\and
 \infer
 		{}
@@ -631,49 +454,66 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 		\quad(\textsc{Changes}\longrightarrow)
 		\and
 \infer
+		{}
+		{M\ \vdash\ \encapsulates{S_1}{S}\ \longrightarrow\ \encapsulates{S_1\ \cup\ S_2}{S}}
+		\quad(\textsc{Encap}-\cup)
+		\and
+\infer
 		{
 		\oiInternal{A}{\neg A}{M}{A'}
 		}
 		{
-		M\ \vdash\ \changes{S}{A}\ \wedge\ \forall x.[x\ \not\in\ S\ \vee\ \internal{x}]\ \longrightarrow\ A'
+		M\ \vdash\ \changes{I}{A}\ \longrightarrow\ A'
 		}
 		\quad(\textsc{Int-Changes})
 		\and
 \infer
 		{}
-		{
-		M\ \vdash\ 
-			\changes {\_}{x.f = y}\ \wedge\ 
-			\encapsulates{S}{x.f} \longrightarrow\ \\\\
-			\exists\ S.[\changes{S}{x.f = y}\ \wedge\ \forall\ z.[z \not\in S\ \vee\ \internal{z}]]
-		}
-		\quad(\textsc{Int-Mut})
+		{M\ \vdash\ \changes{\_}{\encapsulated{x.f\ =\ \_}}\ \wedge\ \internal{x}\ \longleftrightarrow\ \texttt{false}}
+		\quad(\textsc{Encap-Int-f})
 		\and
 \infer
-		{
-		A_\texttt{encap} = \encapsulates{S_1}{S_2}\\
-		S_C = \{x\ |\ x : C\}
-		}
-		{M\ \vdash\ A_\texttt{encap}\ \wedge\ x\ \in\ S_2\ \wedge \changes {\_}{x.f = y}\ \longrightarrow\ \\\\ 
-		\exists\ z,\ C.[z\ :\ C\ \wedge\ z\ \in\ S_1\ \wedge\ \changes{S_C}{x.f = y}]}
-		\quad(\textsc{Mut})
-		\and
-\infer
-		{
-		A_\texttt{encap} = \encapsulates{S_1}{S_2}\\
-		S_C = \{x\ |\ x : C\}
-		}
-		{
-		M\ \vdash\ A_\texttt{encap}\ \wedge\ y\ \in\ S_2\ \wedge\ x\ \not\in\ S_1\ \cup\ S_2\ \vee\ \changes {\_}{\access{x}{y}} \longrightarrow\ \\\\
-		\exists\ x',\ z,\ C.[x'\ \not\in\ S_1\ \cup\ S_2\ \wedge\ z : C\ \wedge\ z\ \in\ S_1\ \wedge\ \changes{S_C}{\access {x'}{z}}]
-		}
-		\quad(\textsc{Gives})
+		{}
+		{M\ \vdash\ \changes{\_}{\encapsulated{x.f\ =\ \_}}\ \wedge\ \external{x} \longleftrightarrow\ \changes{I}{\encapsulated{x}}}
+		\quad(\textsc{Encap-Ext-f})
+%		\and
+%\infer
+%		{}
+%		{
+%		M\ \vdash\ 
+%			\changes {\_}{x.f = y}\ \wedge\ 
+%			\encapsulates{S}{x.f} \longrightarrow\ \\\\
+%			\exists\ S.[\changes{S}{x.f = y}\ \wedge\ \forall\ z.[z \not\in S\ \vee\ \internal{z}]]
+%		}
+%		\quad(\textsc{Int-Mut})
+%		\and
+%\infer
+%		{
+%		A_\texttt{encap} = \encapsulates{S_1}{S_2}\\
+%		S_C = \{x\ |\ x : C\}
+%		}
+%		{M\ \vdash\ A_\texttt{encap}\ \wedge\ x\ \in\ S_2\ \wedge \changes {\_}{x.f = y}\ \longrightarrow\ \\\\ 
+%		\exists\ z,\ C.[z\ :\ C\ \wedge\ z\ \in\ S_1\ \wedge\ \changes{S_C}{x.f = y}]}
+%		\quad(\textsc{Mut})
+%		\and
+%\infer
+%		{
+%		A_\texttt{encap} = \encapsulates{S_1}{S_2}\\
+%		S_C = \{x\ |\ x : C\}
+%		}
+%		{
+%		M\ \vdash\ A_\texttt{encap}\ \wedge\ y\ \in\ S_2\ \wedge\ x\ \not\in\ S_1\ \cup\ S_2\ \vee\ \changes {\_}{\access{x}{y}} \longrightarrow\ \\\\
+%		\exists\ x',\ z,\ C.[x'\ \not\in\ S_1\ \cup\ S_2\ \wedge\ z : C\ \wedge\ z\ \in\ S_1\ \wedge\ \changes{S_C}{\access {x'}{z}}]
+%		}
+%		\quad(\textsc{Gives})
 \end{mathpar}
-\caption{Non-Temporal Chainmail Proof Rules}
-\label{f:non-temporal}
+\caption{Chainmail Consequence Proof Rules}
+\label{f:consequence}
 \end{figure}
 
 \subsection{Internal/External Boundary}
+
+\newpage
 
 \section{Examples}
 
@@ -698,161 +538,132 @@ AccountMethSpec $\triangleq$  {a : Account $\wedge$ a.balance = b}
 From \texttt{DepositSpec}, \texttt{AccountMethSpec}, and Definition \ref{def:module_necessary} we can derive \texttt{BASafety}
 \begin{lstlisting}[mathescape=true]
 BASafety $\triangleq$  a : Account $\wedge$ $\changes{\_}{\texttt{a.balance = b}}$
-            only if $\exists$ a'. [a' : Account $\wedge$ $\calls{\_}{\texttt{a'}}{\texttt{deposit}}{\texttt{a, \_}}$ $\vee$ $\calls{\_}{\texttt{a}}{\texttt{deposit}}{\texttt{a'},\_}$
+            onlyIf $\exists$ a'. [a' : Account $\wedge$ $\calls{\_}{\texttt{a'}}{\texttt{deposit}}{\texttt{a, \_}}$ $\vee$ $\calls{\_}{\texttt{a}}{\texttt{deposit}}{\texttt{a'},\_}$
 \end{lstlisting}
 Then we assume that all methods $m$ in \texttt{Account} observe the following specification:
 \begin{lstlisting}[mathescape=true]
-AccountEncapsulation $\triangleq$ {a : Account $\wedge$ $\neg$ $\langle$ x access a $\rangle$}
+AccountEncapsulation $\triangleq$ {a : Account $\wedge$ $\encapsulated{\texttt{a}}$}
 				          a.m(...)
-				       {$\neg$ $\langle$ x access a $\rangle$}
+				       {$\encapsulated{\texttt{a}}$}
 \end{lstlisting}
 And thus from \texttt{AccoutnEncapsulation} and Definition \ref{def:module_necessary} we can derive \texttt{BAEncapsulation}
 \begin{lstlisting}[mathescape=true]
-BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{\_}{\access{\_}{a}}$
-                 only if false
+BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{I}{\encapsulated{\texttt{a}}}$
+                 onlyIf false
 \end{lstlisting}
-\begin{figure}[p]
+%\begin{figure}[p]
 \begin{minipage}{\linewidth}
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ only if $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
+\begin{tcolorbox}
+\footnotesize
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true, frame = single, rulecolor = \color{blue}]
+a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+  onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
 \end{lstlisting}
-\hfill by \textsc{Changes}
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b $\wedge$ $\internal{\texttt{a}}$ to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-  only if $\exists$ S.[$\forall$ x.[x $\not\in$ S $\vee$ $\internal{\texttt{x}}$] $\wedge$ $\changes{\texttt{S}}{\texttt{a.balance = b}}$]
-\end{lstlisting}
-\hfill by $\longrightarrow_1$, \textsc{Int-Mut}, and $\longrightarrow_3$
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b $\wedge$ $\internal{\texttt{a}}$ to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-  only if $\exists$ o.[$\calls{\texttt{o}}{\texttt{a}}{\texttt{deposit}}{\texttt{\_, \_}}$ $\wedge$ $\external{\texttt{o}}$]
-\end{lstlisting}
-\hfill by \textsc{Int-Changes}, \textsc{BASafety}, and $\longrightarrow_3$
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b $\wedge$ $\internal{\texttt{a}}$ to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ only if $\exists$ o.[$\access{\texttt{o}}{\texttt{a}}$ $\wedge$ $\external{\texttt{o}}$]
-\end{lstlisting}
-\hfill by \textsc{Int-Changes}, \textsc{BASafety}, and $\longrightarrow_3$
-\begin{lstlisting}[mathescape=true]
-ResultA $\triangleq$ a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ only if $\neg\encapsulated{\texttt{a}}$
-\end{lstlisting}
-\hfill by $\longrightarrow_1$ and $\longrightarrow_3$
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ only through $\changes{\texttt{\_}}{\encapsulated{\texttt{a}}}$
-\end{lstlisting}
-\hfill by \textsc{Changes}
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ only through $\changes{\texttt{\_}}{\encapsulated{\texttt{a}}}$ $\wedge$ $\encapsulated{\texttt{a}}$
-\end{lstlisting}
-\hfill by \textsc{Changes}$\longrightarrow$ and $\longrightarrow_3$\\
-{\color{red}ABORT! TODO: Fix encapsulation stuff.}
-\caption{Proof of Satisfaction of the Bank Account Example}
 \end{minipage}
-\end{figure}
-$$
-	\{\encapsulated{a}\}
-$$
-$$
-	\{\neg\encapsulated{a}\}
-$$
-$$\ot$$
-$$
-	\exists x\ y.[\changes{y}{\access{x}{a}}]
-$$
+\begin{minipage}{0.24\textwidth}
+\scriptsize
 \hfill by \textsc{Changes}
-\hrule
-\vspace{3mm}
-(b)
-$$
-	\{\encapsulated{a}\}
-$$
-$$
-	\{\neg\encapsulated{a}\}
-$$
-$$\ot$$
-$$
-	\texttt{false}
-$$
-\hfill by \textsc{Int-Changes}, \texttt{BAEncapsulation}, and $\longrightarrow_3$ \\
-\hrule
-\vspace{3mm}
-\noindent{\color{red}Julian: then we use (a) and (b) to give us:}
-\vspace{3mm}
-\hrule
-\vspace{3mm}
-$$
-	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\}
-$$
-$$
-	\{\neg \encapsulated{a}\}
-$$
-$$\oi$$
-$$
-	{\texttt{true}}
-$$
-\hfill by \textsc{If-True}
-\hrule
-\vspace{3mm}
-$$
-	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\}
-$$
-$$
-	\{\neg \encapsulated{a}\}
-$$
-$$\oi$$
-$$
-	{\encapsulated{a}\ \vee\ \neg\encapsulated{a}}
-$$
-\hfill by \textsc{If-$\longrightarrow_3$} and \textsc{Excluded Middle}
-\hrule
-\vspace{3mm}
-$$
-	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\}
-$$
-$$
-	\{\neg \encapsulated{a}\}
-$$
-$$\oi$$
-$$
-	{\neg \encapsulated{a}\ \vee\ \encapsulated{a}}
-$$
-\hfill by \textsc{If-$\longrightarrow_3$}
-\hrule
-\vspace{3mm}
-$$
-	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\}
-$$
-$$
-	\{\neg \encapsulated{a}\}
-$$
-$$\oi$$
-$$
-	{\neg\encapsulated{a}}
-$$
-\hfill by \textsc{If-$\vee$E$_1$} and (b)
-\hrule
-\vspace{3mm}
-$$
-	\{a : \texttt{Account}\ \wedge a.\texttt{balance} = b\}
-$$
-$$
-	\{\neg\ a.\texttt{balance} \neq b\}
-$$
-$$\oi$$
-$$
-	{\neg\encapsulated{a}}
-$$
-\hfill by \textsc{If-Trans} and (a)
-\hrule
-\vspace{3mm}
-\normalsize
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance\ =\ b}}$ 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by $\longrightarrow_1$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+  onlyThrough $\changes{I}{\texttt{a.balance = b}}$ $\vee$ $\changes{I}{\encapsulated{\text{a.balance = b}}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap} and \textsc{Trans}$_1$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\changes{I}{\texttt{a.balance = b}}$ $\vee$ false
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap-Int-f} and \textsc{Trans}$_3$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\scriptsize
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\changes{I}{\texttt{a.balance = b}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Trans}$_3$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\exists$ o.[$\access{\texttt{o}}{\texttt{a}}$ $\wedge$ $\external{\texttt{o}}$]
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Int-Changes}, \textsc{BASafety}, and $\longrightarrow_3$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true, frame = none]
+ResultA $\triangleq$ a : Account $\wedge$ a.balance = b  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+            onlyThrough $\neg\encapsulated{\texttt{a}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by $\longrightarrow_3$
+\end{minipage}
+\end{tcolorbox}
+\begin{tcolorbox}
+\footnotesize
+\hfill by \textsc{Changes}
+\begin{lstlisting}[mathescape=true, rulecolor=\color{blue}]
+a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ onlyThrough $\changes{\_}{\encapsulated{\texttt{a}}}$
+\end{lstlisting}
+\center{$\Downarrow$ by \textsc{Encap}}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ onlyThrough $\changes{I}{\encapsulated{\texttt{a}}}$
+\end{lstlisting}
+\center{$\Downarrow$ by \textsc{Int-Changes}, \textsc{BAEncapsulation}, and $\longrightarrow_3$}
+\begin{lstlisting}[mathescape=true, rulecolor=\color{red}]
+ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ onlyThrough false
+\end{lstlisting}
+\end{tcolorbox}
 
-\subsection{Safe}
+\begin{tcolorbox}
+\footnotesize
+\center{by \textsc{If-True}, \textsc{Excluded Middle}, and \textsc{If}-$\longrightarrow_3$}
+\begin{lstlisting}[mathescape=true, rulecolor=\color{blue}]
+a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$ 
+  onlyIf $\encapsulated{\texttt{a}}$ $\vee$ $\neg\encapsulated{\texttt{a}}$
+\end{lstlisting}
+\center{$\Downarrow$ by \textsc{If}-$\vee$\textsc{E}$_1$ and \texttt{ResultB}}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$  onlyIf $\neg \encapsulated{\texttt{a}}$
+\end{lstlisting}
+\center{$\Downarrow$ by \texttt{ResultA} and \textsc{If-Trans}}
+\begin{lstlisting}[mathescape=true, rulecolor=\color{red}]
+Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+           onlyIf $\neg \encapsulated{\texttt{a}}$
+\end{lstlisting}
+\end{tcolorbox}
 
-\subsection{DOM}
-
-\subsection{DAO}
-
-\section{Soundness}
-
+\end{minipage}
+%\end{figure}
 
 
 
