@@ -60,6 +60,7 @@
 \usepackage{amsthm}
 \usepackage{listings}
 \usepackage{tcolorbox}
+\usepackage{xspace}
 
 \newtcolorbox{proofBox}[3][]
 {
@@ -97,8 +98,8 @@
 \newcommand\hoareIf[4]{#1,\ #2,\ \{#3\}\ \intstep\ #4}
 \newcommand\rtrns[3]{\{#1\}\ #2\ \texttt{returns}\ #3}
 
-\newcommand\encapsulated[1]{\langle {\color{blue}\texttt{encapsulated}_{\mathcal{T}}}\ #1 \rangle}
-\newcommand\encapsulates[2]{\langle #1\ {\color{blue}\texttt{encapsulates}_{\mathcal{T}}}\ #2 \rangle}
+\newcommand\encapsulated[1]{\langle {\color{blue}\texttt{encapsulated}}\ #1 \rangle}
+\newcommand\encapsulates[2]{\langle #1\ {\color{blue}\texttt{encapsulates}}\ #2 \rangle}
 \newcommand\bencapsulated[1]{\langle {\color{blue}\texttt{encapsulated}_{\mathcal{B}}}\ #1 \rangle}
 \newcommand\bencapsulates[2]{\langle #1\ {\color{blue}\texttt{encapsulates}_{\mathcal{B}}}\ #2 \rangle}
 \newcommand\encapsulatesStrong[2]{\langle #1\ \texttt{encapsulates}_\texttt{strong}\ #2 \rangle}
@@ -110,6 +111,7 @@
 \newcommand\external[1]{\langle #1\ {\color{blue}\texttt{external}}\rangle}
 \newcommand\comprehension[2]{\{#1 | #2\}}
 \newcommand\internalStep{\langle \texttt{internal step}\rangle}
+\newcommand\I{\textit{Int}\xspace}
 
 \lstset{ % General setup for the package
 	language=Java,
@@ -316,20 +318,38 @@ on either a read or a write of data that is topologically encapsulated by $B$.
 We now formalize this relationship between Behavioral Encapsulation and Topological Encapsulation in Lemma \ref{lem:behaveToTop}.
 \begin{lemma}[Topological Encapsulation implies Behavioral Encapsulation]
 \label{lem:behaveToTop}
-For modules $M$ and $M'$, program configuration $\sigma$, set $B$, and assertion $A$ $M;\ M',\ \sigma\ \vDash\ \bencapsulates{B}{A}$ if
+For modules $M$ and $M'$, program configuration $\sigma$, set $B$, and assertion $A$ we have
 \begin{itemize}
 \item
-(\textsc{Write}):
-$\exists\ x,\ f,\ y$ such that $M;\ M',\ \sigma \vDash\ \encapsulates{B}{x.f}$ and $M;\ M',\ \sigma \vDash\ x.f\ =\ y\ \longrightarrow\ A$ or
-\item
 (\textsc{Read}):
-$\exists\ x,\ y$ such that $M;\ M,'\ \sigma \vDash\ \encapsulates{B}{y}$ and $M;\ M',\ \sigma \vDash \neg \access{x}{y}\ \longrightarrow\ A$ 
+$\forall\ x,\ y$ if $M;\ M,'\ \sigma \vDash\ \changes{\_}{\neg\access{x}{y}}\ \longrightarrow\ \changes{\_}{A}$ then
+$$M;\ M,'\ \sigma \vDash\ \encapsulates{B}{y}\ \longrightarrow\ \bencapsulates{B}{A}$$ and
+\item
+(\textsc{Write}):
+$\forall\ x,\ f,\ y$ if $M;\ M',\ \sigma \vDash\ \changes{\_}{x.f = y}\ \longrightarrow\ \changes{\_}{A}$ 
+$$M;\ M',\ \sigma \vDash\ \encapsulates{B}{x.f}\ \longrightarrow \bencapsulates{B}{A}$$
 \end{itemize}
 %or put as a single Chainmail assertion
 %$$M;\ M',\ \sigma\ \vDash\ (\encapsulates{B}{x.f} \wedge (x.f = y \longrightarrow A))\ \vee\ 
 %(\encapsulates{B}{y} \wedge (\neg \access{x}{y} \longrightarrow A))
 %\longrightarrow \bencapsulates{B}{A}$$
 \end{lemma}
+%\begin{lemma}[Topological Encapsulation implies Behavioral Encapsulation]
+%\label{lem:behaveToTop}
+%For modules $M$ and $M'$, program configuration $\sigma$, set $B$, and assertion $A$ we have
+%\begin{itemize}
+%\item
+%(\textsc{Read}):
+%$\forall\ x,\ y$ $M;\ M,'\ \sigma \vDash\ \encapsulates{B}{y}\ \longleftrightarrow\ \bencapsulates{B}{\neg \access{x}{y}}$ and
+%\item
+%(\textsc{Write}):
+%$\forall\ x,\ f,\ y$ $M;\ M',\ \sigma \vDash\ \encapsulates{B}{x.f}\ \longleftrightarrow \bencapsulates{B}{x.f = y}$
+%\end{itemize}
+%%or put as a single Chainmail assertion
+%%$$M;\ M',\ \sigma\ \vDash\ (\encapsulates{B}{x.f} \wedge (x.f = y \longrightarrow A))\ \vee\ 
+%%(\encapsulates{B}{y} \wedge (\neg \access{x}{y} \longrightarrow A))
+%%\longrightarrow \bencapsulates{B}{A}$$
+%\end{lemma}
 That is any write to fields/read from objects encapsulated by 
 $B$ implies that any assertion $A$ dependent on that write/read is behaviorally 
 encapsulated by $B$, i.e. $\bencapsulates{B}{A}$.
@@ -358,7 +378,7 @@ the subset relation in Def. \ref{def:subset}
 \begin{definition}[Internal Set]
 \label{def:intSet}
 We define the set of all internal objects as
-$$\emph{Int} \equiv\ \{x\ |\ \internal{x} \}$$
+$$\I \equiv\ \{x\ |\ \internal{x} \}$$
 \end{definition}
 \begin{definition}[Subset]
 \label{def:subset}
@@ -370,6 +390,7 @@ $$S_1\ \subseteq\ S_2\ \equiv\ \forall x.[x\ \in\ S_1\ \longrightarrow\ x\ \in\ 
 We note in Lemma \ref{lem:setModSet} that any set is a 
 subset of it's modifying set, in Lemma \ref{lem:modSetInternal} that 
 any modifying set of an internal set, is itself an internal set, 
+in Lemma \ref{lem:modInt} that the modifying set of \I is \I,
 and in Lemma \ref{lem:subsetTrans} that the subset relation is transitive.
 \begin{lemma}[Set $\subseteq$ Modifying Set]
 \label{lem:setModSet}
@@ -379,7 +400,12 @@ if $M;\ M,\ \sigma\ \vDash S\ \subseteq\ X_S$
 \begin{lemma}[Internal Modifying Set]
 \label{lem:modSetInternal}
 For all modules $M$ and $M'$, program configurations $\sigma$, and object sets $S$, 
-if $M;\ M,\ \sigma\ \vDash S\ \subseteq\ \textit{Int}\ \longrightarrow X_S\ \subseteq\ \textit{Int}$
+if $M;\ M,\ \sigma\ \vDash S\ \subseteq\ \I\ \longrightarrow X_S\ \subseteq\ \I$
+\end{lemma}
+\begin{lemma}[\I = $X_{\I}$]
+\label{lem:modInt}
+For all modules $M$ and $M'$, and program configurations $\sigma$, 
+$M;\ M,\ \sigma\ \vDash \I = X_{\I}$
 \end{lemma}
 \begin{lemma}[$\subseteq$ Transitivity]
 \label{lem:subsetTrans}
@@ -391,10 +417,10 @@ Finally, for simplicity, we introduce some notation for encapsulation by the
 internal set in Def. \ref{def:intEncap}
 \begin{definition}[Internal Encapsulation]
 \label{def:intEncap}
-$$\encapsulated{S}\ \equiv\ \encapsulates{\emph{Int}}{S}$$
-$$\encapsulated{x}\ \equiv\ \encapsulates{\emph{Int}}{x}$$
-$$\encapsulated{x.f}\ \equiv\ \encapsulates{\emph{Int}}{x.f}$$
-$$\bencapsulated{A}\ \equiv\ \bencapsulates{\emph{Int}}{A}$$
+$$\encapsulated{S}\ \equiv\ \encapsulates{\I}{S}$$
+$$\encapsulated{x}\ \equiv\ \encapsulates{\I}{x}$$
+$$\encapsulated{x.f}\ \equiv\ \encapsulates{\I}{x.f}$$
+$$\bencapsulated{A}\ \equiv\ \bencapsulates{\I}{A}$$
 \end{definition}
 
 \section{Inference System}
@@ -427,8 +453,8 @@ $$\bencapsulated{A}\ \equiv\ \bencapsulates{\emph{Int}}{A}$$
 		\quad(\textsc{Changes}\longrightarrow)
 		\and
 \infer
-		{M\ \vdash\ \bencapsulates{S_1}{S}}
-		{M\ \vdash\ \bencapsulates{S_1\ \cup\ S_2}{S}}
+		{M\ \vdash\ \encapsulates{B}{I}}
+		{M\ \vdash\ \encapsulates{B \cup S}{I}}
 		\quad(\textsc{Encap}-\cup)
 		\and
 \infer
@@ -436,24 +462,69 @@ $$\bencapsulated{A}\ \equiv\ \bencapsulates{\emph{Int}}{A}$$
 		\oiInternal{A}{\neg A}{M}{A'}
 		}
 		{
-		M\ \vdash\ \changes{\emph{Int}}{A}\ \longrightarrow\ A'
+		M\ \vdash\ \changes{\I}{A}\ \longrightarrow\ A'
 		}
 		\quad(\textsc{Int-Changes})
 		\and
 \infer
-		{M\ \vdash\ \changes{\_}{\bencapsulated{x.f\ =\ \_}}\ \wedge\ \internal{x}}
+		{M\ \vdash\ x \in B}
+		{M\ \vdash\ \encapsulates{B}{x.f}}
+		\quad(\textsc{Encap-f})
+		\and
+\infer
+		{M\ \vdash\ \changes{\_}{\encapsulated{x.f}}\ \wedge\ \internal{x}}
 		{M\ \vdash\ \texttt{false}}
-		\quad(\textsc{Encap-Int-f})
+		\quad(\textsc{Change-Encap-Int-f})
 		\and
 \infer
-		{M\ \vdash\ \changes{\_}{\bencapsulated{x.f\ =\ \_}}\ \wedge\ \external{x}}
-		{M\ \vdash\ \changes{I}{\bencapsulated{x}}}
-		\quad(\textsc{Encap-Ext-f}_1)
+		{M\ \vdash\ \changes{\_}{\encapsulated{x.f}}\ \wedge\ \external{x}}
+		{M\ \vdash\ \changes{\I}{\encapsulated{x}}}
+		\quad(\textsc{Change-Encap-Ext-f}_1)
 		\and
 \infer
-		{M\ \vdash\ \changes{I}{\bencapsulated{x}}}
-		{M\ \vdash\ \changes{\_}{\bencapsulated{x.f\ =\ \_}}\ \wedge\ \external{x}}
-		\quad(\textsc{Encap-Ext-f}_2)
+		{M\ \vdash\ \changes{\I}{\encapsulated{x}}}
+		{M\ \vdash\ \changes{\_}{\encapsulated{x.f\ =\ \_}}\ \wedge\ \external{x}}
+		\quad(\textsc{Change-Encap-Ext-f}_2)
+%		\and
+%\infer
+%		{
+%		M\ \vdash\ \encapsulates{B}{y}\\
+%		M\ \vdash\ \changes{\_}{\neg\access{x}{y}}\ \longrightarrow\ \changes{\_}{A}
+%		}
+%		{
+%		M\ \vdash\ \bencapsulates{B}{A}
+%		}
+%		\quad(\textsc{Encap-Read}_1)
+%		\and
+%\infer
+%		{
+%		M\ \vdash\ \bencapsulates{B}{y}\\
+%		M\ \vdash\ \changes{\_}{\neg\access{x}{y}}\ \longrightarrow\ \changes{\_}{A}
+%		}
+%		{
+%		M\ \vdash\ \encapsulates{B}{A}
+%		}
+%		\quad(\textsc{Encap-Read}_2)
+%		\and
+%\infer
+%		{
+%		M\ \vdash\ \encapsulates{B}{x.f}\\
+%		M\ \vdash\ \changes{\_}{x.f = y}\ \longrightarrow\ \changes{\_}{A}
+%		}
+%		{
+%		M\ \vdash\ \bencapsulates{B}{A}
+%		}
+%		\quad(\textsc{Encap-Write}_1)
+%		\and
+%\infer
+%		{
+%		M\ \vdash\ \bencapsulates{B}{x.f}\\
+%		M\ \vdash\ \changes{\_}{x.f = y}\ \longrightarrow\ \changes{\_}{A}
+%		}
+%		{
+%		M\ \vdash\ \encapsulates{B}{A}
+%		}
+%		\quad(\textsc{Encap-Write}_2)
 %		\and
 %\infer
 %		{}
@@ -505,13 +576,31 @@ $$\bencapsulated{A}\ \equiv\ \bencapsulates{\emph{Int}}{A}$$
 	M\ \vdash\ \onlyThrough{A}{\neg A}{\changes{\_}{A}}
 	}
 	\quad(\textsc{Changes})
+%	\and
+%\infer
+%	{}
+%	{
+%	M\ \vdash\ \onlyThrough{\bencapsulates{B}{A}}{\changes{\_}{A}}{\changes{X_B}{A}\ \vee\ \changes{X_B}{\bencapsulates{B}{A}}}
+%	}
+%	\quad(\textsc{Encap})
 	\and
 \infer
-	{}
 	{
-	M\ \vdash\ \onlyThrough{\bencapsulates{B}{A}}{\changes{\_}{A}}{\changes{X_B}{A}\ \vee\ \changes{X_B}{\bencapsulates{B}{A}}}
+	A = \encapsulates{B}{y}
 	}
-	\quad(\textsc{Encap})
+	{
+	M\ \vdash\ \onlyThrough{A_1}{\changes{\_}{\neg\access{x}{y}}}{\changes{X_B}{\neg\access{x}{y}}\ \vee\ \changes{X_B}{A_1}}
+	}
+	\quad(\textsc{Encap-Read})
+	\and
+\infer
+	{
+	A = \encapsulates{B}{x.f}
+	}
+	{
+	M\ \vdash\ \onlyThrough{A}{\changes{\_}{x.f=y}}{\changes{X_B}{x.f=y}\ \vee\ \changes{X_B}{A}}
+	}
+	\quad(\textsc{Encap-Write})
 %	\and
 %\infer
 %	{
@@ -671,7 +760,7 @@ $$\bencapsulated{A}\ \equiv\ \bencapsulates{\emph{Int}}{A}$$
 
 \subsection{Bank Account (Old)}
 \begin{lstlisting}[mathescape=true]
-BankSpec $\triangleq$  a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ only if $\neg\ \encapsulated{\texttt{a}}$
+BankSpec $\triangleq$  a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ only if $\neg\ \bencapsulated{\texttt{a}}$
 \end{lstlisting}
 We assume that the method \texttt{deposit} conforms to the following 
 specification
@@ -694,13 +783,13 @@ BASafety $\triangleq$  a : Account $\wedge$ $\changes{\_}{\texttt{a.balance = b}
 \end{lstlisting}
 Then we assume that all methods $m$ in \texttt{Account} observe the following specification:
 \begin{lstlisting}[mathescape=true]
-AccountEncapsulation $\triangleq$ {a : Account $\wedge$ $\encapsulated{\texttt{a}}$}
+AccountEncapsulation $\triangleq$ {a : Account $\wedge$ $\bencapsulated{\texttt{a}}$}
 				          a.m(...)
-				       {$\encapsulated{\texttt{a}}$}
+				       {$\bencapsulated{\texttt{a}}$}
 \end{lstlisting}
 And thus from \texttt{AccoutnEncapsulation} and Definition \ref{def:module_necessary} we can derive \texttt{BAEncapsulation}
 \begin{lstlisting}[mathescape=true]
-BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{I}{\encapsulated{\texttt{a}}}$
+BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{\I}{\bencapsulated{\texttt{a}}}$
                  onlyIf false
 \end{lstlisting}
 %\begin{figure}[p]
@@ -709,7 +798,8 @@ BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{I}{\encapsulated{\t
 \footnotesize
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true, frame = single]
-a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+a : Account $\wedge$ a.balance = b 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
   onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
 \end{lstlisting}
 \end{minipage}
@@ -719,29 +809,42 @@ a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangl
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance\ =\ b}}$ 
-  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
+a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance}}$ 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+  onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.24\textwidth}
 \scriptsize
-\hfill by $\longrightarrow_1$
+\hfill by $\longrightarrow$ and \textsc{Encap-f}
+\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[mathescape=true]
+%a : Account $\wedge$ a.balance = b $\wedge$ $\bencapsulated{\texttt{a.balance = b}}$ 
+%  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+%  onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by $\longrightarrow$ and Lemma \ref{lem:behaveToTop}(\textsc{Read})
+%\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+  onlyThrough $\changes{\I}{\texttt{a.balance = b}}$ $\vee$ $\changes{\I}{\encapsulated{\text{a.balance = b}}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap-Write} and \textsc{Trans}$_1$
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true]
 a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
   to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-  onlyThrough $\changes{I}{\texttt{a.balance = b}}$ $\vee$ $\changes{I}{\encapsulated{\text{a.balance = b}}}$
-\end{lstlisting}
-\end{minipage}
-\begin{minipage}{0.24\textwidth}
-\scriptsize
-\hfill by \textsc{Encap} and \textsc{Trans}$_1$
-\end{minipage}
-\begin{minipage}{0.75\textwidth}
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
-  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\changes{I}{\texttt{a.balance = b}}$ $\vee$ false
+  onlyThrough $\changes{I}{\texttt{a.balance = b}}$ $\vee$ false
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.24\textwidth}
@@ -752,32 +855,35 @@ a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b
 \scriptsize
 \begin{lstlisting}[mathescape=true]
 a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
-  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\changes{I}{\texttt{a.balance = b}}$
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+  onlyThrough $\changes{I}{\texttt{a.balance = b}}$
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.24\textwidth}
 \scriptsize
-\hfill by \textsc{Trans}$_3$
+\hfill by $\vee$\textsc{E}$_1$
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true]
 a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
-  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ onlyThrough $\exists$ o.[$\access{\texttt{o}}{\texttt{a}}$ $\wedge$ $\external{\texttt{o}}$]
+  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+  onlyThrough $\exists$ o.[$\access{\texttt{o}}{\texttt{a}}$ $\wedge$ $\external{\texttt{o}}$]
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.24\textwidth}
 \scriptsize
-\hfill by \textsc{Int-Changes}, \textsc{BASafety}, and $\longrightarrow_3$
+\hfill by \textsc{Int-Changes}, \textsc{BASafety}, and $\longrightarrow$
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true, frame = none]
-ResultA $\triangleq$ a : Account $\wedge$ a.balance = b  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+ResultA $\triangleq$ a : Account $\wedge$ a.balance = b  
+            to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
             onlyThrough $\neg\encapsulated{\texttt{a}}$
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.24\textwidth}
 \scriptsize
-\hfill by $\longrightarrow_3$
+\hfill by $\longrightarrow$
 \end{minipage}
 \end{proofBox}
 
@@ -785,7 +891,8 @@ ResultA $\triangleq$ a : Account $\wedge$ a.balance = b  to $\langle\ \neg$ a.ba
 \footnotesize
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true, frame=single]
-a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$
+a : Account $\wedge$ $\encapsulated{\texttt{a}}$ 
+  to $\neg\encapsulated{\texttt{a}}$
   onlyThrough $\changes{\_}{\encapsulated{\texttt{a}}}$
 \end{lstlisting}
 \end{minipage}
@@ -795,7 +902,8 @@ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$
+a : Account $\wedge$ $\encapsulated{\texttt{a}}$ 
+  to $\neg\encapsulated{\texttt{a}}$
   onlyThrough $\changes{I}{\encapsulated{\texttt{a}}}$
 \end{lstlisting}
 \end{minipage}
@@ -805,13 +913,14 @@ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true, frame=none]
-ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ 
+ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ 
+  to $\neg\encapsulated{\texttt{a}}$ 
   onlyThrough false
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.24\textwidth}
 \scriptsize
-\hfill by \textsc{Int-Changes}, \textsc{BAEncapsulation}, and $\longrightarrow_3$
+\hfill by \textsc{Int-Changes}, \textsc{BAEncapsulation}, and $\longrightarrow$
 \end{minipage}
 \end{proofBox}
 
@@ -819,17 +928,19 @@ ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\e
 \footnotesize
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true, frame=single]
-a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$ 
+a : Account $\wedge$ a.balance = b $\wedge$ 
+  to $\neg\encapsulated{\texttt{a}}$ 
   onlyIf $\encapsulated{\texttt{a}}$ $\vee$ $\neg\encapsulated{\texttt{a}}$
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}{0.24\textwidth}
 \scriptsize
-\hfill by \textsc{If-True}, \textsc{Excluded Middle}, and \textsc{If}-$\longrightarrow_3$
+\hfill by \textsc{If-True}, \textsc{Excluded Middle}, and \textsc{If}-$\longrightarrow$
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$  
+a : Account $\wedge$ a.balance = b $\wedge$ 
+  to $\neg\encapsulated{\texttt{a}}$  
   onlyIf $\neg \encapsulated{\texttt{a}}$
 \end{lstlisting}
 \end{minipage}
@@ -839,7 +950,8 @@ a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true, frame=none]
-Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ 
+           to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
            onlyIf $\neg \encapsulated{\texttt{a}}$
 \end{lstlisting}
 \end{minipage}
@@ -847,6 +959,17 @@ Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ to $\langle\ \ne
 \scriptsize
 \hfill by \texttt{ResultA} and \textsc{If-Trans}
 \end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[mathescape=true, frame=none]
+%Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ 
+%           to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
+%           onlyIf $\neg \bencapsulated{\texttt{a}}$
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by Lemma \ref{lem:behaveToTop}(\textsc{Read}) and $\longrightarrow$
+%\end{minipage}
 \end{proofBox}
 
 \end{minipage}
