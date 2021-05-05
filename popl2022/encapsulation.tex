@@ -61,6 +61,13 @@
 \usepackage{listings}
 \usepackage{tcolorbox}
 
+\newtcolorbox{proofBox}[3][]
+{
+  colframe = #3,
+  colback  = #2,
+  #1,
+}
+
 
 %constrained reduction
 \newcommand{\constrained}{\mathrel{\leadsto\ \!\!\!\!{\raisebox{1pt}{$\mathsmaller{\mathsmaller{\mathsmaller{\mathsmaller\rvert}}}$}}}}
@@ -90,15 +97,17 @@
 \newcommand\hoareIf[4]{#1,\ #2,\ \{#3\}\ \intstep\ #4}
 \newcommand\rtrns[3]{\{#1\}\ #2\ \texttt{returns}\ #3}
 
-\newcommand\encapsulated[1]{\langle \texttt{encapsulated}\ #1 \rangle}
-\newcommand\encapsulates[2]{\langle #1\ \texttt{encapsulates}\ #2 \rangle}
+\newcommand\encapsulated[1]{\langle {\color{blue}\texttt{encapsulated}_{\mathcal{T}}}\ #1 \rangle}
+\newcommand\encapsulates[2]{\langle #1\ {\color{blue}\texttt{encapsulates}_{\mathcal{T}}}\ #2 \rangle}
+\newcommand\bencapsulated[1]{\langle {\color{blue}\texttt{encapsulated}_{\mathcal{B}}}\ #1 \rangle}
+\newcommand\bencapsulates[2]{\langle #1\ {\color{blue}\texttt{encapsulates}_{\mathcal{B}}}\ #2 \rangle}
 \newcommand\encapsulatesStrong[2]{\langle #1\ \texttt{encapsulates}_\texttt{strong}\ #2 \rangle}
 \newcommand\encapsulatesMdl[1]{\langle \texttt{encapsulating}_\texttt{int}\ #1 \rangle}
-\newcommand\calls[4]{\langle #1\ \texttt{calls}\ #2.#3(#4) \rangle}
-\newcommand\changes[2]{\langle #1\ \texttt{changes}\ #2 \rangle}
-\newcommand\access[2]{\langle #1\ \texttt{access}\ #2 \rangle}
-\newcommand\internal[1]{\langle #1\ \texttt{internal}\rangle}
-\newcommand\external[1]{\langle #1\ \texttt{external}\rangle}
+\newcommand\calls[4]{\langle #1\ {\color{blue}\texttt{calls}}\ #2.#3(#4) \rangle}
+\newcommand\changes[2]{\langle #1\ {\color{blue}\texttt{changes}}\ #2 \rangle}
+\newcommand\access[2]{\langle #1\ {\color{blue}\texttt{access}}\ #2 \rangle}
+\newcommand\internal[1]{\langle #1\ {\color{blue}\texttt{internal}}\rangle}
+\newcommand\external[1]{\langle #1\ {\color{blue}\texttt{external}}\rangle}
 \newcommand\comprehension[2]{\{#1 | #2\}}
 \newcommand\internalStep{\langle \texttt{internal step}\rangle}
 
@@ -230,216 +239,180 @@ Text of abstract \ldots.
 %% environment and commands, and keywords command.
 \maketitle
 
-\section{Inference System}
+\section{Encapsulation}
+We define two forms of encapsulation: (1) encapsulation of sets of objects by sets of objects (topological encapsulation), and (2) encapsulation of assertions by sets of objects (behavioral encapsulation).
 
+The first form of encapsulation is easiest to define, is topological in nature, and refers to which 
+objects refer to which other objects in the heap. We use the syntax $\encapsulates{B}{I}$
+for topological encapsulation. We define this form of encapsulation as a Chainmail predicate in Def. \ref{def:tencap}.
+\begin{definition}[Topological Encapsulation]
+\label{def:tencap}
+$$\encapsulates{B}{I}\ \equiv\ \forall x,\ y.[y\ \in\ I\ \wedge\ 
+														(x\ \in\ B \cup I\ \vee\ 
+ 														\neg\access{x}{y})]\ \wedge\ 
+										\texttt{this}\ \not\in\ B \cup I$$
+\end{definition}
+That is, for any program state where the current 
+computation is occurring externally to the subset of the heap defined by $B \cup I$, 
+we say $\encapsulates{B}{I}$ if all objects external to $B$ and $I$ do not have access
+to any objects in $I$.
+We can use Def. \ref{def:tencap} to extend our notion of topological
+encapsulation to include objects and field accesses. We do this in Def. \ref{def:oencap} and \ref{def:fencap}.
+\begin{definition}[Topological Object Encapsulation]
+\label{def:oencap}
+$$\encapsulates{B}{x}\ \equiv\ \exists I.[\encapsulates{B}{I}\ \wedge\ x \in I]$$
+\end{definition}
+\begin{definition}[Topological Field Encapsulation]
+\label{def:fencap}
+$$\encapsulates{B}{x.f}\ \equiv\ \encapsulates{B}{x}\ \vee\ x \in B$$
+\end{definition}
 
-\begin{definition}[Encapsulation]
-For modules $M$ and $M'$, program configuration $\sigma$, set $S$, and assertion $A$ $M;\ M',\ \sigma\ \vDash\ \encapsulates{S}{A}$ iff
+The second form of encapsulation refers to a behavioral property, and has the form 
+$\bencapsulates{B}{A}$, and informally means that any computation that results in a 
+change to $A$ requires a prior interaction with an object in $B$. Formally we define 
+the semantics in Definition Def. \ref{def:bencap}.
+\begin{definition}[Behavioral Encapsulation]
+\label{def:bencap}
+$\forall$ $M$, $M'$, $\sigma$, $B$, and $A$, \\
+$M;\ M',\ \sigma\ \vDash\ \bencapsulates{B}{A}$ iff
+$\forall$ $\sigma'$ such that
 \begin{itemize}
 \item
-$\exists\ x,\ f,\ y$ such that $M\ \vDash\ \encapsulates{S}{x.f}$ and $M\ \vDash\ x.f\ =\ y\ \longrightarrow\ A$ or
+$\sigma = \sigma'$ or $M;\ M',\ \sigma\ \leadsto^*\ \sigma'$ and
 \item
-$\exists\ x,\ y$ such that $M\ \vDash\ \encapsulates{S}{y}$ and $M\ \vDash \neg \access{x}{y}\ \longrightarrow\ A$
+$M;\ M',\ \sigma'\ \vDash\ \changes{\_}{A}$
+\end{itemize}
+then it follows that $\exists$ $\sigma''$ such that
+\begin{itemize}
+\item
+either
+\begin{itemize}
+\item
+$\sigma = \sigma''$ or 
+\item
+$M \circ M',\ \sigma\ \leadsto^*\ \sigma''$ and
+$M \circ M',\ \sigma''\ \leadsto^*\ \sigma'$
+\end{itemize}
+and
+\item
+either
+\begin{itemize}
+\item
+$\sigma''$.(\texttt{contn}) = \texttt{\_ := b.m(...)} and $\texttt{b}\ \in\ B$ or
+\item
+$\sigma''$.(\texttt{contn}) = \texttt{\_ := b.f} and $\texttt{b}\ \in\ B$ or
+\item
+$\sigma''$.(\texttt{contn}) = \texttt{b.f := \_} and $\texttt{b}\ \in\ B$
+\end{itemize}
 \end{itemize}
 \end{definition}
 
-%\begin{definition}[Class Set]
-%For set $S$, we define the class set of $S$ as
-%$$\texttt{C}_S \equiv\ \{x\ |\ \exists y.[y\ \in\ S\ \wedge\ y : C\ \wedge\ x : C]\}$$
-%\end{definition}
 
+The connection between our topological and behavioral definitions of encapsulation is
+interesting. The assertions that might be behaviorally encapsulated by a set $B$ include
+those assertions that are dependent on objects that are either in $B$, or encapsulated 
+by $B$. More specifically, $\bencapsulates{B}{A}$ if satisfaction of $A$ is dependent 
+on either a read or a write of data that is topologically encapsulated by $B$.
+We now formalize this relationship between Behavioral Encapsulation and Topological Encapsulation in Lemma \ref{lem:behaveToTop}.
+\begin{lemma}[Topological Encapsulation implies Behavioral Encapsulation]
+\label{lem:behaveToTop}
+For modules $M$ and $M'$, program configuration $\sigma$, set $B$, and assertion $A$ $M;\ M',\ \sigma\ \vDash\ \bencapsulates{B}{A}$ if
+\begin{itemize}
+\item
+(\textsc{Write}):
+$\exists\ x,\ f,\ y$ such that $M;\ M',\ \sigma \vDash\ \encapsulates{B}{x.f}$ and $M;\ M',\ \sigma \vDash\ x.f\ =\ y\ \longrightarrow\ A$ or
+\item
+(\textsc{Read}):
+$\exists\ x,\ y$ such that $M;\ M,'\ \sigma \vDash\ \encapsulates{B}{y}$ and $M;\ M',\ \sigma \vDash \neg \access{x}{y}\ \longrightarrow\ A$ 
+\end{itemize}
+%or put as a single Chainmail assertion
+%$$M;\ M',\ \sigma\ \vDash\ (\encapsulates{B}{x.f} \wedge (x.f = y \longrightarrow A))\ \vee\ 
+%(\encapsulates{B}{y} \wedge (\neg \access{x}{y} \longrightarrow A))
+%\longrightarrow \bencapsulates{B}{A}$$
+\end{lemma}
+That is any write to fields/read from objects encapsulated by 
+$B$ implies that any assertion $A$ dependent on that write/read is behaviorally 
+encapsulated by $B$, i.e. $\bencapsulates{B}{A}$.
+It is important to note that there are assertions that are behaviorally encapsulated
+by some set $B$ that are not related to either reads or writes (i.e. the calling of some private but pure method might be dependent on some external call to $B$).
+
+It is also useful to note that if $\encapsulates{B}{I}$, then while we know that 
+any operation that reads from/writes to $I$ necessitates an interaction with $B$,
+it does not necessarily require computation by an object in $B$. Specifically, 
+in $\mathcal{L}_\text{oo}$ this refers to a broader set that includes any objects
+that share a class with an object in $B$. Thus, for any boundary set $B$, we are 
+able to define a modifying set of objects of which some element of is required to 
+perform some computation to read from/write to any object/field encapsulated by 
+$B$. In $\mathcal{L}_\text{oo}$ that set is defined in Def. \ref{def:modSet}
+\begin{definition}[Modifying Set]
+\label{def:modSet}
+For set $B$, we define the modifying set of $B$ as
+$$X_B \equiv\ \{x\ |\ \exists y,\ C.[y\ \in\ B\ \wedge\ y : C\ \wedge\ x : C]\}$$
+\end{definition}
+Def \ref{def:modSet} is language dependent. In $\mathcal{L}_\text{oo}$ $X_B$ refers to
+those objects that share a class with a member of $B$, 
+but other languages, this might refer some other set of objects.
+
+We also define the set of all internal objects in Def. \ref{def:intSet} along with 
+the subset relation in Def. \ref{def:subset}
 \begin{definition}[Internal Set]
+\label{def:intSet}
 We define the set of all internal objects as
-$$I \equiv\ \{x\ |\ \internal{x} \}$$
+$$\emph{Int} \equiv\ \{x\ |\ \internal{x} \}$$
+\end{definition}
+\begin{definition}[Subset]
+\label{def:subset}
+We define the subset relation in Chainmail as
+$$S_1\ \subseteq\ S_2\ \equiv\ \forall x.[x\ \in\ S_1\ \longrightarrow\ x\ \in\ S_2]$$
 \end{definition}
 
-\subsection{Only If/Only Through}
-\begin{figure}[t]
-\footnotesize
-\begin{mathpar}
-\infer
-	{}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{\texttt{true}}}
-	\quad(\textsc{True})
-	\and
-\infer
-	{}
-	{
-	M\ \vdash\ \onlyThrough{A}{\neg A}{\changes{\_}{A}}
-	}
-	\quad(\textsc{Changes})
-	\and
-\infer
-	{}
-	{
-	M\ \vdash\ \onlyThrough{\encapsulated{A}}{\changes{\_}{A}}{\changes{I}{A}\ \vee\ \changes{I}{\encapsulated{A}}}
-	}
-	\quad(\textsc{Encap})
-%	\and
-%\infer
-%	{
-%	M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists x.[A_3]}\\
-%	y\ \not\in A_1,\ A_2,\ A_3
-%	}
-%	{
-%	M\ \vdash\ \onlyThrough{A_1}{A_2}{[y/x]A_3}
-%	}
-%	\quad(\exists_3)
-	\and
-\infer
-	{
-	M\ \vdash\ A_1 \longrightarrow A_1'\\
-	M\ \vdash\ A_2 \longrightarrow A_2'\\
-	M\ \vdash\ A_3' \longrightarrow A_3\\
-	M\ \vdash\ \onlyThrough{A_1'}{A_2'}{A_3'}
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3}}
-	\quad(\textsc{$\longrightarrow$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
-	M\ \vdash\ \onlyThrough{A_1'}{A_2}{A'}
-	}
-	{M\ \vdash\ \onlyThrough{A_1\ \vee\ A_1'}{A_2}{A\ \vee\ A'}}
-	\quad(\textsc{$\vee$I$_1$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\
-	M\ \vdash\ \onlyThrough{A_1}{A_2'}{A'}
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2\ \vee\ A_2'}{A\ \vee\ A'}}
-	\quad(\textsc{$\vee$I$_2$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}} \\
-	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
-	\quad(\textsc{$\vee$E$_1$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}} \\
-	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
-	\quad(\textsc{$\vee$E$_2$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
-	M\ \vdash\ \onlyThrough{A_1}{A_3}{A}
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
-	\quad(\textsc{Trans$_1$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
-	M\ \vdash\ \onlyThrough{A_3}{A_2}{A}
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
-	\quad(\textsc{Trans$_2$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyIf{A_1}{A_2}{A}
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
-	\quad(\textsc{If})
-\end{mathpar}
-\caption{\emph{Only Through}}
-\label{f:only_through}
-\footnotesize
-\begin{mathpar}
-\infer
-	{}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{\texttt{true}}}
-	\quad(\textsc{If-True})
-	\and
-\infer
-	{
-	M\ \vdash\ A_1 \longrightarrow A_1'\\
-	M\ \vdash\ A_2 \longrightarrow A_2'\\
-	M\ \vdash\ A_3' \longrightarrow A_3\\
-	M\ \vdash\ \onlyIf{A_1'}{A_2'}{A_3'}
-	}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_3}}
-	\quad(\textsc{If-$\longrightarrow$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\
-	M\ \vdash\ \onlyIf{A_1'}{A_2}{A'}
-	}
-	{M\ \vdash\ \onlyIf{A_1\ \vee\ A_	1'}{A_2}{A\ \vee\ A'}}
-	\quad(\textsc{If-$\vee$I$_1$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\
-	M\ \vdash\ \onlyIf{A_1}{A_2'}{A'}
-	}
-	{M\ \vdash\ \onlyIf{A_1}{A_2\ \vee\ A_2'}{A\ \vee\ A'}}
-	\quad(\textsc{If-$\vee$I$_2$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\
-	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}}
-	}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
-	\quad(\textsc{If-$\vee$E$_1$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\
-	M\ \vdash\ \onlyThrough{A'}{A_2}{\texttt{false}}
-	}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
-	\quad(\textsc{If-$\vee$E$_2$})
-	\and
-\infer
-	{}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_1}}
-	\quad(\textsc{If-Start})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
-	M\ \vdash\ \onlyIf{A_1}{A_3}{A}
-	}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
-	\quad(\textsc{If-Trans)}
-%	\and
-%\infer
-%	{
-%	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_2}
-%	}
-%	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_2}}
-%	\quad(\textsc{If-Ind)}
-\end{mathpar}
-\caption{\emph{Only if}}
-\label{f:only_if}
-\end{figure}
+
+We note in Lemma \ref{lem:setModSet} that any set is a 
+subset of it's modifying set, in Lemma \ref{lem:modSetInternal} that 
+any modifying set of an internal set, is itself an internal set, 
+and in Lemma \ref{lem:subsetTrans} that the subset relation is transitive.
+\begin{lemma}[Set $\subseteq$ Modifying Set]
+\label{lem:setModSet}
+For all modules $M$ and $M'$, program configurations $\sigma$, and object sets $S$, 
+if $M;\ M,\ \sigma\ \vDash S\ \subseteq\ X_S$
+\end{lemma}
+\begin{lemma}[Internal Modifying Set]
+\label{lem:modSetInternal}
+For all modules $M$ and $M'$, program configurations $\sigma$, and object sets $S$, 
+if $M;\ M,\ \sigma\ \vDash S\ \subseteq\ \textit{Int}\ \longrightarrow X_S\ \subseteq\ \textit{Int}$
+\end{lemma}
+\begin{lemma}[$\subseteq$ Transitivity]
+\label{lem:subsetTrans}
+For all modules $M$ and $M'$, program configurations $\sigma$, and object sets $S_1$, $S_2$, 
+and $S_3$, if $M;\ M,\ \sigma\ \vDash S_1\ \subseteq\ S_2\ \wedge\ S_2\ \subseteq\ S_3\ \longrightarrow\ S_1\ \subseteq\ S_3$
+\end{lemma}
+
+Finally, for simplicity, we introduce some notation for encapsulation by the 
+internal set in Def. \ref{def:intEncap}
+\begin{definition}[Internal Encapsulation]
+\label{def:intEncap}
+$$\encapsulated{S}\ \equiv\ \encapsulates{\emph{Int}}{S}$$
+$$\encapsulated{x}\ \equiv\ \encapsulates{\emph{Int}}{x}$$
+$$\encapsulated{x.f}\ \equiv\ \encapsulates{\emph{Int}}{x.f}$$
+$$\bencapsulated{A}\ \equiv\ \bencapsulates{\emph{Int}}{A}$$
+\end{definition}
+
+\section{Inference System}
 
 \begin{figure}[t]
 \footnotesize
 \begin{mathpar}
 \infer
-		{}
+		{M\ \vdash\ \calls{x}{y}{m}{args}}
 		{
-		M\ \vdash\ \calls{x}{y}{m}{args}\ \longrightarrow\ \access{x}{y}
+		M\ \vdash\ \access{x}{y}
 		}
 		\quad(\textsc{Calls-Recv})
 		\and
 \infer
-		{}
+		{M\ \vdash\ \calls{x}{y}{m}{\ldots,z,\ldots}}
 		{
-		M\ \vdash\ \calls{x}{y}{m}{\ldots,z,\ldots}\ \longrightarrow\ \access{x}{z}
+		M\ \vdash\ \access{x}{z}
 		}
 		\quad(\textsc{Calls-Args})
 %		\and
@@ -449,13 +422,13 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 %		\quad(\textsc{Class-Int})
 		\and
 \infer
-		{}
-		{M\ \vdash\ \changes{\_}{A}\ \longrightarrow\ A}
+		{M\ \vdash\ \changes{\_}{A}}
+		{M\ \vdash\ A}
 		\quad(\textsc{Changes}\longrightarrow)
 		\and
 \infer
-		{}
-		{M\ \vdash\ \encapsulates{S_1}{S}\ \longrightarrow\ \encapsulates{S_1\ \cup\ S_2}{S}}
+		{M\ \vdash\ \bencapsulates{S_1}{S}}
+		{M\ \vdash\ \bencapsulates{S_1\ \cup\ S_2}{S}}
 		\quad(\textsc{Encap}-\cup)
 		\and
 \infer
@@ -463,19 +436,24 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 		\oiInternal{A}{\neg A}{M}{A'}
 		}
 		{
-		M\ \vdash\ \changes{I}{A}\ \longrightarrow\ A'
+		M\ \vdash\ \changes{\emph{Int}}{A}\ \longrightarrow\ A'
 		}
 		\quad(\textsc{Int-Changes})
 		\and
 \infer
-		{}
-		{M\ \vdash\ \changes{\_}{\encapsulated{x.f\ =\ \_}}\ \wedge\ \internal{x}\ \longleftrightarrow\ \texttt{false}}
+		{M\ \vdash\ \changes{\_}{\bencapsulated{x.f\ =\ \_}}\ \wedge\ \internal{x}}
+		{M\ \vdash\ \texttt{false}}
 		\quad(\textsc{Encap-Int-f})
 		\and
 \infer
-		{}
-		{M\ \vdash\ \changes{\_}{\encapsulated{x.f\ =\ \_}}\ \wedge\ \external{x} \longleftrightarrow\ \changes{I}{\encapsulated{x}}}
-		\quad(\textsc{Encap-Ext-f})
+		{M\ \vdash\ \changes{\_}{\bencapsulated{x.f\ =\ \_}}\ \wedge\ \external{x}}
+		{M\ \vdash\ \changes{I}{\bencapsulated{x}}}
+		\quad(\textsc{Encap-Ext-f}_1)
+		\and
+\infer
+		{M\ \vdash\ \changes{I}{\bencapsulated{x}}}
+		{M\ \vdash\ \changes{\_}{\bencapsulated{x.f\ =\ \_}}\ \wedge\ \external{x}}
+		\quad(\textsc{Encap-Ext-f}_2)
 %		\and
 %\infer
 %		{}
@@ -509,6 +487,180 @@ $$I \equiv\ \{x\ |\ \internal{x} \}$$
 \end{mathpar}
 \caption{Chainmail Consequence Proof Rules}
 \label{f:consequence}
+\end{figure}
+
+
+\subsection{Only If/Only Through}
+\begin{figure}[t]
+\footnotesize
+\begin{mathpar}
+\infer
+	{}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{\texttt{true}}}
+	\quad(\textsc{True})
+	\and
+\infer
+	{}
+	{
+	M\ \vdash\ \onlyThrough{A}{\neg A}{\changes{\_}{A}}
+	}
+	\quad(\textsc{Changes})
+	\and
+\infer
+	{}
+	{
+	M\ \vdash\ \onlyThrough{\bencapsulates{B}{A}}{\changes{\_}{A}}{\changes{X_B}{A}\ \vee\ \changes{X_B}{\bencapsulates{B}{A}}}
+	}
+	\quad(\textsc{Encap})
+%	\and
+%\infer
+%	{
+%	M\ \vdash\ \onlyThrough{A_1}{A_2}{\exists x.[A_3]}\\
+%	y\ \not\in A_1,\ A_2,\ A_3
+%	}
+%	{
+%	M\ \vdash\ \onlyThrough{A_1}{A_2}{[y/x]A_3}
+%	}
+%	\quad(\exists_3)
+	\and
+\infer
+	{
+	M\ \vdash\ A_1 \longrightarrow A_1'\\
+	M\ \vdash\ A_2 \longrightarrow A_2'\\
+	M\ \vdash\ A_3' \longrightarrow A_3\\
+	M\ \vdash\ \onlyThrough{A_1'}{A_2'}{A_3'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3}}
+	\quad(\textsc{$\longrightarrow$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\\\
+	M\ \vdash\ \onlyThrough{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1\ \vee\ A_1'}{A_2}{A\ \vee\ A'}}
+	\quad(\textsc{$\vee$I$_1$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A} \\\\
+	M\ \vdash\ \onlyThrough{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2\ \vee\ A_2'}{A\ \vee\ A'}}
+	\quad(\textsc{$\vee$I$_2$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}} \\\\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{$\vee$E$_1$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}} \\\\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \vee\ A'}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{$\vee$E$_2$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\\\
+	M\ \vdash\ \onlyThrough{A_1}{A_3}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{Trans$_1$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\\\
+	M\ \vdash\ \onlyThrough{A_3}{A_2}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{Trans$_2$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A}
+	}
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A}}
+	\quad(\textsc{If})
+\end{mathpar}
+\caption{\emph{Only Through}}
+\label{f:only_through}
+\footnotesize
+\begin{mathpar}
+\infer
+	{}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{\texttt{true}}}
+	\quad(\textsc{If-True})
+	\and
+\infer
+	{}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_1}}
+	\quad(\textsc{If-Start})
+	\and
+\infer
+	{
+	M\ \vdash\ A_1 \longrightarrow A_1'\\
+	M\ \vdash\ A_2 \longrightarrow A_2'\\
+	M\ \vdash\ A_3' \longrightarrow A_3\\
+	M\ \vdash\ \onlyIf{A_1'}{A_2'}{A_3'}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_3}}
+	\quad(\textsc{If-$\longrightarrow$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\\\
+	M\ \vdash\ \onlyIf{A_1'}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyIf{A_1\ \vee\ A_	1'}{A_2}{A\ \vee\ A'}}
+	\quad(\textsc{If-$\vee$I$_1$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\\\
+	M\ \vdash\ \onlyIf{A_1}{A_2'}{A'}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2\ \vee\ A_2'}{A\ \vee\ A'}}
+	\quad(\textsc{If-$\vee$I$_2$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\\\
+	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
+	\quad(\textsc{If-$\vee$E$_1$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\\\
+	M\ \vdash\ \onlyThrough{A'}{A_2}{\texttt{false}}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
+	\quad(\textsc{If-$\vee$E$_2$})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3} \\
+	M\ \vdash\ \onlyIf{A_1}{A_3}{A}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
+	\quad(\textsc{If-Trans)}
+%	\and
+%\infer
+%	{
+%	M\ \vdash\ \onlyThrough{A_1}{A_2}{A_2}
+%	}
+%	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_2}}
+%	\quad(\textsc{If-Ind)}
+\end{mathpar}
+\caption{\emph{Only if}}
+\label{f:only_if}
 \end{figure}
 
 \subsection{Internal/External Boundary}
@@ -553,10 +705,10 @@ BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{I}{\encapsulated{\t
 \end{lstlisting}
 %\begin{figure}[p]
 \begin{minipage}{\linewidth}
-\begin{tcolorbox}
+\begin{proofBox}{white}{black}
 \footnotesize
 \begin{minipage}{0.75\textwidth}
-\begin{lstlisting}[mathescape=true, frame = single, rulecolor = \color{blue}]
+\begin{lstlisting}[mathescape=true, frame = single]
 a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
   onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
 \end{lstlisting}
@@ -627,40 +779,75 @@ ResultA $\triangleq$ a : Account $\wedge$ a.balance = b  to $\langle\ \neg$ a.ba
 \scriptsize
 \hfill by $\longrightarrow_3$
 \end{minipage}
-\end{tcolorbox}
-\begin{tcolorbox}
-\footnotesize
-\hfill by \textsc{Changes}
-\begin{lstlisting}[mathescape=true, rulecolor=\color{blue}]
-a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ onlyThrough $\changes{\_}{\encapsulated{\texttt{a}}}$
-\end{lstlisting}
-\center{$\Downarrow$ by \textsc{Encap}}
-\begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ onlyThrough $\changes{I}{\encapsulated{\texttt{a}}}$
-\end{lstlisting}
-\center{$\Downarrow$ by \textsc{Int-Changes}, \textsc{BAEncapsulation}, and $\longrightarrow_3$}
-\begin{lstlisting}[mathescape=true, rulecolor=\color{red}]
-ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ onlyThrough false
-\end{lstlisting}
-\end{tcolorbox}
+\end{proofBox}
 
-\begin{tcolorbox}
+\begin{proofBox}{white}{black}
 \footnotesize
-\center{by \textsc{If-True}, \textsc{Excluded Middle}, and \textsc{If}-$\longrightarrow_3$}
-\begin{lstlisting}[mathescape=true, rulecolor=\color{blue}]
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true, frame=single]
+a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$
+  onlyThrough $\changes{\_}{\encapsulated{\texttt{a}}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Changes}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true]
+a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$
+  onlyThrough $\changes{I}{\encapsulated{\texttt{a}}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true, frame=none]
+ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ to $\neg\encapsulated{\texttt{a}}$ 
+  onlyThrough false
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Int-Changes}, \textsc{BAEncapsulation}, and $\longrightarrow_3$
+\end{minipage}
+\end{proofBox}
+
+\begin{proofBox}{white}{black}
+\footnotesize
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true, frame=single]
 a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$ 
   onlyIf $\encapsulated{\texttt{a}}$ $\vee$ $\neg\encapsulated{\texttt{a}}$
 \end{lstlisting}
-\center{$\Downarrow$ by \textsc{If}-$\vee$\textsc{E}$_1$ and \texttt{ResultB}}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{If-True}, \textsc{Excluded Middle}, and \textsc{If}-$\longrightarrow_3$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
 \begin{lstlisting}[mathescape=true]
-a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$  onlyIf $\neg \encapsulated{\texttt{a}}$
+a : Account $\wedge$ a.balance = b $\wedge$ to $\neg\encapsulated{\texttt{a}}$  
+  onlyIf $\neg \encapsulated{\texttt{a}}$
 \end{lstlisting}
-\center{$\Downarrow$ by \texttt{ResultA} and \textsc{If-Trans}}
-\begin{lstlisting}[mathescape=true, rulecolor=\color{red}]
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{If}-$\vee$\textsc{E}$_1$ and \texttt{ResultB}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[mathescape=true, frame=none]
 Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
            onlyIf $\neg \encapsulated{\texttt{a}}$
 \end{lstlisting}
-\end{tcolorbox}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \texttt{ResultA} and \textsc{If-Trans}
+\end{minipage}
+\end{proofBox}
 
 \end{minipage}
 %\end{figure}
