@@ -503,7 +503,24 @@ $$\bencapsulated{A}\ \equiv\ \bencapsulates{\I}{A}$$
 \section{Inference System}  
 
 In this Section we provide an inference system for constructing 
-proofs of Chainmail specifications. Since the core of Chainmail's
+proofs of Chainmail specifications. We start by defining several judgments
+\begin{definition}[Chainmail Satisfaction]
+For all modules $M$ and $M'$, program configuration $\sigma$,
+and Chainmail assertion $A$,
+$$M;\ M',\ \sigma\ \vdash\ A$$ 
+if and only if satisfaction of $A$ is provable in $\sigma$ with internal module $M$ and external module $M'$.
+\end{definition}
+It is often useful to refer to Chainmail properties that hold for all
+possible program configurations and external modules given some internal module. For 
+this purpose we provide the following definition:
+\begin{definition}[Chainmail Module Satisfaction]
+For all modules $M$ and Chainmail assertions $A$,
+$M\ \vdash\ A$ holds
+iff for all external modules $M'$ and program configurations $\sigma$ we have
+$M; M,\ \sigma \vdash\ A$
+\end{definition}
+
+Since the core of Chainmail's
 reasoning is about the boundary between known, traditionally specified code,
 and unknown, unspecified, and potentially malicious code, we first 
 present a mechanism for reasoning about changes to program state
@@ -514,22 +531,22 @@ For all modules $M$ and Chainmail assertions $A_1$, $A_2$, and $A$, we say $\oiI
 for all possible method calls $\calls{x}{y}{m}{args}$ on $M$, we are able to prove 
 $M\ \vdash\ \hoare{A_1\ \wedge\ \neg A}{y.m(args)}{\neg A_2}$
 \end{definition}
-Informally we express this $A$ is a necessary precondition to reach $A_2$ from $A_1$ 
+Informally we express this as $A$ is a necessary precondition to reach $A_2$ from $A_1$ 
 through a single internal method call. 
 From this we define a core proof rule for constructing proofs in Chainmail.
 \begin{mathpar}
 \infer
 		{
 		\oiInternal{A}{\neg A}{M}{A'}\\\\
-		M\ \vdash\ \changes{\I}{A}
+		M;\ M',\ \sigma\ \vdash\ \changes{\I}{A}
 		}
 		{
-		M\ \vdash\ A'
+		M;\ M',\ \sigma\ \vdash\ A'
 		}
 		\quad(\textsc{Changes-Int})
 \end{mathpar}
 That is, if $A'$ is a necessary precondition to changing $A$, and
-we know that the internal module $M$ changes $A$, then we can conclude
+we know that the internal module $M$ changes $A$, with external module $M'$, and program configuration $\sigma$, then we can conclude
 that $A'$ is true.
 
 In Fig. \ref{f:chainmail_proof_rules} we provide some more proof rules for 
@@ -540,97 +557,97 @@ changing of program state.
 \footnotesize
 \begin{mathpar}
 \infer
-		{M\ \vdash\ \calls{x}{y}{m}{\ldots}}
+		{M;\ M',\ \sigma\ \vdash\ \calls{x}{y}{m}{\ldots}}
 		{
-		M\ \vdash\ \access{x}{y}
+		M;\ M',\ \sigma\ \vdash\ \access{x}{y}
 		}
 		\quad(\textsc{Calls-Recv})
 		\and
 \infer
-		{M\ \vdash\ \calls{x}{y}{m}{\ldots,z,\ldots}}
+		{M;\ M',\ \sigma\ \vdash\ \calls{x}{y}{m}{\ldots,z,\ldots}}
 		{
-		M\ \vdash\ \access{x}{z}
+		M;\ M',\ \sigma\ \vdash\ \access{x}{z}
 		}
 		\quad(\textsc{Calls-Args})
 		\and
 \infer
-		{M\ \vdash\ \calls{x}{y}{m}{\ldots}}
+		{M;\ M',\ \sigma\ \vdash\ \calls{x}{y}{m}{\ldots}}
 		{
-		M\ \vdash\ (\internal{x}\ \wedge\ \external{y})\ \vee\ (\external{x}\ \wedge\ \internal{y})
+		M;\ M',\ \sigma\ \vdash\ (\internal{x}\ \wedge\ \external{y})\ \vee\ (\external{x}\ \wedge\ \internal{y})
 		}
 		\quad(\textsc{Calls-Ext/Int})
 		\and
 \infer
 		{
-		M\ \vdash\ \calls{x}{y}{m}{\ldots} \\
-		M\ \vdash\ \external{x}
+		M;\ M',\ \sigma\ \vdash\ \calls{x}{y}{m}{\ldots} \\
+		M;\ M',\ \sigma\ \vdash\ \external{x}
 		}
 		{
-		M\ \vdash\ x = \texttt{this}
+		M;\ M',\ \sigma\ \vdash\ x = \texttt{this}
 		}
 		\quad(\textsc{Calls-}\texttt{this})
 		\and
 \infer
 		{
-		M\ \vdash\ \exists y.[A]\\
+		M;\ M',\ \sigma\ \vdash\ \exists y.[A]\\
 		\textit{fresh}(x)
 		}
-		{M\ \vdash\ [x/y]A}
+		{M;\ M',\ \sigma\ \vdash\ [x/y]A}
 		\quad(\textsc{Exists})
 		\and
 \infer
-		{M\ \vdash\ \changes{\_}{A}}
-		{M\ \vdash\ A}
+		{M;\ M',\ \sigma\ \vdash\ \changes{\_}{A}}
+		{M;\ M',\ \sigma\ \vdash\ A}
 		\quad(\textsc{Changes}\longrightarrow)
 		\and
 \infer
 		{
-		M\ \vdash\ \changes{\_}{\encapsulates{B}{I}}
+		M\;\ M',\ \sigma \vdash\ \changes{\_}{\encapsulates{B}{I}}
 		}
-		{M\ \vdash\ \changes{X_B}{\encapsulates{B}{I}}}
+		{M;\ M',\ \sigma\ \vdash\ \changes{X_B}{\encapsulates{B}{I}}}
 		\quad(\textsc{Changes-Encap})
 		\and
 \infer
 		{}
-		{M\ \vdash\ \neg\encapsulated{\texttt{this}}}
+		{M;\ M',\ \sigma\ \vdash\ \neg\encapsulated{\texttt{this}}}
 		\quad(\textsc{Encap}-\texttt{this})
 		\and
 \infer
 		{
-		M\ \vdash\ \encapsulates{B}{x} \\
-		M\ \vdash\ \access{y}{x}
+		M;\ M',\ \sigma\ \vdash\ \encapsulates{B}{x} \\
+		M;\ M',\ \sigma\ \vdash\ \access{y}{x}
 		}
-		{M\ \vdash\ y \in B\ \vee\ \encapsulates{B}{y}}
+		{M;\ M',\ \sigma\ \vdash\ y \in B\ \vee\ \encapsulates{B}{y}}
 		\quad(\textsc{Encap-Access})
 		\and
 \infer
-		{M\ \vdash\ \encapsulates{B}{I}}
-		{M\ \vdash\ \encapsulates{B \cup S}{I}}
+		{M;\ M',\ \sigma\ \vdash\ \encapsulates{B}{I}}
+		{M;\ M',\ \sigma\ \vdash\ \encapsulates{B \cup S}{I}}
 		\quad(\textsc{Encap}-\cup)
 		\and
 \infer
-		{M\ \vdash\ x \in B}
-		{M\ \vdash\ \encapsulates{B}{x.f}}
+		{M;\ M',\ \sigma\ \vdash\ x \in B}
+		{M;\ M',\ \sigma\ \vdash\ \encapsulates{B}{x.f}}
 		\quad(\textsc{Encap-f}_1)
 		\and
 \infer
-		{M\ \vdash\ \encapsulates{B}{x}}
-		{M\ \vdash\ \encapsulates{B}{x.f}}
+		{M;\ M',\ \sigma\ \vdash\ \encapsulates{B}{x}}
+		{M;\ M',\ \sigma\ \vdash\ \encapsulates{B}{x.f}}
 		\quad(\textsc{Encap-f}_2)
 		\and
 \infer
-		{M\ \vdash\ \changes{\_}{\encapsulated{x.f}}\ \wedge\ \internal{x}}
-		{M\ \vdash\ \texttt{false}}
+		{M;\ M',\ \sigma\ \vdash\ \changes{\_}{\encapsulated{x.f}}\ \wedge\ \internal{x}}
+		{M;\ M',\ \sigma\ \vdash\ \texttt{false}}
 		\quad(\textsc{Change-Encap-Int-f})
 		\and
 \infer
-		{M\ \vdash\ \changes{\_}{\encapsulated{x.f}}\ \wedge\ \external{x}}
-		{M\ \vdash\ \changes{\I}{\encapsulated{x}}}
+		{M;\ M',\ \sigma\ \vdash\ \changes{\_}{\encapsulated{x.f}}\ \wedge\ \external{x}}
+		{M;\ M',\ \sigma\ \vdash\ \changes{\I}{\encapsulated{x}}}
 		\quad(\textsc{Change-Encap-Ext-f}_1)
 		\and
 \infer
-		{M\ \vdash\ \changes{\I}{\encapsulated{x}}\ \wedge\ \external{x}}
-		{M\ \vdash\ \changes{\I}{\encapsulated{x.f}}}
+		{M;\ M',\ \sigma\ \vdash\ \changes{\I}{\encapsulated{x}}\ \wedge\ \external{x}}
+		{M;\ M',\ \sigma\ \vdash\ \changes{\I}{\encapsulated{x.f}}}
 		\quad(\textsc{Change-Encap-Ext-f}_2)
 %		\and
 %\infer
@@ -1637,11 +1654,11 @@ We also need to a proof rule that allows us to prove program invariants.
 \begin{mathpar}
 \infer
 		{
-		M\ \vdash\ \exists o.[o : \texttt{Object}\ \wedge\ \forall o'.[o' = o]]\ \longrightarrow\ A\\
-		M\ \vdash\ \onlyThrough{A}{\neg A}{\texttt{false}}
+		M;\ M',\ \sigma\ \vdash\ \exists o.[o : \texttt{Object}\ \wedge\ \forall o'.[o' = o]]\ \longrightarrow\ A\\
+		M;\ M',\ \sigma\ \vdash\ \onlyThrough{A}{\neg A}{\texttt{false}}
 		}
 		{
-		M\ \vdash\ A
+		M;\ M',\ \sigma\ \vdash\ A
 		}
 		\quad(\textsc{Invariant})
 \end{mathpar}
@@ -1740,6 +1757,445 @@ Bank3Result $\triangleq$ b : Bank $\wedge$ b.acc.acc1.bal = x
 \begin{minipage}{0.24\textwidth}
 \scriptsize
 \hfill by \textsc{Invariant}, \texttt{EncapInv}, and $\longrightarrow$
+\end{minipage}
+\end{proofBox}
+
+\newpage
+
+
+
+\subsection{Bank Account 4 - Ghost Field Balance {\color{red}(Julian: still working on this)}} 
+\label{ex:bank4}
+In this version of the Bank Account, we show that we 
+are able to reason about fairly complex forms of encapsulation.
+Specifically if some \texttt{Bank} \texttt{b} encapsulates
+some \texttt{Account} a, then it must follow that 
+the \texttt{Ledger} \texttt{l} that contains \texttt{a}
+is also encapsulated by \texttt{b}, and subsequently that any change to
+the balance of \texttt{a} requires a call to \texttt{transfer}
+on \texttt{b}. This is interesting because, while other examples
+do not provide a way to leak access to an account, this example 
+does, but only through the \texttt{Ledger} interface, and thus
+encapsulation of the \texttt{Ledger} is sufficient to ensure
+encapsulation of the account. Note, this example only proves 
+that leaking of an account is not possible, it does not prove 
+that encapsulation of an account is always assured under all 
+program states. Encapsulation of the account is shown in the
+example in Section \ref{ex:bank3}.
+\begin{lstlisting}[mathescape=true, frame=lines]
+module BankMdl
+  class Account
+
+  class Ledger
+    field acc : Account
+    field balance : int
+    field tail : Ledger
+    method addToBalance(amt)
+      if a == this.acc
+        this.balance := this.balance + amt
+    method find(a)
+      if a == this.acc
+        return this
+      else if this.tail == null
+        return null
+      else
+        return this.tail.find(a)
+    ghost balance(a)
+      if this.acc == a
+        return balance
+      else if this.tail == null
+        return -1
+      else 
+        return tail.balance(a)
+
+  class Bank
+    field accs : Ledger
+    
+    method transfer(from, to, amt)
+      dest := this.accs.find(from);
+      src := this.accs.find(to);
+      if dest != null && src != null && amt >= 0
+        dest.addToBalance(amt)
+        src.addToBalance(-1 * amt)
+        
+    ghost balance(acc) 
+      this.accs.balance(acc)
+      
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+BankSpec $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+             to a.bal $\neq$ x
+             onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+\end{lstlisting}
+As with the example in Section \ref{ex:bank1}, we require 
+the \verb|Bank| module to prove several invariants:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+AccAccess $\triangleq$ a : Account $\wedge$ $\encapsulates{\texttt{B}}{\texttt{a}}$
+              to $\neg\encapsulates{\texttt{B}}{\texttt{a}}$
+              through BankMdl
+              onlyIf $\exists$ o, l. [ l : Ledger $\wedge$ ($\calls{\texttt{o}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+                                                 $\calls{\texttt{o}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)]
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+BalChange $\triangleq$ a : Account $\wedge$ a.bal = x
+              to a.bal $\neq$ x
+              through BankMdl
+              onlyIf $\exists$ a' o. [a' : Account $\wedge$ $\external{\texttt{o}}$ $\wedge$ 
+                            ($\calls{\_}{\texttt{a}}{\texttt{transfer}}{\texttt{a'}, \_}$ $\vee$ $\calls{\_}{\texttt{a'}}{\texttt{transfer}}{\texttt{a}, \_}$)] $\vee$
+                     $\exists$ b. [b : Bank $\wedge$ $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$ $\wedge$ 
+                            (b.accs.acc1 = a $\vee$ b.accs.acc2 = a)])]
+\end{lstlisting}
+%We also need to prove a more general property of the encapsulation of account objects by bank objects.
+%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+%AccEncap1 $\triangleq$ b : Bank $\wedge$ ($\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ $\vee$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$)
+%              $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs}}$
+%\end{lstlisting}
+Finally we need to prove the following property:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+BankEncapUnique $\triangleq$ a : Account $\wedge$ b b' : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
+                    (b'.accs.acc1 = a || b'.accs.acc2 = a)
+                    $\longrightarrow$ b' = b
+\end{lstlisting}
+
+
+
+\begin{proofBox}{white}{black}
+\footnotesize
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
+  $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
+  $\changes{X_\texttt{\{b\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Changes}-$\longrightarrow$ and \textsc{Changes-Encap}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
+  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \texttt{AccAccess}, \textsc{Changes-Int}, and \textsc{Exists}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
+  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\texttt{x}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Calls-Ext/Int}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
+  x = this $\wedge$ $\access{\texttt{x}}{\texttt{l}}$ $\wedge$ $\access{\texttt{l}}{\texttt{a}}$ $\wedge$ $\external{\texttt{x}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Calls-}\texttt{this} and \textsc{Calls-Recv}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
+  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
+  ($\encapsulated{\texttt{l}}$ $\vee$ l $\in$ {b})
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap-}\texttt{this}, \textsc{Encap-Access}, and \textsc{Encap-}$\cup$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
+  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ $\encapsulated{\texttt{l}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by $\vee$\textsc{E}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
+  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
+  ($\encapsulated{\texttt{this}}$ $\vee$ this $\in$ $\I$)
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap-Access}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
+  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
+  false
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
+ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
+            $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$ $\longrightarrow$ false
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\end{minipage}
+\end{proofBox}
+
+
+%\begin{proofBox}{white}{black}
+%\footnotesize
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg \encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by \textsc{Changes}
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ $\changes{X_\texttt{\{b\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by \textsc{Changes}-$\longrightarrow$, \textsc{Changes-Encap} and $\longrightarrow$
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%                  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%                   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by \texttt{AccAccess}, \textsc{Changes-Int}, \textsc{Exists}, and $\longrightarrow$
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%                  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%                   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\texttt{x}}$
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by \textsc{Calls-Ext/Int} and $\longrightarrow$
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ x = this $\wedge$
+%                  $\access{\texttt{x}}{\texttt{l}}$ $\wedge$ $\access{\texttt{l}}{\texttt{a}}$ $\wedge$ $\external{\texttt{x}}$
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by \textsc{Calls-}\texttt{this}, \textsc{Calls-Recv} and $\longrightarrow$
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
+%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
+%                  ($\encapsulated{\texttt{l}}$ $\vee$ l $\in$ {b})
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by \textsc{Encap-}\texttt{this}, \textsc{Encap-Access}, \textsc{Encap-}$\cup$, and $\longrightarrow$
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
+%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
+%                  $\encapsulated{\texttt{l}}$
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by $\longrightarrow$
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true]
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
+%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
+%                  ($\encapsulated{\texttt{this}}$ $\vee$ this $\in$ $\I$)
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by \textsc{Encap-Access} and $\longrightarrow$
+%\end{minipage}
+%\begin{minipage}{0.75\textwidth}
+%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
+%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%  onlyThrough false
+%\end{lstlisting}
+%\end{minipage}
+%\begin{minipage}{0.24\textwidth}
+%\scriptsize
+%\hfill by $\longrightarrow$
+%\end{minipage}
+%\end{proofBox}
+
+
+\begin{proofBox}{white}{black}
+\footnotesize
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\changes{\_}{\texttt{a.bal = x}}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Changes} and $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
+     ($\changes{X_{\{\texttt{b}\}}}{\texttt{a.bal = x}}$ $\vee$ $\changes{X_{\{\texttt{b}\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$)
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap-Write} and $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ $\changes{\I}{\texttt{a.bal = x}}$ $\vee$ false
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \texttt{ResultA}, \textsc{Encap-}$\cup$, and $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
+              $\exists$ a' o. [a' : Account $\wedge$ $\external{\texttt{o}}$ $\wedge$ 
+                          ($\calls{\texttt{o}}{\texttt{a}}{\texttt{transfer}}{\texttt{a'}, \_}$ $\vee$ 
+                           $\calls{\texttt{o}}{\texttt{a'}}{\texttt{transfer}}{\texttt{a}, \_}$)] $\vee$
+              $\exists$ b'. [b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+                      (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])]
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \texttt{BalChange}, \textsc{Changes-Int}, and $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
+              ($\external{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{a}}$) $\vee$
+              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Exists}, \textsc{Calls-Recv}, \textsc{Calls-Args}, \textsc{Calls-}\texttt{this}, and $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
+              ($\encapsulates{\texttt{b}}{\texttt{this}}$ $\vee$ this $\in$ {b}) $\vee$
+              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap-Access}
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
+              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \textsc{Encap-}\texttt{this} and $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+  to a.bal $\neq$ x
+  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
+              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+              b' = b
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by \texttt{BankEncapUnique} and $\longrightarrow$
+\end{minipage}
+\begin{minipage}{0.75\textwidth}
+\begin{lstlisting}[language = Chainmail, mathescape=true]
+Result $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+           to a.bal $\neq$ x
+           onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.24\textwidth}
+\scriptsize
+\hfill by $\longrightarrow$
 \end{minipage}
 \end{proofBox}
 
