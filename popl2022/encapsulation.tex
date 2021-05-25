@@ -88,7 +88,7 @@
 \lstdefinelanguage{Chainmail}{
   basicstyle=\scriptsize\sffamily\ttfamily,
   morekeywords={calls, external, internal, access, 
-                onlyThrough, onlyIf, to, true, false, through},
+                onlyThrough, onlyIf, to1, to, true, false, through},
   sensitive=false,
   morecomment=[l]{//},
   morecomment=[s]{/*}{*/},
@@ -1227,6 +1227,63 @@ changing of program state.
 %\newpage
 
 \section{Examples}
+
+\begin{lstlisting}[mathescape=true, frame=lines]
+module BankMdl
+  class boundary Account
+    field password : Object
+    method authenticate(pwd)
+      return pwd == this.password
+
+  class internal Ledger
+    field acc1 : Account
+    field bal1 : int
+    field acc2 : Account
+    field bal1 : int
+    ghost intrnl getBalance(acc) = 
+      if acc == acc1
+        bal1
+      else if acc == acc2
+        bal2
+      else -1
+    method transfer(amt, from, to)
+      if from == acc1 && to == acc2
+        bal1 := bal1 - amt
+        bal2 := bal2 + amt
+      else if from == acc2 && to == acc1
+        bal1 := bal1 + amt
+        bal2 := bal2 - amt
+      
+
+  class boundary Bank
+    field book : Ledger
+    ghost intrnl getBalance(acc) = book.getBalance(acc)
+    method transfer(pwd, amt, from, to)
+      if (from.authenticate(pwd))
+        book.transfer(amt, from, to)
+\end{lstlisting}
+
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+BankSpec1 $\triangleq$  b : Bank $\wedge$ b.getBalance(a) = bal 
+               to b.getbalance(a) $\neq$ bal
+               onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a}}$]
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+BankSpec2 $\triangleq$  b : Bank $\wedge$ b.getBalance(a) = bal 
+               to b.getbalance(a) $\neq$ bal
+               onlyIf $\exists$ o'.[$\external{\texttt{o'}}$ $\wedge$ $\access{\texttt{o'}}{\texttt{a.password}}$]
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+AccountLeak $\triangleq$  a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a}}$]
+                 to1 $\access{\texttt{o}}{\texttt{a.password}}$ $\wedge$ $\external{\texttt{o}}$
+                 onlyIf false
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+PasswordLeak $\triangleq$  a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a}}$]
+                  to1 $\access{\texttt{o}}{\texttt{a.password}}$ $\wedge$ $\external{\texttt{o}}$
+                  onlyIf false
+\end{lstlisting}
+
 
 \subsection{Bank Account 1 - Simple}
 \label{ex:bank1}
