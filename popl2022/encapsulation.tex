@@ -325,10 +325,13 @@ Classes can be annotated as either \texttt{internal} or \texttt{boundary}, and w
 that the type system enforces some guarantees about aliasing of \texttt{internal} classes,
 specifically that \texttt{internal} classes may only be initialized by module internal objects,
 and instances of classes annotated as \texttt{boundary} may not return \texttt{internal} 
-objects. This is a straightforward property that could be modeled by a type system, and
+objects. This is a straightforward property that is a simple extension to a type system, and
 is assumed here only to elide language features that do not fall in the bounds of this paper.
 It is conceivable that any other of a number encapsulation mechanisms could be used from
-prior language designs that have already been studied. The semantics of \Loo are unchanged from
+prior language designs that have already been studied. To accompany this, \Loo also includes
+an optional annotation on ghost fields \texttt{intrnl} that enforces the requirement that 
+the body of the ghost field includes only references to obejcts that are defined by the internal 
+module. The semantics of \Loo are unchanged from
 that of \cite{FASE}, and are given in Appendix \ref{app:Loo}.
 
 \subsection{\Chainmail}
@@ -360,8 +363,6 @@ that of \cite{FASE}, and are given in Appendix \ref{app:Loo}.
 		{
 		\syntaxline
 				{\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}}
-				{\encapsulated{e}}
-				{\changes{}{A}}
 		\endsyntaxline
 		}
 \endSyntaxElement\\
@@ -398,7 +399,7 @@ $M;\ M',\ \sigma\ \vDash\ \access{\alpha_1}{\alpha_2}$ iff
 \item
 $\exists\ o,\ f$ such that $[\alpha_1\ \mapsto\ o]\ \in\ \sigma.(\texttt{heap})$ and $[f\ \mapsto\ \alpha_2]\ \in\ o.(\texttt{flds})$ or
 \item
-$\exists\ x$ such that $[x\ \mapsto\ \alpha_2]\in\sigma.(\texttt{local})$ and $[\texttt{this}\ \mapsto\ \alpha_1]\in\sigma.(\texttt{local})$
+$\exists\ \phi,\ x$ such that $\phi \in \sigma.(\texttt{stack})$ and $[x\ \mapsto\ \alpha_2]\in\phi.(\texttt{local})$ and $[\texttt{this}\ \mapsto\ \alpha_1]\in\phi.(\texttt{local})$
 \end{itemize}
 \item
 $M;\ M',\ \sigma\ \vDash\ \internal{\alpha}$ iff $\textit{classOf}(\sigma,\alpha) = C$ and $C \in M$
@@ -419,59 +420,6 @@ $[z_i\mapsto v_i]\in\sigma.(\texttt{local})$ for all $1 \leq i \leq n$
 \end{itemize}
 \end{definition}
 
-\begin{figure}[t]
-\begin{mathpar}
-\infer
-		{}
-		{M;\ M',\ \sigma\ \vdash\ i : \texttt{intrnl}}
-		\and
-\infer
-		{}
-		{M;\ M',\ \sigma\ \vdash\ \nul : \texttt{intrnl}}
-		\and
-\infer
-		{}
-		{M;\ M',\ \sigma\ \vdash\ \true : \texttt{intrnl}}
-		\and
-\infer
-		{}
-		{M;\ M',\ \sigma\ \vdash\ \false : \texttt{intrnl}}
-		\and
-\infer
-		{
-		classOf(\sigma, \alpha) \in M
-		}
-		{
-		M;\ M',\ \sigma\ \vdash \alpha : \texttt{intrnl}
-		}
-		\and
-\infer
-		{
-		M;\ M',\ \sigma \vdash e : int\\
-		M \circ M',\ \sigma \vdash e \hookrightarrow \alpha\\
-		[\alpha \mapsto o]\in\sigma.(\texttt{heap})\\
-		[f \mapsto v]o.(\texttt{flds}) \\
-		M;\ M',\ \sigma \vdash v : \texttt{intrnl}\\
-		}
-		{
-		M;\ M',\ \sigma \vdash e.f : \texttt{intrnl}
-		}
-		\and
-\infer
-		{
-		M;\ M',\ \sigma\ \vdash\ e_1 : \texttt{intrnl}\\
-		M;\ M',\ \sigma\ \vdash\ e_2 : \texttt{intrnl}\\
-		M \circ M',\ \sigma\ \vdash\ e \hookrightarrow \alpha\\
-		\texttt{ghost}\ \texttt{intrnl}\ g(x)\{e\} \in gflds(\sigma,\alpha)
-		}
-		{
-		M;\ M',\ \sigma \vdash e_1.g(e_2) : \texttt{intrnl}
-		}
-\end{mathpar}
-\caption{Internal Expressions}
-\label{f:intrnl}
-\end{figure}
-
 %\begin{figure}[t]
 %\begin{mathpar}
 %\infer
@@ -489,23 +437,6 @@ $[z_i\mapsto v_i]\in\sigma.(\texttt{local})$ for all $1 \leq i \leq n$
 %\caption{Encapsulated Expressions}
 %\label{f:intrnl}
 %\end{figure}
-
-To the definition of \Chainmail provided by \citeauthor{FASE}, we introduce a new assertion form: $\encapsulated{e}$.
-Informally this means that $e$ is encapsulated by the internal module, and can only be changed by some internal module
-operation. To give the formal semantics, we first define when we consider an expression to be module internal, that is
-for an expression $e$, all heap locations necessary to the evaluation of $e$ are internal. This is given in Fig. \ref{f:intrnl}.
-\begin{definition}[Encapsulation]
-For internal module $M$, external module $M'$, program configuration $\sigma$, an expression $e$ we have
-$M;\ M,\ \sigma\ \vDash\ \encapsulated{e}$ iff 
-\begin{itemize}
-\item
-$M,\ \sigma\ \vdash\ e : \texttt{intrnl}$ or
-\item
-$e = e'.f$ and $M,\ \sigma\ \vdash\ e' : \texttt{intrnl}$ or
-\item
-$e = e'.g(e'')$ and $M,\ \sigma\ \vdash\ e' : \texttt{intrnl}$
-\end{itemize}
-\end{definition}
 	
 %	\begin{figure}[h]
 %	\[
@@ -542,31 +473,6 @@ $e = e'.g(e'')$ and $M,\ \sigma\ \vdash\ e' : \texttt{intrnl}$
 %	\label{f:assertions_triple2}
 %	\end{figure}
 
-The second assertion we have extended \Chainmail with is \emph{changes}.
-$\changes{}{A}$ the following semantics:
-\begin{definition}[Changes]
-For all internal modules $M$, external modules $M'$, program configurations $\sigma$, and assertions $A$,
-$M_1\ ;\ M_2,\ \sigma\ \vDash\ \changes {} {A}$ if and only if there exists $\sigma'$ such that 
-\begin{itemize}
-\item
-$\reduction{M}{M'}{\sigma}{\sigma'}$ and
-\item
-$M_1\ ;\ M_2,\ \sigma\ \vDash\ A$ and
-\item
-$M_1\ ;\ M_2,\ \sigma'\ \vDash\ \neg A$ and
-\item
-$\exists \sigma_1, \ldots, \sigma_n$ such that
-\begin{itemize}
-\item
-$M_1\ \circ\ M_2,\ \bullet\ \sigma\ \leadsto\ \sigma_1\ \leadsto\ \ldots\ \leadsto\ \sigma_n \leadsto \sigma'$ and
-\item
-$M_1\ ;\ M_2,\ \sigma_i\ \vDash\ \internal{\sigma_i.(\texttt{this})}$ for all $1 \leq i \leq n$ and
-\item
-$M_1\ ;\ M_2,\ \sigma_j\ \vDash\ A$ and $M_1\ ;\ M_2,\ \sigma_{j + 1}\ \vDash\ \neg A$ for some $1 \leq j < n$ 
-\end{itemize}
-\end{itemize}
-\end{definition}
-
 
 
 
@@ -574,11 +480,11 @@ $M_1\ ;\ M_2,\ \sigma_j\ \vDash\ A$ and $M_1\ ;\ M_2,\ \sigma_{j + 1}\ \vDash\ \
 \subsection{Holistic Guarantees}
 \label{s:holistic-guarantees}
 
-\Chainmail generalizes holistic properties about internal data to 
+\Chainmail generalizes holistic properties about internal data 
 across execution. To do this we define syntactic forms for 
 \emph{Holistic Guarantees} in Fig. \ref{f:holistic-syntax}.
-We express satisfaction of Holistic Guarantees as $M\ \vdash\ \mathcal{H}$.
-That is, a module $\mathcal{H}$ satisfies module $M$. This allows 
+We express provability of satisfaction of Holistic Guarantees as $M\ \vdash\ \mathcal{H}$.
+That is, a module $M$ proves the satisfaction of holistic guarantee $\mathcal{H}$. This allows 
 the construction of proofs without considering either the details 
 of the program configuration or the external client module.
 
@@ -615,8 +521,15 @@ an intermediate program state where the balance is changed.
 then the original program state must have also satisfied $A$.\\
 e.g. if the balance of a bank account changes over time, then there must be some external object in the current 
 program state that has access to the account.
+\item
+\emph{Single-Step Only If} [$\onlyIfSingle{A_1}{A_2}{A}$]: If program execution starts at some $A_1$ state, and reaches some $A_2$ state after a single execution step, 
+then the original program state must have also satisfied $A$.\\
+e.g. if the balance of a bank account changes over a single execution step, then that execution step must be a method call to the account.
 \end{enumerate}
 
+We give the definition of ``only  through'' in Def. \ref{def:ot}. Note 
+that the intermediate state where $A$ is true might be the initial state ($\sigma_1$),
+or final state ($\sigma_2$). 
 \begin{definition}[\textsc{Only Through}]
 \label{def:ot}
 $M \vDash\ \onlyThrough {A_1}{A_2}{A}$ if and only if
@@ -627,22 +540,20 @@ $M ; M', \sigma_1\ \vDash A_1$
 \item
 $M ; M', \sigma_2\ \vDash\ A_2$ and
 \item
-$M ; M'\ \bullet\ \sigma_1\ \constrained^*\ \sigma_2$
+$M ; M'\ \bullet\ \sigma_1\ \leadsto^*\ \sigma_2$
 \end{itemize}
 then $\exists\ \sigma,$ such that
 \begin{itemize}
 \item
-$\sigma\ =\ \sigma_1$ or $M ; M'\ \bullet\ \sigma_1\ \constrained^*\ \sigma$
+$\sigma\ =\ \sigma_1$ or $M ; M'\ \bullet\ \sigma_1\ \leadsto^*\ \sigma$
 \item
 $\sigma\ =\ \sigma_2$ or $M ; M'\ \bullet\ \sigma\ \leadsto^*\ \sigma_2$
 \item
 $M ; M',\ \sigma\ \vDash\ A$
 \end{itemize}
 \end{definition}
-We give the definition of ``only  through'' in Def. \ref{def:ot}. Note 
-that the intermediate state where $A$ is true might be the initial state ($\sigma_1$),
-or final state ($\sigma_2$). 
 
+We give the definition of ``only if'' in Def. \ref{def:oi}.
 \begin{definition}[\textsc{Only If}]
 \label{def:oi}
 $M \vDash\ \onlyIf {A_1}{A_2}{A}$ if and only if
@@ -653,11 +564,12 @@ $M ; M', \sigma_1\ \vDash A_1$
 \item
 $M ; M', \sigma_2\ \vDash\ A_2$ and
 \item
-$M ; M'\ \bullet\ \sigma_1\ \constrained^*\ \sigma_2$
+$M ; M'\ \bullet\ \sigma_1\ \leadsto^*\ \sigma_2$
 \end{itemize}
 then $M ; M',\ \sigma_1\ \vDash\ A$
 \end{definition} 
 
+We give the definition of ``single-step only if'' in Def. \ref{def:oi-single}.
 \begin{definition}[\textsc{Only If Single-Step}]
 \label{def:oi-single}
 $M \vDash\ \onlyIfSingle {A_1}{A_2}{A}$ if and only if
@@ -668,10 +580,185 @@ $M ; M', \sigma_1\ \vDash A_1$
 \item
 $M ; M', \sigma_2\ \vDash\ A_2$ and
 \item
-$M ; M'\ \bullet\ \sigma_1\ \constrained\ \sigma_2$
+$M ; M'\ \bullet\ \sigma_1\ \leadsto\ \sigma_2$
 \end{itemize}
 then $M ; M',\ \sigma_1\ \vDash\ A$
 \end{definition}
+
+\subsection{Encapsulation}
+
+\begin{definition}[Encapsulation]
+For an internal module $M$, we define an assertion $A$ as being 
+encapsulated, written $M\ \vDash\ A\ :\ encap$, if and only if
+there exists some $\sigma$, $\sigma'$, $x$, $y$, $\overline{z}$, and $m$ such that 
+$M\ \vDash\ \onlyIfSingle{A}{\neg A}{\calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}\ \wedge\ A}$
+%for all external modules $M'$, and program configurations $\sigma_1$ and $\sigma_2$
+%such that 
+%\begin{itemize}
+%\item
+%$M;\ M',\ \sigma_1\ \leadsto^*\ \sigma_2$ and 
+%\item
+%$M;\ M',\ \sigma_1\ \vDash\ A$
+%\item
+%$M;\ M',\ \sigma_2\ \vDash\ \neg A$
+%\end{itemize}
+%then there exists some $\sigma$, $\sigma'$, $x$, $y$, $\overline{z}$, and $m$ such that 
+%\begin{itemize}
+%\item
+%$\sigma = \sigma_1$ or $M;\ M',\ \sigma_1\ \leadsto^*\ \sigma$ and 
+%\item
+%$\sigma' = \sigma_2$ or $M;\ M',\ \sigma'\ \leadsto^*\ \sigma_2$ and 
+%\item
+%$M;\ M',\ \sigma\ \leadsto\ \sigma'$ and 
+%\item
+%$M;\ M',\ \sigma\ \vDash\ \calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}\ \wedge\ A$ and
+%\item
+%$M;\ M',\ \sigma'\ \vDash\ \neg A$
+%\end{itemize}
+\end{definition}
+
+\begin{figure}[t]
+\begin{mathpar}
+\infer
+		{}
+		{M;\ M',\ \sigma\ \vdash\ i : \texttt{intrnl}}
+		\and
+\infer
+		{}
+		{M;\ M',\ \sigma\ \vdash\ \nul : \texttt{intrnl}}
+		\and
+\infer
+		{}
+		{M;\ M',\ \sigma\ \vdash\ \true : \texttt{intrnl}}
+		\and
+\infer
+		{}
+		{M;\ M',\ \sigma\ \vdash\ \false : \texttt{intrnl}}
+		\and
+\infer
+		{
+		classOf(\sigma, \alpha) \in M
+		}
+		{
+		M;\ M',\ \sigma\ \vdash \alpha : \texttt{intrnl}
+		}
+		\and
+\infer
+		{
+		M;\ M',\ \sigma \vdash e : \texttt{intrnl}\\
+		M \circ M',\ \sigma \vdash e \hookrightarrow \alpha\\
+		[\alpha \mapsto o]\in\sigma.(\texttt{heap})\\
+		[f \mapsto v]o.(\texttt{flds}) \\
+		M;\ M',\ \sigma \vdash v : \texttt{intrnl}\\
+		}
+		{
+		M;\ M',\ \sigma \vdash e.f : \texttt{intrnl}
+		}
+		\and
+\infer
+		{
+		M;\ M',\ \sigma\ \vdash\ e_1 : \texttt{intrnl}\\
+		M;\ M',\ \sigma\ \vdash\ e_2 : \texttt{intrnl}\\
+		M \circ M',\ \sigma\ \vdash\ e \hookrightarrow \alpha\\
+		\texttt{ghost}\ \texttt{intrnl}\ g(x)\{e\} \in gflds(\sigma,\alpha)
+		}
+		{
+		M;\ M',\ \sigma \vdash e_1.g(e_2) : \texttt{intrnl}
+		}
+\end{mathpar}
+\caption{Internal Expressions}
+\label{f:intrnl}
+\end{figure}
+
+\begin{figure}[t]
+\begin{mathpar}
+\infer
+		{M,\ M'\ \sigma\ \vdash\ e\ :\ \texttt{intrnl}}
+		{M,\ M'\ \sigma\ \vdash\ e\ :\ encap}
+		\and
+\infer
+		{M,\ M'\ \sigma\ \vdash\ e\ :\ \texttt{intrnl}}
+		{M,\ M'\ \sigma\ \vdash\ e.f\ :\ encap}
+		\and
+\infer
+		{
+		M,\ M'\ \sigma\ \vdash\ e_1\ :\ encap \\
+		M,\ M'\ \sigma\ \vdash\ e_2\ :\ encap
+		}
+		{
+		M,\ M'\ \sigma\ \vdash\ e_1 = e_2\ :\ encap
+		}
+		\and
+\infer
+		{
+		M,\ M'\ \sigma\ \vdash\ e_1\ :\ encap \\
+		M,\ M'\ \sigma\ \vdash\ e_2\ :\ encap
+		}
+		{
+		M,\ M'\ \sigma\ \vdash\ e_1 + e_2\ :\ encap
+		}
+		\and
+\infer
+		{
+		M,\ M'\ \sigma\ \vdash\ e : encap \\
+		M,\ M'\ \sigma\ \vdash\ e_1\ :\ encap \\
+		M,\ M'\ \sigma\ \vdash\ e_2\ :\ encap
+		}
+		{
+		M,\ M'\ \sigma\ \vdash\ \texttt{if}\ e\ \texttt{then}\ e_1\ \texttt{else}\ e_2\ :\  encap
+		}
+		\and
+\infer
+		{M,\ M'\ \sigma\ \vdash\ \internal{\alpha_1}}
+		{M,\ M'\ \sigma\ \vdash\ \access{\alpha_1}{\alpha_2}}
+		\and
+\infer
+		{M,\ M'\ \sigma\ \vdash\ \forall x.[\internal{x}\ \vee\ \neg\access{x}{\alpha_2}]}
+		{M,\ M'\ \sigma\ \vdash\ \neg\access{\alpha_1}{\alpha_2}\ :\ encap}
+		\and
+\infer
+		{
+		M,\ M'\ \sigma\ \vdash\ A_1\ :\ encap\\
+		M,\ M'\ \sigma\ \vdash\ A_2\ :\ encap
+		}
+		{M,\ M'\ \sigma\ \vdash\ A_1\ \wedge\ A_2\ :\ encap}
+		\and
+\infer
+		{
+		M,\ M'\ \sigma\ \vdash\ A_1\ :\ encap\\
+		M,\ M'\ \sigma\ \vdash\ A_2\ :\ encap
+		}
+		{M,\ M'\ \sigma\ \vdash\ A_1\ \vee\ A_2\ :\ encap}
+		\and
+\infer
+		{
+		M,\ M'\ \sigma\ \vdash\ A\ :\ encap
+		}
+		{M,\ M'\ \sigma\ \vdash\ \neg A\ :\ encap}
+		\and
+\infer
+		{
+		\infer{
+				\fbox{$\alpha$} \\\\
+				\vdots \\\\
+				M,\ M'\ \sigma\ \vdash\ [\alpha/x]A\ :\ encap
+				}{}
+		}
+		{M,\ M'\ \sigma\ \vdash\ \forall x.[A]\ :\ encap}
+		\and
+\infer
+		{
+		\infer{
+				\fbox{$\alpha$} \\\\
+				\vdots \\\\
+				M,\ M'\ \sigma\ \vdash\ [\alpha/x]A\ :\ encap
+				}{}
+		}
+		{M,\ M'\ \sigma\ \vdash\ \exists x.[A]\ :\ encap}
+\end{mathpar}
+\caption{Assertion Encapsulation}
+\label{f:asrt-encap}
+\end{figure}
 
 
 \section{Inference System}  
