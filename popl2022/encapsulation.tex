@@ -294,10 +294,16 @@ Text of abstract \ldots.
 		\texttt{method}\ m\ (\overline{x})\{\ s\ \}
 		}
 \endSyntaxElement\\
+\syntaxElement{fld}{Field Def.}
+		{\syntaxline
+			{\texttt{field}\ f\ :\ C}
+			{\texttt{field}\ \texttt{intrnl}\ f\ :\ C}
+		\endsyntaxline}
+\endSyntaxElement\\
 \syntaxElement{gfld}{Ghost Field Def.}
 		{\syntaxline
-			{\texttt{ghost}\ \texttt{intrnl}\ g\ (x)\{\ e\ \}}
 			{\texttt{ghost}\ g\ (x)\{\ e\ \}}
+			{\texttt{ghost}\ \texttt{intrnl}\ g\ (x)\{\ e\ \}}
 		\endsyntaxline}
 \endSyntaxElement\\
 \syntaxElement{E}{Class Encapsulation}
@@ -589,230 +595,427 @@ then $M ; M',\ \sigma_1\ \vDash\ A$
 
 \begin{definition}[Encapsulation]
 For an internal module $M$, we define an assertion $A$ as being 
-encapsulated, written $M\ \vDash\ A\ :\ encap$, if and only if
-there exists some $\sigma$, $\sigma'$, $x$, $y$, $\overline{z}$, and $m$ such that 
-$M\ \vDash\ \onlyIfSingle{A}{\neg A}{\calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}\ \wedge\ A}$
-%for all external modules $M'$, and program configurations $\sigma_1$ and $\sigma_2$
-%such that 
-%\begin{itemize}
-%\item
-%$M;\ M',\ \sigma_1\ \leadsto^*\ \sigma_2$ and 
-%\item
-%$M;\ M',\ \sigma_1\ \vDash\ A$
-%\item
-%$M;\ M',\ \sigma_2\ \vDash\ \neg A$
-%\end{itemize}
-%then there exists some $\sigma$, $\sigma'$, $x$, $y$, $\overline{z}$, and $m$ such that 
-%\begin{itemize}
-%\item
-%$\sigma = \sigma_1$ or $M;\ M',\ \sigma_1\ \leadsto^*\ \sigma$ and 
-%\item
-%$\sigma' = \sigma_2$ or $M;\ M',\ \sigma'\ \leadsto^*\ \sigma_2$ and 
-%\item
-%$M;\ M',\ \sigma\ \leadsto\ \sigma'$ and 
-%\item
-%$M;\ M',\ \sigma\ \vDash\ \calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}\ \wedge\ A$ and
-%\item
-%$M;\ M',\ \sigma'\ \vDash\ \neg A$
-%\end{itemize}
+encapsulated, written $M\ \vDash \encaps{A}$, if and only if
+%$M\ \vDash\ \onlyIfSingle{A}{\neg A}{\calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}}$
+for all external modules $M'$, and program configurations $\sigma$ and $\sigma'$
+such that 
+\begin{itemize}
+\item
+$M;\ M',\ \sigma\ \leadsto\ \sigma'$ and 
+\item
+$M;\ M',\ \sigma\ \vDash\ A$ and
+\item
+$M;\ M',\ \sigma'\ \vDash\ \neg A$
+\end{itemize}
+then there exists some $\sigma_1$, $\ldots$, $\sigma_n$ such that
+\begin{itemize}
+\item
+$M \circ M',\ \sigma\ \leadsto\ \sigma_1\ \leadsto\ \ldots\ \leadsto\ \sigma_n\ \leadsto\ \sigma'$ where $n \geq 1$ and 
+\item
+$classOf(\texttt{this}, \sigma_i) \in M$ where $1 \leq i \leq n$
+\end{itemize}
 \end{definition}
+
+
+
+\section{Inference System}  
+
+In this Section we provide an inference system for constructing 
+proofs of the Holistic Guarantees defined in Section \ref{s:holistic-guarantees}. 
+
+We start by defining several properties that we would like to construct proofs of. 
+Fig. \ref{f:property-syntax} provides the syntax for properties ($P$). That is
+properties are either assertions ($A$), internal expressions ($\intrnl{e}$), 
+or encapsulation of assertions ($\encaps{A}$).
+\begin{figure}[t]
+\[
+\begin{syntax}
+\syntaxElement{P}{Property}
+		{
+		\syntaxline
+				{A}
+				{\intrnl{e}}
+				{\encaps{A}}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+\caption{}
+\label{f:property-syntax}
+\end{figure}
+
+\begin{figure}[t]
+\begin{mathpar}
+\infer
+		{
+		M,\ A_1\ \vdash\ A_2 \\
+		M,\ A_2\ \vdash\ P
+		}
+		{
+		M,\ A_1\ \vdash\ P
+		}
+		\and
+\infer
+		{
+		M,\ A_1\ \vdash\ P
+		}
+		{
+		M,\ A_1\ \wedge\ A_2\ \vdash\ P
+		}
+		\and
+\infer
+		{
+		M,\ A_2\ \vdash\ P
+		}
+		{
+		M,\ A_1\ \wedge\ A_2\ \vdash\ P
+		}
+		\and
+\infer
+		{
+		M,\ A_1\ \vee\ A_2\ \vdash\ P
+		}
+		{
+		M,\ A_1\ \vdash\ P
+		}
+		\and
+\infer
+		{
+		M,\ A_1\ \vee\ A_2\ \vdash\ P
+		}
+		{
+		M,\ A_2\ \vdash\ P
+		}
+		\and
+\infer
+		{
+		M,\ A_1\ \vdash\ P \\
+		M,\ A_2\ \vdash\ P
+		}
+		{
+		M,\ A_1\ \vee\ A_2\ \vdash\ P
+		}
+\end{mathpar}
+\caption{General Property Proof Rules}
+\label{f:prop-proof}
+\end{figure}
+Proofs that these properties hold are constructed in the context of
+an internal module $M$ and an assertion about the set of program states that the proof holds for $A$.
+Proofs of properties are expressed as $M,\ A\ \vdash\ P$. That is, given 
+internal module $M$ and assertion $A$, we are able to prove property $P$.
+Proof rules for properties are given in Figs. \ref{f:prop-proof}, \ref{f:sat-proof},
+\ref{f:intrnl}, and \ref{f:asrt-encap}.
+Fig. \ref{f:prop-proof} gives general proof rules for properties.
+Fig. \ref{f:sat-proof} gives proof rules for assertion satisfaction.
+Fig. \ref{f:intrnl} gives proof rules for whether an expression is ``internal'', that is whether the footprint of an expression 
+is composed of internal objects.
+Fig. \ref{f:asrt-encap} gives proof rules for whether an assertion is encapsulated, that is whether 
+a change in satisfaction of an assertion requires interaction with the internal module.
+\begin{figure}[t]
+\begin{mathpar}
+\infer
+		{}
+		{M,\ A\ \vdash\ A}
+		\and
+\infer
+		{}
+		{M,\ A\ \vdash\ \true}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ A_1 \\
+		M,\ A\ \vdash\ A_1\ \longrightarrow\ A_2\\
+		}
+		{M,\ A\ \vdash\ A_2}
+		\and
+\infer
+		{
+		\alpha
+		}
+		{
+		M,\ \forall x.[A]\ \vdash\ [\alpha/x]A
+		}
+		\and
+\infer
+		{
+		\infer
+				{
+				\fbox{$\alpha$} \\\\
+				\vdots\\\\
+				M,\ A'\ \vdash\ [\alpha/x]A
+				}
+				{}
+		}
+		{
+		M,\ A'\ \vdash\ \forall x.[A]
+		}
+		\and
+\infer
+		{
+		\alpha\ \textit{fresh}
+		}
+		{
+		M,\ \exists x.[A]\ \vdash\ [\alpha/x]A
+		}
+		\and
+\infer
+		{
+		\alpha\\
+		M,\ A'\ \vdash\ [\alpha/x]A
+		}
+		{
+		M,\ A'\ \vdash\ \exists x.[A]
+		}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ \calls{\alpha_1}{\alpha_2}{m}{\overline{\alpha}}
+		}
+		{
+		M,\ A\ \vdash \access{\alpha_1}{\alpha_2}
+		}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ \calls{\alpha_1}{\alpha_2}{m}{\ldots,\alpha_i,\ldots}
+		}
+		{
+		M,\ A\ \vdash \access{\alpha_1}{\alpha_i}
+		}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ e_1 = e_2 \\
+		M,\ A\ \vdash\ e_2 = e_3
+		}
+		{
+		M,\ A\ \vdash e_1 = e_3
+		}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ \alpha : C \\
+		C\ \in\ M \\
+		}
+		{
+		M,\ A\ \vdash \internal{\alpha}
+		}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ e : C \\
+		(\texttt{field}\ \_\ f\ :\ D)\ \in\ M(C).(\texttt{flds})
+		}
+		{
+		M,\ A\ \vdash e.f : D
+		}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ \alpha : C \\
+		(\texttt{class}\ \texttt{intrnl}\ C \{\_; \_\})\ \in\ M
+		}
+		{
+		M,\ A\ \vdash \forall x.[\internal{x}\ \vee\ \neg \access{x}{\alpha}]
+		}
+\end{mathpar}
+\caption{Assertion Satisfaction Proof Rules}
+\label{f:sat-proof}
+\end{figure}
 
 \begin{figure}[t]
 \begin{mathpar}
 \infer
 		{}
-		{M;\ M',\ \sigma\ \vdash\ i : \texttt{intrnl}}
+		{M,\ A\ \vdash\ \intrnl{i}}
 		\and
 \infer
 		{}
-		{M;\ M',\ \sigma\ \vdash\ \nul : \texttt{intrnl}}
+		{M,\ A\ \vdash\ \intrnl{\nul}}
 		\and
 \infer
 		{}
-		{M;\ M',\ \sigma\ \vdash\ \true : \texttt{intrnl}}
+		{M,\ A\ \vdash\ \intrnl{\true}}
 		\and
 \infer
 		{}
-		{M;\ M',\ \sigma\ \vdash\ \false : \texttt{intrnl}}
+		{M,\ A\ \vdash\ \intrnl{\false}}
 		\and
 \infer
 		{
-		classOf(\sigma, \alpha) \in M
+		M,\ A\ \vdash\ \internal{\alpha}
 		}
 		{
-		M;\ M',\ \sigma\ \vdash \alpha : \texttt{intrnl}
-		}
-		\and
-\infer
-		{
-		M;\ M',\ \sigma \vdash e : \texttt{intrnl}\\
-		M \circ M',\ \sigma \vdash e \hookrightarrow \alpha\\
-		[\alpha \mapsto o]\in\sigma.(\texttt{heap})\\
-		[f \mapsto v]o.(\texttt{flds}) \\
-		M;\ M',\ \sigma \vdash v : \texttt{intrnl}\\
-		}
-		{
-		M;\ M',\ \sigma \vdash e.f : \texttt{intrnl}
+		M,\ A\ \vdash \intrnl{\alpha}
 		}
 		\and
 \infer
 		{
-		M;\ M',\ \sigma\ \vdash\ e_1 : \texttt{intrnl}\\
-		M;\ M',\ \sigma\ \vdash\ e_2 : \texttt{intrnl}\\
-		M \circ M',\ \sigma\ \vdash\ e \hookrightarrow \alpha\\
-		\texttt{ghost}\ \texttt{intrnl}\ g(x)\{e\} \in gflds(\sigma,\alpha)
+		M,\ A\ \vdash \intrnl{e} \\
+		M,\ A\ \vdash e : C\\
+		[\texttt{field}\ \_\ f\ :\ D]\ \in\ M(C).(\texttt{flds}) \\
+		D\ \in\ M
 		}
 		{
-		M;\ M',\ \sigma \vdash e_1.g(e_2) : \texttt{intrnl}
+		M;\ M',\ \sigma \vdash \intrnl{e.f}
+		}
+		\and
+\infer
+		{
+		M,\ A\ \vdash\ \intrnl{e_1}\\
+		M,\ A\ \vdash\ \intrnl{e_2}\\
+		M,\ A\ \vdash\ \intrnl{e} \\
+		M,\ A\ \vdash\ e_1 : C \\
+		\texttt{ghost}\ \texttt{intrnl}\ g(x)\{e\} \in M(C).(\texttt{gflds})
+		}
+		{
+		M;\ M',\ \sigma \vdash \intrnl{e_1.g(e_2)}
 		}
 \end{mathpar}
-\caption{Internal Expressions}
+\caption{Internal Proof Rules}
 \label{f:intrnl}
 \end{figure}
 
 \begin{figure}[t]
 \begin{mathpar}
 \infer
-		{M,\ M'\ \sigma\ \vdash\ e\ :\ \texttt{intrnl}}
-		{M,\ M'\ \sigma\ \vdash\ e\ :\ encap}
+		{M,\ A\ \vdash\ \intrnl{e}}
+		{M,\ A\ \vdash\ \encaps{e}}
 		\and
 \infer
-		{M,\ M'\ \sigma\ \vdash\ e\ :\ \texttt{intrnl}}
-		{M,\ M'\ \sigma\ \vdash\ e.f\ :\ encap}
-		\and
-\infer
-		{
-		M,\ M'\ \sigma\ \vdash\ e_1\ :\ encap \\
-		M,\ M'\ \sigma\ \vdash\ e_2\ :\ encap
-		}
-		{
-		M,\ M'\ \sigma\ \vdash\ e_1 = e_2\ :\ encap
-		}
+		{M,\ A\ \vdash\ \intrnl{e}}
+		{M,\ A\ \vdash\ \encaps{e.f}}
 		\and
 \infer
 		{
-		M,\ M'\ \sigma\ \vdash\ e_1\ :\ encap \\
-		M,\ M'\ \sigma\ \vdash\ e_2\ :\ encap
+		M,\ A\ \vdash\ \encaps{e_1} \\
+		M,\ A\ \vdash\ \encaps{e_2}
 		}
 		{
-		M,\ M'\ \sigma\ \vdash\ e_1 + e_2\ :\ encap
+		M,\ A\ \vdash\ \encaps{e_1 = e_2}
 		}
 		\and
 \infer
 		{
-		M,\ M'\ \sigma\ \vdash\ e : encap \\
-		M,\ M'\ \sigma\ \vdash\ e_1\ :\ encap \\
-		M,\ M'\ \sigma\ \vdash\ e_2\ :\ encap
+		M,\ A\ \vdash\ \encaps{e_1} \\
+		M,\ A\ \vdash\ \encaps{e_2}
 		}
 		{
-		M,\ M'\ \sigma\ \vdash\ \texttt{if}\ e\ \texttt{then}\ e_1\ \texttt{else}\ e_2\ :\  encap
+		M,\ A\ \vdash\ \encaps{e_1 + e_2}
 		}
-		\and
-\infer
-		{M,\ M'\ \sigma\ \vdash\ \internal{\alpha_1}}
-		{M,\ M'\ \sigma\ \vdash\ \access{\alpha_1}{\alpha_2}}
-		\and
-\infer
-		{M,\ M'\ \sigma\ \vdash\ \forall x.[\internal{x}\ \vee\ \neg\access{x}{\alpha_2}]}
-		{M,\ M'\ \sigma\ \vdash\ \neg\access{\alpha_1}{\alpha_2}\ :\ encap}
 		\and
 \infer
 		{
-		M,\ M'\ \sigma\ \vdash\ A_1\ :\ encap\\
-		M,\ M'\ \sigma\ \vdash\ A_2\ :\ encap
+		M,\ A\ \vdash\ \encaps{e} \\
+		M,\ A\ \vdash\ \encaps{e_1} \\
+		M,\ A\ \vdash\ \encaps{e_2}
 		}
-		{M,\ M'\ \sigma\ \vdash\ A_1\ \wedge\ A_2\ :\ encap}
+		{
+		M,\ A\ \vdash\ \encaps{\texttt{if}\ e\ \texttt{then}\ e_1\ \texttt{else}\ e_2}
+		}
+		\and
+\infer
+		{M,\ A\ \vdash\ \internal{\alpha_1}}
+		{M,\ A\ \vdash\ \encaps{\access{\alpha_1}{\alpha_2}}}
+		\and
+\infer
+		{M,\ A\ \vdash\ \forall x.[\internal{x}\ \vee\ \neg\access{x}{\alpha_2}]}
+		{M,\ A\ \vdash\ \encaps{\neg\access{\alpha_1}{\alpha_2}}}
 		\and
 \infer
 		{
-		M,\ M'\ \sigma\ \vdash\ A_1\ :\ encap\\
-		M,\ M'\ \sigma\ \vdash\ A_2\ :\ encap
+		M,\ A\ \vdash\ \encaps{A_1}\\
+		M,\ A\ \vdash\ \encaps{A_2}
 		}
-		{M,\ M'\ \sigma\ \vdash\ A_1\ \vee\ A_2\ :\ encap}
+		{M,\ A\ \vdash\ \encaps{A_1\ \wedge\ A_2}}
 		\and
 \infer
 		{
-		M,\ M'\ \sigma\ \vdash\ A\ :\ encap
+		M,\ A\ \vdash\ \encaps{A_1}\\
+		M,\ A\ \vdash\ \encaps{A_2}
 		}
-		{M,\ M'\ \sigma\ \vdash\ \neg A\ :\ encap}
+		{M,\ A\ \vdash\ \encaps{A_1\ \vee\ A_2}}
 		\and
 \infer
 		{
-		\infer{
-				\fbox{$\alpha$} \\\\
-				\vdots \\\\
-				M,\ M'\ \sigma\ \vdash\ [\alpha/x]A\ :\ encap
-				}{}
+		M,\ A'\ \vdash\ \encaps{A}
 		}
-		{M,\ M'\ \sigma\ \vdash\ \forall x.[A]\ :\ encap}
+		{M,\ A'\ \vdash\ \encaps{\neg A}}
 		\and
 \infer
 		{
 		\infer{
 				\fbox{$\alpha$} \\\\
 				\vdots \\\\
-				M,\ M'\ \sigma\ \vdash\ [\alpha/x]A\ :\ encap
+				M,\ A'\ \vdash\ \encaps{[\alpha/x]A}
 				}{}
 		}
-		{M,\ M'\ \sigma\ \vdash\ \exists x.[A]\ :\ encap}
+		{M,\ A'\ \vdash\ \encaps{\forall x.[A]}}
+		\and
+\infer
+		{
+		\infer{
+				\fbox{$\alpha$} \\\\
+				\vdots \\\\
+				M,\ A'\ \vdash\ \encaps{[\alpha/x]A}
+				}{}
+		}
+		{M,\ A'\ \vdash\ \encaps{\exists x.[A]}}
 \end{mathpar}
-\caption{Assertion Encapsulation}
+\caption{Assertion Encapsulation Proof Rules}
 \label{f:asrt-encap}
 \end{figure}
 
-
-\section{Inference System}  
-
-In this Section we provide an inference system for constructing 
-proofs of the Holistic Guarantees defined in Section \ref{s:holistic-guarantees}. We start by defining several judgments
-\begin{definition}[Chainmail Satisfaction]
-For all modules $M$ and $M'$, program configuration $\sigma$,
-and \Chainmail assertion $A$,
-$$M;\ M',\ \sigma\ \vdash\ A$$ 
-if and only if satisfaction of $A$ is provable in $\sigma$ with internal module $M$ and external module $M'$.
-\end{definition}
-It is often useful to refer to \Chainmail properties that hold for all
-possible program configurations and external modules given some internal module. For 
-this purpose we provide the following definition:
-\begin{definition}[Chainmail Module Satisfaction]
-For all modules $M$ and \Chainmail assertions $A$,
-$M\ \vdash\ A$ holds
-iff for all external modules $M'$ and program configurations $\sigma$ we have
-$M; M,\ \sigma \vdash\ A$
-\end{definition}
-
-Since the core of Chainmail's
-reasoning is about the boundary between known, traditionally specified code,
-and unknown, unspecified, and potentially malicious code, we first 
-present a mechanism for reasoning about changes to program state
-due to internal computation. For this we define a form of specification
-for internal computation:
-\begin{definition}[Internal Necessary Conditions]
-For all modules $M$ and \Chainmail assertions $A_1$, $A_2$, and $A$, we say $\oiInternal{A_1}{A_2}{M}{A}$ iff
-for all possible method calls $\calls{x}{y}{m}{args}$ on $M$, we are able to prove 
-$M\ \vdash\ \hoare{A_1\ \wedge\ \neg A}{y.m(args)}{\neg A_2}$
-\end{definition}
-Informally we express this as $A$ is a necessary precondition to reach $A_2$ from $A_1$ 
-through a single internal method call. 
-From this we define a core proof rule for constructing proofs in Chainmail.
-\begin{mathpar}
-\infer
-		{
-		\oiInternal{A}{\neg A}{M}{A'}\\\\
-		M;\ M',\ \sigma\ \vdash\ \changes{\I}{A}
-		}
-		{
-		M;\ M',\ \sigma\ \vdash\ A'
-		}
-		\quad(\textsc{Changes-Int})
-\end{mathpar}
-That is, if $A'$ is a necessary precondition to changing $A$, and
-we know that the internal module $M$ changes $A$, with external module $M'$, and program configuration $\sigma$, then we can conclude
-that $A'$ is true.
-
-In Fig. \ref{f:chainmail_proof_rules} we provide some more proof rules for 
-Chainmail that largely provide reasoning about topological encapsulation and 
-changing of program state. 
+%We start by defining several judgments
+%\begin{definition}[Chainmail Satisfaction]
+%For all modules $M$ and $M'$, program configuration $\sigma$,
+%and \Chainmail assertion $A$,
+%$$M;\ M',\ \sigma\ \vdash\ A$$ 
+%if and only if satisfaction of $A$ is provable in $\sigma$ with internal module $M$ and external module $M'$.
+%\end{definition}
+%It is often useful to refer to \Chainmail properties that hold for all
+%possible program configurations and external modules given some internal module. For 
+%this purpose we provide the following definition:
+%\begin{definition}[Chainmail Module Satisfaction]
+%For all modules $M$ and \Chainmail assertions $A$,
+%$M\ \vdash\ A$ holds
+%iff for all external modules $M'$ and program configurations $\sigma$ we have
+%$M; M,\ \sigma \vdash\ A$
+%\end{definition}
+%
+%Since the core of Chainmail's
+%reasoning is about the boundary between known, traditionally specified code,
+%and unknown, unspecified, and potentially malicious code, we first 
+%present a mechanism for reasoning about changes to program state
+%due to internal computation. For this we define a form of specification
+%for internal computation:
+%\begin{definition}[Internal Necessary Conditions]
+%For all modules $M$ and \Chainmail assertions $A_1$, $A_2$, and $A$, we say $\oiInternal{A_1}{A_2}{M}{A}$ iff
+%for all possible method calls $\calls{x}{y}{m}{args}$ on $M$, we are able to prove 
+%$M\ \vdash\ \hoare{A_1\ \wedge\ \neg A}{y.m(args)}{\neg A_2}$
+%\end{definition}
+%Informally we express this as $A$ is a necessary precondition to reach $A_2$ from $A_1$ 
+%through a single internal method call. 
+%From this we define a core proof rule for constructing proofs in Chainmail.
+%\begin{mathpar}
+%\infer
+%		{
+%		\oiInternal{A}{\neg A}{M}{A'}\\\\
+%		M;\ M',\ \sigma\ \vdash\ \changes{\I}{A}
+%		}
+%		{
+%		M;\ M',\ \sigma\ \vdash\ A'
+%		}
+%		\quad(\textsc{Changes-Int})
+%\end{mathpar}
+%That is, if $A'$ is a necessary precondition to changing $A$, and
+%we know that the internal module $M$ changes $A$, with external module $M'$, and program configuration $\sigma$, then we can conclude
+%that $A'$ is true.
+%
+%In Fig. \ref{f:chainmail_proof_rules} we provide some more proof rules for 
+%Chainmail that largely provide reasoning about topological encapsulation and 
+%changing of program state. 
 
 %\begin{figure}[t]
 %\footnotesize
@@ -985,8 +1188,6 @@ changing of program state.
 %\label{f:chainmail_proof_rules}
 %\end{figure}
 
-\section{Inference System}
-
 \begin{figure}[t]
 \footnotesize
 \begin{mathpar}
@@ -1039,9 +1240,9 @@ changing of program state.
 	\and
 \infer
 	{
-	M\ \vdash\ A_1 \longrightarrow A_1'\\
-	M\ \vdash\ A_2 \longrightarrow A_2'\\
-	M\ \vdash\ A_3' \longrightarrow A_3\\
+	M,\ A_1\ \vdash\ A_1'\\
+	M,\ A_2\ \vdash\ A_2'\\
+	M,\ A_3'\ \vdash\ A_3\\
 	M\ \vdash\ \onlyThrough{A_1'}{A_2'}{A_3'}
 	}
 	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3}}
@@ -1118,9 +1319,9 @@ changing of program state.
 	\and
 \infer
 	{
-	M\ \vdash\ A_1 \longrightarrow A_1'\\
-	M\ \vdash\ A_2 \longrightarrow A_2'\\
-	M\ \vdash\ A_3' \longrightarrow A_3\\
+	M,\ A_1\ \vdash\ A_1'\\
+	M,\ A_2\ \vdash\ A_2'\\
+	M,\ A_3'\ \vdash\ A_3\\
 	M\ \vdash\ \onlyIf{A_1'}{A_2'}{A_3'}
 	}
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_3}}
@@ -1145,18 +1346,18 @@ changing of program state.
 \infer
 	{
 	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\\\
-	M\ \vdash\ \onlyThrough{A_1}{A'}{\texttt{false}}
-	}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
-	\quad(\textsc{If-$\vee$E$_1$})
-	\and
-\infer
-	{
-	M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \vee\ A'} \\\\
 	M\ \vdash\ \onlyThrough{A'}{A_2}{\texttt{false}}
 	}
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
-	\quad(\textsc{If-$\vee$E$_2$})
+	\quad(\textsc{If-$\vee$E})
+	\and
+\infer
+	{
+	M\ \vdash\ \onlyIf{A_1}{A_2}{A} \\\\
+	M\ \vdash\ \onlyThrough{A_1}{A_2}{A'}
+	}
+	{M\ \vdash\ \onlyIf{A_1}{A_2}{A\ \wedge\ A'}}
+	\quad(\textsc{If-$\wedge$I})
 	\and
 \infer
 	{
@@ -1239,7 +1440,7 @@ module BankMdl
     field acc1 : Account
     field bal1 : int
     field acc2 : Account
-    field bal1 : int
+    field bal2 : int
     ghost intrnl getBalance(acc) = 
       if acc == acc1
         bal1
