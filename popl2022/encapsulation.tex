@@ -63,38 +63,6 @@
 \usepackage{xspace}
 \usepackage{chainmailDefs}
 
-\newtcolorbox{proofBox}[3][]
-{
-  colframe = #3,
-  colback  = #2,
-  #1,
-}
-
-\lstset{ % General setup for the package
-	language=Java,
-	basicstyle=\scriptsize\sffamily\ttfamily,
- 	numberstyle=\tiny,
- 	frame = bottomline,
-	tabsize=4,
-	columns=fixed,
-	showstringspaces=false,
-	showtabs=false,
-	keepspaces,
-	morekeywords={true, false, field, method, module, presumes, achieves, requires, ensures, PRE, POST, ghost, bool, int, constr},
-	commentstyle=\color{red},
-	keywordstyle=\color{blue}
-}
-
-\lstdefinelanguage{Chainmail}{
-  basicstyle=\scriptsize\sffamily\ttfamily,
-  morekeywords={calls, external, internal, access, 
-                onlyThrough, onlyIf, to1, to, true, false, through},
-  sensitive=false,
-  morecomment=[l]{//},
-  morecomment=[s]{/*}{*/},
-  morestring=[b]",
-}
-
 
 \begin{document}
 
@@ -967,6 +935,20 @@ a change in satisfaction of an assertion requires interaction with the internal 
 \label{f:asrt-encap}
 \end{figure}
 
+We further introduce the notation $\hoare{A_1}{M}{A_2}$ to
+mean that every method definition in every class in $M$
+has the pre-condition $A_1$ and post-conditions $A_2$. Formally 
+we have:
+\begin{definition}[Module Wide Traditional Hoare Specifications]
+\label{def:hoareMdl}
+For all assertions $A_1$ and $A_2$, and modules $M$, we have
+$\hoare{A_1}{M}{A_2}$ if and only if
+for all classes $C\ \in\ M$, method definitions $\texttt{method}\ m(\overline{x})\{ s \}\ \in\ M(C).(\texttt{mths})$, 
+then for any method call $y.m(\overline{v})$, then the traditional Hoare triple $\hoare{A_1}{y.m(\overline{v})}{A_2}$
+is provable. i.e. 
+$$\vdash\hoare{A_1}{y.m(\overline{v})}{A_2}$$
+\end{definition}
+
 %We start by defining several judgments
 %\begin{definition}[Chainmail Satisfaction]
 %For all modules $M$ and $M'$, program configuration $\sigma$,
@@ -1395,9 +1377,17 @@ a change in satisfaction of an assertion requires interaction with the internal 
 \footnotesize
 \begin{mathpar}
 \infer
+	{
+	M,\ A_1\ \wedge\ A\ \vdash\ \encaps{A} \\
+	\vdash\hoare{A\ \wedge\ \neg A'}{M}{\neg A}
+	}
+	{M\ \vdash\ \onlyIfSingle{A}{\neg A}{A'}}
+	\quad(\textsc{If1-Encaps})
+	\and
+\infer
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
 	{M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A}}
-	\quad(\textsc{If-If1})
+	\quad(\textsc{If1-If})
 	\and
 \infer
 	{
@@ -1432,6 +1422,11 @@ a change in satisfaction of an assertion requires interaction with the internal 
 	}
 	{M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A}}
 	\quad(\textsc{If1-$\vee$E})
+	\and
+\infer
+	{}
+	{M\ \vdash\ \onlyIfSingle{A_1}{A_2}{\true}}
+	\quad(\textsc{If1-True})
 \end{mathpar}
 \caption{\emph{Only If Single Step}}
 \label{f:only-if-single}
@@ -1439,9 +1434,12 @@ a change in satisfaction of an assertion requires interaction with the internal 
 
 %\subsection{Internal/External Boundary}
 %
-%\newpage
+\newpage
 
 \section{Examples}
+
+\subsection{Bank Account w/ Password and Ghost Field}
+
 
 \begin{lstlisting}[mathescape=true, frame=lines]
 module BankMdl
@@ -1477,7 +1475,7 @@ module BankMdl
       if (from.authenticate(pwd))
         book.transfer(amt, from, to)
 \end{lstlisting}
-
+We would need to prove \texttt{BankSpec1} and \texttt{BankSpec2}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 BankSpec1 $\triangleq$  b : Bank $\wedge$ b.getBalance(a) = bal 
                to b.getbalance(a) $\neq$ bal
@@ -1485,19 +1483,72 @@ BankSpec1 $\triangleq$  b : Bank $\wedge$ b.getBalance(a) = bal
 \end{lstlisting}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 BankSpec2 $\triangleq$  b : Bank $\wedge$ b.getBalance(a) = bal 
-               to b.getbalance(a) $\neq$ bal
+               to b.getbalance(a) < bal
                onlyIf $\exists$ o'.[$\external{\texttt{o'}}$ $\wedge$ $\access{\texttt{o'}}{\texttt{a.password}}$]
 \end{lstlisting}
+In order to do this, we need to prove the intermediate results \texttt{AccountLeak} and \texttt{PasswordLeak}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 AccountLeak $\triangleq$  a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a}}$]
-                 to1 $\access{\texttt{o}}{\texttt{a.password}}$ $\wedge$ $\external{\texttt{o}}$
+                 to1 $\access{\texttt{o}}{\texttt{a}}$ $\wedge$ $\external{\texttt{o}}$
                  onlyIf false
 \end{lstlisting}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-PasswordLeak $\triangleq$  a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a}}$]
+PasswordLeak $\triangleq$  a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a.password}}$]
                   to1 $\access{\texttt{o}}{\texttt{a.password}}$ $\wedge$ $\external{\texttt{o}}$
                   onlyIf false
 \end{lstlisting}
+Finally, in order construct the above proofs, we assume that \texttt{BankMdl} module 
+has the following traditional specifications.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+AccountIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a}}$]} 
+                              BankMdl 
+                           {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a}}$]}
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+PasswordIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a.password}}$]} 
+                              BankMdl 
+                           {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a.password}}$]}
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+TransferChangesBalance $\triangleq$ {a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ 
+                                 $\neg$ $\exists$ o.[$\calls{\texttt{o}}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$]}
+                              BankMdl 
+                           {b.getBalance(a) = bal}
+\end{lstlisting}
+It is easy enough to see that both \texttt{AccountIsNotLeaked}, \texttt{PasswordIsNotLeaked}, and \texttt{TransferChangesBalance} are provable
+pre- and post-condition using traditional Hoare Logic.
+
+\begin{proofexample}
+\proofsteps
+	{\onlyIfSingleEx
+			{a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a.password}}$]}
+			{$\access{\texttt{o}}{\texttt{a.password}}$ $\wedge$ $\external{\texttt{o}}$}
+			{\true}
+			}
+		{by \textsc{If1-True}}
+	{\onlyIfSingleEx
+			{a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a.password}}$]}
+			{$\access{\texttt{o}}{\texttt{a.password}}$ $\wedge$ $\external{\texttt{o}}$}
+			{\false}}
+		{by \textsc{If1-Encaps} and\\ \texttt{PasswordIsNotLeakedByBank}}
+\endproofsteps
+\end{proofexample}
+
+\begin{proofexample}
+\proofsteps
+	{\onlyIfEx
+			{b : Bank $\wedge$ b.getBalance(a) = bal}
+			{b.getbalance(a) < bal}
+			{\true}
+			}
+		{by \textsc{If-True}}
+	{\onlyIfSingleEx
+			{a : Account $\wedge$ $\forall$ o.[$\internal{\texttt{o}}$ $\vee$ $\neg$ $\access{\texttt{o}}{\texttt{a.password}}$]}
+			{$\access{\texttt{o}}{\texttt{a.password}}$ $\wedge$ $\external{\texttt{o}}$}
+			{\false}}
+		{by \textsc{If1-Encaps} and\\ \texttt{PasswordIsNotLeakedByBank}}
+\endproofsteps
+\end{proofexample}
 
 
 \subsection{Bank Account 1 - Simple}
