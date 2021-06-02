@@ -5,62 +5,17 @@ proofs of the Holistic Guarantees defined in Section \ref{s:holistic-guarantees}
 The inference system for proving Holistic Guarantees consists of several steps:
 \begin{enumerate}
 \item
-Proving module level holistic guarantees from classic specifications.
+Proving encapsulation of module data (Section \ref{s:encap-proof})
 \item
-Proving single step necessary conditions from module level holistic guarantees.
+Proving module level holistic guarantees of encapsulated data from classic specifications (Section \ref{s:classical-proof})
 \item
-Proving general necessary conditions for emergent behavior.
+Proving single step necessary conditions from module level holistic guarantees (Section \ref{s:singleStep-proof})
+\item
+Proving general necessary conditions for emergent behavior (Section \ref{s:emergent-proof})
 \end{enumerate}
 
-\subsection{Single Step Holistic Guarantees from Classic Specifications}
-Classical specification languages are very useful, 
-and have a long history in specifying the behavior 
-of known programs. Holistic specifications on the 
-other hand allow us to specify all possible programs, 
-including potentially unknown code. In order to do this
-we assume that known, internal module code is specified
-using some classical specification language. In this Section
-we raise classical specifications to prove holistic guarantees
-for internal module code.
-
-We do not define a new assertion language and Hoare logic
-as this is a field that has seen much work. We rely on this 
-prior work, and assume some underlying specification language
-that makes use of common features of existing specification 
-languages. Notably the syntax in Fig. \ref{f:chainmail-syntax}
-contains assertion forms that are not present in common 
-specification languages. For this purpose we define a subset 
-of $A$ in Fig. \ref{f:classical-syntax}.
-\begin{figure}[t]
-\[
-\begin{syntax}
-\syntaxElement{P, Q}{Classical Assertion Syntax}
-		{
-		\syntaxline
-				{e}
-				{e : C}
-				{P\ \wedge\ P}
-				{P\ \vee\ P}
-				{\forall x.[P]}
-				{\exists x.[P]}
-		\endsyntaxline
-		}
-\endSyntaxElement\\
-\end{syntax}
-\]
-\caption{Classical Assertion Syntax}
-\label{f:classical-syntax}
-\end{figure}
-We assume that there is some classical specification
-inference system exists that allows us to prove 
-specifications of the form
-$$M\ \vdash\ \hoare{P}{\alpha.m(\overline{v})}{Q}$$
-That is we assume we are able to prove for some method $m$
-defined in module $M$, the execution of $\alpha.m(\overline{v})$
-with the pre-condition $P$ results in a program state that 
-satisfies post-condition $Q$.
-
-
+\subsection{Proving Encapsulation}
+\label{s:encap-proof}
 We start by giving providing the syntax for type contexts in Fig. \ref{f:context-syntax}.
 \begin{figure}[t]
 \[
@@ -93,89 +48,45 @@ Fig. \ref{f:intrnl} gives proof rules for whether an expression is ``internal'',
 is composed of internal objects.
 Fig. \ref{f:asrt-encap} gives proof rules for whether an assertion is encapsulated, that is whether 
 a change in satisfaction of an assertion requires interaction with the internal module.
+
 \begin{figure}[t]
 \begin{mathpar}
-%\infer
-%		{}
-%		{M,\ A\ \vdash\ A}
-%		\and
-%\infer
-%		{}
-%		{M,\ A\ \vdash\ \true}
-%		\and
-%\infer
-%		{
-%		M,\ A\ \vdash\ A_1 \\
-%		M,\ A\ \vdash\ A_1\ \longrightarrow\ A_2\\
-%		}
-%		{M,\ A\ \vdash\ A_2}
-%		\and
-%\infer
-%		{
-%		\alpha
-%		}
-%		{
-%		M,\ \forall x.[A]\ \vdash\ [\alpha/x]A
-%		}
-%		\and
-%\infer
-%		{
-%		\infer
-%				{
-%				\fbox{$\alpha$} \\\\
-%				\vdots\\\\
-%				M,\ A'\ \vdash\ [\alpha/x]A
-%				}
-%				{}
-%		}
-%		{
-%		M,\ A'\ \vdash\ \forall x.[A]
-%		}
-%		\and
-%\infer
-%		{
-%		\alpha\ \textit{fresh}
-%		}
-%		{
-%		M,\ \exists x.[A]\ \vdash\ [\alpha/x]A
-%		}
-%		\and
-%\infer
-%		{
-%		\alpha\\
-%		M,\ A'\ \vdash\ [\alpha/x]A
-%		}
-%		{
-%		M,\ A'\ \vdash\ \exists x.[A]
-%		}
-%		\and
 \infer
 		{}
 		{
-		M,\ \Gamma\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\overline{\alpha}}\ \longrightarrow\ \access{\alpha_1}{\alpha_2}
+		M,\ \Gamma\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \longrightarrow\ \external{\alpha_1}
 		}
+		\quad(\textsc{Caller-Ext})
+		\and
+\infer
+		{}
+		{
+		M,\ \Gamma\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \longrightarrow\ \access{\alpha_1}{\alpha_2}
+		}
+		\quad(\textsc{Calls-Recv})
 		\and
 \infer
 		{}
 		{
 		M,\ \Gamma\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\ldots,\alpha_i,\ldots}\ \longrightarrow\ \access{\alpha_1}{\alpha_i}
 		}
+		\quad(\textsc{Calls-Args})
 		\and
+%\infer
+%		{}
+%		{
+%		M,\ \Gamma\ \vdash\ e_1 = e_2\ \wedge\ e_2 = e_3\ \longrightarrow\ e_1 = e_3
+%		}
+%		\and
 \infer
-		{}
-		{
-		M,\ \Gamma\ \vdash\ e_1 = e_2\ \wedge\ e_2 = e_3\ \longrightarrow\ e_1 = e_3
-		}
-		\and
-\infer
-		{\alpha : C\ \in\ \Gamma}
+		{\alpha : C\ \in\ M}
 		{
 		M,\ \Gamma\ \vdash\ \alpha : C
 		}
 		\and
 \infer
 		{
-		C\ \in\ \Gamma
+		C\ \in\ M
 		}
 		{
 		M,\ \Gamma\ \vdash \alpha : C\ \longrightarrow\ \internal{\alpha}
@@ -194,8 +105,9 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		(\texttt{class}\ \texttt{intrnl}\ C \{\_; \_\})\ \in\ M
 		}
 		{
-		M,\ \Gamma\ \vdash \alpha : C\ \longrightarrow\ \forall x.[\internal{x}\ \vee\ \neg \access{x}{\alpha}]
+		M,\ \Gamma\ \vdash \alpha : C\ \longrightarrow\ \wrapped{\alpha}
 		}
+		\quad(\textsc{Intrnl-Wrapped})
 \end{mathpar}
 \caption{Assertion Satisfaction Proof Rules}
 \label{f:sat-proof}
@@ -303,6 +215,125 @@ a change in satisfaction of an assertion requires interaction with the internal 
 \caption{Assertion Encapsulation Proof Rules}
 \label{f:asrt-encap}
 \end{figure}
+
+
+\subsection{Module-Level Holistic Guarantees from Classical Specifications}
+\label{s:classical-proof}
+Classical specification languages are very useful, 
+and have a long history in specifying the behavior 
+of known programs. Holistic specifications on the 
+other hand allow us to specify all possible programs, 
+including potentially unknown code. In order to do this
+we assume that known, internal module code is specified
+using some classical specification language. In this Section
+we raise classical specifications to prove holistic guarantees
+for internal module code.
+
+We do not define a new assertion language and Hoare logic
+as this is a field that has seen much work. We rely on this 
+prior work, and assume some underlying specification language
+that makes use of common features of existing specification 
+languages. Notably the syntax in Fig. \ref{f:chainmail-syntax}
+contains assertion forms that are not present in common 
+specification languages. For this purpose we define a subset 
+of $A$, $P$ in Fig. \ref{f:classical-syntax}, that consists only 
+of syntactic forms commonly found in classical specification 
+languages.
+\begin{figure}[t]
+\[
+\begin{syntax}
+\syntaxElement{P, Q}{Classical Assertion Syntax}
+		{
+		\syntaxline
+				{e}
+				{e : C}
+				{P\ \wedge\ P}
+				{P\ \vee\ P}
+				{\forall x.[P]}
+				{\exists x.[P]}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+\caption{Classical Assertion Syntax}
+\label{f:classical-syntax}
+\end{figure}
+We assume that there is some classical specification
+inference system exists that allows us to prove 
+specifications of the form
+$$M\ \vdash\ \hoare{P}{\texttt{res} = \alpha.m(\overline{v})}{Q}$$
+That is we assume we are able to prove for some method $m$
+defined in module $M$, the execution of $\alpha.m(\overline{v})$
+with the pre-condition $P$ results in a program state that 
+satisfies post-condition $Q$, where the returned value is represented
+by \texttt{res} in $Q$.
+
+Fig. \ref{f:classical->singlestep} introduces the first of the proof 
+rules for Single-Step Only If.
+\begin{figure}[t]
+\begin{mathpar}
+\infer
+	{
+%	M,\ \textit{Env}(A) \vdash\ \encaps{e}\\
+	M\ \vdash\ \hoare
+						{\neg P\ \wedge\ P_1}
+						{\texttt{res} = \alpha.m(\overline{v})}
+						{\neg P_2}
+	}
+	{
+	M\ \vdash\ \onlyIfSingle
+			{A\ \wedge\ P_1\ \wedge\ \calls{\_}{\alpha}{m}{\overline{v}}}
+			{\neg P_2}
+			{P}
+	}
+	\quad(\textsc{If1-Encaps})
+	\and
+\infer
+	{
+	M\ \vdash\ \hoare
+						{\neg P}
+						{\texttt{res} = \alpha.m(\overline{v})}
+						{\texttt{res} \neq \alpha'}
+	}
+	{M\ \vdash\ \onlyIfSingle{\wrapped{\alpha'}\ \wedge\ \calls{\_}{\alpha}{m}{\overline{v}}}{\neg \wrapped{\alpha'}}{P}}
+	\quad(\textsc{If1-Wrapped})
+	\and
+\infer
+	{
+	\{m_1, \ldots, m_n\}\ \textit{are all the methods in}\ M\\
+	\forall i\ \in\ 1 \ldots n,
+				M\ \vdash\ \onlyIfSingle
+								{\neg A_1\ \wedge\ \calls{\_}{\alpha}{m_i}{\overline{\alpha}}}
+								{A_1}
+								{A_2} \\
+	M\ \vdash\ A_1\ \longrightarrow\ \neg A_3\\
+	M,\ \textit{Env}(A_1)\ \vdash\ \encaps{A_3}
+	}
+	{
+	M\ \vdash\ \onlyIfSingle{A_1}{A_3}{A_2}
+	}
+	\quad(\textsc{If1-Internal})
+\end{mathpar}
+\caption{Deriving Per-Method Holistic Guarantees for Known Module Code}
+\label{f:classical->singlestep}
+\end{figure}
+
+\textsc{If1-Encaps} states that if we are able to prove that $P$ is 
+a necessary precondition to method $m$ to go from a state where 
+$P_1$ is true to a state where $P_2$ is true, then we can raise 
+that to say that for a single step of execution where that method 
+is called we can go from $P_1$ to $P_2$ only if $P$ was initially true.
+
+\textsc{If1-Wrapped} raises a classical proof about necessary preconditions 
+for leaking of data by a single internal method to a the more general form of 
+Single-Step Only If.
+
+Finally, \textsc{If1-Internal} provides a more general proof step that says
+if a proof of a classical specification can be proven for all internal 
+methods, and that classical specification requires internally encapsulated
+data, then we can construct a more general proof that does not rely on
+statements about specific method calls.
 
 %\subsection{Holistic Guarantees from Traditional Specifications}
 
@@ -702,6 +733,12 @@ a change in satisfaction of an assertion requires interaction with the internal 
 %\label{f:chainmail_proof_rules}
 %\end{figure}
 
+\subsection{Single-Step Necessary Conditions}
+\label{s:singleStep-proof}
+
+\subsection{Holistic Specifications for Emergent Behavior}
+\label{s:emergent-proof}
+
 \begin{figure}[t]
 \footnotesize
 \begin{mathpar}
@@ -908,48 +945,6 @@ a change in satisfaction of an assertion requires interaction with the internal 
 \begin{figure}[t]
 \footnotesize
 \begin{mathpar}
-\infer
-	{
-	M,\ \textit{Env}(A) \vdash\ \encaps{e}\\
-	M\ \vdash\ \hoare
-						{\neg P}
-						{\texttt{res} = \alpha.m(\overline{v})}
-						{\texttt{res} \neq \alpha'}
-	}
-	{
-	M\ \vdash\ \onlyIfSingle
-			{A\ \wedge\ e\ \calls{\_}{\alpha}{m}{\overline{v}}}
-			{\neg e}
-			{P}
-	}
-	\quad(\textsc{If1-Encaps})
-	\and
-\infer
-	{
-	M\ \vdash\ \hoare
-						{\neg P}
-						{\texttt{res} = \alpha.m(\overline{v})}
-						{\texttt{res} \neq \alpha'}
-	}
-	{M\ \vdash\ \onlyIfSingle{\wrapped{\alpha'}\ \wedge\ \calls{\_}{\alpha}{m}{\overline{v}}}{\neg \wrapped{\alpha'}}{P}}
-	\quad(\textsc{If1-Wrapped})
-	\and
-\infer
-	{
-	\{m_1, \ldots, m_n\}\ \textit{are all the methods in}\ M\\
-	\forall i\ \in\ 1 \ldots n,
-				M\ \vdash\ \onlyIfSingle
-								{\neg A_1\ \wedge\ \calls{\_}{\alpha}{m_i}{\overline{\alpha}}}
-								{A_1}
-								{A_2} \\
-	M\ \vdash\ A_1\ \longrightarrow\ \neg A_3\\
-	M,\ \textit{Env}(A_1)\ \vdash\ \encaps{A_3}
-	}
-	{
-	M\ \vdash\ \onlyIfSingle{A_1}{A_3}{A_2}
-	}
-	\quad(\textsc{If1-Internal})
-	\and
 \infer
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
 	{M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A}}
