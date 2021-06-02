@@ -2,7 +2,66 @@
 
 In this Section we provide an inference system for constructing 
 proofs of the Holistic Guarantees defined in Section \ref{s:holistic-guarantees}.
+The inference system for proving Holistic Guarantees consists of several steps:
+\begin{enumerate}
+\item
+Proving module level holistic guarantees from classic specifications.
+\item
+Proving single step necessary conditions from module level holistic guarantees.
+\item
+Proving general necessary conditions for emergent behavior.
+\end{enumerate}
 
+\subsection{Single Step Holistic Guarantees from Classic Specifications}
+Classical specification languages are very useful, 
+and have a long history in specifying the behavior 
+of known programs. Holistic specifications on the 
+other hand allow us to specify all possible programs, 
+including potentially unknown code. In order to do this
+we assume that known, internal module code is specified
+using some classical specification language. In this Section
+we raise classical specifications to prove holistic guarantees
+for internal module code.
+
+We do not define a new assertion language and Hoare logic
+as this is a field that has seen much work. We rely on this 
+prior work, and assume some underlying specification language
+that makes use of common features of existing specification 
+languages. Notably the syntax in Fig. \ref{f:chainmail-syntax}
+contains assertion forms that are not present in common 
+specification languages. For this purpose we define a subset 
+of $A$ in Fig. \ref{f:classical-syntax}.
+\begin{figure}[t]
+\[
+\begin{syntax}
+\syntaxElement{P, Q}{Classical Assertion Syntax}
+		{
+		\syntaxline
+				{e}
+				{e : C}
+				{P\ \wedge\ P}
+				{P\ \vee\ P}
+				{\forall x.[P]}
+				{\exists x.[P]}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+\caption{Classical Assertion Syntax}
+\label{f:classical-syntax}
+\end{figure}
+We assume that there is some classical specification
+inference system exists that allows us to prove 
+specifications of the form
+$$M\ \vdash\ \hoare{P}{\alpha.m(\overline{v})}{Q}$$
+That is we assume we are able to prove for some method $m$
+defined in module $M$, the execution of $\alpha.m(\overline{v})$
+with the pre-condition $P$ results in a program state that 
+satisfies post-condition $Q$.
+
+
+We start by giving providing the syntax for type contexts in Fig. \ref{f:context-syntax}.
 \begin{figure}[t]
 \[
 \begin{syntax}
@@ -17,8 +76,18 @@ proofs of the Holistic Guarantees defined in Section \ref{s:holistic-guarantees}
 \end{syntax}
 \]
 \caption{}
-\label{f:property-syntax}
+\label{f:context-syntax}
 \end{figure}
+We construct type contexts out of assertions using the following rules:
+\begin{mathpar}
+\infer
+		{}
+		{\textit{Env}(\alpha : C) = \alpha : C,\ \emptyset}
+		\and
+\infer
+		{}
+		{\textit{Env}(A_1\ \wedge\ A_2) = \textit{Env}(A_1) \cup \textit{Env}(A_2)}
+\end{mathpar}
 Fig. \ref{f:sat-proof} gives proof rules for assertion satisfaction.
 Fig. \ref{f:intrnl} gives proof rules for whether an expression is ``internal'', that is whether the footprint of an expression 
 is composed of internal objects.
@@ -235,179 +304,179 @@ a change in satisfaction of an assertion requires interaction with the internal 
 \label{f:asrt-encap}
 \end{figure}
 
-\subsection{Holistic Guarantees from Traditional Specifications}
+%\subsection{Holistic Guarantees from Traditional Specifications}
 
-While our inference system provides a way to construct proofs of
-Holistic specifications, these proofs ultimately need to consider
-how known, internal code behaves. For this reason we lean on prior work 
-on traditional specifications to provide crucial guarantees 
-about known code. To this end we introduce the notation $\hoare{A_1}{M}{A_2}$ to
-mean that every method definition in every class in $M$
-has the pre-condition $A_1$ and post-conditions $A_2$. Formally 
-we have:
-\begin{definition}[Holistic Guarantees]
-\label{def:hoareMdl}
-For all assertions $A$ and $A'$ and modules $M$, we have
-$\vDash\hoare{A}{M}{A'}$ if and only if
-for all external modules $M$ and program configurations $\sigma$ and $\sigma'$ such that
-\begin{itemize}
-\item
-$M;\ M'\ \sigma\ \leadsto\ \sigma'$ and
-\item
-$\forall \sigma_1,\ \sigma_n$ such that 
-$M\circ M'\ \sigma\ \leadsto\ \sigma_1\ \leadsto^*\ \sigma_n\ \leadsto\ \sigma'$  and $classOf(\sigma_i.(\texttt{this}), \sigma_i) \in M$ where $1 \leq i \leq n$ and
-\item
-$M;\ M'\ \sigma\ \vDash\ A$
-\end{itemize}
-then 
-$M;\ M'\ \sigma'\ \vDash\ A'$
-% all classes 
-%$C\ \in\ M$, method definitions $\texttt{method}\ m(\overline{x})\{ s \}\ \in\ M(C).(\texttt{mths})$, 
-%then for any internal method call $y.m(\overline{v})$, if $A_1$ is true before $y.m(\overline{v})$, $A_2$ will 
-%be true after.
-\end{definition}
-Being able to prove statements of the form $\vdash\hoare{A}{M}{A'}$ allows us 
-to rephrase necessary conditions as $\vdash\hoare{A\ \wedge\ \neg A'}{M}{A}$.
-This states that internal module code only allows a change in satisfaction of $A$
-in the case where $A'$ was true immediately prior to the call to internal module code.
-
-Before we can prove such assertions, we first 
-note that assertions $A$ and $A'$ in Def. \ref{def:hoareMdl} are holistic, 
-and are not typically expressible by traditional specification languages.
-Ideally we would like to lean on prior Hoare logics in order to avoid
-straying too far from the topic of this paper.
-To this end we note that only the \Chainmail assertions of the form
-$\access{x}{y}$, $\internal{x}$, $\external{y}$, and $\calls{x}{y}{m}{\overline{z}}$
-are not featured in traditional modern specification techniques.
-We further note that we are generally only concerned with
-how module code modifies the heap over time, specifically 
-we are concerned with modifications of the following two forms:
-\begin{itemize}
-\item
-\emph{Mutation}: which module internal methods mutate which field values
-\item
-\emph{Leaking}: which module internal methods leak encapsulated data
-\end{itemize}
-Proving specifications about specific forms of \emph{Mutation} and \emph{Leaking} 
-using a traditional specification language is much more tractable
-than encoding proofs of general holistic specifications. Simple guarantees about mutation
-can be expressed largely using expressions, i.e assertions that 
-are already present in many specification languages. Simple guarantees 
-about encapsulation can be derived from slightly more sophisticated 
-reasoning, but still using the tools present in many specification languages.
-
-\begin{figure}
-\[
-\begin{syntax}
-\syntaxElement{\mathcal{T}}{}
-		{
-		\syntaxline
-				{\hoare{e_1\ \wedge\ \neg P}{M}{e_2}}
-%		\endsyntaxline
-%		}
+%While our inference system provides a way to construct proofs of
+%Holistic specifications, these proofs ultimately need to consider
+%how known, internal code behaves. For this reason we lean on prior work 
+%on traditional specifications to provide crucial guarantees 
+%about known code. To this end we introduce the notation $\hoare{A_1}{M}{A_2}$ to
+%mean that every method definition in every class in $M$
+%has the pre-condition $A_1$ and post-conditions $A_2$. Formally 
+%we have:
+%\begin{definition}[Holistic Guarantees]
+%\label{def:hoareMdl}
+%For all assertions $A$ and $A'$ and modules $M$, we have
+%$\vDash\hoare{A}{M}{A'}$ if and only if
+%for all external modules $M$ and program configurations $\sigma$ and $\sigma'$ such that
+%\begin{itemize}
+%\item
+%$M;\ M'\ \sigma\ \leadsto\ \sigma'$ and
+%\item
+%$\forall \sigma_1,\ \sigma_n$ such that 
+%$M\circ M'\ \sigma\ \leadsto\ \sigma_1\ \leadsto^*\ \sigma_n\ \leadsto\ \sigma'$  and $classOf(\sigma_i.(\texttt{this}), \sigma_i) \in M$ where $1 \leq i \leq n$ and
+%\item
+%$M;\ M'\ \sigma\ \vDash\ A$
+%\end{itemize}
+%then 
+%$M;\ M'\ \sigma'\ \vDash\ A'$
+%% all classes 
+%%$C\ \in\ M$, method definitions $\texttt{method}\ m(\overline{x})\{ s \}\ \in\ M(C).(\texttt{mths})$, 
+%%then for any internal method call $y.m(\overline{v})$, if $A_1$ is true before $y.m(\overline{v})$, $A_2$ will 
+%%be true after.
+%\end{definition}
+%Being able to prove statements of the form $\vdash\hoare{A}{M}{A'}$ allows us 
+%to rephrase necessary conditions as $\vdash\hoare{A\ \wedge\ \neg A'}{M}{A}$.
+%This states that internal module code only allows a change in satisfaction of $A$
+%in the case where $A'$ was true immediately prior to the call to internal module code.
+%
+%Before we can prove such assertions, we first 
+%note that assertions $A$ and $A'$ in Def. \ref{def:hoareMdl} are holistic, 
+%and are not typically expressible by traditional specification languages.
+%Ideally we would like to lean on prior Hoare logics in order to avoid
+%straying too far from the topic of this paper.
+%To this end we note that only the \Chainmail assertions of the form
+%$\access{x}{y}$, $\internal{x}$, $\external{y}$, and $\calls{x}{y}{m}{\overline{z}}$
+%are not featured in traditional modern specification techniques.
+%We further note that we are generally only concerned with
+%how module code modifies the heap over time, specifically 
+%we are concerned with modifications of the following two forms:
+%\begin{itemize}
+%\item
+%\emph{Mutation}: which module internal methods mutate which field values
+%\item
+%\emph{Leaking}: which module internal methods leak encapsulated data
+%\end{itemize}
+%Proving specifications about specific forms of \emph{Mutation} and \emph{Leaking} 
+%using a traditional specification language is much more tractable
+%than encoding proofs of general holistic specifications. Simple guarantees about mutation
+%can be expressed largely using expressions, i.e assertions that 
+%are already present in many specification languages. Simple guarantees 
+%about encapsulation can be derived from slightly more sophisticated 
+%reasoning, but still using the tools present in many specification languages.
+%
+%\begin{figure}
+%\[
+%\begin{syntax}
+%\syntaxElement{\mathcal{T}}{}
 %		{
 %		\syntaxline
-				{\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}}
-		\endsyntaxline
-		}
-\endSyntaxElement\\
-\syntaxElement{P}{}
-		{
-		\syntaxline
-				{\alpha_1 : C\ \wedge\ \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \wedge\ e}
-				{P\ \vee\ P}
-		\endsyntaxline
-		}
-\endSyntaxElement\\
-\end{syntax}
-\]
-\caption{Restricted \Chainmail Specifications}
-\label{f:traditional-to-holistic}
-\end{figure}
-
-For simplicity we start by defining a \Chainmail predicate \texttt{wrapped}:
-$$\wrapped{\alpha}\ \equiv\ \forall x.[\internal{x}\ \vee\ \neg \access{x}{\alpha}]$$
-In Fig. \ref{f:traditional-to-holistic}, we introduce a narrower syntactic 
-form of \Chainmail assertions that can be expressed using only using 
-traditional specification languages. It is not immediately obvious how 
-specifications of the form $\mathcal{T}$ can be expressed in a traditional
-manner, as they include non-traditional holistic specification forms $\wrapped{\alpha}$,
-and $\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$.
-
-\paragraph{Wrapped as a Traditional Specification}
-Consider the specification 
-$$\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}$$
-$\wrapped{\alpha}$ may only be used in a restricted manner, i.e. at the top 
-level of the specification. That is that if access to $\alpha$ is restricted 
-to only internal objects before entry to internal module code, 
-then it is similarly restricted after if $\neg P$ is true. We now note that 
-access to an object $\alpha$ may only be granted by internal code in one of four ways
-\begin{enumerate}
-\item
-Writing $\alpha$ to some field
-\item
-A method call where $\alpha$ is passed as an argument
-\item
-A constructor call where $\alpha$ is passed as an argument
-\item
-Returning $\alpha$ as a method return
-\end{enumerate}
-Considering each case, 
-it is easy to see that the only possible method that 
-internal code may use to expose $\alpha$ is as a method
-return from some internal method.
-\begin{enumerate}
-\item
-The semantics of \Loo prohibit internal code 
-writing to the field of an external object.
-\item
-We prohibit external method calls from internal code.
-\item
-We prohibit external constructor calls from internal code.
-\end{enumerate}
-Most traditional specification languages include the ability 
-to write specifications about returned values of methods, and 
-thus we can rewrite $\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}$
-as $\hoare{\neg P}{M}{\texttt{ret}\ \neq\ \alpha}$, assuming we can find an appropriate 
-way to express $P$.
-
-
-\paragraph{Calls as a Traditional Specification}
-The only remaining aspect of $\mathcal{T}$ that needs be
-expressed using traditional means is $\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$.
-Again, we first look at the restricted shape of $P$, specifically that
-$\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$ forms part a program condition
-under which the core property we are concerned with 
-(either \emph{field mutation} or \emph{data leaking})
-may occur. Further, the $\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$
-only occurs once in an assertion constructed out of a
-conjunction with some expression. Thus, to capture \emph{calls}
-we differ the specifications for each possible method call in an
-internal module. 
-
-We provide some proof rules for a 
-restricted version of the semantics in 
-Def. \ref{def:hoareMdl} in Fig. \ref{f:hoareMdlProof}.
-\begin{figure}
-\begin{mathpar}
-\infer
-	{
-	\forall \alpha,\ m,\ \overline{v},\ e', P = \ldots\ \vee\ \alpha : C \wedge \calls{\_}{\alpha}{m}{\overline{v}}\ \wedge\ e'\ \vee\ \ldots\ \Rightarrow\ C\ \in\ M\ \textit{and}\ \\\\ 
-	\vdash\hoare{e_1 \wedge \neg e'}{\alpha.m(\overline{v})}{e_2}\ \textit{and}\ \\\\
-	\vdash\hoare{e_1 \wedge e'}{\alpha.m(\overline{v})}{\neg e_2}\
-	}
-	{\vdash\hoare{e_1\ \wedge\ \neg P}{M}{e_2}}
-	\and
-\infer
-	{
-	\forall \alpha,\ m,\ \overline{v},\ e', P = \ldots\ \vee\ \alpha : C \wedge \calls{\_}{\alpha}{m}{\overline{v}}\ \wedge\ e'\ \vee\ \ldots\ \Rightarrow\ C\ \in\ M\ \textit{and}\ \\\\ 
-	\vdash\hoare{\neg e'}{\alpha.m(\overline{v})}{\texttt{ret} \neq \alpha}
-	}
-	{\vdash\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}}
-\end{mathpar}
-\caption{Proof Rules for Restricted Holistic Guarantees}
-\label{f:hoareMdlProof}
-\end{figure}
+%				{\hoare{e_1\ \wedge\ \neg P}{M}{e_2}}
+%%		\endsyntaxline
+%%		}
+%%		{
+%%		\syntaxline
+%				{\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}}
+%		\endsyntaxline
+%		}
+%\endSyntaxElement\\
+%\syntaxElement{P}{}
+%		{
+%		\syntaxline
+%				{\alpha_1 : C\ \wedge\ \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \wedge\ e}
+%				{P\ \vee\ P}
+%		\endsyntaxline
+%		}
+%\endSyntaxElement\\
+%\end{syntax}
+%\]
+%\caption{Restricted \Chainmail Specifications}
+%\label{f:traditional-to-holistic}
+%\end{figure}
+%
+%For simplicity we start by defining a \Chainmail predicate \texttt{wrapped}:
+%$$\wrapped{\alpha}\ \equiv\ \forall x.[\internal{x}\ \vee\ \neg \access{x}{\alpha}]$$
+%In Fig. \ref{f:traditional-to-holistic}, we introduce a narrower syntactic 
+%form of \Chainmail assertions that can be expressed using only using 
+%traditional specification languages. It is not immediately obvious how 
+%specifications of the form $\mathcal{T}$ can be expressed in a traditional
+%manner, as they include non-traditional holistic specification forms $\wrapped{\alpha}$,
+%and $\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$.
+%
+%\paragraph{Wrapped as a Traditional Specification}
+%Consider the specification 
+%$$\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}$$
+%$\wrapped{\alpha}$ may only be used in a restricted manner, i.e. at the top 
+%level of the specification. That is that if access to $\alpha$ is restricted 
+%to only internal objects before entry to internal module code, 
+%then it is similarly restricted after if $\neg P$ is true. We now note that 
+%access to an object $\alpha$ may only be granted by internal code in one of four ways
+%\begin{enumerate}
+%\item
+%Writing $\alpha$ to some field
+%\item
+%A method call where $\alpha$ is passed as an argument
+%\item
+%A constructor call where $\alpha$ is passed as an argument
+%\item
+%Returning $\alpha$ as a method return
+%\end{enumerate}
+%Considering each case, 
+%it is easy to see that the only possible method that 
+%internal code may use to expose $\alpha$ is as a method
+%return from some internal method.
+%\begin{enumerate}
+%\item
+%The semantics of \Loo prohibit internal code 
+%writing to the field of an external object.
+%\item
+%We prohibit external method calls from internal code.
+%\item
+%We prohibit external constructor calls from internal code.
+%\end{enumerate}
+%Most traditional specification languages include the ability 
+%to write specifications about returned values of methods, and 
+%thus we can rewrite $\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}$
+%as $\hoare{\neg P}{M}{\texttt{ret}\ \neq\ \alpha}$, assuming we can find an appropriate 
+%way to express $P$.
+%
+%
+%\paragraph{Calls as a Traditional Specification}
+%The only remaining aspect of $\mathcal{T}$ that needs be
+%expressed using traditional means is $\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$.
+%Again, we first look at the restricted shape of $P$, specifically that
+%$\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$ forms part a program condition
+%under which the core property we are concerned with 
+%(either \emph{field mutation} or \emph{data leaking})
+%may occur. Further, the $\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}$
+%only occurs once in an assertion constructed out of a
+%conjunction with some expression. Thus, to capture \emph{calls}
+%we differ the specifications for each possible method call in an
+%internal module. 
+%
+%We provide some proof rules for a 
+%restricted version of the semantics in 
+%Def. \ref{def:hoareMdl} in Fig. \ref{f:hoareMdlProof}.
+%\begin{figure}
+%\begin{mathpar}
+%\infer
+%	{
+%	\forall \alpha,\ m,\ \overline{v},\ e', P = \ldots\ \vee\ \alpha : C \wedge \calls{\_}{\alpha}{m}{\overline{v}}\ \wedge\ e'\ \vee\ \ldots\ \Rightarrow\ C\ \in\ M\ \textit{and}\ \\\\ 
+%	\vdash\hoare{e_1 \wedge \neg e'}{\alpha.m(\overline{v})}{e_2}\ \textit{and}\ \\\\
+%	\vdash\hoare{e_1 \wedge e'}{\alpha.m(\overline{v})}{\neg e_2}\
+%	}
+%	{\vdash\hoare{e_1\ \wedge\ \neg P}{M}{e_2}}
+%	\and
+%\infer
+%	{
+%	\forall \alpha,\ m,\ \overline{v},\ e', P = \ldots\ \vee\ \alpha : C \wedge \calls{\_}{\alpha}{m}{\overline{v}}\ \wedge\ e'\ \vee\ \ldots\ \Rightarrow\ C\ \in\ M\ \textit{and}\ \\\\ 
+%	\vdash\hoare{\neg e'}{\alpha.m(\overline{v})}{\texttt{ret} \neq \alpha}
+%	}
+%	{\vdash\hoare{\wrapped{\alpha}\ \wedge\ \neg P}{M}{\wrapped{\alpha}}}
+%\end{mathpar}
+%\caption{Proof Rules for Restricted Holistic Guarantees}
+%\label{f:hoareMdlProof}
+%\end{figure}
 
 
 
@@ -841,11 +910,45 @@ Def. \ref{def:hoareMdl} in Fig. \ref{f:hoareMdlProof}.
 \begin{mathpar}
 \infer
 	{
-	M,\ A_1\ \wedge\ A\ \vdash\ \encaps{A} \\
-	\vdash\hoare{A\ \wedge\ \neg A'}{M}{\neg A}
+	M,\ \textit{Env}(A) \vdash\ \encaps{e}\\
+	M\ \vdash\ \hoare
+						{\neg P}
+						{\texttt{res} = \alpha.m(\overline{v})}
+						{\texttt{res} \neq \alpha'}
 	}
-	{M\ \vdash\ \onlyIfSingle{A}{\neg A}{A'}}
+	{
+	M\ \vdash\ \onlyIfSingle
+			{A\ \wedge\ e\ \calls{\_}{\alpha}{m}{\overline{v}}}
+			{\neg e}
+			{P}
+	}
 	\quad(\textsc{If1-Encaps})
+	\and
+\infer
+	{
+	M\ \vdash\ \hoare
+						{\neg P}
+						{\texttt{res} = \alpha.m(\overline{v})}
+						{\texttt{res} \neq \alpha'}
+	}
+	{M\ \vdash\ \onlyIfSingle{\wrapped{\alpha'}\ \wedge\ \calls{\_}{\alpha}{m}{\overline{v}}}{\neg \wrapped{\alpha'}}{P}}
+	\quad(\textsc{If1-Wrapped})
+	\and
+\infer
+	{
+	\{m_1, \ldots, m_n\}\ \textit{are all the methods in}\ M\\
+	\forall i\ \in\ 1 \ldots n,
+				M\ \vdash\ \onlyIfSingle
+								{\neg A_1\ \wedge\ \calls{\_}{\alpha}{m_i}{\overline{\alpha}}}
+								{A_1}
+								{A_2} \\
+	M\ \vdash\ A_1\ \longrightarrow\ \neg A_3\\
+	M,\ \textit{Env}(A_1)\ \vdash\ \encaps{A_3}
+	}
+	{
+	M\ \vdash\ \onlyIfSingle{A_1}{A_3}{A_2}
+	}
+	\quad(\textsc{If1-Internal})
 	\and
 \infer
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A}}
