@@ -5,15 +5,19 @@
 \subsection{Bank Account w/ Password and Ghost Field}
 We provide an implementation of \texttt{BankMdl} in Fig. \ref{f:ex-bank}.
 \begin{figure}[t]
+%      (PRE:  from == acc1 && to == acc2
+%       POST: bal1$_\texttt{new}$ < bal1$_\texttt{old}$)
+%      (PRE:  from == acc2 && to == acc1
+%       POST: bal2$_\texttt{new}$ < bal2$_\texttt{old}$)
 \begin{lstlisting}[mathescape=true, frame=lines]
 module BankMdl
   class boundary Account
     field password : Object
     method authenticate(pwd)
-      (PRE:  a : Account
-       POST: res != a.password)
       (PRE:  a : Account $\wedge$ b : Bank
        POST: b.getBalance(a)$_\texttt{old}$ == b.getBalance(a)$_\texttt{new}$)
+      (PRE:  a : Account
+       POST: res != a.password)
       (PRE:  a : Account
        POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
       {return pwd == this.password}
@@ -39,14 +43,10 @@ module BankMdl
         bal2
       else -1
     method transfer(amt, from, to)
-      (PRE:  from == acc1 && to == acc2
-       POST: bal1$_\texttt{old}$ < bal1$_\texttt{new}$)
-      (PRE:  from == acc2 && to == acc1
-       POST: bal2$_\texttt{old}$ < bal2$_\texttt{new}$)
-      (PRE:  a : Account
-       POST: res != a.password)
       (PRE:  a : Account $\wedge$ b : Bank $\wedge$ $\neg$ (a == acc1 $\wedge$ a == acc2)
        POST: b.getBalance(a)$_\texttt{old}$ == b.getBalance(a)$_\texttt{new}$)
+      (PRE:  a : Account
+       POST: res != a.password)
       (PRE:  a : Account
        POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
       {if from == acc1 && to == acc2
@@ -61,10 +61,10 @@ module BankMdl
     field book : Ledger
     ghost intrnl getBalance(acc) = book.getBalance(acc)
     method transfer(pwd, amt, from, to)
-      (PRE:  a : Account
-       POST: res != a.password)
       (PRE:  a : Account $\wedge$ b : Bank $\wedge$ $\neg$ (a == acc1 $\wedge$ a == acc2)
        POST: b.getBalance(a)$_\texttt{old}$ a= b.getBalance(a)$_\texttt{new}$)
+      (PRE:  a : Account
+       POST: res != a.password)
       (PRE:  a : Account
        POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
       {if (from.authenticate(pwd))
@@ -131,132 +131,249 @@ that we have annotated \texttt{BankMdl} with.
 
 
 \begin{figure}[t]
+\footnotesize
 \begin{proofexample}
 \proofsteps{\texttt{BalanceChange}}
-	{\onlyIfSingleEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
-			{b.getBalance(a) < bal}
-			{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$ $\vee$ $\calls{\_}{\texttt{b.book}}{\texttt{transfer}}{\_, \texttt{a}, \_}$}
+	{
+	\begin{proofexample}
+		\proofsteps{AuthBalChange}
+			{\proofstepwithrule
+				{\hoareEx
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal}
+						{a.authenticate(pwd)}
+						{b.getbalance(a$^\prime$) == bal}
+						}
+					{by classical spec.}
 			}
-		{by \textsc{If1-Encaps} and Classical Specs. on \texttt{BankMdl}}
-	{\onlyIfSingleEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
-			{b.getBalance(a) < bal}
-			{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$ $\vee$ $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{b.book}}$]}
+			{\proofstepwithrule
+				{\hoareEx
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\neg$ false}
+						{a.authenticate(pwd)}
+						{$\neg$ b.getbalance(a$^\prime$) < bal}
+						}
+					{by classical Hoare logic}
 			}
-		{by \textsc{If1-}$\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Calls-Recv}}
-	{\onlyIfSingleEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
-			{b.getBalance(a) < bal}
-			{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\texttt{a}}{\texttt{authenticate}}{\texttt{pwd}}$}
+						{b.getbalance(a$^\prime$) < bal}
+						{false}
+						}
+					{by \textsc{If1-Classical}}
 			}
-		{by \textsc{If1-}$\longrightarrow$, \textsc{Intrnl-Wrapped}, and \textsc{If1-}$\vee$E}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\texttt{a}}{\texttt{authenticate}}{\texttt{pwd}}$}
+						{b.getbalance(a$^\prime$) < bal}
+						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a$^\prime$.password, amt, a$^\prime$, to}}$}
+						}
+					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+		\proofsteps{ChangePasswordBalChange}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{a : Account $\wedge$ a$^\prime$ : $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{pwd}}$}
+						{b.getbalance(a$^\prime$) < bal}
+						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a$^\prime$.password, amt, a$^\prime$, to}}$}
+						}
+					{by similar reasoning to \textbf{AuthBalChange}}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+		\proofsteps{Ledger::TransferBalChange}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{b.getbalance(a) < bal}
+						{$\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						}
+					{by \textsc{If-Start} and \textsc{If1-If}}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{b.getbalance(a) < bal}
+						{$\neg\wrapped{\texttt{l}}$}
+						}
+					{by \textsc{If1-}$\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Caller-Recv}}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{b.getbalance(a) < bal}
+						{\false}
+						}
+					{by \textsc{Intrnl-Wrapped} and \textsc{If1-}$\longrightarrow$}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{b.getbalance(a) < bal}
+						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password, amt, a, to}}$}
+						}
+					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+		\proofsteps{Bank::TransferBalChange}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{b$^\prime$}}{\texttt{transfer}}{\texttt{pwd, amt, from, to}}$}
+						{b.getbalance(a) < bal}
+						{a == from $\wedge$ pwd == a.password $\wedge$ b$^\prime$ == b}
+						}
+					{by similar reasoning to \textbf{AuthBalChange}}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{b$^\prime$}}{\texttt{transfer}}{\texttt{pwd, amt, from, to}}$}
+						{b.getbalance(a) < bal}
+						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password, amt, a, to}}$}
+						}
+					{by \textsc{If1-}$\longrightarrow$}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+	{\proofstepwithrule
+			{\onlyIfSingleEx
+					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
+					{b.getbalance(a) < bal}
+					{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password, amt, a, to}}$}
+					}
+				{by \textbf{AuthBalChange}, \textbf{ChangePasswordBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, and \textsc{If1-Internal}}
+		}
 \endproofsteps
 \end{proofexample}
+\caption{Proof of the intermediate result \texttt{BalanceChange}}
+\end{figure}
+\begin{figure}[t]
 \begin{proofexample}
 \proofsteps{\texttt{PasswordChange}}
-	{\onlyIfSingleEx
-			{a : Account $\wedge$ a.password = p}
-			{a.password $\neq$ p}
-			{$\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{p}, \_}$}
-			}
-		{by \textsc{If1-Encaps} and Classical Specs. on \texttt{BankMdl}}
+	{\proofstepwithrule{\onlyIfSingleEx
+				{a : Account $\wedge$ a.password = p}
+				{a.password $\neq$ p}
+				{$\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{p}, \_}$}
+				}
+			{by similar reasoning to \textbf{BalanceChange}}
+	}
 \endproofsteps
 \end{proofexample}
 \begin{proofexample}
 \proofsteps{\texttt{PasswordLeak}}
-	{\onlyIfSingleEx
-			{a : Account $\wedge$ a.password = p $\wedge$ $\wrapped{\texttt{p}}$}
-			{$\neg \wrapped{\texttt{p}}$}
-			{false}
-			}
-		{by \textsc{If1-Encaps} and Classical Specs. on \texttt{BankMdl}}
+	{\proofstepwithrule{\onlyIfSingleEx
+				{a : Account $\wedge$ a.password = p $\wedge$ $\wrapped{\texttt{p}}$}
+				{$\neg \wrapped{\texttt{p}}$}
+				{false}
+				}
+			{by similar reasoning to \textbf{BalanceChange}}
+	}
 \endproofsteps
 \end{proofexample}
-\caption{Proofs of the intermediate results \texttt{BalanceChange}, \texttt{PasswordChange}, and \texttt{PasswordLeak}}
+\caption{Proofs of the intermediate results \texttt{PasswordChange} and \texttt{PasswordLeak}}
 \end{figure}
 
 \begin{figure}[t]
 \begin{proofexample}
 \proofsteps{\texttt{BankSpec}}
-	{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
-			{b.getBalance(a) < bal}
-			{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$}
-			}
-		{by \textsc{Changes} and \texttt{BalanceChange}}
-	{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
-			{b.getBalance(a) < bal}
-			{$\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.password}}$]}
-			}
-		{by $\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Calls-Args}}
-	{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{b.getBalance(a) < bal}
-			{$\neg$$\wrapped{\texttt{a.password}}$}
-			}
-		{by $\longrightarrow$}
-	{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{b.getBalance(a) < bal}
-			{$\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ (a.password = pwd $\vee$ a.password != pwd)}
-			}
-		{by $\longrightarrow$ and \textsc{Excluded Middle}}
-	{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{b.getBalance(a) < bal}
-			{($\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ a.password = pwd) $\vee$\\
-			($\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ a.password != pwd)}
-			}
-		{by $\longrightarrow$}
-	{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{b.getBalance(a) < bal}
-			{$\neg$$\wrapped{\texttt{pwd}}$ $\vee$
-			a.password != pwd}
-			}
-		{by $\longrightarrow$}
-	{\case
-		{A}
-		{\onlyIfEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{$\neg$$\wrapped{\texttt{pwd}}$}
-			{$\wrapped{\texttt{pwd}}\ \vee \neg\wrapped{\texttt{pwd}}$}
-			}}
-		{by \textsc{If-}$\longrightarrow$ and \textsc{Excluded Middle}}
-	{\onlyIfEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{$\neg$$\wrapped{\texttt{pwd}}$}
-			{$\neg\wrapped{\texttt{pwd}}$}
-			}
-		{by $\vee$E and \texttt{PasswordLeak}}
-	{\case
-		{B}
-		{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{a.password != pwd}
-			{$\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{pwd}, \_}$}
-			}}
-		{by \textsc{Changes} and \textsc{PasswordChange}}
-	{\onlyThroughEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{a.password != pwd}
-			{$\neg\wrapped{\texttt{pwd}}$}
-			}
-		{by $\vee$E and \texttt{PasswordLeak}}
-	{\onlyIfEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{a.password != pwd}
-			{$\neg\wrapped{\texttt{pwd}}$}
-			}
-		{by \textbf{Case A} and \textsc{Trans}}
-	{\onlyIfEx
-			{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-			{b.getBalance(a) < bal}
-			{$\neg\wrapped{\texttt{pwd}}$}
-			}
-		{by \textbf{Case A}, \textbf{Case B}, \textsc{If-}$\vee$I$_2$, and \textsc{If-}$\longrightarrow$}
+	{\proofstepwithrule{\onlyThroughEx
+				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
+				{b.getBalance(a) < bal}
+				{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$}
+				}
+			{by \textsc{Changes} and \texttt{BalanceChange}}}
+	{\proofstepwithrule{\onlyThroughEx
+				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
+				{b.getBalance(a) < bal}
+				{$\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.password}}$]}
+				}
+			{by $\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Calls-Args}}}
+	{\proofstepwithrule{\onlyThroughEx
+				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+				{b.getBalance(a) < bal}
+				{$\neg$$\wrapped{\texttt{a.password}}$}
+				}
+			{by $\longrightarrow$}}
+	{\proofstepwithrule{\onlyThroughEx
+				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+				{b.getBalance(a) < bal}
+				{$\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ (a.password = pwd $\vee$ a.password != pwd)}
+				}
+			{by $\longrightarrow$ and \textsc{Excluded Middle}}}
+	{\proofstepwithrule{\onlyThroughEx
+				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+				{b.getBalance(a) < bal}
+				{($\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ a.password = pwd) $\vee$\\
+				($\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ a.password != pwd)}
+				}
+			{by $\longrightarrow$}}
+	{\proofstepwithrule{\onlyThroughEx
+				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+				{b.getBalance(a) < bal}
+				{$\neg$$\wrapped{\texttt{pwd}}$ $\vee$
+				a.password != pwd}
+				}
+			{by $\longrightarrow$}}
+	{
+	\begin{proofexample}
+	\proofsteps{Case A ($\neg\wrapped{\texttt{pwd}}$)}
+			{\proofstepwithrule
+				{\onlyIfEx
+					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+					{$\neg$$\wrapped{\texttt{pwd}}$}
+					{$\wrapped{\texttt{pwd}}\ \vee \neg\wrapped{\texttt{pwd}}$}
+					}
+				{by \textsc{If-}$\longrightarrow$ and \textsc{Excluded Middle}}}
+			{\proofstepwithrule{\onlyIfEx
+					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+					{$\neg$$\wrapped{\texttt{pwd}}$}
+					{$\neg\wrapped{\texttt{pwd}}$}
+					}
+				{by $\vee$E and \texttt{PasswordLeak}}}
+	\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+	\proofsteps{Case B (\texttt{a.password != pwd})}
+		{\proofstepwithrule{\onlyThroughEx
+					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+					{a.password != pwd}
+					{$\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{pwd}, \_}$}
+					}
+				{by \textsc{Changes} and \textsc{PasswordChange}}}
+		{\proofstepwithrule{\onlyThroughEx
+					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+					{a.password != pwd}
+					{$\neg\wrapped{\texttt{pwd}}$}
+					}
+				{by $\vee$E and \texttt{PasswordLeak}}}
+		{\proofstepwithrule{\onlyIfEx
+					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+					{a.password != pwd}
+					{$\neg\wrapped{\texttt{pwd}}$}
+					}
+				{by \textbf{Case A} and \textsc{Trans}}}
+	\endproofsteps
+	\end{proofexample}
+	}
+	{\proofstepwithrule{\onlyIfEx
+				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
+				{b.getBalance(a) < bal}
+				{$\neg\wrapped{\texttt{pwd}}$}
+				}
+			{by \textbf{Case A}, \textbf{Case B}, \textsc{If-}$\vee$I$_2$, and \textsc{If-}$\longrightarrow$}}
 \endproofsteps
 \end{proofexample}
 \caption{Proof of \texttt{BankSpec}}

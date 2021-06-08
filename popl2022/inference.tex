@@ -54,21 +54,21 @@ a change in satisfaction of an assertion requires interaction with the internal 
 \infer
 		{}
 		{
-		M,\ \Gamma\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \longrightarrow\ \external{\alpha_1}
+		M\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \longrightarrow\ \external{\alpha_1}
 		}
 		\quad(\textsc{Caller-Ext})
 		\and
 \infer
 		{}
 		{
-		M,\ \Gamma\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \longrightarrow\ \access{\alpha_1}{\alpha_2}
+		M\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\overline{v}}\ \longrightarrow\ \access{\alpha_1}{\alpha_2}
 		}
 		\quad(\textsc{Calls-Recv})
 		\and
 \infer
 		{}
 		{
-		M,\ \Gamma\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\ldots,\alpha_i,\ldots}\ \longrightarrow\ \access{\alpha_1}{\alpha_i}
+		M\ \vdash \calls{\alpha_1}{\alpha_2}{m}{\ldots,\alpha_i,\ldots}\ \longrightarrow\ \access{\alpha_1}{\alpha_i}
 		}
 		\quad(\textsc{Calls-Args})
 		\and
@@ -79,17 +79,11 @@ a change in satisfaction of an assertion requires interaction with the internal 
 %		}
 %		\and
 \infer
-		{\alpha : C\ \in\ M}
-		{
-		M,\ \Gamma\ \vdash\ \alpha : C
-		}
-		\and
-\infer
 		{
 		C\ \in\ M
 		}
 		{
-		M,\ \Gamma\ \vdash \alpha : C\ \longrightarrow\ \internal{\alpha}
+		M\ \vdash \alpha : C\ \longrightarrow\ \internal{\alpha}
 		}
 		\and
 \infer
@@ -97,7 +91,7 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		(\texttt{field}\ \_\ f\ :\ D)\ \in\ M(C).(\texttt{flds})
 		}
 		{
-		M,\ \Gamma\ \vdash e : C\ \longrightarrow\ e.f : D
+		M\ \vdash e : C\ \longrightarrow\ e.f : D
 		}
 		\and
 \infer
@@ -105,9 +99,16 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		(\texttt{class}\ \texttt{intrnl}\ C \{\_; \_\})\ \in\ M
 		}
 		{
-		M,\ \Gamma\ \vdash \alpha : C\ \longrightarrow\ \wrapped{\alpha}
+		M\ \vdash \alpha : C\ \longrightarrow\ \wrapped{\alpha}
 		}
 		\quad(\textsc{Intrnl-Wrapped})
+		\and
+\infer
+		{}
+		{
+		M\ \vdash \false\ \longrightarrow\ A
+		}
+		\quad(\textsc{Absurd})
 \end{mathpar}
 \caption{Assertion Satisfaction Proof Rules}
 \label{f:sat-proof}
@@ -133,7 +134,8 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		\and
 \infer
 		{
-		M,\ \Gamma\ \vdash\ \internal{\alpha}
+		\alpha : C\ \in\ \Gamma\\
+		C \in M
 		}
 		{
 		M,\ \Gamma\ \vdash \intrnl{\alpha}
@@ -744,11 +746,6 @@ statements about specific method calls.
 \footnotesize
 \begin{mathpar}
 \infer
-	{}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{\texttt{true}}}
-	\quad(\textsc{True})
-	\and
-\infer
 	{M\ \vdash\ \onlyIfSingle{A}{\neg A}{A'}}
 	{
 	M\ \vdash\ \onlyThrough{A}{\neg A}{A'}
@@ -792,9 +789,9 @@ statements about specific method calls.
 	\and
 \infer
 	{
-	M,\ A_1\ \vdash\ A_1'\\
-	M,\ A_2\ \vdash\ A_2'\\
-	M,\ A_3'\ \vdash\ A_3\\
+	M\ \vdash\ A_1\ \longrightarrow\ A_1'\\
+	M\ \vdash\ A_2\ \longrightarrow\ A_2'\\
+	M\ \vdash\ A_3'\ \longrightarrow\ A_3\\
 	M\ \vdash\ \onlyThrough{A_1'}{A_2'}{A_3'}
 	}
 	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A_3}}
@@ -857,17 +854,17 @@ statements about specific method calls.
 	\and
 \infer
 	{
-	M,\ A_1\ \vdash\ \internal{\alpha}
+	M\ \vdash\ \onlyThrough{A_1}{\neg A_1}{\false}
 	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \wedge\ \internal{\alpha}}}
-	\quad(\textsc{Int-Inv})
-	\and
-\infer
-	{
-	M,\ A_1\ \vdash\ \alpha : C
-	}
-	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \wedge\ \alpha : C}}
-	\quad(\textsc{Class-Inv})
+	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A_1}}
+	\quad(\textsc{Invariant})
+%	\and
+%\infer
+%	{
+%	M,\ A_1\ \vdash\ \alpha : C
+%	}
+%	{M\ \vdash\ \onlyThrough{A_1}{A_2}{A\ \wedge\ \alpha : C}}
+%	\quad(\textsc{Class-Inv})
 \end{mathpar}
 \caption{\emph{Only Through}}
 \label{f:only_through}
@@ -875,19 +872,14 @@ statements about specific method calls.
 \begin{mathpar}
 \infer
 	{}
-	{M\ \vdash\ \onlyIf{A_1}{A_2}{\texttt{true}}}
-	\quad(\textsc{If-True})
-	\and
-\infer
-	{}
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_1}}
 	\quad(\textsc{If-Start})
 	\and
 \infer
 	{
-	M,\ A_1\ \vdash\ A_1'\\
-	M,\ A_2\ \vdash\ A_2'\\
-	M,\ A_3'\ \vdash\ A_3\\
+	M\ \vdash\ A_1\ \longrightarrow\ A_1'\\
+	M\ \vdash\ A_2\ \longrightarrow\ A_2'\\
+	M\ \vdash\ A_3'\ \longrightarrow\ A_3\\
 	M\ \vdash\ \onlyIf{A_1'}{A_2'}{A_3'}
 	}
 	{M\ \vdash\ \onlyIf{A_1}{A_2}{A_3}}
@@ -984,11 +976,6 @@ statements about specific method calls.
 	}
 	{M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A}}
 	\quad(\textsc{If1-$\vee$E})
-	\and
-\infer
-	{}
-	{M\ \vdash\ \onlyIfSingle{A_1}{A_2}{\true}}
-	\quad(\textsc{If1-True})
 \end{mathpar}
 \caption{\emph{Only If Single Step}}
 \label{f:only-if-single}
