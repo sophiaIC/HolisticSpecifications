@@ -31,7 +31,7 @@ module BankMdl
       {if pwd == this.password
         this.password := newPwd}
 
-  class internal Ledger
+  class inside Ledger
     field acc1 : Account
     field bal1 : int
     field acc2 : Account
@@ -59,7 +59,7 @@ module BankMdl
 
   class boundary Bank
     field book : Ledger
-    ghost intrnl getBalance(acc) = book.getBalance(acc)
+    ghost intrnrl getBalance(acc) = book.getBalance(acc)
     method transfer(pwd, amt, from, to)
       (PRE:  a : Account $\wedge$ b : Bank $\wedge$ $\neg$ (a == acc1 $\wedge$ a == acc2)
        POST: b.getBalance(a)$_\texttt{old}$ a= b.getBalance(a)$_\texttt{new}$)
@@ -378,6 +378,55 @@ that we have annotated \texttt{BankMdl} with.
 \end{proofexample}
 \caption{Proof of \texttt{BankSpec}}
 \end{figure}
+
+\newpage
+
+\subsection{Bank Account 2}
+\begin{figure}[t]
+%      (PRE:  from == acc1 && to == acc2
+%       POST: bal1$_\texttt{new}$ < bal1$_\texttt{old}$)
+%      (PRE:  from == acc2 && to == acc1
+%       POST: bal2$_\texttt{new}$ < bal2$_\texttt{old}$)
+\begin{lstlisting}[mathescape=true, frame=lines]
+module BankMdl
+  class inside Account
+    field password : Object
+    field balance : int
+    ghost getBalance() = this.balance
+    method authenticate(pwd)
+      (PRE:  a : Account $\wedge$ b : Bank
+       POST: b.getBalance(a)$_\texttt{old}$ == b.getBalance(a)$_\texttt{new}$)
+      (PRE:  a : Account
+       POST: res != a.password)
+      (PRE:  a : Account
+       POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
+      {return pwd == this.password}
+    method changePassword(pwd, newPwd)
+      (PRE:  a : Account
+       POST: res != a.password)
+      (PRE:  a : Account $\wedge$ b : Bank
+       POST: b.getBalance(a)$_\texttt{old}$ == b.getBalance(a)$_\texttt{new}$)
+      (PRE:  a : Account $\wedge$ $\neg$ pwd == this.password
+       POST: a.password$_\texttt{old}$ = a.password$_\texttt{new}$)
+      {if pwd == this.password
+        this.password := newPwd}      
+
+  class boundary Bank
+    ghost intrnl getBalance(acc) = acc.getBalance()
+    method transfer(pwd, amt, from, to)
+      (PRE:  a : Account $\wedge$ b : Bank $\wedge$ $\neg$ (a == acc1 $\wedge$ a == acc2)
+       POST: b.getBalance(a)$_\texttt{old}$ a= b.getBalance(a)$_\texttt{new}$)
+      (PRE:  a : Account
+       POST: res != a.password)
+      (PRE:  a : Account
+       POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
+      {if (from.authenticate(pwd))
+         book.transfer(amt, from, to)}
+\end{lstlisting}
+\caption{Bank Account Module - Alternate Implementation}
+\label{f:ex-bank2}
+\end{figure}
+
 
 
 %\subsection{Bank Account 1 - Simple}
