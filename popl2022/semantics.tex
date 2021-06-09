@@ -109,10 +109,10 @@
 
 The \Loo syntax is given in Figure \ref{f:loo-syntax}, and is largely unchanged from
 that of \citeauthor{FASE}. What does differ is the class annotation $E$ for encapsulation.
-Classes can be annotated as either \texttt{internal} or \texttt{boundary}, and we assume 
+Classes can be annotated as either \texttt{inside} or \texttt{boundary}, and we assume 
 that the type system enforces some guarantees about aliasing of \texttt{internal} classes,
-specifically that \texttt{internal} classes may only be initialized by module internal objects,
-and instances of classes annotated as \texttt{boundary} may not return \texttt{internal} 
+specifically that \texttt{inside} classes may only be initialized by module internal objects,
+and instances of classes annotated as \texttt{boundary} may not return \texttt{inside} 
 objects. This is a straightforward property that is a simple extension to a type system, and
 is assumed here only to elide language features that do not fall in the bounds of this paper.
 It is conceivable that any other of a number encapsulation mechanisms could be used from
@@ -160,29 +160,34 @@ that of \cite{FASE}, and are given in Appendix \ref{app:Loo}.
 \label{f:chainmail-syntax}
 \end{figure}
 
-Figure \ref{f:chainmail-syntax} gives the syntax of \Chainmail used in this paper.
-The syntax is a modified, and largely simplified version of the syntax of \cite{FASE}.
+Figure \ref{f:chainmail-syntax} gives the syntax of the \Chainmail specification language used in this paper. \Chainmail 
 
 \subsubsection{Semantics}
 \begin{definition}[Satisfaction of \Chainmail Assertions] 
 We define satisfaction of an assertion $A$ by a program configuration $\sigma$ with internal module $M$ and external module $M'$ as:
 \begin{itemize}
 \item
-$M;\ M',\ \sigma\ \vDash\ e$ iff $M \circ M',\ \sigma\ \vdash\ e\ \hookrightarrow \true$
+$\satisfiesA{M}{M'}{\sigma}{e}$ iff $\eval{M \circ M'}{\sigma}{e}{\true}$
 \item
-$M;\ M',\ \sigma\ \vDash\ e : C$ iff $M \circ M',\ \sigma\ \vdash\ e\ \hookrightarrow \alpha$ \textit{and} $\textit{classOf}(\sigma, \alpha) = C$
+$\satisfiesA{M}{M'}{\sigma}{e : C}$ iff $\eval{M \circ M'}{\sigma}{e}{\alpha}$ \textit{and} $\textit{classOf}(\sigma, \alpha) = C$
 \item
-$M;\ M',\ \sigma\ \vDash\ \neg A$ iff $M;\ M',\ \sigma\ \not\vDash\ A$
+$\satisfiesA{M}{M'}{\sigma}{\neg A}$ iff $\notsatisfies{M}{M'}{\sigma}{A}$
 \item
-$M;\ M',\ \sigma\ \vDash\ A_1\ \wedge\ A_2$ iff $M;\ M',\ \sigma\ \vDash\ A_1$ and $M;\ M', \sigma\ \vDash\ A_2$
+$\satisfiesA{M}{M'}{\sigma}{A_1\ \wedge\ A_2}$ iff $\satisfiesA{M}{M'}{\sigma}{A_1}$ and 
+$\satisfiesA{M}{M'}{\sigma}{A_2}$
 \item
-$M;\ M',\ \sigma\ \vDash\ A_1\ \vee\ A_2$ iff $M;\ M',\ \sigma\ \vDash\ A_1$ or $M;\ M', \sigma\ \vDash\ A_2$
+$\satisfiesA{M}{M'}{\sigma}{A_1\ \vee\ A_2}$ iff $\satisfiesA{M}{M'}{\sigma}{A_1}$ or 
+$\satisfiesA{M}{M'}{\sigma}{A_2}$
 \item
-$M;\ M',\ \sigma\ \vDash\ \all{x}{A}$ iff $\forall \alpha \in \sigma.(\texttt{heap})$ we have $M;\ M',\ \sigma\ \vDash\ [\alpha/x]A$
+$\satisfiesA{M}{M'}{\sigma}{\all{x}{A}}$ iff 
+$\forall \alpha \in \sigma.(\texttt{heap})$ we have 
+$\satisfiesA{M}{M'}{\sigma}{[\alpha/x]A}$
 \item
-$M;\ M',\ \sigma\ \vDash\ \ex{x}{A}$ iff $\exists \alpha \in \sigma.(\texttt{heap})$ such that $M;\ M',\ \sigma\ \vDash\ [\alpha/x]A$
+$\satisfiesA{M}{M'}{\sigma}{\ex{x}{A}}$ iff 
+$\exists \alpha \in \sigma.(\texttt{heap})$ such that 
+$\satisfiesA{M}{M'}{\sigma}{[\alpha/x]A}$
 \item
-$M;\ M',\ \sigma\ \vDash\ \access{\alpha_1}{\alpha_2}$ iff 
+$\satisfiesA{M}{M'}{\sigma}{\access{\alpha_1}{\alpha_2}}$ iff 
 \begin{itemize}
 \item
 $\exists\ o,\ f$ such that $[\alpha_1\ \mapsto\ o]\ \in\ \sigma.(\texttt{heap})$ and $[f\ \mapsto\ \alpha_2]\ \in\ o.(\texttt{flds})$ or
@@ -190,11 +195,13 @@ $\exists\ o,\ f$ such that $[\alpha_1\ \mapsto\ o]\ \in\ \sigma.(\texttt{heap})$
 $\exists\ \phi,\ x$ such that $\phi \in \sigma.(\texttt{stack})$ and $[x\ \mapsto\ \alpha_2]\in\phi.(\texttt{local})$ and $[\texttt{this}\ \mapsto\ \alpha_1]\in\phi.(\texttt{local})$
 \end{itemize}
 \item
-$M;\ M',\ \sigma\ \vDash\ \internal{\alpha}$ iff $\textit{classOf}(\sigma,\alpha) = C$ and $C \in M$
+$\satisfiesA{M}{M'}{\sigma}{\internal{\alpha}}$ iff 
+$\textit{classOf}(\sigma,\alpha) = C$ and $C \in M$
 \item
-$M;\ M',\ \sigma\ \vDash\ \external{\alpha}$ iff $\textit{classOf}(\sigma,\alpha) = C$ and $C \not\in M$
+$\satisfiesA{M}{M'}{\sigma}{\external{\alpha}}$ iff 
+$\textit{classOf}(\sigma,\alpha) = C$ and $C \not\in M$
 \item
-$M;\ M',\ \sigma\ \vDash\ \calls{\alpha_1}{\alpha_2}{m}{v_1, \ldots, v_n}$ iff
+$\satisfiesA{M}{M'}{\sigma}{\calls{\alpha_1}{\alpha_2}{m}{v_1, \ldots, v_n}}$ iff
 \begin{itemize}
 \item
 $\sigma.(\texttt{contn} = x := y.m(z_1,\ldots,z_n))$ and 
@@ -320,80 +327,82 @@ that the intermediate state where $A$ is true might be the initial state ($\sigm
 or final state ($\sigma_2$). 
 \begin{definition}[\textsc{Only Through}]
 \label{def:ot}
-$M \vDash\ \onlyThrough {A_1}{A_2}{A}$ if and only if
+$\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ if and only if
 $\forall M',\ \sigma_1,\ \sigma_2,$ such that 
 \begin{itemize}
 \item
-$M ; M', \sigma_1\ \vDash A_1$
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
 \item
-$M ; M', \sigma_2\ \vDash\ A_2$ and
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
 \item
-$M ; M'\ \bullet\ \sigma_1\ \leadsto^*\ \sigma_2$
+$\reductions{M}{M'}{\sigma_1}{\sigma_2}$
 \end{itemize}
 then $\exists\ \sigma,$ such that
 \begin{itemize}
 \item
-$\sigma\ =\ \sigma_1$ or $M ; M'\ \bullet\ \sigma_1\ \leadsto^*\ \sigma$
+$\reductions{M}{M'}{\sigma_1}{\sigma}$
 \item
-$\sigma\ =\ \sigma_2$ or $M ; M'\ \bullet\ \sigma\ \leadsto^*\ \sigma_2$
+$\reductions{M}{M'}{\sigma}{\sigma_2}$
 \item
-$M ; M',\ \sigma\ \vDash\ A$
+$\satisfiesA{M}{M'}{\sigma}{A}$
 \end{itemize}
 \end{definition}
 
 We give the definition of ``only if'' in Def. \ref{def:oi}.
 \begin{definition}[\textsc{Only If}]
 \label{def:oi}
-$M \vDash\ \onlyIf {A_1}{A_2}{A}$ if and only if
+$\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ if and only if
 $\forall M',\ \sigma_1,\ \sigma_2,$ such that 
 \begin{itemize}
 \item
-$M ; M', \sigma_1\ \vDash A_1$
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
 \item
-$M ; M', \sigma_2\ \vDash\ A_2$ and
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
 \item
-$M ; M'\ \bullet\ \sigma_1\ \leadsto^*\ \sigma_2$
+$\reductions{M}{M'}{\sigma_1}{\sigma_2}$
 \end{itemize}
-then $M ; M',\ \sigma_1\ \vDash\ A$
+then $\satisfiesA{M}{M'}{\sigma_1}{A}$
 \end{definition} 
 
 We give the definition of ``single-step only if'' in Def. \ref{def:oi-single}.
 \begin{definition}[\textsc{Only If Single-Step}]
 \label{def:oi-single}
-$M \vDash\ \onlyIfSingle {A_1}{A_2}{A}$ if and only if
+$\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$ if and only if
 $\forall M',\ \sigma_1,\ \sigma_2,$ such that 
 \begin{itemize}
 \item
-$M ; M', \sigma_1\ \vDash A_1$
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
 \item
-$M ; M', \sigma_2\ \vDash\ A_2$ and
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
 \item
-$M ; M'\ \bullet\ \sigma_1\ \leadsto\ \sigma_2$
+$\reduction{M}{M'}{\sigma_1}{\sigma_2}$
 \end{itemize}
-then $M ; M',\ \sigma_1\ \vDash\ A$
+then $\satisfiesA{M}{M'}{\sigma_1}{A}$
 \end{definition}
 
 \subsection{Encapsulation}
+In order to reason about necessary requirements in an open world,
+we differentiate between those assertions that require computation
+by internal, known code, and those assertions that may change due 
+to computation by external, unknown code.
 
 \begin{definition}[Encapsulation]
-For an internal module $M$, we define an assertion $A$ as being 
-encapsulated, written $M\ \vDash \encaps{A}$, if and only if
+\label{def:encapsulation}
+For an internal module $M$ and assertion $A$, we define an assertion $A'$ as being 
+encapsulated, written $M\ \vDash A\ \Rightarrow\ \encaps{A'}$, if and only if
 %$M\ \vDash\ \onlyIfSingle{A}{\neg A}{\calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}}$
 for all external modules $M'$, and program configurations $\sigma$ and $\sigma'$
 such that 
 \begin{itemize}
 \item
-$M;\ M',\ \sigma\ \leadsto\ \sigma'$ and 
+$\reduction{M}{M'}{\sigma}{\sigma'}$ and 
 \item
-$M;\ M',\ \sigma\ \vDash\ A$ and
+$\satisfiesA{M}{M'}{\sigma}{A}$ and
 \item
-$M;\ M',\ \sigma'\ \vDash\ \neg A$
+$\satisfiesA{M}{M'}{\sigma}{A'}$ and
+\item
+$\satisfiesA{M}{M'}{\sigma'}{\neg A'}$
 \end{itemize}
-then there exists some $\sigma_1$, $\ldots$, $\sigma_n$ such that
-\begin{itemize}
-\item
-$M \circ M',\ \sigma\ \leadsto\ \sigma_1\ \leadsto\ \ldots\ \leadsto\ \sigma_n\ \leadsto\ \sigma'$ where $n \geq 1$ and 
-\item
-$classOf(\texttt{this}, \sigma_i) \in M$ where $1 \leq i \leq n$
-\end{itemize}
+then there exists some $\alpha$, $m$, $\overline{v}$ such that
+$\satisfiesA{M}{M'}{\sigma}{\calls{\_}{\alpha}{m}{\overline{v}}\ \wedge\ \internal{\alpha}}$
 \end{definition}
