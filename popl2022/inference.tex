@@ -54,20 +54,24 @@ To assist in the definition of a proof system to proof assertion encapsulation,
 we define proof rules for expressions that depend entirely on internal objects
 for their evaluation.
 \begin{definition}[Internal Expressions]
-For all modules M
+For all modules $M$, assertions $A$, and expressions $e$, 
+$\satisfies{M}{\givenA{A}{\intrnl{e}}}$ if and only if for all external modules 
+$M'$, heaps $\chi$, and frame stacks $\psi$
+such that $\satisfiesA{M}{M'}{(\chi, \psi)}{A}$
+then there exists some value $v$ such that
+$\eval{M}{(\{[\alpha\ \mapsto\ o] | [\alpha\ \mapsto\ o]\ \in\ \chi\ \wedge\ o.(\texttt{class})\ \in\ M\}, \psi)}{e}{v}$
 \end{definition}
 
-The encapsulation proof system consists of two relations 
+
+The encapsulation proof system thus consists of two relations 
 \begin{itemize}
 \item
 Purely internal expressions: $\proves{M}{\givenA{A}{\intrnl{e}}}$ and
 \item
 Assertion encapsulation: $\proves{M}{\givenA{A}{\encaps{A'}}}$
 \end{itemize}
-That is, 
 
-Fig. \ref{f:intrnl} gives proof rules for whether an expression is ``internal'', that is whether the footprint of an expression 
-is composed of internal objects.
+Fig. \ref{f:intrnl} gives proof rules for an expression having an module internal footprint.
 Fig. \ref{f:asrt-encap} gives proof rules for whether an assertion is encapsulated, that is whether 
 a change in satisfaction of an assertion requires interaction with the internal module.
 
@@ -97,6 +101,7 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		{
 		\proves{M}{\givenA{A}{\intrnl{\alpha}}}
 		}
+		\quad(\textsc{Intrnl-Obj})
 		\and
 \infer
 		{
@@ -108,11 +113,12 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		{
 		\proves{M}{\givenA{A}{\intrnl{e.f}}}
 		}
+		\quad(\textsc{Intrnl-Field})
 		\and
 \infer
 		{
 		\proves{M}{\givenA{A}{\intrnl{e_1}}}\\
-		\proves{M}{\givenA{A}{\intrnl{e_1}}}\\
+		\proves{M}{\givenA{A}{\intrnl{e_2}}}\\
 		\proves{M}{\givenA{A}{\intrnl{e}}} \\
 		\proves{M}{A\ \longrightarrow\ e_1 : C} \\
 		\texttt{ghost}\ \texttt{intrnl}\ g(x)\{e\} \in M(C).(\texttt{gflds})
@@ -120,6 +126,7 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		{
 		\proves{M}{\givenA{A}{\intrnl{e_1.g(e_2)}}}
 		}
+		\quad(\textsc{Intrnl-Ghost})
 \end{mathpar}
 \caption{Internal Proof Rules}
 \label{f:intrnl}
@@ -130,6 +137,7 @@ a change in satisfaction of an assertion requires interaction with the internal 
 \infer
 		{\proves{M}{\givenA{A}{\intrnl{e}}}}
 		{\proves{M}{\givenA{A}{\encaps{e}}}}
+		\quad(\textsc{Enc-Intrnl})
 		\and
 \infer
 		{\proves{M}{\givenA{A}{\intrnl{e}}}}
@@ -168,12 +176,30 @@ a change in satisfaction of an assertion requires interaction with the internal 
 		{\proves{M}{\givenA{A}{\encaps{\access{\alpha_1}{\alpha_2}}}}}
 		\and
 \infer
+		{}
+		{\proves{M}{\givenA{A}{\encaps{\wrapped{A'}}}}}
+		\quad(\textsc{Enc-Wrapped})
+		\and
+\infer
 		{\proves{M}{A\ \longrightarrow\ \wrapped{\alpha_2}}}
 		{\proves{M}{\givenA{A}{\encaps{\neg \access{\alpha_1}{\alpha_2}}}}}
+		\and
+\infer
+		{
+		\proves{M}{A_1\ \longrightarrow\ A_2} \\
+		\proves{M}{A\ \longrightarrow\ A_1} \\
+		\proves{M}{\givenA{A}{\encaps{A_1}}}
+		}
+		{\proves{M}{\givenA{A}{\encaps{A_2}}}}
 \end{mathpar}
 \caption{Assertion Encapsulation Proof Rules}
 \label{f:asrt-encap}
 \end{figure}
+
+\begin{lemma}[Encapsulation Soundness]
+For all modules $M$, and assertions $A$ and $A'$, 
+if $\proves{M}{\givenA{A}{\encaps{A'}}}$ then $\satisfies{M}{\givenA{A}{A'}}$
+\end{lemma}
 
 
 \subsection{Module-Level Holistic Guarantees from Classical Specifications}

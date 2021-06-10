@@ -128,13 +128,8 @@ that we have annotated \texttt{BankMdl} with.
 %\end{lstlisting}
 %It is easy enough to see that both \texttt{AccountIsNotLeaked}, \texttt{PasswordIsNotLeaked}, and \texttt{TransferChangesBalance} are provable
 %pre- and post-condition using traditional Hoare Logic.
-
-
-\begin{figure}[t]
-\footnotesize
-\begin{proofexample}
-\proofsteps{\texttt{BalanceChange}}
-	{
+\\
+{
 	\begin{proofexample}
 		\proofsteps{AuthBalChange}
 			{\proofstepwithrule
@@ -171,8 +166,8 @@ that we have annotated \texttt{BankMdl} with.
 			}
 		\endproofsteps
 	\end{proofexample}
-	}
-	{
+}
+{
 	\begin{proofexample}
 		\proofsteps{ChangePasswordBalChange}
 			{\proofstepwithrule
@@ -185,8 +180,8 @@ that we have annotated \texttt{BankMdl} with.
 			}
 		\endproofsteps
 	\end{proofexample}
-	}
-	{
+}
+{
 	\begin{proofexample}
 		\proofsteps{Ledger::TransferBalChange}
 			{\proofstepwithrule
@@ -223,8 +218,8 @@ that we have annotated \texttt{BankMdl} with.
 			}
 		\endproofsteps
 	\end{proofexample}
-	}
-	{
+}
+{
 	\begin{proofexample}
 		\proofsteps{Bank::TransferBalChange}
 			{\proofstepwithrule
@@ -245,20 +240,54 @@ that we have annotated \texttt{BankMdl} with.
 			}
 		\endproofsteps
 	\end{proofexample}
-	}
+}
+\begin{proofexample}
+\proofsteps{\texttt{BalanceEncaps}}
+	{\begin{proofexample}
+		\proofsteps{\texttt{aIntrnl}}
+			{\proofstepwithrule
+			{$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\texttt{a}}}}$}
+				{by \textsc{Intrnl-Obj}}
+		}
+		\endproofsteps
+	\end{proofexample}
+		}
+	{\begin{proofexample}
+		\proofsteps{\texttt{bIntrnl}}
+			{\proofstepwithrule
+			{$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\texttt{b}}}}$}
+				{by \textsc{Intrnl-Obj}}
+		}
+		\endproofsteps
+	\end{proofexample}
+		}
+	{\begin{proofexample}
+		\proofsteps{\texttt{balIntrnl}}
+			{\proofstepwithrule
+			{$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\texttt{b.getBalance(a)}}}}$}
+				{by \texttt{aEncaps}, \texttt{bEncaps}, and \textsc{Intrnl-Ghost}}
+		}
+		\endproofsteps
+	\end{proofexample}
+		}
+		{\proofstepwithrule
+			{
+			$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\encaps{\texttt{b.getBalance(a)}}}}$
+			}{by \texttt{balIntrnl}, \textsc{Enc-Intrnl}}}
+\endproofsteps
+\end{proofexample}
+\begin{proofexample}
+\proofsteps{\texttt{BalanceChange}}
 	{\proofstepwithrule
 			{\onlyIfSingleEx
 					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
 					{b.getbalance(a) < bal}
 					{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password, amt, a, to}}$}
 					}
-				{by \textbf{AuthBalChange}, \textbf{ChangePasswordBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, and \textsc{If1-Internal}}
+				{by \textbf{AuthBalChange}, \textbf{ChangePasswordBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, \textbf{BalanceEncaps}, and \textsc{If1-Internal}}
 		}
 \endproofsteps
 \end{proofexample}
-\caption{Proof of the intermediate result \texttt{BalanceChange}}
-\end{figure}
-\begin{figure}[t]
 \begin{proofexample}
 \proofsteps{\texttt{PasswordChange}}
 	{\proofstepwithrule{\onlyIfSingleEx
@@ -272,19 +301,88 @@ that we have annotated \texttt{BankMdl} with.
 \end{proofexample}
 \begin{proofexample}
 \proofsteps{\texttt{PasswordLeak}}
+	{
+	\begin{proofexample}
+		\proofsteps{AuthPwdLeak}
+			{\proofstepwithrule
+				{\hoareEx
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password == pwd}
+						{\texttt{res} = a$^\prime$.authenticate(\_)}
+						{res != pwd}
+						}
+					{by classical spec.}
+			}
+			{\proofstepwithrule
+				{\hoareEx
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password == pwd $\wedge$ $\neg$ false}
+						{\texttt{res} = a$^\prime$.authenticate(\_)}
+						{res != pwd}
+						}
+					{by classical Hoare logic}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{a}^\prime}{\texttt{authenticate}}{\_}$}
+						{$\neg \wrapped{\_}$}
+						{false}
+						}
+					{by \textsc{If1-Wrapped}}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+		\proofsteps{ChangePasswordLeak}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{a}^\prime}{\texttt{changePassword}}{\_, \_}$}
+						{$\neg \wrapped{\texttt{pwd}}$}
+						{false}
+						}
+					{by similar reasoning to \textbf{AuthPwdLeak}}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+		\proofsteps{Ledger::TransferPwdLeak}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ l : Ledger $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\_, \_, \_}$}
+						{$\neg \wrapped{\texttt{pwd}}$}
+						{false}
+						}
+					{by similar reasoning to \textbf{AuthPwdLeak}}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+		\proofsteps{Bank::TransferPwdLeak}
+			{\proofstepwithrule
+				{\onlyIfSingleEx
+						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\_, \_, \_, \_}$}
+						{$\neg \wrapped{\texttt{pwd}}$}
+						{false}
+						}
+					{by similar reasoning to \textbf{AuthPwdLeak}}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
 	{\proofstepwithrule{\onlyIfSingleEx
 				{a : Account $\wedge$ a.password = p $\wedge$ $\wrapped{\texttt{p}}$}
 				{$\neg \wrapped{\texttt{p}}$}
 				{false}
 				}
-			{by similar reasoning to \textbf{BalanceChange}}
+			{by \textsc{If1-Internal}, \textbf{AuthPwdLeak}, \textbf{ChangePasswordLeak}, \textbf{Ledger::TransferPwdLeak}, and \textbf{Bank::TransferPwdLeak}}
 	}
 \endproofsteps
 \end{proofexample}
-\caption{Proofs of the intermediate results \texttt{PasswordChange} and \texttt{PasswordLeak}}
-\end{figure}
 
-\begin{figure}[t]
 \begin{proofexample}
 \proofsteps{\texttt{BankSpec}}
 	{\proofstepwithrule{\onlyThroughEx
@@ -376,8 +474,6 @@ that we have annotated \texttt{BankMdl} with.
 			{by \textbf{Case A}, \textbf{Case B}, \textsc{If-}$\vee$I$_2$, and \textsc{If-}$\longrightarrow$}}
 \endproofsteps
 \end{proofexample}
-\caption{Proof of \texttt{BankSpec}}
-\end{figure}
 
 \newpage
 
