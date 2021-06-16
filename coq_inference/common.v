@@ -46,8 +46,8 @@ Definition empty {A B : Type} `{Eq A} : partial_map A B := t_empty None.
 Definition update {A B : Type} `{Eq A} (a : A) (b : B) (map : partial_map A B) :=
   t_update map a (Some b).
 
-Notation "'⟦' a '↦' b '⟧' m" := (update a b m)(at level 40).
-Notation "'⟦' x '↦' y '⟧_∈' m" := (m x = Some y)(at level 40).
+Notation "'⟦' a '↦' b '⟧' m" := (update a b m)(at level 41, right associativity).
+Notation "'⟦' x '↦' y '⟧_∈' m" := (m x = Some y)(at level 41).
 
 Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
   {

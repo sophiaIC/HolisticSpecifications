@@ -18,108 +18,64 @@ Module Hoare(L : LanguageDef).
   Module L_Semantics := AbstractOperationalSemantics(L).
   Import L_Semantics.
   Module L_Chainmail := Chainmail(L).
-  Import L_Chainmail.
+  Export L_Chainmail.
 
   Open Scope reduce_scope.
   Open Scope chainmail_scope.
 
-  Reserved Notation "M '∙' '{pre:' P '}' σ '{post:' Q '}'" (at level 40).
-  Reserved Notation "M '∙' '{pre:' P '}' σ1 '⤳⋆' σ2 '{post:' Q '}'" (at level 40).
-  Reserved Notation "M1 '⦂' M2 '⦿' '{pre:' P '}' σ '{post:' Q '}'" (at level 40).
+  Declare Scope hoare_scope.
 
-  Inductive hoare_triple : mdl -> (config -> Prop) -> config -> (config -> Prop) -> Prop :=
-  | ht_r : forall M σ (P Q : config -> Prop), (forall σ', P σ ->
-                                            M ∙ σ ⤳ σ' ->
-                                            Q σ') ->
-                                     M ∙ {pre: P} σ {post: Q}
+  Reserved Notation "M '⊢' '{pre:' P '}' m '{post:' Q '}'" (at level 40).
 
-  where "M '∙' '{pre:' P '}' σ '{post:' Q '}'"
-          := (hoare_triple M P σ Q).
+  Inductive classical : asrt -> Prop :=
+  | cl_exp : forall e, classical (a_exp e)
+  | cl_class : forall e C, classical (a_class e C)
+  | cl_neg : forall P, classical P ->
+                  classical (¬ P)
+  | cl_and : forall P1 P2, classical P1 ->
+                      classical P2 ->
+                      classical (P1 ∧ P2)
+  | cl_or : forall P1 P2, classical P1 ->
+                     classical P2 ->
+                     classical (P1 ∨ P2)
+  | cl_all : forall P, classical P ->
+                  classical (∀x.[P])
+  | cl_ex : forall P, classical P ->
+                 classical (∃x.[P]).
 
-  Inductive hoare_triples : mdl -> (config -> Prop) -> config -> config -> (config -> Prop) -> Prop :=
-  | ht_single : forall M P σ1 σ2 Q, M ∙ σ1 ⤳ σ2 ->
-                               M ∙ {pre: P} σ1 {post: Q} ->
-                               M ∙ {pre: P} σ1 ⤳⋆ σ2 {post: Q}
-  | ht_trans : forall M P σ1 σ σ2 P' Q, M ∙ σ1 ⤳ σ ->
-                                   M ∙ {pre: P} σ1 {post: P'} ->
-                                   M ∙ {pre: P'} σ ⤳⋆ σ2 {post: Q} ->
-                                   M ∙ {pre: P} σ1 ⤳⋆ σ2 {post: Q}
 
-  where "M '∙' '{pre:' P '}' σ1 '⤳⋆' σ2 '{post:' Q '}'" := (hoare_triples M P σ1 σ2 Q).
+  Inductive meth_call : Type :=
+  | m_call : addr -> mth -> partial_map name value -> meth_call.
 
-  Inductive hoare_triple_pr : mdl -> mdl -> (config -> Prop) -> config -> (config -> Prop) -> Prop :=
-  | ht_pr : forall M1 M2 σ (P Q : config -> Prop), (forall σ', P σ ->
-                                                 M1 ⦂ M2 ⦿ σ ⤳ σ' ->
-                                                 Q σ') ->
-                                          M1 ⦂ M2 ⦿ {pre: P } σ {post: Q }
+  Inductive is_call : config -> name -> meth_call -> Prop :=
+  | is_meth_call : forall χ ϕ x y b ψ α m β,
+      contn ϕ = c_ ((call x y m β);; b) ->
+      ⟦ y ↦ v_ α⟧_∈ local ϕ ->
+      is_call (χ, ψ) x (m_call α m ((local ϕ) ∘ β)).
 
-  where "M1 '⦂' M2 '⦿' '{pre:' P '}' σ '{post:' Q '}'"
-          := (hoare_triple_pr M1 M2 P σ Q).
+  Inductive hoare_triple : mdl -> asrt -> meth_call -> asrt -> Prop :=
+  | ht_r : forall M1 α m β P Q, (forall M2 x σ σ', is_call σ x (m_call α m β) ->
+                                       M1 ⦂ M2 ◎ σ ⊨ P ->
+                                       M1 ⦂ M2 ⦿ σ ⤳ σ' ->
+                                       exists v χ ϕ ψ, σ' = (χ, ϕ :: ψ) /\
+                                                  ⟦ x ↦ v ⟧_∈ local ϕ /\
+                                                  M1 ⦂ M2 ◎ σ' ⊨ [v /s 0]Q) ->
+                       M1 ⊢ {pre: P} (m_call α m β) {post: Q}
 
-  Hint Constructors hoare_triple hoare_triples hoare_triple_pr : hoare_db.
+  where "M '⊢' '{pre:' P '}' m '{post:' Q '}'"
+          := (hoare_triple M P m Q).
 
-  Reserved Notation "M '∙' '[pre:' P ']' σ '[post:' Q ']'" (at level 40).
-  Reserved Notation "M1 '⦂' M2 '⦿' '[pre:' P ']' σ '[post:' Q ']'" (at level 40).
+  Parameter hoare_consequence1 :
+    forall M A1 C A2 A1', M ⊢ {pre: A1'} C {post: A2} ->
+                     M ⊢ A1 ⊇ A1' ->
+                     M ⊢ {pre: A1} C {post: A2}.
 
-  Inductive necessary_triple : mdl -> (config -> Prop) -> config -> (config -> Prop) -> Prop :=
-  | nt_r : forall M σ (P Q : config -> Prop), (forall σ', Q σ' ->
-                                            M ∙ σ ⤳ σ' ->
-                                            P σ) ->
-                                     M ∙ [pre: P] σ [post: Q]
+  Parameter hoare_consequence2 :
+    forall M A1 C A2 A2', M ⊢ {pre: A1} C {post: A2'} ->
+                     M ⊢ A2' ⊇ A2 ->
+                     M ⊢ {pre: A1} C {post: A2}.
 
-  where "M '∙' '[pre:' P ']' σ '[post:' Q ']'"
-          := (necessary_triple M P σ Q).
-
-  Inductive necessary_triple_pr : mdl -> mdl -> (config -> Prop) -> config -> (config -> Prop) -> Prop :=
-  | nt_pr : forall M1 M2 σ (P Q : config -> Prop), (forall σ', Q σ' ->
-                                                 M1 ⦂ M2 ⦿ σ ⤳ σ' ->
-                                                 P σ) ->
-                                          M1 ⦂ M2 ⦿ [pre: P ] σ [post: Q]
-
-  where "M1 '⦂' M2 '⦿' '[pre:' P ']' σ '[post:' Q ']'" := (necessary_triple_pr M1 M2 P σ Q).
-
-  Hint Constructors necessary_triple necessary_triple_pr : hoare_db.
-
-  Notation "M1 '⦂' M2 '◎' σ0 '…' '̱' '⊨' '{pre:' A1 '}' σ '{post:' A2 '}'" :=
-    (M1 ⦂ M2 ⦿ {pre: fun σ => M1 ⦂ M2 ◎ σ0 … σ ⊨ A1} σ {post: fun σ' => M1 ⦂ M2 ◎ σ0 … σ' ⊨ A2})(at level 40).
-
-  Notation "M1 '⦂' M2 '◎' σ0 '…s' '⊨' '{pre:' A1 '}' s '{post:' A2 '}'" :=
-    (forall σ c, contn_is (s ;; c) σ -> (M1 ⦂ M2 ◎ σ0 … ̱ ⊨ {pre: A1 } σ {post: A2 }))(at level 40).
-
-  Definition is_skip : config -> Prop :=
-    fun σ => exists b, contn_is (c_ skip ;; b) σ.
-
-  Definition is_call : config -> Prop :=
-    fun σ => exists x α m args b, contn_is (c_ call x α m args ;; b) σ.
-
-  Definition is_rtrn : config -> Prop :=
-    fun σ => (exists v b, contn_is (c_ rtrn v ;; b) σ) \/ (exists v, contn_is (c_rtrn v) σ).
-
-  Definition is_acc : config -> Prop :=
-    fun σ => exists x v b, contn_is (c_ acc x v ;; b) σ.
-
-  Definition is_mut : config -> Prop :=
-    fun σ => exists α f v b, contn_is (c_ mut α f v ;; b) σ.
-
-  Definition is_new : config -> Prop :=
-    fun σ => exists C args b, contn_is (c_ new C args ;; b) σ.
-
-  Definition empty_condition := (fun (_ : config) => True).
-  Notation "∅" := (empty_condition)(at level 40).
-
-  Definition waiting_frame_is :=
-    fun (f : config -> Prop) σ => exists ϕ1 ϕ2 ψ, snd σ = ϕ1 :: ϕ2 :: ψ /\
-                                                  f (fst σ, ϕ2 :: ψ).
-
-  Definition is_return_to :=
-    fun (f : config -> Prop) σ => is_rtrn σ /\
-                           waiting_frame_is f σ.
-
-  Definition is_call_to :=
-    fun (f : config -> addr -> Prop) σ =>
-      exists α, (exists x m args c, contn_is (c_ x ≔m α ▸ m ⟨ args ⟩ ;; c) σ) /\
-           f σ α.
-
+  Close Scope hoare_scope.
   Close Scope chainmail_scope.
   Close Scope reduce_scope.
 End Hoare.

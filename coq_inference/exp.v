@@ -8,8 +8,6 @@ Require Import chainmail.defs.
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
 
-
-
 Class Subst (A B C : Type) : Type :=
   {
     sbst : A -> B -> C -> A
@@ -84,11 +82,11 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
 (** M, σ [v/x]e' ↪ v'*)
 (** ------------------------ (Field_Ghost_Val) *)
 (** M, σ ⊢ e0.f(e) ↪ v'      *)
-| v_f_ghost  : forall M χ ψ e0 e g α o e' v v' C,
+| v_f_ghost  : forall M χ ψ e0 e g α o e' v v' C a,
     M ∙ (χ, ψ) ⊢ e0 ↪ (v_addr α) ->
     χ α = Some o ->
     M (cname o) = Some C ->
-    C.(c_g_fields) g = Some e' ->
+    C.(c_g_fields) g = Some (a, e') ->
     M ∙ (χ, ψ) ⊢ e ↪ v ->
     M ∙ (χ, ψ) ⊢ ([ v /s O ] [ (v_addr α) /s (S 0)] e') ↪ v' ->
     M ∙ (χ, ψ) ⊢ e_acc_g e0 g e ↪ v'

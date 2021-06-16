@@ -13,8 +13,6 @@ Inductive mth : Type := methID : nat -> mth.
 
 Inductive gfld : Type := gFieldID : nat -> gfld.
 
-Definition internal_g : gfld := gFieldID 0.
-
 Inductive cls : Type := classID : nat -> cls.
 
 Inductive addr : Type := address : nat -> addr.
@@ -614,6 +612,9 @@ Inductive exp : Type :=
 
 Hint Constructors exp : L_db.
 
+Notation "'e_this'" := (e_var x_this)(at level 20).
+Notation "'e♢' n" := (e_hole n)(at level 20).
+Notation "'e_' α" := (e_val (v_addr α))(at level 20).
 Notation "'e_true'" := (e_val v_true)(at level 40).
 Notation "'e_false'" := (e_val v_false)(at level 40).
 Notation "'e_null'" := (e_val v_null)(at level 40).
@@ -676,15 +677,26 @@ Definition config : Type := (heap * stack).
 | bnd : nat -> var.*)
 
 (*ghost_fields is a mapping from ghost field names to expressions*)
-Definition ghost_fields := partial_map gfld exp.
+
+Inductive annotate :=
+| int
+| none.
+
+Definition ghost_fields := partial_map gfld (annotate * exp).
 
 Inductive privacy :=
 | inside   : privacy
 | boundary : privacy.
 
+Inductive typ :=
+| t_cls : cls -> typ
+| t_int : typ
+| t_bool : typ.
+
+
 Record classDef := clazz{c_name : cls;
                          annot : privacy;
-                         c_fields : partial_map fld cls;
+                         c_fields : partial_map fld typ;
                          c_meths : partial_map mth block;
                          c_g_fields : ghost_fields}.
 

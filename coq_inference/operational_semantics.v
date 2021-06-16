@@ -187,14 +187,4 @@ Module Type SemanticProperties(L : LanguageDef).
   Module LSemantics := AbstractOperationalSemantics(L).
   Import LSemantics.
 
-  Open Scope reduce_scope.
-  Open Scope L_scope.
-
-
-  Parameter semantic_equivalence :
-    forall M1 M2 σ1 σ2, (L_red M1 M2 σ1 σ2 <->
-                    M1 ⦂ M2 ⦿ ⟦ σ1 ⟧ ⤳ ⟦ σ2 ⟧).
-
-  Close Scope L_scope.
-  Close Scope reduce_scope.
 End SemanticProperties.

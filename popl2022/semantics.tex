@@ -2,11 +2,24 @@
 
 \subsection{\Loo}
 
+\subsubsection{Syntax}
+
+The syntax of \Loo is given in Fig. \ref{f:loo-syntax}.
+
+
 \begin{figure}[t]
 \[
 \begin{syntax}
 \syntaxID{x, y, z}{Variable}
 \syntaxID{C, D}{Class Id.}
+\syntaxElement{T}{Type}
+		{
+		\syntaxline
+				{\_}
+				{C}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
 \syntaxID{f}{Field Id.}
 \syntaxID{g}{Ghost Field Id.}
 \syntaxID{m}{Method Id.}
@@ -59,11 +72,19 @@
 		\endsyntaxline
 		}
 \endSyntaxElement\\
+\syntaxElement{c}{Continuation}
+		{
+		\syntaxline
+				{s}
+				{x:=\bullet; s}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
 \syntaxElement{\chi}{Heap}
 		{\overline{\alpha \mapsto o}}
 \endSyntaxElement\\
 \syntaxElement{\phi}{Frame}
-		{\{\texttt{local}:=\overline{x\mapsto v};\ \texttt{contn}:=s\}}
+		{\{\texttt{local}:=\overline{x\mapsto v};\ \texttt{contn}:=c\}}
 \endSyntaxElement\\
 \syntaxElement{\psi}{Stack}
 		{\syntaxline{\phi}{\phi : \psi}\endsyntaxline}
@@ -73,27 +94,26 @@
 \endSyntaxElement\\
 \syntaxElement{mth}{Method Def.}
 		{
-		\texttt{method}\ m\ (\overline{x})\{\ s\ \}
+		\texttt{method}\ m\ (\overline{x : T})\{\ s\ \}
 		}
 \endSyntaxElement\\
 \syntaxElement{fld}{Field Def.}
 		{\syntaxline
-			{\texttt{field}\ f\ :\ C}
-			{\texttt{field}\ \texttt{intrnl}\ f\ :\ C}
+			{\texttt{field}\ f\ :\ T}
 		\endsyntaxline}
 \endSyntaxElement\\
 \syntaxElement{gfld}{Ghost Field Def.}
 		{\syntaxline
-			{\texttt{ghost}\ g\ (x)\{\ e\ \}}
-			{\texttt{ghost}\ \texttt{intrnl}\ g\ (x)\{\ e\ \}}
+			{\texttt{ghost}\ g\ (x : T)\{\ e\ \} : T}
+			{\texttt{ghost}\ \texttt{intrnl}\ g\ (x : T)\{\ e\ \} : T}
 		\endsyntaxline}
 \endSyntaxElement\\
-\syntaxElement{E}{Class Encapsulation}
-		{\syntaxline{\texttt{internal}}{\texttt{boundary}}\endsyntaxline}
+\syntaxElement{E}{Class Annotation}
+		{\syntaxline{\texttt{inside}}{\texttt{boundary}}\endsyntaxline}
 \endSyntaxElement\\
 \syntaxElement{ClassDef}{Class Def.}
 		{
-		E\ \texttt{class}\ C\ \{\ \texttt{flds}:=\overline{f};\ \texttt{gflds}:=\overline{gfld};\ \texttt{mths}:=\overline{mth}\ \}
+		E\ \texttt{class}\ C\ \{\ \texttt{flds}:=\overline{fld};\ \texttt{gflds}:=\overline{gfld};\ \texttt{mths}:=\overline{mth}\ \}
 		}
 \endSyntaxElement\\
 \syntaxElement{Mdl}{Module Def.}
@@ -107,20 +127,216 @@
 \label{f:loo-syntax}
 \end{figure}
 
-The \Loo syntax is given in Figure \ref{f:loo-syntax}, and is largely unchanged from
-that of \citeauthor{FASE}. What does differ is the class annotation $E$ for encapsulation.
-Classes can be annotated as either \texttt{inside} or \texttt{boundary}, and we assume 
-that the type system enforces some guarantees about aliasing of \texttt{internal} classes,
-specifically that \texttt{inside} classes may only be initialized by module internal objects,
-and instances of classes annotated as \texttt{boundary} may not return \texttt{inside} 
-objects. This is a straightforward property that is a simple extension to a type system, and
-is assumed here only to elide language features that do not fall in the bounds of this paper.
-It is conceivable that any other of a number encapsulation mechanisms could be used from
-prior language designs that have already been studied. To accompany this, \Loo also includes
-an optional annotation on ghost fields \texttt{intrnl} that enforces the requirement that 
-the body of the ghost field includes only references to obejcts that are defined by the internal 
-module. The semantics of \Loo are unchanged from
-that of \cite{FASE}, and are given in Appendix \ref{app:Loo}.
+\subsubsection{Semantics}
+
+We provide the definition of module linking in Def. \ref{def:linking}
+\begin{definition}
+\label{def:linking}
+For all modules $M_1$ and $M_2$, if the domains of $M_1$ and $M_2$ are disjoint, 
+we define the module linking function as $M_1\ \circ\ M_2\ \triangleq\ M_1\ \cup\ M_2$.
+\end{definition}
+
+We provide the definition of reference interpretation in Def. \ref{def:interpret}
+\begin{definition}
+For a program configuration $\sigma = (\chi, \phi : \psi)$, we provide the following function definitions:
+\begin{itemize}
+\item
+$\interpret{\sigma}{x}\ \triangleq\ \phi.(\texttt{local})(x)$
+\item
+$\interpret{\sigma}{\alpha.f}\ \triangleq\ \chi(\alpha).(\texttt{flds})(f)$
+\item
+$\interpret{\sigma}{x.f}\ \triangleq\ \interpret{\sigma}{\alpha.f}$ where $\interpret{\sigma}{x}=\alpha$
+\end{itemize}
+\end{definition}
+
+Definition Def. \ref{def:class-lookup} defines the class lookup function for \Loo.
+\begin{definition}[Class Lookup]
+\label{def:class-lookup}
+For program configuration $\sigma = (\chi, \phi : \psi)$, class lookup is defined as 
+$$\class{\sigma}{x}\ \triangleq\ \chi(\interpret{\sigma}{x}).(\texttt{class})$$
+\end{definition}
+
+Definition Def. \ref{def:meth-lookup} defines the method lookup function for \Loo.
+\begin{definition}[Method Lookup]
+\label{def:meth-lookup}
+For module $M$, class $C$, and method name $m$, method lookup is defined as 
+$$\meth{M}{C}{m}\ \triangleq\ M(C).\texttt{mths}(m)$$
+\end{definition}
+
+Fig. \ref{f:loo-semantics} gives the operational semantics of \Loo.
+
+\begin{figure}[t]
+\begin{mathpar}
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \psi)\\
+	\sigma_2 = (\chi, \phi_2 : \phi_1' : \psi)\\
+	\phi_1.(\texttt{contn}) = (x := y.m(\overline{z}); s)\\
+	\phi_1' = \phi_1[\texttt{contn} := (x := \bullet; s)]\\
+	\meth{M}{\class{\sigma_1}{x}}{m} = m(\overline{p})\{body\}\\
+	\phi_2 = \{\texttt{local}:= ([\texttt{this}\ \mapsto\ \interpret{\sigma_1}{x}]\overline{[p_i\ \mapsto\ \interpret{\sigma_1}{z_i}]}), \texttt{contn}:=body\}
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	\quad(\textsc{Call})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \psi) \\
+	\sigma_2 = (\chi, \phi_2 : \psi) \\
+	\phi_1.(\texttt{contn}) = (x := y.f; s)\\
+	\interpret{\sigma_1}{x.f} = v \\
+	\phi_2 = \{\texttt{local}:=\phi_1.(\texttt{local})[x\ \mapsto\ v],\ \texttt{contn}:=s\}
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	\quad(\textsc{Read})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi_1, \phi_1 : \psi) \\
+	\sigma_2 = (\chi_2, \phi_2 : \psi) \\
+	\phi_1.(\texttt{contn}) = (x.f := y; s)\\
+	\interpret{\sigma_1}{y} = v \\
+	\phi_2 = \{\texttt{local}:=\phi_1.(\texttt{local}),\ \texttt{contn}:=s\}\\
+	\chi_2 = \chi_1[\interpret{x}{\sigma_1}.f \mapsto\ v]
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	{}
+	\quad(\textsc{Write})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi, \phi : \psi) \\
+	\phi.(\texttt{contn}) = (x := \texttt{new}\ C(\overline{z}); s)\\
+	M(C).(\texttt{flds}) = \overline{\texttt{field}\ f : T} \\
+	\sigma_2 = (\chi[\alpha\ \mapsto\ \{\texttt{class}:=C, \texttt{flds}:=\overline{f\ \mapsto\ \interpret{\sigma_1}{z}}\}], \phi[x\ \mapsto\ \alpha] : \psi)
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	\quad(\textsc{New})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \phi_2 : \psi) \\
+	\phi_1.(\texttt{contn}) = (\texttt{return}\ x; s)\ \textit{or}\ \phi_1.(\texttt{contn}) = (\texttt{return}\ x)\\
+	\phi_2.(\texttt{contn}) = (y := \bullet; s)\\
+	\sigma_2 = (\chi, \phi_2[y\ \mapsto\ \interpret{\sigma_1}{x}] : \psi)
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	{}
+	\quad(\textsc{Return})
+\end{mathpar}
+\caption{Operational Semantics of \Loo}
+\label{f:loo-semantics}
+\end{figure}
+
+We give the semantics of module pair execution in Def. \ref{def:pair-reduce}
+\begin{definition}[Module Pair Execution]
+\label{def:pair-reduce}
+For all internal modules $M_1$, external modules $M_2$, and program configurations $\sigma$ and $\sigma'$, 
+we say that $\reduction{M_1}{M_2}{\sigma}{\sigma'}$ if and only if
+\begin{itemize}
+\item
+$\class{\sigma}{\sigma.(\texttt{this})}\ \in\ M_2$ and
+\item
+$\class{\sigma'}{\sigma'.(\texttt{this})}\ \in\ M_2$ and 
+\end{itemize} 
+and
+\begin{itemize}
+\item
+$\exec{M_1\ \circ\ M_2}{\sigma}{\sigma'}$ or
+\item
+$M_1\ \circ\ M_2,\ \sigma \leadsto\ \sigma_1\ \leadsto\ \ldots\ \sigma_n\ \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.(\texttt{this})}\ \in\ M_1$ for all $1\ \leq\ i\ \leq\ n$
+\end{itemize}
+\end{definition}
+
+Expression evaluation is given in Fig. \ref{f:evaluation}
+\begin{figure}
+\begin{mathpar}
+\infer
+		{}
+		{\eval{M}{\sigma}{v}{v}}
+		\quad(\textsc{E-Val})
+		\and
+\infer
+		{}
+		{\eval{M}{\sigma}{x}{\interpret{\sigma}{x}}}
+		\quad(\textsc{E-Var})
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{i_1}\\
+		\eval{M}{\sigma}{e_2}{i_2}\\
+		i_1 + i_2 = i
+		}
+		{
+		\eval{M}{\sigma}{e_1 + e_2}{i}
+		}
+		\quad(\textsc{E-Add})
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{v}\\
+		\eval{M}{\sigma}{e_2}{v}
+		}
+		{
+		\eval{M}{\sigma}{e_1 = e_2}{\true}
+		}
+		\quad(\textsc{E-Eq}_1)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{v_1}\\
+		\eval{M}{\sigma}{e_2}{v_2}\\
+		v_1 \neq\ v_2
+		}
+		{
+		\eval{M}{\sigma}{e_1 = e_2}{\false}
+		}
+		\quad(\textsc{E-Eq}_2)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e}{\true}\\
+		\eval{M}{\sigma}{e_1}{v}
+		}
+		{
+		\eval{M}{\sigma}{\ifthenelse{e}{e_1}{e_2}}{v}
+		}
+		\quad(\textsc{E-If}_1)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e}{\false}\\
+		\eval{M}{\sigma}{e_2}{v}
+		}
+		{
+		\eval{M}{\sigma}{\ifthenelse{e}{e_1}{e_2}}{v}
+		}
+		\quad(\textsc{E-If}_2)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e}{\alpha}
+		}
+		{
+		\eval{M}{\sigma}{e.f}{\interpret{\sigma}{\alpha.f}}
+		}
+		\quad(\textsc{E-Field})
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{\alpha}\\
+		\eval{M}{\sigma}{e_2}{v'}\\
+		\texttt{ghost}\ g(x : T)\{e\} : T'\ \in\ M(\class{\sigma}{\alpha}).(\texttt{gflds})\\
+		\eval{M}{\sigma}{[v'/x]e}{v}
+		}
+		{
+		\eval{M}{\sigma}{e_1.g(e_2)}{v}
+		}
+		\quad(\textsc{E-Ghost})
+\end{mathpar}
+\caption{\Loo expression evaluation}
+\label{f:evaluation}
+\end{figure}
 
 \subsection{\Chainmail}
 
@@ -278,15 +494,15 @@ $[z_i\mapsto v_i]\in\sigma.(\texttt{local})$ for all $1 \leq i \leq n$
 \Chainmail generalizes holistic properties about internal data 
 across execution. To do this we define syntactic forms for 
 \emph{Holistic Guarantees} in Fig. \ref{f:holistic-syntax}.
-We express provability of satisfaction of Holistic Guarantees as $M\ \vdash\ \mathcal{H}$.
-That is, a module $M$ proves the satisfaction of holistic guarantee $\mathcal{H}$. This allows 
+We express provability of satisfaction of Holistic Guarantees as $\satisfies{M}{H}$.
+That is, a module $M$ satisfies a holistic guarantee $H$. This allows 
 the construction of proofs without considering either the details 
 of the program configuration or the external client module.
 
 \begin{figure}[t]
 \[
 \begin{syntax}
-\syntaxElement{\mathcal{H}}{Holistic Guarantee}
+\syntaxElement{H}{Holistic Guarantee}
 		{
 		\syntaxline
 				{\onlyIf{A_1}{A_2}{A_3}}
@@ -370,6 +586,8 @@ We give the definition of ``single-step only if'' in Def. \ref{def:oi-single}.
 $\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$ if and only if
 $\forall M',\ \sigma_1,\ \sigma_2,$ such that 
 \begin{itemize}
+\item
+$\textit{Arising}(M, M', \sigma_1)$
 \item
 $\satisfiesA{M}{M'}{\sigma_1}{A_1}$
 \item
