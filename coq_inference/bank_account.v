@@ -1,26 +1,23 @@
-Require Import common.
-Require Import defs.
-Require Import partial_maps.
-Require Import L_def.
-Require Import exp.
-Require Import exp_properties.
-Require Import chainmail.
-Require Import hoare.
 Require Import List.
 Require Import String.
-Require Import inference.
 Open Scope string_scope.
+Require Import L_def.
+Require Import defs.
+Require Import common.
+Require Import exp.
+Require Import chainmail_tactics.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 Module BankAccount(L : LanguageDef).
 
-  Module L_Inference := Inference(L).
-  Import L_Inference.
+  Module L_ChainmailTactics := ChainmailTactics(L).
+  Import L_ChainmailTactics.
   Open Scope reduce_scope.
   Open Scope chainmail_scope.
   Open Scope hoare_scope.
   Open Scope inference_scope.
+  Open Scope chainmail_tactics_scope.
 
   (** #<h2>#Variables#</h2>#*)
 
@@ -42,7 +39,7 @@ Module BankAccount(L : LanguageDef).
                                  boundary
                                  (⟦ password ↦ (t_cls Object) ⟧ empty)
                                  (⟦ changePassword ↦ changePasswordBody ⟧
-                                    ⟦ authenticate ↦ authenticateBody  ⟧
+                                    ⟦ authenticate ↦ authenticateBody ⟧
                                     empty)
                                  empty.
 
@@ -134,9 +131,111 @@ Module BankAccount(L : LanguageDef).
                             m_call a changePassword β
                             {post: a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩵ (e_int bal))}.
 
+  Parameter transferBalanceChangeSpecification :
+    forall a a' b b' p bal β,
+      BankMdl ⊢ {pre: (a_class (e_ a) Account) ∧
+                      (a_class (e_ b)  Bank) ∧
+                      (a_class (e_ b') Bank) ∧
+                      (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal)))}
+              m_call b' transfer (⟦ pwd ↦ p⟧ ⟦ fromAcc ↦ a' ⟧ β)
+              {post: a_exp (e_val p ⩵ e_acc_f (e_ a) password) ∧
+                     (a_exp (e_val a' ⩵ (e_ a)))}.
+
   Lemma eq_implies_not_lt :
     forall M e1 e2, M ⊢ (a_exp (e1 ⩵ e2)) ⊇ (¬ a_exp (e1 ⩻ e2)).
-    Admitted.
+  Admitted.
+
+  Lemma not_false_is_true :
+    forall M, M ⊢ (¬ a_exp (e_false)) ⊇ (a_exp (e_true)).
+  Admitted.
+
+  Lemma true_is_not_false :
+    forall M, M ⊢ (a_exp (e_true)) ⊇ (¬ a_exp (e_false)).
+  Admitted.
+
+  Lemma and_true1 :
+    forall M A, M ⊢ (A ∧ (a_exp (e_true))) ⊇ A.
+  Admitted.
+
+  Lemma and_true2 :
+    forall M A, M ⊢ A ⊇ (A ∧ (a_exp (e_true))).
+  Admitted.
+
+  Lemma and_comm :
+    forall M A1 A2, M ⊢ (A1 ∧ A2) ⊇ (A2 ∧ A1).
+  Admitted.
+
+  Lemma and_assoc1 :
+    forall M A1 A2 A3, M ⊢ (A1 ∧ A2 ∧ A3) ⊇ (A1 ∧ (A2 ∧ A3)).
+  Admitted.
+
+  Lemma and_assoc2 :
+    forall M A1 A2 A3, M ⊢ A1 ∧ (A2 ∧ A3) ⊇ A1 ∧ A2 ∧ A3.
+  Admitted.
+
+  Lemma and_consequence1 :
+    forall M A1 A1' A2, M ⊢ A1 ⊇ A1' ->
+                   M ⊢ A1 ∧ A2 ⊇ A1' ∧ A2.
+  Admitted.
+
+  Lemma and_consequence2 :
+    forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
+                   M ⊢ A1 ∧ A2 ⊇ A1 ∧ A2'.
+  Admitted.
+
+  Lemma conseq_and1 :
+    forall M A1 A1' A2, M ⊢ A1 ⊇ A1' ->
+                   M ⊢ A1 ∧ A2 ⊇ A1'.
+  Admitted.
+
+  Lemma conseq_and2 :
+    forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
+                   M ⊢ A1 ∧ A2 ⊇ A2'.
+  Admitted.
+
+  Lemma conseq_ex :
+    forall M A1 A2, (forall x, M ⊢ [x /s 0] A1 ⊇ A2) ->
+               M ⊢ (∃x.[A1]) ⊇ A2.
+  Admitted.
+
+  Lemma subst_eq :
+    forall M x y z A, M ⊢ (a_exp (e_val x ⩵ e_val y)) ∧ [y /s z] A ⊇ [x /s z] A.
+  Admitted.
+
+  Ltac hoare_simpl :=
+    match goal with
+    | [|- _ ⊢ {pre: ?A1 ∧ (?A2 ∧ ?A3)} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_assoc2]
+    | [|- _ ⊢ {pre: (_ ∧ (_ ∧ _)) ∧ _} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_consequence1, and_assoc2]
+    | [|- _ ⊢ {pre: _ ∧ ((_ ∧ _) ∧ _)} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_consequence1, and_assoc2]
+    | [|- _ ⊢ {pre: _ ∧ (a_exp (e_true))} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_true1]
+    | [|- _ ⊢ {pre: _ ∧ (¬ (a_exp (e_false)))} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_consequence2, not_false_is_true]
+    end.
+
+  Ltac spec_auto :=
+    match goal with
+    |[|- _ ⊢ ?A ⊇ ?A] =>
+     apply conseq_refl
+    |[|- _ ⊢ ∃x.[_] ⊇ _] =>
+     apply conseq_ex; intros; simpl
+    |[|- _ ⊢ ?A ∧ _ ⊇ ?A] =>
+     apply conseq_and1
+    |[|- _ ⊢ _ ∧ ?A ⊇ ?A] =>
+     apply conseq_and2
+    |[|- _ ⊢ _ ∧ ?A ∧ _ ⊇ ?A] =>
+     apply conseq_and2, conseq_and1
+    |[|- _ ⊢ _ ∧ _ ∧ ?A ∧ _ ⊇ ?A] =>
+     apply conseq_and2, conseq_and2, conseq_and1
+    end.
 
   Lemma authBalChange :
     forall a a' b bal ps,
@@ -152,9 +251,9 @@ Module BankAccount(L : LanguageDef).
     eapply if1_classical with (β := ps);
       [|auto].
     eapply hoare_consequence2; [|apply eq_implies_not_lt].
-    admit. (* add normal hoare logic rules *)
-
-  Admitted.
+    repeat hoare_simpl.
+    apply authenticateBalanceChangeSpecification.
+  Qed.
 
   Lemma changePassowrdBalChange :
     forall a a' b bal ps,
@@ -168,11 +267,11 @@ Module BankAccount(L : LanguageDef).
   Proof.
     intros.
     apply if1_classical with (β := ps);
-      [|auto]. (* add simplification to tactic*)
+      [|auto].
     eapply hoare_consequence2; [|apply eq_implies_not_lt].
-    admit. (* add normal hoare logic rules *)
-
-  Admitted.
+    repeat hoare_simpl.
+    apply changePasswordBalanceChangeSpecification.
+  Qed.
 
   Lemma ledgerTransferBalChange :
     forall l a b bal ps v,
@@ -198,18 +297,28 @@ Module BankAccount(L : LanguageDef).
       [|apply conseq_refl
        |apply conseq_refl
        |apply neg_false with (A:=wrapped(a_ l))].
-    
-  Admitted.
+    apply if1_andI.
+
+    - apply if1_if.
+      apply if_start.
+      apply consequence_transitivity with (A2 := a_class (e_ l) Ledger);
+        [apply conseq_and1|apply inside_wrapped with (Def:=LedgerDef); auto].
+      repeat apply conseq_and1; spec_auto.
+
+    - apply if1_if, if_start.
+      repeat apply conseq_and2.
+      spec_auto.
+      apply recv_not_wrapped.
+  Qed.
 
   Lemma bankTransferBalChange :
-    forall l a b b' bal ps v,
-      BankMdl ⊢ ((a_class (e_ l) Ledger) ∧
-                 (a_class (e_ a) Account) ∧
+    forall a b b' bal ps v,
+      BankMdl ⊢ ((a_class (e_ a) Account) ∧
                  (a_class (e_ b) Bank) ∧
                  (a_class (e_ b') Bank) ∧
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal))) ∧
                  (a_exp ((e_acc_f (e_ a) password) ⩵ (e_val v))) ∧
-                (∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer) ⟨ ps ⟩ ]))
+                (∃x.[ (a♢ 0) calls (a_ b') ◌ (am_ transfer) ⟨ ps ⟩ ]))
               to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
               onlyIf (∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer) ⟨ ⟦ pwd ↦ (av_ v)⟧
                                                                                 ⟦ amt ↦ (a♢ 1)⟧
@@ -218,8 +327,63 @@ Module BankAccount(L : LanguageDef).
                                                                                 empty ⟩]]]).
   Proof.
     intros.
-    
+
+    repeat extract3 (v_ b) 10.
+    extract3 (v_ b) 10.
+    extract3 (v_ b) 10.
+    extract3 (v_ b) 10.
+    extract3 (v_ b) 10.
+    extract3 (v_ b) 10.
+    extract3 (v_ b) 10.
+
+
+    assert (Hrewrite : ∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer)
+                                ⟨ ⟦ pwd ↦ (av_ v)⟧
+                                    ⟦ amt ↦ (a♢ 1)⟧
+                                    ⟦ fromAcc ↦ (a_ a) ⟧
+                                    ⟦ toAcc ↦ (a♢ 2) ⟧
+                                    empty ⟩]]] =
+             [(v_ b) /s 0]∃x.[∃x.[∃x.[ (a♢ 0) calls (a♢ 3) ◌ (am_ transfer)
+                                          ⟨ ⟦ pwd ↦ (av_ v)⟧
+                                              ⟦ amt ↦ (a♢ 1)⟧
+                                              ⟦ fromAcc ↦ (a_ a) ⟧
+                                              ⟦ toAcc ↦ (a♢ 2) ⟧
+                                              empty ⟩]]]);
+      [admit|rewrite Hrewrite; clear Hrewrite].
+
+    eapply if1_conseq;
+      [|apply conseq_refl
+       |apply conseq_refl
+       |apply subst_eq with (y:=v_ b); simpl].
+
+    subst_simpl.
+
+    assert (Hrewrite : ∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer)
+                                ⟨ ⟦ pwd ↦ (av_ v)⟧
+                                    ⟦ amt ↦ (a♢ 1)⟧
+                                    ⟦ fromAcc ↦ (a_ a) ⟧
+                                    ⟦ toAcc ↦ (a♢ 2) ⟧
+                                    empty ⟩]]] =
+             [(v_ a) /s 2]∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer)
+                                          ⟨ ⟦ pwd ↦ (av_ v)⟧
+                                              ⟦ amt ↦ (a♢ 1)⟧
+                                              ⟦ fromAcc ↦ (a♢ 3) ⟧
+                                              ⟦ toAcc ↦ (a♢ 2) ⟧
+                                              empty ⟩]]]);
+      [admit|rewrite Hrewrite].
+
+    eapply if1_conseq;
+      [|apply conseq_refl
+       |apply conseq_refl
+       |apply subst_eq with (y:=v_ b); simpl].
+
+    eapply if1_classical;
+      [|auto].
+
   Admitted.
+
+  Lemma balanceEncaps :
+    forall b b' a bal 
 
 
   Close Scope chainmail_scope.

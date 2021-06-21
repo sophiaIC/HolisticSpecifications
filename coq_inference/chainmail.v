@@ -209,6 +209,20 @@ Module Chainmail(L : LanguageDef).
       end
     }.
 
+  Instance optionSubst{A : Type}`{Subst A nat value} : Subst (option A) nat value :=
+    {
+    sbst o n v := match o with
+                  | Some a => Some ([v /s n] a)
+                  | None => None
+                  end
+    }.
+
+  Instance vMap : Subst (partial_map name a_val) nat value :=
+    {
+    sbst β n v :=
+      fun x => [v /s n] (β x)
+    }.
+
   Instance asrtSubst : Subst asrt nat value :=
     {
     sbst :=
@@ -225,7 +239,7 @@ Module Chainmail(L : LanguageDef).
         | ∃x.[ A ]    => ∃x.[ (sbst' A (S n) v)]
 
         | x access y  => ([ v /s n] x) access ([ v /s n ] y)
-        | x calls y ◌  m ⟨ vMap ⟩ => ([ v /s n ] x) calls ([ v /s n ] y) ◌ m ⟨ vMap ⟩
+        | x calls y ◌  m ⟨ vMap ⟩ => ([ v /s n ] x) calls ([ v /s n ] y) ◌ m ⟨ [v /s n] vMap ⟩
 
         | x external => ([ v /s n ] x) external
         | x internal => ([ v /s n ] x) internal

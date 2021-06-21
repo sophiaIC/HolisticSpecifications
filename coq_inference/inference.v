@@ -11,8 +11,6 @@ Require Import hoare.
 Module Inference(L : LanguageDef).
 
   Export L.
-  Module L_Semantics := AbstractOperationalSemantics(L).
-  Export L_Semantics.
   Module L_Hoare := Hoare(L).
   Export L_Hoare.
   (*)Module L_Chainmail := Chainmail(L).
@@ -41,6 +39,10 @@ Module Inference(L : LanguageDef).
 
   Definition wrapped := (fun α => ∀x.[ (a♢ 0) internal ∨ ¬ (a♢ 0) access α]).
 
+  Lemma recv_not_wrapped :
+    forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (α2).
+  Admitted.
+
   Lemma inside_wrapped :
     forall M α C Def, ⟦ C ↦ Def ⟧_∈ M ->
                  annot Def = inside ->
@@ -63,6 +65,12 @@ Module Inference(L : LanguageDef).
 
   Lemma neg_false :
     forall M A, M ⊢ (A ∧ ¬ A) ⊇ (a_exp (e_false)).
+  Admitted.
+
+  Lemma consequence_transitivity :
+    forall M A1 A2 A3, M ⊢ A1 ⊇ A2 ->
+                  M ⊢ A2 ⊇ A3 ->
+                  M ⊢ A1 ⊇ A3.
   Admitted.
 
   Inductive intrnl : mdl -> asrt -> exp -> Prop :=
@@ -104,7 +112,8 @@ Module Inference(L : LanguageDef).
                               enc M A1 A.
 
   Inductive only_if : mdl -> asrt -> asrt -> asrt -> Prop :=
-  | if_start  : forall M A1 A2, M ⊢ A1 to A2 onlyIf A1
+  | if_start  : forall M A1 A2 A, M ⊢ A1 ⊇ A ->
+                             M ⊢ A1 to A2 onlyIf A
   | if_conseq : forall M A1 A1' A2 A2' A A', M ⊢ A1' to A2' onlyIf A' ->
                                         M ⊢ A1 ⊇ A1' ->
                                         M ⊢ A2 ⊇ A2' ->
@@ -119,6 +128,9 @@ Module Inference(L : LanguageDef).
   | if_orE    : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ∨ A' ->
                                 M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
                                 M ⊢ A1 to A2 onlyIf A
+  | if_andI : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ->
+                              M ⊢ A1 to A2 onlyIf A' ->
+                              M ⊢ A1 to A2 onlyIf A ∧ A'
   | if_trans  : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
                                 M ⊢ A1 to A' onlyIf A ->
                                 M ⊢ A1 to A2 onlyIf A
@@ -192,6 +204,9 @@ Module Inference(L : LanguageDef).
   | if1_orE   : forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ∨ A' ->
                                 M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
                                 M ⊢ A1 to1 A2 onlyIf A
+  | if1_andI : forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ->
+                               M ⊢ A1 to1 A2 onlyIf A' ->
+                               M ⊢ A1 to1 A2 onlyIf A ∧ A'
 
   where
   "M '⊢' A1 'to1' A2 'onlyIf' A3" := (only_if1 M A1 A2 A3).

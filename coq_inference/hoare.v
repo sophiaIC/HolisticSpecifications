@@ -16,7 +16,7 @@ Module Hoare(L : LanguageDef).
 
   Import L.
   Module L_Semantics := AbstractOperationalSemantics(L).
-  Import L_Semantics.
+  Export L_Semantics.
   Module L_Chainmail := Chainmail(L).
   Export L_Chainmail.
 
