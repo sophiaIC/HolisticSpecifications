@@ -139,7 +139,8 @@ Module BankAccount(L : LanguageDef).
                       (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal)))}
               m_call b' transfer (⟦ pwd ↦ p⟧ ⟦ fromAcc ↦ a' ⟧ β)
               {post: a_exp (e_val p ⩵ e_acc_f (e_ a) password) ∧
-                     (a_exp (e_val a' ⩵ (e_ a)))}.
+                     (a_exp (e_val a' ⩵ (e_ a))) ∧
+                     (a_exp (e_ b' ⩵ (e_ b)))}.
 
   Lemma eq_implies_not_lt :
     forall M e1 e2, M ⊢ (a_exp (e1 ⩵ e2)) ⊇ (¬ a_exp (e1 ⩻ e2)).
@@ -312,70 +313,42 @@ Module BankAccount(L : LanguageDef).
   Qed.
 
   Lemma bankTransferBalChange :
-    forall a b b' bal ps v,
+    forall a b b' bal p p' ps,
       BankMdl ⊢ ((a_class (e_ a) Account) ∧
                  (a_class (e_ b) Bank) ∧
                  (a_class (e_ b') Bank) ∧
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal))) ∧
-                 (a_exp ((e_acc_f (e_ a) password) ⩵ (e_val v))) ∧
-                (∃x.[ (a♢ 0) calls (a_ b') ◌ (am_ transfer) ⟨ ps ⟩ ]))
+                 (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
+                (∃x.[ (a♢ 0) calls (a_ b') ◌ (am_ transfer) ⟨ ⟦ pwd ↦ a_ p' ⟧ ps  ⟩ ]))
               to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
-              onlyIf (∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer) ⟨ ⟦ pwd ↦ (av_ v)⟧
-                                                                                ⟦ amt ↦ (a♢ 1)⟧
-                                                                                ⟦ fromAcc ↦ (a_ a) ⟧
-                                                                                ⟦ toAcc ↦ (a♢ 2) ⟧
+              onlyIf (∃x.[∃x.[∃x.[ (a♢ 0) calls (a♢ 1) ◌ (am_ transfer) ⟨ ⟦ pwd ↦ (a_ p)⟧
+                                                                                ⟦ amt ↦ (a♢ 2)⟧
+                                                                                ⟦ fromAcc ↦ (a♢ 3) ⟧
+                                                                                ⟦ toAcc ↦ (a♢ 4) ⟧
                                                                                 empty ⟩]]]).
   Proof.
     intros.
 
-    repeat extract3 (v_ b) 10.
-    extract3 (v_ b) 10.
-    extract3 (v_ b) 10.
-    extract3 (v_ b) 10.
-    extract3 (v_ b) 10.
-    extract3 (v_ b) 10.
-    extract3 (v_ b) 10.
-
-
-    assert (Hrewrite : ∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer)
-                                ⟨ ⟦ pwd ↦ (av_ v)⟧
-                                    ⟦ amt ↦ (a♢ 1)⟧
-                                    ⟦ fromAcc ↦ (a_ a) ⟧
-                                    ⟦ toAcc ↦ (a♢ 2) ⟧
-                                    empty ⟩]]] =
-             [(v_ b) /s 0]∃x.[∃x.[∃x.[ (a♢ 0) calls (a♢ 3) ◌ (am_ transfer)
-                                          ⟨ ⟦ pwd ↦ (av_ v)⟧
-                                              ⟦ amt ↦ (a♢ 1)⟧
-                                              ⟦ fromAcc ↦ (a_ a) ⟧
-                                              ⟦ toAcc ↦ (a♢ 2) ⟧
-                                              empty ⟩]]]);
-      [admit|rewrite Hrewrite; clear Hrewrite].
-
-    eapply if1_conseq;
+    extract3 (v_ p) 100;
+      eapply if1_conseq;
       [|apply conseq_refl
        |apply conseq_refl
-       |apply subst_eq with (y:=v_ b); simpl].
+       |apply subst_eq with (y:=v_ p'); simpl];
+      subst_simpl.
 
-    subst_simpl.
+    eapply if1_andI.
 
-    assert (Hrewrite : ∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer)
-                                ⟨ ⟦ pwd ↦ (av_ v)⟧
-                                    ⟦ amt ↦ (a♢ 1)⟧
-                                    ⟦ fromAcc ↦ (a_ a) ⟧
-                                    ⟦ toAcc ↦ (a♢ 2) ⟧
-                                    empty ⟩]]] =
-             [(v_ a) /s 2]∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer)
-                                          ⟨ ⟦ pwd ↦ (av_ v)⟧
-                                              ⟦ amt ↦ (a♢ 1)⟧
-                                              ⟦ fromAcc ↦ (a♢ 3) ⟧
-                                              ⟦ toAcc ↦ (a♢ 2) ⟧
-                                              empty ⟩]]]);
-      [admit|rewrite Hrewrite].
+    - eapply if1_if.
+      eapply if_start.
+      eapply conseq_and1, conseq_and2.
 
-    eapply if1_conseq;
+
+    extract3 (v_ a) 100;
+      eapply if1_conseq;
       [|apply conseq_refl
        |apply conseq_refl
-       |apply subst_eq with (y:=v_ b); simpl].
+       |apply subst_eq with (y:=v_ b); simpl];
+      subst_simpl.
 
     eapply if1_classical;
       [|auto].

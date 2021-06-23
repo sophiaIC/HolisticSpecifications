@@ -189,7 +189,7 @@ Module Inference(L : LanguageDef).
       M ⊢ (A1 ∧ (a_class (e_ α) C) ∧ ∃x.[ (a♢ 0) calls (a_ α) ◌ (am_ m) ⟨ β ⟩]) to1 A2 onlyIf A3) ->
       M ⊢ A1 to1 A2 onlyIf A3
   | if1_if : forall M A1 A2 A3, M ⊢ A1 to A2 onlyIf A3 ->
-                           M ⊢ A1 to1 A2 onlyIf A3
+                                M ⊢ A1 to1 A2 onlyIf A3
   | if1_conseq : forall M A1 A1' A2 A2' A A', M ⊢ A1' to1 A2' onlyIf A' ->
                                          M ⊢ A1 ⊇ A1' ->
                                          M ⊢ A2 ⊇ A2' ->

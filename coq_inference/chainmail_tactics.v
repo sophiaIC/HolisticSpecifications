@@ -39,11 +39,27 @@ Module ChainmailTactics(L : LanguageDef).
       auto.
   Qed.
 
+  Lemma ehole_neq_subst :
+    forall v n m, n <> m -> ([v /s n] (e_hole m)) = (e_hole m).
+    intros; simpl.
+    apply <- Nat.eqb_neq in H;
+      rewrite H;
+      reflexivity.
+  Qed.
+
   Lemma ahole_subst :
     forall v n, ([v /s n] (a♢ n)) = (av_ v).
     intros; simpl;
       rewrite <- beq_nat_refl;
       auto.
+  Qed.
+
+  Lemma ahole_neq_subst :
+    forall v n m, n <> m -> ([v /s n] (a♢ m)) = (a♢ m).
+    intros; simpl.
+    apply <- Nat.eqb_neq in H;
+      rewrite H;
+      reflexivity.
   Qed.
 
   Lemma eq_subst :
@@ -159,6 +175,18 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite ghost_subst with (e1:=e)(e2:=e')(g:=g')
     | [H : context [[ _ /s _] (e_acc_g ?e ?g' ?e')] |- _] =>
       rewrite ghost_subst with (e1:=e)(e2:=e')(g:=g') in H
+
+    | [|- context[[_ /s ?m] (e_hole ?m)]] =>
+      rewrite ehole_subst
+    | [H : context[[_ /s ?m] (e_hole ?m)] |- _] =>
+      rewrite ehole_subst in H
+
+    | [|- context[[_ /s _] (e_hole _)]] =>
+      rewrite ehole_neq_subst;
+      [|solve[auto]]
+    | [H : context[[_ /s _] (e_hole _)] |- _] =>
+      rewrite ehole_neq_subst in H;
+      [|solve[auto]]
     end.
 
   Axiom functional_extensionality :
@@ -316,6 +344,28 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite external_subst with (y:=y')
     | [H : context[[_ /s _] (?y' external)] |- _] =>
       rewrite external_subst with (y:=y') in H
+
+    | [|- context [[ _ /s _] (e_acc_g ?e ?g' ?e')]] =>
+      rewrite ghost_subst with (e1:=e)(e2:=e')(g:=g')
+    | [H : context [[ _ /s _] (e_acc_g ?e ?g' ?e')] |- _] =>
+      rewrite ghost_subst with (e1:=e)(e2:=e')(g:=g') in H
+
+    | [|- context[[_ /s ?m] (a♢ ?m)]] =>
+      rewrite ahole_subst
+    | [H : context[[_ /s ?m] (a♢ ?m)] |- _] =>
+      rewrite ehole_subst in H
+
+    | [|- context[[_ /s _] (a♢ _)]] =>
+      rewrite ahole_neq_subst;
+      [|solve[auto]]
+    | [H : context[[_ /s _] (a♢ _)] |- _] =>
+      rewrite ahole_neq_subst in H;
+      [|solve[auto]]
+
+    | [|- context[[_ /s _] (av_ _)]] =>
+      rewrite aval_subst
+    | [H : context[[_ /s _] (av_ _)] |- _] =>
+      rewrite aval_subst in H
     end.
 
   Ltac subst_simpl :=
@@ -348,23 +398,63 @@ Module ChainmailTactics(L : LanguageDef).
       auto.
   Qed.
 
-  Lemma hole_other_subst :
-    forall 
+  Lemma ahole_other_subst :
+    forall x n m, n <> m ->
+             ([x /s n] (a♢ m)) = (a♢ m).
+    intros x n m H;
+      simpl.
+    apply <- Nat.eqb_neq in H;
+      rewrite H;
+      reflexivity.
+  Qed.
+
+  Lemma subst_rewrite :
+    forall{A B C: Type}`{Subst C B A} (a : A)(b : B)(c1 c2 : C),
+      c1 = ([a /s b] c2) ->
+      exists c3, c1 = ([a /s b] c3).
+    intros; eauto.
+  Qed.
+
+  Lemma stupid_rename :
+    forall {A : Type} (a : A), exists a', a' = a.
+    eauto.
+  Qed.
+
+  Lemma stupid_rename_subst :
+    forall {A B C}`{Subst C B A} (a : A) (b : B) (c : C),
+    exists c', c = c' /\ (([a /s b] c) = ([a /s b] c')).
+    eauto.
+  Qed.
 
   Ltac extract_from_val v' n' :=
     match goal with
     | [|- context[av_ v']] =>
-      rewrite <- val_hole_subst with (v:=v')(n:=n')
+      rewrite <- val_hole_subst with (v:=v')(n:=n');
+      let a := fresh "a" in
+      remember (av_ v') as a
     | [|- context[e_val v']] =>
-      rewrite <- val_exp_hole_subst with (v:=v')(n:=n')
+      rewrite <- val_exp_hole_subst with (v:=v')(n:=n');
+      let e := fresh "e" in
+      remember (e_val v') as e
     end.
 
   Ltac extract_other_vals v' n' :=
     match goal with
     | [|- context[av_ ?v'']] =>
-      rewrite <- aval_other_subst with (x:=v')(v:=v'')(n:=n')
+      rewrite <- (aval_subst v' n' v'');
+      let a := fresh "a" in
+      remember (av_ v'') as a
     | [|- context[e_val ?v'']] =>
-      rewrite <- eval_other_subst with (x:=v')(v:=v'')(n:=n')
+      rewrite <- (val_subst v' n' v'');
+      let e := fresh "e" in
+      remember (e_val v'') as e
+    | [|- context[a♢ ?m']] =>
+      rewrite <- (ahole_other_subst v' n' m');
+      [|solve[auto]];
+      let a := fresh "a" in
+      let Ha := fresh "H" in
+      destruct (stupid_rename (a♢ m')) as [a Ha];
+      rewrite <-  Ha
     end.
 
   Ltac extract_vals v' n' :=
@@ -404,7 +494,7 @@ Module ChainmailTactics(L : LanguageDef).
   Ltac extract_from_map v' n' :=
     match goal with
     | [|-context[⟦ ?y ↦ [v' /s n'] ?v'' ⟧ ([v' /s n'] ?β')]] =>
-      rewrite <- update_subst with (v:=v')(a:=v'')(n:=n')(x:=y)(β:=β')
+      rewrite <- update_subst(*) with (v:=v')(a:=v'')(n:=n')(x:=y)(β:=β')*)
     | [|-context[empty]] =>
       rewrite <- empty_subst with (v:=v')(n:=n');
       let β'' := fresh "β" in
@@ -414,34 +504,34 @@ Module ChainmailTactics(L : LanguageDef).
   Ltac extract_from_asrt v' :=
     match goal with
     | [|- context[a_exp ([v' /s ?n'] ?e')]] =>
-      rewrite <- exp_subst with (x:=v')(n:=n')(e:=e')
+      rewrite <- exp_subst (*)with (x:=v')(n:=n')(e:=e')*)
 
     | [|- context[([v' /s ?n'] ?A1') ∧ ([v' /s ?n'] ?A2')]] =>
-      rewrite <- and_subst with (x:=v')(n:=n')(A1:=A1')(A2:=A2')
+      rewrite <- and_subst (*)with (x:=v')(n:=n')(A1:=A1')(A2:=A2')*)
 
     | [|- context[([v' /s ?n'] ?A1') ∨ ([v' /s ?n'] ?A2')]] =>
-      rewrite <- or_subst with (x:=v')(n:=n')(A1:=A1')(A2:=A2')
+      rewrite <- or_subst (*)with (x:=v')(n:=n')(A1:=A1')(A2:=A2')*)
 
     | [|- context[∀x.[([v' /s ?n'] ?A')]]] =>
-      rewrite <- all_subst with (x:=v')(n:=n')(A:=A')
+      rewrite <- all_subst (*)with (x:=v')(n:=n')(A:=A')*)
 
     | [|- context[∃x.[([v' /s ?n'] ?A')]]] =>
-      rewrite <- ex_subst with (x:=v')(n:=n')(A:=A')
+      rewrite <- ex_subst (*)with (x:=v')(n:=n')(A:=A')*)
 
     | [|- context[[v' /s ?n']?A']] =>
-      rewrite <- neg_subst with (x:=v')(n:=n')(A:=A')
+      rewrite <- neg_subst (*)with (x:=v')(n:=n')(A:=A')*)
 
     | [|- context[([v' /s ?n']?y') internal]] =>
-      rewrite <- internal_subst with (x:=v')(n:=n')(y:=y')
+      rewrite <- internal_subst (*)with (x:=v')(n:=n')(y:=y')*)
 
     | [|- context[([v' /s ?n']?y') external]] =>
-      rewrite <- external_subst with (x:=v')(n:=n')(y:=y')
+      rewrite <- external_subst (*)with (x:=v')(n:=n')(y:=y')*)
 
-    | [|- context[([v' /s ?n'] ?A1') access ([v' /s ?n'] ?A2')]] =>
-      rewrite <- access_subst with (x:=v')(n:=n')(A1:=A1')(A2:=A2')
+    | [|- context[([v' /s ?n'] ?y') access ([v' /s ?n'] ?z')]] =>
+      rewrite <- access_subst (*)with (x:=v')(n:=n')(y:=y')(z:=z')*)
 
     | [|- context[([v' /s ?n'] ?y') calls ([v' /s ?n'] ?z') ◌ ?m' ⟨ [v' /s ?n'] ?β' ⟩]] =>
-      rewrite <- calls_subst with (x:=v')(n:=n')(y:=y')(z:=z')(m:=m')(β:=β')
+      rewrite <- calls_subst (*)with (x:=v')(n:=n')(y:=y')(z:=z')(m:=m')(β:=β')*)
     end.
 
   Ltac subst_vals :=
@@ -457,13 +547,14 @@ Module ChainmailTactics(L : LanguageDef).
     repeat extract_other_vals v' n';
     repeat extract_from_exp v';
     repeat extract_from_map v' n';
-    repeat extract_from_asrt v'.
+    repeat extract_from_asrt v';
+    subst.
 
   Open Scope inference_scope.
 
   Ltac extract1 v' n' :=
     match goal with
-    | [|- ?M ⊢ ?A1 to1 ?A2 onlyIf ?A3] =>
+    | [|- ?M ⊢ _ to1 ?A2 onlyIf ?A3] =>
       let A2' := fresh "A" in
       let H2 := fresh in
       let A3' := fresh "A" in
@@ -472,7 +563,7 @@ Module ChainmailTactics(L : LanguageDef).
       remember A3 as A3'  eqn : H3;
       extract v' n';
       subst A2' A3'
-    | [|- ?M ⊢ ?A1 to ?A2 onlyIf ?A3] =>
+    | [|- ?M ⊢ _ to ?A2 onlyIf ?A3] =>
       let A2' := fresh "A" in
       let H2 := fresh in
       let A3' := fresh "A" in
@@ -481,7 +572,7 @@ Module ChainmailTactics(L : LanguageDef).
       remember A3 as A3'  eqn : H3;
       extract v' n';
       subst A2' A3'
-    | [|- ?M ⊢ ?A1 to ?A2 onlyThrough ?A3] =>
+    | [|- ?M ⊢ _ to ?A2 onlyThrough ?A3] =>
       let A2' := fresh "A" in
       let H2 := fresh in
       let A3' := fresh "A" in
@@ -494,7 +585,7 @@ Module ChainmailTactics(L : LanguageDef).
 
   Ltac extract2 v' n' :=
     match goal with
-    | [|- ?M ⊢ ?A1 to1 ?A2 onlyIf ?A3] =>
+    | [|- ?M ⊢ ?A1 to1 _ onlyIf ?A3] =>
       let A1' := fresh "A" in
       let H1 := fresh in
       let A3' := fresh "A" in
@@ -503,7 +594,7 @@ Module ChainmailTactics(L : LanguageDef).
       remember A3 as A3'  eqn : H3;
       extract v' n';
       subst A1' A3
-    | [|- ?M ⊢ ?A1 to ?A2 onlyIf ?A3] =>
+    | [|- ?M ⊢ ?A1 to _ onlyIf ?A3] =>
       let A1' := fresh "A" in
       let H1 := fresh in
       let A3' := fresh "A" in
@@ -512,7 +603,7 @@ Module ChainmailTactics(L : LanguageDef).
       remember A3 as A3'  eqn : H3;
       extract v' n';
       subst A1' A3
-    | [|- ?M ⊢ ?A1 to ?A2 onlyThrough ?A3] =>
+    | [|- ?M ⊢ ?A1 to _ onlyThrough ?A3] =>
       let A1' := fresh "A" in
       let H1 := fresh in
       let A3' := fresh "A" in
@@ -525,7 +616,17 @@ Module ChainmailTactics(L : LanguageDef).
 
   Ltac extract3 v' n' :=
     match goal with
-    | [|- ?M ⊢ ?A1 to1 ?A2 onlyIf ?A3] =>
+    | [|- ?M ⊢ ?A1 to1 ?A2 onlyIf _] =>
+      let A1' := fresh "A" in
+      let H1 := fresh in
+      let A2' := fresh "A" in
+      let H2 := fresh in
+      remember A1 as A1'  eqn : H1;
+      remember A2 as A2'  eqn : H2;
+      extract v' n';
+      subst
+
+    | [|- ?M ⊢ ?A1 to ?A2 onlyIf _] =>
       let A1' := fresh "A" in
       let H1 := fresh in
       let A2' := fresh "A" in
@@ -535,17 +636,7 @@ Module ChainmailTactics(L : LanguageDef).
       extract v' n';
       subst A1' A2'
 
-    | [|- ?M ⊢ ?A1 to ?A2 onlyIf ?A3] =>
-      let A1' := fresh "A" in
-      let H1 := fresh in
-      let A2' := fresh "A" in
-      let H2 := fresh in
-      remember A1 as A1'  eqn : H1;
-      remember A2 as A2'  eqn : H2;
-      extract v' n';
-      subst A1' A2'
-
-    | [|- ?M ⊢ ?A1 to ?A2 onlyThrough ?A3] =>
+    | [|- ?M ⊢ ?A1 to ?A2 onlyThrough _] =>
       let A1' := fresh "A" in
       let H1 := fresh in
       let A2' := fresh "A" in
