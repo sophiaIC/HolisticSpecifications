@@ -203,6 +203,21 @@ Module BankAccount(L : LanguageDef).
     forall M x y z A, M ⊢ (a_exp (e_val x ⩵ e_val y)) ∧ [y /s z] A ⊇ [x /s z] A.
   Admitted.
 
+  Lemma caller_unique :
+    forall M v v' a a' m m' β β',
+      M ⊢ (av_ v) calls a ◌ m ⟨ β ⟩ ∧ (av_ v') calls a' ◌ m' ⟨ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
+  Admitted.
+
+  Lemma recv_unique :
+    forall M v v' a a' m m' β β',
+      M ⊢ a calls (av_ v) ◌ m ⟨ β ⟩ ∧ a' calls (av_ v) ◌ m' ⟨ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
+  Admitted.
+
+  Lemma param_unique :
+    forall M a1 a1' a2 a2' m m' x v v' β β',
+      M ⊢ a1 calls a2 ◌ m ⟨ ⟦ x ↦ (av_ v) ⟧ β ⟩ ∧ a1' calls a2' ◌ m' ⟨ ⟦ x ↦ (av_ v') ⟧ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
+  Admitted.
+
   Ltac hoare_simpl :=
     match goal with
     | [|- _ ⊢ {pre: ?A1 ∧ (?A2 ∧ ?A3)} _ {post: _}] =>
