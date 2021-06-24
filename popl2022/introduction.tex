@@ -1,54 +1,57 @@
-\section{Introduction}
-
-Current systems are complex, and  built out of many different components of different provenance and
-different degree of trustworthiness.
+ \newcommand{\prg}[1]{{\texttt{#1}}}
+ \section{Introduction}
+I DIDN"T CHANGE ANYTHING TECHINICAL (OTHER THAN CHANGING 10 to 100). INSTEAD I WROTE A QUERY AND I WOULD LIKE SOMEONE ELSE TO READ WHAT I WROTE AND MAKE THE CHANGE. - SUSAN
+%Current systems are complex, and  built out of many different components of different provenance and different degree of trustworthiness.
   
-  \newcommand{\prg}[1]{{\texttt{#1}}}
-  
-In order for the resulting  complex system to offer the
+{\se{Although complex software is built out of modules/components of different provenance and different degrees of trustworthiness, we want all of its behaviour to be unsurprising.}}
+In order for the resulting complex system to offer the
 desired services, the individual components 
-need to   be able to make "good things"   happen.
+need to  be able to make ``good things''   happen.
 But in order for the resulting  complex system
  to offer these services \emph{robustly},  the individual components 
- need to be able to prevent "bad things" from happening. 
+ need to be able to prevent ``bad things'' from happening. 
 
-  To demonstrate that   good things \emph{can} happen, we use  witnesses;
+To demonstrate that  good things \emph{can} happen, we use witnesses;
 eg  a precondition and a code snippet, whose execution will establish the
 wished-for effect.  For example, if I send an email to a valid address it will
-be delivered to its recipient. The pre-condition and the code snippet
+be delivered to its recipient. The precondition and the code snippet
 are \emph{sufficient} conditions for the desired effect. 
 
 Our work is about the specification and verification of robustness: that bad things \emph{will 
-not} happen. For example, nobody gets to read my email unless I forwarded it to them.   
-Note that such an assertion is agnostic as to the set of methods supported by the mail-module.
+not} happen. For example, nobody gets to read an email sent only to me unless I forwarded it to them.   
+Note that such an assertion is agnostic to the set of methods supported by the mail-module.
 
-The challenge here is twofold: How do we specify the "bad things",
+The challenge here is twofold: How do we specify the ``bad things'',
  and how do we prove that such bad things do not happen? 
 
-To specify the bad things, we cannot
-refer to one particular peace of code, % and cannot refer to one witness;
- instead, we need to make a guarantee which encompasses all possible
- functions executable by a module in all their possible sequences or even interleavings --
- we need to consider their \emph{emerging} behaviour.
- Rather than considering the sufficient conditions to achieve a certain effect,
- we express the necessary precondition. For example,    a third party 
- will not get to read my email unless I forward it to them -- the forwarding
- is a necessary precondition for the reading.
+To specify undesirable properties, we cannot refer to one particular piece of code, instead we need to provide guarantees which encompass the software in its entirety -- the \emph{holistic} system. We need to consider the emerging behaviour of all possible functions executable in all possible sequences, including interleavings. Rather than considering the sufficient conditions to achieve a given effect, we express necessary preconditions for the holistic system. For example, a third party will not get to read my email unless I forward it to them - the forward is a necessary precondition for the reading. To reason about necessary conditions we develop our Logic of Necessity.
+
+There has been work in the past to expand specification of systems beyond the specification of good things. <<James we need a related work paragraph>>
+
+%To specify the bad things, we cannot
+%refer to one particular piece of code, % and cannot refer to one witness;
+% instead, we need to make a guarantee which encompasses all possible
+% functions executable by a module in all their possible sequences or even interleavings --
+ %we need to consider their \emph{emerging} behaviour.
+ %Rather than considering the sufficient conditions to achieve a certain effect,
+ %we express the necessary precondition. For example,    a third party 
+ %will not get to read my email unless I forward it to them -- the forwarding
+% is a necessary precondition for the reading.
  
- To reason about necessary conditions, we develop a special
- logic with such necessity triples. The most basic such holistic assertions 
- can be derived from classical assertions (sufficient \jm[old:truples]{triples})
- under assumptions of encapsulation;
- they can then be further combined using our logic of necessity.
+ %To reason about necessary conditions, we develop a special
+ %logic with such necessity triples. The most basic such holistic assertions 
+ %can be derived from classical assertions (sufficient \jm[old:truples]{triples})
+ %under assumptions of encapsulation;
+ %they can then be further combined using our logic of necessity.
  
  We illustrate our ideas in terms of the following example:
  \prg{Account}s have a balance and a 
 password. One may transfer \prg{100} units from one \prg{Account} to another, but only provided
-that  the caller provides the right password. Below we show the Version I of the code for 
+that  the caller provides the right password. Below we show the version \sf{I} of the code for 
 a class \prg{Account}. 
 We use a Java-like syntax,  and assume that fields are private in the sense of C++, \emph{i.e.,}
  only methods of that class may read or write these fields,
- and   that addresses are unforgeable, and so  there is no way to guess a password.
+ and   that addresses are unforgeable -- so  there is no way to guess a password.
 
  
 
@@ -70,7 +73,7 @@ as well as a ``classical'' specification of the method \prg{transfer}:
 \begin{lstlisting}[mathescape=true, frame=lines]
   method transfer(dest:Account, pwd':Password) -> void {
        ( PRE:  this.bal=bal1 $\wedge$ this.pwd==pwd' $\wedge$ dest.bal=bal2 $\wedge$ dest=/=this 
-         POST: this.bal == bal1-10 $\wedge$  dest.bal=dest.bal+10 )
+         POST: this.bal == bal1-100 $\wedge$  dest.bal=dest.bal+100 )
        ( PRE: this.bal=bal1 $\wedge$ this.pwd=/=pwd' $\wedge$ dest.bal=bal2
          POST: this.bal == bal1 $\wedge$  dest.bal=dest.balance )
        ( PRE: a : Account $\wedge$ a=/=this $\wedge$ a=/=dest  $\wedge$ a.bal=bal  
@@ -82,11 +85,10 @@ as well as a ``classical'' specification of the method \prg{transfer}:
   
  
  Now consider two further versions of the class account, given in Figure \ref{fig:ExampleAccount}.
- In Version II and Version III the class has an additional method, \prg{set}, which allows resetting
- the password.
-The method \prg{transfer} in all three versions of the class \prg{Account} satisfy the (ClassicSpec), 
-however, undoubtedly, while the first and third version of \prg{Account} are "robust", the second version is not.
-Namely version II allows a client to change the password of the account, and then to repeatedly withdraw 
+ In version {\sf{II}} and version {\sf{III}} the class has an additional method, \prg{set}, which enables the resetting of the password.
+The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
+however, while the first and third version of \prg{Account} are ``robust'', the second version is not.
+Namely version II allows any client to change the password of the account, and then to repeatedly withdraw 
 money from it.
   
 % On the other hand, we expect our software -- even if complex -- to provide some simple, high level
@@ -137,12 +139,12 @@ class Account{
 
  
  The remit of our work is to find ways to specify robustness. 
- The flaw in Version II arises from the \emph{emergent} behaviour of that class: first use \prg{set} 
- to overwrite the
- password, and then use the new password and \prg{transfer}   
- to express robustness, we need to preclude any such behaviour.
+ The flaw in version {\sf{II}} arises from \emph{emergent} behaviour as \prg{set} 
+ can be used to overwrite the
+ password, and then using the new password \prg{transfer}  can be called.
+ If we want the \prg{Account} class to be robust, we must prohibit the password from being freely available.
  Therefore, we propose a holistic specification which says that
- the \prg{balance} of an \prg{Account} reduces only if an object which does not belong
+ the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
  class \prg{Account} has access to the password:
  
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
@@ -150,6 +152,8 @@ class Account{
                    to a.balance < bal
                    onlyIf $\exists$ o'.[$\external{\texttt{o'}}$ $\wedge$ $\access{\texttt{o'}}{\texttt{a.pwd}}$]
 \end{lstlisting}
+ 
+ WHY DOES o HAVE A PRIME?
  
  In more detail, the specification from above says that if in the current
  configuration \prg{a} is an \prg{Account},
@@ -163,15 +167,18 @@ class Account{
  Note, that the specification only talks about effects (here the balance reducing), and does not
  talk about individual methods (such as \prg{set} or \prg{transfer}).
  
- Our holistic specification language, \Chainmail, extends traditional specifications with
-notions of access (which object points to which), control (which methods is called)\footnote{perhaps drop as confusing?}, 
+
+ The holistic specification language, \Chainmail, extends traditional specifications with
+notions of access (which object points to which), control (which methods are called)\footnote{Sophia -perhaps drop as confusing? Susan -I think both of the bracketed phrases should be omitted, as we have already used the word access when describing the passwords and we don't mention control anywhere}, 
  the distinction between external and internal objects, and necessary conditions, 
- whereby the assertion $A to A' onlyIf A''$ expresses that if in in the current configuration
- $A$ holds, and in some future configuration $A''$ will hold, then $A''$ must also hold in the 
- current configuration.  Earlier work by \cite{tacas} was also concerned with 
+ whereby the assertion $A~to~A'~onlyIf~A''$ expresses that if in in the current configuration
+ $A$ holds, and in some future configuration $A''$, <<SHOULD BE A SINGLE PRIME-SUSAN>> will hold, then $A''$ must also hold in the 
+ current configuration.  
+ 
+  %THIS NEEDS TO BE PART OF THE RELATED WORK EARLIER IN THE PAPER AND NOT HERE - SUSAN
+ Earlier work by \cite{fase} was also concerned with 
  holistic specifications and necessary conditions, which they expressed through time operators.
- \Chainmail is less rich than Chainmail, however it comes with a proof system which is lacking from 
- Chainmail.
+ \Chainmail is less rich than Chainmail, however it comes with a proof system which Chainmail lacked.
  
   
  The contributions of this paper are as follows:
@@ -181,8 +188,9 @@ notions of access (which object points to which), control (which methods is call
  We propose \Chainmail, a specification language with which to
 express holistic specifications. 
  \item
- We propose a logic of triples of assertions that allows us to prove
- a module's adherence to such a holistic assertion. 
+ %We propose a logic of triples of assertions that allows us to prove
+ %a module's adherence to such a holistic assertion. 
+ We propose a Logic of Necessity for writing holistic assertions and for proving a module's adherence to said assertions.
  This logic builds on top of classical pre- post- conditions.
  \item
  We prove soundness of our logic.  
@@ -194,11 +202,11 @@ outlined  in this section
  QUESTIONS:
  \begin{itemize}
  \item
- holistic assertion -- different name or say we adopt from FASE; holistic -> comprehensive, integrated, aggregate
+ holistic assertion -- different name or say we adopt from FASE; holistic -> comprehensive, integrated, aggregate <<I THINK WE SHOULD KEEP THEM AS HOLISTIC  - SUSAN>>
  \item
- Name for our logic?  Holistic logic? What is we have a different take on holistic next year? Necessity triples?
+ Name for our logic?  Holistic logic? What is we have a different take on holistic next year? Necessity triples? 
 \item
-If our \Chainmail is simpler than the TACAS Chainmail, then we need to argue that we can express all TACAS examples
+If our \Chainmail is simpler than the FASE Chainmail, then we need to argue that we can express all FASE examples
  \end{itemize}
   
 The rest of the paper is organised as follows: .... 
