@@ -678,9 +678,9 @@ $[z_i\mapsto v_i]\in\sigma.(\texttt{local})$ for all $1 \leq i \leq n$
 
 \Chainmail generalizes holistic properties about internal data 
 across execution. To do this we define syntactic forms for 
-\emph{Holistic Guarantees} in Fig. \ref{f:holistic-syntax}.
-We express provability of satisfaction of Holistic Guarantees as $\satisfies{M}{H}$.
-That is, a module $M$ satisfies a holistic guarantee $H$. This allows 
+\emph{Necessity Specifications} in Fig. \ref{f:holistic-syntax}.
+We express provability of satisfaction of Necessity Specifications as $\satisfies{M}{H}$.
+That is, a module $M$ satisfies a necessity specification $H$. This allows 
 the construction of proofs without considering either the details 
 of the program configuration or the external client module.
 
@@ -688,7 +688,7 @@ of the program configuration or the external client module.
 \footnotesize
 \[
 \begin{syntax}
-\syntaxElement{H}{Holistic Guarantee}
+\syntaxElement{H}{Necessity Specification}
 		{
 		\syntaxline
 				{\onlyIf{A_1}{A_2}{A_3}}
@@ -703,30 +703,63 @@ of the program configuration or the external client module.
 \endSyntaxElement\\
 \end{syntax}
 \]
-\caption{Syntax for Holistic Guarantees}
+\caption{Syntax for Necessity Specifications}
 \label{f:holistic-syntax}
 \end{figure}
-\subsubsection{Only Through/Only If/Only-If Single}
 
-\begin{enumerate}
-\item
-\emph{Only Through} [$\onlyThrough{A_1}{A_2}{A}$]: If a program execution starts at some $A_1$ state, and reaches some $A_2$ state, then program execution must have passed through some $A$ state.\\
-e.g.if the balance of the bank account changes over time, then the paths connecting the two states must contain 
-an intermediate program state where the balance is changed.
-\item
-\emph{Only If} [$\onlyIf{A_1}{A_2}{A}$]: If program execution starts at some $A_1$ state, and reaches some $A_2$ state, 
-then the original program state must have also satisfied $A$.\\
+\subsubsection{Only If}
+[$\onlyIf{A_1}{A_2}{A}$]: If program execution starts at some state $A_1$, and reaches some state $A_2$, 
+then the original program state must have also satisfied $A$.
 e.g. if the balance of a bank account changes over time, then there must be some external object in the current 
-program state that has access to the account.
-\item
-\emph{Single-Step Only If} [$\onlyIfSingle{A_1}{A_2}{A}$]: If program execution starts at some $A_1$ state, and reaches some $A_2$ state after a single execution step, 
-then the original program state must have also satisfied $A$.\\
-e.g. if the balance of a bank account changes over a single execution step, then that execution step must be a method call to the account.
-\end{enumerate}
+program state that has access to the account's password.
 
+We give the definition of ``only if'' in Def. \ref{def:oi}.
+\begin{definition}[\textsc{Only If}]
+\label{def:oi}
+$\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ if and only if
+$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
+\begin{itemize}
+\item
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
+\item
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
+\item
+$\reductions{M}{M'}{\sigma_1}{\sigma_2}$
+\end{itemize}
+then $\satisfiesA{M}{M'}{\sigma_1}{A}$
+\end{definition} 
+
+\subsubsection{Single-Step Only If}
+[$\onlyIfSingle{A_1}{A_2}{A}$]: If program execution starts at some state $A_1$, and reaches some state $A_2$ after a single execution step, 
+then the original program state must have also satisfied $A$.
+e.g. if the balance of a bank account changes over a single execution step, then that execution step must be a method call to the bank \prg{transfer} method.
+
+We give the definition of ``single-step only if'' in Def. \ref{def:oi-single}.
+\begin{definition}[\textsc{Only If Single-Step}]
+\label{def:oi-single}
+$\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$ if and only if
+$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
+\begin{itemize}
+\item
+$\textit{Arising}(M, M', \sigma_1)$
+\item
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
+\item
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
+\item
+$\reduction{M}{M'}{\sigma_1}{\sigma_2}$
+\end{itemize}
+then $\satisfiesA{M}{M'}{\sigma_1}{A}$
+\end{definition}
+
+\subsubsection{Only Through}
+[$\onlyThrough{A_1}{A_2}{A}$]: If a program execution starts at some $A_1$ state, and reaches some $A_2$ state, then program execution must have passed through some $A$ state.\\
+e.g.if the balance of an account changes over time, then the bank's \prg{transfer} method must have been called 
+in some intermediate state.
 We give the definition of ``only  through'' in Def. \ref{def:ot}. Note 
 that the intermediate state where $A$ is true might be the initial state ($\sigma_1$),
 or final state ($\sigma_2$). 
+
 \begin{definition}[\textsc{Only Through}]
 \label{def:ot}
 $\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ if and only if
@@ -748,40 +781,6 @@ $\reductions{M}{M'}{\sigma}{\sigma_2}$
 \item
 $\satisfiesA{M}{M'}{\sigma}{A}$
 \end{itemize}
-\end{definition}
-
-We give the definition of ``only if'' in Def. \ref{def:oi}.
-\begin{definition}[\textsc{Only If}]
-\label{def:oi}
-$\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ if and only if
-$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-\begin{itemize}
-\item
-$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
-\item
-$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
-\item
-$\reductions{M}{M'}{\sigma_1}{\sigma_2}$
-\end{itemize}
-then $\satisfiesA{M}{M'}{\sigma_1}{A}$
-\end{definition} 
-
-We give the definition of ``single-step only if'' in Def. \ref{def:oi-single}.
-\begin{definition}[\textsc{Only If Single-Step}]
-\label{def:oi-single}
-$\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$ if and only if
-$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-\begin{itemize}
-\item
-$\textit{Arising}(M, M', \sigma_1)$
-\item
-$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
-\item
-$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
-\item
-$\reduction{M}{M'}{\sigma_1}{\sigma_2}$
-\end{itemize}
-then $\satisfiesA{M}{M'}{\sigma_1}{A}$
 \end{definition}
 
 \subsection{Encapsulation}
