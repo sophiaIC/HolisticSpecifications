@@ -153,6 +153,8 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
 
 where "M '∙' σ '⊢' e1 '↪' e2":= (evaluate M σ e1 e2).
 
+Hint Constructors evaluate : exp_db.
+
 Close Scope Z_scope.
 
 Lemma evaluation_unique :

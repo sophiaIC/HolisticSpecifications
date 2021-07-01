@@ -644,7 +644,7 @@ Notation "n '≔m' α '▸' m '⟨' args '⟩'" := (call n α m args)(at level 4
 Notation "'constr' C '⟨' fs '⟩'" := (new C fs)(at level 40).
 
 Inductive block : Type :=
-| b_rtrn : value -> block
+| b_rtrn : name -> block
 | b_stmt : stmt -> block -> block.
 
 Inductive continuation :=

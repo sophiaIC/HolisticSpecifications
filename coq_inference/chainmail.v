@@ -11,7 +11,7 @@ Module Chainmail(L : LanguageDef).
 
   Import L.
   Module L_Semantics := AbstractOperationalSemantics(L).
-  Import L_Semantics.
+  Export L_Semantics.
 
   Declare Scope chainmail_scope.
 
@@ -178,7 +178,7 @@ Module Chainmail(L : LanguageDef).
   | a_acc   : a_val -> a_val -> asrt
 
   (** Control: *)
-  | a_call  : a_val -> a_val -> a_mth -> partial_map name a_val  -> asrt
+  | a_call  : a_val -> a_val -> mth -> partial_map name a_val  -> asrt
 
   (** Viewpoint: *)
   | a_extrn : a_val -> asrt
@@ -267,32 +267,32 @@ Module Chainmail(L : LanguageDef).
                                    ⟦ x ↦ v_ α2 ⟧_∈ ϕ.(local)) ->
                              has_access (χ, ψ) (a_ α1) (a_ α2).
 
-  Inductive makes_call : config -> a_val -> a_val -> a_mth -> partial_map name a_val ->
+  Inductive makes_call : config -> a_val -> a_val -> mth -> partial_map name a_val ->
                          Prop :=
   | method_call : forall χ lcl b ψ x y m args α1 α2,
       ⟦ y ↦ (v_ α2) ⟧_∈ lcl ->
       makes_call (χ, frm α1 lcl (c_ call x y m args ;; b) :: ψ)
                  (a_ α1)
                  (a_ α2)
-                 (am_ m)
+                 m
                  ((fun v => Some (av_ v)) ∘ (lcl ∘ args)).
 
-  Inductive is_internal : mdl -> config -> a_val -> Prop :=
+  Inductive internal_obj : mdl -> config -> a_val -> Prop :=
   | is_int : forall M χ ψ α o, ⟦ α ↦ o ⟧_∈ χ ->
                           (cname o) ∈ M ->
-                          is_internal M (χ, ψ) (a_ α).
+                          internal_obj M (χ, ψ) (a_ α).
 
-  Inductive is_external : mdl -> config -> a_val -> Prop :=
+  Inductive external_obj : mdl -> config -> a_val -> Prop :=
   | is_ext : forall M χ ψ α o, ⟦ α ↦ o ⟧_∈ χ ->
                           (cname o) ∉ M ->
-                          is_external M (χ, ψ) (a_ α).
+                          external_obj M (χ, ψ) (a_ α).
 
   Hint Constructors exp_satisfaction : chainmail_db.
   Hint Constructors has_class : chainmail_db.
   Hint Constructors has_access : chainmail_db.
   Hint Constructors makes_call : chainmail_db.
-  Hint Constructors is_internal : chainmail_db.
-  Hint Constructors is_external : chainmail_db.
+  Hint Constructors internal_obj : chainmail_db.
+  Hint Constructors external_obj : chainmail_db.
 
   Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
 
@@ -471,7 +471,7 @@ Module Chainmail(L : LanguageDef).
    *)
    *)
   (** Viewpoint: *)
-  | sat_extrn : forall M1 M2 σ a, is_external M1 σ a ->
+  | sat_extrn : forall M1 M2 σ a, external_obj M1 σ a ->
                              M1 ⦂ M2 ◎ σ ⊨ (a external)
   (**
 [[[
@@ -481,7 +481,7 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_intrn : forall M1 M2 σ a, is_internal M1 σ a ->
+  | sat_intrn : forall M1 M2 σ a, internal_obj M1 σ a ->
                              M1 ⦂ M2 ◎ σ ⊨ (a internal)
   (**
 [[[
@@ -619,7 +619,7 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_extrn : forall M1 M2 σ a, ~ is_external M1 σ a ->
+  | nsat_extrn : forall M1 M2 σ a, ~ external_obj M1 σ a ->
                               M1 ⦂ M2 ◎ σ ⊭ a_extrn a
   (**
 [[[
@@ -629,7 +629,7 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_intrn : forall M1 M2 σ a, ~ is_internal M1 σ a ->
+  | nsat_intrn : forall M1 M2 σ a, ~ internal_obj M1 σ a ->
                               M1 ⦂ M2 ◎ σ ⊭ (a internal)
   (**
 [[[

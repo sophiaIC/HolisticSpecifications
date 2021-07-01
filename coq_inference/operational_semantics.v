@@ -43,10 +43,11 @@ Module AbstractOperationalSemantics(L : LanguageDef).
         ⤳
         (χ, (frm α (lcl ∘ args) (c_ body)) :: (frm self lcl (n ≔♢ ;; b) :: ψ))
 
-  | r_rtrn_1 : forall M χ self1 lcl1 v self2 lcl2 x b ψ,
-      visible_r M (χ, frm self1 lcl1 (c_rtrn v) :: frm self2 lcl2 (x ≔♢ ;; b) :: ψ) self1 v ->
+  | r_rtrn_1 : forall M χ self1 lcl1 y v self2 lcl2 x b ψ,
+      visible_r M (χ, frm self1 lcl1 (c_rtrn y) :: frm self2 lcl2 (x ≔♢ ;; b) :: ψ) self1 v ->
+      ⟦ y ↦ v ⟧_∈ lcl1 ->
       M ∙
-        (χ, (frm self1 lcl1 (c_rtrn v)) :: (frm self2 lcl2 (x ≔♢ ;; b)) :: ψ)
+        (χ, (frm self1 lcl1 (c_rtrn y)) :: (frm self2 lcl2 (x ≔♢ ;; b)) :: ψ)
         ⤳
         (χ, (frm self2 (update x v lcl2) (c_ b)) :: ψ)
 

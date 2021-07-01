@@ -6,6 +6,7 @@ Require Import exp.
 Require Import exp_properties.
 Require Import operational_semantics.
 Require Import chainmail.
+Require Import classical.
 Require Import List.
 Require Import String.
 Open Scope string_scope.
@@ -15,10 +16,8 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Module Hoare(L : LanguageDef).
 
   Import L.
-  Module L_Semantics := AbstractOperationalSemantics(L).
-  Export L_Semantics.
-  Module L_Chainmail := Chainmail(L).
-  Export L_Chainmail.
+  Module L_Classical := ClassicalProperties(L).
+  Export L_Classical.
 
   Open Scope reduce_scope.
   Open Scope chainmail_scope.
