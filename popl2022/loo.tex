@@ -1,0 +1,411 @@
+
+\section{\Loo}
+\label{app:loo}
+
+
+We introduce \Loo, a simple, typed, class-based, object oriented language that underlies the necessary specifications
+introduced in this paper. \Loo includes ghost fields, recursive definitions that may only be
+used in the specification language.
+While typed, we do not define \Loo's
+full type system, however we assume several properties enforced by the type system, including 
+simple ownership properties:
+\begin{itemize}
+\item
+Method calls may not be made to external, non-library methods.
+\item
+Classes may be annotated as \texttt{inside} or \texttt{boundary}, and objects of \texttt{inside} classes may not be returned by methods of \texttt{boundary} classes.
+\item
+Ghost fields may be annotated as \texttt{intrnl} and thus may only include and be passed references to objects belonging to module internal classes.
+\end{itemize}
+These encapsulation properties are easily enforceable, and we
+do not define the type system as ownership types have been 
+well covered in the literature. 
+We specifically use a simple ownership system to model 
+encapsulation as the theory has been well established by others, 
+however there is no reason other encapsulation mechanisms could 
+not be substituted without affecting the Necessity Logic that 
+is the central contribution of this paper.
+
+\subsubsection{\Loo Syntax}
+The syntax of \Loo is given in Fig. \ref{f:loo-syntax}.
+\Loo modules ($M$) map class names ($C$) to class definitions ($\textit{ClassDef}$).
+A class definition consists of a list of a class annotation ($\texttt{inside}$ or $\texttt{boundary}$),
+a list of field definitions, ghost field definitions, and method definitions.
+A program configuration ($\sigma$) is represented as a heap ($\chi$), stack ($\psi$) pair, 
+where a heap is a map from addresses ($\alpha$) to objects ($o$), and a stack is a non-empty list of frames ($\phi$). A frame consists of a local variable
+map and a continuation ($c$) that represents the statements that are yet to be executed ($s$),
+or a hole waiting to be filled by a method return in the frame above ($x := \bullet; s$).
+A statement is either a field read ($x := y.f$), a field write ($x.f := y$), a method call
+($x := y.m(\overline{z})$), a constructor call ($\texttt{new}\ C(\overline{x})$), a method return statement
+($\texttt{return}\ x$), or a sequence of statements ($s;\ s$).
+
+\Loo also includes syntax for expressions $e$ that may only be used in writing
+specifications or the definition of ghost fields.
+
+
+\begin{figure}[t]
+\footnotesize
+\[
+\begin{syntax}
+\syntaxID{x, y, z}{Variable}
+\syntaxID{C, D}{Class Id.}
+\syntaxElement{T}{Type}
+		{
+		\syntaxline
+				{\_}
+				{C}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\syntaxID{f}{Field Id.}
+\syntaxID{g}{Ghost Field Id.}
+\syntaxID{m}{Method Id.}
+\syntaxID{\alpha}{Address Id.}
+\syntaxInSet{i}{\IntSet}{Integer}
+\syntaxElement{v}{Value}
+		{
+		\syntaxline
+				{\alpha}
+				{i}
+				{\true}
+				{\false}
+				{\nul}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\syntaxElement{e}{Expression}
+		{
+		\syntaxline
+				{x}
+				{v}
+				{e + e}
+				{e = e}
+				{e < e}
+		\endsyntaxline
+		}
+		{
+		\syntaxline
+				{\texttt{if}\ e\ \texttt{then}\ e\ \texttt{else}\ e}
+				{e.f}
+				{e.g(e)}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\syntaxElement{o}{Object}
+		{\{\texttt{class}:=C;\ \texttt{flds}:=\overline{f \mapsto v} \}}
+\endSyntaxElement\\
+\syntaxElement{s}{Statement}
+		{
+		\syntaxline
+				{x:=y.f}
+				{x.f:=y}
+				{x:=y.m(\overline{z})}
+		\endsyntaxline
+		}
+		{
+		\syntaxline
+				{\new{C}{\overline{x}}}
+				{\return{x}}
+				{s;\ s}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\syntaxElement{c}{Continuation}
+		{
+		\syntaxline
+				{s}
+				{x:=\bullet; s}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\syntaxElement{\chi}{Heap}
+		{\overline{\alpha \mapsto o}}
+\endSyntaxElement\\
+\syntaxElement{\phi}{Frame}
+		{\{\texttt{local}:=\overline{x\mapsto v};\ \texttt{contn}:=c\}}
+\endSyntaxElement\\
+\syntaxElement{\psi}{Stack}
+		{\syntaxline{\phi}{\phi : \psi}\endsyntaxline}
+\endSyntaxElement\\
+\syntaxElement{\sigma}{Program Config.}
+		{(\texttt{heap}:=\chi,\texttt{stack}:=\psi)}
+\endSyntaxElement\\
+\syntaxElement{mth}{Method Def.}
+		{
+		\texttt{method}\ m\ (\overline{x : T})\{\ s\ \}
+		}
+\endSyntaxElement\\
+\syntaxElement{fld}{Field Def.}
+		{\syntaxline
+			{\texttt{field}\ f\ :\ T}
+		\endsyntaxline}
+\endSyntaxElement\\
+\syntaxElement{gfld}{Ghost Field Def.}
+		{\syntaxline
+			{\texttt{ghost}\ g\ (x : T)\{\ e\ \} : T}
+			{\texttt{ghost}\ \texttt{intrnl}\ g\ (x : T)\{\ e\ \} : T}
+		\endsyntaxline}
+\endSyntaxElement\\
+\syntaxElement{An}{Class Annotation}
+		{\syntaxline{\texttt{inside}}{\texttt{boundary}}\endsyntaxline}
+\endSyntaxElement\\
+\syntaxElement{CDef}{Class Def.}
+		{
+		An\ \texttt{class}\ C\ \{\ \texttt{constr}:= (\overline{x : T})\{s\};\ \texttt{flds}:=\overline{fld};\ \texttt{gflds}:=\overline{gfld};\ \texttt{mths}:=\overline{mth}\ \}
+		}
+\endSyntaxElement\\
+\syntaxElement{Mdl}{Module Def.}
+		{
+		\syntaxline{\overline{C\ \mapsto\ ClassDef}}\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+\caption{\Loo Syntax}
+\label{f:loo-syntax}
+\end{figure}
+
+\subsubsection{Semantics}
+\Loo is a simple object oriented language, and the operational semantics 
+(given in Fig. \ref{f:loo-semantics} and discussed later)
+do not introduce any novel or surprising features. The operational 
+semantics make use of several helper definitions that we 
+define here.
+
+We provide a definition of reference interpretation in Def. \ref{def:interpret}
+\begin{definition}
+\label{def:interpret}
+For a program configuration $\sigma = (\chi, \phi : \psi)$, we provide the following function definitions:
+\begin{itemize}
+\item
+$\interpret{\sigma}{x}\ \triangleq\ \phi.(\texttt{local})(x)$
+\item
+$\interpret{\sigma}{\alpha.f}\ \triangleq\ \chi(\alpha).(\texttt{flds})(f)$
+\item
+$\interpret{\sigma}{x.f}\ \triangleq\ \interpret{\sigma}{\alpha.f}$ where $\interpret{\sigma}{x}=\alpha$
+\end{itemize}
+\end{definition}
+That is, a variable $x$, or a field access on a variable $x.f$ 
+has an interpretation within a program configuration of value $v$
+if $x$ maps to $v$ in the local variable map, or the field
+$f$ of the object identified by $x$ points to $v$.
+
+Definition Def. \ref{def:class-lookup} defines the class lookup function an object 
+identified by variable $x$.
+\begin{definition}[Class Lookup]
+\label{def:class-lookup}
+For program configuration $\sigma = (\chi, \phi : \psi)$, class lookup is defined as 
+$$\class{\sigma}{x}\ \triangleq\ \chi(\interpret{\sigma}{x}).(\texttt{class})$$
+\end{definition}
+
+Definition Def. \ref{def:meth-lookup} defines the method lookup function for a method
+call $m$ on an object of class $C$.
+\begin{definition}[Method Lookup]
+\label{def:meth-lookup}
+For module $M$, class $C$, and method name $m$, method lookup is defined as 
+$$\meth{M}{C}{m}\ \triangleq\ M(C).\texttt{mths}(m)$$
+\end{definition}
+
+Fig. \ref{f:loo-semantics} gives the operational semantics of \Loo. 
+Program configuration $\sigma_1$ reduces to $\sigma_2$ in the context of
+module $M$ if $\exec{M}{\sigma_1}{\sigma_2}$. The semantics in Fig. \ref{f:loo-semantics}
+are unsurprising, but it is notable that reads (\textsc{Read}) and writes (\textsc{Write})
+are restricted to the class that the field belongs to.
+\begin{figure}[t]
+\begin{minipage}{\textwidth}
+\begin{minipage}{\textwidth}
+\footnotesize
+\begin{mathpar}
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \psi)\\
+	\sigma_2 = (\chi, \phi_2 : \phi_1' : \psi)\\
+	\phi_1.(\texttt{contn}) = (x := y.m(\overline{z}); s)\\
+	\phi_1' = \phi_1[\texttt{contn} := (x := \bullet; s)]\\
+	\meth{M}{\class{\sigma_1}{x}}{m} = m(\overline{p : T})\{body\}\\
+	\phi_2 = \{\texttt{local}:= ([\texttt{this}\ \mapsto\ \interpret{\sigma_1}{x}]\overline{[p_i\ \mapsto\ \interpret{\sigma_1}{z_i}]}), \texttt{contn}:=body\}
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	\quad(\textsc{Call})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \psi) \\
+	\sigma_2 = (\chi, \phi_2 : \psi) \\
+	\phi_1.(\texttt{contn}) = (x := y.f; s)\\
+	\interpret{\sigma_1}{x.f} = v \\
+	\phi_2 = \{\texttt{local}:=\phi_1.(\texttt{local})[x\ \mapsto\ v],\ \texttt{contn}:=s\}\\
+	\class{\sigma_1}{\this} = \class{\sigma_1}{y}
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	\quad(\textsc{Read})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi_1, \phi_1 : \psi) \\
+	\sigma_2 = (\chi_2, \phi_2 : \psi) \\
+	\phi_1.(\texttt{contn}) = (x.f := y; s)\\
+	\interpret{\sigma_1}{y} = v \\
+	\phi_2 = \{\texttt{local}:=\phi_1.(\texttt{local}),\ \texttt{contn}:=s\}\\
+	\chi_2 = \chi_1[\interpret{x}{\sigma_1}.f \mapsto\ v]\\
+	\class{\sigma_1}{\this} = \class{\sigma_2}{x}
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	{}
+	\quad(\textsc{Write})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi, \phi : \psi) \\
+	\phi.(\texttt{contn}) = (x := \texttt{new}\ C(\overline{z}); s)\\
+	M(C).(\texttt{constr}) = (\overline{p : T})\{ s' \} \\
+	\phi' = \{\texttt{local}:=[\texttt{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \texttt{contn} := s'\}\\
+	\sigma_2 = (\chi[\alpha\ \mapsto\ \{\texttt{class}:=C, \texttt{flds}:=\overline{f\ \mapsto\ \nul}], \phi' : \phi[\texttt{contn}\ :=\ (x := \bullet; s)] : \psi)
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	\quad(\textsc{New})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \phi_2 : \psi) \\
+	\phi_1.(\texttt{contn}) = (\texttt{return}\ x; s)\ \textit{or}\ \phi_1.(\texttt{contn}) = (\texttt{return}\ x)\\
+	\phi_2.(\texttt{contn}) = (y := \bullet; s)\\
+	\sigma_2 = (\chi, \phi_2[y\ \mapsto\ \interpret{\sigma_1}{x}] : \psi)
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	{}
+	\quad(\textsc{Return})
+\end{mathpar}
+\caption{\Loo operational Semantics}
+\label{f:loo-semantics}
+\end{minipage}
+\begin{minipage}{\textwidth}
+\footnotesize
+\begin{mathpar}
+\infer
+		{}
+		{\eval{M}{\sigma}{v}{v}}
+		\quad(\textsc{E-Val})
+		\and
+\infer
+		{}
+		{\eval{M}{\sigma}{x}{\interpret{\sigma}{x}}}
+		\quad(\textsc{E-Var})
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{i_1}\\
+		\eval{M}{\sigma}{e_2}{i_2}\\
+		i_1 + i_2 = i
+		}
+		{
+		\eval{M}{\sigma}{e_1 + e_2}{i}
+		}
+		\quad(\textsc{E-Add})
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{v}\\
+		\eval{M}{\sigma}{e_2}{v}
+		}
+		{
+		\eval{M}{\sigma}{e_1 = e_2}{\true}
+		}
+		\quad(\textsc{E-Eq}_1)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{v_1}\\
+		\eval{M}{\sigma}{e_2}{v_2}\\
+		v_1 \neq\ v_2
+		}
+		{
+		\eval{M}{\sigma}{e_1 = e_2}{\false}
+		}
+		\quad(\textsc{E-Eq}_2)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e}{\true}\\
+		\eval{M}{\sigma}{e_1}{v}
+		}
+		{
+		\eval{M}{\sigma}{\ifthenelse{e}{e_1}{e_2}}{v}
+		}
+		\quad(\textsc{E-If}_1)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e}{\false}\\
+		\eval{M}{\sigma}{e_2}{v}
+		}
+		{
+		\eval{M}{\sigma}{\ifthenelse{e}{e_1}{e_2}}{v}
+		}
+		\quad(\textsc{E-If}_2)
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e}{\alpha}
+		}
+		{
+		\eval{M}{\sigma}{e.f}{\interpret{\sigma}{\alpha.f}}
+		}
+		\quad(\textsc{E-Field})
+		\and
+\infer
+		{
+		\eval{M}{\sigma}{e_1}{\alpha}\\
+		\eval{M}{\sigma}{e_2}{v'}\\
+		\texttt{ghost}\ g(x : T)\{e\} : T'\ \in\ M(\class{\sigma}{\alpha}).(\texttt{gflds})\\
+		\eval{M}{\sigma}{[v'/x]e}{v}
+		}
+		{
+		\eval{M}{\sigma}{e_1.g(e_2)}{v}
+		}
+		\quad(\textsc{E-Ghost})
+\end{mathpar}
+\caption{\Loo expression evaluation}
+\label{f:evaluation}
+\end{minipage}
+\end{minipage}
+\end{figure}
+
+While the small-step operational semantics of \Loo is given in Fig. \ref{f:loo-semantics},
+specification satisfaction is defined over an abstracted notion of 
+execution that models the open world, called \emph{module pair execution}. 
+That is, execution occurs in the context of not just an internal, trusted module, but 
+an external, untrusted module. We borrow the definition of pair execution 
+from \citeauthor{FASE}, along with the related definition of module linking, given in Def. \ref{def:linking}.
+\begin{definition}
+\label{def:linking}
+For all modules $M_1$ and $M_2$, if the domains of $M_1$ and $M_2$ are disjoint, 
+we define the module linking function as $M_1\ \circ\ M_2\ \triangleq\ M_1\ \cup\ M_2$.
+\end{definition}
+That is, given an internal, trusted module $M_1$, and an external, untrusted module $M_2$, 
+we take their linking as the union of the two if their domains are disjoint.
+
+We give the semantics of module pair execution in Def. \ref{def:pair-reduce}
+\begin{definition}[Module Pair Execution]
+\label{def:pair-reduce}
+For all internal modules $M_1$, external modules $M_2$, and program configurations $\sigma$ and $\sigma'$, 
+we say that $\reduction{M_1}{M_2}{\sigma}{\sigma'}$ if and only if
+\begin{itemize}
+\item
+$\class{\sigma}{\sigma.(\texttt{this})}\ \in\ M_2$ and
+\item
+$\class{\sigma'}{\sigma'.(\texttt{this})}\ \in\ M_2$ and 
+\end{itemize} 
+and
+\begin{itemize}
+\item
+$\exec{M_1\ \circ\ M_2}{\sigma}{\sigma'}$ or
+\item
+$M_1\ \circ\ M_2,\ \sigma \leadsto\ \sigma_1\ \leadsto\ \ldots\ \sigma_n\ \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.(\texttt{this})}\ \in\ M_1$ for all $1\ \leq\ i\ \leq\ n$
+\end{itemize}
+\end{definition}
+
+Finally, we provide a semantics for expression evaluation is given in Fig. \ref{f:evaluation}. 
+That is, given a module $M$ and a program configuration $\sigma$, expression $e$ evaluates to $v$
+if $\eval{M}{\sigma}{e}{v}$. Note, the evaluation of expressions is separate from the operational
+semantics of \Loo, and thus there is no restriction on field access.
