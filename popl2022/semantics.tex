@@ -2,30 +2,98 @@
 \label{s:semantics}
 
 \subsection{\Loo}
-We introduce a simple object-oriented language called \Loo upon 
+We introduce a simple object-oriented language, \Loo, upon 
 which our specification language sits. \Loo is a typical, imperative,
-class based, object oriented language, where a program $\sigma$ consists of a 
+class based, object oriented language. A \Loo program $\sigma$ consists of a 
 heap $\chi$, and a frame stack $\psi$. A frame $\phi$ consists of
 local variable map, and sequence of statements to be executed called 
 a continuation. A statement may create new objects and push them to the heap, 
 perform field reads and writes on objects, and call methods on those objects. 
 Program execution is performed in the context of a module which is a mapping
 of class names to class definitions. Given the simplicity of \Loo, we do not
-define \Loo here, rather we direct the reader to Appendix \ref{app:loo}
+define \Loo here, rather we direct the reader to Appendix \ref{app:loo} for 
+the full syntax and operational semantics. There are several properties 
+of \Loo that are important to the central topic of this paper. Firstly,
+we define two forms of execution for \Loo, one in Figure \ref{f:loo-semantics}
+that is unsurprising and details the execution of specific 
+statements in the language, and a second called \emph{module pair execution} 
+that models that open world, where the components of a program can
+have both known (internal) and unknown (external) provenance.
+\begin{definition}[Module Pair Execution]
+\label{def:pair-reduce}
+For all internal modules $M_1$, external modules $M_2$, and program configurations $\sigma$ and $\sigma'$, 
+we say that $\reduction{M_1}{M_2}{\sigma}{\sigma'}$ if and only if
+\begin{itemize}
+\item
+$\class{\sigma}{\sigma.(\texttt{this})}\ \in\ M_2$ and
+\item
+$\class{\sigma'}{\sigma'.(\texttt{this})}\ \in\ M_2$ and 
+\end{itemize} 
+and
+\begin{itemize}
+\item
+$\exec{M_1\ \circ\ M_2}{\sigma}{\sigma'}$ or
+\item
+$M_1\ \circ\ M_2,\ \sigma \leadsto\ \sigma_1\ \leadsto\ \ldots\ \sigma_n\ \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.(\texttt{this})}\ \in\ M_1$ for all $1\ \leq\ i\ \leq\ n$
+\end{itemize}
+\end{definition}
+The definition of module pair execution makes reference to a function
+$\class{\sigma}{x}$ that is defined in Appendix \ref{app:loo}, and
+is a class lookup function for a specific variable in a specific program.
+Secondly, we reference module linking ($M_1\ \circ\ M_2$), a function
+that results in the union of two disjoint modules.
+
+An \emph{Initial} program configuration contains a single frame 
+with a single local variable \prg{this} pointing to a single object 
+in the heap of class \prg{Object}, and a continuation.
+\begin{definition}[Initial Program Configuration]
+\label{def:initial}
+A program configuration $\sigma$ is said to be an initial configuration ($\initial{\sigma}$)
+if and only if
+\begin{itemize}
+\item
+$\sigma.(\prg{heap}) = [\alpha\ \mapsto\ \{\prg{class}:=Object;\ \prg{flds}:=\emptyset\}]$ and
+\item
+$\sigma.(\prg{stack}) = \{\prg{local}:=[\prg{this}\ \mapsto\ \alpha];\ \prg{contn}:= s\}$
+\end{itemize} 
+for some address $\alpha$ and some statement $s$.
+\end{definition}
+
+An \emph{Arising} program configuration is defined as any program configuration
+that arises from some initial program configuration through module pair execution.
+\begin{definition}[Arising Program Configuration]
+\label{def:arising}
+For internal module $M_1$ and external module $M_2$, a program configuration $\sigma$ is 
+said to be an arising configuration ($\arising{M_1}{M_2}{\sigma}$)
+if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
+$\reductions{M_1}{M_2}{\sigma_0}{\sigma}$
+\end{definition}
+
+Finally, we assume that there is some type system defined for \Loo that enforces several 
+two encapsulation/ownership properties:
+\begin{itemize}
+\item
+Classes can be annotated as either \prg{inside} or \prg{boundary}, where \prg{inside} objects
+may not be returned as method results from \prg{boundary} objects
+\item
+Ghost fields may be optionally annotated as \prg{intrnl}, meaning only references to objects 
+internal to the enclosing may be used in the definition of that ghost field.
+\end{itemize}
+We do not define this type system for two reasons: (1) such a type system is fairly straightforward
+in it's definition, and largely orthogonal to the central topic of this paper, and (2) while we
+specify a type system, we are only interested in the encapsulation properties that it affords,
+and there are several other equally appropriate mechanisms able to provide such encapsulation 
+properties.
+
 
 \subsection{\Chainmail}
 \Chainmail extends expressiveness of standard specification languages
-with assertion forms capturing \emph{permission}, \emph{viewpoint}, and \emph{control}.
-That is, \Chainmail specifications are able to specify which objects have
-access to which other object (\emph{permission}), whether an object's origin
-is internal or external to known code (\emph{viewpoint}), or which objects call which 
-methods (\emph{control}). Chainmail \cite{FASE} 
-is also able to express specifications of these forms, however we have improved
-upon these specification forms by considerably simplifying their semantics.
-We do however exclude several assertion forms that \citeauthor{FASE} does include, 
-namely \emph{space} and \emph{time}. We are still are able to model some
-of the expressiveness of the temporal operators of \citeauthor{FASE} by
-introducing our novel Necessity Logic, the core contribution of this paper.
+with assertion forms capturing key concepts of software security:
+ \emph{permission}, \emph{viewpoint}, and \emph{control}.
+%That is, \Chainmail specifications are able to specify which objects have
+%access to which other object (\emph{permission}), whether an object's origin
+%is internal or external to known code (\emph{viewpoint}), or which objects call which 
+%methods (\emph{control}). 
 
 \subsubsection{Syntax}
 
@@ -97,11 +165,11 @@ $\satisfiesA{M}{M'}{\sigma}{A_2}$
 \item
 $\satisfiesA{M}{M'}{\sigma}{\all{x}{A}}$ iff 
 $\satisfiesA{M}{M'}{\sigma}{[\alpha/x]A}$,
-$\forall \alpha \in \sigma.(\texttt{heap})$
+for all $\alpha \in \sigma.(\texttt{heap})$
 \item
 $\satisfiesA{M}{M'}{\sigma}{\ex{x}{A}}$ iff 
-$\exists \alpha \in \sigma.(\texttt{heap})$ such that 
-$\satisfiesA{M}{M'}{\sigma}{[\alpha/x]A}$
+$\satisfiesA{M}{M'}{\sigma}{[\alpha/x]A}$ for some 
+$\alpha \in \sigma.(\texttt{heap})$
 \item
 $\satisfiesA{M}{M'}{\sigma}{\access{\alpha_1}{\alpha_2}}$ iff 
 \begin{itemize}
@@ -130,6 +198,16 @@ $[z_i\mapsto v_i]\in\sigma.(\texttt{local})$ for all $1 \leq i \leq n$
 \end{itemize}
 \end{itemize}
 \end{definition}
+Chainmail \cite{FASE} 
+is also able to express specifications of \emph{permission}, \emph{viewpoint}, and \emph{control}, however we 
+present a considerably simpler semantics, that does not rely on significant variable renaming,
+or restricting execution to the top frame of the stack. 
+Much of these gains arise from the exclusion of temporal operators
+that \citeauthor{FASE} includes. We model aspects of \emph{time} 
+using the novel Necessity Logic presented in this paper. 
+We also do not include assertions about \emph{space}, and the shape of 
+the heap, as they are not required for either the definition 
+of our Necessity Logic, or expressing the examples we are interested in (Seciton \ref{s:examples}).
 
 %\begin{figure}[t]
 %\begin{mathpar}
@@ -188,13 +266,13 @@ $[z_i\mapsto v_i]\in\sigma.(\texttt{local})$ for all $1 \leq i \leq n$
 
 
 
-\subsection{Holistic Guarantees}
+\subsection{Necessity Specifications}
 \label{s:holistic-guarantees}
 
-\Chainmail generalizes holistic properties about internal data 
-across execution. To do this we define syntactic forms for 
-\emph{Necessity Specifications} in Fig. \ref{f:holistic-syntax}.
-We express provability of satisfaction of Necessity Specifications as $\satisfies{M}{H}$.
+In this Section we define syntactic forms for 
+\emph{Necessity Specifications}. Figure \ref{f:holistic-syntax} 
+gives the syntax.
+We express satisfaction of Necessity Specifications as $\satisfies{M}{H}$.
 That is, a module $M$ satisfies a necessity specification $H$. This allows 
 the construction of proofs without considering either the details 
 of the program configuration or the external client module.
@@ -222,80 +300,82 @@ of the program configuration or the external client module.
 \label{f:holistic-syntax}
 \end{figure}
 
-\subsubsection{Only If}
-[$\onlyIf{A_1}{A_2}{A}$]: If program execution starts at some state $A_1$, and reaches some state $A_2$, 
+\paragraph{Only If}
+[$\onlyIf{A_1}{A_2}{A}$]: If an arising program execution starts at some state $A_1$, and reaches some state $A_2$, 
 then the original program state must have also satisfied $A$.
 e.g. if the balance of a bank account changes over time, then there must be some external object in the current 
 program state that has access to the account's password.
 
-We give the definition of ``only if'' in Def. \ref{def:oi}.
-\begin{definition}[Necessary Specifications]
-\label{def:oi}
-$\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ if and only if
-$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-\begin{itemize}
-\item
-$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
-\item
-$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
-\item
-$\reductions{M}{M'}{\sigma_1}{\sigma_2}$
-\end{itemize}
-then $\satisfiesA{M}{M'}{\sigma_1}{A}$
-\end{definition} 
-
-\subsubsection{Single-Step Only If}
-[$\onlyIfSingle{A_1}{A_2}{A}$]: If program execution starts at some state $A_1$, and reaches some state $A_2$ after a single execution step, 
+\paragraph{Single-Step Only If}
+[$\onlyIfSingle{A_1}{A_2}{A}$]: If an arising program execution starts at some state $A_1$, and reaches some state $A_2$ after a single execution step, 
 then the original program state must have also satisfied $A$.
 e.g. if the balance of a bank account changes over a single execution step, then that execution step must be a method call to the bank \prg{transfer} method.
 
-We give the definition of ``single-step only if'' in Def. \ref{def:oi-single}.
+\paragraph{Only Through}
+[$\onlyThrough{A_1}{A_2}{A}$]: If an arising program execution starts at some $A_1$ state, and reaches some $A_2$ state, then program execution must have passed through some $A$ state.
+e.g. if the balance of an account changes over time, then the bank's \prg{transfer} method must have been called 
+in some intermediate state. We give the definition of ``only  through'' in Def. \ref{def:ot}. Note 
+that the intermediate state where $A$ is true might be the initial state ($\sigma_1$),
+or final state ($\sigma_2$). 
+
+We define the semantics of the Necessity Specifications in Definitions \ref{def:oi}, \ref{def:oi-single}, and \ref{def:ot}.
+\begin{definition}[Only If]
+\label{def:oi}
+$\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ if and only if
+$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
+%\begin{itemize}
+%\item
+$\arising{M}{M'}{\sigma_1}$,
+%\item
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$,
+%\item
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$, and
+%\item
+$\reductions{M}{M'}{\sigma_1}{\sigma_2}$
+%\end{itemize}
+then $\satisfiesA{M}{M'}{\sigma_1}{A}$.
+\end{definition} 
+
 \begin{definition}[\textsc{Only If Single-Step}]
 \label{def:oi-single}
 $\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$ if and only if
 $\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-\begin{itemize}
-\item
-$\textit{Arising}(M, M', \sigma_1)$
-\item
-$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
-\item
-$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
-\item
+%\begin{itemize}
+%\item
+$\arising{M}{M'}{\sigma_1}$,
+%\item
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$,
+%\item
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$, and
+%\item
 $\reduction{M}{M'}{\sigma_1}{\sigma_2}$
-\end{itemize}
+%\end{itemize}
 then $\satisfiesA{M}{M'}{\sigma_1}{A}$
 \end{definition}
-
-\subsubsection{Only Through}
-[$\onlyThrough{A_1}{A_2}{A}$]: If a program execution starts at some $A_1$ state, and reaches some $A_2$ state, then program execution must have passed through some $A$ state.\\
-e.g.if the balance of an account changes over time, then the bank's \prg{transfer} method must have been called 
-in some intermediate state.
-We give the definition of ``only  through'' in Def. \ref{def:ot}. Note 
-that the intermediate state where $A$ is true might be the initial state ($\sigma_1$),
-or final state ($\sigma_2$). 
 
 \begin{definition}[\textsc{Only Through}]
 \label{def:ot}
 $\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ if and only if
 $\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-\begin{itemize}
-\item
-$\satisfiesA{M}{M'}{\sigma_1}{A_1}$
-\item
-$\satisfiesA{M}{M'}{\sigma_2}{A_2}$ and
-\item
+%\begin{itemize}
+%\item
+$\arising{M}{M'}{\sigma_1}$,
+%\item
+$\satisfiesA{M}{M'}{\sigma_1}{A_1}$,
+%\item
+$\satisfiesA{M}{M'}{\sigma_2}{A_2}$, and
+%\item
 $\reductions{M}{M'}{\sigma_1}{\sigma_2}$
-\end{itemize}
+%\end{itemize}
 then $\exists\ \sigma,$ such that
-\begin{itemize}
-\item
-$\reductions{M}{M'}{\sigma_1}{\sigma}$
-\item
-$\reductions{M}{M'}{\sigma}{\sigma_2}$
-\item
-$\satisfiesA{M}{M'}{\sigma}{A}$
-\end{itemize}
+%\begin{itemize}
+%\item
+$\reductions{M}{M'}{\sigma_1}{\sigma}$,
+%\item
+$\reductions{M}{M'}{\sigma}{\sigma_2}$,
+%\item
+$\satisfiesA{M}{M'}{\sigma}{A}$.
+%\end{itemize}
 \end{definition}
 
 \subsection{Encapsulation}
