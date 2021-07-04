@@ -158,11 +158,13 @@ Module Inference(L : LanguageDef).
                                            M ⊢ A1 to A2' onlyThrough A' ->
                                            M ⊢ A1 to A2 ∨ A2 onlyThrough A ∨ A'
   | ot_orE1     : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A ∨ A' ->
-                                       M ⊢ A1 to A' onlyThrough a_exp (e_false) ->
-                                       M ⊢ A1 to A2 onlyThrough A
+                                  M ⊢ A1 ⊇ ¬ A' ->
+                                  M ⊢ A1 to A' onlyThrough a_exp (e_false) ->
+                                  M ⊢ A1 to A2 onlyThrough A
   | ot_orE2     : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A ∨ A' ->
-                                       M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
-                                       M ⊢ A1 to A2 onlyThrough A
+                                  M ⊢ A2 ⊇ ¬ A' ->
+                                  M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
+                                  M ⊢ A1 to A2 onlyThrough A
   | ot_trans1   : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
                                        M ⊢ A1 to A' onlyThrough A ->
                                        M ⊢ A1 to A2 onlyThrough A

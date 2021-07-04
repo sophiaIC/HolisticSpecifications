@@ -87,12 +87,40 @@ Module Soundness(L : LanguageDef).
   Lemma pair_reductions_external_self :
     forall M1 M2 σ1 σ2,
       M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+      external_self M1 M2 σ1 ->
       external_self M1 M2 σ2.
   Proof.
-    intros M1 M2 σ1 σ2 Hred;
+    intros M1 M2 σ1 σ2 Hred Hext;
       induction Hred; auto.
 
+    apply IHHred.
     eapply pair_reduction_external_self; eauto.
+  Qed.
+
+  Lemma external_self_initial :
+    forall σ, initial σ ->
+         forall M1 M2, external_self M1 M2 σ.
+  Proof.
+    intros;
+      unfold initial, external_self in *;
+      destruct_exists_loo;
+      subst.
+    match goal with
+    | [|- exists χ' ϕ' ψ', (?χ'', ?ϕ'' :: ?ψ'') = (χ', ϕ' :: ψ') /\ _ ] =>
+      exists χ'', ϕ'', ψ''
+    end;
+      split;
+      auto.
+    unfold is_external.
+    simpl.
+    repeat map_rewrite.
+    Print link.
+    match goal with
+    | [|- exists χ' ϕ' ψ', (?χ'', ?ϕ'' :: ?ψ'') = (χ', ϕ' :: ψ') /\ _ ] =>
+      exists χ'', ϕ'', ψ''
+    end.
+      split.
+      auto.
   Qed.
 
   Lemma arising_external_self :
@@ -236,7 +264,7 @@ Module Soundness(L : LanguageDef).
     forall M' σ1 σ2, arising M M' σ1 ->
                 M ⦂ M' ◎ σ1 ⊨ A1 ->
                 M ⦂ M' ◎ σ2 ⊨ A2 ->
-                (M ⦂ M' ⦿ σ1 ⤳⋆ σ2 \/ σ1 = σ2) ->
+                M ⦂ M' ⦿ σ1 ⤳⋆ σ2 ->
                 exists σ, (σ = σ1 \/ M ⦂ M' ⦿ σ1 ⤳⋆ σ) /\
                      (σ = σ2 \/ M ⦂ M' ⦿ σ ⤳⋆ σ2) /\
                      M ⦂ M' ◎ σ ⊨ A.
@@ -245,14 +273,14 @@ Module Soundness(L : LanguageDef).
     forall M' σ1 σ2, arising M M' σ1 ->
                 M ⦂ M' ◎ σ1 ⊨ A1 ->
                 M ⦂ M' ◎ σ2 ⊨ A2 ->
-                (M ⦂ M' ⦿ σ1 ⤳⋆ σ2 \/ σ1 = σ2) ->
+                M ⦂ M' ⦿ σ1 ⤳⋆ σ2 ->
                 M ⦂ M' ◎ σ1 ⊨ A.
 
   Definition onlyif1 (M : mdl)(A1 A2 A : asrt):=
     forall M' σ1 σ2, arising M M' σ1 ->
                 M ⦂ M' ◎ σ1 ⊨ A1 ->
                 M ⦂ M' ◎ σ2 ⊨ A2 ->
-                (M ⦂ M' ⦿ σ1 ⤳ σ2 \/ σ1 = σ2) ->
+                M ⦂ M' ⦿ σ1 ⤳ σ2 ->
                 M ⦂ M' ◎ σ1 ⊨ A.
 
   Lemma arising_trans :
@@ -273,10 +301,13 @@ Module Soundness(L : LanguageDef).
 
   Ltac auto_entails :=
     repeat match goal with
-           | [H : _ ⦂ _ ◎ ?σa ⊨ ?Aa,
-                  Hent : _ ⊢ ?Aa ⊇ _,
+           | [H : ?Ma ⦂ ?Mb ◎ ?σa ⊨ ?Aa,
+                  Hent : ?Ma ⊢ ?Aa ⊇ ?Ab,
                          Harr : arising _ _ _ |- _ ] =>
-             apply (entails_implies Hent Harr) in H
+             notHyp (Ma ⦂ Mb ◎ σa ⊨ Ab);
+             let H := fresh in
+             assert (H : Ma ⦂ Mb ◎ σa ⊨ Ab);
+             [apply (entails_implies Hent Harr); auto|]
            end.
 
   Ltac auto_arising :=
@@ -328,6 +359,19 @@ Module Soundness(L : LanguageDef).
                        Ma ⦂ Mb ◎ σ ⊨ A);
           [apply (Hot Mb σa σb Har); auto|]
         end).
+
+  Lemma thing :
+    forall M A1 A2 A,
+      onlythrough M A1 A2 A ->
+      M ⊢ A1 ∧ A2 ⊇ A.
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    a_prop.
+    unfold onlythrough in *.
+    specialize (H M' σ).
+  Qed.
 
   Ltac necessity_soundness_simpl :=
     unfold onlythrough, onlyif, onlyif1;
@@ -403,16 +447,15 @@ Module Soundness(L : LanguageDef).
 
     - necessity_soundness_simpl.
 
-
-      necessity_soundness_simpl.
-
     - necessity_soundness_simpl.
 
     - necessity_soundness_simpl.
 
-    - repeat necessity_soundness_simpl.
+    - necessity_soundness_simpl;
+        necessity_soundness_simpl.
 
-    - repeat necessity_soundness_simpl.
+    - necessity_soundness_simpl;
+        necessity_soundness_simpl.
 
     - necessity_soundness_simpl;
         try solve [match goal with
@@ -441,12 +484,33 @@ Module Soundness(L : LanguageDef).
                    repeat destruct_exists_loo;
                    andDestruct;
                    a_prop].
-      a_prop;
-        repeat disj_split.
-      + exists σ1;
-          eauto.
-      + apply_necessity.
 
+    - necessity_soundness_simpl.
+      + a_prop;
+          repeat disj_split.
+        * eexists;
+            eauto.
+        * apply_necessity;
+            repeat destruct_exists_loo;
+            andDestruct;
+            a_prop.
+      + a_prop;
+          repeat disj_split.
+        * eexists;
+            eauto.
+        * auto_arising.
+          apply_necessity;
+            repeat destruct_exists_loo;
+            andDestruct;
+            a_prop.
+
+    - necessity_soundness_simpl;
+        try solve [repeat destruct_exists_loo;
+                   andDestruct;
+                   repeat disj_split;
+                   subst;
+                   eauto].
+      + 
 
 
   Qed.

@@ -133,8 +133,7 @@ Module AbstractOperationalSemantics(L : LanguageDef).
   Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" (at level 40).
 
   Inductive pair_reductions : mdl -> mdl -> config -> config -> Prop :=
-  | prs_single : forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
-                                     M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2
+  | prs_refl : forall M1 M2 σ, M1 ⦂ M2 ⦿ σ ⤳⋆ σ
 
   | prs_trans : forall M1 M2 σ1 σ σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ ->
                                       M1 ⦂ M2 ⦿ σ ⤳⋆ σ2 ->
