@@ -902,6 +902,42 @@ Module ClassicalProperties(L : LanguageDef).
 
   Hint Resolve entails_implies : chainmail_db.
 
+  Lemma true_satisfied :
+    forall M1 M2 M σ, M1 ⋄ M2 ≜ M ->
+                 exp_satisfaction M1 M2 σ (e_true).
+    intros.
+    eapply exp_sat; eauto with exp_db.
+  Qed.
+
+  Hint Resolve true_satisfied : chainmail_db.
+
+  Lemma false_not_satisfied :
+    forall M1 M2 σ, ~ M1 ⦂ M2 ◎ σ ⊨ (a_exp (e_false)).
+    intros.
+    intro Hcontra;
+      inversion Hcontra;
+      subst.
+    match goal with
+    | [H : exp_satisfaction _ _ _ _ |- _] =>
+      inversion H;
+        subst
+    end.
+    match goal with
+    | [H : evaluate _ _ _ _  |- _] =>
+      inversion H
+    end.
+  Qed.
+
+  Hint Resolve true_satisfied : chainmail_db.
+
+  Lemma false_not_satisfied_corollary :
+    forall M1 M2 σ P, M1 ⦂ M2 ◎ σ ⊨ (a_exp (e_false)) ->
+               P.
+  Proof.
+    intros M1 M2 σ P H;
+      contradiction (false_not_satisfied M1 M2 σ).
+  Qed.
+
   Ltac a_intro :=
     match goal with
     | [|- _ ⦂ _ ◎ _ ⊨ (∀x.[ _])] => apply sat_all; intros; simpl in *
@@ -933,6 +969,9 @@ Module ClassicalProperties(L : LanguageDef).
            | [Ha : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ ?A,
                    Hb : ~ ?M1 ⦂ ?M2 ◎ ?σ ⊭ ?A |- _] =>
              inversion Ha; subst; crush
+
+           | [H : ?M1 ⦂ ?M2 ◎ ?σ ⊨ (a_exp (e_false)) |- ?P] =>
+             apply (false_not_satisfied_corollary M1 M2 σ P H)
            end.
 
   Close Scope chainmail_scope.
