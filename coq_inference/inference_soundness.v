@@ -97,31 +97,9 @@ Module Soundness(L : LanguageDef).
     eapply pair_reduction_external_self; eauto.
   Qed.
 
-  Lemma external_self_initial :
+  Parameter initial_external_self :
     forall σ, initial σ ->
          forall M1 M2, external_self M1 M2 σ.
-  Proof.
-    intros;
-      unfold initial, external_self in *;
-      destruct_exists_loo;
-      subst.
-    match goal with
-    | [|- exists χ' ϕ' ψ', (?χ'', ?ϕ'' :: ?ψ'') = (χ', ϕ' :: ψ') /\ _ ] =>
-      exists χ'', ϕ'', ψ''
-    end;
-      split;
-      auto.
-    unfold is_external.
-    simpl.
-    repeat map_rewrite.
-    Print link.
-    match goal with
-    | [|- exists χ' ϕ' ψ', (?χ'', ?ϕ'' :: ?ψ'') = (χ', ϕ' :: ψ') /\ _ ] =>
-      exists χ'', ϕ'', ψ''
-    end.
-      split.
-      auto.
-  Qed.
 
   Lemma arising_external_self :
     forall M1 M2 σ, arising M1 M2 σ ->
@@ -131,6 +109,10 @@ Module Soundness(L : LanguageDef).
     unfold arising in *;
       destruct_exists_loo;
       andDestruct.
+    match goal with
+    | [H : initial _ |- external_self ?M ?M' _ ] =>
+      apply initial_external_self with (M1:=M)(M2:=M') in H
+    end.
     eapply pair_reductions_external_self; eauto.
   Qed.
 
@@ -359,19 +341,6 @@ Module Soundness(L : LanguageDef).
                        Ma ⦂ Mb ◎ σ ⊨ A);
           [apply (Hot Mb σa σb Har); auto|]
         end).
-
-  Lemma thing :
-    forall M A1 A2 A,
-      onlythrough M A1 A2 A ->
-      M ⊢ A1 ∧ A2 ⊇ A.
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    a_prop.
-    unfold onlythrough in *.
-    specialize (H M' σ).
-  Qed.
 
   Ltac necessity_soundness_simpl :=
     unfold onlythrough, onlyif, onlyif1;
