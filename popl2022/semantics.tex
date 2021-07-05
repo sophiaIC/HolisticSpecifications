@@ -14,11 +14,11 @@ of class names to class definitions. Given the simplicity of \Loo, we do not
 define \Loo here, rather we direct the reader to Appendix \ref{app:loo} for 
 the full syntax and operational semantics. There are several properties 
 of \Loo that are important to the central topic of this paper. Firstly,
-we define two forms of execution for \Loo, one in Figure \ref{f:loo-semantics}
+we define two forms of execution for \Loo, one in Fig. \ref{f:loo-semantics}
 that is unsurprising and details the execution of specific 
 statements in the language, and a second called \emph{module pair execution} 
 that models that open world, where the components of a program can
-have both known (internal) and unknown (external) provenance.
+have both known (\internalO) and unknown (\externalO) provenance.
 \begin{definition}[Module Pair Execution]
 \label{def:pair-reduce}
 For all internal modules $M_1$, external modules $M_2$, and program configurations $\sigma$ and $\sigma'$, 
@@ -69,15 +69,15 @@ if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
 $\reductions{M_1}{M_2}{\sigma_0}{\sigma}$
 \end{definition}
 
-Finally, we assume that there is some type system defined for \Loo that enforces several 
+Finally, we assume that there is some type system defined for \Loo that enforces 
 two encapsulation/ownership properties:
 \begin{itemize}
 \item
-Classes can be annotated as either \prg{inside} or \prg{boundary}, where \prg{inside} objects
-may not be returned as method results from \prg{boundary} objects
+Classes may be optionally annotated as \enclosed, and objects of \enclosed classes
+may not be returned as method results from non-\enclosed objects
 \item
 Ghost fields may be optionally annotated as \prg{intrnl}, meaning only references to objects 
-internal to the enclosing may be used in the definition of that ghost field.
+internal to the defining module may be used in the definition of that ghost field.
 \end{itemize}
 We do not define this type system for two reasons: (1) such a type system is fairly straightforward
 in it's definition, and largely orthogonal to the central topic of this paper, and (2) while we
@@ -132,7 +132,7 @@ with assertion forms capturing key concepts of software security:
 \label{f:chainmail-syntax}
 \end{figure}
 
-Figure \ref{f:chainmail-syntax} gives the assertion syntax of the \Chainmail specification language.
+Fig. \ref{f:chainmail-syntax} gives the assertion syntax of the \Chainmail specification language.
 An assertion may be an expression, a class assertion, the usual connectives and quantifiers, along 
 with several non-standard assertion forms:
 \begin{itemize}
@@ -145,7 +145,7 @@ with several non-standard assertion forms:
 \end{itemize}
 
 \subsubsection{Semantics}
-The semantics of \Chainmail assertions is given in Def. \ref{def:chainmail-semantics}.
+The semantics of \Chainmail assertions is given in Definition \ref{def:chainmail-semantics}.
 \begin{definition}[Satisfaction of \Chainmail Assertions] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a program configuration $\sigma$ with internal module $M$ and external module $M'$ as:
@@ -204,10 +204,10 @@ present a considerably simpler semantics, that does not rely on significant vari
 or restricting execution to the top frame of the stack. 
 Much of these gains arise from the exclusion of temporal operators
 that \citeauthor{FASE} includes. We model aspects of \emph{time} 
-using the novel Necessity Logic presented in this paper. 
+using the novel Logic of Necessity presented in this paper. 
 We also do not include assertions about \emph{space}, and the shape of 
 the heap, as they are not required for either the definition 
-of our Necessity Logic, or expressing the examples we are interested in (Seciton \ref{s:examples}).
+of our Necessity Logic, or expressing the examples we are interested in (see Seciton \ref{s:examples}).
 
 %\begin{figure}[t]
 %\begin{mathpar}
@@ -269,8 +269,8 @@ of our Necessity Logic, or expressing the examples we are interested in (Seciton
 \subsection{Necessity Specifications}
 \label{s:holistic-guarantees}
 
-In this Section we define syntactic forms for 
-\emph{Necessity Specifications}. Figure \ref{f:holistic-syntax} 
+In this Section we define syntactic forms and semantics of
+\emph{Necessity Specifications}. Fig. \ref{f:holistic-syntax} 
 gives the syntax.
 We express satisfaction of Necessity Specifications as $\satisfies{M}{H}$.
 That is, a module $M$ satisfies a necessity specification $H$. This allows 
@@ -314,68 +314,68 @@ e.g. if the balance of a bank account changes over a single execution step, then
 \paragraph{Only Through}
 [$\onlyThrough{A_1}{A_2}{A}$]: If an arising program execution starts at some $A_1$ state, and reaches some $A_2$ state, then program execution must have passed through some $A$ state.
 e.g. if the balance of an account changes over time, then the bank's \prg{transfer} method must have been called 
-in some intermediate state. We give the definition of ``only  through'' in Def. \ref{def:ot}. Note 
+in some intermediate state. We give the definition of ``only  through'' in Definition \ref{def:ot}. Note 
 that the intermediate state where $A$ is true might be the initial state ($\sigma_1$),
 or final state ($\sigma_2$). 
 
 We define the semantics of the Necessity Specifications in Definitions \ref{def:oi}, \ref{def:oi-single}, and \ref{def:ot}.
 \begin{definition}[Only If]
 \label{def:oi}
-$\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ if and only if
-$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-%\begin{itemize}
-%\item
+$\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ if and only if for all
+$M'$, $\sigma_1$, and $\sigma_2$, such that 
+\begin{itemize}
+\item
 $\arising{M}{M'}{\sigma_1}$,
-%\item
+\item
 $\satisfiesA{M}{M'}{\sigma_1}{A_1}$,
-%\item
+\item
 $\satisfiesA{M}{M'}{\sigma_2}{A_2}$, and
-%\item
+\item
 $\reductions{M}{M'}{\sigma_1}{\sigma_2}$
-%\end{itemize}
+\end{itemize}
 then $\satisfiesA{M}{M'}{\sigma_1}{A}$.
 \end{definition} 
 
 \begin{definition}[\textsc{Only If Single-Step}]
 \label{def:oi-single}
-$\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$ if and only if
-$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-%\begin{itemize}
-%\item
+$\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$ if and only if for all
+$M'$, $\sigma_1$, and $\sigma_2$, such that 
+\begin{itemize}
+\item
 $\arising{M}{M'}{\sigma_1}$,
-%\item
+\item
 $\satisfiesA{M}{M'}{\sigma_1}{A_1}$,
-%\item
+\item
 $\satisfiesA{M}{M'}{\sigma_2}{A_2}$, and
-%\item
+\item
 $\reduction{M}{M'}{\sigma_1}{\sigma_2}$
-%\end{itemize}
+\end{itemize}
 then $\satisfiesA{M}{M'}{\sigma_1}{A}$
 \end{definition}
 
 \begin{definition}[\textsc{Only Through}]
 \label{def:ot}
-$\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ if and only if
-$\forall M',\ \sigma_1,\ \sigma_2,$ such that 
-%\begin{itemize}
-%\item
+$\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ if and only if for all
+$M'$, $\sigma_1$, and $\sigma_2$, such that 
+\begin{itemize}
+\item
 $\arising{M}{M'}{\sigma_1}$,
-%\item
+\item
 $\satisfiesA{M}{M'}{\sigma_1}{A_1}$,
-%\item
+\item
 $\satisfiesA{M}{M'}{\sigma_2}{A_2}$, and
-%\item
+\item
 $\reductions{M}{M'}{\sigma_1}{\sigma_2}$
-%\end{itemize}
-then $\exists\ \sigma,$ such that
-%\begin{itemize}
-%\item
+\end{itemize}
+then there exists $\sigma,$ such that
+\begin{itemize}
+\item
 $\reductions{M}{M'}{\sigma_1}{\sigma}$,
-%\item
+\item
 $\reductions{M}{M'}{\sigma}{\sigma_2}$,
-%\item
+\item
 $\satisfiesA{M}{M'}{\sigma}{A}$.
-%\end{itemize}
+\end{itemize}
 \end{definition}
 
 \subsection{Encapsulation}
