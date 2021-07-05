@@ -479,7 +479,7 @@ Module Soundness(L : LanguageDef).
                    repeat disj_split;
                    subst;
                    eauto].
-      + 
+      +  
 
 
   Qed.
