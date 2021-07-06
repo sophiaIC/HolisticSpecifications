@@ -4,7 +4,7 @@
 \subsection{\Loo}
 We introduce a simple object-oriented language, \Loo, upon 
 which our specification language sits. \Loo is a typical, imperative,
-class based, object oriented language. A \Loo program $\sigma$ consists of a 
+class based, object oriented language. A \Loo configuration $\sigma$ consists of a 
 heap $\chi$, and a frame stack $\psi$. A frame $\phi$ consists of
 local variable map, and sequence of statements to be executed called 
 a continuation. A statement may create new objects and push them to the heap, 
@@ -34,7 +34,7 @@ $\class{\sigma'}{\sigma'.\texttt{this}}\ \in\ M_2$ and
 %\item
 %$\exec{M_1\ \circ\ M_2}{\sigma}{\sigma'}$ or
 %\item
-$M_1\ \circ\ M_2,\ \sigma \leadsto\ \sigma_1\ \leadsto\ \ldots\ \sigma_n\ \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\texttt{this}}\ \in\ M_1$ for all $0\ \leq\ i\ \leq\ n$
+$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\texttt{this}} \in M_1$ for all $0 \leq i \leq n$
 %\end{itemize}
 \end{definition}
 The definition of module pair execution makes reference to a function
@@ -42,23 +42,6 @@ $\class{\sigma}{x}$ that is defined in Appendix \ref{app:loo}, and
 is a class lookup function for a specific variable in a specific program.
 Secondly, we reference module linking ($M_1\ \circ\ M_2$), a function
 that results in the union of two disjoint modules.
-
-An \emph{Initial} program configuration contains a single frame 
-with a single local variable \prg{this} pointing to a single object 
-in the heap of class \prg{Object}, and a continuation.
-\begin{definition}[Initial Program Configuration]
-\label{def:initial}
-A program configuration $\sigma$ is said to be an initial configuration ($\initial{\sigma}$)
-if and only if
-\begin{itemize}
-\item
-$\sigma.\prg{heap} = [\alpha\ \mapsto\ \{\prg{class}:=\prg{Object};\ \prg{flds}:=\emptyset\}]$ and
-\item
-$\sigma.\prg{stack} = \{\prg{local}:=[\prg{this}\ \mapsto\ \alpha];\ \prg{contn}:= s\}$
-\end{itemize} 
-for some address $\alpha$ and some statement $s$.
-\end{definition}
-
 An \emph{Arising} program configuration is defined as any program configuration
 that arises from some initial program configuration through module pair execution.
 \begin{definition}[Arising Program Configuration]
@@ -68,22 +51,28 @@ said to be an arising configuration ($\arising{M_1}{M_2}{\sigma}$)
 if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
 $\reductions{M_1}{M_2}{\sigma_0}{\sigma}$
 \end{definition}
+Definition \ref{def:arising} uses the definition for \emph{Initial} configurations 
+the definition of which can be found in Definition \ref{def:initial}. Informally, 
+an initial configuration, heap of which contains a single object of class \prg{Object}, and
+the stack consists of a single frame, where the local variable map contains only the 
+mapping of \prg{this} to the single object, and the continuation is some statement
+to be executed.
 
-Finally, we assume that there is some type system defined for \Loo that enforces 
-two encapsulation properties:
-\begin{itemize}
-\item
-Classes may be optionally annotated as \enclosed, and objects of \enclosed classes
-may not be returned as method results from non-\enclosed objects
-\item
-Ghost fields may be optionally annotated as \prg{intrnl}, meaning only references to objects 
-internal to the defining module may be used in the definition of that ghost field.
-\end{itemize}
-We do not define this type system for two reasons: (1) such a type system is fairly straightforward
-in it's definition, and largely orthogonal to the central topic of this paper, and (2) while we
-specify a type system, we are only interested in the encapsulation properties that it affords,
-and there are several other equally appropriate mechanisms able to provide such encapsulation 
-properties.
+%Finally, we assume that there is some type system defined for \Loo that enforces 
+%two encapsulation properties:
+%\begin{itemize}
+%\item
+%Classes may be optionally annotated as \enclosed, and objects of \enclosed classes
+%may not be returned as method results from non-\enclosed objects
+%\item
+%Ghost fields may be optionally annotated as \prg{intrnl}, meaning only references to objects 
+%internal to the defining module may be used in the definition of that ghost field.
+%\end{itemize}
+%We do not define this type system for two reasons: (1) such a type system is fairly straightforward
+%in it's definition, and largely orthogonal to the central topic of this paper, and (2) while we
+%specify a type system, we are only interested in the encapsulation properties that it affords,
+%and there are several other equally appropriate mechanisms able to provide such encapsulation 
+%properties.
 
 
 \subsection{\Chainmail}
@@ -115,14 +104,14 @@ with assertion forms capturing key concepts of software security:
 		}
 		{
 		\syntaxline
-				{\access{\alpha_1}{\alpha_2}}
-				{\internal{\alpha}}
-				{\external{\alpha}}
+				{\access{x}{y}}
+				{\internal{x}}
+				{\external{x}}
 		\endsyntaxline
 		}
 		{
 		\syntaxline
-				{\calls{\alpha_1}{\alpha_2}{m}{\overline{v}}}
+				{\calls{x}{y}{m}{\overline{z}}}
 		\endsyntaxline
 		}
 \endSyntaxElement\\
@@ -137,64 +126,80 @@ An assertion may be an expression, a class assertion, the usual connectives and 
 with several non-standard assertion forms:
 \begin{itemize}
 \item
-\emph{Permission} ($\access{\alpha_1}{\alpha_2}$): Which objects have access to which other objects (i.e. $\alpha_1$ has access to $\alpha_2$).
+\emph{Permission} ($\access{x}{y}$): Which objects have access to which other objects (i.e. $x$ has access to $y$).
 \item
-\emph{Viewpoint} ($\internal{\alpha}$ and $\external{\alpha}$): Which objects are internal or external to our component.
+\emph{Viewpoint} ($\internal{x}$ and $\external{y}$): Which objects are internal or external to our component.
 \item
-\emph{Control} ($\calls{\alpha_1}{m}{\alpha_2}{\overline{v}}$): Which objects call which functions on which other objects. 
+\emph{Control} ($\calls{x}{m}{y}{\overline{z}}$): Which objects call which functions on which other objects. 
 \end{itemize}
 
 \subsubsection{Semantics}
-The semantics of \Chainmail assertions is given in Definition \ref{def:chainmail-semantics}.
+The semantics of \Chainmail assertions is given in Definition \ref{def:chainmail-semantics}. 
+The definition of the semantics of \Chainmail makes use of several language features of 
+\Loo that can be found in Appendix \ref{app:loo}. Specifically, $\eval{M}{\sigma}{e}{v}$
+is the evaluation relation for expressions, and is interpreted as expression $e$ evaluates
+to value $v$ in the context of program configuration $\sigma$, with module $M$. The full
+semantics of expression evaluation are given in Figure \ref{f:evaluation}. It should 
+be noted that expressions in \Loo may be recursively defined, and thus evaluation may not
+necessarily terminate, however the logic remains classical because recursion is restricted
+to expressions, and not generally to assertions.
+
+Further, Definition \ref{def:chainmail-semantics} uses the interpretation of several variables
+in a specific frame or configuration: i.e. $\interpret{\phi}{x} = v$, meaning that $x$ maps to
+value $v$ in the local variable map of frame $\phi$, and $\interpret{\sigma}{x} = v$ meaning $x$ 
+maps to value $v$ in the top most frame of $\sigma$'s stack.
 \begin{definition}[Satisfaction of \Chainmail Assertions] 
 \label{def:chainmail-semantics}
-We define satisfaction of an assertion $A$ by a program configuration $\sigma$ with internal module $M$ and external module $M'$ as:
+We define satisfaction of an assertion $A$ by a program configuration $\sigma$ with internal module $M$ as:
 \begin{itemize}
 \item
-$\satisfiesA{M}{M'}{\sigma}{e}$ iff $\eval{M \circ M'}{\sigma}{e}{\true}$
+$\satisfiesA{M}{\sigma}{e}$ iff $\eval{M \circ M'}{\sigma}{e}{\true}$
 \item
-$\satisfiesA{M}{M'}{\sigma}{e : C}$ iff $\eval{M \circ M'}{\sigma}{e}{\alpha}$ \textit{and} $\textit{classOf}(\sigma, \alpha) = C$
+$\satisfiesA{M}{\sigma}{e : C}$ iff $\eval{M \circ M'}{\sigma}{e}{\alpha}$ \textit{and} $\textit{classOf}(\sigma, \alpha) = C$
 \item
-$\satisfiesA{M}{M'}{\sigma}{\neg A}$ iff $\notsatisfies{M}{M'}{\sigma}{A}$
+$\satisfiesA{M}{\sigma}{\neg A}$ iff $\notsatisfies{M}{M'}{\sigma}{A}$
 \item
-$\satisfiesA{M}{M'}{\sigma}{A_1\ \wedge\ A_2}$ iff $\satisfiesA{M}{M'}{\sigma}{A_1}$ and 
-$\satisfiesA{M}{M'}{\sigma}{A_2}$
+$\satisfiesA{M}{\sigma}{A_1\ \wedge\ A_2}$ iff $\satisfiesA{M}{\sigma}{A_1}$ and 
+$\satisfiesA{M}{\sigma}{A_2}$
 \item
-$\satisfiesA{M}{M'}{\sigma}{A_1\ \vee\ A_2}$ iff $\satisfiesA{M}{M'}{\sigma}{A_1}$ or 
-$\satisfiesA{M}{M'}{\sigma}{A_2}$
+$\satisfiesA{M}{\sigma}{A_1\ \vee\ A_2}$ iff $\satisfiesA{M}{\sigma}{A_1}$ or 
+$\satisfiesA{M}{\sigma}{A_2}$
 \item
-$\satisfiesA{M}{M'}{\sigma}{\all{x}{A}}$ iff 
-$\satisfiesA{M}{M'}{\sigma}{[\alpha/x]A}$,
+$\satisfiesA{M}{\sigma}{\all{x}{A}}$ iff 
+$\satisfiesA{M}{\sigma'}{A}$,\\
+where $x$ is fresh in $\sigma$ and $\sigma' = \sigma[x \mapsto \alpha]$
 for all $\alpha \in \sigma.\texttt{heap}$
 \item
-$\satisfiesA{M}{M'}{\sigma}{\ex{x}{A}}$ iff 
-$\satisfiesA{M}{M'}{\sigma}{[\alpha/x]A}$ for some 
-$\alpha \in \sigma.\texttt{heap}$
+$\satisfiesA{M}{\sigma}{\ex{x}{A}}$ iff 
+$\satisfiesA{M}{\sigma}{A}$ \\
+where $x$ is fresh in $\sigma$ and $\sigma' = \sigma[x \mapsto \alpha]$
+for some $\alpha \in \sigma.\texttt{heap}$
 \item
-$\satisfiesA{M}{M'}{\sigma}{\access{\alpha_1}{\alpha_2}}$ iff 
+$\satisfiesA{M}{\sigma}{\access{x}{y}}$ iff 
 \begin{itemize}
 \item
-$\exists\ o,\ f$ such that $[\alpha_1\ \mapsto\ o]\ \in\ \sigma.(\texttt{heap})$ and $[f\ \mapsto\ \alpha_2]\ \in\ o.(\texttt{flds})$ or
+$\exists\ f$ such that $\interpret{\sigma}{x.f}={\interpret{\sigma}{y}}$ or
 \item
-$\exists\ \phi,\ x$ such that $\phi \in \sigma.(\texttt{stack})$ and $[x\ \mapsto\ \alpha_2]\in\phi.(\texttt{local})$ and $[\texttt{this}\ \mapsto\ \alpha_1]\in\phi.(\texttt{local})$
+there exists some $\phi$ in the stack of $\sigma$ such that $\interpret{\phi}{x}=\interpret{\phi}{\prg{this}}$ 
+and there exists $z$ such that $\interpret{\phi}{y}=\interpret{\phi}{z}$
 \end{itemize}
 \item
-$\satisfiesA{M}{M'}{\sigma}{\internal{\alpha}}$ iff 
-$\textit{classOf}(\sigma,\alpha) = C$ and $C \in M$
+$\satisfiesA{M}{\sigma}{\internal{x}}$ iff 
+$\textit{classOf}(\sigma,x) \in M$
 \item
-$\satisfiesA{M}{M'}{\sigma}{\external{\alpha}}$ iff 
-$\textit{classOf}(\sigma,\alpha) = C$ and $C \not\in M$
+$\satisfiesA{M}{\sigma}{\external{x}}$ iff 
+$\textit{classOf}(\sigma,x) \not\in M$
 \item
-$\satisfiesA{M}{M'}{\sigma}{\calls{\alpha_1}{\alpha_2}{m}{v_1, \ldots, v_n}}$ iff
+$\satisfiesA{M}{\sigma}{\calls{x}{y}{m}{z_1, \ldots, z_n}}$ iff
 \begin{itemize}
 \item
-$\sigma.(\texttt{contn} = x := y.m(z_1,\ldots,z_n))$ and 
+$\sigma.\texttt{contn} = (\_ := y'.m(z'_1,\ldots,z'_n))$ and 
 \item
-$[\texttt{this}\mapsto \alpha_1]\in\sigma.(\texttt{local})$ and
+$\interpret{\sigma}{x} = \interpret{\sigma}{\prg{this}}$ and
 \item
-$[y\mapsto \alpha_2]\in\sigma.(\texttt{local})$ and
+$\interpret{\sigma}{x} = \interpret{\sigma}{\prg{this}}$ and
 \item
-$[z_i\mapsto v_i]\in\sigma.(\texttt{local})$ for all $1 \leq i \leq n$
+$\interpret{\sigma}{z_i} = \interpret{\sigma}{z'_i}$ for all $1 \leq i \leq n$
 \end{itemize}
 \end{itemize}
 \end{definition}
