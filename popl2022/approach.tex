@@ -1,8 +1,10 @@
-\section{Outline of our approach -- should go somewhere}
+\renewcommand{\sophia}[2][]{\ponders{Sophia}{blue}{#1} \textcolor{blue}{#2}\xspace}
 
-\subsection{Internal and External Calls} 
-Our work concentrates on guarantees applicable in the \emph{open} setting; that is, a certain module
-$M$ is programmed in such a robust manner\footnote{SD: We had agreed no to say "robust", but I think it is OK here. Alternatively, say defensively robust?} that execution of $M$ together with \emph{any} \externalM 
+\section{Outline of our approach}
+
+\subsection{Internal and External Modules, Objects, and Calls} 
+Our work concentrates on guarantees made for the \emph{open} setting; that is, a certain module
+$M$ is programmed in such a robust manner\sophia[We had agreed no to say "robust", but I think it is OK here. Alternatively, say defensively robust?]{} that execution of $M$ together with \emph{any} \externalM 
 module $M'$ will uphold these guarantees. In the tradition of
 visible states semantics, we are  only interested in upholding the guarantees while 
 $M'$, the  \externalM module,  is executing.   
@@ -13,95 +15,123 @@ distinguish between \emph{\internalC} calls, i.e. calls made % from \externalO o
  to \externalC objects. % We are less
 % interested in calls made from \internalO objects to \internalO objects, because we only need 
 % establish the guarantees when the \externalM module is executing. And we 
-Note that we do not -- yet -- support calls from
-\internalO objects to \externalO objects.\footnote{SOPHIA: we need to think where our system forbids that, ... ?}
 
-\footnote{???? Add a paragraph to make the above now a bit more formal? Say something about arising and something about two state execution??? ???}
 
-\subsection{How we reason}
+Moreover, because we only require that the guarantees are upheld while 
+  the  \externalM module  is executing, we develop an \emph{external steps} semantics, \sophia{I like the term} where
+ any internal calls are executed in one, large, step.
+ Note that we do not -- yet -- support calls from
+\internalO objects to \externalO objects.\sophia[we need to think where our system forbids that, ... ?]{} 
+ With the external steps semantics,  the executing object (the \prg{this}) is always   external. 
+ 
+\subsection{Reasoning about Necessity}
 
-\footnote{Shall we skip this paragraph?} Our Logic of Necessity is based on the following ingredients: 
-\textbf{a:} A  % concept of a encapsulation, 
-way to  establish that a certain effect is \emph{encapsulated}, in the 
-sense that it can only take place if an \internalC call was made; 
-\textbf{b:} A way to obtain necessary conditions given an effect and \emph{one}
- specific \internalC call;
-\textbf{c:} A way to obtain necessary conditions given a certain encapsulated effect and \emph{any},
-\emph{single} \internalC call;
-\textbf{d:} A way to combine one-call   necessary conditions  so as to obtain necessary conditions 
-for effects over 
-\emph{any number} of \internalC or \externalC calls.
+%\footnote{Shall we skip this paragraph?} Our Logic of Necessity is based on the following ingredients: 
+%\textbf{a:} A  % concept of a encapsulation, 
+%way to  establish that a certain effect is \emph{encapsulated}, in the 
+%sense that it can only take place if an \internalC call was made; 
+%\textbf{b:} A way to obtain necessary conditions given an effect and \emph{one}
+% specific \internalC call;
+%\textbf{c:} A way to obtain necessary conditions given a certain encapsulated effect and \emph{any},
+%\emph{single} \internalC call;
+%\textbf{d:} A way to combine one-call   necessary conditions  so as to obtain necessary conditions 
+%for effects over 
+%\emph{any number} of \internalC or \externalC calls.
 
-As an example, we   outline the proof that version III of \prg{Account} adheres to $(AccntHolisticSpec)$.
+We  now outline the proof that version III of \prg{Account} adheres to $(HolisticSpec)$,
+and  will then use that outline to 
+ introduce the main ingredients of our Necessity Logic. The proof consists,
+broadly, of the following parts:
 
 \begin{description}
-\item[1st Step, a:] We establish that the balance % is \emph{encapsulated} by 
-% the class \prg{Account}, in the sense that
-% its value may change 
-% may change only   by making \prg{Account}-\internalC calls.  
-is encapsulated by \prg{Account}. 
+\item[P1:] We establish that the balance 
+ may change only   through \prg{Account}-\internalC calls.  
 
+\item[P2:] 
+For each method of the class  \prg{Account},  we establish that   
+if the method were called and  caused the  balance to reduce, then, before the call,
+the caller had access  to the password.
 
-\item[2nd Step, b:] 
-For each method of the class  \prg{Account}  we establish that   
-the balance does not reduce, unless the caller had access 
-to the password.
-
-\item[3rd Step, c:]  
-Therefore, if the balance were to reduce in \emph{one} call, then some
+\item[P3:]  
+From \textbf{P1} and \textbf{P2}, we obtain that if the balance were to 
+reduce in \emph{any}  \emph{single} call, then some
 external object would have to have had access to the password before the call.
 
-\item[4th Step, b and c:] We establish % in the class \prg{Account} in Version\_III 
+\item[P4:] We establish % in the class \prg{Account} in Version\_III 
 that   an external object has access to 
 the password after \emph{one} internal call, only if it already had access before that call.
-After that, we establish  that if an external object had access to 
+From that, we establish  that  an external object will have access to 
 the password after \emph{any number} of external or internal 
-calls, only if it already had access before that call.
+steps, only if it already had access before these steps.
 
-\item[5th Step, d:] We   combine the findings from the Third and Fourth Step, and obtain
-that  Version\_III adheres to $(AccntHolisticSpec)$
+\item[P5:] Combining  the results from \textbf{P3} and \textbf{P4}, we obtain
+that  Version\_III satisfies $(HolisticSpec)$
 
 \end{description} 
  
-We  now outline  the new formal concepts needed to accomplish the five steps from above:
+We  now outline  the new formal concepts needed to accomplish the five parts of the proof from above:
 
 \begin{description}
-\item[a] We introduce the concept of \emph{assertion-encapsulation}: An assertion $A$  is
-encapsulated by  module $M$, if it can be invalidated only through
+% \item[assertion encapsulation] % We introduce the concept of \emph{assertion-encapsulation}: 
+  \item[from effect to module]  An assertion $A$  is
+\emph{encapsulated} by a module $M$, if  $A$ can be invalidated only through
     an $M$-\internalC call. 
   In short, an $M$-\internalC call is a \emph{necessary} condition for
 a given effect to take place.
 \footnote{Notice that for the sake of simplicity, our example consists of a module with one class only, but 
     in general our approach accommodates modules with any number of classes.
-     Notice also, that while in this example, the balance is 
+     Notice also, that while in this example  the balance is 
 represented by a field, our approach also works when the balance is a ghost method, defined 
 recursively over several objects of different classes.}
-\footnote{Say this, or  leave for later? For this work, we establish assertion-encapsulation just by considering the 
-footprint of the assertion, and requiring that it only includes internal objects --
-more advanced approaches are possible, and will be considered in further work.}
 
+In \textbf{P1}, the assertion \prg{a:Account\! $\wedge$\! a.balance=val} is encapsulated by \prg{Account}.
 
-\item[b]  
+We assume that there exists some algorithm to judge assertion encapsulation.
+The construction of such an algorithm is not the focus of our work;
+  we  outline a rudimentary such algorithm, but more powerful
+approaches are possible. 
+ 
+
+\item[from effect and call to necessary condition] We want to infer
+a necessary condition given an effect and
+a single, specified, method call. 
+
+In \textbf{P2},   a necessary condition for the  reduction of \prg{a.balance}  after the call \prg{a.transfer(a',pwd)} is that the caller  had access to \prg{a.password} before the call.
+
+We addressed the challenge of the inference of necessary conditions 
+ by leveraging the sufficient conditions from classical specifications:
+ \sophia[
+  Here we should 
+  pat ourselves on the back.  
+  James, need your  magic here.]{} 
  As we will see in Section \ref{s:classical-proof}, 
- % we do this 
 if the negation of a method's
- classical postcondition infers  the effect we are interested in, then the negation of the 
- classical precondition  is the necessary precondition for the effect. Thus, 
-we use a method's sufficient conditions to infer a method's and effect's necessary conditions.
-\footnote{Should we say :
-  The "basic" rules of our Logic of Necessity allow us to infer such necessary conditions out of classical Hoare triples. }
-\footnote{Should we say: As for the first step, more powerful solutions are possible, which we will consider  in further work. }
+ classical postcondition implies  the effect we are interested in, then the negation of the 
+ classical precondition  is the necessary precondition for the effect and the method call. Thus, 
+  a method's sufficient conditions are used to infer a method's and effect's necessary conditions.
 
-\item[c]  Here we go from a set
-of per-effect-and-method necessary  condition to a per-module assertion, as long as it is due to 
-\emph{one} \internalC call.
 
-The second tier of our Logic of Necessity allows us to generalize  such one-call per-method necessary conditions, to   method-agnostic, one-call necessary conditions.
+\item[from effect and single step to necessary condition]  We want to infer
+a necessary condition given an effect and
+a single, unspecified step. This step could be a internal, or an external method call,
+or any other external step, such as field assignment, or conditional, etc.
 
-\item[d] 
-We now need to consider the \emph{emergent} behaviour of the module.  This step is crucial; namely, remember that while Version\_II adheres to
-the guarantee from the \textbf{3rd Step}, it does not adhere to  $(AccntHolisticSpec)$.   
-Our Logic of Necessity allows us to combine  several such one-call method-agnostic necessary conditions, and obtain a several-call   necessary condition.
-\footnote{Should we say :The third tier of our Logic of Necessity allows us to generalize  such one-call method-agnostic necessary conditions, to a several-call \internalC/\externalC necessary conditions.}
+In \textbf{P3},   a necessary condition for the  reduction of \prg{a.balance}  after \emph{any}
+step, is that the caller  had access to \prg{a.password} before the call.
+And similarly in \textbf{P4},   a necessary condition for an external object's
+access to \prg{a.password}  after \emph{any}
+step, is that that object had access to \prg{a.password} before the call.
 
+For effects that are encapsulated in a module $M$, we can infer such one-step
+necessary conditions by combining the necessary conditions for that effect and 
+all   methods in $M$.
+
+
+
+\item[from effect to necessary conditions] 
+We now need to consider the \emph{emergent} behaviour of the internal module
+combined with any internal module. This step is crucial; namely, remember that while Version\_II adheres to
+the guarantee from the \textbf{P3}, it does not adhere to  $(HolisticSpec)$.   
+Our Logic of Necessity allows us to combine  several such one-step necessary conditions, and obtain  several-step   necessary condition.
+ 
 \end{description} 
