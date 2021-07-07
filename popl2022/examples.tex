@@ -93,21 +93,25 @@ BankSpec $\triangleq$ from b : Bank $\wedge$ b.getBalance(a) = bal
               onlyIf $\neg\wrapped{\prg{a}}$
 \end{lstlisting}
 That is, if the balance of an account ever decreases, it must be true that some object external to
-\prg{BankMdl} has access to the password of that account. We construct this proof by following
-the outline of our reasoning given in Section \ref{s:approach}:
+\prg{BankMdl} has access to the password of that account. An informal account of the construction of 
+the overall proof follows the outline of our reasoning given in Section \ref{s:approach}:
 \begin{description}
 \item[A]
 We use our rudimentary encapsulation system to prove that both \prg{b.getBalance(a) = bal} and \prg{a.password = pwd} are an encapsulated assertion.
 \item[B]
-We prove necessary preconditions for reducing the balance for each method in \prg{BankMdl}.
+We use classical specifications to prove that only a call to \prg{Bank::transfer} may 
+with the correct password be used to decrease the balance of an account. Similarly, we
+use classical specifications to prove that no method can leak the password of an account.
 \item[C]
-We combine the per-method necessary preconditions along with the encapsulation of \prg{b.getBalance(a) = bal} to arrive at a necessary precondition 
-for reducing the balance using \emph{any} method in \prg{BankMdl}.
+We combine the per-method necessary preconditions along with the encapsulation of \prg{b.getBalance(a) = bal} to arrive at a per-step
+necessary precondition for reducing the balance using \emph{any} method in \prg{BankMdl}. Similarly, 
+we show that \emph{no} step may leak the password of an account.
 \item[D]
-We use the Logic of Necessity to prove the emergent behavior specified in \prg{BankSpec}.
+Finally we use the Logic of Necessity and the results of A, B, and C, prove the emergent behavior specified in \prg{BankSpec}.
 \end{description}
 
 \subsubsection{A: The Encapsulation of Account Balance and Password}
+\label{s:BA-encap}
 We base the soundness of our of encapsulation on the type system of \Loo, and use the proof rules given in Fig.s \ref{f:intrnl} and \ref{f:asrt-encap}.
 We provide the proof for the encapsulation of \prg{b.getBalance(a)} below\\
 %\begin{figure}[h]
@@ -160,6 +164,7 @@ We omit the proof of $\encaps{\prg{a.password = pwd}}$, as it's construction is 
 %\end{figure}
 
 \subsubsection{B: Proving Necessary Preconditions from Classical Specifications}
+\label{s:BA-classical}
 We now provide proofs for necessary preconditions on a per-method basis, leveraging 
 classical specifications.
 
@@ -310,84 +315,10 @@ but we elide most of the steps as they do not differ much from that of \textbf{A
 	\end{proofexample}
 }
 \end{minipage}
+Below we provide the proofs for each method in \prg{BankMdl} that they cannot
+be used to leak the password of an account. \\
 \begin{minipage}{\textwidth}
-
-\subsubsection{C: Proving Necessary Module Preconditions}
-
-
-In order to do this, we need to prove the intermediate results \prg{BalanceChange}, \prg{PasswordChange}, and \prg{PasswordLeak}
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-BalanceChange $\triangleq$ from  a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal
-                 to1 b.getBalance(a) < bal
-                 onlyIf $\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$
-\end{lstlisting}
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-PasswordChange $\triangleq$ from a : Account $\wedge$ a.password = p
-                  to1 $\neg$ a.password $\neq$ p
-                  onlyIf $\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{a.password}, \_}$
-\end{lstlisting}
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-PasswordLeak $\triangleq$ from a : Account $\wedge$ a.password = p $\wedge$ wrapped<p>
-                  to1 $\neg$ wrapped<p>
-                  onlyIf false
-\end{lstlisting}
-To prove these intermediate results, we make use of the classical specifications 
-that we have annotated \prg{BankMdl} with.
-
-%Finally, in order construct the above proofs, we assume that \prg{BankMdl} module 
-%has the following traditional specifications.
-%%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%%AccountIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a}}$]} 
-%%                              BankMdl 
-%%                           {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a}}$]}
-%%\end{lstlisting}
-%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%PasswordIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a.password}}$]} 
-%                              BankMdl 
-%                           {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a.password}}$]}
-%\end{lstlisting}
-%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%TransferChangesBalance $\triangleq$ {a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ 
-%                                 $\neg$ $\exists$ o.[$\calls{\prg{o}}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$]}
-%                            BankMdl 
-%                         {b.getBalance(a) = bal}
-%\end{lstlisting}
-%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%PasswordChange $\triangleq$ {a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ 
-%                                 $\neg$ $\exists$ o.[$\calls{\prg{o}}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$]}
-%                              BankMdl 
-%                           {b.getBalance(a) = bal}
-%\end{lstlisting}
-%It is easy enough to see that both \prg{AccountIsNotLeaked}, \prg{PasswordIsNotLeaked}, and \prg{TransferChangesBalance} are provable
-%pre- and post-condition using traditional Hoare Logic.
-\noindent
-\begin{proofexample}
-\proofsteps{\prg{BalanceChange}}
-	{\proofstepwithrule
-			{\onlyIfSingleEx
-					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
-					{b.getbalance(a) < bal}
-					{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
-					}
-				{by \textbf{AuthBalChange}, \textbf{ChangePasswordBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, \textbf{BalanceEncaps}, and \textsc{If1-Internal}}
-		}
-\endproofsteps
-\end{proofexample}
-\end{minipage}
-\begin{proofexample}
-\proofsteps{\prg{PasswordChange}}
-	{\proofstepwithrule{\onlyIfSingleEx
-				{a : Account $\wedge$ a.password = p}
-				{a.password $\neq$ p}
-				{$\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{p}, \_}$}
-				}
-			{by similar reasoning to \textbf{BalanceChange}}
-	}
-\endproofsteps
-\end{proofexample}
-\begin{proofexample}
-\proofsteps{\prg{PasswordLeak}}
-	{
+{
 	\begin{proofexample}
 		\proofsteps{AuthPwdLeak}
 			{\proofstepwithrule
@@ -459,18 +390,96 @@ that we have annotated \prg{BankMdl} with.
 		\endproofsteps
 	\end{proofexample}
 	}
+
+\subsubsection{C: Proving Per-Step Necessary Specifications}
+The next step is to construct proofs of necessary conditions for
+\emph{any} possible step in our external state semantics.
+In order to prove the final result in the next section,
+we need to prove three per-step necessary specifications: \prg{BalanceChange}, \prg{PasswordChange}, and \prg{PasswordLeak}.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+BalanceChange $\triangleq$ from  a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal
+                 to1 b.getBalance(a) < bal
+                 onlyIf $\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+PasswordChange $\triangleq$ from a : Account $\wedge$ a.password = p
+                  to1 $\neg$ a.password $\neq$ p
+                  onlyIf $\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{a.password}, \_}$
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+PasswordLeak $\triangleq$ from a : Account $\wedge$ a.password = p $\wedge$ wrapped<p>
+                  to1 $\neg$ wrapped<p>
+                  onlyIf false
+\end{lstlisting}
+We provide the proofs of these below. The proof of \prg{BalanceChange} is constructed
+by combining the results from \ref{s:BA-encap} and \ref{s:BA-classical} using \textsc{If1-Internal}. 
+Again, we elide the details of the proof of \prg{PasswordChange} and \prg{PasswordLeak} as they are similar to that
+of \prg{BalanceChange}. \\
+\noindent
+\begin{proofexample}
+\proofsteps{\prg{BalanceChange}}
+	{\proofstepwithrule
+			{\onlyIfSingleEx
+					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
+					{b.getbalance(a) < bal}
+					{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
+					}
+				{by \textbf{AuthBalChange}, \textbf{ChangePasswordBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, \textbf{BalanceEncaps}, and \textsc{If1-Internal}}
+		}
+\endproofsteps
+\end{proofexample}
+\end{minipage}
+\begin{proofexample}
+\proofsteps{\prg{PasswordChange}}
+	{\proofstepwithrule{\onlyIfSingleEx
+				{a : Account $\wedge$ a.password = p}
+				{a.password $\neq$ p}
+				{$\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{p}, \_}$}
+				}
+			{by similar reasoning to \textbf{BalanceChange}}
+	}
+\endproofsteps
+\end{proofexample}
+\begin{proofexample}
+\proofsteps{\prg{PasswordLeak}}
 	{\proofstepwithrule{\onlyIfSingleEx
 				{a : Account $\wedge$ a.password = p $\wedge$ $\wrapped{\prg{p}}$}
 				{$\neg \wrapped{\prg{p}}$}
 				{false}
 				}
-			{by \textsc{If1-Internal}, \textbf{AuthPwdLeak}, \textbf{ChangePasswordLeak}, \textbf{Ledger::TransferPwdLeak}, and \textbf{Bank::TransferPwdLeak}}
+			{by similar reasoning to \prg{Balancechange}}
 	}
 \endproofsteps
 \end{proofexample}
 \subsubsection{D: Proving Emergent Behavior}
 Finally, we combine our module-wide single-step necessity specifications to 
-prove emergent behavior of the entire system.\\
+prove emergent behavior of the entire system. Informally the
+reasoning used in the construction of the proof of \prg{BankSpec} can be stated as
+\begin{description}
+\item [(1)]
+If the balance of an account decreases, then
+by \prg{BalanceChange} there must have been a call
+to \prg{transfer} in \prg{Bank} with the correct password.
+\item [(2)]
+If there was a call where the \prg{Account}'s password 
+was used, then there must have been an intermediate program state
+when some external object had access to the password.
+\item [(3)]
+Either that password was the same password in the initial 
+program state, or it was different.
+\item [(4 A)]
+If it is the same as the initial password, then since by \prg{PasswordLeak}
+it is impossible to leak the password, it follows that some external object 
+must have had access to the password initially.
+\item [(4 B)]
+If the password is different from the initial password, 
+then there must have been an intervening program state when it 
+changed. By \prg{PasswordChange} we know that this must have occurred
+by ac call to change password with the correct password. Thus,
+there must be a some intervening program state where the initial
+password is known. From here we proceed by the same reasoning 
+as \textbf{(4 A)}.
+\end{description}
 \begin{proofexample}
 \proofsteps{\prg{BankSpec}}
 	{\proofstepwithrule{\onlyThroughEx
