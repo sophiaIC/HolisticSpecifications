@@ -3,36 +3,50 @@
 \section{Examples}
 \label{s:examples}
 
-\subsection{Bank Account w/ Password and Ghost Field}
-We provide an implementation of \texttt{BankMdl} in Fig. \ref{f:ex-bank}.
+\subsection{Bank Account}
+In this section we provide a full description of our
+running example of a Bank Account, along with a proof 
+of the bank account specification using our Logic of Necessity.
+We start by providing an implementation of \prg{BankMdl} in Fig. \ref{f:ex-bank}.
+A \prg{Bank} consists of a \prg{Ledger}, a method for transferring 
+funds between accounts (\prg{transfer}), and a ghost field, \prg{balance}
+for looking up the balance of an account at a bank. A \prg{Ledger} is
+a mapping from \prg{Account}s to their balances. Note, for brevity
+our implementation only includes two accounts (\prg{acc1} and \prg{acc2}),
+but it is easy to see how this could extend to a \prg{Ledger}
+of arbitrary size. \prg{Ledger} is annotated as \enclosed, and as 
+such the type system ensures our required encapsulation properties.
+Finally, an \prg{Account} has some \prg{password} object, and 
+methods to authenticate a provided password (\prg{authenticate}), 
+change the password (\prg{changePassword}).
 \begin{figure}[t]
 %      (PRE:  from == acc1 && to == acc2
-%       POST: bal1$_\texttt{new}$ < bal1$_\texttt{old}$)
+%       POST: bal1$_\prg{new}$ < bal1$_\prg{old}$)
 %      (PRE:  from == acc2 && to == acc1
-%       POST: bal2$_\texttt{new}$ < bal2$_\texttt{old}$)
+%       POST: bal2$_\prg{new}$ < bal2$_\prg{old}$)
 \begin{lstlisting}[mathescape=true, frame=lines, language=chainmail]
 module BankMdl
-  class boundary Account
+  class Account
     field password : Object
     method authenticate(pwd)
       (PRE:  a : Account $\wedge$ b : Bank
-       POST: b.getBalance(a)$_\texttt{old}$ == b.getBalance(a)$_\texttt{new}$)
+       POST: b.getBalance(a)$_\prg{old}$ == b.getBalance(a)$_\prg{new}$)
       (PRE:  a : Account
        POST: res != a.password)
       (PRE:  a : Account
-       POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
+       POST: a.password$_\prg{old}$ == a.password$_\prg{new}$)
       {return pwd == this.password}
     method changePassword(pwd, newPwd)
       (PRE:  a : Account
        POST: res != a.password)
       (PRE:  a : Account $\wedge$ b : Bank
-       POST: b.getBalance(a)$_\texttt{old}$ == b.getBalance(a)$_\texttt{new}$)
+       POST: b.getBalance(a)$_\prg{old}$ == b.getBalance(a)$_\prg{new}$)
       (PRE:  a : Account $\wedge$ $\neg$ pwd == this.password
-       POST: a.password$_\texttt{old}$ = a.password$_\texttt{new}$)
+       POST: a.password$_\prg{old}$ = a.password$_\prg{new}$)
       {if pwd == this.password
         this.password := newPwd}
 
-  class inside Ledger
+  class enclosed Ledger
     field acc1 : Account
     field bal1 : int
     field acc2 : Account
@@ -45,11 +59,11 @@ module BankMdl
       else -1
     method transfer(amt, from, to)
       (PRE:  a : Account $\wedge$ b : Bank $\wedge$ $\neg$ (a == acc1 $\wedge$ a == acc2)
-       POST: b.getBalance(a)$_\texttt{old}$ == b.getBalance(a)$_\texttt{new}$)
+       POST: b.getBalance(a)$_\prg{old}$ == b.getBalance(a)$_\prg{new}$)
       (PRE:  a : Account
        POST: res != a.password)
       (PRE:  a : Account
-       POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
+       POST: a.password$_\prg{old}$ == a.password$_\prg{new}$)
       {if from == acc1 && to == acc2
          bal1 := bal1 - amt
          bal2 := bal2 + amt
@@ -58,43 +72,43 @@ module BankMdl
          bal2 := bal2 - amt}
       
 
-  class boundary Bank
+  class Bank
     field book : Ledger
     ghost intrnrl getBalance(acc) = book.getBalance(acc)
     method transfer(pwd, amt, from, to)
       (PRE:  a : Account $\wedge$ b : Bank $\wedge$ $\neg$ (a == acc1 $\wedge$ a == acc2)
-       POST: b.getBalance(a)$_\texttt{old}$ a= b.getBalance(a)$_\texttt{new}$)
+       POST: b.getBalance(a)$_\prg{old}$ a= b.getBalance(a)$_\prg{new}$)
       (PRE:  a : Account
        POST: res != a.password)
       (PRE:  a : Account
-       POST: a.password$_\texttt{old}$ == a.password$_\texttt{new}$)
+       POST: a.password$_\prg{old}$ == a.password$_\prg{new}$)
       {if (from.authenticate(pwd))
          book.transfer(amt, from, to)}
 \end{lstlisting}
 \caption{Bank Account Module}
 \label{f:ex-bank}
 \end{figure}
-We would need to prove \texttt{BankSpec}
+We would need to prove \prg{BankSpec}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %BankSpec1 $\triangleq$  b : Bank $\wedge$ b.getBalance(a) = bal 
 %               to b.getbalance(a) $\neq$ bal
-%               onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a}}$]
+%               onlyIf $\exists$ o.[$\external{\prg{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a}}$]
 %\end{lstlisting}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 BankSpec $\triangleq$ from b : Bank $\wedge$ b.getBalance(a) = bal 
               to b.getbalance(a) < bal
-              onlyIf $\exists$ o'.[$\external{\texttt{o'}}$ $\wedge$ $\access{\texttt{o'}}{\texttt{a.password}}$]
+              onlyIf $\wrapped{\prg{a}}$
 \end{lstlisting}
-In order to do this, we need to prove the intermediate results \texttt{BalanceChange}, \texttt{PasswordChange}, and \texttt{PasswordLeak}
+In order to do this, we need to prove the intermediate results \prg{BalanceChange}, \prg{PasswordChange}, and \prg{PasswordLeak}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 BalanceChange $\triangleq$ from  a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal
                  to1 b.getBalance(a) < bal
-                 onlyIf $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$
+                 onlyIf $\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$
 \end{lstlisting}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 PasswordChange $\triangleq$ from a : Account $\wedge$ a.password = p
                   to1 $\neg$ a.password $\neq$ p
-                  onlyIf $\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{a.password}, \_}$
+                  onlyIf $\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{a.password}, \_}$
 \end{lstlisting}
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 PasswordLeak $\triangleq$ from a : Account $\wedge$ a.password = p $\wedge$ wrapped<p>
@@ -102,33 +116,33 @@ PasswordLeak $\triangleq$ from a : Account $\wedge$ a.password = p $\wedge$ wrap
                   onlyIf false
 \end{lstlisting}
 To prove these intermediate results, we make use of the classical specifications 
-that we have annotated \texttt{BankMdl} with.
+that we have annotated \prg{BankMdl} with.
 
-%Finally, in order construct the above proofs, we assume that \texttt{BankMdl} module 
+%Finally, in order construct the above proofs, we assume that \prg{BankMdl} module 
 %has the following traditional specifications.
 %%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%%AccountIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a}}$]} 
+%%AccountIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a}}$]} 
 %%                              BankMdl 
-%%                           {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a}}$]}
+%%                           {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a}}$]}
 %%\end{lstlisting}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%PasswordIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a.password}}$]} 
+%PasswordIsNotLeakedByBank $\triangleq$ {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a.password}}$]} 
 %                              BankMdl 
-%                           {a : Account $\wedge$ $\forall$ x.[$\internal{\texttt{x}}$ $\vee$ $\neg\access{\texttt{x}}{\texttt{a.password}}$]}
+%                           {a : Account $\wedge$ $\forall$ x.[$\internal{\prg{x}}$ $\vee$ $\neg\access{\prg{x}}{\prg{a.password}}$]}
 %\end{lstlisting}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %TransferChangesBalance $\triangleq$ {a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ 
-%                                 $\neg$ $\exists$ o.[$\calls{\texttt{o}}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$]}
+%                                 $\neg$ $\exists$ o.[$\calls{\prg{o}}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$]}
 %                            BankMdl 
 %                         {b.getBalance(a) = bal}
 %\end{lstlisting}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %PasswordChange $\triangleq$ {a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ 
-%                                 $\neg$ $\exists$ o.[$\calls{\texttt{o}}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$]}
+%                                 $\neg$ $\exists$ o.[$\calls{\prg{o}}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$]}
 %                              BankMdl 
 %                           {b.getBalance(a) = bal}
 %\end{lstlisting}
-%It is easy enough to see that both \texttt{AccountIsNotLeaked}, \texttt{PasswordIsNotLeaked}, and \texttt{TransferChangesBalance} are provable
+%It is easy enough to see that both \prg{AccountIsNotLeaked}, \prg{PasswordIsNotLeaked}, and \prg{TransferChangesBalance} are provable
 %pre- and post-condition using traditional Hoare Logic.
 \noindent
 \begin{minipage}{\textwidth}
@@ -153,7 +167,7 @@ that we have annotated \texttt{BankMdl} with.
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\texttt{a}}{\texttt{authenticate}}{\texttt{pwd}}$}
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
 						{b.getbalance(a$^\prime$) < bal}
 						{false}
 						}
@@ -161,9 +175,9 @@ that we have annotated \texttt{BankMdl} with.
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\texttt{a}}{\texttt{authenticate}}{\texttt{pwd}}$}
+						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
 						{b.getbalance(a$^\prime$) < bal}
-						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a$^\prime$.password, amt, a$^\prime$, to}}$}
+						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a$^\prime$.password, amt, a$^\prime$, to}}$}
 						}
 					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
 			}
@@ -177,9 +191,9 @@ that we have annotated \texttt{BankMdl} with.
 		\proofsteps{ChangePasswordBalChange}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{a : Account $\wedge$ a$^\prime$ : $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{pwd}}$}
+						{a : Account $\wedge$ a$^\prime$ : $\wedge$ b : Bank $\wedge$ b.getBalance(a$^\prime$) = bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{pwd}}$}
 						{b.getbalance(a$^\prime$) < bal}
-						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a$^\prime$.password, amt, a$^\prime$, to}}$}
+						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a$^\prime$.password, amt, a$^\prime$, to}}$}
 						}
 					{by similar reasoning to \textbf{AuthBalChange}}
 			}
@@ -193,23 +207,23 @@ that we have annotated \texttt{BankMdl} with.
 		\proofsteps{Ledger::TransferBalChange}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
 						{b.getbalance(a) < bal}
-						{$\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{$\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
 						}
 					{by \textsc{If-Start} and \textsc{If1-If}}
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
 						{b.getbalance(a) < bal}
-						{$\neg\wrapped{\texttt{l}}$}
+						{$\neg\wrapped{\prg{l}}$}
 						}
 					{by \textsc{If1-}$\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Caller-Recv}}
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
 						{b.getbalance(a) < bal}
 						{\false}
 						}
@@ -217,9 +231,9 @@ that we have annotated \texttt{BankMdl} with.
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\texttt{amt, from, to}}$}
+						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
 						{b.getbalance(a) < bal}
-						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password, amt, a, to}}$}
+						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
 						}
 					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
 			}
@@ -233,7 +247,7 @@ that we have annotated \texttt{BankMdl} with.
 		\proofsteps{Bank::TransferBalChange}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{b$^\prime$}}{\texttt{transfer}}{\texttt{pwd, amt, from, to}}$}
+						{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{b$^\prime$}}{\prg{transfer}}{\prg{pwd, amt, from, to}}$}
 						{b.getbalance(a) < bal}
 						{a == from $\wedge$ pwd == a.password $\wedge$ b$^\prime$ == b}
 						}
@@ -241,9 +255,9 @@ that we have annotated \texttt{BankMdl} with.
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\texttt{b$^\prime$}}{\texttt{transfer}}{\texttt{pwd, amt, from, to}}$}
+						{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{b$^\prime$}}{\prg{transfer}}{\prg{pwd, amt, from, to}}$}
 						{b.getbalance(a) < bal}
-						{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password, amt, a, to}}$}
+						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
 						}
 					{by \textsc{If1-}$\longrightarrow$}
 			}
@@ -253,49 +267,49 @@ that we have annotated \texttt{BankMdl} with.
 \end{minipage}
 \begin{minipage}{\textwidth}
 \begin{proofexample}
-\proofsteps{\texttt{BalanceEncaps}}
+\proofsteps{\prg{BalanceEncaps}}
 	{\begin{proofexample}
-		\proofsteps{\texttt{aIntrnl}}
+		\proofsteps{\prg{aIntrnl}}
 			{\proofstepwithrule
-			{$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\texttt{a}}}}$}
+			{$\proves{\prg{BankMdl}}{\givenA{\prg{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\prg{a}}}}$}
 				{by \textsc{Intrnl-Obj}}
 		}
 		\endproofsteps
 	\end{proofexample}
 		}
 	{\begin{proofexample}
-		\proofsteps{\texttt{bIntrnl}}
+		\proofsteps{\prg{bIntrnl}}
 			{\proofstepwithrule
-			{$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\texttt{b}}}}$}
+			{$\proves{\prg{BankMdl}}{\givenA{\prg{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\prg{b}}}}$}
 				{by \textsc{Intrnl-Obj}}
 		}
 		\endproofsteps
 	\end{proofexample}
 		}
 	{\begin{proofexample}
-		\proofsteps{\texttt{balIntrnl}}
+		\proofsteps{\prg{balIntrnl}}
 			{\proofstepwithrule
-			{$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\texttt{b.getBalance(a)}}}}$}
-				{by \texttt{aEncaps}, \texttt{bEncaps}, and \textsc{Intrnl-Ghost}}
+			{$\proves{\prg{BankMdl}}{\givenA{\prg{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\intrnl{\prg{b.getBalance(a)}}}}$}
+				{by \prg{aEncaps}, \prg{bEncaps}, and \textsc{Intrnl-Ghost}}
 		}
 		\endproofsteps
 	\end{proofexample}
 		}
 		{\proofstepwithrule
 			{
-			$\proves{\texttt{BankMdl}}{\givenA{\texttt{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\encaps{\texttt{b.getBalance(a)}}}}$
-			}{by \texttt{balIntrnl}, \textsc{Enc-Intrnl}}}
+			$\proves{\prg{BankMdl}}{\givenA{\prg{b$^\prime$ : Bank $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}}{\encaps{\prg{b.getBalance(a)}}}}$
+			}{by \prg{balIntrnl}, \textsc{Enc-Intrnl}}}
 \endproofsteps
 \end{proofexample}
 \end{minipage}
 \begin{minipage}{\textwidth}
 \begin{proofexample}
-\proofsteps{\texttt{BalanceChange}}
+\proofsteps{\prg{BalanceChange}}
 	{\proofstepwithrule
 			{\onlyIfSingleEx
 					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
 					{b.getbalance(a) < bal}
-					{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password, amt, a, to}}$}
+					{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
 					}
 				{by \textbf{AuthBalChange}, \textbf{ChangePasswordBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, \textbf{BalanceEncaps}, and \textsc{If1-Internal}}
 		}
@@ -303,25 +317,25 @@ that we have annotated \texttt{BankMdl} with.
 \end{proofexample}
 \end{minipage}
 \begin{proofexample}
-\proofsteps{\texttt{PasswordChange}}
+\proofsteps{\prg{PasswordChange}}
 	{\proofstepwithrule{\onlyIfSingleEx
 				{a : Account $\wedge$ a.password = p}
 				{a.password $\neq$ p}
-				{$\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{p}, \_}$}
+				{$\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{p}, \_}$}
 				}
 			{by similar reasoning to \textbf{BalanceChange}}
 	}
 \endproofsteps
 \end{proofexample}
 \begin{proofexample}
-\proofsteps{\texttt{PasswordLeak}}
+\proofsteps{\prg{PasswordLeak}}
 	{
 	\begin{proofexample}
 		\proofsteps{AuthPwdLeak}
 			{\proofstepwithrule
 				{\hoareEx
 						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password == pwd}
-						{\texttt{res} = a$^\prime$.authenticate(\_)}
+						{\prg{res} = a$^\prime$.authenticate(\_)}
 						{res != pwd}
 						}
 					{by classical spec.}
@@ -329,14 +343,14 @@ that we have annotated \texttt{BankMdl} with.
 			{\proofstepwithrule
 				{\hoareEx
 						{a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password == pwd $\wedge$ $\neg$ false}
-						{\texttt{res} = a$^\prime$.authenticate(\_)}
+						{\prg{res} = a$^\prime$.authenticate(\_)}
 						{res != pwd}
 						}
 					{by classical Hoare logic}
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{a}^\prime}{\texttt{authenticate}}{\_}$}
+						{$\wrapped{\prg{pwd}}$ $\wedge$ a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{authenticate}}{\_}$}
 						{$\neg \wrapped{\_}$}
 						{false}
 						}
@@ -350,8 +364,8 @@ that we have annotated \texttt{BankMdl} with.
 		\proofsteps{ChangePasswordLeak}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{a}^\prime}{\texttt{changePassword}}{\_, \_}$}
-						{$\neg \wrapped{\texttt{pwd}}$}
+						{$\wrapped{\prg{pwd}}$ $\wedge$ a : Account $\wedge$ a$^\prime$ : Account $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{changePassword}}{\_, \_}$}
+						{$\neg \wrapped{\prg{pwd}}$}
 						{false}
 						}
 					{by similar reasoning to \textbf{AuthPwdLeak}}
@@ -364,8 +378,8 @@ that we have annotated \texttt{BankMdl} with.
 		\proofsteps{Ledger::TransferPwdLeak}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ l : Ledger $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\_, \_, \_}$}
-						{$\neg \wrapped{\texttt{pwd}}$}
+						{$\wrapped{\prg{pwd}}$ $\wedge$ a : Account $\wedge$ l : Ledger $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\_, \_, \_}$}
+						{$\neg \wrapped{\prg{pwd}}$}
 						{false}
 						}
 					{by similar reasoning to \textbf{AuthPwdLeak}}
@@ -378,8 +392,8 @@ that we have annotated \texttt{BankMdl} with.
 		\proofsteps{Bank::TransferPwdLeak}
 			{\proofstepwithrule
 				{\onlyIfSingleEx
-						{$\wrapped{\texttt{pwd}}$ $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\texttt{l}}{\texttt{transfer}}{\_, \_, \_, \_}$}
-						{$\neg \wrapped{\texttt{pwd}}$}
+						{$\wrapped{\prg{pwd}}$ $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ a.password = pwd $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\_, \_, \_, \_}$}
+						{$\neg \wrapped{\prg{pwd}}$}
 						{false}
 						}
 					{by similar reasoning to \textbf{AuthPwdLeak}}
@@ -388,8 +402,8 @@ that we have annotated \texttt{BankMdl} with.
 	\end{proofexample}
 	}
 	{\proofstepwithrule{\onlyIfSingleEx
-				{a : Account $\wedge$ a.password = p $\wedge$ $\wrapped{\texttt{p}}$}
-				{$\neg \wrapped{\texttt{p}}$}
+				{a : Account $\wedge$ a.password = p $\wedge$ $\wrapped{\prg{p}}$}
+				{$\neg \wrapped{\prg{p}}$}
 				{false}
 				}
 			{by \textsc{If1-Internal}, \textbf{AuthPwdLeak}, \textbf{ChangePasswordLeak}, \textbf{Ledger::TransferPwdLeak}, and \textbf{Bank::TransferPwdLeak}}
@@ -398,83 +412,83 @@ that we have annotated \texttt{BankMdl} with.
 \end{proofexample}
 
 \begin{proofexample}
-\proofsteps{\texttt{BankSpec}}
+\proofsteps{\prg{BankSpec}}
 	{\proofstepwithrule{\onlyThroughEx
 				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
 				{b.getBalance(a) < bal}
-				{$\calls{\_}{\texttt{b}}{\texttt{transfer}}{\texttt{a.password}, \_, \texttt{a}, \_}$}
+				{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$}
 				}
-			{by \textsc{Changes} and \texttt{BalanceChange}}}
+			{by \textsc{Changes} and \prg{BalanceChange}}}
 	{\proofstepwithrule{\onlyThroughEx
 				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal}
 				{b.getBalance(a) < bal}
-				{$\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.password}}$]}
+				{$\exists$ o.[$\external{\prg{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a.password}}$]}
 				}
 			{by $\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Calls-Args}}}
 	{\proofstepwithrule{\onlyThroughEx
 				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 				{b.getBalance(a) < bal}
-				{$\neg$$\wrapped{\texttt{a.password}}$}
+				{$\neg$$\wrapped{\prg{a.password}}$}
 				}
 			{by $\longrightarrow$}}
 	{\proofstepwithrule{\onlyThroughEx
 				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 				{b.getBalance(a) < bal}
-				{$\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ (a.password = pwd $\vee$ a.password != pwd)}
+				{$\neg$$\wrapped{\prg{a.password}}$ $\wedge$ (a.password = pwd $\vee$ a.password != pwd)}
 				}
 			{by $\longrightarrow$ and \textsc{Excluded Middle}}}
 	{\proofstepwithrule{\onlyThroughEx
 				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 				{b.getBalance(a) < bal}
-				{($\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ a.password = pwd) $\vee$\\
-				($\neg$$\wrapped{\texttt{a.password}}$ $\wedge$ a.password != pwd)}
+				{($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password = pwd) $\vee$\\
+				($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password != pwd)}
 				}
 			{by $\longrightarrow$}}
 	{\proofstepwithrule{\onlyThroughEx
 				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 				{b.getBalance(a) < bal}
-				{$\neg$$\wrapped{\texttt{pwd}}$ $\vee$
+				{$\neg$$\wrapped{\prg{pwd}}$ $\vee$
 				a.password != pwd}
 				}
 			{by $\longrightarrow$}}
 	{
 	\begin{proofexample}
-	\proofsteps{Case A ($\neg\wrapped{\texttt{pwd}}$)}
+	\proofsteps{Case A ($\neg\wrapped{\prg{pwd}}$)}
 			{\proofstepwithrule
 				{\onlyIfEx
 					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-					{$\neg$$\wrapped{\texttt{pwd}}$}
-					{$\wrapped{\texttt{pwd}}\ \vee \neg\wrapped{\texttt{pwd}}$}
+					{$\neg$$\wrapped{\prg{pwd}}$}
+					{$\wrapped{\prg{pwd}}\ \vee \neg\wrapped{\prg{pwd}}$}
 					}
 				{by \textsc{If-}$\longrightarrow$ and \textsc{Excluded Middle}}}
 			{\proofstepwithrule{\onlyIfEx
 					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
-					{$\neg$$\wrapped{\texttt{pwd}}$}
-					{$\neg\wrapped{\texttt{pwd}}$}
+					{$\neg$$\wrapped{\prg{pwd}}$}
+					{$\neg\wrapped{\prg{pwd}}$}
 					}
-				{by $\vee$E and \texttt{PasswordLeak}}}
+				{by $\vee$E and \prg{PasswordLeak}}}
 	\endproofsteps
 	\end{proofexample}
 	}
 	{
 	\begin{proofexample}
-	\proofsteps{Case B (\texttt{a.password != pwd})}
+	\proofsteps{Case B (\prg{a.password != pwd})}
 		{\proofstepwithrule{\onlyThroughEx
 					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 					{a.password != pwd}
-					{$\calls{\_}{\texttt{a}}{\texttt{changePassword}}{\texttt{pwd}, \_}$}
+					{$\calls{\_}{\prg{a}}{\prg{changePassword}}{\prg{pwd}, \_}$}
 					}
 				{by \textsc{Changes} and \textsc{PasswordChange}}}
 		{\proofstepwithrule{\onlyThroughEx
 					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 					{a.password != pwd}
-					{$\neg\wrapped{\texttt{pwd}}$}
+					{$\neg\wrapped{\prg{pwd}}$}
 					}
-				{by $\vee$E and \texttt{PasswordLeak}}}
+				{by $\vee$E and \prg{PasswordLeak}}}
 		{\proofstepwithrule{\onlyIfEx
 					{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 					{a.password != pwd}
-					{$\neg\wrapped{\texttt{pwd}}$}
+					{$\neg\wrapped{\prg{pwd}}$}
 					}
 				{by \textbf{Case A} and \textsc{Trans}}}
 	\endproofsteps
@@ -483,7 +497,7 @@ that we have annotated \texttt{BankMdl} with.
 	{\proofstepwithrule{\onlyIfEx
 				{a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ a.password = pwd}
 				{b.getBalance(a) < bal}
-				{$\neg\wrapped{\texttt{pwd}}$}
+				{$\neg\wrapped{\prg{pwd}}$}
 				}
 			{by \textbf{Case A}, \textbf{Case B}, \textsc{If-}$\vee$I$_2$, and \textsc{If-}$\longrightarrow$}}
 \endproofsteps
@@ -561,38 +575,38 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\subsection{Bank Account 1 - Simple}
 %\label{ex:bank1}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%BankSpec $\triangleq$  a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ only if $\neg\ \encapsulated{\texttt{a}}$
+%BankSpec $\triangleq$  a : Account $\wedge$ a.balance = b to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ only if $\neg\ \encapsulated{\prg{a}}$
 %\end{lstlisting}
-%We assume that the method \texttt{deposit} conforms to the following 
+%We assume that the method \prg{deposit} conforms to the following 
 %specification
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %DepositSpec $\triangleq$  {a'.balance = b $\wedge$ a' $\neq$ a $\wedge$ a' $\neq$ from}
 %					a.deposit(from, amt) 
 %			   {a'.balance = b}
 %\end{lstlisting}
-%And all other methods \texttt{m} in \texttt{Account} conform to the 
+%And all other methods \prg{m} in \prg{Account} conform to the 
 %following spec
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %AccountMethSpec $\triangleq$  {a : Account $\wedge$ a.balance = b}
 %					  a.m(...) 
 %			       {a.balance = b}
 %\end{lstlisting}
-%From \texttt{DepositSpec} and \texttt{AccountMethSpec} we can derive \texttt{BASafety}
+%From \prg{DepositSpec} and \prg{AccountMethSpec} we can derive \prg{BASafety}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
 %BASafety $\triangleq$  a : Account $\wedge$ a.balance = b 
 %            to a.balance != b
 %            through Bank
-%            onlyIf $\exists$ a'. [a' : Account $\wedge$ $\calls{\_}{\texttt{a'}}{\texttt{deposit}}{\texttt{a, \_}}$ $\vee$ $\calls{\_}{\texttt{a}}{\texttt{deposit}}{\texttt{a'},\_}$
+%            onlyIf $\exists$ a'. [a' : Account $\wedge$ $\calls{\_}{\prg{a'}}{\prg{deposit}}{\prg{a, \_}}$ $\vee$ $\calls{\_}{\prg{a}}{\prg{deposit}}{\prg{a'},\_}$
 %\end{lstlisting}
-%Then we assume that all methods $m$ in \texttt{Account} observe the following specification:
+%Then we assume that all methods $m$ in \prg{Account} observe the following specification:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%AccountEncapsulation $\triangleq$ {a : Account $\wedge$ $\encapsulated{\texttt{a}}$}
+%AccountEncapsulation $\triangleq$ {a : Account $\wedge$ $\encapsulated{\prg{a}}$}
 %				          a.m(...)
-%				       {$\encapsulated{\texttt{a}}$}
+%				       {$\encapsulated{\prg{a}}$}
 %\end{lstlisting}
-%And thus from \texttt{AccoutnEncapsulation} and Definition \ref{def:module_necessary} we can derive \texttt{BAEncapsulation}
+%And thus from \prg{AccoutnEncapsulation} and Definition \ref{def:module_necessary} we can derive \prg{BAEncapsulation}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{\I}{\encapsulated{\texttt{a}}}$
+%BAEncapsulation $\triangleq$  a : Account $\wedge$ $\changes{\I}{\encapsulated{\prg{a}}}$
 %                 onlyIf false
 %\end{lstlisting}
 %%\begin{figure}[p]
@@ -603,7 +617,7 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame = single]
 %a : Account $\wedge$ a.balance = b 
 %  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%  onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
+%  onlyThrough $\changes{\prg{\_}}{\prg{a.balance = b}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -612,9 +626,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance}}$ 
+%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\prg{a.balance}}$ 
 %  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%  onlyThrough $\changes{\texttt{\_}}{\texttt{a.balance = b}}$
+%  onlyThrough $\changes{\prg{\_}}{\prg{a.balance = b}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -623,9 +637,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\prg{a.balance = b}}$ 
 %  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%  onlyThrough $\changes{\I}{\texttt{a.balance = b}}$ $\vee$ 
+%  onlyThrough $\changes{\I}{\prg{a.balance = b}}$ $\vee$ 
 %              $\changes{\I}{\encapsulated{\text{a.balance = b}}}$
 %\end{lstlisting}
 %\end{minipage}
@@ -635,9 +649,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\prg{a.balance = b}}$ 
 %  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%  onlyThrough $\changes{I}{\texttt{a.balance = b}}$ $\vee$ false
+%  onlyThrough $\changes{I}{\prg{a.balance = b}}$ $\vee$ false
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -647,9 +661,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{minipage}{0.75\textwidth}
 %\scriptsize
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\prg{a.balance = b}}$ 
 %  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%  onlyThrough $\changes{I}{\texttt{a.balance = b}}$
+%  onlyThrough $\changes{I}{\prg{a.balance = b}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -658,9 +672,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\texttt{a.balance = b}}$ 
+%a : Account $\wedge$ a.balance = b $\wedge$ $\encapsulated{\prg{a.balance = b}}$ 
 %  to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%  onlyThrough $\exists$ o.[$\access{\texttt{o}}{\texttt{a}}$ $\wedge$ $\external{\texttt{o}}$]
+%  onlyThrough $\exists$ o.[$\access{\prg{o}}{\prg{a}}$ $\wedge$ $\external{\prg{o}}$]
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -671,7 +685,7 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame = none]
 %ResultA $\triangleq$ a : Account $\wedge$ a.balance = b  
 %            to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%            onlyThrough $\neg\encapsulated{\texttt{a}}$
+%            onlyThrough $\neg\encapsulated{\prg{a}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -684,9 +698,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\footnotesize
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%a : Account $\wedge$ $\encapsulated{\texttt{a}}$ 
-%  to $\neg\encapsulated{\texttt{a}}$
-%  onlyThrough $\changes{\_}{\encapsulated{\texttt{a}}}$
+%a : Account $\wedge$ $\encapsulated{\prg{a}}$ 
+%  to $\neg\encapsulated{\prg{a}}$
+%  onlyThrough $\changes{\_}{\encapsulated{\prg{a}}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -695,9 +709,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ $\encapsulated{\texttt{a}}$ 
-%  to $\neg\encapsulated{\texttt{a}}$
-%  onlyThrough $\changes{I}{\encapsulated{\texttt{a}}}$
+%a : Account $\wedge$ $\encapsulated{\prg{a}}$ 
+%  to $\neg\encapsulated{\prg{a}}$
+%  onlyThrough $\changes{I}{\encapsulated{\prg{a}}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -706,8 +720,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
-%ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\texttt{a}}$ 
-%  to $\neg\encapsulated{\texttt{a}}$ 
+%ResultB $\triangleq$ a : Account $\wedge$ $\encapsulated{\prg{a}}$ 
+%  to $\neg\encapsulated{\prg{a}}$ 
 %  onlyThrough false
 %\end{lstlisting}
 %\end{minipage}
@@ -722,8 +736,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
 %a : Account $\wedge$ a.balance = b $\wedge$ 
-%  to $\neg\encapsulated{\texttt{a}}$ 
-%  onlyIf $\encapsulated{\texttt{a}}$ $\vee$ $\neg\encapsulated{\texttt{a}}$
+%  to $\neg\encapsulated{\prg{a}}$ 
+%  onlyIf $\encapsulated{\prg{a}}$ $\vee$ $\neg\encapsulated{\prg{a}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -733,30 +747,30 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
 %a : Account $\wedge$ a.balance = b $\wedge$ 
-%  to $\neg\encapsulated{\texttt{a}}$  
-%  onlyIf $\neg \encapsulated{\texttt{a}}$
+%  to $\neg\encapsulated{\prg{a}}$  
+%  onlyIf $\neg \encapsulated{\prg{a}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{If}-$\vee$\textsc{E}$_1$ and \texttt{ResultB}
+%\hfill by \textsc{If}-$\vee$\textsc{E}$_1$ and \prg{ResultB}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
 %Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ 
 %           to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%           onlyIf $\neg \encapsulated{\texttt{a}}$
+%           onlyIf $\neg \encapsulated{\prg{a}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{ResultA} and \textsc{If-Trans}
+%\hfill by \prg{ResultA} and \textsc{If-Trans}
 %\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[mathescape=true, frame=none]
 %%Result $\triangleq$ a : Account $\wedge$ a.balance = b $\wedge$ 
 %%           to $\langle\ \neg$ a.balance $\neq$ b $\rangle$ 
-%%           onlyIf $\neg \bencapsulated{\texttt{a}}$
+%%           onlyIf $\neg \bencapsulated{\prg{a}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -773,15 +787,15 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\label{ex:bank2}
 %In this version of the Bank Account, we show that we 
 %are able to reason about fairly complex forms of encapsulation.
-%Specifically if some \texttt{Bank} \texttt{b} encapsulates
-%some \texttt{Account} a, then it must follow that 
-%the \texttt{Ledger} \texttt{l} that contains \texttt{a}
-%is also encapsulated by \texttt{b}, and subsequently that any change to
-%the balance of \texttt{a} requires a call to \texttt{transfer}
-%on \texttt{b}. This is interesting because, while other examples
+%Specifically if some \prg{Bank} \prg{b} encapsulates
+%some \prg{Account} a, then it must follow that 
+%the \prg{Ledger} \prg{l} that contains \prg{a}
+%is also encapsulated by \prg{b}, and subsequently that any change to
+%the balance of \prg{a} requires a call to \prg{transfer}
+%on \prg{b}. This is interesting because, while other examples
 %do not provide a way to leak access to an account, this example 
-%does, but only through the \texttt{Ledger} interface, and thus
-%encapsulation of the \texttt{Ledger} is sufficient to ensure
+%does, but only through the \prg{Ledger} interface, and thus
+%encapsulation of the \prg{Ledger} is sufficient to ensure
 %encapsulation of the account. Note, this example only proves 
 %that leaking of an account is not possible, it does not prove 
 %that encapsulation of an account is always assured under all 
@@ -809,36 +823,36 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %      this.accs.getAcc1().transfer(this.accs.getAcc2(), amt)
 %\end{lstlisting}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%BankSpec $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%BankSpec $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %             to a.bal $\neq$ x
-%             onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%             onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %As with the example in Section \ref{ex:bank1}, we require 
 %the \verb|Bank| module to prove several invariants:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%AccAccess $\triangleq$ a : Account $\wedge$ $\encapsulates{\texttt{B}}{\texttt{a}}$
-%              to $\neg\encapsulates{\texttt{B}}{\texttt{a}}$
+%AccAccess $\triangleq$ a : Account $\wedge$ $\encapsulates{\prg{B}}{\prg{a}}$
+%              to $\neg\encapsulates{\prg{B}}{\prg{a}}$
 %              through BankMdl
-%              onlyIf $\exists$ o, l. [ l : Ledger $\wedge$ ($\calls{\texttt{o}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%                                                 $\calls{\texttt{o}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)]
+%              onlyIf $\exists$ o, l. [ l : Ledger $\wedge$ ($\calls{\prg{o}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%                                                 $\calls{\prg{o}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a)]
 %\end{lstlisting}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %BalChange $\triangleq$ a : Account $\wedge$ a.bal = x
 %              to a.bal $\neq$ x
 %              through BankMdl
-%              onlyIf $\exists$ a' o. [a' : Account $\wedge$ $\external{\texttt{o}}$ $\wedge$ 
-%                            ($\calls{\_}{\texttt{a}}{\texttt{transfer}}{\texttt{a'}, \_}$ $\vee$ $\calls{\_}{\texttt{a'}}{\texttt{transfer}}{\texttt{a}, \_}$)] $\vee$
-%                     $\exists$ b. [b : Bank $\wedge$ $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%              onlyIf $\exists$ a' o. [a' : Account $\wedge$ $\external{\prg{o}}$ $\wedge$ 
+%                            ($\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{a'}, \_}$ $\vee$ $\calls{\_}{\prg{a'}}{\prg{transfer}}{\prg{a}, \_}$)] $\vee$
+%                     $\exists$ b. [b : Bank $\wedge$ $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$ $\wedge$ 
 %                            (b.accs.acc1 = a $\vee$ b.accs.acc2 = a)])]
 %\end{lstlisting}
 %%We also need to prove a more general property of the encapsulation of account objects by bank objects.
 %%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%%AccEncap1 $\triangleq$ b : Bank $\wedge$ ($\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ $\vee$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$)
-%%              $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs}}$
+%%AccEncap1 $\triangleq$ b : Bank $\wedge$ ($\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$ $\vee$ $\encapsulates{\prg{b}}{\prg{b.accs.acc2}}$)
+%%              $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs}}$
 %%\end{lstlisting}
 %Finally we need to prove the following property:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%BankEncapUnique $\triangleq$ a : Account $\wedge$ b b' : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
+%BankEncapUnique $\triangleq$ a : Account $\wedge$ b b' : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$
 %                    (b'.accs.acc1 = a || b'.accs.acc2 = a)
 %                    $\longrightarrow$ b' = b
 %\end{lstlisting}
@@ -849,16 +863,16 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\footnotesize
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%  $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%  $\changes{\_}{\encapsulates{\prg{b}}{\prg{a}}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%  $\changes{X_\texttt{\{b\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%  $\changes{X_\prg{\{b\}}}{\encapsulates{\prg{b}}{\prg{a}}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -867,20 +881,20 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a)
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{AccAccess}, \textsc{Changes-Int}, and \textsc{Exists}
+%\hfill by \prg{AccAccess}, \textsc{Changes-Int}, and \textsc{Exists}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\texttt{x}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\prg{x}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -889,29 +903,29 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  x = this $\wedge$ $\access{\texttt{x}}{\texttt{l}}$ $\wedge$ $\access{\texttt{l}}{\texttt{a}}$ $\wedge$ $\external{\texttt{x}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  x = this $\wedge$ $\access{\prg{x}}{\prg{l}}$ $\wedge$ $\access{\prg{l}}{\prg{a}}$ $\wedge$ $\external{\prg{x}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Calls-}\texttt{this} and \textsc{Calls-Recv}
+%\hfill by \textsc{Calls-}\prg{this} and \textsc{Calls-Recv}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
-%  ($\encapsulated{\texttt{l}}$ $\vee$ l $\in$ {b})
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ 
+%  ($\encapsulated{\prg{l}}$ $\vee$ l $\in$ {b})
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Encap-}\texttt{this}, \textsc{Encap-Access}, and \textsc{Encap-}$\cup$
+%\hfill by \textsc{Encap-}\prg{this}, \textsc{Encap-Access}, and \textsc{Encap-}$\cup$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ $\encapsulated{\texttt{l}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ $\encapsulated{\prg{l}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -920,9 +934,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
-%  ($\encapsulated{\texttt{this}}$ $\vee$ this $\in$ $\I$)
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\encapsulated{\prg{l}}$ $\wedge$
+%  ($\encapsulated{\prg{this}}$ $\vee$ this $\in$ $\I$)
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -931,8 +945,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\encapsulated{\prg{l}}$ $\wedge$
 %  false
 %\end{lstlisting}
 %\end{minipage}
@@ -942,8 +956,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
-%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%            $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$ $\longrightarrow$ false
+%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%            $\changes{\_}{\encapsulates{\prg{b}}{\prg{a}}}$ $\longrightarrow$ false
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -955,9 +969,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\footnotesize
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg \encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg \encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\changes{\_}{\encapsulates{\prg{b}}{\prg{a}}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -966,9 +980,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ $\changes{X_\texttt{\{b\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ $\changes{X_\prg{\{b\}}}{\encapsulates{\prg{b}}{\prg{a}}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -977,24 +991,24 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%%                  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%%                   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%%                  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%%                   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a)
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
 %%\scriptsize
-%%\hfill by \texttt{AccAccess}, \textsc{Changes-Int}, \textsc{Exists}, and $\longrightarrow$
+%%\hfill by \prg{AccAccess}, \textsc{Changes-Int}, \textsc{Exists}, and $\longrightarrow$
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%%                  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%%                   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\texttt{x}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%%                  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%%                   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\prg{x}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1003,36 +1017,36 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ x = this $\wedge$
-%%                  $\access{\texttt{x}}{\texttt{l}}$ $\wedge$ $\access{\texttt{l}}{\texttt{a}}$ $\wedge$ $\external{\texttt{x}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ x = this $\wedge$
+%%                  $\access{\prg{x}}{\prg{l}}$ $\wedge$ $\access{\prg{l}}{\prg{a}}$ $\wedge$ $\external{\prg{x}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
 %%\scriptsize
-%%\hfill by \textsc{Calls-}\texttt{this}, \textsc{Calls-Recv} and $\longrightarrow$
+%%\hfill by \textsc{Calls-}\prg{this}, \textsc{Calls-Recv} and $\longrightarrow$
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
-%%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
-%%                  ($\encapsulated{\texttt{l}}$ $\vee$ l $\in$ {b})
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\prg{this}}$ $\wedge$
+%%                  $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ 
+%%                  ($\encapsulated{\prg{l}}$ $\vee$ l $\in$ {b})
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
 %%\scriptsize
-%%\hfill by \textsc{Encap-}\texttt{this}, \textsc{Encap-Access}, \textsc{Encap-}$\cup$, and $\longrightarrow$
+%%\hfill by \textsc{Encap-}\prg{this}, \textsc{Encap-Access}, \textsc{Encap-}$\cup$, and $\longrightarrow$
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
-%%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
-%%                  $\encapsulated{\texttt{l}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\prg{this}}$ $\wedge$
+%%                  $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ 
+%%                  $\encapsulated{\prg{l}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1041,11 +1055,11 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
-%%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
-%%                  ($\encapsulated{\texttt{this}}$ $\vee$ this $\in$ $\I$)
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\prg{this}}$ $\wedge$
+%%                  $\neg \encapsulated{\prg{this}}$ $\wedge$ $\encapsulated{\prg{l}}$ $\wedge$
+%%                  ($\encapsulated{\prg{this}}$ $\vee$ this $\in$ $\I$)
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1054,8 +1068,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
-%%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
 %%  onlyThrough false
 %%\end{lstlisting}
 %%\end{minipage}
@@ -1070,9 +1084,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\footnotesize
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\changes{\_}{\texttt{a.bal = x}}$
+%  onlyThrough $\changes{\_}{\prg{a.bal = x}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1081,10 +1095,10 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%     ($\changes{X_{\{\texttt{b}\}}}{\texttt{a.bal = x}}$ $\vee$ $\changes{X_{\{\texttt{b}\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$)
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%     ($\changes{X_{\{\prg{b}\}}}{\prg{a.bal = x}}$ $\vee$ $\changes{X_{\{\prg{b}\}}}{\encapsulates{\prg{b}}{\prg{a}}}$)
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1093,52 +1107,52 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ $\changes{\I}{\texttt{a.bal = x}}$ $\vee$ false
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ $\changes{\I}{\prg{a.bal = x}}$ $\vee$ false
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{ResultA}, \textsc{Encap-}$\cup$, and $\longrightarrow$
+%\hfill by \prg{ResultA}, \textsc{Encap-}$\cup$, and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%              $\exists$ a' o. [a' : Account $\wedge$ $\external{\texttt{o}}$ $\wedge$ 
-%                          ($\calls{\texttt{o}}{\texttt{a}}{\texttt{transfer}}{\texttt{a'}, \_}$ $\vee$ 
-%                           $\calls{\texttt{o}}{\texttt{a'}}{\texttt{transfer}}{\texttt{a}, \_}$)] $\vee$
-%              $\exists$ b'. [b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%              $\exists$ a' o. [a' : Account $\wedge$ $\external{\prg{o}}$ $\wedge$ 
+%                          ($\calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{a'}, \_}$ $\vee$ 
+%                           $\calls{\prg{o}}{\prg{a'}}{\prg{transfer}}{\prg{a}, \_}$)] $\vee$
+%              $\exists$ b'. [b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %                      (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])]
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{BalChange}, \textsc{Changes-Int}, and $\longrightarrow$
+%\hfill by \prg{BalChange}, \textsc{Changes-Int}, and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%              ($\external{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{a}}$) $\vee$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%              ($\external{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{a}}$) $\vee$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Exists}, \textsc{Calls-Recv}, \textsc{Calls-Args}, \textsc{Calls-}\texttt{this}, and $\longrightarrow$
+%\hfill by \textsc{Exists}, \textsc{Calls-Recv}, \textsc{Calls-Args}, \textsc{Calls-}\prg{this}, and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%              ($\encapsulates{\texttt{b}}{\texttt{this}}$ $\vee$ this $\in$ {b}) $\vee$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%              ($\encapsulates{\prg{b}}{\prg{this}}$ $\vee$ this $\in$ {b}) $\vee$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
 %\end{lstlisting}
 %\end{minipage}
@@ -1148,35 +1162,35 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Encap-}\texttt{this} and $\longrightarrow$
+%\hfill by \textsc{Encap-}\prg{this} and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              b' = b
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{BankEncapUnique} and $\longrightarrow$
+%\hfill by \prg{BankEncapUnique} and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%Result $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%Result $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %           to a.bal $\neq$ x
-%           onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%           onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1189,21 +1203,21 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %
 %\subsection{Bank Account 3 - General Encapsulation  of Accounts}
 %\label{ex:bank3}
-%Ideally we would like the encapsulation of accounts to arise from the definition of \texttt{Bank},
+%Ideally we would like the encapsulation of accounts to arise from the definition of \prg{Bank},
 %and not have to provide it as a precondition to our robustness property. A preferable holistic 
-%specification to \texttt{Bank} would be:
+%specification to \prg{Bank} would be:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %BankSpec $\triangleq$ b : Bank $\wedge$ b.accs.acc1.bal = x $\wedge$ b : Bank
 %             to b.accs.acc1.bal $\neq$ x
-%             onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%             onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %That is, under all possible program configurations, the balance of an 
-%account can only be modified using the \texttt{Bank} interface, i.e.
-%encapsulation of the \texttt{Account} by the \texttt{Bank} is implicit.
-%Unfortunately this proof is not possible using the \texttt{Bank} as defined
+%account can only be modified using the \prg{Bank} interface, i.e.
+%encapsulation of the \prg{Account} by the \prg{Bank} is implicit.
+%Unfortunately this proof is not possible using the \prg{Bank} as defined
 %in Section \ref{ex:bank2} because there is no way to ensure encapsulation
-%of the \texttt{Account} by the \texttt{Bank} when the \texttt{Bank} is 
-%created. For this we need to specify how \texttt{Bank}s and \texttt{Account}s are created.
+%of the \prg{Account} by the \prg{Bank} when the \prg{Bank} is 
+%created. For this we need to specify how \prg{Bank}s and \prg{Account}s are created.
 %\begin{lstlisting}[mathescape=true, frame=lines]
 %class Account {
 %  field bal : int
@@ -1237,8 +1251,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{mathpar}
 %\infer
 %		{
-%		M;\ M',\ \sigma\ \vdash\ \exists o.[o : \texttt{Object}\ \wedge\ \forall o'.[o' = o]]\ \longrightarrow\ A\\
-%		M;\ M',\ \sigma\ \vdash\ \onlyThrough{A}{\neg A}{\texttt{false}}
+%		M;\ M',\ \sigma\ \vdash\ \exists o.[o : \prg{Object}\ \wedge\ \forall o'.[o' = o]]\ \longrightarrow\ A\\
+%		M;\ M',\ \sigma\ \vdash\ \onlyThrough{A}{\neg A}{\prg{false}}
 %		}
 %		{
 %		M;\ M',\ \sigma\ \vdash\ A
@@ -1247,55 +1261,55 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{mathpar}
 %It is quite simple to prove the following property:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%$\exists$ o.[o : Object $\wedge$ $\forall$ o'.[o' = o]] $\longrightarrow$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$]
+%$\exists$ o.[o : Object $\wedge$ $\forall$ o'.[o' = o]] $\longrightarrow$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$]
 %\end{lstlisting}
 %Now we can use the above rule to demonstrate that given the appropriate
-%traditional specifications on the methods on \texttt{BankMdl} (including the constructors), 
-%$\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ and $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$ 
-%are program invariants. i.e. \texttt{BankMdl} must use traditional specifications to 
-%prove the following about all methods in \texttt{Bank}, \texttt{Ledger}, and \texttt{Account}:
+%traditional specifications on the methods on \prg{BankMdl} (including the constructors), 
+%$\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$ and $\encapsulates{\prg{b}}{\prg{b.accs.acc2}}$ 
+%are program invariants. i.e. \prg{BankMdl} must use traditional specifications to 
+%prove the following about all methods in \prg{Bank}, \prg{Ledger}, and \prg{Account}:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%{$\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ $\wedge$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$]}
+%{$\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$ $\wedge$ $\encapsulates{\prg{b}}{\prg{b.accs.acc2}}$]}
 %  _.m(...)
-%{$\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ $\wedge$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$]}
+%{$\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$ $\wedge$ $\encapsulates{\prg{b}}{\prg{b.accs.acc2}}$]}
 %\end{lstlisting}
-%With this we can prove the following internal module invariant for \texttt{BankMdl}
+%With this we can prove the following internal module invariant for \prg{BankMdl}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%BankEncap $\triangleq$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ $\wedge$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$
-%              to $\neg\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ $\wedge$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$
+%BankEncap $\triangleq$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$ $\wedge$ $\encapsulates{\prg{b}}{\prg{b.accs.acc2}}$
+%              to $\neg\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$ $\wedge$ $\encapsulates{\prg{b}}{\prg{b.accs.acc2}}$
 %              through BankMdl
 %              onlyIf false
 %\end{lstlisting}
 %
-%Now we can construct a proof of \texttt{BankSpec}. We will re-use the results from Section \ref{ex:bank2} 
+%Now we can construct a proof of \prg{BankSpec}. We will re-use the results from Section \ref{ex:bank2} 
 %as the proofs are much the same.
 %
 %\begin{proofBox}{white}{black}
 %\footnotesize
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$
-%  to $\neg$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$
-%  onlyThrough $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}}$
+%b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$
+%  to $\neg$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$
+%  onlyThrough $\changes{\_}{\encapsulates{\prg{b}}{\prg{b.accs.acc1}}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$
-%  to $\neg$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$
+%b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$
+%  to $\neg$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$
 %  onlyThrough false
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{ResultA} (from Section \ref{ex:bank1}) and \textsc{Trans}$_1$
+%\hfill by \prg{ResultA} (from Section \ref{ex:bank1}) and \textsc{Trans}$_1$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%EncapInv $\triangleq$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$]
-%             to $\neg$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$]
+%EncapInv $\triangleq$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$]
+%             to $\neg$ $\forall$ b.[b : Bank $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$]
 %             onlyThrough false
 %\end{lstlisting}
 %\end{minipage}
@@ -1310,20 +1324,20 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
 %b : Bank $\wedge$ a : Account $\wedge$ b.acc.acc1 = a $\wedge$ a.bal = x $\wedge$ 
-%  $\encapsulates{\texttt{b}}{\texttt{a}}$
+%  $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%  onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{Result}(Section \ref{ex:bank2}) and $\longrightarrow$
+%\hfill by \prg{Result}(Section \ref{ex:bank2}) and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%b : Bank $\wedge$ b.acc.acc1.bal = x $\wedge$ $\encapsulates{\texttt{b}}{\texttt{b.acc.acc1}}$
+%b : Bank $\wedge$ b.acc.acc1.bal = x $\wedge$ $\encapsulates{\prg{b}}{\prg{b.acc.acc1}}$
 %  to b.acc.acc1.bal $\neq$ x
-%  onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%  onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1334,12 +1348,12 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
 %Bank3Result $\triangleq$ b : Bank $\wedge$ b.acc.acc1.bal = x
 %                to b.acc.acc1.bal $\neq$ x
-%                onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%                onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Invariant}, \texttt{EncapInv}, and $\longrightarrow$
+%\hfill by \textsc{Invariant}, \prg{EncapInv}, and $\longrightarrow$
 %\end{minipage}
 %\end{proofBox}
 %
@@ -1351,15 +1365,15 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\label{ex:bank4}
 %In this version of the Bank Account, we show that we 
 %are able to reason about fairly complex forms of encapsulation.
-%Specifically if some \texttt{Bank} \texttt{b} encapsulates
-%some \texttt{Account} a, then it must follow that 
-%the \texttt{Ledger} \texttt{l} that contains \texttt{a}
-%is also encapsulated by \texttt{b}, and subsequently that any change to
-%the balance of \texttt{a} requires a call to \texttt{transfer}
-%on \texttt{b}. This is interesting because, while other examples
+%Specifically if some \prg{Bank} \prg{b} encapsulates
+%some \prg{Account} a, then it must follow that 
+%the \prg{Ledger} \prg{l} that contains \prg{a}
+%is also encapsulated by \prg{b}, and subsequently that any change to
+%the balance of \prg{a} requires a call to \prg{transfer}
+%on \prg{b}. This is interesting because, while other examples
 %do not provide a way to leak access to an account, this example 
-%does, but only through the \texttt{Ledger} interface, and thus
-%encapsulation of the \texttt{Ledger} is sufficient to ensure
+%does, but only through the \prg{Ledger} interface, and thus
+%encapsulation of the \prg{Ledger} is sufficient to ensure
 %encapsulation of the account. Note, this example only proves 
 %that leaking of an account is not possible, it does not prove 
 %that encapsulation of an account is always assured under all 
@@ -1406,36 +1420,36 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %      
 %\end{lstlisting}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%BankSpec $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%BankSpec $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %             to a.bal $\neq$ x
-%             onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%             onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %As with the example in Section \ref{ex:bank1}, we require 
 %the \verb|Bank| module to prove several invariants:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%AccAccess $\triangleq$ a : Account $\wedge$ $\encapsulates{\texttt{B}}{\texttt{a}}$
-%              to $\neg\encapsulates{\texttt{B}}{\texttt{a}}$
+%AccAccess $\triangleq$ a : Account $\wedge$ $\encapsulates{\prg{B}}{\prg{a}}$
+%              to $\neg\encapsulates{\prg{B}}{\prg{a}}$
 %              through BankMdl
-%              onlyIf $\exists$ o, l. [ l : Ledger $\wedge$ ($\calls{\texttt{o}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%                                                 $\calls{\texttt{o}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)]
+%              onlyIf $\exists$ o, l. [ l : Ledger $\wedge$ ($\calls{\prg{o}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%                                                 $\calls{\prg{o}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a)]
 %\end{lstlisting}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 %BalChange $\triangleq$ a : Account $\wedge$ a.bal = x
 %              to a.bal $\neq$ x
 %              through BankMdl
-%              onlyIf $\exists$ a' o. [a' : Account $\wedge$ $\external{\texttt{o}}$ $\wedge$ 
-%                            ($\calls{\_}{\texttt{a}}{\texttt{transfer}}{\texttt{a'}, \_}$ $\vee$ $\calls{\_}{\texttt{a'}}{\texttt{transfer}}{\texttt{a}, \_}$)] $\vee$
-%                     $\exists$ b. [b : Bank $\wedge$ $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%              onlyIf $\exists$ a' o. [a' : Account $\wedge$ $\external{\prg{o}}$ $\wedge$ 
+%                            ($\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{a'}, \_}$ $\vee$ $\calls{\_}{\prg{a'}}{\prg{transfer}}{\prg{a}, \_}$)] $\vee$
+%                     $\exists$ b. [b : Bank $\wedge$ $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$ $\wedge$ 
 %                            (b.accs.acc1 = a $\vee$ b.accs.acc2 = a)])]
 %\end{lstlisting}
 %%We also need to prove a more general property of the encapsulation of account objects by bank objects.
 %%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%%AccEncap1 $\triangleq$ b : Bank $\wedge$ ($\encapsulates{\texttt{b}}{\texttt{b.accs.acc1}}$ $\vee$ $\encapsulates{\texttt{b}}{\texttt{b.accs.acc2}}$)
-%%              $\longrightarrow$ $\encapsulates{\texttt{b}}{\texttt{b.accs}}$
+%%AccEncap1 $\triangleq$ b : Bank $\wedge$ ($\encapsulates{\prg{b}}{\prg{b.accs.acc1}}$ $\vee$ $\encapsulates{\prg{b}}{\prg{b.accs.acc2}}$)
+%%              $\longrightarrow$ $\encapsulates{\prg{b}}{\prg{b.accs}}$
 %%\end{lstlisting}
 %Finally we need to prove the following property:
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-%BankEncapUnique $\triangleq$ a : Account $\wedge$ b b' : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
+%BankEncapUnique $\triangleq$ a : Account $\wedge$ b b' : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$
 %                    (b'.accs.acc1 = a || b'.accs.acc2 = a)
 %                    $\longrightarrow$ b' = b
 %\end{lstlisting}
@@ -1446,16 +1460,16 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\footnotesize
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%  $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%  $\changes{\_}{\encapsulates{\prg{b}}{\prg{a}}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%  $\changes{X_\texttt{\{b\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%  $\changes{X_\prg{\{b\}}}{\encapsulates{\prg{b}}{\prg{a}}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1464,20 +1478,20 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a)
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{AccAccess}, \textsc{Changes-Int}, and \textsc{Exists}
+%\hfill by \prg{AccAccess}, \textsc{Changes-Int}, and \textsc{Exists}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\texttt{x}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\prg{x}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1486,29 +1500,29 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  x = this $\wedge$ $\access{\texttt{x}}{\texttt{l}}$ $\wedge$ $\access{\texttt{l}}{\texttt{a}}$ $\wedge$ $\external{\texttt{x}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  x = this $\wedge$ $\access{\prg{x}}{\prg{l}}$ $\wedge$ $\access{\prg{l}}{\prg{a}}$ $\wedge$ $\external{\prg{x}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Calls-}\texttt{this} and \textsc{Calls-Recv}
+%\hfill by \textsc{Calls-}\prg{this} and \textsc{Calls-Recv}
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
-%  ($\encapsulated{\texttt{l}}$ $\vee$ l $\in$ {b})
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ 
+%  ($\encapsulated{\prg{l}}$ $\vee$ l $\in$ {b})
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Encap-}\texttt{this}, \textsc{Encap-Access}, and \textsc{Encap-}$\cup$
+%\hfill by \textsc{Encap-}\prg{this}, \textsc{Encap-Access}, and \textsc{Encap-}$\cup$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ $\encapsulated{\texttt{l}}$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ $\encapsulated{\prg{l}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1517,9 +1531,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
-%  ($\encapsulated{\texttt{this}}$ $\vee$ this $\in$ $\I$)
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\encapsulated{\prg{l}}$ $\wedge$
+%  ($\encapsulated{\prg{this}}$ $\vee$ this $\in$ $\I$)
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1528,8 +1542,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$
-%  $\external{\texttt{this}}$ $\wedge$ $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
+%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$
+%  $\external{\prg{this}}$ $\wedge$ $\neg \encapsulated{\prg{this}}$ $\wedge$ $\encapsulated{\prg{l}}$ $\wedge$
 %  false
 %\end{lstlisting}
 %\end{minipage}
@@ -1539,8 +1553,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
-%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%            $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$ $\longrightarrow$ false
+%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%            $\changes{\_}{\encapsulates{\prg{b}}{\prg{a}}}$ $\longrightarrow$ false
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1552,9 +1566,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\footnotesize
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg \encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\changes{\_}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg \encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\changes{\_}{\encapsulates{\prg{b}}{\prg{a}}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1563,9 +1577,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ $\changes{X_\texttt{\{b\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ $\changes{X_\prg{\{b\}}}{\encapsulates{\prg{b}}{\prg{a}}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1574,24 +1588,24 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%%                  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%%                   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a)
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%%                  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%%                   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a)
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
 %%\scriptsize
-%%\hfill by \texttt{AccAccess}, \textsc{Changes-Int}, \textsc{Exists}, and $\longrightarrow$
+%%\hfill by \prg{AccAccess}, \textsc{Changes-Int}, \textsc{Exists}, and $\longrightarrow$
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ 
-%%                  ($\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
-%%                   $\calls{\texttt{x}}{\texttt{l}}{\texttt{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\texttt{x}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ 
+%%                  ($\calls{\prg{x}}{\prg{l}}{\prg{getAcc1}}{}$ $\wedge$ l.acc1 = a $\vee$ 
+%%                   $\calls{\prg{x}}{\prg{l}}{\prg{getAcc2}}{}$ $\wedge$ l.acc2 = a) $\wedge$ $\external{\prg{x}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1600,36 +1614,36 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ x = this $\wedge$
-%%                  $\access{\texttt{x}}{\texttt{l}}$ $\wedge$ $\access{\texttt{l}}{\texttt{a}}$ $\wedge$ $\external{\texttt{x}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ x = this $\wedge$
+%%                  $\access{\prg{x}}{\prg{l}}$ $\wedge$ $\access{\prg{l}}{\prg{a}}$ $\wedge$ $\external{\prg{x}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
 %%\scriptsize
-%%\hfill by \textsc{Calls-}\texttt{this}, \textsc{Calls-Recv} and $\longrightarrow$
+%%\hfill by \textsc{Calls-}\prg{this}, \textsc{Calls-Recv} and $\longrightarrow$
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
-%%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
-%%                  ($\encapsulated{\texttt{l}}$ $\vee$ l $\in$ {b})
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\prg{this}}$ $\wedge$
+%%                  $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ 
+%%                  ($\encapsulated{\prg{l}}$ $\vee$ l $\in$ {b})
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
 %%\scriptsize
-%%\hfill by \textsc{Encap-}\texttt{this}, \textsc{Encap-Access}, \textsc{Encap-}$\cup$, and $\longrightarrow$
+%%\hfill by \textsc{Encap-}\prg{this}, \textsc{Encap-Access}, \textsc{Encap-}$\cup$, and $\longrightarrow$
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
-%%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{l}}$ $\wedge$ 
-%%                  $\encapsulated{\texttt{l}}$
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\prg{this}}$ $\wedge$
+%%                  $\neg \encapsulated{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{l}}$ $\wedge$ 
+%%                  $\encapsulated{\prg{l}}$
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1638,11 +1652,11 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true]
-%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  onlyThrough $\encapsulated{\texttt{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\texttt{this}}$ $\wedge$
-%%                  $\neg \encapsulated{\texttt{this}}$ $\wedge$ $\encapsulated{\texttt{l}}$ $\wedge$
-%%                  ($\encapsulated{\texttt{this}}$ $\vee$ this $\in$ $\I$)
+%%a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
+%%  onlyThrough $\encapsulated{\prg{a}}$ $\wedge$ l : Ledger $\wedge$ $\external{\prg{this}}$ $\wedge$
+%%                  $\neg \encapsulated{\prg{this}}$ $\wedge$ $\encapsulated{\prg{l}}$ $\wedge$
+%%                  ($\encapsulated{\prg{this}}$ $\vee$ this $\in$ $\I$)
 %%\end{lstlisting}
 %%\end{minipage}
 %%\begin{minipage}{0.24\textwidth}
@@ -1651,8 +1665,8 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %%\end{minipage}
 %%\begin{minipage}{0.75\textwidth}
 %%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=none]
-%%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
-%%  to $\neg\encapsulates{\texttt{b}}{\texttt{a}}$
+%%ResultA $\triangleq$ a : Account $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
+%%  to $\neg\encapsulates{\prg{b}}{\prg{a}}$
 %%  onlyThrough false
 %%\end{lstlisting}
 %%\end{minipage}
@@ -1667,9 +1681,9 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\footnotesize
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true, frame=single]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\changes{\_}{\texttt{a.bal = x}}$
+%  onlyThrough $\changes{\_}{\prg{a.bal = x}}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1678,10 +1692,10 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%     ($\changes{X_{\{\texttt{b}\}}}{\texttt{a.bal = x}}$ $\vee$ $\changes{X_{\{\texttt{b}\}}}{\encapsulates{\texttt{b}}{\texttt{a}}}$)
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%     ($\changes{X_{\{\prg{b}\}}}{\prg{a.bal = x}}$ $\vee$ $\changes{X_{\{\prg{b}\}}}{\encapsulates{\prg{b}}{\prg{a}}}$)
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
@@ -1690,52 +1704,52 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ $\changes{\I}{\texttt{a.bal = x}}$ $\vee$ false
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ $\changes{\I}{\prg{a.bal = x}}$ $\vee$ false
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{ResultA}, \textsc{Encap-}$\cup$, and $\longrightarrow$
+%\hfill by \prg{ResultA}, \textsc{Encap-}$\cup$, and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%              $\exists$ a' o. [a' : Account $\wedge$ $\external{\texttt{o}}$ $\wedge$ 
-%                          ($\calls{\texttt{o}}{\texttt{a}}{\texttt{transfer}}{\texttt{a'}, \_}$ $\vee$ 
-%                           $\calls{\texttt{o}}{\texttt{a'}}{\texttt{transfer}}{\texttt{a}, \_}$)] $\vee$
-%              $\exists$ b'. [b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%              $\exists$ a' o. [a' : Account $\wedge$ $\external{\prg{o}}$ $\wedge$ 
+%                          ($\calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{a'}, \_}$ $\vee$ 
+%                           $\calls{\prg{o}}{\prg{a'}}{\prg{transfer}}{\prg{a}, \_}$)] $\vee$
+%              $\exists$ b'. [b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %                      (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])]
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{BalChange}, \textsc{Changes-Int}, and $\longrightarrow$
+%\hfill by \prg{BalChange}, \textsc{Changes-Int}, and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%              ($\external{\texttt{this}}$ $\wedge$ $\access{\texttt{this}}{\texttt{a}}$) $\vee$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%              ($\external{\prg{this}}$ $\wedge$ $\access{\prg{this}}{\prg{a}}$) $\vee$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Exists}, \textsc{Calls-Recv}, \textsc{Calls-Args}, \textsc{Calls-}\texttt{this}, and $\longrightarrow$
+%\hfill by \textsc{Exists}, \textsc{Calls-Recv}, \textsc{Calls-Args}, \textsc{Calls-}\prg{this}, and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$ 
-%              ($\encapsulates{\texttt{b}}{\texttt{this}}$ $\vee$ this $\in$ {b}) $\vee$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$ 
+%              ($\encapsulates{\prg{b}}{\prg{this}}$ $\vee$ this $\in$ {b}) $\vee$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
 %\end{lstlisting}
 %\end{minipage}
@@ -1745,35 +1759,35 @@ DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              (b'.accs.acc1 = a $\vee$ b'.accs.acc2 = a)])
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \textsc{Encap-}\texttt{this} and $\longrightarrow$
+%\hfill by \textsc{Encap-}\prg{this} and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %  to a.bal $\neq$ x
-%  onlyThrough $\encapsulates{\texttt{b}}{\texttt{a}}$ $\wedge$
-%              b' : Bank $\wedge$ $\calls{\_}{\texttt{b'}}{\texttt{transfer}}{\_}$ $\wedge$ 
+%  onlyThrough $\encapsulates{\prg{b}}{\prg{a}}$ $\wedge$
+%              b' : Bank $\wedge$ $\calls{\_}{\prg{b'}}{\prg{transfer}}{\_}$ $\wedge$ 
 %              b' = b
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
 %\scriptsize
-%\hfill by \texttt{BankEncapUnique} and $\longrightarrow$
+%\hfill by \prg{BankEncapUnique} and $\longrightarrow$
 %\end{minipage}
 %\begin{minipage}{0.75\textwidth}
 %\begin{lstlisting}[language = Chainmail, mathescape=true]
-%Result $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\texttt{b}}{\texttt{a}}$
+%Result $\triangleq$ a : Account $\wedge$ a.bal = x $\wedge$ b : Bank $\wedge$ $\encapsulates{\prg{b}}{\prg{a}}$
 %           to a.bal $\neq$ x
-%           onlyThrough $\calls{\_}{\texttt{b}}{\texttt{transfer}}{\_}$
+%           onlyThrough $\calls{\_}{\prg{b}}{\prg{transfer}}{\_}$
 %\end{lstlisting}
 %\end{minipage}
 %\begin{minipage}{0.24\textwidth}
