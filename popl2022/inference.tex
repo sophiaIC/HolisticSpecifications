@@ -6,38 +6,34 @@ proofs of the Necessity Specifications defined in Section \ref{s:holistic-guaran
 The inference system for proving Holistic Guarantees consists of several steps:
 \begin{enumerate}
 \item
-Proving encapsulation of module data (Section \ref{s:encap-proof})
+Proving necessity specifications from classical specifications for a particular internal method (Section \ref{s:classical-proof})
 \item
-Proving module level holistic guarantees of encapsulated data from classic specifications (Section \ref{s:classical-proof})
+Proving module-wide necessity specifications by combining per-method necessity specifications (Section \ref{s:module-proof})
 \item
-Proving single step necessary conditions from module level holistic guarantees (Section \ref{s:singleStep-proof})
-\item
-Proving general necessary conditions for emergent behavior (Section \ref{s:emergent-proof})
+Raising necessary conditions to construct proofs of emergent behavior (Section \ref{s:emergent-proof})
 \end{enumerate}
 
 
-\subsection{Module-Level Necessity Specifications from Classical Specifications}
+\subsection{Per-Method Necessity Specifications from Classical Specifications}
 \label{s:classical-proof}
-Classical specification languages are very useful, 
-and have a long history in specifying the behavior 
-of known programs. Necessity Specifications on the 
-other hand allow us to specify all possible programs, 
-including potentially unknown code. In order to do this
-we assume that known, internal module code is specified
-using some classical specification language. In this Section
-we raise classical specifications to prove holistic guarantees
-for internal module code.
+In this section we detail how we use classical specifications
+to construct per-method necessary specifications. In order to do this
+note that if a precondition is \emph{sufficient}
+to achieve a particular result, then the negation of that precondition
+is \emph{necessary} to achieve the negation of the result. Specifically, 
+using classical Hoare logic, if $\hoare{P}{C}{Q}$ is true, then 
+it follows that $\neg P$ is a \emph{necessary precondition} for $\neg Q$ to 
+hold following the execution of $C$.
 
 We do not define a new assertion language and Hoare logic
-as this is a field that has seen much work. We rely on this 
-prior work, and assume some underlying specification language
-that makes use of common features of existing specification 
-languages. Notably the syntax in Fig. \ref{f:chainmail-syntax}
-contains assertion forms that are not present in common 
-specification languages. For this purpose we define a subset 
-of $A$, $P$ in Fig. \ref{f:classical-syntax}, that consists only 
-of syntactic forms commonly found in classical specification 
-languages.
+as this is a field that has seen much work, and any contribution we would provide 
+would be uninteresting. Rather, we rely on this 
+prior work, and assume some underlying logic that can be used 
+to prove a limited subset of \Chainmail, comprising only those 
+assertions that are commonly present in other specification languages.
+We provide this subset in Fig. \ref{f:chainmail-syntax}. That is, classical assertions
+are restricted to expressions, class assertions, the usual connectives, negation, 
+implication, and the usual quantifiers.
 \begin{figure}[t]
 \footnotesize
 \[
@@ -49,6 +45,8 @@ languages.
 				{e : C}
 				{P\ \wedge\ P}
 				{P\ \vee\ P}
+				{P\ \longrightarrow\ P}
+				{\neg P}
 				{\forall x.[P]}
 				{\exists x.[P]}
 		\endsyntaxline
@@ -76,7 +74,6 @@ rules for Single-Step Only If.
 \begin{mathpar}
 \infer
 	{
-%	M,\ \textit{Env}(A) \vdash\ \encaps{e}\\
 	\proves{M}{\hoare
 						{x : C \ \wedge\ P_1\ \wedge\ \neg P}
 						{\prg{res} = x.m(\overline{z})}
@@ -101,7 +98,33 @@ rules for Single-Step Only If.
 	\proves{M}{\onlyIfSingle{\wrapped{y}\ \wedge\ x : C \wedge\ \calls{\_}{x}{m}{\overline{z}}}{\neg \wrapped{y}}{P}}
 	}
 	\quad(\textsc{If1-Wrapped})
-	\and
+\end{mathpar}
+\caption{Deriving Per-Method Necessary Specifications for Known Module Code}
+\label{f:classical->singlestep}
+\end{figure}
+
+\textsc{If1-Encaps} states that if we are able to prove that $P$ is 
+a necessary precondition to method $m$ to go from a state where 
+$P_1$ is true to a state where $P_2$ is true, then we can raise 
+that to say that for a single step of execution where that method 
+is called we can go from $P_1$ to $P_2$ only if $P$ was initially true.
+
+\textsc{If1-Wrapped} raises a classical proof about necessary preconditions 
+for leaking of data by a single internal method to a the more general form of 
+Single-Step Only If.
+
+\subsection{Module Wide Necessary Specifications}
+\label{s:module-proof}
+
+Finally, \textsc{If1-Internal} provides a more general proof step that says
+if a proof of a classical specification can be proven for all internal 
+methods, and that classical specification requires internally encapsulated
+data, then we can construct a more general proof that does not rely on
+statements about specific method calls.
+
+\begin{figure}
+\footnotesize
+\begin{mathpar}
 \infer
 	{
 %	\textit{dom}(M) = \{C_1, \ldots, C_n\}\\
@@ -118,31 +141,15 @@ rules for Single-Step Only If.
 	}
 	\quad(\textsc{If1-Internal})
 \end{mathpar}
-\caption{Deriving Per-Method Holistic Guarantees for Known Module Code}
-\label{f:classical->singlestep}
+\caption{Combining per-method necessary conditions to achieve module-wide necessary conditions.}
 \end{figure}
 
-\textsc{If1-Encaps} states that if we are able to prove that $P$ is 
-a necessary precondition to method $m$ to go from a state where 
-$P_1$ is true to a state where $P_2$ is true, then we can raise 
-that to say that for a single step of execution where that method 
-is called we can go from $P_1$ to $P_2$ only if $P$ was initially true.
-
-\textsc{If1-Wrapped} raises a classical proof about necessary preconditions 
-for leaking of data by a single internal method to a the more general form of 
-Single-Step Only If.
-
-Finally, \textsc{If1-Internal} provides a more general proof step that says
-if a proof of a classical specification can be proven for all internal 
-methods, and that classical specification requires internally encapsulated
-data, then we can construct a more general proof that does not rely on
-statements about specific method calls.
 
 %\subsection{Single-Step Necessary Conditions}
 %\label{s:singleStep-proof}
 %
-%\subsection{Holistic Specifications for Emergent Behavior}
-%\label{s:emergent-proof}
+\subsection{Necessary Specifications for Emergent Behavior}
+\label{s:emergent-proof}
 
 \begin{figure}[t]
 \footnotesize
