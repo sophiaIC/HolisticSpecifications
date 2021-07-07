@@ -12,12 +12,12 @@
 \begin{flushright}
   \textit{Condition B is hard to formalize, \\since it requires saying precisely what a bad
 plan is,\\ and we do not attempt to do so.}\\
-  Leslie Lamport
+ \cite{byzantine}
 \end{flushright}
 
 The days of single, monolithic programs are long gone.  Contemporary
 software is built over decades, by combining modules and components of
-different provenance and different degrees of trustworthiness, and can
+different provenance and different degrees of trustworthiness, which can
 interact with almost every other program, device, or person.
 In order for the resulting complex system to be correct, we need to be
 able to reason about individual components to ensure that they behave
@@ -44,7 +44,7 @@ postcondition (good or bad) cannot be achieved:
 it is necessary that someone is sent an email before they can read it;
 it is necessary that the correct password is provided before money can
 be transferred.  If a necessary condition can never be achieved, then
-bad things guarded by that condition cannot happen.
+bad things guarded by that condition cannot happen. \susan [ I have a real problem with the last sentence. We don't have necessary pre-conditions for bad things in the paper - for instance we don't have a necessary condition ``Passwords can be changed by anyone.'' which we show cannot happen. I want to just remove the sentence.]{}
 
 The challenge here is twofold: How do we specify the bad things we are
 concerned about, and how do we prove that the bad things we've
@@ -73,18 +73,19 @@ happen'' (safety) conditions in his seminal paper on ``Multiprocess
 Programs''.  Type systems ensure entire classes of bad things can't
 happen, preserving executing even if memory structures are greatly
 corrupted \cite{Rinard03}.
-
-
-\citeauthor{FASE} were also concerned with 
- holistic specifications and necessary conditions, which they expressed through time operators.
+More recently, \citeauthor{FASE} were also concerned with 
+ %holistic specifications and 
+ necessary conditions, which they expressed through time operators.
  
 We propose that necessary conditions should be attached to effects, and that 
- effects should be expressed through pairs of assertions: what holds now, and what may hold it the future. Thus, our holistic specifications have the shape\\
+ effects should be expressed through pairs of assertions: what holds now, and what may hold it the future. Thus, our 
+ %holistic 
+ specifications have the shape\\
 \strut \hspace{1.5in} $\onlyIf {A_1} {A_2} {A_3}$ \\
 \noindent
 The above says that if $A_1$ were to hold in the current state, and $A_2$ were to hold in a future state,
-then $A_3$ has to hold now -- in other words, $A_3$ is a necessary condition of  the effect of going
-from an $A_2$-state to and $A_3$-state.\sophia[Shall we also talk of onlyIf1, and onlythrough? I vote no]{}
+then $A_3$ has to hold now -- in other words, $A_3$ is a necessary condition for  the effect of going
+from an $A_1$-state to and $A_2$-state.\sophia[Shall we also talk of onlyIf1, and onlythrough? I vote no - Susan agree]{}
 
 Our assertions $A$ allow for the usual logical connectives and quantifiers
  (e.g. $\wedge$, $\forall$), the usual assertions about the state (e.g. \prg{x.f > 3}), and 
@@ -94,19 +95,19 @@ Our assertions $A$ allow for the usual logical connectives and quantifiers
  \emph{Provenance:}\sophia[used to be called viewpoint, but I think it is provenance]{}
  an internal object belongs to the module under consideration ($\internal{\texttt{o}}$ ), all others
  belong to   unknown, external, module ($\external{\texttt{o}}$) .  \emph{Access:} 
- which object has access to which other object, $\access{\texttt{o}}{\texttt{o}}$. 
+ which object has access to which other object, $\access{\texttt{o}}{\texttt{o'}}$. 
  Provenance is relevant, because a
  module may make stronger guarantees about its own, internal objects. 
- And Access (or permission in Miller's work \sophia[need citation here]{}) is relevant because in general,
+ And Access (or permission in \cite{miller-esop2013}'s work \sophia[need citation here]{}) is relevant because in general,
  access to objects is necessary to
  achieve effects (eg cannot print unless one had access to a printer).
   
  
-\footnote{I think this should appear somewhere later: Chainmail appears 
- to be less rich than Chainmail, however we have been able to specify 
- all their examples, and in addition, we have a proof system for 
- \Chainmail has a proof system, something lacking 
- ih Chainmail lacked. }
+%\footnote{I think this should appear somewhere later: Chainmail appears 
+% to be less rich than Chainmail, however we have been able to specify 
+ %all their examples, and in addition, we have a proof system for 
+ %\Chainmail has a proof system, something lacking 
+ %ih Chainmail lacked. }
 %To specify the bad things, we cannot
 %refer to one particular piece of code, % and cannot refer to one witness;
 % instead, we need to make a guarantee which encompasses all possible
@@ -141,11 +142,12 @@ in Java, albeit without reflection).
 module AccountMdl
   class Account
     field balance:int 
-    field pwd: Object 
+    field pwd: Password
     method transfer(dest:Account, pwd':Object) -> void
       if this.pwd==pwd'
         this.balance-=100
         dest.balance+=100
+  class Password
 \end{lstlisting}
 
 as well as a ``classical'' specification of the method \prg{transfer}:
@@ -163,12 +165,13 @@ ClassicSpec  $\triangleq$
          POST:  a.balance=bal $\wedge$ a.pwd=pwd1)
        ( PRE: a : Account $\wedge$ a.pwd=pwd1  
          POST: a.pwd=pwd1)       
-\end{lstlisting}\footnote{Perhaps omit some of the lines here, but we do need them all in the full discussion}
+\end{lstlisting}
+%\footnote{Perhaps omit some of the lines here, but we do need them all in the full discussion}
  
   
  
- Now consider two further versions of the class account, given in Fig. \ref{fig:ExampleAccount}.
- In version {\sf{II}} and version {\sf{III}} the class has an additional method, \prg{set}, which enables the resetting of the password.
+ Now consider two further versions of the module, given in Fig. \ref{fig:ExampleAccount}.
+ In version {\sf{II}} and version {\sf{III}} the \prg{Account} class has an additional method, \prg{set}, which enables the resetting of the password.
 The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
 however, while executing the first and third version of \prg{Account} won't exhibit unwanted behaviour, the second version doesn't preclude it.
 %Namely version II allows any client to change the password of the account, and then to repeatedly withdraw money from it.
@@ -186,26 +189,26 @@ however, while executing the first and third version of \prg{Account} won't exhi
 % the possible effects of the combinations of these actions. 
   
   
- 
+ \susan[]{I removed the number on the module name because it isn't referred to and doesn't need to be}
  \begin{figure}[hbtp]
  \begin{tabular}{lll}
 \begin{minipage}{0.35\textwidth}
 \begin{lstlisting}[language=chainmail]
-module AccountMdl2
-  class Account{
+module AccountMdl
+  class Account
     field balance:int 
     field pwd: Password 
     method transfer(..) 
       ... as earlier ...
     method set(pwd': Object)
       this.pwd=pwd'
-}   
+  class Password 
 \end{lstlisting}
 \end{minipage}
   &\ \ \  \ \   &
 \begin{minipage}{0.50\textwidth}
 \begin{lstlisting}[language=chainmail]
-module AccountMdl3
+module AccountMdl
   class Account
     field balance:int 
     field pwd: Password 
@@ -214,10 +217,11 @@ module AccountMdl3
     method set(pwd',pwd'': Object)
       if (this.pwd==pwd') 
         this.pwd=pwd''
+  class Password
 \end{lstlisting}
 \end{minipage} 
  \end{tabular}
-  \caption{class \prg{Account} version II,  \ \ \ \ \ \hspace{.7in} \ \ \ \ \ \  class \prg{Account} version III}
+  \caption{module \prg{AccountMdl} version II,  \ \ \ \ \ \hspace{.7in} \ \ \ \ \ \  module \prg{AccountMdl} version III}
  \label{fig:ExampleAccount}
  \end{figure}
 
@@ -226,12 +230,13 @@ module AccountMdl3
  can be used to overwrite the
  password, and then using the new password \prg{transfer}  can be called.
 % If we want the \prg{Account} class to be robust, we must prohibit the password from being freely available.
- Therefore, we propose a holistic specification which says that
+ Therefore, we propose a %holistic 
+ specification which says that
  the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
- class \prg{Account} has access to the password:
+ module has access to the password:
  
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-HolisticSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
+NecessitySpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
                   to a.balance < bal
                   onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
 \end{lstlisting}
@@ -240,8 +245,8 @@ HolisticSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
  In more detail, the specification from above says that if in the current
  configuration \prg{a} is an \prg{Account},
  and in some future configuration \prg{a} will have a balance less than the current one, then, in the \emph{current} configuration
- there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to class
- \prg{Account}), and which has access to \prg{a}'s password.
+ there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to module
+ \prg{AccountMdl}), and which has access to \prg{a}'s password.
  
  
  Thus, having access to the password is a necessary condition for the balance to reduce.
@@ -254,19 +259,19 @@ HolisticSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
  \begin{enumerate}
  \item
  We propose \Chainmail, a specification language with which to
-express holistic specifications. 
+express Necessity Specifications. 
  \item
-  We propose a Logic of Necessity for writing holistic assertions and for proving a module's adherence to said assertions.
+  We propose a Logic of Necessity for writing assertions and for proving a module's adherence to said assertions.
  This logic builds on top of classical pre- post- conditions.
  \item
  We prove soundness of our logic.  
  \item
- We use our logic to prove adherence to the holistic assertion of the example
-outlined  in this section
+ We use our logic to prove adherence to the assertion of the example
+outlined  in this section.
  \end{enumerate}
  
- We have developed a Coq proof of soundness of our approach, and a Cow proof of the
- example in this paper. We make these proofs available as supplementary material.
+ We have developed a Coq proof of soundness of our approach, and a Coq proof of the
+ account example in this paper. We make these proofs available as supplementary material.
 % QUESTIONS:
 % \begin{itemize}
 % \item
