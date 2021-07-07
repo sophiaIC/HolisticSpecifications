@@ -1,3 +1,6 @@
+\renewcommand{\sophia}[2][]{\ponders{Sophia}{blue}{#1} \textcolor{blue}{#2}\xspace}
+
+
 \section{Introduction}
 %Current systems are complex, and  built out of many different components of different provenance and different degree of trustworthiness.
 
@@ -11,8 +14,6 @@
 plan is,\\ and we do not attempt to do so.}\\
   Leslie Lamport
 \end{flushright}
-\susan[that is the best quote I could find - from Byzantine Generals]{}
-\sophia[better than Amis's quote, I think]{}
 
 The days of single, monolithic programs are long gone.  Contemporary
 software is built over decades, by combining modules and components of
@@ -57,16 +58,48 @@ entirety, and constrain the emergent behaviour of all its components,
 for an open system, all possible sequences of API invocations.
 
 
-Rather than considering the sufficient conditions to
+\sophia[Is this paragraph important? Skip?]{} Rather than considering the sufficient conditions to
 achieve a given effect, we express necessary preconditions for the
 holistic system. For example, a third party will not get to read my
 email unless I forward it to them - the forward is a necessary
 precondition for the reading. To reason about necessary conditions we
 develop our Logic of Necessity. 
 
-There has been work in the past to expand specifications of systems beyond the specification of good things.  blah, blah, blah  \citeauthor{FASE} were also concerned with 
+ 
+
+There has been work in the past to expand specifications of systems beyond the specification of good things.  blah, blah, blah  \sophia[JAMES BRING IN HERE THE OTHERS, and in particular Gordon's correspondence assertions also say that type systems are also about bad things
+do not happen]{} \citeauthor{FASE} were also concerned with 
  holistic specifications and necessary conditions, which they expressed through time operators.
- \Chainmail appears to be less rich than Chainmail, however we have been able to specify all their examples. In addition, \Chainmail has a proof system, which Chainmail lacked.
+ 
+We propose that necessary conditions should be attached to effects, and that 
+ effects should be expressed through pairs of assertions: what holds now, and what may hold it the future. Thus, our holistic specifications have the shape\\
+\strut \hspace{1.5in} $\onlyIf {A_1} {A_2} {A_3}$ \\
+\noindent
+The above says that if $A_1$ were to hold in the current state, and $A_2$ were to hold in a future state,
+then $A_3$ has to hold now -- in other words, $A_3$ is a necessary condition of  the effect of going
+from an $A_2$-state to and $A_3$-state.\sophia[Shall we also talk of onlyIf1, and onlythrough? I vote no]{}
+
+Our assertions $A$ allow for the usual logical connectives and quantifiers
+ (e.g. $\wedge$, $\forall$), the usual assertions about the state (e.g. \prg{x.f > 3}), and 
+ % two assertions that are specific to reasoning about open programs: 
+ the following two assertions specific to reasoning about open programs:\sophia[Have 
+ we spoken about open earlier on?]{}
+ \emph{Provenance:}\sophia[used to be called viewpoint, but I think it is provenance]{}
+ an internal object belongs to the module under consideration ($\internal{\texttt{o}}$ ), all others
+ belong to   unknown, external, module ($\external{\texttt{o}}$) .  \emph{Access:} 
+ which object has access to which other object, $\access{\texttt{o}}{\texttt{o}}$. 
+ Provenance is relevant, because a
+ module may make stronger guarantees about its own, internal objects. 
+ And Access (or permission in Miller's work \sophia[need citation here]{}) is relevant because in general,
+ access to objects is necessary to
+ achieve effects (eg cannot print unless one had access to a printer).
+  
+ 
+\footnote{I think this should appear somewhere later: Chainmail appears 
+ to be less rich than Chainmail, however we have been able to specify 
+ all their examples, and in addition, we have a proof system for 
+ \Chainmail has a proof system, something lacking 
+ ih Chainmail lacked. }
 %To specify the bad things, we cannot
 %refer to one particular piece of code, % and cannot refer to one witness;
 % instead, we need to make a guarantee which encompasses all possible
@@ -110,9 +143,10 @@ class Account{
 as well as a ``classical'' specification of the method \prg{transfer}:
 
 
- (ClassicSpec)$  \ \ $  $\triangleq$
+
 \begin{lstlisting}[mathescape=true, frame=lines, language=Chainmail]
-  method transfer(dest:Account, pwd':Password) -> void {
+$(ClassicSpec)$  $\triangleq$
+   method transfer(dest:Account, pwd':Password) -> void {
        ( PRE:  this.balance=bal1 $\wedge$ this.pwd==pwd' $\wedge$ dest.balance=bal2 $\wedge$ dest=/=this 
          POST: this.balance == bal1-100 $\wedge$  dest.balance == bal2+100 )
        ( PRE: this.balance=bal1 $\wedge$ this.pwd=/=pwd' $\wedge$ dest.balance=bal2
@@ -173,7 +207,7 @@ class Account{
 \end{lstlisting}
 \end{minipage} 
  \end{tabular}
-  \caption{class \prg{Account} version II, and \ \ \ \ \ \  class \prg{Account} version III}
+  \caption{class \prg{Account} version II,  \ \ \ \ \ \hspace{.7in} \ \ \ \ \ \  class \prg{Account} version III}
  \label{fig:ExampleAccount}
  \end{figure}
 
@@ -187,16 +221,14 @@ class Account{
  class \prg{Account} has access to the password:
  
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-(HolisticSpec)  $\triangleq$  a:Account $\wedge$ a.balance==bal
-                   to a.balance < bal
-                   onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
+$(HolisticSpec)$  $\triangleq$   from a:Account $\wedge$ a.balance==bal
+                  to a.balance < bal
+                  onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
 \end{lstlisting}
  
-%\jm[good point. fixed]{WHY DOES o HAVE A PRIME?}
- 
+  
  In more detail, the specification from above says that if in the current
  configuration \prg{a} is an \prg{Account},
- % with balance \prg{bal}, 
  and in some future configuration \prg{a} will have a balance less than the current one, then, in the \emph{current} configuration
  there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to class
  \prg{Account}), and which has access to \prg{a}'s password.
@@ -206,19 +238,7 @@ class Account{
  Note, that the specification only talks about effects (here the balance reducing), and does not
  talk about individual methods (such as \prg{set} or \prg{transfer}).
  
-
- The holistic specification language, \Chainmail, extends traditional specifications with
-notions of access, %(which object points to which)
-control 
-%(which methods are called)
-\footnote{Sophia -perhaps drop as confusing? Susan -I think both of the bracketed phrases should be omitted, as we have already used the word access when describing the passwords and we don't mention control anywhere}, 
- the distinction between external and internal objects, and necessary conditions, 
- whereby the assertion $A~to~A'~onlyIf~A''$ expresses that if in in the current configuration
- $A$ holds, and in some future configuration $A'$, 
-\susan[{changed first " to '}]{}
- will hold, then $A''$ must also hold in the 
- current configuration.  
-  
+   
  The contributions of this paper are as follows:
  
  \begin{enumerate}
@@ -267,5 +287,7 @@ The rest of the paper is organised as follows: ....
 %discusses our design, \ref{sect:related} considers related
 %work, and section~\ref{sect:conclusion} concludes.
 %We relegate various details to appendices.
+
+
 
 
