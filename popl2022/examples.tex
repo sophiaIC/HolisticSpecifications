@@ -161,7 +161,15 @@ We omit the proof of $\encaps{\prg{a.password = pwd}}$, as it's construction is 
 
 \subsubsection{B: Proving Necessary Preconditions from Classical Specifications}
 We now provide proofs for necessary preconditions on a per-method basis, leveraging 
-classical specifications.\\
+classical specifications.
+
+First we use the classical specification of the \prg{authenticate} method in \prg{Account} to prove that a call to \prg{authenticate} can only result in 
+a decrease in balance in a single step if there were in fact a call to \prg{transfer} to the \prg{Bank}. This may seem 
+odd at first, and impossible to prove, however we leverage the fact that we are first able to prove that \prg{false}
+is a necessary condition to decreasing the balance, or in other words, it is not possible to decrease the balance by a
+call to \prg{authenticate}. We then use the proof rule \textsc{Absurd} to prove our desired necessary condition.
+This proof is presented as \prg{AuthBalChange} below.
+\\
 \noindent
 \begin{minipage}{\textwidth}
 {
@@ -203,6 +211,9 @@ classical specifications.\\
 	\end{proofexample}
 }
 \end{minipage}
+We provide the statements of the proof results for the remaining methods in the module below,
+%(\textbf{ChangePasswordBalChange}, \textbf{Ledger::TransferBalChange}, and \textbf{Bank::TransferBalChange}), 
+but we elide most of the steps as they do not differ much from that of \textbf{AuthBalChange}.\\
 \begin{minipage}{\textwidth}
 {
 	\begin{proofexample}
@@ -219,6 +230,46 @@ classical specifications.\\
 	\end{proofexample}
 }
 \end{minipage}
+%\begin{minipage}{\textwidth}
+%{
+%	\begin{proofexample}
+%		\proofsteps{Ledger::TransferBalChange}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getbalance(a) < bal}
+%						{$\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						}
+%					{by \textsc{If-Start} and \textsc{If1-If}}
+%			}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getbalance(a) < bal}
+%						{$\neg\wrapped{\prg{l}}$}
+%						}
+%					{by \textsc{If1-}$\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Caller-Recv}}
+%			}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getbalance(a) < bal}
+%						{\false}
+%						}
+%					{by \textsc{Intrnl-Wrapped} and \textsc{If1-}$\longrightarrow$}
+%			}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getbalance(a) < bal}
+%						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
+%						}
+%					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%}
+%\end{minipage}
 \begin{minipage}{\textwidth}
 {
 	\begin{proofexample}
@@ -227,33 +278,9 @@ classical specifications.\\
 				{\onlyIfSingleEx
 						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
 						{b.getbalance(a) < bal}
-						{$\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
-						}
-					{by \textsc{If-Start} and \textsc{If1-If}}
-			}
-			{\proofstepwithrule
-				{\onlyIfSingleEx
-						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
-						{b.getbalance(a) < bal}
-						{$\neg\wrapped{\prg{l}}$}
-						}
-					{by \textsc{If1-}$\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Caller-Recv}}
-			}
-			{\proofstepwithrule
-				{\onlyIfSingleEx
-						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
-						{b.getbalance(a) < bal}
-						{\false}
-						}
-					{by \textsc{Intrnl-Wrapped} and \textsc{If1-}$\longrightarrow$}
-			}
-			{\proofstepwithrule
-				{\onlyIfSingleEx
-						{l : Ledger $\wedge$ a : Account $\wedge$ b : Bank $\wedge$ b.getBalance(a) = bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
-						{b.getbalance(a) < bal}
 						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
 						}
-					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
+					{by similar reasoning to \textbf{\prg{AuthBalChange}}}
 			}
 		\endproofsteps
 	\end{proofexample}
@@ -441,7 +468,6 @@ that we have annotated \prg{BankMdl} with.
 	}
 \endproofsteps
 \end{proofexample}
-
 \subsubsection{D: Proving Emergent Behavior}
 Finally, we combine our module-wide single-step necessity specifications to 
 prove emergent behavior of the entire system.\\
