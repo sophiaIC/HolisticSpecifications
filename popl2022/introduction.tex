@@ -85,35 +85,53 @@ happen, preserving executing even if memory structures are greatly
 corrupted \cite{Rinard03}.
 More recently, \citeauthor{FASE} were also concerned with 
  %holistic specifications and 
- necessary conditions, which they expressed through time operators.
+ necessary conditions, which they expressed through temporal
+ operators.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
-We propose that necessary conditions should be attached to effects, and that 
- effects should be expressed through pairs of assertions: what holds now, and what may hold it the future. Thus, our 
- %holistic 
- specifications have the shape\\
+
+In this paper we introduce \textit{necessity specifications}:\\
 \strut \hspace{1.5in} $\onlyIf {A_1} {A_2} {A_3}$ \\
-\noindent
-The above says that if $A_1$ were to hold in the current state, and $A_2$ were to hold in a future state,
-then $A_3$ has to hold now -- in other words, $A_3$ is a necessary condition for  the effect of going
-from an $A_1$-state to and $A_2$-state.\sophia[Shall we also talk of onlyIf1, and onlythrough? I vote no - Susan agree]{}
+to say a change from a current state satisfying $A_1$ to a future
+state satisfying $A_2$ (i.e.\ an effect) is possible only if the necessary condition
+$A_3$ holds in the current state
+%
+(i.e.\ $(A_1 \wedge \Diamond A_2) \longrightarrow A_3$).
+%
+Unlike \citeauthor{VerX} or \citeauthor{FASE}
+which use general temporal operators, 
+We support necessity specifications with this explicit
+%
+``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
+%
+and concomitant specialised inference system.
+%
+%
+Our assertions $A$ support the usual expressions about program state
+(e.g. \prg{x.f > 3}), logical connectives and quantifiers
+(e.g. $\wedge$, $\forall$), and additional predicates
+to capture \textit{provenance} (whether an object $o$'s definition is
+$\internal{\texttt{o}}$ or $\external{\texttt{o}}$) to the current
+module, and \textit{permission} \cite{miller-esop2013} (whether an
+object $o$ has direct access to another object $o'$:
+$\access{\texttt{o}}{\texttt{o'}}$).
+ 
 
-Our assertions $A$ allow for the usual logical connectives and quantifiers
- (e.g. $\wedge$, $\forall$), the usual assertions about the state (e.g. \prg{x.f > 3}), and 
- % two assertions that are specific to reasoning about open programs: 
- the following two assertions specific to reasoning about open programs:\sophia[Have 
- we spoken about open earlier on?]{}
- \emph{Provenance:}\sophia[used to be called viewpoint, but I think it is provenance]{}
- an internal object belongs to the module under consideration ($\internal{\texttt{o}}$ ), all others
- belong to   unknown, external, module ($\external{\texttt{o}}$) .  \emph{Access:} 
- which object has access to which other object, $\access{\texttt{o}}{\texttt{o'}}$. 
- Provenance is relevant, because a
- module may make stronger guarantees about its own, internal objects. 
- And Access (or permission in \cite{miller-esop2013}'s work \sophia[need citation here]{}) is relevant because in general,
- access to objects is necessary to
- achieve effects (eg cannot print unless one had access to a printer).
+%% , , and 
+%%  % two assertions that are specific to reasoning about open programs: 
+%%  the following two assertions specific to reasoning about open programs:\sophia[Have 
+%%  we spoken about open earlier on?]{}
+%%  \emph{Provenance:}\sophia[used to be called viewpoint, but I think it is provenance]{}
+%%  an internal object belongs to the module under consideration ($\internal{\texttt{o}}$ ), all others
+%%  belong to   unknown, external, module ($\external{\texttt{o}}$) .  \emph{Access:} 
+%%  which object has access to which other object, $\access{\texttt{o}}{\texttt{o'}}$. 
+%%  Provenance is relevant, because a
+%%  module may make stronger guarantees about its own, internal objects. 
+%%  And Access (or permission in \cite{miller-esop2013}'s work \sophia[need citation here]{}) is relevant because in general,
+%%  access to objects is necessary to
+%%  achieve effects (eg cannot print unless one had access to a printer).
   
  
 %\footnote{I think this should appear somewhere later: Chainmail appears 
@@ -139,21 +157,21 @@ Our assertions $A$ allow for the usual logical connectives and quantifiers
 
 
 
+For example, consider the \prg{Account1} class modeling a bank account
+with a balance and a password, where funds may be transferred
+between accounts only with the sending account's password:
 
-We illustrate our ideas in terms of the following example:
-\prg{Account}s have a balance and a password. One may transfer
-\prg{100} units from one \prg{Account} to another, but only provided
-that the caller provides the right password. Below we show version
-\sf{I} of the code for a class \prg{Account}.  We use a Java-like
-syntax, and assume that fields are ``class-wide'' private (again as in
-Java, so methods may read and write fields of any instance of that
-class) and that passwords are unforgeable and not enumerable (again as
-in Java, albeit without reflection).
+% (Note that we assume private fields are accessible ``class-wide''.)
+%
+% (methods may read and write fields of any instance of a class)
+%
+%and that passwords are unforgeable and not enumerable (again as
+%in Java, albeit without reflection).
 
  
 \begin{lstlisting}[language=Chainmail]
-module AccountMdl
-  class Account
+module Mod1
+  class Account1
     field balance:int 
     field pwd: Password
     method transfer(dest:Account, pwd':Object) -> void
@@ -163,7 +181,12 @@ module AccountMdl
   class Password
 \end{lstlisting}
 
-as well as a ``classical'' specification of the method \prg{transfer}:
+\noindent 
+We can capture the intended
+semantics of the \prg{transfer} method by writing ``classical''
+specifications in terms of pre- and post-conditions ---
+\prg{Account1}'s implementation of the \prg{transfer} method meets
+this specification.
 
 
 
@@ -181,13 +204,24 @@ ClassicBankSpec  $\triangleq$
 \end{lstlisting}
 %\footnote{Perhaps omit some of the lines here, but we do need them all in the full discussion}
  
-  
  
- Now consider two further versions of the module, given in Fig. \ref{fig:ExampleAccount}.
- In version {\sf{II}} and version {\sf{III}} the \prg{Account} class has an additional method, \prg{set}, which enables the resetting of the password.
-The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
-however, while executing the first and third version of \prg{Account} won't exhibit unwanted behaviour, the second version doesn't preclude it.
-%Namely version II allows any client to change the password of the account, and then to repeatedly withdraw money from it.
+
+Now consider the following alternative implementations
+\prg{Account2} allows any client to reset its password at any time, while
+\prg{Account3} first requires the existing password in order to change it.
+The problem is that although the \prg{transfer} method is the same in
+all three alternatives, and although each one satisfies (ClassicSpec),
+emergent code sequences such as
+%
+\prg{account.set(42); account.transfer(yourAccount, 42}
+%
+are enough to drain \prg{Account2} without supplying the password.
+
+%% The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
+%% however, while executing the first and third version of \prg{Account} won't exhibit unwanted behaviour, the second version doesn't preclude it.
+%Namely version II allows any client to change the password of the
+%account, and then to repeatedly withdraw money from it.
+
   
 % On the other hand, we expect our software -- even if complex -- to provide some simple, high level
 %guarantees, e.g. email addressed to me personally will not be read by a third party unless I explicitly 
@@ -202,27 +236,29 @@ however, while executing the first and third version of \prg{Account} won't exhi
 % the possible effects of the combinations of these actions. 
   
   
- \susan[]{I removed the number on the module name because it isn't referred to and doesn't need to be}
- \begin{figure}[hbtp]
- \begin{tabular}{lll}
-\begin{minipage}{0.35\textwidth}
+%% \susan[]{I removed the number on the module name because it isn't
+%% referred to and doesn't need to be} 
+ %% \begin{figure}[hbtp]
+\begin{tabular}{lll}
+  \begin{minipage}{0.35\textwidth}
+    \vfill
 \begin{lstlisting}[language=chainmail]
-module AccountMdl
-  class Account
+module Mod2
+  class Account2
     field balance:int 
     field pwd: Password 
     method transfer(..) 
       ... as earlier ...
     method set(pwd': Object)
       this.pwd=pwd'
-  class Password 
+      class Password
 \end{lstlisting}
 \end{minipage}
   &\ \ \  \ \   &
 \begin{minipage}{0.50\textwidth}
 \begin{lstlisting}[language=chainmail]
-module AccountMdl
-  class Account
+module Mod3
+  class Account3
     field balance:int 
     field pwd: Password 
     method transfer(..) 
@@ -234,35 +270,57 @@ module AccountMdl
 \end{lstlisting}
 \end{minipage} 
  \end{tabular}
-  \caption{module \prg{AccountMdl} version II,  \ \ \ \ \ \hspace{.7in} \ \ \ \ \ \  module \prg{AccountMdl} version III}
- \label{fig:ExampleAccount}
- \end{figure}
+ %%  \caption{module \prg{AccountMdl} version II,  \ \ \ \ \ \hspace{.7in} \ \ \ \ \ \  module \prg{AccountMdl} version III}
+ %% \label{fig:ExampleAccount}
+ %% \end{figure}
 
- 
- The flaw in version {\sf{II}} arises from \emph{emergent} behaviour as \prg{set} 
- can be used to overwrite the
- password, and then using the new password \prg{transfer}  can be called.
+
+We need to rule out \prg{Account2} while permitting \prg{Account3} and
+\prg{Account1}. The catch is the leak in \prg{Account2} is the result
+of  \emph{emergent} behaviour from the interactions of the \prg{set}
+and \prg{transfer} methods --- even though \prg{Account3} also has a
+\prg{set} method, it does not exhibit the unwanted interaction.
+
+
+ %% The flaw in version {\sf{II}} arises from 
+ %% can be used to overwrite the
+ %% password, and then using the new password \prg{transfer}  can be called.
 % If we want the \prg{Account} class to be robust, we must prohibit the password from being freely available.
- Therefore, we propose a %holistic 
- specification which says that
- the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
- module has access to the password:
+
+We need a necessity condition here: to ensure that money can only be
+transferred when the sending account's password is known.
+
+%% In this paper, we show how \textit{necessity specifications} can solve
+%% this progkem.  
+%%  Therefore, we propose a %holistic 
+%%  specification which says that
+%%  the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
+%%  module has access to the password:
+ 
+
+ %% Therefore, we propose a %holistic 
+ %% specification which says that
+ %% the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
+ %% module has access to the password:
  
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 NecessityBankSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
                       to a.balance < bal
                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
 \end{lstlisting}
- 
+
+JAMKES  DONE TO HERE
+
+ NecessityBankSpec essentially says that an account's balance can only
+ be reduced if an external object can access the password.
   
- In more detail, the specification from above says that if in the current
- configuration \prg{a} is an \prg{Account},
- and in some future configuration \prg{a} will have a balance less than the current one, then, in the \emph{current} configuration
- there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to module
- \prg{AccountMdl}), and which has access to \prg{a}'s password.
+ %% In more detail, the specification from above says that if in the current
+ %% configuration \prg{a} is an \prg{Account},
+ %% and in some future configuration \prg{a} will have a balance less than the current one, then, in the \emph{current} configuration
+ %% there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to module
+ %% \prg{AccountMdl}), and which has access to \prg{a}'s password.
  
- 
- Thus, having access to the password is a necessary condition for the balance to reduce.
+%% T9hu having access to the password is a necessary condition for the balance to reduce.
  Note, that the specification only talks about effects (here the balance reducing), and does not
  talk about individual methods (such as \prg{set} or \prg{transfer}).
  
