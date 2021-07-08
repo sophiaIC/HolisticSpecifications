@@ -11,7 +11,7 @@ an underlying programming language \Loo, (Section \ref{sub:Loo}).
 We then  define an assertion language, \SpecO,  which can talk about
  the contents of the state, as well about 
   of provenance and permission(Section \ref{sub:SpecO}).
-Finally, we define necessity specifications in \Chainmail (Section \ref{s:holistic-guarantees}).
+Finally, we define necessity specifications in \SpecO (Section \ref{s:holistic-guarantees}).
 \sophia[added]{} 
 
 
@@ -165,7 +165,7 @@ More in Definition \ref{def:initial}.
 \SpecO extends expressiveness of standard specification languages
 with assertion forms capturing key concepts of software security:
  \emph{permission}, \sd{\emph{provenance}}, and \emph{control}.
-%That is, \Chainmail specifications are able to specify which objects have
+%That is, \SpecO specifications are able to specify which objects have
 %access to which other object (\emph{permission}), whether an object's origin
 %is internal or external to known code (\emph{viewpoint}), or which objects call which 
 %methods (\emph{control}). 
@@ -176,7 +176,7 @@ with assertion forms capturing key concepts of software security:
 \footnotesize
 \[
 \begin{syntax}
-\syntaxElement{A}{\Chainmail Assertion}
+\syntaxElement{A}{\SpecO Assertion}
 		{
 		\syntaxline
 				{e}
@@ -203,13 +203,13 @@ with assertion forms capturing key concepts of software security:
 \endSyntaxElement\\
 \end{syntax}
 \]
-\caption{\Chainmail Assertions}
+\caption{\SpecO Assertions}
 \label{f:chainmail-syntax}
 \end{figure}
 
 \sophia[I, fig. \ref{f:chainmail-syntax}, I think we can drop "SpecOAssertion" since it is in the caption]{}
 
-Fig. \ref{f:chainmail-syntax} gives the assertion syntax of the \Chainmail specification language.
+Fig. \ref{f:chainmail-syntax} gives the assertion syntax of the \SpecO specification language.
 An assertion may be an expression, a class assertion, the usual connectives and quantifiers, along 
 with several non-standard assertion forms:
 \begin{itemize}
@@ -226,7 +226,7 @@ with several non-standard assertion forms:
 
 \subsubsection{Semantics of \SpecO}
 The semantics of \SpecO assertions is given in Definition \ref{def:chainmail-semantics}. 
-The definition of the semantics of \Chainmail makes use of several language features of 
+The definition of the semantics of \SpecO makes use of several language features of 
 \Loo that can be found in Appendix \ref{app:loo}. Specifically, $\eval{M}{\sigma}{e}{v}$
 is the evaluation relation for expressions, and is interpreted as expression $e$ evaluates
 to value $v$ in the context of program configuration $\sigma$, with module $M$. The full
@@ -241,14 +241,14 @@ value $v$ in the local variable map of frame $\phi$, and $\interpret{\sigma}{x} 
 maps to value $v$ in the top most frame of $\sigma$'s stack.
 
 \sophia[some spurious $\circ M'$ below -- am removing them]{}
-\begin{definition}[Satisfaction of \Chainmail Assertions] 
+\begin{definition}[Satisfaction of \SpecO Assertions] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a program configuration $\sigma$ with internal module $M$ as:
 \begin{itemize}
 \item
 $\satisfiesA{M}{\sigma}{e}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\true}$
 \item
-$\satisfiesA{M}{\sigma}{e : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\alpha}$ \textit{and} $\class{\sigma}{\alpha} = C$
+$\satisfiesA{M}{\sigma}{e : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\alpha}$ \textit{and} $\sigma.\prg{heap}(\alpha).\prg{class} = C$
 \item
 $\satisfiesA{M}{\sigma}{\neg A}$ \ \ \ iff \ \ \  ${M},{\sigma}\nvDash{A}$
 \item
@@ -306,6 +306,7 @@ $\interpret{\sigma}{z_i} = \interpret{\sigma}{z'_i}$ \ \ \ for all $1\!\leq i\!\
 
 
 \sophia[In previous page it was $\textit{classOf}(\sigma,\alpha)$, here it is $\textit{classOf}(\sigma,x)$]{} 
+\jm[changed $\class{}{}$ to explicit class look-up in semantics of \SpecO]{}
 
 \sophia[What is "general form of satisfaction"? We need a better term than that. We also need motivation here. Can we take from FASE?]{} 
 
@@ -319,6 +320,21 @@ for all modules $M'$, and all $\sigma$, if $\arising{M'}{M}{\sigma}$, then $\sat
 \footnote{used to say: \ \ $\satisfiesA{M}{\sigma}{A}$ for all program configurations $\sigma$. \ \  
 but this is wrong }
 \end{definition}
+
+\jm[I have put this here, but I'm not sure it makes sense here ...]{
+In order to both define the logic of necessity, and construct many proofs of the examples presented in this paper,
+we need the ability to reason about \Chainmail 
+apart from Necessity Specifications. That is, we rely on the existence of
+a relation of the form $\proves{M}{A}$. Again, as with encapsulation, this does not fall in the 
+domain of our logic of necessity, but is a secondary relation upon which soundness relies. Such a logic is also useful in presenting proofs 
+of examples in this paper. For this reason, we elide the definition 
+of such a logic, but rely on the existence of one and it's soundness. Lemma \ref{lem:specX-prove-soundness}
+states the soundness of such a logic.
+\begin{lemma}[Soundness of \Chainmail Provability]
+\label{lem:specX-prove-soundness}
+For all modules $M$ and assertions $A$, $\proves{M}{A}$ then $\satisfies{M}{A}$.
+\end{lemma}
+}
 
 %\begin{figure}[t]
 %\begin{mathpar}
@@ -410,11 +426,12 @@ We have three forms of necessity assertions, described below:
 \endSyntaxElement\\
 \end{syntax}
 \]
-\caption{Syntax for Necessity Specifications}
+\caption{Syntax of \Chainmail}
 \label{f:holistic-syntax}
 \end{figure}
 
 \sophia[In Fig. \ref{f:holistic-syntax}, I think we can drop "Necessity Specification" and just put \Chainmail assertions in the caption]{}
+\jm[wrt. \Chainmail vs \SpecO: I have changed most references to \SpecO, as that was what I meant when I mentioned \Chainmail. I think there may be some mis-renamings though. I will check carefully tomorrow on my read through, but be aware there may be some weird renamings.]{}
 
 \paragraph{Only If}
 [$\onlyIf{A_1}{A_2}{A}$]: If an arising program configuration starts at some state $A_1$, and reaches some state $A_2$, 
@@ -437,10 +454,24 @@ or final state ($\sigma_2$).
 \sophia[We need the motivation, definition, and explanations for the viewpoint adaptation operator, ad in
 FASE]{}
 
+\jm[]{As programs execute, the local variable 
+map may change, variables may be overwritten, or the entire local variable maps may be lost on a method return.
+For this reason, before we provide the semantics of Necessity Specifications, we first introduce an adaptation operator
+to account for variable renaming throughout the execution of a program.
+\begin{definition}
+$\adapt{\sigma}{\sigma'} \triangleq (\chi, \{\prg{local} := \beta'[\overline{z}' \mapsto \beta(\overline{z})], \prg{contn}:= [\overline{z}/\overline{z'}]c\} : \psi)$
+where 
+\begin{itemize}
+\item
+$\sigma = (\chi, \{\prg{local}:=\beta, \prg{contn}:=c\} : \psi)$ and
+$\sigma' = (\_, \{\prg{local}:=\beta'; \prg{contn}:=\_\} : \_)$, and
+\item
+$dom(\beta) = \overline{z}$, $dom(\beta') \cap \overline{z}' = \emptyset$, and $|\overline{z}| = |\overline{z}'|$
+\end{itemize}
+\end{definition}}
 We define $M \models H$ the semantics of the Necessity Specifications in Definition \ref{def:necessity-semantics}. \sd{The definition goes by cases over the three possible syntactic forms of $H$:}
 
 
-\sophia[In the definition, the third bullet replace O by open parenthesis and C by close parenthesis]{}
 \noindent
 \begin{definition}[Necessity Specifications]
 \label{def:necessity-semantics}
@@ -536,7 +567,7 @@ by internal, known code, " I do not think that is correct}
 % and those assertions that may change due 
 % to computation by external, unknown code.
 \sd{As we saw in section 2, when the concept of encapsulation of \SpecO assertions 
-in useful when proving adherence to \Chainmail specifications.}
+in useful when proving adherence to \SpecO specifications.}
 An assertion $A$ is encapsulated by a module $M$ if it cannot be invalidated unless an
 internal method is called. 
 \sd{Here we refine this concept, to allow for ``conditional'' encapsulation:
@@ -559,10 +590,21 @@ $\;\;\;\;$- $\satisfiesA{M}{\sigma}{A'}$   \\
 $\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A'}$   \\
 \end{tabular}
 \end{definition}
-\sophia[Is it possible/easy to lay out this definition so that it looks like Def. 3.5]{}
-
 \sophia[Here we should talk about soundness of an inference system fir encapsulation, and
 define soudness for it. Then say that am algorithmic rudimentary system is in the appendix.]{}
+
+
+\jm[]{
+As we have already stated, we assume the existence of such an assertion encapsulation system, 
+along with an inference system for constructing proofs of assertion encapsulation, written $\proves{M}{\givenA{A_1}{\encaps{A_2}}}$.
+For the purposes of the examples presented later in the paper, we introduce a rudimentary 
+encapsulation system that relies on the type system of \Loo, but the logic of necessity 
+does not rely on the specifics of any one encapsulation system, only it's soundness.
+\begin{lemma}[Encapsulation Soundness]
+\label{lem:encap-soundness}
+For all modules $M$, and assertions $A_1$ and $A_2$, if $\proves{M}{\givenA{A_1}{\encaps{A_2}}}$ then $\proves{M}{\givenA{A_1}{\encaps{A_2}}}$.
+\end{lemma}
+}
 
 
 \subsection{Expressiveness of Necessity Specifications}
@@ -574,7 +616,7 @@ The ERC20 is a widely used token standard describing the basic functionality of 
 contract. This functionality includes issuing tokens, keeping track of tokens belonging to participants, and the 
 transfer of tokens between participants. Tokens may only be transferred if there is sufficient tokens in the 
 participant's account, and if either they or someone authorized the participant initiated the transfer. We 
-specify these necessary conditions here using \Chainmail and the Logic of Necessity. Firstly, \prg{ERC20Spec1} 
+specify these necessary conditions here using \SpecO and the Logic of Necessity. Firstly, \prg{ERC20Spec1} 
 says that if the balance of a participant's account is ever reduced by some amount $m$, then
 that must have occurred as a result of a call to the \prg{transfer} method with amount $m$ by the participant,
 or the \prg{transferFrom} method with the amount $m$ by some other participant.

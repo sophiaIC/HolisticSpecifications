@@ -13,35 +13,6 @@ Proving module-wide necessity specifications by combining per-method necessity s
 Raising necessary conditions to construct proofs of emergent behavior (Section \ref{s:emergent-proof})
 \end{enumerate}
 
-\subsection{Encapsulation}
-
-\jm[]{
-As we have already stated, we assume the existence of an assertion encapsulation system, 
-and an inference system for constructing proofs of assertion encapsulation, written $\proves{M}{\givenA{A_1}{A_2}}$.
-For the purposes of the examples presented later in the paper, we introduce a rudimentary 
-encapsulation system that relies on the type system of \Loo, but the logic of necessity 
-does rely on the specifics of any one encapsulation system, only it's soundness.
-\begin{lemma}[Encapsulation Soundness]
-\label{lem:encap-soundness}
-For all modules $M$, and assertions $A_1$ and $A_2$, if $\proves{M}{\givenA{A_1}{\encaps{A_2}}}$ then $\proves{M}{\givenA{A_1}{\encaps{A_2}}}$.
-\end{lemma}
-}
-
-\jm[]{
-In order to both define the logic of necessity, and construct many proofs of the examples presented in this paper,
-we need the ability to reason about \Chainmail 
-apart from Necessity Specifications. That is, we rely on the existence of
-a relation of the form $\proves{M}{A}$. Again, as with encapsulation, this does not fall in the 
-domain of our logic of necessity, but is a secondary relation upon which soundness relies. Such a logic is also useful in presenting proofs 
-of examples in this paper. For this reason, we elide the definition 
-of such a logic, but rely on the existence of one and it's soundness. Lemma \ref{lem:specX-prove-soundness}
-states the soundness of such a logic.
-\begin{lemma}[Soundness of \Chainmail Provability]
-\label{lem:specX-prove-soundness}
-For all modules $M$ and assertions $A$, $\proves{M}{A}$ then $\satisfies{M}{A}$.
-\end{lemma}
-}
-
 \subsection{Per-Method Necessity Specifications from Classical Specifications}
 \label{s:classical-proof}
 In this section we detail how we use classical specifications
@@ -57,7 +28,7 @@ We do not define a new assertion language and Hoare logic
 as this is a field that has seen much work, and any contribution we would provide 
 would be uninteresting. Rather, we rely on this 
 prior work, and assume some underlying logic that can be used 
-to prove a limited subset of \Chainmail, comprising only those 
+to prove a limited subset of \SpecO, comprising only those 
 assertions that are commonly present in other specification languages.
 We provide this subset in Fig. \ref{f:chainmail-syntax}. That is, classical assertions
 are restricted to expressions, class assertions, the usual connectives, negation, 
@@ -141,7 +112,7 @@ is called we can go from $P_1$ to $P_2$ only if $P$ was initially true.
 for leaking of data by a single internal method to a the more general form of 
 Single-Step Only If.
 
-\subsection{Module Wide Necessity Specifications}
+\subsection{Necessity Specifications for Any Single Step}
 \label{s:module-proof}
 
 We now raise per-method necessity specifications 
@@ -174,7 +145,17 @@ statements about specific method calls.
 \end{figure}
 Once we are able to derive proofs of more general necessity specifications, 
 we can further extend these rules to allow for the construction of more complex 
-necessary conditions. We provide such rules in Fig. \ref{f:only-if-single}.
+necessary conditions. We provide such rules in Fig. \ref{f:only-if-single}. 
+\jm{By the rule for implication (\textsc{If1-$\longrightarrow$}), we are able 
+to strengthen properties of either the starting or ending state, or 
+weaken the necessary pre-condition. There are two disjunction introduction 
+rules (\textsc{If1-$\vee$I1} and \textsc{If1-$\vee$I2}). The disjunction
+elimination rule is of note, it mirrors typical disjunction elimination
+rules, with a variation stating that if it is not possible  to reach 
+the end state from one branch of the disjunction, then we can eliminate 
+that branch. Note, given the rule for implication, there is no need 
+for conjunction introduction (\textsc{IF1-$\wedge$I}), but a rule 
+for conjunction elimination is derivable from the rule for implication.}
 \begin{figure}[t]
 \footnotesize
 \begin{mathpar}
@@ -212,10 +193,18 @@ necessary conditions. We provide such rules in Fig. \ref{f:only-if-single}.
 \infer
 	{
 	\proves{M}{\onlyIfSingle{A_1}{A_2}{A\ \vee\ A'}} \\\\
-	\proves{M}{\onlyThrough{A_1}{A'}{\prg{false}}}
+	\proves{M}{\onlyThrough{A'}{A_2}{\prg{false}}}
 	}
 	{\proves{M}{\onlyIfSingle{A_1}{A_2}{A}}}
 	\quad(\textsc{If1-$\vee$E})
+	\and
+\infer
+	{
+	\proves{M}{\onlyIfSingle{A_1}{A_2}{A}} \\\\
+	\proves{M}{\onlyThrough{A_1}{A_2}{A'}}
+	}
+	{\proves{M}{\onlyIfSingle{A_1}{A_2}{A\ \wedge\ A'}}}
+	\quad(\textsc{If1-$\wedge$I})
 \end{mathpar}
 \caption{\emph{Only If Single Step}}
 \label{f:only-if-single}
@@ -232,7 +221,31 @@ The final step is to raise per-step necessity specifications to
 multiple step necessity specifications, allowing the specification
 of emergent behavior. Fig. \ref{f:only-through} allows for the 
 construction of proofs for \emph{Only Through}, while Fig. \ref{f:only-if}
-provides rules for the construction of proofs of \emph{Only If}.
+provides rules for the construction of proofs of \emph{Only If}. 
+\jm[]{The rules for both of these relations are fairly similar to each other, 
+and that of the single step necessity specification from 
+section \ref{s:module-proof}. Definitions of both relations include 
+rules for implication along with disjunction introduction and elimination.
+While Fig. \ref{f:only-if} includes a rule for conjunction introduction (\textsc{If-$\wedge$I}),
+such a rule is not possible for \emph{only through}, as unlike \emph{only if} where
+the necessary condition must hold, specifically, in the starting configuration, 
+there is no such specific moment in time in which the necessary condition 
+for \emph{only through} must hold.
+Another rule of note is \textsc{Changes}
+that states that if the satisfaction of some assertion changes over time, 
+then there must be some specific intermediate state where that change occurred.
+This is an important rule in the logic, and in allowing for proofs of 
+emergent properties. It is this rule that ultimately connects program 
+execution to encapsulated properties. 
+\emph{Only through} also includes two transitivity rules (\textsc{Trans}$_1$ and \textsc{Trans}$_2$)
+that say that necessary conditions to reach intermediate states or 
+proceed from intermediate states are themselves intermediate states. 
+Finally any proof of an \emph{only if} specification, is itself a proof
+of an \emph{only through} specification (\textsc{If}).
+\emph{Only if} also includes a transitivity rule (\textsc{If-Trans}), but 
+since the necessary condition must be true in the beginning state,
+there is only a single rule. Finally, any starting condition is
+itself a necessary precondition (\textsc{If-Start}).}
 
 \begin{figure}[t]
 \footnotesize
@@ -280,7 +293,7 @@ provides rules for the construction of proofs of \emph{Only If}.
 	\and
 \infer
 	{
-	\proves{M}{\onlyThrough{A_1}{A'}{\prg{false}}} \\\\
+	\proves{M}{\onlyThrough{A'}{A_2}{\prg{false}}} \\\\
 	\proves{M}{\onlyThrough{A_1}{A_2}{A\ \vee\ A'}}
 	}
 	{\proves{M}{\onlyThrough{A_1}{A_2}{A}}}
@@ -308,13 +321,13 @@ provides rules for the construction of proofs of \emph{Only If}.
 	}
 	{\proves{M}{\onlyThrough{A_1}{A_2}{A}}}
 	\quad(\textsc{If})
-	\and
-\infer
-	{
-	\proves{M}{\onlyThrough{A_1}{\neg A_1}{\false}}
-	}
-	{\proves{M}{\onlyThrough{A_1}{A_2}{A_1}}}
-	\quad(\textsc{Invariant})
+%	\and
+%\infer
+%	{
+%	\proves{M}{\onlyThrough{A_1}{\neg A_1}{\false}}
+%	}
+%	{\proves{M}{\onlyThrough{A_1}{A_2}{A_1}}}
+%	\quad(\textsc{Invariant})
 %	\and
 %\infer
 %	{
@@ -327,11 +340,6 @@ provides rules for the construction of proofs of \emph{Only If}.
 \label{f:only-through}
 \footnotesize
 \begin{mathpar}
-\infer
-	{}
-	{\proves{M}{\onlyIf{A_1}{A_2}{A_1}}}
-	\quad(\textsc{If-Start})
-	\and
 \infer
 	{
 	\proves{M}{A_1\ \longrightarrow\ A_1'}\\
@@ -368,7 +376,7 @@ provides rules for the construction of proofs of \emph{Only If}.
 	\and
 \infer
 	{
-	\proves{M}{\onlyIf{A_1}{A_2}{A}h} \\\\
+	\proves{M}{\onlyIf{A_1}{A_2}{A}} \\\\
 	\proves{M}{\onlyThrough{A_1}{A_2}{A'}}
 	}
 	{\proves{M}{\onlyIf{A_1}{A_2}{A\ \wedge\ A'}}}
@@ -376,11 +384,16 @@ provides rules for the construction of proofs of \emph{Only If}.
 	\and
 \infer
 	{
-	\proves{M}{\onlyThrough{A_1}{A_2}{A_3}} \\
+	\proves{M}{\onlyThrough{A_1}{A_2}{A_3}} \\\\
 	\proves{M}{\onlyIf{A_1}{A_3}{A}}
 	}
 	{\proves{M}{\onlyIf{A_1}{A_2}{A}}}
 	\quad(\textsc{If-Trans)}
+	\and
+\infer
+	{}
+	{\proves{M}{\onlyIf{A_1}{A_2}{A_1}}}
+	\quad(\textsc{If-Start})
 \end{mathpar}
 \caption{\emph{Only if}}
 \label{f:only-if}
@@ -517,4 +530,11 @@ For all modules $M$, and necessity specifications $H$, if
 $\proves{M}{H}$ then $\satisfies{M}{H}$
 \end{theorem}
 \begin{proof}
+The soundness proof of the logic of necessity proceeds by 
+induction on the derivation of $\proves{M}{H}$.
+The proof relies on two secondary results:
+\begin{description}
+\item - Soundness of the encapsulation relation: $\proves{M}{\givenA{A}{\encaps{A'}}}$
+\item - Soundness of \SpecO proof system: $\proves{M}{A}$
+\end{description}
 \end{proof}
