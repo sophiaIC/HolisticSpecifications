@@ -127,10 +127,10 @@ Module Soundness(L : LanguageDef).
 
 
   Lemma internal_reductions_is_call :
-    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
-                   exists α1 α2 m β, M1 ⦂ M2 ◎ σ1 ⊨ (α1 calls α2 ◌ m ⟨ β ⟩ ∧
-                                                α1 external ∧
-                                                α2 internal).
+    forall M M' σ1 σ2, M ⦂ M' ⦿ σ1 ⤳… σ2 ->
+                  exists α1 α2 m β, M ◎ σ1 ⊨ (α1 calls α2 ◌ m ⟨ β ⟩ ∧
+                                         α1 external ∧
+                                         α2 internal).
   Proof.
     intros M1 M2 σ1 σ2 Hred;
       induction Hred.
@@ -180,13 +180,13 @@ Module Soundness(L : LanguageDef).
 
       try solve [encap_intros;
                  match goal with
-                 | [H1 : _ ⦂ _ ◎ _ ⊨ (a_exp _),
-                         H2 : _ ⦂ _ ◎ _ ⊨ ¬ _|- _] =>
+                 | [H1 : _ ◎ _ ⊨ (a_exp _),
+                         H2 : _ ◎ _ ⊨ ¬ _|- _] =>
                    inversion H1;
                    subst
                  end;
                  match goal with
-                 | [H : exp_satisfaction _ _ _ _ |- _ ] =>
+                 | [H : exp_satisfaction _ _ _ |- _ ] =>
                    inversion H;
                    subst
                  end;
@@ -198,7 +198,7 @@ Module Soundness(L : LanguageDef).
 
     - encap_intros.
       match goal with
-      | [H : _ ⦂ _ ◎ _ ⊨ (a_exp (e_true)) |- _] =>
+      | [H : _ ◎ _ ⊨ (a_exp (e_true)) |- _] =>
         inversion H;
           subst;
           clear H
@@ -236,7 +236,7 @@ Module Soundness(L : LanguageDef).
       match goal with
       | [Hent : M ⊢ ?A1 ⊇ ?A2,
                 Har : arising _ _ _,
-                      Hsat : _ ⦂ _ ◎ _ ⊨ ?A1 |- _] =>
+                      Hsat : _ ◎ _ ⊨ ?A1 |- _] =>
         apply (entails_implies Hent Har) in Hsat
       end.
       eauto.
@@ -244,26 +244,26 @@ Module Soundness(L : LanguageDef).
 
   Definition onlythrough (M : mdl)(A1 A2 A : asrt):=
     forall M' σ1 σ2, arising M M' σ1 ->
-                M ⦂ M' ◎ σ1 ⊨ A1 ->
-                M ⦂ M' ◎ σ2 ⊨ A2 ->
-                M ⦂ M' ⦿ σ1 ⤳⋆ σ2 ->
+                M ◎ σ1 ⊨ A1 ->
+                M ◎ σ2 ⊨ A2 ->
+                M ⦂ M'  ⦿ σ1 ⤳⋆ σ2 ->
                 exists σ, (σ = σ1 \/ M ⦂ M' ⦿ σ1 ⤳⋆ σ) /\
                      (σ = σ2 \/ M ⦂ M' ⦿ σ ⤳⋆ σ2) /\
-                     M ⦂ M' ◎ σ ⊨ A.
+                     M ◎ σ ⊨ A.
 
   Definition onlyif (M : mdl)(A1 A2 A : asrt):=
     forall M' σ1 σ2, arising M M' σ1 ->
-                M ⦂ M' ◎ σ1 ⊨ A1 ->
-                M ⦂ M' ◎ σ2 ⊨ A2 ->
+                M ◎ σ1 ⊨ A1 ->
+                M ◎ σ2 ⊨ A2 ->
                 M ⦂ M' ⦿ σ1 ⤳⋆ σ2 ->
-                M ⦂ M' ◎ σ1 ⊨ A.
+                M ◎ σ1 ⊨ A.
 
   Definition onlyif1 (M : mdl)(A1 A2 A : asrt):=
     forall M' σ1 σ2, arising M M' σ1 ->
-                M ⦂ M' ◎ σ1 ⊨ A1 ->
-                M ⦂ M' ◎ σ2 ⊨ A2 ->
+                M ◎ σ1 ⊨ A1 ->
+                M ◎ σ2 ⊨ A2 ->
                 M ⦂ M' ⦿ σ1 ⤳ σ2 ->
-                M ⦂ M' ◎ σ1 ⊨ A.
+                M ◎ σ1 ⊨ A.
 
   Lemma arising_trans :
     forall M1 M2 σ1 σ2, arising M1 M2 σ1 ->
@@ -283,12 +283,12 @@ Module Soundness(L : LanguageDef).
 
   Ltac auto_entails :=
     repeat match goal with
-           | [H : ?Ma ⦂ ?Mb ◎ ?σa ⊨ ?Aa,
+           | [H : ?Ma ◎ ?σa ⊨ ?Aa,
                   Hent : ?Ma ⊢ ?Aa ⊇ ?Ab,
                          Harr : arising _ _ _ |- _ ] =>
-             notHyp (Ma ⦂ Mb ◎ σa ⊨ Ab);
+             notHyp (Ma ◎ σa ⊨ Ab);
              let H := fresh in
-             assert (H : Ma ⦂ Mb ◎ σa ⊨ Ab);
+             assert (H : Ma ◎ σa ⊨ Ab);
              [apply (entails_implies Hent Harr); auto|]
            end.
 
@@ -308,37 +308,37 @@ Module Soundness(L : LanguageDef).
         match goal with
         | [Hoi : onlyif ?Ma ?Aa ?Ab ?A,
                  Har : arising ?Ma ?Mb ?σa,
-                       Hsat1 : ?Ma ⦂ ?Mb ◎ ?σa ⊨ ?Aa,
-                               Hsat2 : ?Ma ⦂ ?Mb ◎ ?σb ⊨ ?Ab,
+                       Hsat1 : ?Ma ◎ ?σa ⊨ ?Aa,
+                               Hsat2 : ?Ma ◎ ?σb ⊨ ?Ab,
                                        Hred :  ?Ma ⦂ ?Mb ⦿ ?σa ⤳⋆ ?σb |- _] =>
-          notHyp (Ma ⦂ Mb ◎ σa ⊨ A);
-          assert (Ma ⦂ Mb ◎ σa ⊨ A);
+          notHyp (Ma ◎ σa ⊨ A);
+          assert (Ma ◎ σa ⊨ A);
           [apply (Hoi Mb σa σb Har); auto|]
         end);
     repeat (
         match goal with
         | [Hoi1 : onlyif1 ?Ma ?Aa ?Ab ?A,
                   Har : arising ?Ma ?Mb ?σa,
-                        Hsat1 : ?Ma ⦂ ?Mb ◎ ?σa ⊨ ?Aa,
-                                Hsat2 : ?Ma ⦂ ?Mb ◎ ?σb ⊨ ?Ab,
+                        Hsat1 : ?Ma ◎ ?σa ⊨ ?Aa,
+                                Hsat2 : ?Ma ◎ ?σb ⊨ ?Ab,
                                         Hred :  ?Ma ⦂ ?Mb ⦿ ?σa ⤳ ?σb |- _] =>
-          notHyp (Ma ⦂ Mb ◎ σa ⊨ A);
-          assert (Ma ⦂ Mb ◎ σa ⊨ A);
+          notHyp (Ma ◎ σa ⊨ A);
+          assert (Ma ◎ σa ⊨ A);
           [apply (Hoi1 Mb σa σb Har); auto|]
         end);
     repeat (
         match goal with
         | [Hot : onlythrough ?Ma ?Aa ?Ab ?A,
                  Har : arising ?Ma ?Mb ?σa,
-                       Hsat1 : ?Ma ⦂ ?Mb ◎ ?σa ⊨ ?Aa,
-                               Hsat2 : ?Ma ⦂ ?Mb ◎ ?σb ⊨ ?Ab,
+                       Hsat1 : ?Ma ◎ ?σa ⊨ ?Aa,
+                               Hsat2 : ?Ma ◎ ?σb ⊨ ?Ab,
                                        Hred :  ?Ma ⦂ ?Mb ⦿ ?σa ⤳⋆ ?σb |- _] =>
           notHyp (exists σ, (σ = σa \/ Ma ⦂ Mb ⦿ σa ⤳⋆ σ) /\
                        (σ = σb \/ Ma ⦂ Mb ⦿ σ ⤳⋆ σb) /\
-                       Ma ⦂ Mb ◎ σ ⊨ A);
+                       Ma ◎ σ ⊨ A);
           assert (exists σ, (σ = σa \/ Ma ⦂ Mb ⦿ σa ⤳⋆ σ) /\
                        (σ = σb \/ Ma ⦂ Mb ⦿ σ ⤳⋆ σb) /\
-                       Ma ⦂ Mb ◎ σ ⊨ A);
+                       Ma ◎ σ ⊨ A);
           [apply (Hot Mb σa σb Har); auto|]
         end).
 
