@@ -5,19 +5,18 @@ Require Import L_def.
 Require Import defs.
 Require Import common.
 Require Import exp.
-Require Import chainmail_tactics.
+Require Import inference_tactics.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 Module BankAccount(L : LanguageDef).
 
-  Module L_ChainmailTactics := ChainmailTactics(L).
-  Import L_ChainmailTactics.
-  Open Scope reduce_scope.
+  Export L.
+  Module L_InferenceTactics := InferenceTactics(L).
+  Import L_InferenceTactics.
+
   Open Scope chainmail_scope.
-  Open Scope hoare_scope.
-  Open Scope inference_scope.
-  Open Scope chainmail_tactics_scope.
+  Open Scope reduce_scope.
 
   (** #<h2>#Variables#</h2>#*)
 
@@ -259,7 +258,7 @@ Module BankAccount(L : LanguageDef).
                  (a_class (e_ b) Bank) ∧
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩵ (e_int bal))) ∧
                  (a_class (e_ a) Account) ∧
-                 (∃x.[ (a♢ 0) calls (a_ a) ◌ (am_ authenticate) ⟨ (fun v => Some (av_ v)) ∘ ps ⟩]))
+                 (∃x.[ (a♢ 0) calls (a_ a) ◌ authenticate ⟨ (fun v => Some (av_ v)) ∘ ps ⟩]))
               to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩻ (e_int bal)))
               onlyIf (a_exp (e_false)).
   Proof.
@@ -277,7 +276,7 @@ Module BankAccount(L : LanguageDef).
                  (a_class (e_ b) Bank) ∧
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩵ (e_int bal))) ∧
                  (a_class (e_ a) Account) ∧
-                 (∃x.[ (a♢ 0) calls (a_ a) ◌ (am_ changePassword) ⟨ (fun v => Some (av_ v)) ∘ ps ⟩]))
+                 (∃x.[ (a♢ 0) calls (a_ a) ◌ changePassword ⟨ (fun v => Some (av_ v)) ∘ ps ⟩]))
               to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩻ (e_int bal)))
               onlyIf (a_exp (e_false)).
   Proof.
@@ -296,9 +295,9 @@ Module BankAccount(L : LanguageDef).
                  (a_class (e_ b) Bank) ∧
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal))) ∧
                  (a_exp ((e_acc_f (e_ a) password) ⩵ (e_val v))) ∧
-                (∃x.[ (a♢ 0) calls (a_ l) ◌ (am_ ledgerTransfer) ⟨ ps ⟩ ]))
+                (∃x.[ (a♢ 0) calls (a_ l) ◌ ledgerTransfer ⟨ ps ⟩ ]))
               to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
-              onlyIf (∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ (am_ transfer) ⟨ ⟦ pwd ↦ (av_ v)⟧
+              onlyIf (∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ b) ◌ transfer ⟨ ⟦ pwd ↦ (av_ v)⟧
                                                                                 ⟦ amt ↦ (a♢ 1)⟧
                                                                                 ⟦ fromAcc ↦ (a_ a) ⟧
                                                                                 ⟦ toAcc ↦ (a♢ 2) ⟧
@@ -334,13 +333,13 @@ Module BankAccount(L : LanguageDef).
                  (a_class (e_ b') Bank) ∧
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal))) ∧
                  (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                (∃x.[ (a♢ 0) calls (a_ b') ◌ (am_ transfer) ⟨ ⟦ pwd ↦ a_ p' ⟧ ps  ⟩ ]))
+                (∃x.[ (a♢ 0) calls (a_ b') ◌ transfer ⟨ ⟦ pwd ↦ a_ p' ⟧ ps  ⟩ ]))
               to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
-              onlyIf (∃x.[∃x.[∃x.[ (a♢ 0) calls (a♢ 1) ◌ (am_ transfer) ⟨ ⟦ pwd ↦ (a_ p)⟧
-                                                                                ⟦ amt ↦ (a♢ 2)⟧
-                                                                                ⟦ fromAcc ↦ (a♢ 3) ⟧
-                                                                                ⟦ toAcc ↦ (a♢ 4) ⟧
-                                                                                empty ⟩]]]).
+              onlyIf (∃x.[∃x.[∃x.[ (a♢ 0) calls (a♢ 1) ◌ transfer ⟨ ⟦ pwd ↦ (a_ p)⟧
+                                                                      ⟦ amt ↦ (a♢ 2)⟧
+                                                                      ⟦ fromAcc ↦ (a♢ 3) ⟧
+                                                                      ⟦ toAcc ↦ (a♢ 4) ⟧
+                                                                      empty ⟩]]]).
   Proof.
     intros.
 
@@ -356,6 +355,7 @@ Module BankAccount(L : LanguageDef).
     - eapply if1_if.
       eapply if_start.
       eapply conseq_and1, conseq_and2.
+      
 
 
     extract3 (v_ a) 100;

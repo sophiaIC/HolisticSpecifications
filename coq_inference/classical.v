@@ -23,13 +23,13 @@ Module ClassicalProperties(L : LanguageDef).
 
   Ltac sat_contra_inversion :=
     match goal with
-    | [|- ~ _ ⦂ _ ◎ _ ⊨ _] =>
+    | [|- ~ _ ◎ _ ⊨ _] =>
       let Hcontra := fresh in
       intro Hcontra;
       inversion Hcontra;
       subst;
       clear Hcontra
-    | [|- ~ _ ⦂ _ ◎ _ ⊭ _] =>
+    | [|- ~ _ ◎ _ ⊭ _] =>
       let Hcontra := fresh in
       intro Hcontra;
       inversion Hcontra;
@@ -42,11 +42,11 @@ Module ClassicalProperties(L : LanguageDef).
 
   (** Lemma 5: Classical (4) *)
   Theorem sat_implies_not_nsat_mutind :
-    (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
-                       ~ M1 ⦂ M2 ◎ σ ⊭ A) /\
+    (forall M σ A, M ◎ σ ⊨ A ->
+                       ~ M ◎ σ ⊭ A) /\
 
-    (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
-                       ~ M1 ⦂ M2 ◎ σ ⊨ A).
+    (forall M σ A, M ◎ σ ⊭ A ->
+                   ~ M ◎ σ ⊨ A).
   Proof.
     apply sat_mutind;
       intros;
@@ -59,15 +59,15 @@ Module ClassicalProperties(L : LanguageDef).
   Qed.
 
   Theorem sat_implies_not_nsat :
-    (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
-                  ~ M1 ⦂ M2 ◎ σ ⊭ A).
+    (forall M σ A, M ◎ σ ⊨ A ->
+                   ~ M ◎ σ ⊭ A).
   Proof.
     destruct sat_implies_not_nsat_mutind; crush.
   Qed.
 
   Theorem nsat_implies_not_sat :
-    (forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
-                  ~ M1 ⦂ M2 ◎ σ ⊨ A).
+    (forall M σ A, M ◎ σ ⊭ A ->
+                   ~ M ◎ σ ⊨ A).
   Proof.
     destruct sat_implies_not_nsat_mutind; crush.
   Qed.
@@ -218,8 +218,8 @@ Module ClassicalProperties(L : LanguageDef).
 
   (** Lemma 5: Classical (1) *)
   Lemma sat_excluded_middle_with_subst :
-    (forall A M1 M2 σ s, (M1 ⦂ M2 ◎ σ ⊨ (subst_list s A)) \/
-                    (M1 ⦂ M2 ◎ σ ⊭ (subst_list s A))).
+    (forall A M σ s, (M ◎ σ ⊨ (subst_list s A)) \/
+                     (M ◎ σ ⊭ (subst_list s A))).
   Proof.
     intro A;
       induction A;
@@ -228,29 +228,29 @@ Module ClassicalProperties(L : LanguageDef).
       subst_list_rewrite;
       try solve [repeat match goal with
                         | [ s' : list (value * nat),
-                                 IH : (forall (_ _ : mdl)(_ : config)(s : list (value * nat)), _) |-
-                            context[?M ⦂ ?M' ◎ ?σ' ⊨ _]] =>
-                          specialize (IH M M' σ' s')
+                                 IH : (forall (_ : mdl)(_ : config)(s : list (value * nat)), _) |-
+                            context[?M  ◎ ?σ' ⊨ _]] =>
+                          specialize (IH M σ' s')
                         end;
                  repeat disj_split; auto with chainmail_db].
 
     - (* exp *)
-      destruct (excluded_middle (exp_satisfaction M1 M2 σ (subst_list s e)));
+      destruct (excluded_middle (exp_satisfaction M σ (subst_list s e)));
         auto with chainmail_db.
 
     - (* class *)
-      destruct (excluded_middle (has_class M1 M2 σ (subst_list s e) c));
+      destruct (excluded_middle (has_class M σ (subst_list s e) c));
         auto with chainmail_db.
 
     - (* all *)
-      destruct (excluded_middle (exists x, M1 ⦂ M2 ◎ σ ⊭ ([x /s 0] subst_list (list_S s) A)));
+      destruct (excluded_middle (exists x, M ◎ σ ⊭ ([x /s 0] subst_list (list_S s) A)));
         [destruct_exists_loo;
          andDestruct;
          eauto with chainmail_db|].
       left.
       apply sat_all;
         intros.
-      destruct (IHA M1 M2 σ ((x, 0)::(list_S s)));
+      destruct (IHA M σ ((x, 0)::(list_S s)));
         auto.
       match goal with
       | [ H : ~ _ |- _ ] =>
@@ -259,7 +259,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto.
 
     - (* ex *)
-      destruct (excluded_middle (exists x, M1 ⦂ M2 ◎ σ ⊨ ([x /s 0]subst_list (list_S s) A)));
+      destruct (excluded_middle (exists x, M ◎ σ ⊨ ([x /s 0]subst_list (list_S s) A)));
         [destruct_exists_loo;
          andDestruct;
          eauto with chainmail_db|].
@@ -267,7 +267,7 @@ Module ClassicalProperties(L : LanguageDef).
       right;
         apply nsat_ex;
         intros.
-      destruct (IHA M1 M2 σ ((x, 0) :: (list_S s)));
+      destruct (IHA M σ ((x, 0) :: (list_S s)));
         eauto with chainmail_db.
       match goal with
       | [ H : ~ _ |- _ ] =>
@@ -287,85 +287,85 @@ Module ClassicalProperties(L : LanguageDef).
                                             (subst_list s p)));
         auto with chainmail_db.
 
-    - destruct (excluded_middle (external_obj M1 σ (subst_list s a)));
+    - destruct (excluded_middle (external_obj M σ (subst_list s a)));
         auto with chainmail_db.
 
-    - destruct (excluded_middle (internal_obj M1 σ (subst_list s a)));
+    - destruct (excluded_middle (internal_obj M σ (subst_list s a)));
         auto with chainmail_db.
 
   Qed.
 
   Theorem sat_excluded_middle :
-    forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A \/
-                 M1 ⦂ M2 ◎ σ ⊭ A.
+    forall M σ A, M ◎ σ ⊨ A \/
+                  M ◎ σ ⊭ A.
   Proof.
     intros.
-    destruct (sat_excluded_middle_with_subst A M1 M2 σ nil);
+    destruct (sat_excluded_middle_with_subst A M σ nil);
       simpl in *;
       auto.
   Qed.
 
   (** Lemma 5: Classical (5) *)
   Lemma arr_true :
-    forall M1 M2 σ A1 A2,
-      M1 ⦂ M2 ◎ σ ⊨ (A1 ⟶ A2) ->
-      M1 ⦂ M2 ◎ σ ⊨ A1 ->
-      M1 ⦂ M2 ◎ σ ⊨ A2.
+    forall M σ A1 A2,
+      M ◎ σ ⊨ (A1 ⟶ A2) ->
+      M ◎ σ ⊨ A1 ->
+      M ◎ σ ⊨ A2.
   Proof.
-    intros M1 M2 σ A1 A2 Hsat;
+    intros M σ A1 A2 Hsat;
       inversion Hsat;
       subst;
       intros;
       auto.
 
-    apply sat_implies_not_nsat_mutind in H3;
+    apply sat_implies_not_nsat_mutind in H2;
       crush.
   Qed.
 
   Lemma arr_false :
-    forall M1 M2 σ A1 A2,
-      M1 ⦂ M2 ◎ σ ⊨ (A1 ⟶ A2) ->
-      M1 ⦂ M2 ◎ σ ⊭ A2 ->
-      M1 ⦂ M2 ◎ σ ⊭ A1.
+    forall M σ A1 A2,
+      M ◎ σ ⊨ (A1 ⟶ A2) ->
+      M ◎ σ ⊭ A2 ->
+      M ◎ σ ⊭ A1.
   Proof.
-    intros M1 M2 σ A1 A2 Hsat;
+    intros M σ A1 A2 Hsat;
       inversion Hsat;
       subst;
       intros;
       auto.
 
-    apply sat_implies_not_nsat_mutind in H3;
+    apply sat_implies_not_nsat_mutind in H2;
       crush.
   Qed.
 
   Lemma arr_prop1 :
-    forall M1 M2 σ A1 A2,
-      (M1 ⦂ M2 ◎ σ ⊨ A1 ->
-       M1 ⦂ M2 ◎ σ ⊨ A2) ->
-      M1 ⦂ M2 ◎ σ ⊨ (A1 ⟶ A2).
+    forall M σ A1 A2,
+      (M ◎ σ ⊨ A1 ->
+       M ◎ σ ⊨ A2) ->
+      M ◎ σ ⊨ (A1 ⟶ A2).
   Proof.
     intros.
     destruct sat_excluded_middle
-      with (M1:=M1)(M2:=M2)
+      with (M:=M)
            (σ:=σ)(A:=A1);
       auto with chainmail_db.
   Qed.
 
   Lemma arr_prop2 :
-    forall M1 M2 σ A1 A2,
-      M1 ⦂ M2 ◎ σ ⊨ (A1 ⟶ A2) ->
-      (M1 ⦂ M2 ◎ σ ⊨ A1 ->
-       M1 ⦂ M2 ◎ σ ⊨ A2).
+    forall M σ A1 A2,
+      M ◎ σ ⊨ (A1 ⟶ A2) ->
+      (M ◎ σ ⊨ A1 ->
+       M ◎ σ ⊨ A2).
   Proof.
     intros.
     eapply arr_true; eauto.
   Qed.
 
   Lemma arr_prop :
-    forall M1 M2 σ A1 A2,
-      M1 ⦂ M2 ◎ σ ⊨ (A1 ⟶ A2) <->
-      (M1 ⦂ M2 ◎ σ ⊨ A1 ->
-       M1 ⦂ M2 ◎ σ ⊨ A2).
+    forall M σ A1 A2,
+      M ◎ σ ⊨ (A1 ⟶ A2) <->
+      (M ◎ σ ⊨ A1 ->
+       M ◎ σ ⊨ A2).
   Proof.
     intros;
       split;
@@ -373,9 +373,9 @@ Module ClassicalProperties(L : LanguageDef).
   Qed.
 
   Lemma all_x_prop :
-    forall M1 M2 σ A,
-      M1 ⦂ M2 ◎ σ ⊨ (∀x.[A]) <->
-      (forall x, M1 ⦂ M2 ◎ σ ⊨ ([x /s 0]A)).
+    forall M σ A,
+      M ◎ σ ⊨ (∀x.[A]) <->
+      (forall x, M ◎ σ ⊨ ([x /s 0]A)).
   Proof.
     intros; split; eauto with chainmail_db; intros.
     inversion H;
@@ -384,9 +384,9 @@ Module ClassicalProperties(L : LanguageDef).
   Qed.
 
   Lemma ex_x_prop :
-    forall M1 M2 σ A,
-      M1 ⦂ M2 ◎ σ ⊨ (∃x.[A]) <->
-      (exists x, M1 ⦂ M2 ◎ σ ⊨ ([x /s 0] A)).
+    forall M σ A,
+      M ◎ σ ⊨ (∃x.[A]) <->
+      (exists x, M ◎ σ ⊨ ([x /s 0] A)).
   Proof.
     intros; split; eauto with chainmail_db; intros.
     inversion H;
@@ -399,8 +399,8 @@ Module ClassicalProperties(L : LanguageDef).
 
   (** Lemma 5: Classical (2) *)
   Lemma and_iff :
-    forall M1 M2 σ A1 A2, (M1 ⦂ M2 ◎ σ ⊨ (A1 ∧ A2)) <->
-                     (M1 ⦂ M2 ◎ σ ⊨ A1 /\ M1 ⦂ M2 ◎ σ ⊨ A2).
+    forall M σ A1 A2, (M ◎ σ ⊨ (A1 ∧ A2)) <->
+                 (M ◎ σ ⊨ A1 /\ M ◎ σ ⊨ A2).
   Proof.
     intros;
       split;
@@ -411,8 +411,8 @@ Module ClassicalProperties(L : LanguageDef).
 
   (** Lemma 5: Classical (3) *)
   Lemma or_iff :
-    forall M1 M2 σ A1 A2, (M1 ⦂ M2 ◎ σ ⊨ (A1 ∨ A2)) <->
-                     (M1 ⦂ M2 ◎ σ ⊨ A1 \/ M1 ⦂ M2 ◎ σ ⊨ A2).
+    forall M σ A1 A2, (M ◎ σ ⊨ (A1 ∨ A2)) <->
+                 (M ◎ σ ⊨ A1 \/ M ◎ σ ⊨ A2).
   Proof.
     intros;
       split;
@@ -422,40 +422,40 @@ Module ClassicalProperties(L : LanguageDef).
   Qed.
 
   Lemma negate_elim_sat :
-    (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨ (¬ ¬ A) ->
-                  M1 ⦂ M2 ◎ σ ⊨ A).
+    (forall A M σ, M ◎ σ ⊨ (¬ ¬ A) ->
+              M ◎ σ ⊨ A).
   Proof.
     intros;
       auto.
     inversion H;
       subst.
-    inversion H4;
+    inversion H3;
       auto.
   Qed.
 
   Lemma negate_elim_nsat :
-    (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊭ (¬ ¬ A) ->
-                  M1 ⦂ M2 ◎ σ ⊭ A).
+    (forall A M σ, M ◎ σ ⊭ (¬ ¬ A) ->
+              M ◎ σ ⊭ A).
   Proof.
     intros;
       auto.
     inversion H;
       subst.
-    inversion H4;
+    inversion H3;
       auto.
   Qed.
 
   Lemma negate_intro_sat :
-    (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊨ A ->
-                  M1 ⦂ M2 ◎ σ ⊨ (¬ ¬ A)).
+    (forall A M σ, M ◎ σ ⊨ A ->
+              M ◎ σ ⊨ (¬ ¬ A)).
   Proof.
     intros;
       auto with chainmail_db.
   Qed.
 
   Lemma negate_intro_nsat :
-    (forall A M1 M2 σ, M1 ⦂ M2 ◎ σ ⊭ A ->
-                  M1 ⦂ M2 ◎ σ ⊭ (¬ ¬ A)).
+    (forall A M σ, M ◎ σ ⊭ A ->
+              M ◎ σ ⊭ (¬ ¬ A)).
   Proof.
     intros;
       auto with chainmail_db.
@@ -488,7 +488,7 @@ Module ClassicalProperties(L : LanguageDef).
 
     inversion H0;
       subst.
-    inversion H5;
+    inversion H4;
       subst.
     match goal with
     | [H : evaluate _ _ _ _ |- _ ] =>
@@ -570,7 +570,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
-      inversion H5;
+      inversion H4;
       eauto with chainmail_db.
   Qed.
 
@@ -585,7 +585,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
-      inversion H5;
+      inversion H4;
       eauto with chainmail_db.
   Qed.
 
@@ -613,7 +613,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
-      inversion H6;
+      inversion H5;
       eauto with chainmail_db.
   Qed.
 
@@ -628,7 +628,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
-      inversion H5;
+      inversion H4;
       eauto with chainmail_db.
   Qed.
 
@@ -656,7 +656,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto with chainmail_db;
-      inversion H5;
+      inversion H4;
       eauto with chainmail_db.
   Qed.
 
@@ -671,8 +671,8 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
+      inversion H5;
       inversion H6;
-      inversion H7;
       eauto with chainmail_db.
   Qed.
 
@@ -700,7 +700,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
-      inversion H5;
+      inversion H4;
       eauto with chainmail_db.
   Qed.
 
@@ -715,7 +715,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
-      inversion H5;
+      inversion H4;
       eauto with chainmail_db.
   Qed.
 
@@ -743,7 +743,7 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
-      inversion H5;
+      inversion H4;
       eauto with chainmail_db.
   Qed.
 
@@ -758,8 +758,8 @@ Module ClassicalProperties(L : LanguageDef).
       inversion H0;
       subst;
       eauto;
+      inversion H5;
       inversion H6;
-      inversion H7;
       eauto with chainmail_db.
   Qed.
 
@@ -787,13 +787,13 @@ Module ClassicalProperties(L : LanguageDef).
 
     inversion H0;
       subst.
-    inversion H5;
+    inversion H4;
       subst.
 
     apply sat_all;
       intros.
     apply sat_not.
-    eapply H6; eauto with chainmail_db.
+    eapply H5; eauto with chainmail_db.
   Qed.
 
   Hint Resolve not_ex_x_all_not_1 : chainmail_db.
@@ -818,7 +818,7 @@ Module ClassicalProperties(L : LanguageDef).
 
     subst_simpl.
     match goal with
-    | [H : _ ⦂ _ ◎ _ ⊨ ¬ _ |- _ ] =>
+    | [H : _ ◎ _ ⊨ ¬ _ |- _ ] =>
       inversion H;
         auto
     end.
@@ -848,7 +848,7 @@ Module ClassicalProperties(L : LanguageDef).
 
     inversion H0;
       subst.
-    inversion H5;
+    inversion H4;
       subst.
 
     apply sat_ex with (x:=x);
@@ -872,7 +872,7 @@ Module ClassicalProperties(L : LanguageDef).
     apply sat_not.
     apply nsat_all with (x:=x);
       auto with chainmail_db.
-    inversion H5; subst; auto.
+    inversion H4; subst; auto.
   Qed.
 
   Hint Resolve not_all_x_ex_not_2 : chainmail_db.
@@ -890,21 +890,20 @@ Module ClassicalProperties(L : LanguageDef).
   Hint Resolve not_all_x_ex_not : chainmail_db.
 
   Lemma entails_implies :
-    forall {M1 M2 σ A1 A2}, entails M1 A1 A2 ->
-                       arising M1 M2  σ ->
-                       M1 ⦂ M2 ◎ σ ⊨ A1 ->
-                       M1 ⦂ M2 ◎ σ ⊨ A2.
+    forall {M M' σ A1 A2}, entails M A1 A2 ->
+                     arising M M' σ ->
+                     M ◎ σ ⊨ A1 ->
+                     M ◎ σ ⊨ A2.
   Proof.
     intros.
     inversion H;
-      auto.
+      eauto.
   Qed.
 
   Hint Resolve entails_implies : chainmail_db.
 
   Lemma true_satisfied :
-    forall M1 M2 M σ, M1 ⋄ M2 ≜ M ->
-                 exp_satisfaction M1 M2 σ (e_true).
+    forall M σ, exp_satisfaction M σ (e_true).
     intros.
     eapply exp_sat; eauto with exp_db.
   Qed.
@@ -912,13 +911,13 @@ Module ClassicalProperties(L : LanguageDef).
   Hint Resolve true_satisfied : chainmail_db.
 
   Lemma false_not_satisfied :
-    forall M1 M2 σ, ~ M1 ⦂ M2 ◎ σ ⊨ (a_exp (e_false)).
+    forall M σ, ~ M ◎ σ ⊨ (a_exp (e_false)).
     intros.
     intro Hcontra;
       inversion Hcontra;
       subst.
     match goal with
-    | [H : exp_satisfaction _ _ _ _ |- _] =>
+    | [H : exp_satisfaction _ _ _ |- _] =>
       inversion H;
         subst
     end.
@@ -931,17 +930,17 @@ Module ClassicalProperties(L : LanguageDef).
   Hint Resolve true_satisfied : chainmail_db.
 
   Lemma false_not_satisfied_corollary :
-    forall M1 M2 σ P, M1 ⦂ M2 ◎ σ ⊨ (a_exp (e_false)) ->
-               P.
+    forall M σ P, M ◎ σ ⊨ (a_exp (e_false)) ->
+             P.
   Proof.
-    intros M1 M2 σ P H;
-      contradiction (false_not_satisfied M1 M2 σ).
+    intros M σ P H;
+      contradiction (false_not_satisfied M σ).
   Qed.
 
   Ltac a_intro :=
     match goal with
-    | [|- _ ⦂ _ ◎ _ ⊨ (∀x.[ _])] => apply sat_all; intros; simpl in *
-    | [|- _ ⦂ _ ◎ _ ⊨ (_ ⟶ _)] => apply arr_prop1; intros; simpl in *
+    | [|- _ ◎ _ ⊨ (∀x.[ _])] => apply sat_all; intros; simpl in *
+    | [|- _ ◎ _ ⊨ (_ ⟶ _)] => apply arr_prop1; intros; simpl in *
     end.
 
   Ltac a_intros :=
@@ -949,29 +948,29 @@ Module ClassicalProperties(L : LanguageDef).
 
   Ltac a_prop :=
     repeat match goal with
-           | [H : _ ⦂ _ ◎ _ ⊨ (_ ∧ _) |- _] => apply -> and_iff in H;
+           | [H : _ ◎ _ ⊨ (_ ∧ _) |- _] => apply -> and_iff in H;
                                                destruct H
-           | [H : _ ⦂ _ ◎ _ ⊨ (_ ∨ _) |- _] => apply -> or_iff in H
-           | [H : _ ⦂ _ ◎ _ ⊨ (_ ⟶ _) |- _] => rewrite -> arr_prop in H
-           | [H : context[_ ⦂ _ ◎ _ ⊨ (_ ⟶ _)] |- _] => rewrite -> arr_prop in H
-           | [H : _ ⦂ _ ◎ _ ⊨ (∀x.[_]) |- _] => rewrite all_x_prop in H; simpl in *
-           | [|- _ ⦂ _ ◎ _ ⊨ (_ ∧ _)] => apply sat_and
-           | [|- _ ⦂ _ ◎ _ ⊨ (_ ∨ _)] => apply <- or_iff
+           | [H : _ ◎ _ ⊨ (_ ∨ _) |- _] => apply -> or_iff in H
+           | [H : _ ◎ _ ⊨ (_ ⟶ _) |- _] => rewrite -> arr_prop in H
+           | [H : context[_ ◎ _ ⊨ (_ ⟶ _)] |- _] => rewrite -> arr_prop in H
+           | [H : _ ◎ _ ⊨ (∀x.[_]) |- _] => rewrite all_x_prop in H; simpl in *
+           | [|- _ ◎ _ ⊨ (_ ∧ _)] => apply sat_and
+           | [|- _ ◎ _ ⊨ (_ ∨ _)] => apply <- or_iff
            | [H : entails ?A1 ?A2,
-                  Ha : ?M1 ⦂ ?M2 ◎  (?χ, ?ϕ::?ψ) ⊨ ?A1 |- _] =>
-             notHyp (M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A2);
+                  Ha : ?M ◎  (?χ, ?ϕ::?ψ) ⊨ ?A1 |- _] =>
+             notHyp (M ◎ (χ, ϕ::ψ) ⊨ A2);
              let H' := fresh in 
-             assert (H' : M1 ⦂ M2 ◎ (χ, ϕ::ψ) ⊨ A2);
-             [apply (entails_implies M1 M2 χ ϕ ψ A1 Ha A2 H); eauto|]
-           | [Ha : ?M1 ⦂ ?M2 ◎  ?σ ⊨ ?A,
-                   Hb : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ ?A |- _] =>
+             assert (H' : M ◎ (χ, ϕ::ψ) ⊨ A2);
+             [apply (entails_implies M χ ϕ ψ A1 Ha A2 H); eauto|]
+           | [Ha : ?M1 ◎ ?σ ⊨ ?A,
+                   Hb : ?M1 ◎ ?σ ⊨ ¬ ?A |- _] =>
              apply sat_implies_not_nsat in Ha
-           | [Ha : ?M1 ⦂ ?M2 ◎ ?σ ⊨ ¬ ?A,
-                   Hb : ~ ?M1 ⦂ ?M2 ◎ ?σ ⊭ ?A |- _] =>
+           | [Ha : ?M1 ◎ ?σ ⊨ ¬ ?A,
+                   Hb : ~ ?M1 ◎ ?σ ⊭ ?A |- _] =>
              inversion Ha; subst; crush
 
-           | [H : ?M1 ⦂ ?M2 ◎ ?σ ⊨ (a_exp (e_false)) |- ?P] =>
-             apply (false_not_satisfied_corollary M1 M2 σ P H)
+           | [H : ?M1 ◎ ?σ ⊨ (a_exp (e_false)) |- ?P] =>
+             apply (false_not_satisfied_corollary M1 σ P H)
            end.
 
   Close Scope chainmail_scope.

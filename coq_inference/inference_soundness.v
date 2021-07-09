@@ -21,12 +21,12 @@ Module Soundness(L : LanguageDef).
   Definition encapsulated (M : mdl)(A A' : asrt) :=
     forall M' σ1 σ2, arising M M' σ1 ->
                 M ⦂ M' ⦿ σ1 ⤳ σ2 ->
-                M ⦂ M' ◎ σ1  ⊨ A ->
-                M ⦂ M' ◎ σ1 ⊨ A' ->
-                M ⦂ M' ◎ σ2 ⊨ ¬ A' ->
-                exists α1 α2 m β, M ⦂ M' ◎ σ1 ⊨ (α1 calls α2 ◌ m ⟨ β ⟩ ∧
-                                            α1 external ∧
-                                            α2 internal).
+                M ◎ σ1  ⊨ A ->
+                M ◎ σ1 ⊨ A' ->
+                M ◎ σ2 ⊨ ¬ A' ->
+                exists α1 α2 m β, M ◎ σ1 ⊨ (α1 calls α2 ◌ m ⟨ β ⟩ ∧
+                                       α1 external ∧
+                                       α2 internal).
 
   Ltac encap_intros :=
     match goal with
@@ -42,25 +42,25 @@ Module Soundness(L : LanguageDef).
 
   Ltac chainmail_auto :=
     match goal with
-    | [H : _ ⦂ _ ◎ _ ⊨ (a_exp (e_int _)) |-_] =>
+    | [H : _ ◎ _ ⊨ (a_exp (e_int _)) |-_] =>
       inversion H;
       subst;
       clear H
 
-    | [H : ~ exp_satisfaction _ _ _ (e_true) |- _] =>
+    | [H : ~ exp_satisfaction _ _ (e_true) |- _] =>
       contradiction H;
       auto
 
-    | [H : exp_satisfaction _ _ _ _ |- _] =>
+    | [H : exp_satisfaction _ _ _ |- _] =>
       inversion H;
       clear H
 
-    | [H : _ ⦂ _ ◎ _ ⊨ ¬ _ |-_] =>
+    | [H : _ ◎ _ ⊨ ¬ _ |-_] =>
       inversion H;
       subst;
       clear H
 
-    | [H : _ ⦂ _ ◎ _ ⊭ (a_exp (e_true)) |-_] =>
+    | [H : _ ◎ _ ⊭ (a_exp (e_true)) |-_] =>
       inversion H;
       subst;
       clear H
@@ -479,7 +479,7 @@ Module Soundness(L : LanguageDef).
                    repeat disj_split;
                    subst;
                    eauto].
-      +  
+      + 
 
 
   Qed.

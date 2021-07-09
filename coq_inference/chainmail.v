@@ -195,9 +195,6 @@ Module Chainmail(L : LanguageDef).
   Notation "x 'access' y" :=(a_acc x y)(at level 26) : chainmail_scope.
   Notation "x 'calls' y '◌' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 26) : chainmail_scope.
 
-  Reserved Notation "M1 '⦂' M2 '◎' σ '⊨' A"(at level 40).
-  Reserved Notation "M1 '⦂' M2 '◎' σ '⊭' A"(at level 40).
-
   Instance a_valSubst : Subst a_val nat value :=
     {
     sbst x n v :=
@@ -246,16 +243,14 @@ Module Chainmail(L : LanguageDef).
         end
     }.
 
-  Inductive exp_satisfaction : mdl -> mdl -> config -> exp -> Prop :=
-  | exp_sat : forall M1 M2 M σ e, M1 ⋄ M2 ≜ M ->
-                             M ∙ σ ⊢ e ↪ v_true ->
-                             exp_satisfaction M1 M2 σ e.
+  Inductive exp_satisfaction : mdl -> config -> exp -> Prop :=
+  | exp_sat : forall M σ e, M ∙ σ ⊢ e ↪ v_true ->
+                       exp_satisfaction M σ e.
 
-  Inductive has_class : mdl -> mdl -> config -> exp -> cls -> Prop :=
-  | has_cls : forall M1 M2 M e α o χ ψ, M1 ⋄ M2 ≜ M ->
-                                   M ∙ (χ, ψ) ⊢ e ↪ (v_ α) ->
-                                   ⟦ α ↦ o ⟧_∈ χ ->
-                                   has_class M1 M2 (χ, ψ) e (cname o).
+  Inductive has_class : mdl -> config -> exp -> cls -> Prop :=
+  | has_cls : forall M e α o χ ψ, M ∙ (χ, ψ) ⊢ e ↪ (v_ α) ->
+                             ⟦ α ↦ o ⟧_∈ χ ->
+                             has_class M (χ, ψ) e (cname o).
 
   Inductive has_access : config -> a_val -> a_val -> Prop :=
   | acc_self : forall σ α, has_access σ (a_ α) (a_ α)
@@ -294,12 +289,15 @@ Module Chainmail(L : LanguageDef).
   Hint Constructors internal_obj : chainmail_db.
   Hint Constructors external_obj : chainmail_db.
 
-  Inductive sat : mdl -> mdl -> config -> asrt -> Prop :=
+  Reserved Notation "M1 '◎' σ '⊨' A"(at level 40).
+  Reserved Notation "M1 '◎' σ '⊭' A"(at level 40).
+
+  Inductive sat : mdl -> config -> asrt -> Prop :=
 
   (** Simple: *)
 
-  | sat_exp   : forall M1 M2 σ e,  exp_satisfaction M1 M2 σ e ->
-                              M1 ⦂ M2 ◎ σ ⊨ (a_exp e)
+  | sat_exp   : forall M σ e,  exp_satisfaction M σ e ->
+                          M ◎ σ ⊨ (a_exp e)
   (**
 [[[
                      M1 ⋄ M2 ≜ M 
@@ -309,8 +307,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_class : forall M1 M2 σ e C, has_class M1 M2 σ e C ->
-                               M1 ⦂ M2 ◎ σ ⊨ (a_class e C)
+  | sat_class : forall M σ e C, has_class M σ e C ->
+                           M ◎ σ ⊨ (a_class e C)
   (**
 [[[
               (α ↦ o) ∈ σ     o has class C
@@ -320,9 +318,9 @@ Module Chainmail(L : LanguageDef).
    *)
 
   (** Connectives: *)
-  | sat_and   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A1 ->
-                                 M1 ⦂ M2 ◎ σ ⊨ A2 ->
-                                 M1 ⦂ M2 ◎ σ ⊨ (A1 ∧ A2)
+  | sat_and   : forall M σ A1 A2, M ◎ σ ⊨ A1 ->
+                             M ◎ σ ⊨ A2 ->
+                             M ◎ σ ⊨ (A1 ∧ A2)
   (**
 [[[
                    M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
@@ -332,8 +330,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_or1   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A1 ->
-                                 M1 ⦂ M2 ◎ σ ⊨ (A1 ∨ A2)
+  | sat_or1   : forall M σ A1 A2, M ◎ σ ⊨ A1 ->
+                             M ◎ σ ⊨ (A1 ∨ A2)
   (**
 [[[
                    M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
@@ -342,8 +340,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_or2   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A2 ->
-                                 M1 ⦂ M2 ◎ σ ⊨ (A1 ∨ A2)
+  | sat_or2   : forall M σ A1 A2, M ◎ σ ⊨ A2 ->
+                             M ◎ σ ⊨ (A1 ∨ A2)
   (**
 [[[
                    M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
@@ -352,8 +350,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_arr1  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A2 ->
-                                 M1 ⦂ M2 ◎ σ ⊨ (A1 ⟶ A2)
+  | sat_arr1  : forall M σ A1 A2, M ◎ σ ⊨ A2 ->
+                             M ◎ σ ⊨ (A1 ⟶ A2)
   (**
 [[[
                    M1 ⦂ M2 ◎ σ0 … σ ⊨ A2
@@ -362,8 +360,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_arr2  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A1 ->
-                                 M1 ⦂ M2 ◎ σ ⊨ (A1 ⟶ A2)
+  | sat_arr2  : forall M σ A1 A2, M ◎ σ ⊭ A1 ->
+                             M ◎ σ ⊨ (A1 ⟶ A2)
   (**
 [[[
                    M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
@@ -372,8 +370,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_not   : forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊭ A ->
-                             M1 ⦂ M2 ◎ σ ⊨ (¬ A)
+  | sat_not   : forall M σ A, M ◎ σ ⊭ A ->
+                         M ◎ σ ⊨ (¬ A)
   (**
 [[[
                 M1 ⦂ M2 ◎ σ0 … σ ⊭ A
@@ -384,8 +382,8 @@ Module Chainmail(L : LanguageDef).
 
   (** Quantifiers: *)
 
-  | sat_all : forall M1 M2 σ A, (forall x, M1 ⦂ M2 ◎ σ ⊨ ([x /s 0]A)) ->
-                           M1 ⦂ M2 ◎ σ ⊨ (∀x.[ A ])
+  | sat_all : forall M σ A, (forall x, M ◎ σ ⊨ ([x /s 0]A)) ->
+                       M ◎ σ ⊨ (∀x.[ A ])
   (**
 [[[
                 (∀ α o, (α ↦ o) ∈ σ.(heap) → M1 ⦂ M2 ◎ σ0 … σ ⊨ ([α / x]A))
@@ -394,8 +392,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_ex  : forall M1 M2 σ x A, M1 ⦂ M2 ◎ σ ⊨ ([x /s 0] A) ->
-                             M1 ⦂ M2 ◎ σ ⊨ (∃x.[ A ])
+  | sat_ex  : forall M σ x A, M ◎ σ ⊨ ([x /s 0] A) ->
+                         M ◎ σ ⊨ (∃x.[ A ])
   (**
 [[[
                      (α ↦ o) ∈ σ.(heap)
@@ -406,8 +404,8 @@ Module Chainmail(L : LanguageDef).
    *)
 
   (** Permission: *)
-  | sat_access : forall M1 M2 σ a1 a2, has_access σ a1 a2 ->
-                                  M1 ⦂ M2 ◎ σ ⊨ (a1 access a2)
+  | sat_access : forall M σ a1 a2, has_access σ a1 a2 ->
+                              M ◎ σ ⊨ (a1 access a2)
 
   (**
 [[[
@@ -444,8 +442,8 @@ Module Chainmail(L : LanguageDef).
    *)*)
 
   (** Control: *)
-  | sat_call : forall M1 M2 σ a1 a2 m β, makes_call σ a1 a2 m β ->
-                                    M1 ⦂ M2 ◎ σ ⊨ (a1 calls a2 ◌ m ⟨ β ⟩)
+  | sat_call : forall M σ a1 a2 m β, makes_call σ a1 a2 m β ->
+                                M ◎ σ ⊨ (a1 calls a2 ◌ m ⟨ β ⟩)
   (**
 [[[
                                ⌊this⌋ σ ≜ α1        
@@ -471,8 +469,8 @@ Module Chainmail(L : LanguageDef).
    *)
    *)
   (** Viewpoint: *)
-  | sat_extrn : forall M1 M2 σ a, external_obj M1 σ a ->
-                             M1 ⦂ M2 ◎ σ ⊨ (a external)
+  | sat_extrn : forall M σ a, external_obj M σ a ->
+                         M ◎ σ ⊨ (a external)
   (**
 [[[
                (α ↦ o) ∈ χ   o.(className) ∉ M1
@@ -481,8 +479,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | sat_intrn : forall M1 M2 σ a, internal_obj M1 σ a ->
-                             M1 ⦂ M2 ◎ σ ⊨ (a internal)
+  | sat_intrn : forall M σ a, internal_obj M σ a ->
+                         M ◎ σ ⊨ (a internal)
   (**
 [[[
                (α ↦ o) ∈ χ   o.(className) ∈ M1
@@ -491,14 +489,14 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  where "M1 '⦂' M2 '◎' σ '⊨' A" := (sat M1 M2 σ A) : chainmail_scope
+  where "M '◎' σ '⊨' A" := (sat M σ A) : chainmail_scope
 
   with
-    nsat : mdl -> mdl -> config -> asrt -> Prop :=
+    nsat : mdl -> config -> asrt -> Prop :=
 
   (*simple*)
-  | nsat_exp : forall M1 M2 σ e, ~ exp_satisfaction M1 M2 σ e ->
-                               M1 ⦂ M2 ◎ σ ⊭ (a_exp e)
+  | nsat_exp : forall M σ e, ~ exp_satisfaction M σ e ->
+                        M ◎ σ ⊭ (a_exp e)
   (**
 [[[
                    M1 ⋄ M2 ≜ M
@@ -508,8 +506,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_class : forall M1 M2 σ e C, ~ has_class M1 M2 σ e C ->
-                                M1 ⦂ M2 ◎ σ ⊭ (a_class e C)
+  | nsat_class : forall M σ e C, ~ has_class M σ e C ->
+                            M ◎ σ ⊭ (a_class e C)
   (**
 [[[
                         (α ↦ o) ∈ σ     
@@ -520,8 +518,8 @@ Module Chainmail(L : LanguageDef).
    *)
 
   (*connectives*)
-  | nsat_and1  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A1 ->
-                                  M1 ⦂ M2 ◎ σ ⊭ (A1 ∧ A2)
+  | nsat_and1  : forall M σ A1 A2, M ◎ σ ⊭ A1 ->
+                              M ◎ σ ⊭ (A1 ∧ A2)
   (**
 [[[
                  M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
@@ -530,8 +528,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_and2  : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A2 ->
-                                  M1 ⦂ M2 ◎ σ ⊭ (A1 ∧ A2)
+  | nsat_and2  : forall M σ A1 A2, M ◎ σ ⊭ A2 ->
+                              M ◎ σ ⊭ (A1 ∧ A2)
   (**
 [[[
                  M1 ⦂ M2 ◎ σ0 … σ ⊭ A2
@@ -540,9 +538,9 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_or    : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊭ A1 ->
-                                  M1 ⦂ M2 ◎ σ ⊭ A2 ->
-                                  M1 ⦂ M2 ◎ σ ⊭ (A1 ∨ A2)
+  | nsat_or    : forall M σ A1 A2, M ◎ σ ⊭ A1 ->
+                              M ◎ σ ⊭ A2 ->
+                              M ◎ σ ⊭ (A1 ∨ A2)
   (**
 [[[
                  M1 ⦂ M2 ◎ σ0 … σ ⊭ A1
@@ -552,9 +550,9 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_arr   : forall M1 M2 σ A1 A2, M1 ⦂ M2 ◎ σ ⊨ A1 ->
-                                  M1 ⦂ M2 ◎ σ ⊭ A2 ->
-                                  M1 ⦂ M2 ◎ σ ⊭ (A1 ⟶ A2)
+  | nsat_arr   : forall M σ A1 A2, M ◎ σ ⊨ A1 ->
+                              M ◎ σ ⊭ A2 ->
+                              M ◎ σ ⊭ (A1 ⟶ A2)
   (**
 [[[
                  M1 ⦂ M2 ◎ σ0 … σ ⊨ A1
@@ -564,8 +562,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_not   : forall M1 M2 σ A, M1 ⦂ M2 ◎ σ ⊨ A ->
-                              M1 ⦂ M2 ◎ σ ⊭ (¬ A)
+  | nsat_not   : forall M σ A, M ◎ σ ⊨ A ->
+                          M ◎ σ ⊭ (¬ A)
   (**
 [[[
                 M1 ⦂ M2 ◎ σ0 … σ ⊨ A
@@ -575,8 +573,8 @@ Module Chainmail(L : LanguageDef).
    *)
 
   (*quantifiers*)
-  | nsat_all : forall M1 M2 σ A x, M1 ⦂ M2 ◎ σ ⊭ ([x /s 0]A) ->
-                              M1 ⦂ M2 ◎ σ ⊭ (∀x.[ A ]) 
+  | nsat_all : forall M σ A x, M ◎ σ ⊭ ([x /s 0]A) ->
+                          M ◎ σ ⊭ (∀x.[ A ]) 
   (**
 [[[
                       (α ↦ o) ∈ σ.(heap)
@@ -586,8 +584,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_ex : forall M1 M2 σ A, (forall x, M1 ⦂ M2 ◎ σ ⊭ ([x /s 0]A)) ->
-                           M1 ⦂ M2 ◎ σ ⊭ (∃x.[ A ])
+  | nsat_ex : forall M σ A, (forall x, M ◎ σ ⊭ ([x /s 0]A)) ->
+                       M ◎ σ ⊭ (∃x.[ A ])
   (**
 [[[
                ∀ α o. (α ↦ o) ∈ σ.(heap) → M1 ⦂ M2 ◎ σ0 … σ ⊭ [α / x]A
@@ -597,8 +595,8 @@ Module Chainmail(L : LanguageDef).
    *)
 
   (** Permission: *)
-  | nsat_access : forall M1 M2 σ a1 a2, ~ has_access σ a1 a2 ->
-                                   M1 ⦂ M2 ◎ σ ⊭ (a1 access a2)
+  | nsat_access : forall M σ a1 a2, ~ has_access σ a1 a2 ->
+                               M ◎ σ ⊭ (a1 access a2)
   (**
 [[[
                 α1 ≠ α2        (∀ o f α3. (α1 ↦ o) ∈ σ ∧ o.f = α3 → α2 ≠ α3)
@@ -609,8 +607,8 @@ Module Chainmail(L : LanguageDef).
    *)
 
   (** Control: *)
-  | nsat_call : forall M1 M2 σ a1 a2 m β, ~ makes_call σ a1 a2 m β ->
-                                     M1 ⦂ M2 ◎ σ ⊭ (a1 calls a2 ◌ m ⟨ β ⟩)
+  | nsat_call : forall M σ a1 a2 m β, ~ makes_call σ a1 a2 m β ->
+                                 M ◎ σ ⊭ (a1 calls a2 ◌ m ⟨ β ⟩)
   (**
 [[[
                     ⌊this⌋ σ ≜ α          α ≠ α1
@@ -619,8 +617,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_extrn : forall M1 M2 σ a, ~ external_obj M1 σ a ->
-                              M1 ⦂ M2 ◎ σ ⊭ a_extrn a
+  | nsat_extrn : forall M σ a, ~ external_obj M σ a ->
+                          M ◎ σ ⊭ a_extrn a
   (**
 [[[
                        α ∉ σ.(heap)
@@ -629,8 +627,8 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  | nsat_intrn : forall M1 M2 σ a, ~ internal_obj M1 σ a ->
-                              M1 ⦂ M2 ◎ σ ⊭ (a internal)
+  | nsat_intrn : forall M σ a, ~ internal_obj M σ a ->
+                          M ◎ σ ⊭ (a internal)
   (**
 [[[
                        α ∉ σ.(heap)
@@ -646,7 +644,7 @@ Module Chainmail(L : LanguageDef).
 
   (*time*)
 
-  where "M1 '⦂' M2 '◎' σ '⊭' A" := (nsat M1 M2 σ A) : chainmail_scope.
+  where "M '◎' σ '⊭' A" := (nsat M σ A) : chainmail_scope.
 
 
   Scheme sat_mut_ind := Induction for sat Sort Prop
@@ -657,10 +655,9 @@ Module Chainmail(L : LanguageDef).
   Hint Constructors sat nsat : chainmail_db.
 
   Definition mdl_sat (M : mdl)(A : asrt) :=
-    forall M' σ0 σ, (exists M'', M ⋄ M' ≜ M'') ->
-               initial σ0 ->
+    forall M' σ0 σ, initial σ0 ->
                M ⦂ M' ⦿ σ0 ⤳⋆ σ ->
-               M ⦂ M' ◎ σ ⊨ A.
+               M ◎ σ ⊨ A.
 
   Notation "M '⊨m' A" := (mdl_sat M A)(at level 40) : chainmail_scope.
 
@@ -669,8 +666,8 @@ Module Chainmail(L : LanguageDef).
 
   Inductive entails : mdl -> asrt -> asrt -> Prop :=
   | ent : forall M A1 A2, (forall σ M', arising M M' σ ->
-                              M ⦂ M' ◎ σ ⊨ A1 ->
-                              M ⦂ M' ◎ σ ⊨ A2) ->
+                              M ◎ σ ⊨ A1 ->
+                              M ◎ σ ⊨ A2) ->
                      entails M A1 A2.
 
   Hint Constructors entails : chainmail_db.
