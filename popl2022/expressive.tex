@@ -1,13 +1,44 @@
 \subsection{Expressiveness of Necessity Specifications}
 
-\susan[]{Chainmail \cite{FASE} was guided by a study of a sequence of exemplars from the object-capability literature and the smart contracts world. We show that \Chainmail is suitable for specifying them too.}
+\susan[]{Both the object capability literature and more recently the smart contract literature are rich sources for exemplars to try \Chainmail on. Ensuring that a visited web page cannot leak your confidential data was looked at by \citeauthor{dd}.
+The high profile, high money losses in the smart contract world have made ensuring that smart contracts cannot be attacked from outside a priority. }
+
+\subsubsection{DOM}
+The key structure underlying a web browser is the Domain Object Model
+(DOM), a recursive composite tree structure of objects that represent
+everything display in a browser window.  Each window has a single DOM
+tree which includes both the page's main content and also third party
+content such as advertisements. To ensure third party content cannot
+affect a page's main content,
+specifications for attenuation for the DOM were proposed in
+\textit{Devriese et al:}   \cite{dd}. 
+
+This example deals with a tree of DOM nodes: Access to a DOM node
+gives access to all its parent and children nodes, and the ability to
+modify the node's properties. However, as the top nodes of the tree
+usually contain privileged information, while the lower nodes contain
+less crucial third-party information, we want to be able to limit  access given to third parties to only the lower part of the DOM tree. We do this through a \prg{Wrapper}, which has a field \prg{node} pointing to a \prg{Node}, and a field \prg{height} which restricts the range of \prg{Node}s which may be modified through the use of the particular \prg{Wrapper}. Namely, when you hold a \prg{Wrapper}  you can modify the \prg{property} of all the descendants of the    \prg{height}-th ancestors of the \prg{node} of that particular \prg{Wrapper}. % It is not difficult to write such a \prg{Wrapper}; a possible implementation  appears in Figure \ref{fig:DOM} in appendix \ref{DOM:traditional}.
+
+
+\prg{DOMSpec} states that if the property of a node in a DOM tree changes,
+it follows that either some non-node, non-wrapper object presently has 
+access to a node of the DOM tree, or to some wrapper with access to some 
+ancestor of the node that was modified.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+DOMSpec $\triangleq$ from nd : Node $\wedge$ nd.property = p
+            to nd.property != p
+            onlyIf $\exists$ o.[$\neg$ o : Node $\wedge$ $\neg$ o : Wrapper $\wedge$ 
+                        ($\exists$ nd' : Node.[$\access{\prg{o}}{\prg{nd'}}$] $\vee$ 
+                         $\exists$ w : Wrapper, k : $\mathbb{N}$.[$\access{\prg{o}}{\prg{w}}$ $\wedge$ nd.parnt$^{\prg{k}}$ = w.node.parnt$^{\prg{w.height}}$] )]
+\end{lstlisting}
 
 \subsubsection{ERC20}
-The ERC20 is a widely used token standard describing the basic functionality of any Ethereum-based token 
+The ERC20\cite{ERC20} is a widely used token standard describing the basic functionality of any Ethereum-based token 
 contract. This functionality includes issuing tokens, keeping track of tokens belonging to participants, and the 
 transfer of tokens between participants. Tokens may only be transferred if there are sufficient tokens in the 
-participant's account, and if either they or someone authorized the participant initiated the transfer. We 
-specify these necessary conditions here using \Chainmail and the Logic of Necessity. Firstly, \prg{ERC20Spec1} 
+participant's account, and if either they or someone authorized the participant initiated the transfer. 
+
+We specify these necessary conditions here using \Chainmail and the Logic of Necessity. Firstly, \prg{ERC20Spec1} 
 says that if the balance of a participant's account is ever reduced by some amount $m$, then
 that must have occurred as a result of a call to the \prg{transfer} method with amount $m$ by the participant,
 or the \prg{transferFrom} method with the amount $m$ by some other participant.
@@ -30,7 +61,7 @@ ERC20Spec2 $\triangleq$ from e : ERC20 $\wedge$ p : Object $\wedge$ p' : Object 
 \end{lstlisting}
 
 \subsubsection{DAO}
-The Decentralized Autonomous Organization (DAO) is a well-known Ethereum contract allowing 
+The Decentralized Autonomous Organization (DAO)~\cite{Dao}  is a well-known Ethereum contract allowing 
 participants to invest funds. The DAO famously was exploited with a re-entrancy bug in 2016, 
 and lost \$50M. Here we provide specifications that would have secured the DAO against such a 
 bug. \prg{DAOSpec1} says that no participant's balance may ever exceed the ether remaining 
@@ -47,20 +78,4 @@ balance is \prg{0}, and they've just withdrawn their funds.
 DAOSpec2 $\triangleq$ from d : DAO
             to1 d.balance(p) = m
             onlyIf $\calls{\prg{p}}{\prg{d}}{\prg{repay}}{\prg{\_}}$ $\wedge$ m = 0 $\vee$ $\calls{\prg{p}}{\prg{d}}{\prg{join}}{\prg{m}}$ $\vee$ d.balance(p) = m
-\end{lstlisting}
-
-\subsubsection{DOM}
-The Domain Object Model (DOM) is the representation of the objects comprising a web document.
-The DOM has a recursive tree structure.
-
-\prg{DOMSpec} states that if the property of a node in a DOM tree changes,
-it follows that either some non-node, non-wrapper object presently has 
-access to a node of the DOM tree, or to some wrapper with access to some 
-ancestor of the node that was modified.
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-DOMSpec $\triangleq$ from nd : Node $\wedge$ n.property = p
-            to nd.property != p
-            onlyIf $\exists$ o.[$\neg$ o : Node $\wedge$ $\neg$ o : Wrapper $\wedge$ 
-                        ($\exists$ nd' : Node.[$\access{\prg{o}}{\prg{nd'}}$] $\vee$ 
-                         $\exists$ w : Wrapper, k : $\mathbb{N}$.[$\access{\prg{o}}{\prg{w}}$ $\wedge$ nd.parnt$^{\prg{k}}$ = w.node.parnt$^{\prg{w.height}}$] )]
 \end{lstlisting}
