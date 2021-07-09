@@ -1,10 +1,15 @@
+
 \section{Proving Necessity}  
 \label{s:inference}
 
 In this Section we provide an inference system for constructing 
 proofs of the Necessity Specifications defined in Section \ref{s:holistic-guarantees}.
-The inference system for proving a Necessity Specification consists of several steps:
+%The inference system for proving a Necessity Specification consists of several steps:
+\sd{Proving}   Necessity Specifications requires several steps, \sd{from the} following four
+categories:
 \begin{enumerate} 
+\item
+\sd{Proving Assertion Encapsulation} (Section \ref{s:encaps-proof})
 \item
 Proving Necessity Specifications from classical specifications for a particular internal method (Section \ref{s:classical-proof})
 \item
@@ -13,27 +18,39 @@ Proving module-wide Necessity Specifications by combining per-method Necessity S
 Raising necessary conditions to construct proofs of emergent behavior (Section \ref{s:emergent-proof})
 \end{enumerate}
 
-\subsection{Per-Method Necessity Specifications from Classical Specifications}
-\label{s:classical-proof}
-In this section we detail how we use Classical Specifications
-to construct per-method Necessity Specifications. In order to do this
-note that if a precondition is \emph{sufficient}
-to achieve a particular result, then the negation of that precondition
-is \emph{necessary} to achieve the negation of the result. Specifically, 
-using classical Hoare logic, if $\hoare{P}{C}{Q}$ is true, then 
-it follows that $\neg P$ is a \emph{necessary precondition} for $\neg Q$ to 
-hold following the execution of $C$.
+\subsection{Assertion Encapsulation}
+\label{s:encaps-proof}
 
-We do not define a new assertion language and Hoare logic
-as this is a field that has seen much work, and any contribution we would provide 
-would be uninteresting. Rather, we rely on this 
-prior work, and assume some underlying logic that can be used 
-to prove a limited subset of \SpecO, comprising only those 
-assertions that are commonly present in other specification languages.
-We provide this subset in Fig. \ref{f:chainmail-syntax}. That is, classical assertions
-are restricted to expressions, class assertions, the usual connectives, negation, 
-implication, and the usual quantifiers.
-\begin{figure}[t]
+\sd{As   already stated in section 2, the first step in proving adherence to Necessity Specifications
+is to prove that an assertion is encapsulated.}
+And as also  already stated, we assume the existence of  
+an inference system for constructing proofs of assertion encapsulation, 
+written $\proves{M}{\givenA{A_1}{\encaps{A_2}}}$.
+\sd{Such an algorithmic system should be sound, in the sense  defined below:}
+
+\begin{definition}[Encapsulation Soundness]
+\label{lem:encap-soundness}
+A judgment of the form $\proves{M}{\givenA{A}{\encaps{A}}}$  is\  \emph{sound}, \ if 
+for all modules $M$, and assertions $A_1$ and $A_2$, if 
+$\proves{M}{\givenA{A_1}{\encaps{A_2}}}$ then $\satisfies{M}{\givenA{A_1}{\encaps{A_2}}}$.
+\end{definition}
+
+
+\sd{The construction of such an algorithmic system is not central to our work,
+because, as we shall see in later sections, } the Logic of Necessity\sophia[do we still have the term "logic of necessity|]{} 
+does not rely on the specifics of any one encapsulation system, only its soundness.
+
+% For the purposes of the examples presented later in the paper, 
+\sd{A rudimentary such inference system for encapsulations
+can be defined on top of a simple type system, while 
+more powerful inference systems are also possible.} 
+In the appendix we define such a system where \sd{internal classes
+may be annotated as \prg{enclosed}, and any path that starts at an internal object and
+only navigates through \prg{enclosed} fields is encapsulated.} 
+We will use that inference system for the proofs in Section \ref{s:examples}, but, as
+we said, the exact nature of that system is of little importance to this work.\sophia[remove the last  para and the lemma from the end of section 3.4]{}
+
+\begin{figure}[tbp]
 \footnotesize
 \[
 \begin{syntax}
@@ -56,18 +73,45 @@ implication, and the usual quantifiers.
 \caption{Classical Assertion Syntax}
 \label{f:classical-syntax}
 \end{figure}
-We assume that there is some classical specification
-inference system exists that allows us to prove 
-specifications of the form
+
+\subsection{Per-Method Necessity Specifications from Classical Specifications}
+\label{s:classical-proof}
+In this section we detail how we use Classical Specifications
+to construct per-method Necessity Specifications. In order to do this
+note that if a precondition \sd{and a certain statement} is \emph{sufficient}
+to achieve a particular result, then the negation of that precondition
+is \emph{necessary} to achieve the negation of the result \sd{after executing that statment.} 
+Specifically, 
+using classical Hoare logic, if $\hoare{P}{\sd{s}}{Q}$ is true, then 
+it follows that $\neg P$ is a \emph{necessary precondition} for $\neg Q$ to 
+hold following the execution of $\prg{s}$.
+
+We do not define a new assertion language and Hoare logic
+  this is a field that has seen much work, and any contribution we would provide 
+would be uninteresting. Rather, we rely on this 
+prior work, and assume some underlying logic that can be used 
+to prove \sd{\emph{classical assertions}}, i.e. a limited subset of \SpecO, comprising only those 
+assertions that are commonly present in other specification languages.
+We provide this subset in Fig. \ref{f:chainmail-syntax}. That is, classical assertions
+are restricted to expressions, class assertions, the usual connectives, negation, 
+implication, and the usual quantifiers.
+
+
+We assume that there exists some classical specification
+inference system  that allows us to prove 
+specifications of the form  $M\ \vdash\ \hoare{P}{\prg{s}}{Q}$. 
+\sd{This implies that we can also have proofs of}
 $$M\ \vdash\ \hoare{P}{\prg{res} = x.m(\overline{z})}{Q}$$
-That is we assume we are able to prove for some method $m$
-defined in module $M$, the execution of $x.m(\overline{z})$
+That is,   % if we assume we are able to prove for some method $m$
+% defined in module $M$,
+ the execution of $x.m(\overline{z})$ 
 with the pre-condition $P$ results in a program state that 
 satisfies post-condition $Q$, where the returned value is represented
 by \prg{res} in $Q$.
 
-Fig. \ref{f:classical->singlestep} introduces the first of the proof 
-rules for Single-Step Only If.
+Fig. \ref{f:classical->singlestep} introduces % the first of the proof 
+\sd{proof rules to infer per-method Necessary Specifications}.
+\sd{These are rules whose conclusion have the  Single-Step Only If form.}
 \begin{figure}[t]
 \footnotesize
 \begin{mathpar}
@@ -102,16 +146,30 @@ rules for Single-Step Only If.
 \label{f:classical->singlestep}
 \end{figure}
 
-\textsc{If1-Encaps} states that if we are able to prove that $P$ is 
+
+\sophia[In general, the rules do not say that if we are to prove XX Xthen we can prove YY; they say that XXX implies YY; so, please avoid saying "prove"]{}
+
+\sd{\textsc{If1-Classical} states that  
+if any state which satifies $P_1$ and $\neg P$ and executes  the method $m$ on an obejct of class $C$, leads to a state that satisfies $\neg P_2$, then, any state which satisfies $P_1$ and calls $m$ on an object of class $C$ will lead to a state that satisfies $P_2$ only if the original state also satisfied $P$.
+We can explain this also as follows: If the triple $.. \vdash \{R_1 \wedge R2\}\ s\ \{Q\}$ holds, then any state that satisfies $R_1$ and which upon execution of \prg{s} leads to a state that satisfies $\neg Q$, cannot satisfy $R_2$ -- because  if it did, then the ensuing state would have to satisfy $Q$,
+}
+
+
+
+
+ \textsc{If1-Encaps} states that if we are able to prove that $P$ is 
 a necessary precondition to method $m$ to go from a state where 
 $P_1$ is true to a state where $P_2$ is true, then we can raise 
 that to say that for a single step of execution where that method 
-is called we can go from $P_1$ to $P_2$ only if $P$ was initially true.
+is called we can go from $P_1$ to $P_2$ only if $P$ was initially true.]\sophia[ where is rule textsc{If1-Encaps}]{}
 
 \susan[We don't say what wrapped means]{}
-\textsc{If1-Wrapped} raises a classical proof about necessary preconditions 
+
+\sophia[\textsc{If1-Wrapped} raises a classical proof about necessary preconditions 
 for leaking of data by a single internal method to a the more general form of 
-Single-Step Only If.
+Single-Step Only If.]{Add explanations as for previous}
+
+\sophia[can we pat ourselves in back here? This section is the achievement we we grappling with for months]{}
 
 \subsection{Necessity Specifications for Any Single Step}
 \label{s:module-proof}
@@ -123,7 +181,22 @@ methods, and that the Classical Specification requires internally encapsulated
 data, then we can construct a more general proof that does not rely on
 statements about specific method calls.
 
-\begin{figure}
+
+Once we are able to derive proofs of more general Necessity Specifications, 
+we can further extend these rules to allow for the construction of more complex 
+necessary conditions. We provide such rules in Fig. \ref{f:only-if-single}. 
+\jm{By the rule for implication (\textsc{If1-$\longrightarrow$}), we are able 
+to strengthen properties of either the starting or ending state, or 
+weaken the necessary pre-condition. There are two disjunction introduction 
+rules (\textsc{If1-$\vee$I1} and \textsc{If1-$\vee$I2}). The disjunction
+elimination rule is of note, it mirrors typical disjunction elimination
+rules, with a variation stating that if it is not possible  to reach 
+the end state from one branch of the disjunction, then we can eliminate 
+that branch. Note, given the rule for implication, there is no need 
+for conjunction introduction (\textsc{IF1-$\wedge$I}), but a rule 
+for conjunction elimination is derivable from the rule for implication.}
+
+\begin{figure}[b]
 \footnotesize
 \begin{mathpar}
 \infer
@@ -143,20 +216,10 @@ statements about specific method calls.
 	\quad(\textsc{If1-Internal})
 \end{mathpar}
 \caption{Combining per-method necessary conditions to achieve module-wide necessary conditions.}
+\label{f:singlestep->module}
 \end{figure}
-Once we are able to derive proofs of more general Necessity Specifications, 
-we can further extend these rules to allow for the construction of more complex 
-necessary conditions. We provide such rules in Fig. \ref{f:only-if-single}. 
-\jm{By the rule for implication (\textsc{If1-$\longrightarrow$}), we are able 
-to strengthen properties of either the starting or ending state, or 
-weaken the necessary pre-condition. There are two disjunction introduction 
-rules (\textsc{If1-$\vee$I1} and \textsc{If1-$\vee$I2}). The disjunction
-elimination rule is of note, it mirrors typical disjunction elimination
-rules, with a variation stating that if it is not possible  to reach 
-the end state from one branch of the disjunction, then we can eliminate 
-that branch. Note, given the rule for implication, there is no need 
-for conjunction introduction (\textsc{IF1-$\wedge$I}), but a rule 
-for conjunction elimination is derivable from the rule for implication.}
+
+
 \begin{figure}[t]
 \footnotesize
 \begin{mathpar}
@@ -525,17 +588,27 @@ itself a necessary precondition (\textsc{If-Start}).}
 %\label{f:sat-proof}
 %\end{figure}
 
-\subsection{Soundness}
+\subsection{Soundness of the Necessity Logic}
+\sophia[Do we still use that term?]{}
+
+
 \begin{theorem}[Soundness]
-For all modules $M$, and Necessity Specifications $H$, if
-$\proves{M}{H}$ then $\satisfies{M}{H}$
+\sd{Assuming a sound \SpecO proof system, $\proves{M}{A}$, and
+a sound encapsulation inference system, $\proves{M}{\givenA{A}{\encaps{A'}}}$,}
+ and  and that on top of these systems we built
+ the Necessity Logic according to the rules in Figures  \ref{f:classical->singlestep}, and 
+ \ref{f:singlestep->module}, and \ref{f:only-if-single}, and \ref{f:only-if},  and \ref{f:only-through}, \\
+ then for    all modules $M$, and all Necessity Specifications  $H$:
+ 
+ $$\proves{M}{H}\ \ \ \ \ \ \ \mbox{implies}\ \ \ \ \ \  \ \ \ \satisfies{M}{H}$$
 \end{theorem}
+
 \begin{proof}
-The soundness proof of the Logic of Necessity proceeds by 
-induction on the derivation of $\proves{M}{H}$.
-The proof relies on two secondary results:
-\begin{description}
-\item - Soundness of the encapsulation relation: $\proves{M}{\givenA{A}{\encaps{A'}}}$
-\item - Soundness of \SpecO proof system: $\proves{M}{A}$
-\end{description}
+% The soundness proof of the Logic of Necessity proceeds by 
+by induction on the derivation of $\proves{M}{H}$.
+%The proof relies on two secondary results:
+%\begin{description}
+%\item - Soundness of the encapsulation relation: $\proves{M}{\givenA{A}{\encaps{A'}}}$
+%\item - Soundness of \SpecO proof system: $\proves{M}{A}$
+% \end{description}
 \end{proof}
