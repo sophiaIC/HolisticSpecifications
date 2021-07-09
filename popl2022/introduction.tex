@@ -93,8 +93,24 @@ More recently, \citeauthor{FASE} were also concerned with
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In this paper we introduce \textit{Necessity Specifications}:\\
-\strut \hspace{1.5in} $\onlyIf {A_1} {A_2} {A_3}$ \\
+In this paper we introduce
+%
+ %% \textit{necessity specifications}:\\
+ %% \strut \hspace{1.5in} $\onlyIf {A_1} {A_2} {A_3}$ \\
+%
+\textit{necessity specifications}:
+%
+%
+%\hspace{1cm} $\onlyIf {A_1} {A_2} {A_3}$ \\ 
+%
+%% \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
+%% $\onlyIf {A_1} {A_2} {A_3}$ 
+%% \end{lstlisting}
+%
+\begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
+from ${A_1}$ to ${A_2}$ onlyIf ${A_3}$ 
+\end{lstlisting}
+%
 to say a change from a current state satisfying $A_1$ to a future
 state satisfying $A_2$ (i.e.\ an effect) is possible only if the necessary condition
 $A_3$ holds in the current state
@@ -102,8 +118,8 @@ $A_3$ holds in the current state
 (i.e.\ $(A_1 \wedge \Diamond A_2) \longrightarrow A_3$).
 %
 Unlike \citeauthor{VerX} or \citeauthor{FASE}
-which use general temporal operators, 
-We support Necessity Specifications with this explicit
+which employ general temporal operators, 
+we support necessity specifications with this explicit
 %
 ``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
 %
@@ -242,8 +258,7 @@ are enough to drain the account \prg{Mod2} without supplying the password.
 %% referred to and doesn't need to be} 
  %% \begin{figure}[hbtp]
 \begin{tabular}{lll}
-  \begin{minipage}{0.35\textwidth}
-    \vfill
+\begin{minipage}[b]{0.35\textwidth}
 \begin{lstlisting}[language=chainmail, frame=lines]
 module Mod2
   class Account
@@ -256,8 +271,8 @@ module Mod2
       class Password
 \end{lstlisting}
 \end{minipage}
-  &\ \ \  \ \   &
-\begin{minipage}{0.50\textwidth}
+&\ \ \  \ \   &%
+\begin{minipage}[b]{0.50\textwidth}
 \begin{lstlisting}[language=chainmail, frame=lines]
 module Mod3
   class Account
@@ -271,7 +286,7 @@ module Mod3
   class Password
 \end{lstlisting}
 \end{minipage} 
- \end{tabular}
+\end{tabular}
  %%  \caption{module \prg{AccountMdl} version II,  \ \ \ \ \ \hspace{.7in} \ \ \ \ \ \  module \prg{AccountMdl} version III}
  %% \label{fig:ExampleAccount}
  %% \end{figure}
@@ -282,66 +297,77 @@ We need to rule out \prg{Mod2} while permitting \prg{Mod3} and
 of  \emph{emergent} behaviour from the interactions of the \prg{set}
 and \prg{transfer} methods --- even though \prg{Mod3} also has a
 \prg{set} method, it does not exhibit the unwanted interaction.
-
-
- %% The flaw in version {\sf{II}} arises from 
- %% can be used to overwrite the
- %% password, and then using the new password \prg{transfer}  can be called.
+This is exactly where a necessity condition can help:
+we want to avoid transferring money
+(or more generally, reducing an account's balance)
+\textit{without} the account password.  Phrasing the same condition
+the other way around gives us a positive statement that still
+rules out the theft: that money \textit{can only} be
+transferred when the account's password is supplied.
+In our necessity condition syntax:
+%
+%% The flaw in version {\sf{II}} arises from 
+%% can be used to overwrite the
+%% password, and then using the new password \prg{transfer}  can be called.
 % If we want the \prg{Account} class to be robust, we must prohibit the password from being freely available.
-
-We need a necessity condition here: to ensure that money can only be
-transferred when the sending account's password is known.
-
+%
+%
 %% In this paper, we show how \textit{necessity specifications} can solve
 %% this progkem.  
 %%  Therefore, we propose a %holistic 
 %%  specification which says that
 %%  the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
 %%  module has access to the password:
- 
-
+%
+%
  %% Therefore, we propose a %holistic 
  %% specification which says that
  %% the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
  %% module has access to the password:
- 
+% 
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 NecessityBankSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
                       to a.balance < bal
                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
 \end{lstlisting}
-
-
-  
- %% In more detail, the specification from above says that if in the current
- %% configuration \prg{a} is an \prg{Account},
- %% and in some future configuration \prg{a} will have a balance less than the current one, then, in the \emph{current} configuration
- %% there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to module
+%
+%
+% 
+%% In more detail, the specification from above says that if in the current
+%% configuration \prg{a} is an \prg{Account},
+%% and in some future configuration \prg{a} will have a balance less than the current one, then,in the \emph{current} configuration
+%% there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to module
  %% \prg{AccountMdl}), and which has access to \prg{a}'s password.
- 
+ %
 %% T9hu having access to the password is a necessary condition for the balance to reduce.
- Note, that the specification only talks about effects (here the balance reducing), and does not
- talk about individual methods (such as \prg{set} or \prg{transfer}).
- 
+The critical point of this necessity specification is that it is
+expressed in terms of observable effects --- reducing the account
+balance --- and not in terms of individual methods --- such as
+\prg{set} or \prg{transfer}.  This gives necessity specifications the
+vital advantage that they constrain not only any
+\textit{implementation} of a bank account with a balance and a
+password (as do traditional sufficient specifications) but also any
+\textit{design} of such a bank account, irrespective of the API it
+offers, the services it exports, or the dependencies on other parts of
+the system.
    
- The contributions of this paper are as follows:
+The contributions of this paper are as follows:
  
  \begin{enumerate}
  \item
- We propose \Chainmail, a specification language with which to
-express Necessity Specifications. 
+\Chainmail, a language to
+express necessity specifications. 
  \item
-  We propose a Logic of Necessity for writing assertions and for proving a module's adherence to said assertions.
- This logic builds on top of classical pre- post- conditions.
- \item
- We prove soundness of our logic.  
- \item
- We use our logic to prove adherence to the assertion of the example
-outlined  in this section.
- \end{enumerate}
- 
- We have developed a Coq proof of soundness of our approach, and a Coq proof of the
- account example in this paper. We make these proofs available as supplementary material.
+a logic proving a module's adherence to its
+necessity specifications
+%% This logic builds on top of classical pre- post- conditions.
+\item
+  a Coq proof of soundness of the logic
+\item
+  a Coq proof of the bank account example 
+\end{enumerate}
+The Coq proofs of the logic and the bank account, are  in the
+supplementary material, along with additional examples of necessity specifications.
 % QUESTIONS:
 % \begin{itemize}
 % \item
@@ -353,7 +379,7 @@ outlined  in this section.
 % \end{itemize}
 
 
-The rest of the paper is organised as follows: .... 
+% The rest of the paper is organised as follows: .... 
 %Section
 %~\ref{sect:motivate:Bank} 
 %\sd{gives an example from the literature} which we will use 
