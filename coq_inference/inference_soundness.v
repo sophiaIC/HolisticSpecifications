@@ -9,6 +9,23 @@ Require Import chainmail.
 Require Import hoare.
 Require Import inference.
 
+(***
+In this file we present the soundness argument. The final soundness proof of
+SpecX as described in the paper can be found at the bottom of this file as
+
+===> Theorem necessity_triple_soundness
+
+We make several assumptions:
+(1) there exists some encapsulation algorithm that is sound. While this is wired into a rudimentary one defined in inference.v
+    that mirrors the rudimentary encapsulation system as defined in the paper, we do not use any results from there here.
+(2) there is a sound underlying Hoare logic
+(3) there is a sound proof system for deriving proofs of SpecW specifications of the form: M ⊢ A
+(4) there are several minor assumptions to do with variable substitution and renaming that are prohibitively
+    complex for work in Coq, but would not be problematic in a paper proof.
+(5) to avoid tedious, but already well trod ground, we avoid proofs about
+    the underlying hoare logic, specifically that if {P} C {Q}, then ¬ P is a necessary precondition for {¬ Q}
+ ***)
+
 Module Soundness(L : LanguageDef).
 
   Export L.
@@ -125,122 +142,13 @@ Module Soundness(L : LanguageDef).
                      external_self M1 M2 σ1 ->
                      external_self M1 M2 σ2.
 
-
-  Lemma internal_reductions_is_call :
-    forall M M' σ1 σ2, M ⦂ M' ⦿ σ1 ⤳… σ2 ->
-                  exists α1 α2 m β, M ◎ σ1 ⊨ (α1 calls α2 ◌ m ⟨ β ⟩ ∧
-                                         α1 external ∧
-                                         α2 internal).
-  Proof.
-    intros M1 M2 σ1 σ2 Hred;
-      induction Hred.
-
-    - unfold external_self, internal_self in *;
-        repeat destruct_exists_loo;
-        andDestruct;
-        subst.
-      unfold is_external, is_internal in *;
-        repeat destruct_exists_loo;
-        andDestruct;
-        subst.
-      match goal with
-      | [H : _ ∙ _ ⤳ _ |- _ ] =>
-        inversion H;
-          subst
-      end;
-        repeat map_rewrite.
-      + crush.
-      + admit.
-      + admit.
-      + eapply no_external_calls in H0;
-          eauto.
-
-  Admitted.
-
-  Lemma intrnl_field_is_encapsulated :
-    forall M A e f, intrnl M A e ->
-               encapsulated M A (a_exp (e_acc_f e f)).
-  Proof.
-    intros.
-    encap_intros.
-    match goal with
-    | [H : _ ⦂ _ ⦿ _ ⤳ _ |- _] =>
-      inversion H;
-        subst
-    end.
-
-    Admitted.
-
   Axiom internal_is_encapsulated :
     forall M A e, intrnl M A e ->
              encapsulated M A (a_exp e).
-  (*Proof.
-    intros M A e Hint;
-      induction Hint;
-
-      try solve [encap_intros;
-                 match goal with
-                 | [H1 : _ ◎ _ ⊨ (a_exp _),
-                         H2 : _ ◎ _ ⊨ ¬ _|- _] =>
-                   inversion H1;
-                   subst
-                 end;
-                 match goal with
-                 | [H : exp_satisfaction _ _ _ |- _ ] =>
-                   inversion H;
-                   subst
-                 end;
-                 match goal with
-                 | [H : evaluate _ _ _ _ |- _ ] =>
-                   inversion H;
-                   subst
-                 end].
-
-    - encap_intros.
-      match goal with
-      | [H : _ ◎ _ ⊨ (a_exp (e_true)) |- _] =>
-        inversion H;
-          subst;
-          clear H
-      end.
-      repeat chainmail_auto.
-      eauto with chainmail_db.
-
-    - encap_intros.
-      admit.
-
-    - encap_intros.
-      admit.
-
-  Admitted.*)
 
   Axiom encapsulation_soundness :
     forall M A A', enc M A A' ->
               encapsulated M A A'.
-(*  Proof.
-    intros M A A' Henc;
-      induction Henc.
-
-    - apply internal_is_encapsulated;
-        auto.
-
-    - admit.
-
-    - admit.
-
-    - admit.
-
-    - admit.
-
-    - encap_intros.
-      match goal with
-      | [Hent : M ⊢ ?A1 ⊇ ?A2,
-                Har : arising _ _ _,
-                      Hsat : _ ◎ _ ⊨ ?A1 |- _] =>
-        apply (entails_implies Hent Har) in Hsat
-      end.
-      eauto.
-  Admitted.*)
 
   Definition onlythrough (M : mdl)(A1 A2 A : asrt):=
     forall M' σ1 σ2, arising M M' σ1 ->
@@ -531,11 +439,11 @@ Module Soundness(L : LanguageDef).
       auto.
   Qed.
 
-  Axiom sat_implies_no_free_variables :
+  Parameter sat_implies_no_free_variables :
     forall M σ A, M ◎ σ ⊨ A ->
              no_free A.
 
-  Axiom neg_no_free :
+  Parameter neg_no_free :
     forall A, no_free A -> no_free (¬ A).
 
   Lemma classical_to_necessary :
@@ -562,7 +470,136 @@ Module Soundness(L : LanguageDef).
 
   (*  Lemma if1_wrapped*)
 
+  Parameter wrapped_necessary_condition :
+    forall M α C m β α' P,  M ⊢ {pre: (a_class (e_ α) C) ∧ ¬ P} (m_call α m β) {post: ¬ (a_exp (e♢ 0 ⩵ (e_addr α')))} ->
+                       onlyif1 M (a_class (e_ α) C ∧
+                                  (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩]) ∧
+                                  wrapped (a_ α')) (¬ wrapped (a_ α')) P.
+
   (*  Lemma if1_internal*)
+
+  Lemma internal_call :
+    forall M A1 A2, encapsulated M A1 A2 ->
+               forall M' σ σ', arising M M' σ ->
+                          M ⦂ M' ⦿ σ ⤳ σ' ->
+                          M ◎ σ ⊨ A1 ->
+                          M ◎ σ ⊨ A2 ->
+                          M ◎ σ' ⊨ ¬ A2 ->
+                          exists α C, C ∈ M /\
+                                 M ◎ σ ⊨ (a_class (e_ α) C) /\
+                                 exists α' m β, M ◎ σ ⊨ (a_ α') calls (a_ α) ◌ m ⟨ β ⟩.
+  Proof.
+    intros.
+    unfold encapsulated in *.
+    specialize (H M' σ σ');
+      repeat auto_specialize.
+    repeat destruct_exists_loo.
+    a_prop.
+    assert (exists α α', x = (a_ α) /\ x0 = (a_ α')).
+
+    - inversion H;
+        subst.
+      inversion H10;
+        subst;
+        eauto.
+
+    - repeat destruct_exists_loo;
+        andDestruct;
+        subst.
+      inversion H5;
+        subst.
+      inversion H10;
+        subst.
+      exists α0, (cname o);
+        repeat split;
+        auto.
+      + apply sat_class, has_cls with (α:=α0); auto.
+        apply v_value.
+      + exists α, m, f;
+          auto.
+
+  Qed.
+
+  Lemma internal_reductions_implies_reduction :
+    forall M M' σ σ', M ⦂ M' ⦿ σ ⤳… σ' ->
+                 exists M'' σ'', M ⋄ M' ≜ M'' /\
+                            M'' ∙ σ ⤳ σ''.
+  Proof.
+    intros M M' σ σ' Hred;
+      induction Hred;
+      eauto.
+  Qed.
+
+  Lemma pair_reduction_implies_reduction :
+    forall M M' σ σ', M ⦂ M' ⦿ σ ⤳ σ' ->
+                 exists M'' σ'', M ⋄ M' ≜ M'' /\
+                            M'' ∙ σ ⤳ σ''.
+  Proof.
+    intros M M' σ σ' Hred;
+      induction Hred;
+      eauto.
+    eapply internal_reductions_implies_reduction;
+      eauto.
+  Qed.
+
+  Lemma calls_method_exists :
+    forall M σ α1 α2 m β, M ◎ σ ⊨ ((a_ α1) calls (a_ α2) ◌ m ⟨ β ⟩) ->
+                     forall C, M ◎ σ ⊨ (a_class (e_ α2) C) ->
+                          forall CDef, ⟦ C ↦ CDef ⟧_∈ M ->
+                                  forall M' σ', M ⦂ M' ⦿ σ ⤳ σ' ->
+                                           m ∈ (CDef.(c_meths)).
+  Proof.
+    intros.
+    inversion H;
+      subst.
+    inversion H6;
+      subst.
+    apply pair_reduction_implies_reduction in H2.
+    repeat destruct_exists_loo;
+      andDestruct.
+    inversion Hb;
+      subst.
+    inversion H0;
+      subst.
+    inversion H5;
+      subst.
+    inversion H8;
+      subst.
+    rewrite H7 in H15;
+      inversion H15;
+      subst.
+    rewrite H11 in H16;
+      inversion H16;
+      subst.
+    inversion Ha;
+      subst.
+    destruct (eq_dec (cname o) Object).
+
+    - rewrite e in H18.
+      unfold extend in H18.
+      rewrite H2 in H18.
+      inversion H18;
+        subst.
+      simpl in H19.
+      inversion H19.
+
+    - destruct (partial_maps.partial_map_dec (cname o) M).
+      + destruct_exists_loo.
+        unfold extend in H18;
+          rewrite H10 in H18.
+        inversion H18;
+          subst.
+        rewrite H10 in H1;
+          inversion H1;
+          subst.
+        eauto.
+      + rewrite e in H1.
+        crush.
+  Qed.
+
+  Parameter exists_subst :
+    forall {A B C}`{Subst A B C} (a : A)(b : B)(c : C),
+      exists a', a = ([c /s b] a').
 
   Theorem necessity_triple_soundness :
     (forall M A1 A2 A3, M ⊢ A1 to A2 onlyThrough A3 ->
@@ -728,9 +765,75 @@ Module Soundness(L : LanguageDef).
       a_prop;
         auto.
 
-    - admit.
+    - necessity_soundness_simpl.
+      apply wrapped_necessary_condition in h.
+      unfold onlyif1 in *.
+      specialize (h M' σ1 σ2);
+        auto_specialize.
+      apply h;
+        auto.
+      a_prop;
+        auto.
 
-    - admit.
+    -  necessity_soundness_simpl.
+       assert (Ha : encapsulated M A1 (¬ A2));
+         [apply encapsulation_soundness; auto|].
+       unfold encapsulated in Ha.
+       specialize (Ha M' σ1 σ2);
+         repeat auto_specialize.
+       apply nsat_not, sat_not in H2;
+         auto_specialize;
+         repeat destruct_exists_loo;
+         a_prop.
+       destruct internal_call
+         with (M:=M)(A1:=A1)(A2:=¬ A2)
+              (M':=M')(σ:=σ1)(σ':=σ2);
+         auto.
+       + apply encapsulation_soundness;
+           auto.
+       + destruct_exists_loo;
+           andDestruct;
+           repeat destruct_exists_loo.
+         inversion Ha0;
+           subst.
+         inversion H13;
+           subst.
+         destruct (exists_subst f0 0 (v_ α)) as [β Hex].
+         specialize (H (cname o0) x2 m0 x1 β).
+         repeat auto_specialize.
+         assert (m0 ∈ c_meths x2).
+         * assert (exists α1 α2, x0 = α1 /\ x = α2).
+           ** inversion H5;
+                subst.
+              inversion H16;
+                subst.
+              eauto.
+           ** repeat destruct_exists_loo;
+                andDestruct;
+                subst.
+              destruct (calls_method_exists) with
+                  (M:=M)(σ:=(χ,ψ))(α1:=α)(α2:=x1)
+                  (m:=m0)(β:=[v_ α /s 0] β)(C:=cname o0)(CDef:=x2)
+                  (M':=M')(σ':=σ2);
+                auto.
+              eauto.
+         * auto_specialize.
+           unfold onlyif1 in *.
+           specialize (H M' (χ, ψ) σ2);
+             repeat auto_specialize.
+           apply H;
+             auto.
+           ** a_prop;
+                auto.
+              apply sat_ex with (x:=v_ α).
+              subst_simpl.
+              rewrite <- Hex.
+              auto.
+           ** inversion H2;
+                subst.
+              inversion H17;
+                subst.
+              auto.
 
     - necessity_soundness_simpl.
       unfold onlyif in *.

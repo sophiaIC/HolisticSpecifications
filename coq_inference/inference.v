@@ -183,14 +183,17 @@ Module Inference(L : LanguageDef).
       β' = (fun v => Some (av_ v)) ∘ β  ->
       M ⊢ (P1 ∧ (a_class (e_addr α) C) ∧ (∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ β' ⟩])) to1 P2 onlyIf P
   | if1_wrapped : forall M α C P m β α',
-      M ⊢ {pre: (a_class (e_addr α) C) ∧ ¬ P } (m_call α m β) {post: a_exp ((e♢ 0) ⩵̸ (e_ α'))} ->
+      M ⊢ {pre: (a_class (e_addr α) C) ∧ ¬ P } (m_call α m β) {post: ¬ a_exp ((e♢ 0) ⩵ (e_ α'))} ->
       M ⊢ (wrapped (a_ α') ∧ (a_class (e_ α) C) ∧ (∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ (fun v => Some (av_ v)) ∘ β ⟩ ]))
         to1 (¬ (wrapped (a_ α'))) onlyIf P
   | if1_internal : forall M A1 A2 A3,
       (forall C CDef m α β, ⟦ C ↦ CDef ⟧_∈ M ->
                             m ∈ c_meths CDef ->
-                            M ⊢ (A1 ∧ (a_class (e_ α) C) ∧ ∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ β ⟩]) to1 A2 onlyIf A3) ->
+                            M ⊢ (A1 ∧ (a_class (e_ α) C) ∧ ∃x.[(a♢ 0) calls (a_ α) ◌ m ⟨ β ⟩]) to1 A2 onlyIf A3) ->
+      enc M A1 (¬ A2) ->
+      M ⊢ A1 ⊇ ¬ A2 ->
       M ⊢ A1 to1 A2 onlyIf A3
+
   | if1_if : forall M A1 A2 A3, M ⊢ A1 to A2 onlyIf A3 ->
                                 M ⊢ A1 to1 A2 onlyIf A3
   | if1_conseq : forall M A1 A1' A2 A2' A A', M ⊢ A1' to1 A2' onlyIf A' ->
