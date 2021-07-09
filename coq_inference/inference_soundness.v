@@ -413,6 +413,10 @@ Module Soundness(L : LanguageDef).
 
   Hint Resolve pair_reduction_is_pair_reductions : reduce_db.
 
+(*)  Lemma classical_to_necessary :
+    forall M P Q C, M ⊢ {pre: P} C {post: Q} ->
+               forall M' σ σ', is_call .*)
+
   Lemma changes_soundness_helper1 :
     forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
                    forall A, M1 ◎ σ1 ⊨ A ->
@@ -448,6 +452,113 @@ Module Soundness(L : LanguageDef).
   Qed.
 
   (*  Lemma if1_classical*)
+
+  Lemma func_equality :
+    forall {A B : Type} (f g : A -> B), f = g ->
+                                  forall a, f a = g a.
+  Proof.
+    intros;
+      auto.
+    rewrite H;
+      auto.
+  Qed.
+
+  Lemma calls_is_call :
+    forall M σ α m β, (M ◎ σ ⊨ ∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩]) ->
+                 exists y, is_call σ y (m_call α m β).
+  Proof.
+    intros M σ α m β Hsat;
+      inversion Hsat;
+      subst.
+    subst_simpl.
+    subst_simpl.
+    simpl in H2.
+    inversion H2;
+      subst.
+    inversion H3;
+      subst.
+    exists x0;
+      eapply is_meth_call
+        with (ϕ:={| this := α1; local := lcl; contn := c_ (x0 ≔m y ▸ m ⟨ args ⟩);; b |})
+             (y:=y);
+      simpl;
+      auto.
+    apply functional_extensionality;
+      intros x.
+    apply func_equality with (a:=x) in H4;
+      simpl in H4.
+    destruct (args x) eqn : Ha;
+      destruct (β x) eqn : Hb;
+      auto.
+    - destruct (lcl n) eqn : Hc;
+        auto.
+      + inversion H4;
+          subst;
+          auto.
+      + inversion H4;
+          subst;
+          auto.
+    - destruct (lcl n) eqn : Hc;
+        auto.
+      + inversion H4;
+          subst;
+          auto.
+    - inversion H4;
+        subst;
+        auto.
+  Qed.
+
+  Definition no_free (A : asrt) :=
+    forall (x : value) (n : nat), ([x /s n] A) = A.
+
+  Lemma classical_with_calls :
+    forall M P α m β Q, M ⊢ {pre: P} (m_call α m β) {post: Q} ->
+                   no_free Q ->
+                   forall σ, M ◎ σ ⊨ (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩]) ->
+                        forall M' σ', M ⦂ M' ⦿ σ ⤳ σ' ->
+                                 M ◎ σ ⊨ P ->
+                                 M ◎ σ' ⊨ Q.
+  Proof.
+    intros.
+    destruct (calls_is_call M σ α m β H1).
+    inversion H;
+      subst.
+    specialize (H11 M' x σ σ').
+    repeat auto_specialize.
+    repeat destruct_exists_loo;
+      andDestruct.
+    rewrite H0 in Hb0;
+      auto.
+  Qed.
+
+  Axiom sat_implies_no_free_variables :
+    forall M σ A, M ◎ σ ⊨ A ->
+             no_free A.
+
+  Axiom neg_no_free :
+    forall A, no_free A -> no_free (¬ A).
+
+  Lemma classical_to_necessary :
+    forall M P1 P2 α m β Q, M ⊢ {pre: P1 ∧ ¬ P2} (m_call α m β) {post: ¬ Q} ->
+                       onlyif1 M (P1 ∧ (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩])) Q P2.
+  Proof.
+    intros.
+    necessity_soundness_simpl.
+    destruct (sat_excluded_middle M σ1 (P1 ∧ ¬ P2)).
+    - apply classical_with_calls with (α:=α)(m:=m)(β:=β)(Q:=¬ Q)(P:=P1 ∧ ¬ P2)(M':=M')(σ':=σ2) in H4;
+        auto;
+      [| eapply neg_no_free, sat_implies_no_free_variables; eauto].
+      destruct (sat_excluded_middle M σ1 P2);
+        auto.
+      apply sat_not in H6.
+      a_prop.
+    - inversion H5;
+        subst.
+      + apply sat_not in H9;
+          a_prop.
+      + inversion H9;
+          auto.
+  Qed.
 
   (*  Lemma if1_wrapped*)
 
@@ -607,7 +718,15 @@ Module Soundness(L : LanguageDef).
       apply H0 in Ha;
         auto.
 
-    - admit.
+    - necessity_soundness_simpl.
+      apply classical_to_necessary in h.
+      unfold onlyif1 in *.
+      specialize (h M' σ1 σ2);
+        repeat auto_specialize.
+      apply h;
+        auto.
+      a_prop;
+        auto.
 
     - admit.
 
