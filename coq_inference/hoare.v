@@ -47,18 +47,19 @@ Module Hoare(L : LanguageDef).
   | m_call : addr -> mth -> partial_map name value -> meth_call.
 
   Inductive is_call : config -> name -> meth_call -> Prop :=
-  | is_meth_call : forall χ ϕ x y b ψ α m β,
+  | is_meth_call : forall χ ϕ x y b ψ α m β β',
       contn ϕ = c_ ((call x y m β);; b) ->
       ⟦ y ↦ v_ α⟧_∈ local ϕ ->
-      is_call (χ, ψ) x (m_call α m ((local ϕ) ∘ β)).
+      β' = (local ϕ) ∘ β ->
+      is_call (χ, ψ) x (m_call α m β').
 
   Inductive hoare_triple : mdl -> asrt -> meth_call -> asrt -> Prop :=
   | ht_r : forall M α m β P Q, (forall M' x σ σ', is_call σ x (m_call α m β) ->
                                         M ◎ σ ⊨ P ->
                                         M ⦂ M' ⦿ σ ⤳ σ' ->
                                         exists v χ ϕ ψ, σ' = (χ, ϕ :: ψ) /\
-                                                  ⟦ x ↦ v ⟧_∈ local ϕ /\
-                                                  M ◎ σ' ⊨ [v /s 0]Q) ->
+                                                   ⟦ x ↦ v ⟧_∈ local ϕ /\
+                                                   M ◎ σ' ⊨ [v /s 0]Q) ->
                           M ⊢ {pre: P} (m_call α m β) {post: Q}
 
   where "M '⊢' '{pre:' P '}' m '{post:' Q '}'"

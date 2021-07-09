@@ -116,8 +116,7 @@ Module Inference(L : LanguageDef).
   Hint Constructors enc : inference_db.
 
   Inductive only_if : mdl -> asrt -> asrt -> asrt -> Prop :=
-  | if_start  : forall M A1 A2 A, M ⊢ A1 ⊇ A ->
-                                  M ⊢ A1 to A2 onlyIf A
+  | if_start  : forall M A1 A2, M ⊢ A1 to A2 onlyIf A1
   | if_conseq : forall M A1 A1' A2 A2' A A', M ⊢ A1' to A2' onlyIf A' ->
                                              M ⊢ A1 ⊇ A1' ->
                                              M ⊢ A2 ⊇ A2' ->
@@ -144,6 +143,8 @@ Module Inference(L : LanguageDef).
 
   with only_through : mdl -> asrt -> asrt -> asrt -> Prop :=
   | ot_end      : forall M A1 A2, M ⊢ A1 to A2 onlyThrough A2
+  | ot_changes : forall M A1 A2, M ⊢ A1 to1 ¬ A1 onlyIf A2 ->
+                            M ⊢ A1 to ¬ A1 onlyThrough A2
   | ot_if       : forall M A1 A2 A, M ⊢ A1 to A2 onlyIf A ->
                                     M ⊢ A1 to A2 onlyThrough A
   | ot_conseq   : forall M A1 A1' A2 A2' A A', M ⊢ A1' to A2' onlyThrough A' ->
@@ -156,13 +157,11 @@ Module Inference(L : LanguageDef).
                                            M ⊢ A1 ∨ A1' to A2 onlyThrough A ∨ A'
   | ot_orI2     : forall M A1 A2 A2' A A', M ⊢ A1 to A2 onlyThrough A ->
                                            M ⊢ A1 to A2' onlyThrough A' ->
-                                           M ⊢ A1 to A2 ∨ A2 onlyThrough A ∨ A'
+                                           M ⊢ A1 to A2 ∨ A2' onlyThrough A ∨ A'
   | ot_orE1     : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A ∨ A' ->
-                                  M ⊢ A1 ⊇ ¬ A' ->
                                   M ⊢ A1 to A' onlyThrough a_exp (e_false) ->
                                   M ⊢ A1 to A2 onlyThrough A
   | ot_orE2     : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A ∨ A' ->
-                                  M ⊢ A2 ⊇ ¬ A' ->
                                   M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
                                   M ⊢ A1 to A2 onlyThrough A
   | ot_trans1   : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
@@ -171,9 +170,9 @@ Module Inference(L : LanguageDef).
   | ot_trans2   : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
                                        M ⊢ A' to A2 onlyThrough A ->
                                        M ⊢ A1 to A2 onlyThrough A
-  | ot_inv      : forall M A1 A2 A3 A, M ⊢ A to ¬ A onlyThrough a_exp (e_false) ->
+(*  | ot_inv      : forall M A1 A2 A3 A, M ⊢ A to ¬ A onlyThrough a_exp (e_false) ->
                                        M ⊢ A1 to A2 onlyThrough A3 ->
-                                       M ⊢ A1 ∧ A to A2 onlyThrough A3 ∧ A
+                                       M ⊢ A1 ∧ A to A2 onlyThrough A3 ∧ A*)
 
   where
   "M '⊢' A1 'to' A2 'onlyThrough' A3" := (only_through M A1 A2 A3)

@@ -171,10 +171,10 @@ Module Soundness(L : LanguageDef).
 
     Admitted.
 
-  Theorem internal_is_encapsulated :
+  Axiom internal_is_encapsulated :
     forall M A e, intrnl M A e ->
              encapsulated M A (a_exp e).
-  Proof.
+  (*Proof.
     intros M A e Hint;
       induction Hint;
 
@@ -212,12 +212,12 @@ Module Soundness(L : LanguageDef).
     - encap_intros.
       admit.
 
-  Admitted.
+  Admitted.*)
 
-  Theorem encapsulation_soundness :
+  Axiom encapsulation_soundness :
     forall M A A', enc M A A' ->
               encapsulated M A A'.
-  Proof.
+(*  Proof.
     intros M A A' Henc;
       induction Henc.
 
@@ -240,15 +240,15 @@ Module Soundness(L : LanguageDef).
         apply (entails_implies Hent Har) in Hsat
       end.
       eauto.
-  Admitted.
+  Admitted.*)
 
   Definition onlythrough (M : mdl)(A1 A2 A : asrt):=
     forall M' σ1 σ2, arising M M' σ1 ->
                 M ◎ σ1 ⊨ A1 ->
                 M ◎ σ2 ⊨ A2 ->
                 M ⦂ M'  ⦿ σ1 ⤳⋆ σ2 ->
-                exists σ, (σ = σ1 \/ M ⦂ M' ⦿ σ1 ⤳⋆ σ) /\
-                     (σ = σ2 \/ M ⦂ M' ⦿ σ ⤳⋆ σ2) /\
+                exists σ, (M ⦂ M' ⦿ σ1 ⤳⋆ σ) /\
+                     (M ⦂ M' ⦿ σ ⤳⋆ σ2) /\
                      M ◎ σ ⊨ A.
 
   Definition onlyif (M : mdl)(A1 A2 A : asrt):=
@@ -403,6 +403,56 @@ Module Soundness(L : LanguageDef).
                 auto
               end].
 
+  Lemma pair_reduction_is_pair_reductions :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                   M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2.
+  Proof.
+    intros; eapply prs_trans;
+      eauto with reduce_db.
+  Qed.
+
+  Hint Resolve pair_reduction_is_pair_reductions : reduce_db.
+
+  Lemma changes_soundness_helper1 :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                   forall A, M1 ◎ σ1 ⊨ A ->
+                        M1 ◎ σ2 ⊨ ¬ A ->
+                        exists σ σ', M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ /\
+                                M1 ⦂ M2 ⦿ σ' ⤳⋆ σ2 /\
+                                M1 ⦂ M2 ⦿ σ ⤳ σ' /\
+                                M1 ◎ σ ⊨ A /\
+                                M1 ◎ σ' ⊨ ¬ A.
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      intros.
+
+    - a_prop.
+
+    - destruct (sat_excluded_middle M1 σ A).
+      + match goal with
+        | [H : forall _, _,
+             A' : asrt |- _ ] =>
+          specialize (H A')
+        end;
+          repeat auto_specialize.
+        repeat destruct_exists_loo;
+          andDestruct.
+        exists σ0, σ3;
+          repeat split;
+          auto with reduce_db.
+        eapply prs_trans; eauto.
+      + exists σ1, σ;
+          repeat split;
+          auto with reduce_db chainmail_db.
+  Qed.
+
+  (*  Lemma if1_classical*)
+
+  (*  Lemma if1_wrapped*)
+
+  (*  Lemma if1_internal*)
+
   Theorem necessity_triple_soundness :
     (forall M A1 A2 A3, M ⊢ A1 to A2 onlyThrough A3 ->
                    onlythrough M A1 A2 A3) /\
@@ -412,75 +462,195 @@ Module Soundness(L : LanguageDef).
                    onlyif1 M A1 A2 A3).
   Proof.
     apply necessity_mutind;
-      intros.
+      intros;
+      try solve [necessity_soundness_simpl; auto].
 
     - necessity_soundness_simpl.
+      match goal with
+      | [_ : _ ⦂ _ ⦿ _ ⤳⋆ ?σ2' |- _] =>
+        exists σ2'; repeat split; auto
+      end.
+      apply prs_refl.
 
     - necessity_soundness_simpl.
+      match goal with
+      | [Hred : ?M1' ⦂ ?M2' ⦿ ?σ1' ⤳⋆ ?σ2',
+                Hsat : ?M1' ◎ ?σ1' ⊨ ?A1' |-_] =>
+        destruct (changes_soundness_helper1 M1' M2' σ1' σ2' Hred A1');
+          auto
+      end;
+        repeat destruct_exists_loo;
+        andDestruct.
+      necessity_soundness_simpl.
+      match goal with
+      | [H : _ ◎ ?σa ⊨ ?A2' |- context[_ ◎ _ ⊨ ?A2']] =>
+        exists σa
+      end;
+        repeat split; eauto with reduce_db.
 
     - necessity_soundness_simpl.
+      eauto with reduce_db.
 
-    - necessity_soundness_simpl;
+    - necessity_soundness_simpl.
+      apply H in H3;
+        auto.
+      destruct_exists_loo;
+        andDestruct.
+      necessity_soundness_simpl.
+
+    - necessity_soundness_simpl.
+      + apply H in H4;
+          auto;
+          destruct_exists_loo;
+          andDestruct.
+        exists σ; repeat split; auto.
+        a_prop; auto.
+
+      + apply H0 in H4;
+          auto;
+          destruct_exists_loo;
+          andDestruct.
+        exists σ; repeat split; auto.
+        a_prop; auto.
+
+    - necessity_soundness_simpl.
+      + apply H in H4;
+          auto;
+          destruct_exists_loo;
+          andDestruct.
+        exists σ; repeat split; auto.
+        a_prop; auto.
+
+      + apply H0 in H4;
+          auto;
+          destruct_exists_loo;
+          andDestruct.
+        exists σ; repeat split; auto.
+        a_prop; auto.
+
+    - necessity_soundness_simpl.
+      apply H in H4;
+        auto;
+        destruct_exists_loo;
+        andDestruct;
+        a_prop.
+      disj_split; eauto.
+      apply H0 in Ha;
+        auto;
+        destruct_exists_loo;
+        andDestruct.
+      a_prop.
+
+    - necessity_soundness_simpl.
+      apply H in H4;
+        auto;
+        destruct_exists_loo;
+        andDestruct;
+        a_prop.
+      disj_split; eauto.
+      necessity_soundness_simpl.
+      apply H0 in Ha0;
+        auto;
+        destruct_exists_loo;
+        andDestruct.
+      a_prop.
+
+    - necessity_soundness_simpl.
+      apply H in H4;
+        auto;
+        destruct_exists_loo;
+        andDestruct;
         necessity_soundness_simpl.
-
-    - necessity_soundness_simpl;
+      apply H0 in Ha;
+        auto;
+        destruct_exists_loo;
+        andDestruct;
         necessity_soundness_simpl.
-
-    - necessity_soundness_simpl;
-        try solve [match goal with
-                   | [Hred : _ ⦂ _ ⦿ _ ⤳⋆ ?σ' |- _] =>
-                     exists σ'
-                   end;
-                   repeat split;
-                   auto;
-                   a_prop;
-                   disj_split;
-                   auto;
-                   apply_necessity;
-                   repeat destruct_exists_loo;
-                   andDestruct;
-                   a_prop];
-        try solve [match goal with
-                   | [Hred : _ ⦂ _ ⦿ ?σ' ⤳⋆ _ |- _] =>
-                     exists σ'
-                   end;
-                   repeat split;
-                   auto;
-                   a_prop;
-                   disj_split;
-                   auto;
-                   apply_necessity;
-                   repeat destruct_exists_loo;
-                   andDestruct;
-                   a_prop].
+      exists σ0; repeat split;
+        auto with reduce_db.
+      apply pair_reductions_transitive with (σ2 := σ);
+        auto.
 
     - necessity_soundness_simpl.
-      + a_prop;
-          repeat disj_split.
-        * eexists;
-            eauto.
-        * apply_necessity;
-            repeat destruct_exists_loo;
-            andDestruct;
-            a_prop.
-      + a_prop;
-          repeat disj_split.
-        * eexists;
-            eauto.
-        * auto_arising.
-          apply_necessity;
-            repeat destruct_exists_loo;
-            andDestruct;
-            a_prop.
+      apply H in H4;
+        auto;
+        destruct_exists_loo;
+        andDestruct;
+        necessity_soundness_simpl.
+      apply H0 in Ha0;
+        auto;
+        destruct_exists_loo;
+        andDestruct;
+        necessity_soundness_simpl.
+      exists σ0; repeat split;
+        auto with reduce_db.
+      apply pair_reductions_transitive with (σ2 := σ);
+        auto.
 
     - necessity_soundness_simpl;
-        try solve [repeat destruct_exists_loo;
-                   andDestruct;
-                   repeat disj_split;
-                   subst;
-                   eauto].
-      + 
+        auto.
+      a_prop;
+        disj_split;
+        auto.
+      apply H0 in H4;
+        auto;
+        destruct_exists_loo;
+        andDestruct.
+      a_prop.
 
+    - necessity_soundness_simpl;
+        auto.
+      apply H in H4;
+        auto;
+        destruct_exists_loo;
+        andDestruct.
+      apply H0 in Ha;
+        auto.
+
+    - admit.
+
+    - admit.
+
+    - admit.
+
+    - necessity_soundness_simpl.
+      unfold onlyif in *.
+      apply H with (M':=M')(σ2:=σ2);
+        auto with reduce_db.
+
+    - necessity_soundness_simpl.
+      apply H in H3;
+        auto;
+        necessity_soundness_simpl;
+        auto.
+      apply pair_reduction_is_pair_reductions in H3.
+      necessity_soundness_simpl.
+      eapply entails_implies;
+        eauto.
+
+    - necessity_soundness_simpl.
+
+      + apply pair_reduction_is_pair_reductions in H4.
+        necessity_soundness_simpl.
+        auto.
+      + apply pair_reduction_is_pair_reductions in H4.
+        necessity_soundness_simpl.
+        auto.
+
+    - necessity_soundness_simpl;
+        a_prop.
+      + apply pair_reduction_is_pair_reductions in H4.
+        necessity_soundness_simpl;
+          auto.
+      + apply pair_reduction_is_pair_reductions in H4.
+        necessity_soundness_simpl;
+          necessity_soundness_simpl;
+          auto.
+        apply H0 in H4;
+          auto;
+          destruct_exists_loo;
+          andDestruct.
+        a_prop.
 
   Qed.
 
