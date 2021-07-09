@@ -1,75 +1,129 @@
 \section{Conclusion}
 \label{s:conclusion}
 
-A module written to be  used with other code needs to ensure that no other code 
-may use it and cause unintended effects. Developers whose modules are going to be used in the wild, need the language to constrain the usage of their code, and the capability to prove that their code will always meet these constraints. 
+Bad things can happen to good programs. In an open world, every
+accessible API is an attack surface: and worse, every combination of
+API calls is a potential attack.  Developers can no longer consider
+components in splendid isolation, verifying the sufficient pre- and
+post- conditions of each method, but must reckon with the emergent
+behaviour of entire software systems. In practice, this means they
+need to identify the necessary conditions under which anything could
+happen\cite{anything} --- good things and bad things alike --- and
+then ensure the necessary conditions for bad things happening never arise.
 
-In this paper we have defined \Chainmail, a specification language that allows us to
-describe Necessity Specifications, i.e. necessary  conditions for effects.
-We use the term  effect to mean the transition from a  state satisfying some assertion 
-$A_1$ to some  other state satisfying  assertion $A_2$. 
-Our assertion language $A$ supports the usual expressions about the values of
-variables, the contents of the heap, as well as predicates to capture provenance 
-and permission.
 
-\Chainmail allows us to take a holistic view of modules, in the sense that we do not focus
-on individual pieces of code; instead, we  describe  the emergent behaviour of all
-the classes and all their methods. 
+%% A module written to be used with other code needs to ensure that no
+%% other code may use it and cause unintended effects.
+%% Developers whose
+%% modules are going to be used in the wild, need the language to
+%% constrain the usage of their code, and the capability to prove that
+%% their code will always meet these constraints.
 
-Modules can satisfy such Necessity Specifications, only if
-the underlying programming language and the runtime system 
-can give some basic guarantees:
- memory safety (addresses cannot be forged), 
-and some notion of privacy (here fields are module-private, i.e. can be read and written only
-by methods of the same module). Different notions of privacy 
-(e.g. fields to be class-private,
-or object-private, and fields to be private only if explicitly defined to be so)  would
-also be sufficient to develop code that satisfies such Necessity Specifications.
+This paper defines \Chainmail, a specification language that takes an
+holistic view of modules. Rather than focusing on individual pieces
+of code, \Chainmail\ can describe the emergent behaviour of all the
+classes and all their methods in a module.
+Using \Chainmail,
+programmers can write Necessity Specifications defining the necessary
+conditions for effects --- things happening --- in programs.
+\Chainmail\ treats program effects as actions:
+that is, as transitions from states satisfying some assertion 
+$A_1$ to other states satisfying assertions $A_2$. 
+Necessity Specifications then permit those transitions
+only if some other assertion $A_3$ holds beforehand;
+or only if $A_3$ holds and $A_2$ is reached in a single step;
+or only if $A_3$ holds at some point on the path between
+$A_1$ and $A_2$.
+The assertion language $A$ supports the usual expressions about the
+values of variables, the contents of the heap, and predicates
+to capture provenance and permission.
 
-We have developed an inference system which can be used to prove that modules satisfy  
-\Chainmail assertions, and have applied it to our running example. 
-Our inference system exploits the sufficient conditions of the classical
-method specifications to infer per method Necessity Specifications;  
-these describe the necessary conditions for given effects
-which take place after the execution of a known method call. 
-Per-method Necessity Specifications can be generalized to one-step
- Necessity Specifications; these describe necessary conditions for
- given effects  which take place after the execution of one, 
- unknown, single, step. 
- Lastly, one-step
-Necessity Specifications are combined with other Necessity Specifications
- to describe the emergent behaviour, ie  necessary conditions for some effect which
- may have taken place over many, unknown, internal or external steps.
- 
-The use of the classical method specifications to derive per method Necessity Specifications
-has two advantages: First, it means that we did not need to develop a special
-purpose logic for that task. Second, it means that all modules that have the same 
-classical per method specifications can be proven to satisfy the same Necessity
-Specifications using the \emph{same} proof.
- This holds even when the classical specifications are ``similar enough''.
-For instance, the modules \prg{Mod1} and \prg{Mod3} from the introduction,
-and also module \prg{BankMdl} from section \ref{s:examples}  satisfy \prg{NecessityBankSpec}.
-The proofs for these three modules differ slightly in the proof of encapsulation of the
-assertion \prg{a.password=pwd} (step \textbf(A)} in section \ref{s:examples}), and
-in the proof of the per-method necessity specification for \prg{transfer}, but otherwise are identical.
+%% doesn't need to be said here
+%%
+%% Modules can satisfy Necessity Specifications only if
+%% the underlying programming language and the runtime system 
+%% can give some basic guarantees:
+%% memory safety (addresses cannot be forged), 
+%% and some notion of privacy (here fields are module-private, i.e. can be read and written only
+%% by methods of the same module). Different notions of privacy 
+%% (e.g. fields to be class-private,
+%% or object-private, and fields to be private only if explicitly defined to be so)  would
+%% also be sufficient to develop code that satisfies such Necessity
+%% Specifications.
 
- 
-Alternatively, we could have developed a bespoke logic to infer per method Necessity Specifications.
-Such a logic might be more powerful than the \Chainmail inference system; 
- we aim to consider that in further work.  Moreover, the classical specifications we using to infer the per method Necessity
-Specifications are very ``basic'', and thus they need to explcitly state what has
-not been modified -- this makes proofs very cumbersome. Classical specifications which have more information
-about the affected part of the state (e.g. using  \prg{modifies}-clauses, or implicit frames
-  \sophia[add ref to JML for modifies, and to some sep 
-logic for the frame, and also some of the Bart Jacobs stuff]{} would make the
- step from the classical specification to per method Necessity Specifications more convenient 
+We have developed an inference system to prove that modules meet
+necessity specifications.  Our inference system exploits the
+sufficient conditions of classical method specifications (pre- and
+post-conditions) to infer per method necessity specifications, and
+then generalise those to cover any single execution step. By
+combining single step specifications, programs can describe
+components' emergent behaviour --- i.e. the necessary conditions for
+program effects, irrespective of how that effect is caused.  Finally,
+we have proved our inference system is sound, and then used it to
+prove the necessity specifications of the bank account example.
 
-Our inference system is parametric with some
-algorithmic judgment which can prove that an assertion is encapsulated; we have developed a
-rudimentary, types-based inference system, but we aim to develop a logic for inferring
-such assertions. The concept of encapsulation in this work is very coarse, and based on
-the classes of objects; in further work, we want to refine it, and be able to 
-reason  about encapsulation
-into other objects.
-Moreover, in the current version of our work we forbid internal objects to call into external objects;
-this restriction allows for a simpler formal treatment, and we will be lifting this restriction.
+%
+%% these describe the necessary conditions for given effects
+%% which take place after the execution of a known method call. 
+%% Per-method Necessity Specifications can be generalized to one-step
+%%  Necessity Specifications; these describe necessary conditions for
+%%  given effects  which take place after the execution of one, 
+%%  unknown, single, step. 
+%%  Lastly, one-step
+%% Necessity Specifications are combined with other Necessity Specifications
+%%  to describe the emergent behaviour, ie  necessary conditions for some effect which
+%%  may have taken place over many, unknown, internal or external steps.
+%
+%
+%
+
+%%the following feels like discussions but I reworded a biut.
+%
+%
+Deriving per method necessity Specifications from classical method
+pre- and post-conditions has two advantages: First, it means that we
+did not need to develop a special purpose logic for that task. Second,
+it means that all modules that have the same classical per method
+specifications can be proven to satisfy the same Necessity
+Specifications using the \emph{same} proof.  This holds even when the
+classical specifications are ``similar enough''.  For instance, the
+modules \prg{Mod1} and \prg{Mod3} from the introduction, and also
+module \prg{BankMdl} from section \ref{s:examples} satisfy
+\prg{NecessityBankSpec}.  The proofs for these three modules differ
+slightly in the proof of encapsulation of the assertion
+\prg{a.password=pwd} (step \textbf(A)} in section \ref{s:examples}),
+  and in the proof of the per-method necessity specification for
+  \prg{transfer}, but otherwise are identical.
+
+
+%%the following feels like discussions but I reworded a bit but...
+
+  
+We considered developing a bespoke logic to infer per method Necessity
+Specifications.  Such a logic might be more powerful than the
+\Chainmail inference system; we aim to consider that in further work.
+Moreover, the classical specifications we using to infer the per
+method Necessity Specifications are very ``basic'', and thus they need
+to explicitly state what has not been modified -- this makes proofs
+very cumbersome. In future work, we plan to start from classical
+specifications which have more information about the affected part of
+the state (e.g. using \prg{modifies}-clauses, or implicit frames
+\cite{Leavens-etal07x,IDF,MattAlex,dafny13}) as we expect this could
+make the step from classical specifications to per method necessity
+specifications more convenient
+
+Our inference system is parametric with an algorithmic judgment which
+can prove that an assertion is encapsulated. In this paper we have
+used a rudimentary, type-based inference system, but we aim to develop
+a logic for inferring such assertions. The concept of encapsulation in
+this work is very coarse, and based on the classes of objects. In the
+future, we plan to refine our handling of encapsulation, and support
+reasoning about more flexible configurations of objects.  Similarly,
+to facilitate the formal treatment, we currently forbid internal
+objects to call into external objects: we hope a better model of
+encapsulation will let us remove this restriction.
+
+
+To conclude: bad things can always happen to good programs. Neccessity
+specifications are necessary to make sure good programs don't do bad
+things in response.
