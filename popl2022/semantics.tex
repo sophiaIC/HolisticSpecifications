@@ -28,9 +28,7 @@ the full \sd{definitions}. % syntax and operational semantics.
 treatment of the open world guarantees.}
 
 A \Loo configuration $\sigma$ consists of a 
-heap $\chi$, and a frame stack $\psi$ --
-\sd{the latter is a sequence of
-frames}.    
+heap $\chi$, and a \jm[]{stack $\psi$, which is a sequence of frames $\phi$}.
 A frame $\phi$ consists of
 local variable map, and \sd{a continuation}, i.e. a sequence of statements to be executed.
  A statement may \sd{assign to variables}, create new objects and push them to the heap, 
@@ -44,6 +42,7 @@ which is a mapping
 \sd{Execution has the format}  $M, \sigma \leadsto \sigma'$, and is
 unsurprising,  c.f. Appendix \ref{app:loo}.
 \sd{The statements being executed are those in the continuation of the top frame.}
+\jm[TODO: make clear that that execution in appendix is small step semantics]{}
  % chopped, as generic 
  % There are several properties  of \Loo that are important to the central topic of this paper. 
  
@@ -64,6 +63,7 @@ collapse all internal steps into one single step.
 %statements in the language, and a second called \emph{external state semantics} 
 %that models that open world, where the components of a program can
 %have both known (\internalO) and unknown (\externalO) provenance.
+
 
 \begin{definition}[External State Semantics]
 \label{def:pair-reduce}
@@ -97,6 +97,17 @@ $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$\ \ \ for all $i\in [1..n)$.
 %$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$ for all $0 \leq i \leq n$
 %\end{itemize}
 \end{definition}
+In Definition \ref{def:pair-reduce}  % of external state semantics makes reference to a 
+we  use  the function
+$\class{\sigma}{x}$. This function looks up 
+the class of   the \jm[changed from ``address'']{object referred by variable $x$ in the} heap of $\sigma$. 
+  % for a specific variable in a specific program.
+% SD not a variable, and no program.
+We also use module linking, $M_1\circ M_2$. The operator $\circ$
+ %  results in the union of two disjoint modules.
+\sd{combines the two modules into one module in the obvious way, provided that their 
+domains are disjoint.}
+Full details in  Appendix \ref{app:loo}.
 \begin{figure}[htb]
   \vspace*{-2.5mm}
   \begin{center}
@@ -110,9 +121,9 @@ $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$\ \ \ for all $i\in [1..n)$.
    \caption{External State Semantics
      (Def. \ref{def:pair-reduce}). %
      % 
-     (a) $\exec{{\color{blue}M_1} \circ {\color{orange}M_2}}{\sigma_1}{\ldots}\leadsto \sigma_9$
-     (b) $\reduction{{\color{blue}M_1}}{{\color{orange}M_2}}{\sigma_2}{\ldots}\leadsto \sigma_9$
-     (c) $\reduction{{\color{orange}M_2}}{{\color{blue}M_1}}{\sigma_1}{\ldots}\leadsto \sigma_8$
+     (a) $\exec{{\color{blue}M} \circ {\color{orange}M'}}{\sigma_1}{\ldots}\leadsto \sigma_9$
+     (b) $\reduction{{\color{blue}M}}{{\color{orange}M'}}{\sigma_2}{\ldots}\leadsto \sigma_9$
+     (c) $\reduction{{\color{orange}M'}}{{\color{blue}M}}{\sigma_1}{\ldots}\leadsto \sigma_8$
     }
    \label{fig:VisibleStates}
  \end{figure}
@@ -125,17 +136,6 @@ the complete execution as in (a), the external state execution when $M_2$ is ext
 
 
 
-In Definition \ref{def:pair-reduce}  % of external state semantics makes reference to a 
-we  use  the function
-$\class{\sigma}{x}$. This function looks up 
-the class of   the \jm[changed from ``address'']{object referred by variable $x$ in the} heap of $\sigma$. 
-  % for a specific variable in a specific program.
-% SD not a variable, and no program.
-We also use module linking, $M_1\circ M_2$. The operator $\circ$
- %  results in the union of two disjoint modules.
-\sd{combines the two modules into one module in the obvious way, provided that their 
-domains are disjoint.}
-Full details in  Appendix \ref{app:loo}.
 
 
 In this work we are interested in guarantees which are upheld by the internal 
@@ -143,10 +143,10 @@ module. Moreover,    these guarantees  need to be satisfied only at `reachable' 
 and need not be satisfied at states that are
 not reachable -- this is described formally in Definition \ref{def:arising}. 
 Reachable states are those that  may arise by external states execution
-of  a given internal module linked with \emph{any} external module
+of  a given internal module linked with \emph{any} external module.
 We describe the states of interest as the \emph{arising configurations}. 
 
-
+\jm[TODO: change all the ``configurations'' to ``states'']{}
 
 
 \begin{definition}[Arising Program Configuration]
@@ -156,6 +156,7 @@ said to be an \emph{arising} configuration, formally \ \ \ $\arising{M_1}{M_2}{\
 if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
 $\reductions{M_1}{M_2}{\sigma_0}{\sigma}$.
 \end{definition}
+\jm[do we say something about ``$\leadsto*$'']{}
 
 % Definition \ref{def:arising} uses the definition for 
 In the definition above we used \emph{Initial} configurations, 
@@ -220,7 +221,7 @@ with assertion forms capturing key concepts of software security:
 
 Fig. \ref{f:chainmail-syntax} gives the assertion syntax of the \SpecO specification language.
 An assertion may be an expression, a class assertion, the usual connectives and quantifiers, along 
-with the following non-standard assertion forms, inspired from the capabilities literature:
+with the following non-standard assertion forms:
 \begin{itemize}
 \item
 \emph{Permission} ($\access{x}{y}$): % Which objects have access to which other objects (i.e.
@@ -232,6 +233,8 @@ with the following non-standard assertion forms, inspired from the capabilities 
 \emph{Control} ($\calls{x}{y}{m}{\overline{z}}$): 
 \sd{$x$ calls method $m$ on object $y$ with arguments $\overline{z}$}.
 \end{itemize}
+\jm[]{\emph{Permission} and \emph{Provenance} are inspired by the capabilities literature, while
+\emph{Control} assists construction of proofs}.
 
 \subsubsection{Semantics of \SpecO}
 The semantics of \SpecO assertions is given in Definition \ref{def:chainmail-semantics}. 
@@ -250,6 +253,7 @@ value $v$ in the local variable map of frame $\phi$, and $\interpret{\sigma}{x} 
 maps to value $v$ in the top most frame of $\sigma$'s stack. And the term  $\interpret{\sigma}{x.f} = v$
 has the obvious meaning.
 
+\jm[make $classOf$ consistent, and use it in the definition of $e : C$]{}
 \begin{definition}[Satisfaction of \SpecO Assertions] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a program configuration $\sigma$ with internal module $M$ as:
@@ -326,7 +330,7 @@ for all modules $M'$, and all $\sigma$, if $\arising{M'}{M}{\sigma}$, then $\sat
 
 A proof system for such assertions is indicated by a judgment of the form \jm[]{$\proves{M}{A}$}. 
 We will not define such a judgment, and just rely on its existence (cf. Theorem 3.2).
-We define soudnness of such a judgment in the usual way:
+We define soundness of such a judgment in the usual way:
 
 \begin{definition}[Soundness of \SpecO Provability]
 \label{ax:specW-prove-soundness}
@@ -441,6 +445,7 @@ We have three forms of Necessity Specifications, described below:
 \caption{Syntax of \Chainmail}
 \label{f:holistic-syntax}
 \end{figure}
+\jm[TODO: make it clear that \Chainmail includes \SpecO]{}
 
 
 
@@ -588,6 +593,7 @@ under which critical actions within of our software are allowed to occur.
 
 
 \subsection{Encapsulation}
+\jm[lemmas? does A => enc(A') imply A => enc($\neg$A')?]{}
  %In order to reason about necessary requirements in an open world,
 % and those assertions that may change due 
 % to computation by external, unknown code.
