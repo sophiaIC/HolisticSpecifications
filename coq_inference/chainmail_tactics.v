@@ -181,10 +181,10 @@ Module ChainmailTactics(L : LanguageDef).
     | [H : context[[_ /s ?m] (e_hole ?m)] |- _] =>
       rewrite ehole_subst in H
 
-    | [|- context[[_ /s _] (e_hole _)]] =>
+    | [|- context[[_ /s ?n] (e_hole ?n)]] =>
       rewrite ehole_neq_subst;
       [|solve[auto]]
-    | [H : context[[_ /s _] (e_hole _)] |- _] =>
+    | [H : context[[_ /s ?n] (e_hole ?n)] |- _] =>
       rewrite ehole_neq_subst in H;
       [|solve[auto]]
     end.
@@ -353,7 +353,7 @@ Module ChainmailTactics(L : LanguageDef).
     | [|- context[[_ /s ?m] (a♢ ?m)]] =>
       rewrite ahole_subst
     | [H : context[[_ /s ?m] (a♢ ?m)] |- _] =>
-      rewrite ehole_subst in H
+      rewrite ahole_subst in H
 
     | [|- context[[_ /s _] (a♢ _)]] =>
       rewrite ahole_neq_subst;

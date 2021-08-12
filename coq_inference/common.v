@@ -70,6 +70,7 @@ Instance optionMonad : Monad option :=
 
 Notation "f1 '∘' f2" := (fun x => bind (f2 x) f1)(at level 40).
 
+
 (*Definition compose
            {A B C : Type} `{Eq A} `{Eq B}
            (map1 : partial_map A B)

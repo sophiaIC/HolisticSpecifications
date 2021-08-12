@@ -55,7 +55,7 @@ Module Inference(L : LanguageDef).
                            M ⊢ a_class e C ⊇ a_class ((e_acc_f e f)) D.
   Admitted.
 
-  Lemma absurd :
+  Lemma conseq_absurd :
     forall M A, M ⊢ (a_exp (e_false)) ⊇ A.
   Admitted.
 
@@ -129,8 +129,8 @@ Module Inference(L : LanguageDef).
                                          M ⊢ A1 to A2' onlyIf A' ->
                                          M ⊢ A1 to A2 ∨ A2' onlyIf A ∨ A'
   | if_orE    : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ∨ A' ->
-                                     M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
-                                     M ⊢ A1 to A2 onlyIf A
+                                M ⊢ A1 ∧ A' to A2 onlyThrough a_exp (e_false) ->
+                                M ⊢ A1 to A2 onlyIf A
   | if_andI : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ->
                                    M ⊢ A1 to A2 onlyIf A' ->
                                    M ⊢ A1 to A2 onlyIf A ∧ A'
@@ -179,7 +179,7 @@ Module Inference(L : LanguageDef).
 
   with only_if1 : mdl -> asrt -> asrt -> asrt -> Prop :=
   | if1_classical : forall M P1 α C m β β' P2 P,
-      M ⊢ {pre: ((a_class (e_addr α) C) ∧ P1 ∧ ¬ P) } (m_call α m β) {post: ¬ P2} ->
+      M ⊢ {pre: (P1 ∧ (a_class (e_addr α) C) ∧ ¬ P) } (m_call α m β) {post: ¬ P2} ->
       β' = (fun v => Some (av_ v)) ∘ β  ->
       M ⊢ (P1 ∧ (a_class (e_addr α) C) ∧ (∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ β' ⟩])) to1 P2 onlyIf P
   | if1_wrapped : forall M α C P m β α',
