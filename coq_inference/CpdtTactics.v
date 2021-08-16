@@ -7,7 +7,7 @@
  *   http://creativecommons.org/licenses/by-nc-nd/3.0/
  *)
 
-Require Import Eqdep List Omega.
+Require Import Eqdep List Lia.
 
 Set Implicit Arguments.
 
@@ -197,7 +197,7 @@ Ltac crush' lemmas invOne :=
       end;
       sintuition; rewriter; sintuition;
       (** End with a last attempt to prove an arithmetic fact with [omega], or prove any sort of fact in a context that is contradictory by reasoning that [omega] can do. *)
-      try omega; try (elimtype False; omega)).
+      try lia; try (elimtype False; lia)).
 
 (** [crush] instantiates [crush'] with the simplest possible parameters. *)
 Ltac crush := crush' false fail.

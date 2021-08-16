@@ -70,7 +70,7 @@ Module BankAccount(L : LanguageDef).
                                       (e_acc_f (e_this) acc1)
                                       (e_if (e_eq (e_var acc) (e_acc_f (e_this) acc2))
                                             (e_acc_f (e_this) bal2)
-                                      (e_int -1)).
+                                            (e_int -1)).
 
   Definition LedgerDef := clazz Ledger
                                 inside
@@ -188,28 +188,28 @@ Module BankAccount(L : LanguageDef).
 
   Lemma and_consequence2 :
     forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
-                   M ⊢ A1 ∧ A2 ⊇ A1 ∧ A2'.
+                        M ⊢ A1 ∧ A2 ⊇ A1 ∧ A2'.
   Admitted.
 
   Lemma conseq_and1 :
     forall M A1 A1' A2, M ⊢ A1 ⊇ A1' ->
-                   M ⊢ A1 ∧ A2 ⊇ A1'.
+                        M ⊢ A1 ∧ A2 ⊇ A1'.
   Admitted.
 
   Lemma conseq_and2 :
     forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
-                   M ⊢ A1 ∧ A2 ⊇ A2'.
+                        M ⊢ A1 ∧ A2 ⊇ A2'.
   Admitted.
 
   Lemma conseq_and :
     forall M A A1 A2,  M ⊢ A ⊇ A1 ->
-                  M ⊢ A ⊇ A2 ->
-                  M ⊢ A ⊇ A1 ∧ A2.
+                       M ⊢ A ⊇ A2 ->
+                       M ⊢ A ⊇ A1 ∧ A2.
   Admitted.
 
   Lemma conseq_ex :
     forall M A1 A2, (forall x, M ⊢ [x /s 0] A1 ⊇ A2) ->
-               M ⊢ (∃x.[A1]) ⊇ A2.
+                    M ⊢ (∃x.[A1]) ⊇ A2.
   Admitted.
 
   Lemma subst_eq :
@@ -241,12 +241,12 @@ Module BankAccount(L : LanguageDef).
 
   Lemma or_l :
     forall M A A1 A2, M ⊢ A ⊇ A1 ->
-                 M ⊢ A ⊇ A1 ∨ A2.
+                      M ⊢ A ⊇ A1 ∨ A2.
   Admitted.
 
   Lemma or_r :
     forall M A A1 A2, M ⊢ A ⊇ A2 ->
-                 M ⊢ A ⊇ A1 ∨ A2.
+                      M ⊢ A ⊇ A1 ∨ A2.
   Admitted.
 
   Ltac hoare_simpl :=
@@ -354,7 +354,7 @@ Module BankAccount(L : LanguageDef).
         | apply conseq_refl
         | apply conseq_refl
         | ].
-      apply consequence_transitivity with (A2 := a_class (e_ l) Ledger);
+      apply conseq_trans with (A2 := a_class (e_ l) Ledger);
         [apply conseq_and1|apply inside_wrapped with (Def:=LedgerDef); auto].
       repeat apply conseq_and1; spec_auto.
 
@@ -378,8 +378,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if1_conseq1 :
     forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
-                      M ⊢ A1 to1 A2 onlyIf A3 ->
-                      M ⊢ A1' to1 A2 onlyIf A3.
+                           M ⊢ A1 to1 A2 onlyIf A3 ->
+                           M ⊢ A1' to1 A2 onlyIf A3.
   Proof.
     intros.
     eapply if1_conseq;
@@ -389,8 +389,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if1_conseq2 :
     forall M A1 A2 A3 A2', M ⊢ A2' ⊇ A2 ->
-                      M ⊢ A1 to1 A2 onlyIf A3 ->
-                      M ⊢ A1 to1 A2' onlyIf A3.
+                           M ⊢ A1 to1 A2 onlyIf A3 ->
+                           M ⊢ A1 to1 A2' onlyIf A3.
   Proof.
     intros.
     eapply if1_conseq;
@@ -400,8 +400,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if1_conseq3 :
     forall M A1 A2 A3 A3', M ⊢ A3 ⊇ A3' ->
-                      M ⊢ A1 to1 A2 onlyIf A3 ->
-                      M ⊢ A1 to1 A2 onlyIf A3'.
+                           M ⊢ A1 to1 A2 onlyIf A3 ->
+                           M ⊢ A1 to1 A2 onlyIf A3'.
   Proof.
     intros.
     eapply if1_conseq;
@@ -413,8 +413,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if_conseq1 :
     forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
-                      M ⊢ A1 to A2 onlyIf A3 ->
-                      M ⊢ A1' to A2 onlyIf A3.
+                           M ⊢ A1 to A2 onlyIf A3 ->
+                           M ⊢ A1' to A2 onlyIf A3.
   Proof.
     intros.
     eapply if_conseq;
@@ -424,8 +424,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if_conseq2 :
     forall M A1 A2 A3 A2', M ⊢ A2' ⊇ A2 ->
-                      M ⊢ A1 to A2 onlyIf A3 ->
-                      M ⊢ A1 to A2' onlyIf A3.
+                           M ⊢ A1 to A2 onlyIf A3 ->
+                           M ⊢ A1 to A2' onlyIf A3.
   Proof.
     intros.
     eapply if_conseq;
@@ -435,8 +435,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if_conseq3 :
     forall M A1 A2 A3 A3', M ⊢ A3 ⊇ A3' ->
-                      M ⊢ A1 to A2 onlyIf A3 ->
-                      M ⊢ A1 to A2 onlyIf A3'.
+                           M ⊢ A1 to A2 onlyIf A3 ->
+                           M ⊢ A1 to A2 onlyIf A3'.
   Proof.
     intros.
     eapply if_conseq;
@@ -448,8 +448,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma ot_conseq1 :
     forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
-                      M ⊢ A1 to A2 onlyThrough A3 ->
-                      M ⊢ A1' to A2 onlyThrough A3.
+                           M ⊢ A1 to A2 onlyThrough A3 ->
+                           M ⊢ A1' to A2 onlyThrough A3.
   Proof.
     intros.
     eapply ot_conseq;
@@ -459,8 +459,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma ot_conseq2 :
     forall M A1 A2 A3 A2', M ⊢ A2' ⊇ A2 ->
-                      M ⊢ A1 to A2 onlyThrough A3 ->
-                      M ⊢ A1 to A2' onlyThrough A3.
+                           M ⊢ A1 to A2 onlyThrough A3 ->
+                           M ⊢ A1 to A2' onlyThrough A3.
   Proof.
     intros.
     eapply ot_conseq;
@@ -470,8 +470,8 @@ Module BankAccount(L : LanguageDef).
 
   Lemma ot_conseq3 :
     forall M A1 A2 A3 A3', M ⊢ A3 ⊇ A3' ->
-                      M ⊢ A1 to A2 onlyThrough A3 ->
-                      M ⊢ A1 to A2 onlyThrough A3'.
+                           M ⊢ A1 to A2 onlyThrough A3 ->
+                           M ⊢ A1 to A2 onlyThrough A3'.
   Proof.
     intros.
     eapply ot_conseq;
@@ -483,7 +483,7 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if1_start_conseq :
     forall M A1 A2 A1', M ⊢ A1 ⊇ A1' ->
-                   M ⊢ A1 to1 A2 onlyIf A1'.
+                        M ⊢ A1 to1 A2 onlyIf A1'.
   Proof.
     intros.
     eapply if1_conseq3;
@@ -494,7 +494,7 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if_start_conseq :
     forall M A1 A2 A1', M ⊢ A1 ⊇ A1' ->
-                   M ⊢ A1 to A2 onlyIf A1'.
+                        M ⊢ A1 to A2 onlyIf A1'.
   Proof.
     intros.
     eapply if_conseq3;
@@ -505,7 +505,7 @@ Module BankAccount(L : LanguageDef).
 
   Lemma if1_andE :
     forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ∧ A' ->
-                    M ⊢ A1 to1 A2 onlyIf A.
+                         M ⊢ A1 to1 A2 onlyIf A.
   Proof.
     intros.
     eapply if1_conseq with (A':=A ∧ A');
@@ -575,7 +575,7 @@ Module BankAccount(L : LanguageDef).
 
     apply transferBalanceChangeSpecification.
 
-(*    apply hoare_consequence1 with
+  (*    apply hoare_consequence1 with
         (A1':=(a_class (e_addr a) Account) ∧
               (a_class (e_addr b) Bank) ∧
               (a_exp (e_acc_g (e_addr b) getBalance (e_addr a) ⩵ (e_int bal))) ∧
@@ -653,8 +653,8 @@ Module BankAccount(L : LanguageDef).
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal))) ∧
                  (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))))
               to (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
-              onlyThrough ∃x.[ ¬ wrapped (a♢ 0) ∧
-                               (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 0)))].
+              onlyThrough (∃x.[ ¬ wrapped (a♢ 0) ∧
+                                (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 0)))]).
   Proof.
 
   Admitted.
@@ -705,7 +705,7 @@ Module BankAccount(L : LanguageDef).
 
     - apply ot_conseq3 with (A3:=∃x.[ ¬ wrapped (a♢ 0) ∧
                                       (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 0)))]).
-      + admit. (* basic from natural deduction. need to encode *)
+      + admit.
 
       + apply balanceChange'.
 
@@ -716,20 +716,59 @@ Module BankAccount(L : LanguageDef).
       * (* Case A *)
         apply if_orE with (A':= wrapped (a_ p)).
 
-      + admit. (* excluded middle*)
-      + apply ot_conseq1 with (A1:=a_class (e_ a) Account ∧
-                                   (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)) ∧
-                                   wrapped (a_ p))).
-        ++ repeat spec_auto.
-           +++ admit. (* easy *)
-           +++ admit. (* easy *)
+        ** admit. (* excluded middle*)
+        ** apply ot_conseq1 with (A1:=a_class (e_ a) Account ∧
+                                      (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)) ∧
+                                       wrapped (a_ p))).
+           *** repeat spec_auto.
+               **** repeat apply conseq_and1;
+                      apply conseq_refl.
+               **** apply conseq_and1, conseq_and2, conseq_refl.
 
-        ++ apply ot_if.
-           apply passwordLeak.
-
+           *** apply ot_if.
+               apply passwordLeak.
 
       * (* Case B *)
-        
+        apply if_trans with (∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ changePassword ⟨ ⟦ pwd ↦ a_ p ⟧ ⟦ newPwd ↦ a♢ 1 ⟧ empty  ⟩ ] ]).
+
+        ** apply ot_conseq1 with (A1:=(a_class (e_ a) Account ∧
+                                       (a_exp (e_acc_f (e_ a) password ⩵ (e_ p))))).
+           *** apply conseq_and.
+               **** repeat apply conseq_and1.
+                    apply conseq_refl.
+
+               **** apply conseq_and2, conseq_refl.
+
+           *** apply ot_conseq2 with (A2:=¬ ((a_class (e_ a) Account) ∧
+                                             (a_exp ((e_acc_f (e_ a) password ⩵ (e_ p)))))).
+
+               **** apply conseq_trans with (A2:=¬ a_class (e_ a) Account ∨
+                                                 ¬ a_exp (e_acc_f (e_ a) password ⩵ (e_ p))).
+                    ***** apply or_r, conseq_refl.
+
+                    ***** apply neg_distr_and_2.
+
+               **** apply passwordChange.
+
+        ** apply if_conseq2 with (A2:=¬ wrapped (a_ p)).
+
+           *** admit.
+
+           *** apply if_orE with (A':= wrapped (a_ p)).
+
+               **** admit. (* excluded middle - see case A *)
+
+               **** apply ot_conseq1 with (A1:= a_class (e_ a) Account ∧
+                                                (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)) ∧
+                                                 wrapped (a_ p))).
+
+                    ***** repeat spec_auto.
+
+                    ****** admit. (* easy *)
+                    ****** admit. (* easy *)
+
+                    ***** apply ot_if.
+                    apply passwordLeak.
   Qed.
 
   Close Scope chainmail_scope.

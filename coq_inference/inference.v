@@ -67,7 +67,7 @@ Module Inference(L : LanguageDef).
     forall M A, M ⊢ (A ∧ ¬ A) ⊇ (a_exp (e_false)).
   Admitted.
 
-  Lemma consequence_transitivity :
+  Lemma conseq_trans :
     forall M A1 A2 A3, M ⊢ A1 ⊇ A2 ->
                        M ⊢ A2 ⊇ A3 ->
                        M ⊢ A1 ⊇ A3.
