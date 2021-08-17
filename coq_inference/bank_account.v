@@ -677,7 +677,7 @@ Module BankAccount(L : LanguageDef).
                  (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩵ (e_int bal))) ∧
                  (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))))
               to (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
-              onlyThrough (∃x.[ ¬ wrapped (a♢ 0) ∧
+              onlyThrough (∃x.[ ¬ wrapped (a♢ 1) ∧
                                 (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 0)))]).
   Proof.
 
@@ -768,7 +768,9 @@ Module BankAccount(L : LanguageDef).
           extract_from_asrt x.
           extract_from_asrt x.
           extract_from_asrt x.
-          apply subst_eq.
+          admit.
+
+        * admit.
 
 
       + apply balanceChange'.
@@ -879,7 +881,7 @@ Module BankAccount(L : LanguageDef).
                     ***** apply ot_if.
                     apply passwordLeak.
 
-  Qed.
+  Admitted.
 
   Close Scope chainmail_scope.
   Close Scope reduce_scope.
