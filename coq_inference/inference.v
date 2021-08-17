@@ -25,6 +25,14 @@ Module Inference(L : LanguageDef).
   Reserved Notation "M '⊢' A1 'to' A2 'onlyThrough' A3" (at level 40).
   Reserved Notation "M '⊢' A1 'to1' A2 'onlyIf' A3" (at level 40).
 
+  Lemma conseq_true :
+    forall M A, M ⊢ A ⊇ (a_true).
+  Admitted.
+
+  Lemma conseq_or_comm :
+    forall M A1 A2, M ⊢ A1 ∨ A2 ⊇ A2 ∨ A1.
+  Admitted.
+
   Lemma caller_ext :
     forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 external.
   Admitted.
@@ -36,8 +44,6 @@ Module Inference(L : LanguageDef).
   Lemma class_internal :
     forall M α C, C ∈ M -> M ⊢ a_class (e_addr α) C ⊇ (a_ α) internal.
   Admitted.
-
-  Definition wrapped := (fun α => ∀x.[ (a♢ 0) internal ∨ ¬ (a♢ 0) access α]).
 
   Lemma recv_not_wrapped :
     forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (α2).
@@ -129,7 +135,7 @@ Module Inference(L : LanguageDef).
                                          M ⊢ A1 to A2' onlyIf A' ->
                                          M ⊢ A1 to A2 ∨ A2' onlyIf A ∨ A'
   | if_orE    : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ∨ A' ->
-                                M ⊢ A1 ∧ A' to A2 onlyThrough a_exp (e_false) ->
+                                M ⊢ A1 ∧ A' to A2 onlyThrough (a_false) ->
                                 M ⊢ A1 to A2 onlyIf A
   | if_andI : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ->
                                    M ⊢ A1 to A2 onlyIf A' ->

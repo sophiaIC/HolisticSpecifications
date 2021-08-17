@@ -194,6 +194,8 @@ Module Chainmail(L : LanguageDef).
   Notation "x 'external'" :=(a_extrn x)(at level 26) : chainmail_scope.
   Notation "x 'access' y" :=(a_acc x y)(at level 26) : chainmail_scope.
   Notation "x 'calls' y '◌' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 26) : chainmail_scope.
+  Notation "'a_true'" := (a_exp (e_true)) (at level 20) : chainmail_scope.
+  Notation "'a_false'" := (a_exp (e_false)) (at level 20) : chainmail_scope.
 
   Instance a_valSubst : Subst a_val nat value :=
     {
@@ -700,6 +702,8 @@ Module Chainmail(L : LanguageDef).
                  | _ => x
                  end
     }.
+
+  Definition wrapped := (fun α => ∀x.[ (a♢ 0) internal ∨ ¬ (a♢ 0) access α]).
 
   Close Scope chainmail_scope.
   Close Scope reduce_scope.

@@ -170,7 +170,8 @@ Module BankAccount(L : LanguageDef).
   Admitted.
 
   Lemma and_comm :
-    forall M A1 A2, M ⊢ (A1 ∧ A2) ⊇ (A2 ∧ A1).
+    forall M A1 A2 A, M ⊢ (A1 ∧ A2) ⊇ A ->
+                 M ⊢ (A2 ∧ A1) ⊇ A.
   Admitted.
 
   Lemma and_assoc1 :
@@ -207,13 +208,30 @@ Module BankAccount(L : LanguageDef).
                        M ⊢ A ⊇ A1 ∧ A2.
   Admitted.
 
+  (*
+    I *think* conseq_ex is true based on the natural deduction inference rule for existentials:
+
+                      -------           ----------
+                      y term            [y / x] A1
+                                 .
+                                 .
+                                 .
+                                 .
+                                 .
+      ∃x.[A1]                   A2
+    ---------------------------------------------------
+                          A2
+
+   The equivalent version for '⊇' would conseq_ex
+   *)
   Lemma conseq_ex :
     forall M A1 A2, (forall x, M ⊢ [x /s 0] A1 ⊇ A2) ->
                     M ⊢ (∃x.[A1]) ⊇ A2.
   Admitted.
 
   Lemma subst_eq :
-    forall M x y z A, M ⊢ (a_exp (e_val x ⩵ e_val y)) ∧ [y /s z] A ⊇ [x /s z] A.
+    forall M x y z A1 A2, M ⊢ [y /s z] A1 ⊇ A2 ->
+                     M ⊢ ([x /s z](a_exp (e♢ z ⩵ e_val y))) ∧ ([x /s z]A1) ⊇ A2.
   Admitted.
 
   Lemma caller_unique :
@@ -241,12 +259,18 @@ Module BankAccount(L : LanguageDef).
 
   Lemma or_l :
     forall M A A1 A2, M ⊢ A ⊇ A1 ->
-                      M ⊢ A ⊇ A1 ∨ A2.
+                 M ⊢ A ⊇ A1 ∨ A2.
   Admitted.
 
   Lemma or_r :
     forall M A A1 A2, M ⊢ A ⊇ A2 ->
-                      M ⊢ A ⊇ A1 ∨ A2.
+                 M ⊢ A ⊇ A1 ∨ A2.
+  Admitted.
+
+  Lemma or_lr :
+    forall M A1 A2 A, M ⊢ A1 ⊇ A ->
+                 M ⊢ A2 ⊇ A ->
+                 M ⊢ (A1 ∨ A2) ⊇ A.
   Admitted.
 
   Ltac hoare_simpl :=
@@ -692,6 +716,10 @@ Module BankAccount(L : LanguageDef).
     forall M A, M ⊢ (a_exp (e_true)) ⊇ (A ∨ ¬ A).
   Admitted.
 
+  Lemma change_class_absurd :
+    forall M x C, M ⊢ (a_class (e_ x) C) to1 ¬ (a_class (e_ x) C) onlyIf (a_false).
+  Admitted.
+
   Lemma necessityBankSpec :
     forall a b bal p, BankMdl ⊢ (a_class (e_ a) Account ∧
                             a_class (e_ b) Bank ∧
@@ -703,9 +731,45 @@ Module BankAccount(L : LanguageDef).
     intros.
     apply if_trans with (A':= ¬ wrapped (a_ p) ∨ ¬ (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)))).
 
-    - apply ot_conseq3 with (A3:=∃x.[ ¬ wrapped (a♢ 0) ∧
+    - apply ot_conseq3 with (A3:=∃x.[ ¬ wrapped (a♢ 1) ∧
                                       (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 0)))]).
-      + admit.
+      + apply conseq_ex;
+          intros;
+          subst_simpl.
+        match goal with
+        | [|- _ ⊢ ¬ wrapped (av_ ?v1) ∧ _ ⊇ ¬ wrapped (av_ ?v2) ∨ _ ] =>
+          match goal with
+          |[|- _ ⊢ ?A ⊇ _] =>
+           apply conseq_trans with (A2:=A ∧ ((a_exp (e_val v1 ⩵ e_val v2)) ∨ ¬ (a_exp (e_val v1 ⩵ e_val v2))));
+             [apply conseq_and;
+              [apply conseq_refl
+              |apply conseq_trans with (A2:=(a_true));
+               [apply conseq_true
+               |apply conseq_excluded_middle]]
+             |]
+          end
+        end.
+        apply and_comm.
+        apply and_distributive_trans_2.
+        apply or_lr.
+
+        * repeat match goal with
+                 | [|- context[wrapped (av_ ?v)]] =>
+                   let Hrewrite := fresh in
+                   assert (Hrewrite : wrapped (av_ v) = wrapped ([v /s 1] (a♢ 1)));
+                     [subst_simpl; auto|rewrite Hrewrite; clear Hrewrite]
+                 end.
+          remember (a♢ 1) as a0.
+          repeat extract_vals x 0.
+          repeat extract_from_exp x.
+          repeat extract_from_wrapped x.
+          extract_from_asrt x.
+          extract_from_asrt x.
+          extract_from_asrt x.
+          extract_from_asrt x.
+          extract_from_asrt x.
+          apply subst_eq.
+
 
       + apply balanceChange'.
 
@@ -716,7 +780,19 @@ Module BankAccount(L : LanguageDef).
       * (* Case A *)
         apply if_orE with (A':= wrapped (a_ p)).
 
-        ** admit. (* excluded middle*)
+        ** apply if_conseq3 with (A3:= a_true).
+           *** match goal with
+               | [|- _ ⊢ _ ⊇ ?Aa ∨ ?Ab] =>
+                 apply conseq_trans with (A2:=Ab ∨ Aa);
+                   [|apply conseq_or_comm]
+               end.
+               apply conseq_excluded_middle.
+           *** match goal with
+               | [|- _ ⊢ ?A1 to _ onlyIf ?A2 ] =>
+                 apply if_conseq3 with (A3:=A1);
+                   [|apply if_start]
+               end.
+               apply conseq_true.
         ** apply ot_conseq1 with (A1:=a_class (e_ a) Account ∧
                                       (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)) ∧
                                        wrapped (a_ p))).
@@ -748,7 +824,30 @@ Module BankAccount(L : LanguageDef).
 
                     ***** apply neg_distr_and_2.
 
-               **** apply passwordChange.
+               **** apply ot_changes.
+
+                    match goal with
+                    | [|- _ ⊢ _ to1 ¬ (?Aa ∧ ?Ab) onlyIf _] =>
+                      apply if1_conseq2 with (A2:=¬ Ab ∨ ¬ Aa);
+                        [apply conseq_trans with (A2:=¬ Aa ∨ ¬ Ab);
+                         [apply neg_distr_and_1|apply conseq_or_comm]|]
+                    end.
+                    match goal with
+                    | [|- _ ⊢ _ to1 _ onlyIf ?A] =>
+                      apply if1_conseq3 with (A3:=A ∨ (a_false));
+                        [apply or_lr;
+                         [apply conseq_refl
+                         |apply conseq_absurd]|]
+                    end.
+                    apply if1_orI2.
+
+                    ***** apply passwordChange.
+                    ***** match goal with
+                          | [|- _ ⊢ ?Aa ∧ _ to1 _ onlyIf _] =>
+                            apply if1_conseq1 with (A1:=Aa);
+                              [repeat spec_auto
+                              |apply change_class_absurd]
+                          end.
 
         ** apply if_conseq2 with (A2:=¬ wrapped (a_ p)).
 
@@ -756,7 +855,16 @@ Module BankAccount(L : LanguageDef).
 
            *** apply if_orE with (A':= wrapped (a_ p)).
 
-               **** admit. (* excluded middle - see case A *)
+               **** match goal with
+                    | [|- _ ⊢ _ to _ onlyIf ?Aa ∨ ?Ab] =>
+                      apply if_conseq3 with (A3:= a_true);
+                        [ apply conseq_trans with (A2:=Ab ∨ Aa);
+                          [ apply conseq_excluded_middle
+                          | apply conseq_or_comm]
+                        |]
+                    end.
+                    apply if_start_conseq.
+                    apply conseq_true.
 
                **** apply ot_conseq1 with (A1:= a_class (e_ a) Account ∧
                                                 (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)) ∧
@@ -764,11 +872,13 @@ Module BankAccount(L : LanguageDef).
 
                     ***** repeat spec_auto.
 
-                    ****** admit. (* easy *)
-                    ****** admit. (* easy *)
+                    ****** (repeat apply conseq_and1;
+                           apply conseq_refl).
+                    ****** (apply conseq_and1, conseq_and2, conseq_refl).
 
                     ***** apply ot_if.
                     apply passwordLeak.
+
   Qed.
 
   Close Scope chainmail_scope.

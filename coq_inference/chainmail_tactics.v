@@ -368,9 +368,27 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite aval_subst in H
     end.
 
+  Lemma wrapped_subst :
+    forall x n y, ([x /s n] (wrapped y)) = wrapped ([x /s S n] y).
+  Proof.
+    intros.
+    unfold wrapped.
+    repeat asrt_subst_simpl.
+    auto.
+  Qed.
+
+  Ltac wrapped_subst_simpl :=
+    match goal with
+    | [|- context[([_ /s _] (wrapped _))]] =>
+      rewrite wrapped_subst
+    | [H : context[([_ /s _] (wrapped _))] |- _] =>
+      rewrite wrapped_subst in H
+    end.
+
   Ltac subst_simpl :=
     repeat (repeat (try (exp_subst_simpl));
             repeat  (try (asrt_subst_simpl));
+            repeat (try (wrapped_subst_simpl));
             repeat (try (map_subst_simpl))).
 
   Lemma val_hole_subst :
@@ -534,6 +552,16 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite <- calls_subst (*)with (x:=v')(n:=n')(y:=y')(z:=z')(m:=m')(β:=β')*)
     end.
 
+  Ltac extract_from_wrapped v' n :=
+    match goal with
+    | [|- context [wrapped (av_ ?v)]] =>
+
+    | [|- context[wrapped ([v' /s _] _)]] =>
+      rewrite <- wrapped_subst
+    | [H : context[wrapped ([v' /s _] _)] |- _] =>
+      rewrite <- wrapped_subst in H
+    end.
+
   Ltac subst_vals :=
     match goal with
     | [|- context[[?v' /s ?n'] (a♢ ?n)]] =>
@@ -547,7 +575,8 @@ Module ChainmailTactics(L : LanguageDef).
     repeat extract_other_vals v' n';
     repeat extract_from_exp v';
     repeat extract_from_map v' n';
-    repeat extract_from_asrt v';
+    repeat (repeat extract_from_asrt v';
+            repeat extract_from_wrapped v');
     subst.
 
 End ChainmailTactics.
