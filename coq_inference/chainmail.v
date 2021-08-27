@@ -216,10 +216,10 @@ Module Chainmail(L : LanguageDef).
                   end
     }.
 
-  Instance vMap : Subst (partial_map name a_val) nat value :=
+  Instance fSubst {A B C D}`{Subst B C D} : Subst (A -> B) C D :=
     {
-    sbst β n v :=
-      fun x => [v /s n] (β x)
+    sbst f c d :=
+      fun x => [d /s c] (f x)
     }.
 
   Instance asrtSubst : Subst asrt nat value :=
@@ -687,7 +687,7 @@ Module Chainmail(L : LanguageDef).
     raise : A -> nat -> A
     }.
 
-  Notation "a '↑' n" := (raise a n)(at level 40) : chainmail_scope.
+  Notation "a '↑' n" := (raise a n)(at level 19) : chainmail_scope.
 
   Instance raiseNat : Raiseable nat :=
     {
@@ -701,6 +701,79 @@ Module Chainmail(L : LanguageDef).
                  | av_hole m => av_hole (m ↑ n)
                  | _ => x
                  end
+    }.
+
+  Instance raiseExp : Raiseable exp :=
+    {
+    raise :=
+      fix raise' e n :=
+        match e with
+        | e_hole m   => e_hole (m ↑ n)
+        | e_eq e1 e2 => e_eq (raise' e1 n) (raise' e2 n)
+        | e_lt e1 e2 => e_lt (raise' e1 n) (raise' e2 n)
+        | e_plus e1 e2 => e_plus (raise' e1 n) (raise' e2 n)
+        | e_minus e1 e2 => e_minus (raise' e1 n) (raise' e2 n)
+        | e_mult e1 e2 => e_mult (raise' e1 n) (raise' e2 n)
+        | e_div e1 e2 => e_div (raise' e1 n) (raise' e2 n)
+        | e_if e1 e2 e3 => e_if (raise' e1 n) (raise' e2 n) (raise' e3 n)
+        | e_acc_f e' f => e_acc_f (raise' e' n) f
+        | e_acc_g e1 g e2 => e_acc_g (raise' e1 n) g (raise' e2 n)
+        | _ => e
+        end
+    }.
+
+  Instance raiseMap {A B : Type}`{Raiseable B} :
+    Raiseable (A -> B) :=
+    {
+    raise f n := (fun a => (f a) ↑ n)
+    }.
+
+(*)  Instance raisePartialMap {A B : Type}`{Eq A}`{Raiseable B} :
+    Raiseable (partial_map A B) :=
+    {
+    raise m n :=
+      (fun b => Some (b ↑ n)) ∘ m
+    }.*)
+
+  Instance raiseOption {A}`{Raiseable A} :
+    Raiseable (option A) :=
+    {
+    raise o n :=
+      match o with
+      | Some a => Some (a ↑ n)
+      | None => None
+      end
+    }.
+
+  Instance raiseAsrt : Raiseable asrt :=
+    {
+    raise := fix raise' A n :=
+      match A with
+      (** Simple: *)
+      | a_exp e => a_exp (e ↑ n)
+      | a_class e C => a_class (e ↑ n) C
+
+      (** Connectives: *)
+      | a_arr A1 A2 => (raise' A1 n) ⟶ (raise' A2 n)
+      | a_and A1 A2 => (raise' A1 n) ∧ (raise' A2 n)
+      | a_or  A1 A2 => (raise' A1 n) ∨ (raise' A2 n)
+      | a_neg A'    => ¬ (raise' A' n)
+
+      (** Quantifiers: *)
+      | a_all A' => a_all (raise' A' (S n))
+      | a_ex A'  => a_ex (raise' A' (S n))
+
+      (** Permission: *)
+      | a_acc x y => (x ↑ n) access (y ↑ n)
+
+      (** Control: *)
+      | x calls y ◌ m ⟨ β ⟩ => x ↑ n calls y ↑ n ◌ m ⟨ β ↑ n ⟩
+
+      (** Viewpoint: *)
+      | x external => x ↑ n external
+      | x internal => x ↑ n internal
+      end
+
     }.
 
   Definition wrapped := (fun α => ∀x.[ (a♢ 0) internal ∨ ¬ (a♢ 0) access α]).

@@ -147,7 +147,6 @@ Reachable states are those that  may arise by external states execution
 of  a given internal module linked with \emph{any} external module.
 We describe the states of interest as the \emph{arising states}. 
 
-\jm[TODO: change all the ``configurations'' to ``states'']{}
 
 
 \begin{definition}[Arising Program State]
@@ -157,7 +156,6 @@ said to be an \emph{arising} state, formally \ \ \ $\arising{M_1}{M_2}{\sigma}$,
 if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
 $\reductions{M_1}{M_2}{\sigma_0}{\sigma}$.
 \end{definition}
-\jm[do we say something about ``$\leadsto*$'']{}
 
 % Definition \ref{def:arising} uses the definition for 
 In the definition above we used \emph{Initial} states, 
@@ -168,7 +166,24 @@ the  stack should consist of a single frame, whose local variable map contains o
 mapping of \prg{this} to the single object, and whose continuation may be any statement.
 % to be executed.
 More in Definition \ref{def:initial}. 
+\jm[]{In Definition \ref{def:arising} We also use the notation $\reductions{M_1}{M_2}{\sigma}{\sigma'}$ to denote
+zero or more reduction steps starting at state $\sigma$ and ending at state $\sigma$, in the context of internal module 
+$M_1$ and external module $M_2$.}
 
+\jm[]{Finally, \Loo has a simple class based type system with the following properties:
+\begin{description}
+\item[(1)]
+Classes may be optionally annotated as \prg{enclosed}
+\item[(2)]
+Methods of non-\prg{enclosed} classes may not return objects of \prg{enclosed} classes
+\item[(3)]
+Modules are typed in isolation of other modules, thereby implicitly prohibiting
+method calls from internal objects to external objects.
+\end{description}
+The type system is not very important, and fairly simple in it's 
+definition. It's only importance is in enforcing the above 
+constraints for purposes of encapsulation, a related but somewhat orthogonal 
+topic.}
 
 
 \subsection{\SpecO}
@@ -254,7 +269,7 @@ value $v$ in the local variable map of frame $\phi$, and $\interpret{\sigma}{x} 
 maps to value $v$ in the top most frame of $\sigma$'s stack. And the term  $\interpret{\sigma}{x.f} = v$
 has the obvious meaning.
 
-\jm[make $classOf$ consistent, and use it in the definition of $e : C$]{}
+
 \begin{definition}[Satisfaction of \SpecO Assertions] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a program state $\sigma$ with internal module $M$ as:
@@ -262,7 +277,7 @@ We define satisfaction of an assertion $A$ by a program state $\sigma$ with inte
 \item
 $\satisfiesA{M}{\sigma}{e}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\true}$
 \item
-$\satisfiesA{M}{\sigma}{e : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\alpha}$ \textit{and} $\sigma.\prg{heap}(\alpha).\prg{class} = C$
+$\satisfiesA{M}{\sigma}{e : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\alpha}$ \textit{and} $\class{\sigma}{\alpha} = C$
 \item
 $\satisfiesA{M}{\sigma}{\neg A}$ \ \ \ iff \ \ \  ${M},{\sigma}\nvDash{A}$
 \item
@@ -285,7 +300,7 @@ $\satisfiesA{M}{\sigma}{\access{x}{y}}$ \ \ \ iff \ \ \
 \item
 $\interpret{\sigma}{x.f}={\interpret{\sigma}{y}}$ \sd{for some $f$}, \  or
 \item
-there exists some $z$, and some frame $\phi$ in the stack of $\sigma$ such that \jm[]{$\interpret{\sigma}{x}=\interpret{\phi}{\prg{this}}$}, \jm[]{and $\interpret{\sigma}{y}=\interpret{\phi}{z}$}
+there exists some $z$, and some frame $\phi$ in the stack of $\sigma$ such that {$\interpret{\sigma}{x}=\interpret{\phi}{\prg{this}}$}, {and $\interpret{\sigma}{y}=\interpret{\phi}{z}$}
 \end{itemize}
 \item
 $\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \  
@@ -294,7 +309,7 @@ $\textit{classOf}(\sigma,x) \in M$
 $\satisfiesA{M}{\sigma}{\external{x}}$ \ \ \ iff \ \ \  
 $\textit{classOf}(\sigma,x) \not\in M$
 \item
-$\satisfiesA{M}{\sigma}{\calls{x}{y}{m}{z_1, \ldots, z_n}}$ \ \ \ iff \ \ \ \jm[sophia asks if we should replace points 2 - 4 in calls with the encoded version?]{}
+$\satisfiesA{M}{\sigma}{\calls{x}{y}{m}{z_1, \ldots, z_n}}$ \ \ \ iff \ \ \ 
 \begin{itemize}
 \item
 $\sigma.\prg{contn} = (\_ := y'.m(z'_1,\ldots,z'_n))$, % and is superfluous, enums are ands, unless expltly stated   
@@ -329,7 +344,7 @@ for all modules $M'$, and all $\sigma$, if $\arising{M'}{M}{\sigma}$, then $\sat
 % details of specific program configurations, a critical component 
 % of constructing our Logic of Necessity in Section \ref{s:inference}. 
 
-A proof system for such assertions is indicated by a judgment of the form \jm[]{$\proves{M}{A}$}. 
+A proof system for such assertions is indicated by a judgment of the form $\proves{M}{A}$. 
 We will not define such a judgment, and just rely on its existence (cf. Theorem 3.2).
 We define soundness of such a judgment in the usual way:
 
@@ -341,14 +356,13 @@ A judgment of the form $M \vdash A$ is \emph{sound}, if for all
 
 \subsubsection{Wrapping}
 
-We define a useful shorthand: \jm[fixed some typos]{} the $\wrapped{}$ predicate  states 
+We define a useful shorthand: the $\wrapped{}$ predicate  states 
 that only \internalO objects have access to some object.
 That object may be either \internalO or \externalO.
 \begin{definition}[Wrapped]
 $\wrapped{o}\ \triangleq\ \all{x}{\neg \access{x}{o}\ \vee\ \internal{x}}$
 \end{definition}
 Wrapped is critical as it captures the conditions under which 
-\jm[removed: reading or writing involving an object ]{}
 necessitates an interaction
 with the \internalM module. If for example, only \internalO
 objects have access to an account's password, then
@@ -419,10 +433,11 @@ is secure we know that the password may not be leaked.
 \subsection{\Chainmail -- Necessity Specifications}
 \label{s:holistic-guarantees}
 
-In this Section we define syntactic forms and semantics of
-\emph{Necessity Specifications}. Fig. \ref{f:holistic-syntax} 
-gives the syntax.
-We have three forms of Necessity Specifications, described below:
+\jm[]{\Chainmail extends \SpecO with novel 
+\emph{Necessity Specifications}.}
+In this Section we define \jm[]{the syntax (Fig. \ref{f:holistic-syntax})} and semantics of
+\emph{Necessity Specifications}.
+We have three forms of Necessity Specifications, \jm[]{defined in Fig. \ref{f:holistic-syntax}}, and described below:
 
 \begin{figure}[t]
 \footnotesize
@@ -443,10 +458,9 @@ We have three forms of Necessity Specifications, described below:
 \endSyntaxElement\\
 \end{syntax}
 \]
-\caption{Syntax of \Chainmail}
+\caption{Syntax of \Chainmail Necessity Specifications}
 \label{f:holistic-syntax}
 \end{figure}
-\jm[TODO: make it clear that \Chainmail includes \SpecO]{}
 
 
 
@@ -465,8 +479,8 @@ e.g. if the balance of a bank account changes over a single execution step, then
 [$\onlyThrough{A_1}{A_2}{A}$]: If an arising program state \jm[]{satisfies} $A_1$, and \jm[]{after some execution, a state satisfying} $A_2$ \jm[]{is reached}, then program execution must have passed through some \jm[]{state satisfying} $A$.
 e.g. if the balance of an account changes over time, then the bank's \prg{transfer} method must have been called 
 in some intermediate state. Note 
-that the intermediate state where $A$ is true might be the initial state \jm[removed: ($\sigma_1$)]{},
-or final state \jm[removed: ($\sigma_2$)]{}. 
+that the intermediate state where $A$ is true might be the initial state,
+or final state.
 
 
 
@@ -548,8 +562,7 @@ of \emph{Single-Step Only If} allow for the statement of such necessary precondi
 for any execution step for any program to achieve a certain outcome. The semantics
 of \emph{Only If} and \emph{Only Through} allow us to raise these necessary preconditions
 to any arbitrary number of execution steps, and thus allow for reasoning about 
-the execution of an entire program\jm[removed:, even those programs in the open world, where
-client functions are unknown and unspecified in a traditional manner]{}.
+the execution of an entire program.
  
 Looking back at the example from the Introduction,   it holds that
 \\
@@ -604,7 +617,7 @@ An assertion $A$ is encapsulated by a module $M$ if it cannot be invalidated unl
 internal method is called. 
 \sd{Here we refine this concept, to allow for ``conditional'' encapsulation:
 $M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
-$A'$ \jm[typo]{cannot} be invalidated, unless a method from $M$ was called.}
+$A'$ cannot be invalidated, unless a method from $M$ was called.}
 
 \begin{definition}[Assertion Encapsulation]
 \label{def:encapsulation}

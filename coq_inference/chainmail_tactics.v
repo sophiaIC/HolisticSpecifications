@@ -161,6 +161,11 @@ Module ChainmailTactics(L : LanguageDef).
     | [H : context [[ _ /s _] (e_div ?e ?e')] |- _] =>
       rewrite div_subst with (e1:=e)(e2:=e') in H
 
+    | [|- context [[ _ /s _] (e_lt ?e ?e')]] =>
+      rewrite lt_subst with (e1:=e)(e2:=e')
+    | [H : context [[ _ /s _] (e_lt ?e ?e')] |- _] =>
+      rewrite lt_subst with (e1:=e)(e2:=e') in H
+
     | [|- context [[ _ /s _] (e_if ?ea ?eb ?ec)]] =>
       rewrite if_subst with (e:=ea)(e1:=eb)(e2:=ec)
     | [H : context [[ _ /s _] (e_if ?ea ?eb ?ec)] |- _] =>
@@ -299,6 +304,11 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite or_subst with (A1:=A)(A2:=A')
     | [H : context[[_ /s _] ?A ∨ ?A'] |- _] =>
       rewrite or_subst with (A1:=A)(A2:=A') in H
+
+    | [|- context[[_ /s _] ?A ⟶ ?A']] =>
+      rewrite arr_subst with (A1:=A)(A2:=A')
+    | [H : context[[_ /s _] ?A ⟶ ?A'] |- _] =>
+      rewrite arr_subst with (A1:=A)(A2:=A') in H
 
     | [|- context[[_ /s _] (∀x.[?A'])]] =>
       rewrite all_subst with (A:=A')
@@ -524,6 +534,9 @@ Module ChainmailTactics(L : LanguageDef).
     | [|- context[a_exp ([v' /s ?n'] ?e')]] =>
       rewrite <- exp_subst (*)with (x:=v')(n:=n')(e:=e')*)
 
+    | [|- context[(a_class ([v' /s ?n'] _) _)]] =>
+      rewrite <- class_subst (*)with (x:=v')(n:=n')(A1:=A1')(A2:=A2')*)
+
     | [|- context[([v' /s ?n'] ?A1') ∧ ([v' /s ?n'] ?A2')]] =>
       rewrite <- and_subst (*)with (x:=v')(n:=n')(A1:=A1')(A2:=A2')*)
 
@@ -552,10 +565,8 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite <- calls_subst (*)with (x:=v')(n:=n')(y:=y')(z:=z')(m:=m')(β:=β')*)
     end.
 
-  Ltac extract_from_wrapped v' n :=
+  Ltac extract_from_wrapped v':=
     match goal with
-    | [|- context [wrapped (av_ ?v)]] =>
-
     | [|- context[wrapped ([v' /s _] _)]] =>
       rewrite <- wrapped_subst
     | [H : context[wrapped ([v' /s _] _)] |- _] =>
@@ -576,7 +587,383 @@ Module ChainmailTactics(L : LanguageDef).
     repeat extract_from_exp v';
     repeat extract_from_map v' n';
     repeat (repeat extract_from_asrt v';
-            repeat extract_from_wrapped v');
-    subst.
+            repeat extract_from_wrapped v').
+
+  (** Raise Simpl **)
+
+  Lemma aval_raise :
+    forall v n, ((av_ v) ↑ n) = (av_ v).
+    auto.
+  Qed.
+
+  Lemma val_raise :
+    forall v n, ((e_val v) ↑ n) = (e_val v).
+    auto.
+  Qed.
+
+  Lemma var_raise :
+    forall y n, ((e_var y) ↑ n) = (e_var y).
+    auto.
+  Qed.
+
+  Lemma ehole_raise_le :
+    forall n m, m <= n -> ((e_hole n) ↑ m) = (e_hole (S n)).
+    intros; simpl.
+    apply leb_correct in H;
+      rewrite H;
+      reflexivity.
+  Qed.
+
+  Lemma ehole_raise_gt :
+    forall n m, m > n -> ((e_hole n) ↑ m) = (e_hole n).
+    intros; simpl.
+    apply <- Nat.leb_gt in H;
+      rewrite H;
+      reflexivity.
+  Qed.
+
+  Lemma ahole_raise_le :
+    forall n m, m <= n -> ((a♢ n) ↑ m) = (a♢ S n).
+    intros; simpl.
+    apply leb_correct in H;
+      rewrite H;
+      reflexivity.
+  Qed.
+
+  Lemma ahole_raise_gt :
+    forall n m,  m > n -> ((a♢ n) ↑ m) = (a♢ n).
+    intros; simpl.
+    apply <- Nat.leb_gt in H;
+      rewrite H;
+      reflexivity.
+  Qed.
+
+  Lemma eq_raise :
+    forall n e1 e2, ((e_eq e1 e2) ↑ n) =
+               (e_eq (e1 ↑ n) (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Lemma lt_raise :
+    forall n e1 e2, ((e_lt e1 e2) ↑ n) =
+               (e_lt (e1 ↑ n) (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Lemma plus_raise :
+    forall n e1 e2, ((e_plus e1 e2) ↑ n) =
+               (e_plus (e1 ↑ n) (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Lemma minus_raise :
+    forall n e1 e2, ((e_minus e1 e2) ↑ n) =
+               (e_minus (e1 ↑ n) (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Lemma mult_raise :
+    forall n e1 e2, ((e_mult e1 e2) ↑ n) =
+               (e_mult (e1 ↑ n) (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Lemma div_raise :
+    forall n e1 e2, ((e_div e1 e2) ↑ n) =
+               (e_div (e1 ↑ n) (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Lemma if_raise :
+    forall n e e1 e2, ((e_if e e1 e2) ↑ n) =
+                 (e_if (e ↑ n) (e1 ↑ n) (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Lemma fld_raise :
+    forall n e f, ((e_acc_f e f) ↑ n) =
+             (e_acc_f (e ↑ n) f).
+    auto.
+  Qed.
+
+  Lemma ghost_raise :
+    forall n e1 g e2, ((e_acc_g e1 g e2) ↑ n) =
+                 (e_acc_g (e1 ↑ n) g (e2 ↑ n)).
+    auto.
+  Qed.
+
+  Ltac exp_raise_simpl :=
+    match goal with
+    | [|- context [(e_val ?v') ↑ ?n]] =>
+      rewrite val_raise
+    | [H : context [(e_val ?v') ↑ ?n] |- _] =>
+      rewrite val_raise in H
+
+    | [|- context [(e_var ?z) ↑ _]] =>
+      rewrite var_raise
+    | [H : context [(e_var ?z) ↑ _] |- _] =>
+      rewrite var_raise in H
+
+    | [|- context [(e_eq ?e ?e') ↑ _ ]] =>
+      rewrite eq_raise
+    | [H : context [(e_eq ?e ?e') ↑ _ ] |- _] =>
+      rewrite eq_raise in H
+
+    | [|- context [(e_plus ?e ?e') ↑ _]] =>
+      rewrite plus_raise
+    | [H : context [(e_plus ?e ?e') ↑ _] |- _] =>
+      rewrite plus_raise in H
+
+    | [|- context [(e_minus ?e ?e') ↑ _]] =>
+      rewrite minus_raise
+    | [H : context [(e_minus ?e ?e') ↑ _] |- _] =>
+      rewrite minus_raise in H
+
+    | [|- context [(e_mult ?e ?e') ↑ _]] =>
+      rewrite mult_raise
+    | [H : context [(e_mult ?e ?e') ↑ _] |- _] =>
+      rewrite mult_raise in H
+
+    | [|- context [(e_div ?e ?e') ↑ _]] =>
+      rewrite div_raise
+    | [H : context [(e_div ?e ?e') ↑ _] |- _] =>
+      rewrite div_raise in H
+
+    | [|- context [(e_lt ?e ?e') ↑ _]] =>
+      rewrite lt_raise
+    | [H : context [(e_lt ?e ?e') ↑ _] |- _] =>
+      rewrite lt_raise in H
+
+    | [|- context [(e_if ?ea ?eb ?ec) ↑ _]] =>
+      rewrite if_raise
+    | [H : context [(e_if ?ea ?eb ?ec) ↑ _] |- _] =>
+      rewrite if_raise in H
+
+    | [|- context [(e_acc_f ?e' ?f') ↑ _]] =>
+      rewrite fld_raise
+    | [H : context [(e_acc_f ?e' ?f') ↑ _] |- _] =>
+      rewrite fld_raise in H
+
+    | [|- context [(e_acc_g ?e ?g' ?e') ↑ _]] =>
+      rewrite ghost_raise
+    | [H : context [(e_acc_g ?e ?g' ?e') ↑ _] |- _] =>
+      rewrite ghost_raise in H
+
+    | [Hle : ?m <= ?n |- context[(e_hole ?n) ↑ ?m]] =>
+      rewrite (ehole_raise_le n m Hle)
+    | [Hle : ?m <= ?n,
+             H : context[(e_hole ?n) ↑ ?m] |- _] =>
+      rewrite (ehole_raise_le n m Hle) in H
+
+    | [Hgt : ?m > ?n |- context[(e_hole ?n) ↑ ?m]] =>
+      rewrite (ehole_raise_gt n m Hgt)
+    | [Hgt : ?m > ?n,
+             H : context[(e_hole ?n) ↑ ?m] |- _] =>
+      rewrite (ehole_raise_gt n m Hgt)
+    end.
+
+  Lemma update_raise :
+    forall n x a (β : partial_map name a_val),
+      ((⟦ x ↦ a ⟧ β)) ↑ n =
+      (⟦ x ↦ (a ↑ n) ⟧ (β ↑ n)).
+    intros.
+    apply functional_extensionality;
+      intros;
+      simpl.
+    repeat map_rewrite.
+    destruct (eqb x0 x);
+      auto.
+  Qed.
+
+  Lemma empty_raise :
+    forall n, (empty ↑ n) = empty.
+    auto.
+  Qed.
+
+  Ltac map_raise_simpl :=
+    match goal with
+    | [ |- context[(⟦ ?x ↦ ?a' ⟧ ?β') ↑ _]] =>
+      rewrite update_raise
+    | [H : context[(⟦ ?x ↦ ?a' ⟧ ?β') ↑ _] |- _] =>
+      rewrite update_raise in H
+
+    | [ |- context[empty ↑ _ ]] =>
+      rewrite empty_raise
+    | [H : context[empty ↑ _] |- _] =>
+      rewrite empty_raise in H
+    end.
+
+  Lemma and_raise :
+    forall n A1 A2, ((A1 ∧ A2) ↑ n) = (A1 ↑ n) ∧ (A2 ↑ n).
+    auto.
+  Qed.
+
+  Lemma or_raise :
+    forall n A1 A2, ((A1 ∨ A2) ↑ n) = (A1 ↑ n) ∨ (A2 ↑ n).
+    auto.
+  Qed.
+
+  Lemma all_raise :
+    forall n A, (∀x.[A] ↑ n) = ∀x.[A ↑ S n].
+    auto.
+  Qed.
+
+  Lemma ex_raise :
+    forall n A, (∃x.[A] ↑ n) = ∃x.[A ↑ S n].
+    auto.
+  Qed.
+
+  Lemma arr_raise :
+    forall n A1 A2, ((A1 ⟶ A2) ↑ n) = (A1 ↑ n) ⟶ (A2 ↑ n).
+    auto.
+  Qed.
+
+  Lemma exp_raise :
+    forall n e, ((a_exp e) ↑ n) = a_exp (e ↑ n).
+    auto.
+  Qed.
+
+  Lemma access_raise :
+    forall n x y, ((x access y) ↑ n) = (x ↑ n) access (y ↑ n).
+    auto.
+  Qed.
+
+  Lemma calls_raise :
+    forall n x y m β, ((x calls y ◌ m ⟨ β ⟩) ↑ n) =
+                   (x ↑ n) calls (y ↑ n) ◌ m ⟨ β ↑ n ⟩.
+    auto.
+  Qed.
+
+  Lemma internal_raise :
+    forall x n, ((x internal) ↑ n) =
+           (x ↑ n) internal.
+    auto.
+  Qed.
+
+  Lemma external_raise :
+    forall x n, ((x external) ↑ n) =
+             (x ↑ n) external.
+    auto.
+  Qed.
+
+  Lemma class_raise :
+    forall n e C, ((a_class e C) ↑ n) =
+             a_class (e ↑ n) C.
+    auto.
+  Qed.
+
+  Lemma neg_raise :
+    forall n A, ((¬ A) ↑ n) =
+           ¬ (A ↑ n).
+    auto.
+  Qed.
+
+  Ltac asrt_raise_simpl :=
+    match goal with
+    | [|- context[(?A ∧ ?A') ↑ _]] =>
+      rewrite and_raise
+    | [H : context[(?A ∧ ?A') ↑ _] |- _] =>
+      rewrite and_raise in H
+
+    | [|- context[(?A ∨ ?A') ↑ _ ]] =>
+      rewrite or_raise
+    | [H : context[(_ ∨ _) ↑ _] |- _] =>
+      rewrite or_raise in H
+
+    | [|- context[(?A ⟶ ?A') ↑ _ ]] =>
+      rewrite arr_raise
+    | [H : context[(_ ⟶ _) ↑ _] |- _] =>
+      rewrite arr_raise in H
+
+    | [|- context[(∀x.[?A']) ↑ _ ]] =>
+      rewrite all_raise
+    | [H : context[(∀x.[?A']) ↑ _] |- _] =>
+      rewrite all_raise in H
+
+    | [|- context[(∃x.[?A']) ↑ _]] =>
+      rewrite ex_raise
+    | [H : context[(∃x.[?A']) ↑ _] |- _] =>
+      rewrite ex_raise in H
+
+    | [|- context[(¬ ?A') ↑ _]] =>
+      rewrite neg_raise
+    | [H : context[(¬ ?A') ↑ _] |- _] =>
+      rewrite neg_raise in H
+
+    | [|- context[(a_exp ?e') ↑ _]] =>
+      rewrite exp_raise
+    | [H : context[(a_exp ?e') ↑ _ ] |- _] =>
+      rewrite exp_raise in H
+
+    | [|- context[(a_class ?e' ?C') ↑ _ ]] =>
+      rewrite class_raise
+    | [H : context[(a_class ?e' ?C') ↑ _ ] |- _] =>
+      rewrite class_raise in H
+
+    | [|- context[(?y' access ?z') ↑ _ ]] =>
+      rewrite access_raise
+    | [H : context[(?y' access ?z') ↑ _] |- _] =>
+      rewrite access_raise in H
+
+    | [|- context[(?y' calls ?z' ◌ ?m' ⟨ ?β' ⟩) ↑ _ ]] =>
+      rewrite calls_raise
+    | [H : context[(?y' calls ?z' ◌ ?m' ⟨ ?β' ⟩) ↑ _ ] |- _] =>
+      rewrite calls_raise in H
+
+    | [|- context[(?y' internal) ↑ _ ]] =>
+      rewrite internal_raise
+    | [H : context[(?y' internal) ↑ _ ] |- _] =>
+      rewrite internal_raise in H
+
+    | [|- context[(?y' external) ↑ _ ]] =>
+      rewrite external_raise
+    | [H : context[(?y' external) ↑ _ ] |- _] =>
+      rewrite external_raise in H
+
+    | [|- context [(e_acc_g ?e ?g' ?e') ↑ _ ]] =>
+      rewrite ghost_raise
+    | [H : context [(e_acc_g ?e ?g' ?e') ↑ _ ] |- _] =>
+      rewrite ghost_raise  in H
+
+    | [Hle : ?m <= ?n |- context[(a♢ ?n) ↑ ?m]] =>
+      rewrite (ahole_raise_le n m Hle)
+    | [Hle : ?m <= ?n,
+             H : context[(a♢ ?n) ↑ ?m] |- _] =>
+      rewrite (ahole_raise_le n m Hle) in H
+
+    | [Hgt : ?m > ?n |- context[(a♢ ?n) ↑ ?m]] =>
+      rewrite (ahole_raise_gt n m Hgt)
+    | [Hgt : ?m > ?n,
+             H : context[(a♢ ?n) ↑ ?m] |- _] =>
+      rewrite (ahole_raise_gt n m Hgt) in H
+
+    | [|- context[(av_ _) ↑ _ ]] =>
+      rewrite aval_raise
+    | [H : context[(av_ _) ↑ _] |- _] =>
+      rewrite aval_raise in H
+    end.
+
+  Lemma wrapped_raise :
+    forall n y, ((wrapped y) ↑ n) = wrapped (y ↑ S n).
+  Proof.
+    intros.
+    unfold wrapped.
+    repeat asrt_raise_simpl.
+    auto.
+  Qed.
+
+  Ltac wrapped_raise_simpl :=
+    match goal with
+    | [|- context[((wrapped _) ↑ _ )]] =>
+      rewrite wrapped_subst
+    | [H : context[((wrapped _) ↑ _)] |- _] =>
+      rewrite wrapped_subst in H
+    end.
+
+  Ltac raise_simpl :=
+    repeat (repeat (try (exp_raise_simpl));
+            repeat  (try (asrt_raise_simpl));
+            repeat (try (wrapped_raise_simpl));
+            repeat (try (map_raise_simpl))).
 
 End ChainmailTactics.

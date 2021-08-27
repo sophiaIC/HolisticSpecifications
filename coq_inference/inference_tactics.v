@@ -112,5 +112,749 @@ Module InferenceTactics(L : LanguageDef).
       subst A1' A2'
     end.
 
+
+  (**  **)
+
+  Lemma conseq_excluded_middle :
+    forall M A, M ⊢ (a_exp (e_true)) ⊇ (A ∨ ¬ A).
+  Admitted.
+
+  Lemma eq_implies_not_lt :
+    forall M e1 e2, M ⊢ (a_exp (e1 ⩵ e2)) ⊇ (¬ a_exp (e1 ⩻ e2)).
+  Admitted.
+
+  Lemma lt_implies_not_eq :
+    forall M e1 e2, M ⊢ (a_exp (e1 ⩻ e2)) ⊇ (¬ a_exp (e1 ⩵ e2)).
+  Admitted.
+
+  Lemma not_false_is_true :
+    forall M, M ⊢ (¬ a_exp (e_false)) ⊇ (a_exp (e_true)).
+  Admitted.
+
+  Lemma true_is_not_false :
+    forall M, M ⊢ (a_exp (e_true)) ⊇ (¬ a_exp (e_false)).
+  Admitted.
+
+  Lemma and_true1 :
+    forall M A, M ⊢ (A ∧ (a_exp (e_true))) ⊇ A.
+  Admitted.
+
+  Lemma and_true2 :
+    forall M A, M ⊢ A ⊇ (A ∧ (a_exp (e_true))).
+  Admitted.
+
+  Lemma and_comm :
+    forall M A1 A2 A, M ⊢ (A1 ∧ A2) ⊇ A ->
+                 M ⊢ (A2 ∧ A1) ⊇ A.
+  Admitted.
+
+  Lemma and_assoc1 :
+    forall M A A1 A2 A3, M ⊢ (A1 ∧ A2 ∧ A3) ⊇ A ->
+                    M ⊢ (A1 ∧ (A2 ∧ A3)) ⊇ A.
+  Admitted.
+
+  Lemma and_assoc2 :
+    forall M A A1 A2 A3, M ⊢ A1 ∧ (A2 ∧ A3) ⊇ A ->
+                    M ⊢ (A1 ∧ A2) ∧ A3 ⊇ A.
+  Admitted.
+
+  Lemma and_consequence1 :
+    forall M A1 A1' A2, M ⊢ A1 ⊇ A1' ->
+                   M ⊢ A1 ∧ A2 ⊇ A1' ∧ A2.
+  Admitted.
+
+  Lemma and_consequence2 :
+    forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
+                        M ⊢ A1 ∧ A2 ⊇ A1 ∧ A2'.
+  Admitted.
+
+  Lemma conseq_and1 :
+    forall M A1 A1' A2, M ⊢ A1 ⊇ A1' ->
+                        M ⊢ A1 ∧ A2 ⊇ A1'.
+  Admitted.
+
+  Lemma conseq_and2 :
+    forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
+                        M ⊢ A1 ∧ A2 ⊇ A2'.
+  Admitted.
+
+  Lemma conseq_and :
+    forall M A A1 A2,  M ⊢ A ⊇ A1 ->
+                  M ⊢ A ⊇ A2 ->
+                  M ⊢ A ⊇ A1 ∧ A2.
+  Admitted.
+
+  (* (∀ M ⊢ [y / x] \longright)*)
+  Lemma conseq_ex1 :
+    forall M A1 A2, (forall x, M ⊢ [x /s 0] A1 ⊇ A2) ->
+               M ⊢ (∃x.[A1]) ⊇ A2.
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    inversion H1;
+      subst.
+    specialize (H x).
+    inversion H;
+      subst.
+    eapply H2;
+      eauto.
+  Qed.
+
+(*)  Lemma conseq_ex_and1 :
+    forall M A1 A2, M ⊢ (∃x.[A1]) ∧ A2 ⊇ (∃x.[A1 ∧ A)])*)
+
+  Lemma conseq_ex_and1 :
+    forall M A1 A2 A, (forall x, M ⊢ A1 ∧ ([x /s 0] A2) ⊇ A) ->
+                 M ⊢ A1 ∧ (∃x.[A2]) ⊇ A.
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    a_prop.
+    match goal with
+    | [H : _ ◎ _ ⊨ ∃x.[_] |- _] =>
+      inversion H;
+        subst
+    end.
+    eauto with chainmail_db.
+  Qed.
+
+  Lemma conseq_ex2 :
+    forall M A1 A2, (exists x, M ⊢ A1 ⊇ [x /s 0] A2) ->
+               M ⊢ A1 ⊇ ∃x.[A2].
+  Admitted.
+
+  Lemma subst_eq :
+    forall M x y z A1 A2, M ⊢ [y /s z] A1 ⊇ A2 ->
+                     M ⊢ [x /s z] (a_exp (e♢ z ⩵ e_val y) ∧ A1) ⊇ A2.
+  Admitted.
+
+  Lemma caller_unique :
+    forall M v v' a a' m m' β β',
+      M ⊢ (av_ v) calls a ◌ m ⟨ β ⟩ ∧ (av_ v') calls a' ◌ m' ⟨ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
+  Admitted.
+
+  Lemma recv_unique :
+    forall M v v' a a' m m' β β',
+      M ⊢ a calls (av_ v) ◌ m ⟨ β ⟩ ∧ a' calls (av_ v) ◌ m' ⟨ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
+  Admitted.
+
+  Lemma param_unique :
+    forall M a1 a1' a2 a2' m m' x v v' β β',
+      M ⊢ a1 calls a2 ◌ m ⟨ ⟦ x ↦ (av_ v) ⟧ β ⟩ ∧ a1' calls a2' ◌ m' ⟨ ⟦ x ↦ (av_ v') ⟧ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
+  Admitted.
+
+  Lemma neg_distr_and_1 :
+    forall M A1 A2, M ⊢ ¬ (A1 ∧ A2) ⊇ ¬ A1 ∨ ¬ A2.
+  Admitted.
+
+  Lemma neg_distr_and_2 :
+    forall M A1 A2, M ⊢ ¬ A1 ∨ ¬ A2 ⊇ ¬ (A1 ∧ A2).
+  Admitted.
+
+  Lemma or_l :
+    forall M A A1 A2, M ⊢ A ⊇ A1 ->
+                 M ⊢ A ⊇ A1 ∨ A2.
+  Admitted.
+
+  Lemma or_r :
+    forall M A A1 A2, M ⊢ A ⊇ A2 ->
+                 M ⊢ A ⊇ A1 ∨ A2.
+  Admitted.
+
+  Lemma or_lr :
+    forall M A1 A2 A, M ⊢ A1 ⊇ A ->
+                 M ⊢ A2 ⊇ A ->
+                 M ⊢ (A1 ∨ A2) ⊇ A.
+  Admitted.
+
+  Ltac hoare_simpl :=
+    match goal with
+    | [|- _ ⊢ {pre: ?A1 ∧ (?A2 ∧ ?A3)} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_assoc2]
+    | [|- _ ⊢ {pre: (_ ∧ (_ ∧ _)) ∧ _} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_consequence1, and_assoc2]
+    | [|- _ ⊢ {pre: _ ∧ ((_ ∧ _) ∧ _)} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_consequence1, and_assoc2]
+    | [|- _ ⊢ {pre: _ ∧ (a_exp (e_true))} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_true1]
+    | [|- _ ⊢ {pre: _ ∧ (¬ (a_exp (e_false)))} _ {post: _}] =>
+      eapply hoare_consequence1;
+      [|apply and_consequence2, not_false_is_true]
+    end.
+
+  Lemma if1_start :
+    forall M A1 A2, M ⊢ A1 to1 A2 onlyIf A1.
+  Proof.
+    auto with inference_db.
+  Qed.
+
+  Hint Resolve if1_start : inference_db.
+
+  Lemma if1_conseq1 :
+    forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
+                      M ⊢ A1 to1 A2 onlyIf A3 ->
+                      M ⊢ A1' to1 A2 onlyIf A3.
+  Proof.
+    intros.
+    eapply if1_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Lemma if1_conseq2 :
+    forall M A1 A2 A3 A2', M ⊢ A2' ⊇ A2 ->
+                           M ⊢ A1 to1 A2 onlyIf A3 ->
+                           M ⊢ A1 to1 A2' onlyIf A3.
+  Proof.
+    intros.
+    eapply if1_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Lemma if1_conseq3 :
+    forall M A1 A2 A3 A3', M ⊢ A3 ⊇ A3' ->
+                           M ⊢ A1 to1 A2 onlyIf A3 ->
+                           M ⊢ A1 to1 A2 onlyIf A3'.
+  Proof.
+    intros.
+    eapply if1_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Hint Resolve if1_conseq1 if1_conseq2 if1_conseq3 : inference_db.
+
+  Lemma if_conseq1 :
+    forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
+                           M ⊢ A1 to A2 onlyIf A3 ->
+                           M ⊢ A1' to A2 onlyIf A3.
+  Proof.
+    intros.
+    eapply if_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Lemma if_conseq2 :
+    forall M A1 A2 A3 A2', M ⊢ A2' ⊇ A2 ->
+                           M ⊢ A1 to A2 onlyIf A3 ->
+                           M ⊢ A1 to A2' onlyIf A3.
+  Proof.
+    intros.
+    eapply if_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Lemma if_conseq3 :
+    forall M A1 A2 A3 A3', M ⊢ A3 ⊇ A3' ->
+                           M ⊢ A1 to A2 onlyIf A3 ->
+                           M ⊢ A1 to A2 onlyIf A3'.
+  Proof.
+    intros.
+    eapply if_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Hint Resolve if_conseq1 if_conseq2 if_conseq3 : inference_db.
+
+  Lemma ot_conseq1 :
+    forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
+                           M ⊢ A1 to A2 onlyThrough A3 ->
+                           M ⊢ A1' to A2 onlyThrough A3.
+  Proof.
+    intros.
+    eapply ot_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Lemma ot_conseq2 :
+    forall M A1 A2 A3 A2', M ⊢ A2' ⊇ A2 ->
+                           M ⊢ A1 to A2 onlyThrough A3 ->
+                           M ⊢ A1 to A2' onlyThrough A3.
+  Proof.
+    intros.
+    eapply ot_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Lemma ot_conseq3 :
+    forall M A1 A2 A3 A3', M ⊢ A3 ⊇ A3' ->
+                           M ⊢ A1 to A2 onlyThrough A3 ->
+                           M ⊢ A1 to A2 onlyThrough A3'.
+  Proof.
+    intros.
+    eapply ot_conseq;
+      try solve [eauto];
+      try solve [apply conseq_refl].
+  Qed.
+
+  Hint Resolve ot_conseq1 ot_conseq2 ot_conseq3 : inference_db.
+
+  Lemma if1_start_conseq :
+    forall M A1 A2 A1', M ⊢ A1 ⊇ A1' ->
+                        M ⊢ A1 to1 A2 onlyIf A1'.
+  Proof.
+    intros.
+    eapply if1_conseq3;
+      eauto with inference_db.
+  Qed.
+
+  Hint Resolve if1_start if1_start_conseq : inference_db.
+
+  Lemma if_start_conseq :
+    forall M A1 A2 A1', M ⊢ A1 ⊇ A1' ->
+                        M ⊢ A1 to A2 onlyIf A1'.
+  Proof.
+    intros.
+    eapply if_conseq3;
+      eauto with inference_db.
+  Qed.
+
+  Hint Resolve if_start_conseq : inference_db.
+
+  Lemma if1_andE :
+    forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ∧ A' ->
+                         M ⊢ A1 to1 A2 onlyIf A.
+  Proof.
+    intros.
+    eapply if1_conseq with (A':=A ∧ A');
+      [ eauto
+      | apply conseq_refl
+      | apply conseq_refl
+      | apply conseq_and1, conseq_refl].
+  Qed.
+
+  Lemma compose_update :
+    forall {A B C : Type}`{Eq A} (f : B -> C) (a : A) (b : B) (g : partial_map A B),
+      (fun b => Some (f b)) ∘ (⟦ a ↦ b ⟧ g) = ⟦ a ↦ f b ⟧ (fun b => Some (f b)) ∘ g.
+  Proof.
+    intros.
+    simpl.
+    apply functional_extensionality;
+      intros.
+    repeat map_rewrite.
+    destruct (eqb x a);
+      auto.
+  Qed.
+
+  Lemma compose_empty :
+    forall {A B C}`{Eq A} (f : B -> C),
+      (fun b => Some (f b)) ∘ empty = empty.
+  Proof.
+    intros;
+      auto.
+  Qed.
+
+  Ltac compose_simpl :=
+    match goal with
+    | [|- context[(fun _ => Some (?f _)) ∘ ⟦ _ ↦ _ ⟧ _]] =>
+      rewrite compose_update
+    | [H : context[(fun _ => Some (?f _)) ∘ ⟦ _ ↦ _ ⟧ _] |- _] =>
+      rewrite compose_update in H
+    | [|- context[(fun _ => Some (?f _)) ∘ empty]] =>
+      rewrite compose_empty
+    | [H : context[(fun _ => Some (?f _)) ∘ empty] |- _] =>
+      rewrite compose_empty in H
+    end.
+
+  Lemma conseq_exp_eq_neq :
+    forall M e1 e2 e3, M ⊢ (a_exp (e1 ⩵ e2)) ∧ (¬ a_exp (e2 ⩵ e3)) ⊇ (¬ a_exp (e1 ⩵ e3)).
+  Proof.
+    intros M e1 e2 e3.
+  Admitted.
+
+  Lemma neqb_S :
+    forall n, n =? S n = false.
+  Proof.
+    intros n;
+      induction n;
+      auto.
+  Qed.
+
+  Lemma exp_subst_raise_n :
+    forall (e : exp)(x : value) n, ([x /s n] (e ↑ n)) = (e ↑ n).
+  Proof.
+    intros e;
+      induction e;
+      intros;
+      auto;
+      try solve [raise_simpl;
+                 subst_simpl;
+                 try rewrite IHe;
+                 try rewrite IHe1;
+                 try rewrite IHe2;
+                 try rewrite IHe3;
+                 auto].
+
+    * simpl.
+      destruct  (n0 =? n) eqn : Heq.
+      ** apply Nat.eqb_eq in Heq;
+           subst.
+         assert (Hrewrite : n <=? n = true);
+           [apply Nat.leb_refl|rewrite Hrewrite; clear Hrewrite].
+         assert (Hrewrite : n =? S n = false);
+           [apply neqb_S|rewrite Hrewrite; clear Hrewrite; auto].
+
+      ** destruct (n0 <? n) eqn : Hlt.
+
+         *** apply Nat.ltb_lt in Hlt.
+             let H := fresh in
+             assert (H : n0 <= n);
+               [crush
+               |apply leb_correct in H;
+                rewrite H;
+                clear H].
+             assert (Hrewrite : n0 =? S n = false);
+               [|rewrite Hrewrite; clear Hrewrite; auto].
+             apply <- Nat.eqb_neq.
+             crush.
+
+         *** apply Nat.ltb_ge in Hlt.
+             apply Nat.eqb_neq in Heq.
+             let H := fresh in
+             assert (H : n0 <=? n = false);
+               [apply <- Nat.leb_gt;
+                crush
+               |rewrite H].
+             apply Nat.eqb_neq in Heq;
+               rewrite Heq;
+               auto.
+
+  Qed.
+
+  Lemma aval_subst_raise_n :
+    forall (a : a_val)(x : value) n, ([x /s n] (a ↑ n)) = (a ↑ n).
+  Proof.
+    intros.
+    destruct a;
+      auto.
+    let H := fresh in
+    destruct (lt_eq_lt_dec n n0) as [H|H];
+      [destruct H|].
+
+    * assert (n <= n0);
+        [crush|raise_simpl].
+      assert (n <> S n0);
+        [crush|subst_simpl; auto].
+
+    * subst.
+      assert (n0 <= n0);
+        [crush|raise_simpl].
+      subst_simpl;
+        auto.
+
+    * assert (n > n0);
+        [auto|raise_simpl].
+      subst_simpl.
+      assert (n <> n0);
+        [crush|subst_simpl; auto].
+  Qed.
+
+  Lemma map_subst_raise_n :
+    forall (m : partial_map name a_val)(x : value) n,
+      ([x /s n] (m ↑ n)) = (m ↑ n).
+  Proof.
+    intros.
+    apply functional_extensionality;
+      intros.
+    simpl.
+    destruct (m x0);
+      simpl;
+      auto.
+    destruct a;
+      simpl;
+      auto.
+    let H := fresh in
+    destruct (lt_eq_lt_dec n n0) as [H|H];
+      [destruct H|].
+
+    * assert (Hle : n <= n0);
+        [crush|].
+      apply leb_correct in Hle;
+        rewrite Hle.
+      assert (Hneq : n <> S n0);
+        [crush
+        |apply <- Nat.eqb_neq in Hneq;
+         rewrite Hneq].
+      auto.
+
+    * subst.
+      rewrite Nat.leb_refl.
+      rewrite neqb_S.
+      auto.
+
+    * assert (Hgt : n > n0);
+        [auto
+        |apply Nat.leb_gt in Hgt;
+         rewrite Hgt].
+      assert (Hneq : n <> n0);
+        [crush
+        |apply <- Nat.eqb_neq in Hneq;
+         rewrite Hneq].
+      auto.
+
+  Qed.
+
+  Lemma asrt_subst_raise_n :
+    forall (A : asrt) (x : value) n, ([x /s n] (A ↑ n)) = (A ↑ n).
+  Proof.
+    intros A;
+      induction A;
+      intros;
+      try solve [raise_simpl;
+                 subst_simpl;
+                 try rewrite exp_subst_raise_n;
+                 try rewrite IHA;
+                 try rewrite IHA1;
+                 try rewrite IHA2;
+                 repeat (rewrite aval_subst_raise_n);
+                 repeat (rewrite map_subst_raise_n);
+                 auto].
+  Qed.
+
+  Lemma conseq_raise_mutind :
+    (forall M σ A, M ◎ σ ⊨ A  -> forall n, M ◎ σ ⊨ (A ↑ n)) /\
+    (forall M σ A, M ◎ σ ⊭ A  -> forall n, M ◎ σ ⊭ (A ↑ n)).
+  Proof.
+    apply sat_mutind;
+      intros;
+      raise_simpl;
+      try solve [repeat a_prop; auto with chainmail_db].
+
+    * admit.
+
+    * admit.
+
+    * apply sat_all;
+        intros.
+      admit.
+
+    * apply sat_ex with (x:=x).
+      admit.
+
+  Admitted.
+
+  Lemma conseq_raise :
+    (forall M σ A, M ◎ σ ⊨ A  -> forall n, M ◎ σ ⊨ (A ↑ n)).
+  Proof.
+    destruct conseq_raise_mutind;
+      auto.
+  Qed.
+
+  Lemma conseq_ex_and_expand_r_1 :
+    forall A2 M A1, M ⊢ (∃x.[A1]) ∧ A2 ⊇ (∃x.[A1 ∧ (A2 ↑ 0)]).
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    repeat a_prop.
+    inversion H0;
+      subst.
+    apply sat_ex with (x:=x).
+    subst_simpl.
+    a_prop;
+      auto.
+    rewrite asrt_subst_raise_n.
+    apply  conseq_raise;
+      auto.
+  Qed.
+
+  Lemma conseq_ex_and_expand_l_1 :
+    forall A2 M A1, M ⊢ (∃x.[A1]) ∧ A2 ⊇ (∃x.[A1 ∧ (A2 ↑ 0)]).
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    repeat a_prop.
+    inversion H0;
+      subst.
+    apply sat_ex with (x:=x).
+    subst_simpl.
+    a_prop;
+      auto.
+    rewrite asrt_subst_raise_n.
+    apply conseq_raise;
+      auto.
+  Qed.
+
+  Ltac spec_auto :=
+    match goal with
+    |[|- _ ⊢ ?A ⊇ ?A] =>
+     apply conseq_refl
+    |[|- _ ⊢ ∃x.[_] ⊇ _] =>
+     apply conseq_ex1; intros; simpl
+    |[|- _ ⊢ ?A ∧ _ ⊇ ?A] =>
+     apply conseq_and1
+    |[|- _ ⊢ _ ∧ ?A ⊇ ?A] =>
+     apply conseq_and2
+    |[|- _ ⊢ _ ∧ ?A ∧ _ ⊇ ?A] =>
+     apply conseq_and2, conseq_and1
+    |[|- _ ⊢ _ ∧ _ ∧ ?A ∧ _ ⊇ ?A] =>
+     apply conseq_and2, conseq_and2, conseq_and1
+    |[|- _ ⊢ _ ⊇ _ ∧ _] =>
+     apply conseq_and
+    end.
+
+  Lemma conseq_and_components :
+    forall M A1 A2 A1' A2', M ⊢ A1 ⊇ A1' ->
+                       M ⊢ A2 ⊇ A2' ->
+                       M ⊢ A1 ∧ A2 ⊇ A1' ∧ A2'.
+  Admitted.
+
+  Ltac is_cnf A :=
+    match A with
+    | ?A1 ∧ (?A2 ∧ ?A3) => fail 1
+    | ?A1 ∧ ?A2 => (tryif (is_cnf A1)
+                    then (tryif (is_cnf A2)
+                           then idtac
+                           else fail 1)
+                    else (fail 1))
+    | ?A1 ∨ ?A2 => (tryif (is_cnf A1)
+                    then (tryif (is_cnf A2)
+                           then idtac
+                           else fail 1)
+                    else (fail 1))
+    | ?A1 ⟶ ?A2 => (tryif (is_cnf A1)
+                    then (tryif (is_cnf A2)
+                           then idtac
+                           else fail 1)
+                    else (fail 1))
+    | ¬ ?A' => is_cnf (A')
+    | (∀x.[ ?A' ]) => is_cnf (A')
+    | (∃x.[ ?A' ]) => is_cnf (A')
+    | _ => idtac
+    end.
+
+  Ltac not_cnf A :=
+    match goal with
+    | [|- _ ] =>
+      is_cnf A;
+      fail 1
+    | [|- _ ] =>
+      idtac
+    end.
+
+  Ltac specX_nf :=
+    match goal with
+    | [|- _ ⊢ ?A1 ∧ (?A2 ∧ ?A3) ⊇ _] =>
+      apply conseq_trans with (A2:=A1 ∧ A2 ∧ A3)
+(*)    | [|- _ ⊢ ?A1 ∧ (?A2 ∧ ?A3) ⊇ _] =>
+      eapply conseq_trans;
+      [apply conseq_and_components;
+       [tryif (is_cnf A1) then apply conseq_refl else specX_nf
+       |tryif (is_cnf (A2 ∧ A3)) then apply conseq_refl else specX_nf]
+      |]*)
+    end.
+
+  Lemma asdfsadf :
+    forall M A1 A2 A3 A4 A, M ⊢ (A1 ∧ (A2 ∧ A3)) ⊇ A ∧ A4.
+  Proof.
+    intros.
+    specX_nf.
+    assert (A1 ∧ (A2 ∧ A3) ∧ A4 = A).
+    is_cnf (A1 ∧ (A2 ∧ A3) ∧ A4).
+    tryif (is_cnf (A1 ∧ (A2 ∧ A3) )) then (tryif (is_cnf A4) then idtac else fail 1) else (fail 1).
+    is_cnf (A1 ∧ (A2 ∧ A3) ).
+    specX_nf.
+    admit.
+    specX_nf.
+    admit.
+    admit.
+    specX_nf.
+    admit.
+    admit.
+    specX_nf.
+    admit.
+    admit.
+    apply conseq_refl.
+    apply conseq_refl.
+    apply conseq_refl.
+  Qed.
+
+
+  (* existential issue. Is this correct? *)
+  Ltac intro_ex_if1 :=
+    match goal with
+    | [|- ?M ⊢ ?Aa ∧ ∃x.[∃x.[?Ab]] to1 _ onlyIf _] =>
+      let v:=fresh "v" in
+      let H:=fresh in
+      destruct (conseq_ex3 M (∃x.[Ab])) as [v H];
+      apply if1_conseq1 with (A1:=Aa ∧ ∃x.[[v /s 1]Ab]);
+      [repeat spec_auto; auto;
+       subst_simpl;
+       apply conseq_and2;
+       auto
+      |clear H]
+    end.
+
+  Lemma if1_and_assoc1 :
+    forall M A1 A2 A3 A4 A5, M ⊢ A1 ∧ (A2 ∧ A3) to1 A4 onlyIf A5 ->
+                        M ⊢ (A1 ∧ A2) ∧ A3 to1 A4 onlyIf A5.
+  Proof.
+    intros M A1 A2 A3 A4 A5 H.
+    eapply if1_conseq1;
+      [|apply H].
+    apply and_assoc2, conseq_refl.
+  Qed.
+
+  Lemma if1_and_assoc1' :
+    forall M A1 A2 A3 A4 A5, M ⊢ (A1 ∧ A2) ∧ A3 to1 A4 onlyIf A5 ->
+                        M ⊢ A1 ∧ (A2 ∧ A3) to1 A4 onlyIf A5.
+  Proof.
+    intros M A1 A2 A3 A4 A5 H.
+    eapply if1_conseq1;
+      [|apply H].
+    apply and_assoc1, conseq_refl.
+  Qed.
+
+  Lemma if1_and_assoc2 :
+    forall M A1 A2 A3 A4 A5, M ⊢ A1 to1 A2 ∧ (A3 ∧ A4) onlyIf A5 ->
+                        M ⊢ A1 to1 (A2 ∧ A3) ∧ A4 onlyIf A5.
+  Proof.
+    intros M A1 A2 A3 A4 A5 H.
+    eapply if1_conseq2;
+      [|apply H].
+    apply and_assoc2, conseq_refl.
+  Qed.
+
+  Lemma if1_and_assoc3 :
+    forall M A1 A2 A3 A4 A5, M ⊢ A1 to1 A2 onlyIf A3 ∧ (A4 ∧ A5) ->
+                        M ⊢ A1 to1 A2 onlyIf (A3 ∧ A4) ∧ A5.
+  Proof.
+    intros M A1 A2 A3 A4 A5 H.
+    eapply if1_conseq3;
+      [|apply H].
+    apply and_assoc1, conseq_refl.
+  Qed.
+
+  Lemma or_dumb1 :
+    forall M A, M ⊢ A ⊇ A ∨ A.
+  Proof.
+  Admitted.
+
+  Lemma or_dumb2 :
+    forall M A, M ⊢ A ∨ A ⊇ A.
+  Proof.
+  Admitted.
+
+  Lemma change_class_absurd :
+    forall M x C, M ⊢ (a_class (e_ x) C) to1 ¬ (a_class (e_ x) C) onlyIf (a_false).
+  Admitted.
+
+  Lemma conseq_not_wrapped :
+    forall M x y, M ⊢ x external ∧ x access y ⊇ ¬ wrapped y.
+  Admitted.
+
 End InferenceTactics.
 

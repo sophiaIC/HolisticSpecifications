@@ -41,6 +41,10 @@ Module Inference(L : LanguageDef).
     forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 access α2.
   Admitted.
 
+  Lemma calls_param1 :
+    forall M α1 α2 m x v β, M ⊢ α1 calls α2 ◌ m ⟨ ⟦ x ↦ v ⟧ β ⟩ ⊇ α1 access v.
+  Admitted.
+
   Lemma class_internal :
     forall M α C, C ∈ M -> M ⊢ a_class (e_addr α) C ⊇ (a_ α) internal.
   Admitted.
@@ -124,31 +128,40 @@ Module Inference(L : LanguageDef).
   Inductive only_if : mdl -> asrt -> asrt -> asrt -> Prop :=
   | if_start  : forall M A1 A2, M ⊢ A1 to A2 onlyIf A1
   | if_conseq : forall M A1 A1' A2 A2' A A', M ⊢ A1' to A2' onlyIf A' ->
-                                             M ⊢ A1 ⊇ A1' ->
-                                             M ⊢ A2 ⊇ A2' ->
-                                             M ⊢ A' ⊇ A ->
-                                             M ⊢ A1 to A2 onlyIf A
+                                        M ⊢ A1 ⊇ A1' ->
+                                        M ⊢ A2 ⊇ A2' ->
+                                        M ⊢ A' ⊇ A ->
+                                        M ⊢ A1 to A2 onlyIf A
   | if_orI1   : forall M A1 A1' A2 A A', M ⊢ A1 to A2 onlyIf A ->
-                                         M ⊢ A1' to A2 onlyIf A' ->
-                                         M ⊢ A1 ∨ A1' to A2 onlyIf A ∨ A'
+                                    M ⊢ A1' to A2 onlyIf A' ->
+                                    M ⊢ A1 ∨ A1' to A2 onlyIf A ∨ A'
   | if_orI2   : forall M A1 A2 A2' A A', M ⊢ A1 to A2 onlyIf A ->
-                                         M ⊢ A1 to A2' onlyIf A' ->
-                                         M ⊢ A1 to A2 ∨ A2' onlyIf A ∨ A'
+                                    M ⊢ A1 to A2' onlyIf A' ->
+                                    M ⊢ A1 to A2 ∨ A2' onlyIf A ∨ A'
   | if_orE    : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ∨ A' ->
                                 M ⊢ A1 ∧ A' to A2 onlyThrough (a_false) ->
                                 M ⊢ A1 to A2 onlyIf A
   | if_andI : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ->
-                                   M ⊢ A1 to A2 onlyIf A' ->
-                                   M ⊢ A1 to A2 onlyIf A ∧ A'
+                              M ⊢ A1 to A2 onlyIf A' ->
+                              M ⊢ A1 to A2 onlyIf A ∧ A'
   | if_trans  : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
-                                     M ⊢ A1 to A' onlyIf A ->
-                                     M ⊢ A1 to A2 onlyIf A
+                                M ⊢ A1 to A' onlyIf A ->
+                                M ⊢ A1 to A2 onlyIf A
+
+  | if_ex1 : forall M A1 A2 A y, M ⊢ ([y /s 0] A1) to A2 onlyIf A ->
+                            M ⊢ (∃x.[A1]) to A2 onlyIf A
+  | if_ex2 : forall M A1 A2 A y, M ⊢ A1 to ([y /s 0] A2) onlyIf A ->
+                            M ⊢ A1 to (∃x.[A2]) onlyIf A
+
+  | if_all : forall M A1 A2 A y, M ⊢ A1 to A2 onlyIf ([y /s 0] A) ->
+                            M ⊢ A1 to A2 onlyIf (∀x.[A])
 
   where
   "M '⊢' A1 'to' A2 'onlyIf' A3" := (only_if M A1 A2 A3)
 
   with only_through : mdl -> asrt -> asrt -> asrt -> Prop :=
   | ot_end      : forall M A1 A2, M ⊢ A1 to A2 onlyThrough A2
+
   | ot_changes : forall M A1 A2, M ⊢ A1 to1 ¬ A1 onlyIf A2 ->
                             M ⊢ A1 to ¬ A1 onlyThrough A2
   | ot_if       : forall M A1 A2 A, M ⊢ A1 to A2 onlyIf A ->
@@ -180,6 +193,14 @@ Module Inference(L : LanguageDef).
                                        M ⊢ A1 to A2 onlyThrough A3 ->
                                        M ⊢ A1 ∧ A to A2 onlyThrough A3 ∧ A*)
 
+  | ot_ex1 : forall M A1 A2 A y, M ⊢ ([y /s 0] A1) to A2 onlyThrough A ->
+                            M ⊢ (∃x.[A1]) to A2 onlyThrough A
+  | ot_ex2 : forall M A1 A2 A y, M ⊢ A1 to ([y /s 0] A2) onlyThrough A ->
+                            M ⊢ A1 to (∃x.[A2]) onlyThrough A
+
+  | ot_all : forall M A1 A2 A y, M ⊢ A1 to A2 onlyThrough ([y /s 0] A) ->
+                            M ⊢ A1 to A2 onlyThrough (∀x.[A])
+
   where
   "M '⊢' A1 'to' A2 'onlyThrough' A3" := (only_through M A1 A2 A3)
 
@@ -188,37 +209,48 @@ Module Inference(L : LanguageDef).
       M ⊢ {pre: (P1 ∧ (a_class (e_addr α) C) ∧ ¬ P) } (m_call α m β) {post: ¬ P2} ->
       β' = (fun v => Some (av_ v)) ∘ β  ->
       M ⊢ (P1 ∧ (a_class (e_addr α) C) ∧ (∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ β' ⟩])) to1 P2 onlyIf P
-  | if1_wrapped : forall M α C P m β α',
-      M ⊢ {pre: (a_class (e_addr α) C) ∧ ¬ P } (m_call α m β) {post: ¬ a_exp ((e♢ 0) ⩵ (e_ α'))} ->
-      M ⊢ (wrapped (a_ α') ∧ (a_class (e_ α) C) ∧ (∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ (fun v => Some (av_ v)) ∘ β ⟩ ]))
+
+  | if1_wrapped : forall M α C P P' m β β' α',
+      M ⊢ {pre: P' ∧ (a_class (e_addr α) C) ∧ ¬ P } (m_call α m β) {post: ¬ a_exp ((e♢ 0) ⩵ (e_ α'))} ->
+      β' = (fun v => Some (av_ v)) ∘ β  ->
+      M ⊢ (P' ∧ wrapped (a_ α') ∧ (a_class (e_ α) C) ∧ (∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ β' ⟩ ]))
         to1 (¬ (wrapped (a_ α'))) onlyIf P
+
   | if1_internal : forall M A1 A2 A3,
       (forall C CDef m α β, ⟦ C ↦ CDef ⟧_∈ M ->
-                            m ∈ c_meths CDef ->
-                            M ⊢ (A1 ∧ (a_class (e_ α) C) ∧ ∃x.[(a♢ 0) calls (a_ α) ◌ m ⟨ β ⟩]) to1 A2 onlyIf A3) ->
+                       m ∈ c_meths CDef ->
+                       M ⊢ (A1 ∧ (a_class (e_ α) C) ∧ ∃x.[(a♢ 0) calls (a_ α) ◌ m ⟨ β ⟩]) to1 A2 onlyIf A3) ->
       enc M A1 (¬ A2) ->
       M ⊢ A1 ⊇ ¬ A2 ->
       M ⊢ A1 to1 A2 onlyIf A3
 
   | if1_if : forall M A1 A2 A3, M ⊢ A1 to A2 onlyIf A3 ->
-                                M ⊢ A1 to1 A2 onlyIf A3
+                           M ⊢ A1 to1 A2 onlyIf A3
   | if1_conseq : forall M A1 A1' A2 A2' A A', M ⊢ A1' to1 A2' onlyIf A' ->
-                                              M ⊢ A1 ⊇ A1' ->
-                                              M ⊢ A2 ⊇ A2' ->
-                                              M ⊢ A' ⊇ A ->
-                                              M ⊢ A1 to1 A2 onlyIf A
+                                         M ⊢ A1 ⊇ A1' ->
+                                         M ⊢ A2 ⊇ A2' ->
+                                         M ⊢ A' ⊇ A ->
+                                         M ⊢ A1 to1 A2 onlyIf A
   | if1_orI1  : forall M A1 A1' A2 A A', M ⊢ A1 to A2 onlyIf A ->
-                                         M ⊢ A1' to A2 onlyIf A' ->
-                                         M ⊢ A1 ∨ A1' to1 A2 onlyIf A ∨ A'
+                                    M ⊢ A1' to A2 onlyIf A' ->
+                                    M ⊢ A1 ∨ A1' to1 A2 onlyIf A ∨ A'
   | if1_orI2  : forall M A1 A2 A2' A A', M ⊢ A1 to1 A2 onlyIf A ->
-                                         M ⊢ A1 to1 A2' onlyIf A' ->
-                                         M ⊢ A1 to1 A2 ∨ A2' onlyIf A ∨ A'
+                                    M ⊢ A1 to1 A2' onlyIf A' ->
+                                    M ⊢ A1 to1 A2 ∨ A2' onlyIf A ∨ A'
   | if1_orE   : forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ∨ A' ->
-                                     M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
-                                     M ⊢ A1 to1 A2 onlyIf A
+                                M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
+                                M ⊢ A1 to1 A2 onlyIf A
   | if1_andI : forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ->
-                                    M ⊢ A1 to1 A2 onlyIf A' ->
-                                    M ⊢ A1 to1 A2 onlyIf A ∧ A'
+                               M ⊢ A1 to1 A2 onlyIf A' ->
+                               M ⊢ A1 to1 A2 onlyIf A ∧ A'
+
+  | if1_ex1 : forall M A1 A2 A y, M ⊢ ([y /s 0] A1) to1 A2 onlyIf A ->
+                             M ⊢ (∃x.[A1]) to1 A2 onlyIf A
+  | if1_ex2 : forall M A1 A2 A y, M ⊢ A1 to1 ([y /s 0] A2) onlyIf A ->
+                             M ⊢ A1 to1 (∃x.[A2]) onlyIf A
+
+  | if1_all : forall M A1 A2 A y, M ⊢ A1 to1 A2 onlyIf ([y /s 0] A) ->
+                             M ⊢ A1 to1 A2 onlyIf (∀x.[A])
 
   where
   "M '⊢' A1 'to1' A2 'onlyIf' A3" := (only_if1 M A1 A2 A3).
