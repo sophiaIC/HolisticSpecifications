@@ -747,20 +747,37 @@ Module InferenceTactics(L : LanguageDef).
 
   Ltac specX_nf :=
     match goal with
-    | [|- _ ⊢ ?A1 ∧ (?A2 ∧ ?A3) ⊇ _] =>
-      apply conseq_trans with (A2:=A1 ∧ A2 ∧ A3)
-(*)    | [|- _ ⊢ ?A1 ∧ (?A2 ∧ ?A3) ⊇ _] =>
-      eapply conseq_trans;
-      [apply conseq_and_components;
-       [tryif (is_cnf A1) then apply conseq_refl else specX_nf
-       |tryif (is_cnf (A2 ∧ A3)) then apply conseq_refl else specX_nf]
-      |]*)
+    | [ |- context G [ ?Aa ∧ (?Ab ∧ ?Ac) ] ] =>
+      let H := context G [ Aa ∧ Ab ∧ Ac ] in
+      match H with
+      | _ ⊢ ?Ad ⊇ _ =>
+        match goal with
+        | [|- _ ⊢ ?Ae ⊇ _ ] =>
+          apply conseq_trans with (A2:=Ad);
+          [try (apply and_assoc1, conseq_refl)
+          |try specX_nf]
+        end
+      end
+
+    end.
+
+  Ltac ctx_test :=
+    match goal with
+    | |- context G [True] =>
+      let x := context G [False] in
+      assert (x)
     end.
 
   Lemma asdfsadf :
-    forall M A1 A2 A3 A4 A, M ⊢ (A1 ∧ (A2 ∧ A3)) ⊇ A ∧ A4.
+    forall M A1 A2 A3 A4 A, M ⊢ A1 ∧ (A2 ∧ (A3 ∧ A4)) ∧ A ⊇ A ∧ A4.
   Proof.
     intros.
+    specX_nf.
+    repeat spec_auto.
+    
+    admit.
+    specX_nf.
+    apply conseq_trans with (A2:=a_true).
     specX_nf.
     assert (A1 ∧ (A2 ∧ A3) ∧ A4 = A).
     is_cnf (A1 ∧ (A2 ∧ A3) ∧ A4).
