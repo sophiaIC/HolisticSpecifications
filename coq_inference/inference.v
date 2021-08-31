@@ -148,13 +148,14 @@ Module Inference(L : LanguageDef).
                                 M ⊢ A1 to A' onlyIf A ->
                                 M ⊢ A1 to A2 onlyIf A
 
-  | if_ex1 : forall M A1 A2 A y, M ⊢ ([y /s 0] A1) to A2 onlyIf A ->
-                            M ⊢ (∃x.[A1]) to A2 onlyIf A
-  | if_ex2 : forall M A1 A2 A y, M ⊢ A1 to ([y /s 0] A2) onlyIf A ->
-                            M ⊢ A1 to (∃x.[A2]) onlyIf A
+  | if_ex1 : forall M A1 A2 A, (forall y, M ⊢ ([y /s 0] A1) to A2 onlyIf A) ->
+                          M ⊢ (∃x.[A1]) to A2 onlyIf A
 
-  | if_all : forall M A1 A2 A y, M ⊢ A1 to A2 onlyIf ([y /s 0] A) ->
-                            M ⊢ A1 to A2 onlyIf (∀x.[A])
+  | if_ex2 : forall M A1 A2 A, (forall y, M ⊢ A1 to ([y /s 0] A2) onlyIf A) ->
+                          M ⊢ A1 to (∃x.[A2]) onlyIf A
+
+  | if_all : forall M A1 A2 A, (forall y, M ⊢ A1 to A2 onlyIf ([y /s 0] A)) ->
+                          M ⊢ A1 to A2 onlyIf (∀x.[A])
 
   where
   "M '⊢' A1 'to' A2 'onlyIf' A3" := (only_if M A1 A2 A3)
@@ -193,13 +194,13 @@ Module Inference(L : LanguageDef).
                                        M ⊢ A1 to A2 onlyThrough A3 ->
                                        M ⊢ A1 ∧ A to A2 onlyThrough A3 ∧ A*)
 
-  | ot_ex1 : forall M A1 A2 A y, M ⊢ ([y /s 0] A1) to A2 onlyThrough A ->
-                            M ⊢ (∃x.[A1]) to A2 onlyThrough A
-  | ot_ex2 : forall M A1 A2 A y, M ⊢ A1 to ([y /s 0] A2) onlyThrough A ->
-                            M ⊢ A1 to (∃x.[A2]) onlyThrough A
+  | ot_ex1 : forall M A1 A2 A, (forall y, M ⊢ ([y /s 0] A1) to A2 onlyThrough A) ->
+                          M ⊢ (∃x.[A1]) to A2 onlyThrough A
+  | ot_ex2 : forall M A1 A2 A, (forall y, M ⊢ A1 to ([y /s 0] A2) onlyThrough A) ->
+                          M ⊢ A1 to (∃x.[A2]) onlyThrough A
 
-  | ot_all : forall M A1 A2 A y, M ⊢ A1 to A2 onlyThrough ([y /s 0] A) ->
-                            M ⊢ A1 to A2 onlyThrough (∀x.[A])
+  | ot_all : forall M A1 A2 A, (forall y, M ⊢ A1 to A2 onlyThrough ([y /s 0] A)) ->
+                          M ⊢ A1 to A2 onlyThrough (∀x.[A])
 
   where
   "M '⊢' A1 'to' A2 'onlyThrough' A3" := (only_through M A1 A2 A3)
@@ -244,13 +245,13 @@ Module Inference(L : LanguageDef).
                                M ⊢ A1 to1 A2 onlyIf A' ->
                                M ⊢ A1 to1 A2 onlyIf A ∧ A'
 
-  | if1_ex1 : forall M A1 A2 A y, M ⊢ ([y /s 0] A1) to1 A2 onlyIf A ->
-                             M ⊢ (∃x.[A1]) to1 A2 onlyIf A
-  | if1_ex2 : forall M A1 A2 A y, M ⊢ A1 to1 ([y /s 0] A2) onlyIf A ->
-                             M ⊢ A1 to1 (∃x.[A2]) onlyIf A
+  | if1_ex1 : forall M A1 A2 A, (forall y, M ⊢ ([y /s 0] A1) to1 A2 onlyIf A) ->
+                           M ⊢ (∃x.[A1]) to1 A2 onlyIf A
+  | if1_ex2 : forall M A1 A2 A, (forall y, M ⊢ A1 to1 ([y /s 0] A2) onlyIf A) ->
+                           M ⊢ A1 to1 (∃x.[A2]) onlyIf A
 
-  | if1_all : forall M A1 A2 A y, M ⊢ A1 to1 A2 onlyIf ([y /s 0] A) ->
-                             M ⊢ A1 to1 A2 onlyIf (∀x.[A])
+  | if1_all : forall M A1 A2 A, (forall y, M ⊢ A1 to1 A2 onlyIf ([y /s 0] A)) ->
+                           M ⊢ A1 to1 A2 onlyIf (∀x.[A])
 
   where
   "M '⊢' A1 'to1' A2 'onlyIf' A3" := (only_if1 M A1 A2 A3).

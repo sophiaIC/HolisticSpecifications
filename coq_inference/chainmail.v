@@ -208,10 +208,10 @@ Module Chainmail(L : LanguageDef).
       end
     }.
 
-  Instance optionSubst{A : Type}`{Subst A nat value} : Subst (option A) nat value :=
+  Instance optionSubst{A B C : Type}`{Subst A B C} : Subst (option A) B C :=
     {
-    sbst o n v := match o with
-                  | Some a => Some ([v /s n] a)
+    sbst o c b := match o with
+                  | Some a => Some ([b /s c] a)
                   | None => None
                   end
     }.
@@ -221,6 +221,9 @@ Module Chainmail(L : LanguageDef).
     sbst f c d :=
       fun x => [d /s c] (f x)
     }.
+
+(*)  Instance partialMapSubst {A B C D}`{Eq A}{Hsubst : Subst (option B) C D} : Subst (partial_map A B) C D :=
+    @fSubst A (option B) C D Hsubst.*)
 
   Instance asrtSubst : Subst asrt nat value :=
     {

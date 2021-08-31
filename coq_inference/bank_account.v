@@ -367,6 +367,21 @@ Module BankAccount(L : LanguageDef).
 
   Qed.
 
+  Lemma a_val_update_subst :
+    forall (f : partial_map name a_val) a  b c d,
+      ([d /s c](⟦ a ↦ b ⟧ f)) =
+      (⟦ a ↦ ([d /s c] b) ⟧ ([d /s c] f)).
+    apply (update_subst).
+  Qed.
+
+  Lemma a_val_empty_subst :
+    forall c d,
+      ([d /s c](@empty name a_val eqbName)) = (@empty name a_val eqbName).
+    apply (empty_subst).
+    * apply pwd.
+    * apply (av_ (v_true)).
+  Qed.
+
   Lemma bankTransferBalChange :
     forall a b b' bal p p' a' m a'',
       BankMdl ⊢ ((a_class (e_ a) Account) ∧
@@ -387,13 +402,61 @@ Module BankAccount(L : LanguageDef).
                                                                         empty  ⟩ ]]]).
   Proof.
     intros.
+    specX_cnf_l.
+
+    apply if1_ex1;
+      intros;
+      subst_simpl.
+
+    (* this should be done by subst_simpl, but for some unknown reason it doesn't. shrug.*)
+    repeat rewrite a_val_update_subst;
+      subst_simpl.
+    repeat rewrite a_val_empty_subst;
+      subst_simpl.
+
+    repeat specX_cnf_r;
+      repeat spec_auto.
+
+    match goal with
+    | [|- _ ⊢ _ ∧ ?A to1 _ onlyIf _] =>
+      apply if1_conseq1 with (A1:=A);
+        [repeat spec_auto|]
+    end.
+
+    match goal with
+    | [|- _ ⊢ _ ∧ ?A to1 _ onlyIf _] =>
+      apply if1_conseq1 with (A1:=A);
+        [repeat spec_auto|]
+    end.
+
+    extract (v_ b) 0;
+      subst.
+    rewrite <- empty_subst with (c:=0)(d:=v_ b);
+      [
+       | apply pwd
+       | apply (a_ a)].
+    repeat rewrite <- a_val_update_subst.
+    extract (v_ b) 0;
+      subst.
+
+    eapply if1_conseq.
+      apply subst_eq;
+      subst_simpl.
+
+    match goal with
+    | [|- _ ⊢ _ ∧ ?A to1 _ onlyIf _] =>
+      apply if1_conseq1 with (A1:=A);
+        [repeat spec_auto|]
+    end.
+    apply if1_conseq1.
+
     match goal with
     | [|- _ ⊢  _ to1 _ onlyIf _] =>
       eapply if1_conseq;
         [eapply if1_andI;
          [apply bankTransferBalChange'
          |apply if1_start]
-        |apply conseq_refl
+        |
         |apply conseq_refl
         |]
     end.

@@ -199,19 +199,29 @@ Module ChainmailTactics(L : LanguageDef).
            f = g.
 
   Lemma update_subst :
-    forall v a n x β, ([v /s n](⟦ x ↦ a ⟧ β)) =
-                 (⟦ x ↦ ([v /s n] a) ⟧ ([v /s n] β)).
+    forall {A B C D : Type}`{Eq A}`{Subst B C D}
+      (f : partial_map A B) (a : A) (b : B) (c : C) (d : D),
+      ([d /s c](⟦ a ↦ b ⟧ f)) =
+      (⟦ a ↦ ([d /s c] b) ⟧ ([d /s c] f)).
     intros.
     apply functional_extensionality;
       intros;
       simpl.
     repeat map_rewrite.
-    destruct (eqb x0 x);
+    destruct (eqb x a);
       auto.
   Qed.
 
+  Lemma a_val_update_subst :
+    forall (f : partial_map name a_val) a  b c d,
+      ([d /s c](⟦ a ↦ b ⟧ f)) =
+      (⟦ a ↦ ([d /s c] b) ⟧ ([d /s c] f)).
+    apply (update_subst).
+  Qed.
+
   Lemma empty_subst :
-    forall v n, ([v /s n] empty) = empty.
+    forall {A B C D}{HEq : Eq A}`{Subst B C D} (a : A)(b : B)(c : C)(d : D),
+      ([d /s c] (@empty A B HEq)) = (@empty A B HEq).
     auto.
   Qed.
 
@@ -226,6 +236,16 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite empty_subst with (v:=v')(n:=n')
     | [H : context[[?v' /s ?n'] empty] |- _] =>
       rewrite empty_subst with (v:=v')(n:=n') in H
+
+    (* not sure why this doesn't follow immediately from the case for update_subst,
+       but it seems to have issues with unification. maybe it can't find the Subst instance?
+       not sure. This works for now
+       TODO: Must look into this.
+     *)
+    | [ |- context[[?v' /s ?n'] (⟦ ?x ↦ ?a' ⟧ ?β')]] =>
+      rewrite update_subst with (v:=v')(a:=a')(n:=n')(β:=β')
+    | [H : context[[?v' /s ?n'] (⟦ ?x ↦ ?a' ⟧ ?β')] |- _] =>
+      rewrite update_subst with (v:=v')(a:=a')(n:=n')(β:=β') in H
     end.
 
   Lemma and_subst :
