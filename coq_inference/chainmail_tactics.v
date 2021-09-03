@@ -186,10 +186,10 @@ Module ChainmailTactics(L : LanguageDef).
     | [H : context[[_ /s ?m] (e_hole ?m)] |- _] =>
       rewrite ehole_subst in H
 
-    | [|- context[[_ /s ?n] (e_hole ?n)]] =>
+    | [|- context[[_ /s _] (e_hole _)]] =>
       rewrite ehole_neq_subst;
       [|solve[auto]]
-    | [H : context[[_ /s ?n] (e_hole ?n)] |- _] =>
+    | [H : context[[_ /s _] (e_hole _)] |- _] =>
       rewrite ehole_neq_subst in H;
       [|solve[auto]]
     end.
@@ -225,6 +225,14 @@ Module ChainmailTactics(L : LanguageDef).
     auto.
   Qed.
 
+  Lemma a_val_empty_subst :
+    forall c d,
+      ([d /s c](@empty name a_val eqbName)) = (@empty name a_val eqbName).
+    apply (empty_subst).
+    * apply (n_ 0).
+    * apply (av_ (v_true)).
+  Qed.
+
   Ltac map_subst_simpl :=
     match goal with
     | [ |- context[[?v' /s ?n'] (⟦ ?x ↦ ?a' ⟧ ?β')]] =>
@@ -243,9 +251,14 @@ Module ChainmailTactics(L : LanguageDef).
        TODO: Must look into this.
      *)
     | [ |- context[[?v' /s ?n'] (⟦ ?x ↦ ?a' ⟧ ?β')]] =>
-      rewrite update_subst with (v:=v')(a:=a')(n:=n')(β:=β')
+      rewrite a_val_update_subst
     | [H : context[[?v' /s ?n'] (⟦ ?x ↦ ?a' ⟧ ?β')] |- _] =>
-      rewrite update_subst with (v:=v')(a:=a')(n:=n')(β:=β') in H
+      rewrite a_val_update_subst in H
+
+    | [ |- context[[?v' /s ?n'] empty]] =>
+      rewrite a_val_empty_subst
+    | [H : context[[?v' /s ?n'] empty] |- _] =>
+      rewrite a_val_empty_subst in H
     end.
 
   Lemma and_subst :
@@ -545,6 +558,13 @@ Module ChainmailTactics(L : LanguageDef).
       rewrite <- update_subst(*) with (v:=v')(a:=v'')(n:=n')(x:=y)(β:=β')*)
     | [|-context[empty]] =>
       rewrite <- empty_subst with (v:=v')(n:=n');
+      let β'' := fresh "β" in
+      remember empty as β''
+
+    | [|-context[⟦ ?y ↦ [v' /s n'] ?v'' ⟧ ([v' /s n'] ?β')]] =>
+      rewrite <- a_val_update_subst
+    | [|-context[empty]] =>
+      rewrite <- a_val_empty_subst with (c:=n')(d:=v');
       let β'' := fresh "β" in
       remember empty as β''
     end.

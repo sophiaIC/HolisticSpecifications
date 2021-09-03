@@ -53,10 +53,14 @@ Module Inference(L : LanguageDef).
     forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (α2).
   Admitted.
 
+  Lemma param_not_wrapped :
+    forall M α1 α2 x p m β, ⟦ x ↦ p ⟧_∈ β -> M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (p).
+  Admitted.
+
   Lemma inside_wrapped :
     forall M α C Def, ⟦ C ↦ Def ⟧_∈ M ->
-                      annot Def = inside ->
-                      M ⊢ a_class (e_addr α) C ⊇ wrapped (a_ α).
+                 annot Def = inside ->
+                 M ⊢ a_class (e_addr α) C ⊇ wrapped (a_ α).
   Admitted.
 
   Lemma fld_type :
@@ -89,39 +93,64 @@ Module Inference(L : LanguageDef).
   | i_false : forall M A, intrnl M A (e_false)
   | i_null : forall M A, intrnl M A (e_null)
   | i_obj : forall M A α C, M ⊢ A ⊇ (a_class (e_addr α) C) ->
-                            C ∈ M ->
-                            intrnl M A (e_addr α)
-(*  | i_var : forall M A x C, M ⊢ A ⊇ (a_class (e_var x) C) ->
+                       C ∈ M ->
+                       intrnl M A (e_addr α)
+  (*  | i_var : forall M A x C, M ⊢ A ⊇ (a_class (e_var x) C) ->
                             C ∈ M ->
                             intrnl M A (e_var x)*)
+  | i_eq : forall M A e1 e2, intrnl M A e1 ->
+                        intrnl M A e2 ->
+                        intrnl M A (e1 ⩵ e2)
   | i_fld : forall M A e C CDef f D, intrnl M A e ->
-                                     M ⊢ A ⊇ (a_class e C) ->
-                                     ⟦ C ↦ CDef ⟧_∈ M ->
-                                     ⟦ f ↦ (t_cls D) ⟧_∈ c_fields CDef ->
-                                     D ∈ M ->
-                                     intrnl M A (e_acc_f e f)
+                                M ⊢ A ⊇ (a_class e C) ->
+                                ⟦ C ↦ CDef ⟧_∈ M ->
+                                ⟦ f ↦ (t_cls D) ⟧_∈ c_fields CDef ->
+                                D ∈ M ->
+                                intrnl M A (e_acc_f e f)
   | i_ghost : forall M A e1 e2 C CDef e g, intrnl M A e1 ->
-                                           intrnl M A e2 ->
-                                           M ⊢ A ⊇ (a_class e1 C) ->
-                                           ⟦ C ↦ CDef ⟧_∈ M ->
-                                           ⟦ g ↦ (int, e) ⟧_∈ c_g_fields CDef ->
-                                           intrnl M A (e_acc_g e1 g e2).
+                                      intrnl M A e2 ->
+                                      M ⊢ A ⊇ (a_class e1 C) ->
+                                      ⟦ C ↦ CDef ⟧_∈ M ->
+                                      ⟦ g ↦ (int, e) ⟧_∈ c_g_fields CDef ->
+                                      intrnl M A (e_acc_g e1 g e2).
 
   Hint Constructors intrnl : inference_db.
 
   Inductive enc : mdl -> asrt -> asrt -> Prop :=
-  | enc_intrnl : forall M A e, intrnl M A e ->
-                               enc M A (a_exp e)
+  | enc_intrnl : forall M A e, enc_exp M A e ->
+                          enc M A (a_exp e)
   | enc_field : forall M A e f, intrnl M A e ->
-                                enc M A (a_exp (e_acc_f e f))
+                           enc M A (a_exp (e_acc_f e f))
   | enc_int_acc : forall M A α1 α2, M ⊢ A ⊇ (α1 internal) ->
-                                    enc M A (α1 access α2)
+                               enc M A (α1 access α2)
+  | enc_eq : forall M A e1 e2, enc_exp M A e1 ->
+                          enc_exp M A e2 ->
+                          enc M A (a_exp (e1 ⩵ e2))
+  | enc_lt : forall M A e1 e2, enc_exp M A e1 ->
+                          enc_exp M A (e2) ->
+                          enc M A (a_exp (e1 ⩻ e2))
   | enc_wrapped1 : forall M A α, enc M A (wrapped α)
   | enc_wrapped2 : forall M A α1 α2, M ⊢ A ⊇ (wrapped α2) ->
-                                     enc M A (¬ α1 access α2)
-  | enc_conseq : forall M A1 A2 A, M ⊢ A1 ⊇ A2 ->
-                                   enc M A2 A ->
-                                   enc M A1 A.
+                                enc M A (¬ α1 access α2)
+  | enc_conseq1 : forall M A1 A2 A, M ⊢ A1 ⊇ A2 ->
+                               enc M A2 A ->
+                               enc M A1 A
+  | enc_conseq2 : forall M A1 A2 A, M ⊢ A2 ⊇ A1 ->
+                               enc M A A2 ->
+                               enc M A A1
+  | enc_or : forall M A1 A2 A, enc M A A1 ->
+                          enc M A A2 ->
+                          enc M A (A1 ∨ A2)
+  | enc_and : forall M A1 A2 A, enc M A A1 ->
+                           enc M A A2 ->
+                           enc M A (A1 ∧ A2)
+  with
+    enc_exp : mdl -> asrt -> exp -> Prop :=
+  | enc_eintrnl : forall M A e, intrnl M A e ->
+                           enc_exp M A e
+  | enc_value : forall M A v, enc_exp M A (e_val v)
+  | enc_fld : forall M A e f, intrnl M A e ->
+                         enc_exp M A (e_acc_f e f).
 
   Hint Constructors enc : inference_db.
 
@@ -132,18 +161,23 @@ Module Inference(L : LanguageDef).
                                         M ⊢ A2 ⊇ A2' ->
                                         M ⊢ A' ⊇ A ->
                                         M ⊢ A1 to A2 onlyIf A
-  | if_orI1   : forall M A1 A1' A2 A A', M ⊢ A1 to A2 onlyIf A ->
-                                    M ⊢ A1' to A2 onlyIf A' ->
-                                    M ⊢ A1 ∨ A1' to A2 onlyIf A ∨ A'
-  | if_orI2   : forall M A1 A2 A2' A A', M ⊢ A1 to A2 onlyIf A ->
-                                    M ⊢ A1 to A2' onlyIf A' ->
-                                    M ⊢ A1 to A2 ∨ A2' onlyIf A ∨ A'
+
+  | if_orI1   : forall M A1 A1' A2 A, M ⊢ A1 to A2 onlyIf A ->
+                                 M ⊢ A1' to A2 onlyIf A ->
+                                 M ⊢ A1 ∨ A1' to A2 onlyIf A
+
+  | if_orI2   : forall M A1 A2 A2' A, M ⊢ A1 to A2 onlyIf A ->
+                                 M ⊢ A1 to A2' onlyIf A ->
+                                 M ⊢ A1 to A2 ∨ A2' onlyIf A
+
   | if_orE    : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ∨ A' ->
                                 M ⊢ A1 ∧ A' to A2 onlyThrough (a_false) ->
                                 M ⊢ A1 to A2 onlyIf A
+
   | if_andI : forall M A1 A2 A A', M ⊢ A1 to A2 onlyIf A ->
                               M ⊢ A1 to A2 onlyIf A' ->
                               M ⊢ A1 to A2 onlyIf A ∧ A'
+
   | if_trans  : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
                                 M ⊢ A1 to A' onlyIf A ->
                                 M ⊢ A1 to A2 onlyIf A
@@ -172,18 +206,23 @@ Module Inference(L : LanguageDef).
                                                M ⊢ A2 ⊇ A2' ->
                                                M ⊢ A' ⊇ A ->
                                                M ⊢ A1 to A2 onlyThrough A
-  | ot_orI1     : forall M A1 A1' A2 A A', M ⊢ A1 to A2 onlyThrough A ->
-                                           M ⊢ A1' to A2 onlyThrough A' ->
-                                           M ⊢ A1 ∨ A1' to A2 onlyThrough A ∨ A'
-  | ot_orI2     : forall M A1 A2 A2' A A', M ⊢ A1 to A2 onlyThrough A ->
-                                           M ⊢ A1 to A2' onlyThrough A' ->
-                                           M ⊢ A1 to A2 ∨ A2' onlyThrough A ∨ A'
+
+  | ot_orI1     : forall M A1 A1' A2 A, M ⊢ A1 to A2 onlyThrough A ->
+                                   M ⊢ A1' to A2 onlyThrough A ->
+                                   M ⊢ A1 ∨ A1' to A2 onlyThrough A
+
+  | ot_orI2     : forall M A1 A2 A2' A, M ⊢ A1 to A2 onlyThrough A ->
+                                   M ⊢ A1 to A2' onlyThrough A ->
+                                   M ⊢ A1 to A2 ∨ A2' onlyThrough A
+
   | ot_orE1     : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A ∨ A' ->
                                   M ⊢ A1 to A' onlyThrough a_exp (e_false) ->
                                   M ⊢ A1 to A2 onlyThrough A
+
   | ot_orE2     : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A ∨ A' ->
                                   M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
                                   M ⊢ A1 to A2 onlyThrough A
+
   | ot_trans1   : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
                                        M ⊢ A1 to A' onlyThrough A ->
                                        M ⊢ A1 to A2 onlyThrough A
@@ -232,12 +271,12 @@ Module Inference(L : LanguageDef).
                                          M ⊢ A2 ⊇ A2' ->
                                          M ⊢ A' ⊇ A ->
                                          M ⊢ A1 to1 A2 onlyIf A
-  | if1_orI1  : forall M A1 A1' A2 A A', M ⊢ A1 to A2 onlyIf A ->
-                                    M ⊢ A1' to A2 onlyIf A' ->
-                                    M ⊢ A1 ∨ A1' to1 A2 onlyIf A ∨ A'
-  | if1_orI2  : forall M A1 A2 A2' A A', M ⊢ A1 to1 A2 onlyIf A ->
-                                    M ⊢ A1 to1 A2' onlyIf A' ->
-                                    M ⊢ A1 to1 A2 ∨ A2' onlyIf A ∨ A'
+  | if1_orI1  : forall M A1 A1' A2 A, M ⊢ A1 to A2 onlyIf A ->
+                                 M ⊢ A1' to A2 onlyIf A ->
+                                 M ⊢ A1 ∨ A1' to1 A2 onlyIf A
+  | if1_orI2  : forall M A1 A2 A2' A, M ⊢ A1 to1 A2 onlyIf A ->
+                                 M ⊢ A1 to1 A2' onlyIf A ->
+                                 M ⊢ A1 to1 A2 ∨ A2' onlyIf A
   | if1_orE   : forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ∨ A' ->
                                 M ⊢ A' to A2 onlyThrough a_exp (e_false) ->
                                 M ⊢ A1 to1 A2 onlyIf A

@@ -253,6 +253,14 @@ Module InferenceTactics(L : LanguageDef).
     forall M A1 A2, M ⊢ ¬ A1 ∨ ¬ A2 ⊇ ¬ (A1 ∧ A2).
   Admitted.
 
+  Lemma neg_distr_or_1 :
+    forall M A1 A2, M ⊢ ¬ (A1 ∨ A2) ⊇ ¬ A1 ∧ ¬ A2.
+  Admitted.
+
+  Lemma neg_distr_or_2 :
+    forall M A1 A2, M ⊢ ¬ A1 ∧ ¬ A2 ⊇ ¬ (A1 ∨ A2).
+  Admitted.
+
   Lemma or_l :
     forall M A A1 A2, M ⊢ A ⊇ A1 ->
                  M ⊢ A ⊇ A1 ∨ A2.
@@ -698,20 +706,45 @@ Module InferenceTactics(L : LanguageDef).
       apply conseq_ex_and_expand_l_1
     |[|- _ ⊢ ∃x.[_] ⊇ _] =>
      apply conseq_ex1; intros; simpl
+
+    | [ |- _ ⊢ ¬ (?Aa ∧ ?Ab) ⊇ (¬ ?Aa) ∨ (¬ ?Ab)] =>
+      apply neg_distr_and_1
+    | [ |- _ ⊢ (¬?Aa) ∨  (¬?Ab) ⊇ ¬ (?Aa ∧ ?Ab)] =>
+      apply neg_distr_and_2
+
+    | [ |- _ ⊢ ¬ (?Aa ∨ ?Ab) ⊇ (¬ ?Aa) ∧ (¬ ?Ab)] =>
+      apply neg_distr_or_1
+    | [ |- _ ⊢ (¬?Aa) ∧  (¬?Ab) ⊇ ¬ (?Aa ∨ ?Ab)] =>
+      apply neg_distr_or_2
+
     |[|- _ ⊢ _ ⊇ _ ∧ _] =>
      apply conseq_and
     |[|- _ ⊢ _ ∧ _ ⊇ _] =>
-     tryif (solve [apply conseq_and1; spec_auto])
+     tryif (solve [apply conseq_and1; repeat spec_auto])
      then idtac
-     else (solve [apply conseq_and2; spec_auto])
-(*)    |[|- _ ⊢ _ ⊇ ∃x.[_]] =>
-     apply conseq_ex2*)
+     else (solve [apply conseq_and2; repeat spec_auto])
+
+    | [|- _ ⊢ _ ∨ _ ⊇ _] =>
+      apply or_lr
+    | [|- _ ⊢ _ ⊇ _ ∨ _] =>
+      tryif (solve [apply or_l; spec_auto])
+      then idtac
+      else (solve [apply or_r; spec_auto])
+
     end.
 
   Lemma conseq_and_components :
     forall M A1 A2 A1' A2', M ⊢ A1 ⊇ A1' ->
                        M ⊢ A2 ⊇ A2' ->
                        M ⊢ A1 ∧ A2 ⊇ A1' ∧ A2'.
+  Admitted.
+
+  Lemma conseq_not_not1 :
+    forall M A, M ⊢ ¬ (¬ A) ⊇ A.
+  Admitted.
+
+  Lemma conseq_not_not2 :
+    forall M A, M ⊢ A ⊇ ¬ (¬ A).
   Admitted.
 
   Ltac is_cnf_l A :=
@@ -749,6 +782,23 @@ Module InferenceTactics(L : LanguageDef).
     then (fail 0)
     else (idtac).
 
+  Ltac distr_neg :=
+    match goal with
+    | [|- _ ⊢ ?Aa ⊇ _ ] =>
+      match Aa with
+      | context G [¬ (?Ab ∧ ?Ac)] =>
+        let Aa' := context G [(¬ Ab) ∨ (¬ Ac)] in
+        apply conseq_trans with (A2:= Aa');
+        [repeat spec_auto
+        |try distr_neg]
+      | context G [¬ (?Ab ∨ ?Ac)] =>
+        let Aa' := context G [(¬ Ab) ∧ (¬ Ac)] in
+        apply conseq_trans with (A2:= Aa');
+        [ repeat spec_auto
+        |try distr_neg]
+      end
+    end.
+
   Ltac specX_cnf_l :=
     match goal with
     | [|- _ ⊢ ?A ⊇ _] =>
@@ -770,17 +820,13 @@ Module InferenceTactics(L : LanguageDef).
       not_cnf_l A
     end;
 
+    repeat distr_neg;
+
     match goal with
 
+    (* consequence *)
     | [|- _ ⊢ ?Aa ⊇ _ ] =>
       match Aa with
-      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
-        let Aa' := context G [Ab ∧ Ac ∧ Ad] in
-        apply conseq_trans with (A2:=Aa');
-        [try (apply and_assoc1, conseq_refl);
-         repeat spec_auto
-        | try specX_cnf_l]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[(Ab ↑ 0) ∧ Ac]] in
         apply conseq_trans with (A2:=Aa');
@@ -794,18 +840,18 @@ Module InferenceTactics(L : LanguageDef).
         [ repeat spec_auto
         | try specX_cnf_l];
         raise_simpl
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad] in
+        apply conseq_trans with (A2:=Aa');
+        [try (apply and_assoc1, conseq_refl);
+         repeat spec_auto
+        | try specX_cnf_l]
       end
 
     (* onlyIf (1) *)
     | [|- _ ⊢ ?Aa to _ onlyIf _] =>
       match Aa with
-      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
-        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
-        apply if_conseq1 with (A1:= Aa');
-        [try spec_auto;
-         try specX_cnf_l
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply if_conseq1 with (A1:= Aa');
@@ -821,18 +867,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_l
         |];
         raise_simpl
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_l
+        |]
       end
 
     (* onlyIf (2) *)
     | [|- _ ⊢ _ to ?Aa onlyIf _] =>
       match Aa with
-      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
-        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
-        apply if_conseq2 with (A2:= Aa');
-        [try spec_auto;
-         try specX_cnf_l
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply if_conseq2 with (A2:= Aa');
@@ -848,18 +894,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_l
         |];
         raise_simpl
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_l
+        |]
       end
 
     (* only through (1)*)
     | [|- _ ⊢ ?Aa to _ onlyThrough _] =>
       match Aa with
-      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
-        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
-        apply ot_conseq1 with (A1:= Aa');
-        [try spec_auto;
-         try specX_cnf_l
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply ot_conseq1 with (A1:= Aa');
@@ -875,18 +921,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_l
         |];
         raise_simpl
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply ot_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_l
+        |]
       end
 
     (* onlythrough (2) *)
     | [|- _ ⊢ _ to ?Aa onlyThrough _] =>
       match Aa with
-      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
-        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
-        apply ot_conseq2 with (A2:= Aa');
-        [try spec_auto;
-         try specX_cnf_l
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply ot_conseq2 with (A2:= Aa');
@@ -902,18 +948,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_l
         |];
         raise_simpl
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply ot_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_l
+        |]
       end
 
     (* only if1 (1)*)
     | [|- _ ⊢ ?Aa to1 _ onlyIf _] =>
       match Aa with
-      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
-        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
-        apply if1_conseq1 with (A1:= Aa');
-        [try spec_auto;
-         try specX_cnf_l
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply if1_conseq1 with (A1:= Aa');
@@ -929,18 +975,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_l
         |];
         raise_simpl
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if1_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_l
+        |]
       end
 
     (* only if1 (2) *)
     | [|- _ ⊢ _ to1 ?Aa onlyIf _] =>
       match Aa with
-      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
-        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
-        apply if1_conseq2 with (A2:= Aa');
-        [try spec_auto;
-         try specX_cnf_l
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply if1_conseq2 with (A2:= Aa');
@@ -956,6 +1002,124 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_l
         |];
         raise_simpl
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if1_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_l
+        |]
+      end
+
+    end.
+
+  Ltac specX_cnf_l_no_ex :=
+    match goal with
+    | [|- _ ⊢ ?A ⊇ _] =>
+      not_cnf_l A
+
+    | [|- _ ⊢ ?A to1 _ onlyIf _] =>
+      not_cnf_l A
+    | [|- _ ⊢ _ to1 ?A onlyIf _] =>
+      not_cnf_l A
+
+    | [|- _ ⊢ ?A to _ onlyIf _] =>
+      not_cnf_l A
+    | [|- _ ⊢ _ to ?A onlyIf _] =>
+      not_cnf_l A
+
+    | [|- _ ⊢ ?A to _ onlyThrough _] =>
+      not_cnf_l A
+    | [|- _ ⊢ _ to ?A onlyThrough _] =>
+      not_cnf_l A
+    end;
+
+    repeat distr_neg;
+
+    match goal with
+
+    (* consequence *)
+    | [|- _ ⊢ ?Aa ⊇ _ ] =>
+      match Aa with
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad] in
+        apply conseq_trans with (A2:=Aa');
+        [try (apply and_assoc1, conseq_refl);
+         repeat spec_auto
+        | try specX_cnf_l_no_ex]
+      end
+
+    (* onlyIf (1) *)
+    | [|- _ ⊢ ?Aa to _ onlyIf _] =>
+      match Aa with
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_l_no_ex
+        |]
+      end
+
+    (* onlyIf (2) *)
+    | [|- _ ⊢ _ to ?Aa onlyIf _] =>
+      match Aa with
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_l_no_ex
+        |]
+      end
+
+    (* only through (1)*)
+    | [|- _ ⊢ ?Aa to _ onlyThrough _] =>
+      match Aa with
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply ot_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_l_no_ex
+        |]
+      end
+
+    (* onlythrough (2) *)
+    | [|- _ ⊢ _ to ?Aa onlyThrough _] =>
+      match Aa with
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply ot_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_l_no_ex
+        |]
+      end
+
+    (* only if1 (1)*)
+    | [|- _ ⊢ ?Aa to1 _ onlyIf _] =>
+      match Aa with
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if1_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_l_no_ex
+        |]
+      end
+
+    (* only if1 (2) *)
+    | [|- _ ⊢ _ to1 ?Aa onlyIf _] =>
+      match Aa with
+
+      | context G [ ?Ab ∧ (?Ac ∧ ?Ad) ] =>
+        let Aa' := context G [Ab ∧ Ac ∧ Ad ] in
+        apply if1_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_l_no_ex
+        |]
       end
 
     end.
@@ -1016,17 +1180,12 @@ Module InferenceTactics(L : LanguageDef).
       not_cnf_r A
     end;
 
-    match goal with
+    repeat distr_neg;
 
+    match goal with
+    (* consequence *)
     | [|- _ ⊢ ?Aa ⊇ _ ] =>
       match Aa with
-      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
-        let Aa' := context G [Ab ∧ (Ac ∧ Ad)] in
-        apply conseq_trans with (A2:=Aa');
-        [try (apply and_assoc2, conseq_refl);
-         repeat spec_auto
-        | try specX_cnf_r]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[(Ab ↑ 0) ∧ Ac]] in
         apply conseq_trans with (A2:=Aa');
@@ -1040,18 +1199,18 @@ Module InferenceTactics(L : LanguageDef).
         [ repeat spec_auto
         | try specX_cnf_r];
         raise_simpl
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad)] in
+        apply conseq_trans with (A2:=Aa');
+        [try (apply and_assoc2, conseq_refl);
+         repeat spec_auto
+        | try specX_cnf_r]
       end
 
     (* onlyIf (1) *)
     | [|- _ ⊢ ?Aa to _ onlyIf _] =>
       match Aa with
-      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
-        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
-        apply if_conseq1 with (A1:= Aa');
-        [try spec_auto;
-         try specX_cnf_r
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply if_conseq1 with (A1:= Aa');
@@ -1067,18 +1226,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_r
         |];
         raise_simpl
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_r
+        |]
       end
 
     (* onlyIf (2) *)
     | [|- _ ⊢ _ to ?Aa onlyIf _] =>
       match Aa with
-      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
-        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
-        apply if_conseq2 with (A2:= Aa');
-        [try spec_auto;
-         try specX_cnf_r
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply if_conseq2 with (A2:= Aa');
@@ -1094,18 +1253,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_r
         |];
         raise_simpl
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_r
+        |]
       end
 
     (* only through (1)*)
     | [|- _ ⊢ ?Aa to _ onlyThrough _] =>
       match Aa with
-      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
-        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
-        apply ot_conseq1 with (A1:= Aa');
-        [try spec_auto;
-         try specX_cnf_r
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply ot_conseq1 with (A1:= Aa');
@@ -1121,18 +1280,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_r
         |];
         raise_simpl
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply ot_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_r
+        |]
       end
 
     (* onlythrough (2) *)
     | [|- _ ⊢ _ to ?Aa onlyThrough _] =>
       match Aa with
-      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
-        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
-        apply ot_conseq2 with (A2:= Aa');
-        [try spec_auto;
-         try specX_cnf_r
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply ot_conseq2 with (A2:= Aa');
@@ -1148,17 +1307,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_r
         |];
         raise_simpl
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply ot_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_r
+        |]
       end
 
     (* only if1 (1)*)
     | [|- _ ⊢ ?Aa to1 _ onlyIf _] =>
       match Aa with
-      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
-        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
-        apply if1_conseq1 with (A1:= Aa');
-        [try spec_auto;
-         try specX_cnf_r
-        |]
 
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
@@ -1175,18 +1335,18 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_r
         |];
         raise_simpl
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if1_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_r
+        |]
       end
 
     (* only if1 (2) *)
     | [|- _ ⊢ _ to1 ?Aa onlyIf _] =>
       match Aa with
-      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
-        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
-        apply if1_conseq2 with (A2:= Aa');
-        [try spec_auto;
-         try specX_cnf_r
-        |]
-
       | context G [ ?Ab ∧ ∃x.[?Ac]] =>
         let Aa' := context G [∃x.[ (Ab ↑ 0) ∧ Ac]] in
         apply if1_conseq2 with (A2:= Aa');
@@ -1202,6 +1362,123 @@ Module InferenceTactics(L : LanguageDef).
          try specX_cnf_r
         |];
         raise_simpl
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if1_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_r
+        |]
+      end
+
+    end.
+
+  Ltac specX_cnf_r_no_ex :=
+    match goal with
+    | [|- _ ⊢ ?A ⊇ _] =>
+      not_cnf_r A
+
+    | [|- _ ⊢ ?A to1 _ onlyIf _] =>
+      not_cnf_r A
+    | [|- _ ⊢ _ to1 ?A onlyIf _] =>
+      not_cnf_r A
+
+    | [|- _ ⊢ ?A to _ onlyIf _] =>
+      not_cnf_r A
+    | [|- _ ⊢ _ to ?A onlyIf _] =>
+      not_cnf_r A
+
+    | [|- _ ⊢ ?A to _ onlyThrough _] =>
+      not_cnf_r A
+    | [|- _ ⊢ _ to ?A onlyThrough _] =>
+      not_cnf_r A
+    end;
+
+    repeat distr_neg;
+
+    match goal with
+    (* consequence *)
+    | [|- _ ⊢ ?Aa ⊇ _ ] =>
+      match Aa with
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad)] in
+        apply conseq_trans with (A2:=Aa');
+        [try (apply and_assoc2, conseq_refl);
+         repeat spec_auto
+        | try specX_cnf_r_no_ex]
+      end
+
+    (* onlyIf (1) *)
+    | [|- _ ⊢ ?Aa to _ onlyIf _] =>
+      match Aa with
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_r_no_ex
+        |]
+      end
+
+    (* onlyIf (2) *)
+    | [|- _ ⊢ _ to ?Aa onlyIf _] =>
+      match Aa with
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_r_no_ex
+        |]
+      end
+
+    (* only through (1)*)
+    | [|- _ ⊢ ?Aa to _ onlyThrough _] =>
+      match Aa with
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply ot_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_r_no_ex
+        |]
+      end
+
+    (* onlythrough (2) *)
+    | [|- _ ⊢ _ to ?Aa onlyThrough _] =>
+      match Aa with
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply ot_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_r_no_ex
+        |]
+      end
+
+    (* only if1 (1)*)
+    | [|- _ ⊢ ?Aa to1 _ onlyIf _] =>
+      match Aa with
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if1_conseq1 with (A1:= Aa');
+        [try spec_auto;
+         try specX_cnf_r_no_ex
+        |]
+      end
+
+    (* only if1 (2) *)
+    | [|- _ ⊢ _ to1 ?Aa onlyIf _] =>
+      match Aa with
+
+      | context G [ (?Ab ∧ ?Ac) ∧ ?Ad ] =>
+        let Aa' := context G [Ab ∧ (Ac ∧ Ad) ] in
+        apply if1_conseq2 with (A2:= Aa');
+        [try spec_auto;
+         try specX_cnf_r_no_ex
+        |]
       end
 
     end.
@@ -1263,6 +1540,82 @@ Module InferenceTactics(L : LanguageDef).
   Lemma conseq_not_wrapped :
     forall M x y, M ⊢ x external ∧ x access y ⊇ ¬ wrapped y.
   Admitted.
+
+  Ltac commutativity :=
+    match goal with
+    | [|- _ ⊢ ?Aa ∧ ?Ab ⊇ _ ] =>
+      apply and_comm;
+      try specX_cnf_r
+
+    | [|- _ ⊢ ?Aa ∧ ?Ab to1 _ onlyIf _ ] =>
+      apply if1_conseq1 with (A1:=Ab ∧ Aa);
+      [ apply and_comm;
+        spec_auto
+       |try specX_cnf_r]
+
+    | [|- _ ⊢ ?Aa ∧ ?Ab to _ onlyIf _ ] =>
+      apply if_conseq1 with (A1:=Ab ∧ Aa);
+      [ apply and_comm;
+        spec_auto
+       |try specX_cnf_r]
+
+    | [|- _ ⊢ ?Aa ∧ ?Ab to _ onlyThrough _ ] =>
+      apply ot_conseq1 with (A1:=Ab ∧ Aa);
+      [ apply and_comm;
+        spec_auto
+       |try specX_cnf_r]
+    end.
+
+  Ltac substitute_equality v :=
+    match goal with
+    | [ |- _ ⊢ (a_exp ((e_val v) ⩵ _)) ∧ _ ⊇ _ ] =>
+      idtac
+    | [|- _ ] =>
+      fail "no valid equality"
+    end;
+    extract v 0;
+    subst;
+    apply subst_eq;
+    subst_simpl.
+
+  Ltac there_exists_on_right α :=
+    match goal with
+    | [ |- _ ⊢ _ ⊇ (∃x.[ _ ]) ] =>
+      idtac
+    | [ |- _ ] =>
+      fail "no top level existential on the right hand side"
+    end;
+    apply conseq_ex2;
+    exists α;
+    subst_simpl.
+
+  Ltac introduce_existential_on_left x :=
+    match goal with
+    | [|- _ ⊢ (∃x.[_]) ⊇ _ ] =>
+      apply conseq_ex1;
+      intro x;
+      subst_simpl
+    | [|- _ ⊢ (∃x.[_]) to _ onlyIf _ ] =>
+      idtac
+    | [|- _ ⊢ (∃x.[_]) to _ onlyIf _ ] =>
+      idtac
+    | [ |- _ ] =>
+      fail "no top level existential on the left hand side"
+    end.
+
+  Lemma by_changes_and_conseq :
+    forall M A1 A2 A,
+      M ⊢ A2 ⊇ ¬ A1 ->
+      M ⊢ A1 to1 ¬ A1 onlyIf A ->
+      M ⊢ A1 to A2 onlyThrough A.
+  Proof.
+    intros.
+    apply ot_conseq2
+      with (A2:=¬ A1);
+      auto.
+    apply ot_changes.
+    auto.
+  Qed.
 
 End InferenceTactics.
 
