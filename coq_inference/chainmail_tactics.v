@@ -995,9 +995,9 @@ Module ChainmailTactics(L : LanguageDef).
   Ltac wrapped_raise_simpl :=
     match goal with
     | [|- context[((wrapped _) ↑ _ )]] =>
-      rewrite wrapped_subst
+      rewrite wrapped_raise
     | [H : context[((wrapped _) ↑ _)] |- _] =>
-      rewrite wrapped_subst in H
+      rewrite wrapped_raise in H
     end.
 
   Ltac raise_simpl :=
