@@ -226,6 +226,7 @@ Module BankAccount(L : LanguageDef).
     forall a a' b β bal, BankMdl ⊢ {pre: (a_class (e_ a') Account) ∧
                                     (a_class (e_ b)  Bank) ∧
                                     (¬ a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩻ (e_int bal))) ∧
+                                    (*                 (a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩵ (e_int bal))) ∧*)
                                     (a_class (e_ a) Account)}
                             m_call a authenticate β
                             {post: ¬ a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩻ (e_int bal))}.
@@ -235,6 +236,7 @@ Module BankAccount(L : LanguageDef).
       BankMdl ⊢ ((a_class (e_ a') Account) ∧
                  (a_class (e_ b) Bank) ∧
                  (¬ a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩻ (e_int bal))) ∧
+(*                 (a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩵ (e_int bal))) ∧*)
                  (a_class (e_ a) Account) ∧
                  (∃x.[ (a♢ 0) calls (a_ a) ◌ authenticate ⟨ ⟦ pwd ↦ av_ p ⟧ empty ⟩]))
               to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a')) ⩻ (e_int bal)))
@@ -1337,7 +1339,8 @@ Module BankAccount(L : LanguageDef).
                       [apply neg_distr_and_1|].
                     apply if1_orI2.
 
-                    ***** eapply if1_conseq1; [|apply change_class_absurd]; spec_auto.
+                    *****
+                      eapply if1_conseq1; [|apply change_class_absurd]; spec_auto.
                     *****
                       eapply if1_conseq2; [apply neg_distr_and_1|].
                     apply if1_orI2.
@@ -1379,9 +1382,11 @@ Module BankAccount(L : LanguageDef).
 
                **** apply conseq_trans with (A2:=¬ a_class (e_ a) Account ∨
                                                  ¬ a_exp (e_acc_f (e_ a) password ⩵ (e_ p))).
-                    ***** apply or_r, conseq_refl.
+                    *****
+                      apply or_r, conseq_refl.
 
-                    ***** apply neg_distr_and_2.
+                    *****
+                      apply neg_distr_and_2.
 
                **** apply ot_changes.
 
@@ -1448,14 +1453,16 @@ Module BankAccount(L : LanguageDef).
                     *****
                        apply by_changes_and_conseq.
 
-                    ****** eapply conseq_trans;
+                    ******
+                      eapply conseq_trans;
                       [|apply neg_distr_and_2].
                     apply or_r.
                     eapply conseq_trans;
                       [|apply neg_distr_and_2].
                     spec_auto.
 
-                    ****** eapply if1_conseq2;
+                    ******
+                      eapply if1_conseq2;
                       [apply neg_distr_and_1|].
                     apply if1_orI2.
 
@@ -1490,3 +1497,15 @@ Module BankAccount(L : LanguageDef).
   Close Scope chainmail_scope.
   Close Scope reduce_scope.
 End BankAccount.
+
+(*
+TODO:
+(1) State of the coq proof
+(2) Paragraph of Sandboxing paper
+(3) Proof of soundness
+(4) Write other half of authenticate or write why it is different
+(5) Rename Chainmail -> SpecW and inference -> SpecX
+(6) Prove admitted lemmas in inference_tactics.v or describe their admission
+(7) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper
+
+ *)
