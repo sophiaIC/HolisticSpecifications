@@ -115,6 +115,68 @@ Module InferenceTactics(L : LanguageDef).
 
   (**  **)
 
+  Lemma conseq_true :
+    forall M A, M ⊢ A ⊇ (a_true).
+  Admitted.
+
+  Lemma conseq_or_comm :
+    forall M A1 A2, M ⊢ A1 ∨ A2 ⊇ A2 ∨ A1.
+  Admitted.
+
+  Lemma caller_ext :
+    forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 external.
+  Admitted.
+
+  Lemma calls_recv :
+    forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 access α2.
+  Admitted.
+
+  Lemma calls_param1 :
+    forall M α1 α2 m x v β, M ⊢ α1 calls α2 ◌ m ⟨ ⟦ x ↦ v ⟧ β ⟩ ⊇ α1 access v.
+  Admitted.
+
+  Lemma class_internal :
+    forall M α C, C ∈ M -> M ⊢ a_class (e_addr α) C ⊇ (a_ α) internal.
+  Admitted.
+
+  Lemma recv_not_wrapped :
+    forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (α2).
+  Admitted.
+
+  Lemma param_not_wrapped :
+    forall M α1 α2 x p m β, ⟦ x ↦ p ⟧_∈ β -> M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (p).
+  Admitted.
+
+  Lemma inside_wrapped :
+    forall M α C Def, ⟦ C ↦ Def ⟧_∈ M ->
+                 annot Def = inside ->
+                 M ⊢ a_class (e_addr α) C ⊇ wrapped (a_ α).
+  Admitted.
+
+  Lemma fld_type :
+    forall M e C CDef f D, ⟦ C ↦ CDef ⟧_∈ M ->
+                           ⟦ f ↦ (t_cls D) ⟧_∈ c_fields CDef ->
+                           M ⊢ a_class e C ⊇ a_class ((e_acc_f e f)) D.
+  Admitted.
+
+  Lemma conseq_absurd :
+    forall M A, M ⊢ (a_exp (e_false)) ⊇ A.
+  Admitted.
+
+  Lemma conseq_refl :
+    forall M A, M ⊢ A ⊇ A.
+  Admitted.
+
+  Lemma neg_false :
+    forall M A, M ⊢ (A ∧ ¬ A) ⊇ (a_exp (e_false)).
+  Admitted.
+
+  Lemma conseq_trans :
+    forall M A1 A2 A3, M ⊢ A1 ⊇ A2 ->
+                       M ⊢ A2 ⊇ A3 ->
+                       M ⊢ A1 ⊇ A3.
+  Admitted.
+
   Lemma conseq_excluded_middle :
     forall M A, M ⊢ (a_exp (e_true)) ⊇ (A ∨ ¬ A).
   Admitted.

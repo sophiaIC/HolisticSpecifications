@@ -471,10 +471,10 @@ Module Soundness(L : LanguageDef).
   (*  Lemma if1_wrapped*)
 
   Parameter wrapped_necessary_condition :
-    forall M α C m β α' P,  M ⊢ {pre: (a_class (e_ α) C) ∧ ¬ P} (m_call α m β) {post: ¬ (a_exp (e♢ 0 ⩵ (e_addr α')))} ->
-                       onlyif1 M (a_class (e_ α) C ∧
-                                  (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩]) ∧
-                                  wrapped (a_ α')) (¬ wrapped (a_ α')) P.
+    forall M α C m β α' P P',  M ⊢ {pre: P' ∧ (a_class (e_ α) C) ∧ ¬ P} (m_call α m β) {post: ¬ (a_exp (e♢ 0 ⩵ (e_addr α')))} ->
+                          onlyif1 M (P' ∧ a_class (e_ α) C ∧
+                                     (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩]) ∧
+                                     wrapped (a_ α')) (¬ wrapped (a_ α')) P.
 
   (*  Lemma if1_internal*)
 
@@ -653,13 +653,15 @@ Module Soundness(L : LanguageDef).
           andDestruct.
         exists σ; repeat split; auto.
         a_prop; auto.
-
-      + apply H0 in H4;
-          auto;
-          destruct_exists_loo;
-          andDestruct.
-        exists σ; repeat split; auto.
-        a_prop; auto.
+        disj_split;
+          auto.
+        necessity_soundness_simpl.
+        apply (H0 M' σ1 σ)
+          in H1;
+          auto.
+        destruct_exists_loo.
+        andDestruct.
+        a_prop.
 
     - necessity_soundness_simpl.
       + apply H in H4;
@@ -668,13 +670,15 @@ Module Soundness(L : LanguageDef).
           andDestruct.
         exists σ; repeat split; auto.
         a_prop; auto.
-
-      + apply H0 in H4;
-          auto;
-          destruct_exists_loo;
-          andDestruct.
-        exists σ; repeat split; auto.
-        a_prop; auto.
+        disj_split;
+          auto.
+        necessity_soundness_simpl.
+        apply (H0 M' σ σ2)
+          in H6;
+          auto.
+        destruct_exists_loo.
+        andDestruct.
+        a_prop.
 
     - necessity_soundness_simpl.
       apply H in H4;
@@ -682,12 +686,17 @@ Module Soundness(L : LanguageDef).
         destruct_exists_loo;
         andDestruct;
         a_prop.
-      disj_split; eauto.
+      necessity_soundness_simpl.
       apply H0 in Ha;
         auto;
         destruct_exists_loo;
-        andDestruct.
-      a_prop.
+        andDestruct;
+        a_prop.
+      eexists;
+        repeat split;
+        eauto with reduce_db.
+      eapply pair_reductions_transitive;
+        eauto.
 
     - necessity_soundness_simpl.
       apply H in H4;
@@ -695,13 +704,51 @@ Module Soundness(L : LanguageDef).
         destruct_exists_loo;
         andDestruct;
         a_prop.
-      disj_split; eauto.
       necessity_soundness_simpl.
       apply H0 in Ha0;
         auto;
         destruct_exists_loo;
-        andDestruct.
-      a_prop.
+        andDestruct;
+        a_prop.
+      exists σ0;
+        repeat split;
+        eauto with reduce_db.
+      eapply pair_reductions_transitive;
+        eauto.
+
+    - necessity_soundness_simpl.
+      match goal with
+      | [H : _ ◎ _ ⊨ ∃x.[ _ ] |- _] =>
+        inversion H;
+          subst
+      end.
+      specialize (H x).
+      apply H in H3;
+        auto.
+
+    - necessity_soundness_simpl.
+      match goal with
+      | [H : _ ◎ _ ⊨ ∃x.[ _ ] |- _] =>
+        inversion H;
+          subst
+      end.
+      specialize (H x).
+      apply H in H3;
+        auto.
+
+    - necessity_soundness_simpl.
+      + apply H in H4;
+          auto;
+          destruct_exists_loo;
+          andDestruct;
+          necessity_soundness_simpl.
+      + apply H0 in H4;
+          auto;
+          a_prop;
+          auto.
+        destruct_exists_loo;
+          andDestruct.
+        a_prop.
 
     - necessity_soundness_simpl.
       apply H in H4;
@@ -710,49 +757,26 @@ Module Soundness(L : LanguageDef).
         andDestruct;
         necessity_soundness_simpl.
       apply H0 in Ha;
-        auto;
-        destruct_exists_loo;
-        andDestruct;
-        necessity_soundness_simpl.
-      exists σ0; repeat split;
-        auto with reduce_db.
-      apply pair_reductions_transitive with (σ2 := σ);
         auto.
 
     - necessity_soundness_simpl.
-      apply H in H4;
-        auto;
-        destruct_exists_loo;
-        andDestruct;
-        necessity_soundness_simpl.
-      apply H0 in Ha0;
-        auto;
-        destruct_exists_loo;
-        andDestruct;
-        necessity_soundness_simpl.
-      exists σ0; repeat split;
-        auto with reduce_db.
-      apply pair_reductions_transitive with (σ2 := σ);
+      match goal with
+      | [H : _ ◎ _ ⊨ (∃x.[ _ ]) |- _ ] =>
+        inversion H;
+          subst
+      end.
+      specialize (H x).
+      necessity_soundness_simpl;
         auto.
 
-    - necessity_soundness_simpl;
-        auto.
-      a_prop;
-        disj_split;
-        auto.
-      apply H0 in H4;
-        auto;
-        destruct_exists_loo;
-        andDestruct.
-      a_prop.
-
-    - necessity_soundness_simpl;
-        auto.
-      apply H in H4;
-        auto;
-        destruct_exists_loo;
-        andDestruct.
-      apply H0 in Ha;
+    - necessity_soundness_simpl.
+      match goal with
+      | [H : _ ◎ _ ⊨ (∃x.[ _ ]) |- _ ] =>
+        inversion H;
+          subst
+      end.
+      specialize (H x).
+      necessity_soundness_simpl;
         auto.
 
     - necessity_soundness_simpl.
@@ -873,6 +897,26 @@ Module Soundness(L : LanguageDef).
           destruct_exists_loo;
           andDestruct.
         a_prop.
+
+    - necessity_soundness_simpl.
+      match goal with
+      | [H : _ ◎ _ ⊨ (∃x.[ _ ]) |- _ ] =>
+        inversion H;
+          subst
+      end.
+      specialize (H x).
+      necessity_soundness_simpl;
+        auto.
+
+    - necessity_soundness_simpl.
+      match goal with
+      | [H : _ ◎ _ ⊨ (∃x.[ _ ]) |- _ ] =>
+        inversion H;
+          subst
+      end.
+      specialize (H x).
+      necessity_soundness_simpl;
+        auto.
 
   Qed.
 

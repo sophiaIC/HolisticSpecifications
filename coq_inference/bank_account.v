@@ -1367,7 +1367,9 @@ Module BankAccount(L : LanguageDef).
                       apply passwordLeak.
 
       * (* Case B *)
-        apply if_trans with (∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ changePassword ⟨ ⟦ pwd ↦ a_ p ⟧ ⟦ newPwd ↦ a♢ 1 ⟧ empty  ⟩ ] ]).
+        apply if_trans
+          with (∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ changePassword ⟨ ⟦ pwd ↦ a_ p ⟧
+                                                                   ⟦ newPwd ↦ a♢ 1 ⟧ empty  ⟩ ] ]).
 
         ** apply ot_conseq1 with (A1:=(a_class (e_ a) Account ∧
                                        (a_exp (e_acc_f (e_ a) password ⩵ (e_ p))))).
@@ -1499,13 +1501,14 @@ Module BankAccount(L : LanguageDef).
 End BankAccount.
 
 (*
+
 TODO:
-(1) State of the coq proof
-(2) Paragraph of Sandboxing paper
-(3) Proof of soundness
-(4) Write other half of authenticate or write why it is different
+(1) Proof of soundness
+(2) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper
+(3) State of the coq proof
+(4) Paragraph of Sandboxing paper
 (5) Rename Chainmail -> SpecW and inference -> SpecX
 (6) Prove admitted lemmas in inference_tactics.v or describe their admission
-(7) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper
+(7) Write other half of authenticate or write why it is different
 
  *)
