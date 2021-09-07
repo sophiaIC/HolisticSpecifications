@@ -284,7 +284,7 @@ Module SpecW(L : LanguageDef).
 
   Inductive external_obj : mdl -> config -> a_val -> Prop :=
   | is_ext : forall M χ ψ α o, ⟦ α ↦ o ⟧_∈ χ ->
-                          (cname o) ∉ M ->
+                          (cname o) ∉ M \/ cname o = Object ->
                           external_obj M (χ, ψ) (a_ α).
 
   Hint Constructors exp_satisfaction : specw_db.

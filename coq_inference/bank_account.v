@@ -1507,7 +1507,7 @@ TODO:
 (2) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper
 (3) State of the coq proof
 (4) Paragraph of Sandboxing paper
-(5) Rename Chainmail -> SpecW and inference -> SpecX
+(5) Rename Chainmail -> SpecW and inference -> SpecX                                X
 (6) Prove admitted lemmas in inference_tactics.v or describe their admission
 (7) Write other half of authenticate or write why it is different
 

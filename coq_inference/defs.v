@@ -888,11 +888,13 @@ Notation "σ '◁' ψ" := (stack_append σ ψ)(at level 40).
 
 Definition is_internal (M1 M2 : mdl)(σ : config)(α : addr) :=
   (exists o CDef, fst σ α = Some o  /\
-             M1 (cname o) = Some CDef).
+                  M1 (cname o) = Some CDef /\
+                  (cname o) <> Object).
 
 Definition is_external (M1 M2 : mdl)(σ : config)(α : addr) :=
   (exists o, fst σ α = Some o /\
-        (cname o) ∉ M1).
+             ((cname o) ∉ M1 \/
+              (cname o) = Object)).
 
 Definition internal_self (M1 M2 : mdl)(σ : config) :=
   exists χ ϕ ψ, σ = (χ, ϕ :: ψ) /\

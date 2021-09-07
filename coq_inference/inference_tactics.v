@@ -115,17 +115,388 @@ Module InferenceTactics(L : LanguageDef).
 
   (**  **)
 
+  Open Scope reduce_scope.
+
+  Lemma intrnl_reductions_start_external_self :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                   external_self M1 M2 σ1.
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      auto.
+  Qed.
+
+  Hint Resolve intrnl_reductions_start_external_self : loo_db.
+
+  Lemma pair_reduction_start_external_self :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                   external_self M1 M2 σ1.
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      eauto with loo_db.
+  Qed.
+
+  Lemma pair_reduction_end_external_self :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                   external_self M1 M2 σ2.
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      eauto with loo_db.
+  Qed.
+
+  Hint Resolve pair_reduction_start_external_self pair_reduction_end_external_self : loo_db.
+
+  Lemma pair_reductions_start_external_self :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                   external_self M1 M2 σ1.
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      eauto with loo_db.
+  Qed.
+
+  Lemma pair_reductions_end_external_self :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                   external_self M1 M2 σ2.
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      eauto with loo_db.
+  Qed.
+
+  Hint Resolve pair_reductions_start_external_self pair_reductions_end_external_self : loo_db.
+
+  Lemma initial_external :
+    forall σ, initial σ ->
+         forall M1 M2, external_self M1 M2 σ.
+  Proof.
+    intros.
+    unfold initial, external_self, is_external in *.
+    destruct_exists_loo;
+      subst.
+    match goal with
+    | [|- exists _ _ _, (?χa, ?ϕa :: ?ψa) = _ /\ _] =>
+      exists χa, ϕa, ψa
+    end.
+    split;
+      auto.
+    simpl.
+    exists ObjectInstance;
+      auto.
+  Qed.
+
+  Lemma reduction_config_components_exists :
+    forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+               exists χ ϕ ψ, σ2 = (χ, ϕ :: ψ).
+  Proof.
+    intros M σ1 σ2 Hred;
+      induction Hred;
+      auto;
+      intros;
+      eauto.
+  Qed.
+
+  Hint Resolve reduction_config_components_exists : loo_db.
+
+  Lemma intrnl_reductions_config_components_exists :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                   exists χ ϕ ψ, σ2 = (χ, ϕ :: ψ).
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      auto;
+      intros;
+      subst;
+      eauto with loo_db.
+  Qed.
+
+  Hint Resolve intrnl_reductions_config_components_exists : loo_db.
+
+  Lemma pair_reduction_config_components_exists :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                   exists χ ϕ ψ, σ2 = (χ, ϕ :: ψ).
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      auto;
+      intros;
+      subst;
+      eauto with loo_db.
+  Qed.
+
+  Lemma pair_reductions_config_components_exists :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                   forall χ1 ϕ1 ψ1, σ1 = (χ1, ϕ1 :: ψ1) ->
+                               exists χ2 ϕ2 ψ2, σ2 = (χ2, ϕ2 :: ψ2).
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      auto;
+      intros;
+      subst;
+      eauto with loo_db.
+    let χ := fresh "χ" in
+    destruct (pair_reduction_config_components_exists M1 M2 (χ1, ϕ1 :: ψ1) σ H) as [χ];
+      auto;
+      repeat destruct_exists_loo;
+      subst.
+    specialize (IHHred χ ϕ ψ).
+    auto_specialize.
+    repeat destruct_exists_loo;
+      subst.
+    eauto with loo_db.
+  Qed.
+
+  Ltac reduction_exists_self_object_disj_tactic :=
+    disj_split;
+    auto;
+    subst;
+    simpl in *.
+
+  Ltac reduction_exists_self_object_match_tactic :=
+     match goal with
+     | [H : forall (ϕ : frame), ?ϕa = ϕ \/ _ -> _ |- _ ] =>
+       specialize (H ϕa);
+       destruct H;
+       auto
+     end;
+     simpl in *;
+     eauto.
+
+  Lemma reduction_exists_self_object :
+    forall M σ1 σ2, M ∙ σ1 ⤳ σ2 ->
+               forall χ1 ψ1
+                 χ2 ψ2, σ1 = (χ1, ψ1) ->
+                        σ2 = (χ2, ψ2) ->
+                        (forall ϕ1, In ϕ1 ψ1 -> this ϕ1 ∈ χ1) ->
+                        (forall ϕ2, In ϕ2 ψ2 -> this ϕ2 ∈ χ2).
+  Proof.
+    intros M σ1 σ2 Hred;
+      induction Hred;
+      intros;
+      simpl;
+      simpl_crush;
+      eauto;
+      simpl_crush;
+      simpl in *;
+      auto;
+      try solve [repeat reduction_exists_self_object_disj_tactic;
+                 reduction_exists_self_object_match_tactic];
+      try solve [reduction_exists_self_object_disj_tactic;
+                 match goal with
+                 | [H : forall (ϕ : frame), _ = _ \/ ?ϕa = ϕ \/ _ -> _ |- _ ] =>
+                   specialize (H ϕa);
+                     destruct H;
+                     auto
+                 end;
+                   simpl in *;
+                   eauto].
+
+    - reduction_exists_self_object_disj_tactic.
+      destruct (eq_dec self α);
+        subst;
+        simpl in *;
+        eauto.
+      + repeat map_rewrite;
+          eauto.
+      + repeat map_rewrite.
+        reduction_exists_self_object_match_tactic.
+      + destruct (eq_dec (this ϕ2) α);
+          subst;
+          eauto.
+        * repeat map_rewrite.
+          reduction_exists_self_object_match_tactic.
+        * repeat map_rewrite.
+
+    - reduction_exists_self_object_disj_tactic.
+      destruct (eq_dec self (inc α));
+        subst;
+        simpl in *;
+        eauto.
+      + repeat map_rewrite;
+          eauto.
+      + repeat map_rewrite.
+        reduction_exists_self_object_match_tactic.
+      + destruct (eq_dec (this ϕ2) (inc α));
+          subst;
+          eauto.
+        * rewrite e.
+          repeat map_rewrite.
+          reduction_exists_self_object_match_tactic.
+        * repeat map_rewrite.
+
+  Qed.
+
+  Hint Resolve reduction_exists_self_object : loo_db.
+
+  Lemma intrnl_reductions_exists_self_object :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
+                   forall χ1 ψ1
+                     χ2 ψ2, σ1 = (χ1, ψ1) ->
+                            σ2 = (χ2, ψ2) ->
+                            (forall ϕ1, In ϕ1 ψ1 -> this ϕ1 ∈ χ1) ->
+                            (forall ϕ2, In ϕ2 ψ2 -> this ϕ2 ∈ χ2).
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      intros;
+      subst;
+      eauto with loo_db.
+    edestruct (intrnl_reductions_config_components_exists M1 M2 (χ1, ψ1) σ Hred).
+    repeat destruct_exists_loo;
+      subst.
+    eauto with loo_db.
+  Qed.
+
+  Hint Resolve intrnl_reductions_exists_self_object : loo_db.
+
+  Lemma pair_reduction_exists_self_object :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
+                   forall χ1 ψ1
+                     χ2 ψ2, σ1 = (χ1, ψ1) ->
+                            σ2 = (χ2, ψ2) ->
+                            (forall ϕ1, In ϕ1 ψ1 -> this ϕ1 ∈ χ1) ->
+                            (forall ϕ2, In ϕ2 ψ2 -> this ϕ2 ∈ χ2).
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      intros;
+      subst;
+      eauto with loo_db.
+    edestruct (intrnl_reductions_config_components_exists M1 M2 (χ1, ψ1) σ);
+      auto.
+    repeat destruct_exists_loo;
+      subst.
+    eauto with loo_db.
+  Qed.
+
+  Lemma pair_reductions_exists_self_object :
+    forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
+                   forall χ1 ψ1
+                     χ2 ψ2, σ1 = (χ1, ψ1) ->
+                            σ2 = (χ2, ψ2) ->
+                            (forall ϕ1, In ϕ1 ψ1 -> this ϕ1 ∈ χ1) ->
+                            (forall ϕ2, In ϕ2 ψ2 -> this ϕ2 ∈ χ2).
+  Proof.
+    intros M1 M2 σ1 σ2 Hred;
+      induction Hred;
+      intros;
+      subst.
+
+    + simpl_crush.
+      eauto.
+
+    + edestruct (pair_reduction_config_components_exists M1 M2 (χ1, ψ1) σ);
+        auto.
+      repeat destruct_exists_loo;
+        subst.
+      eapply IHHred; eauto.
+      eapply pair_reduction_exists_self_object;
+        eauto.
+  Qed.
+
+  Lemma initial_exists_self_object :
+    forall χ ψ, initial (χ, ψ) ->
+           (forall ϕ, In ϕ ψ -> this ϕ ∈ χ).
+  Proof.
+    intros;
+      match goal with
+      | [ H : initial _ |- _] =>
+        inversion H;
+          subst
+      end.
+    simpl_crush.
+    simpl in *.
+    disj_split;
+      [subst; simpl in *|crush].
+    repeat map_rewrite;
+      eauto.
+  Qed.
+
+  Lemma arising_exists_self_object :
+    forall M1 M2 χ ψ, arising M1 M2 (χ, ψ) ->
+                 forall ϕ, In ϕ ψ -> this ϕ ∈ χ.
+  Proof.
+    intros.
+    unfold arising, initial in *.
+    repeat (destruct_exists_loo;
+            andDestruct);
+      subst.
+    eapply pair_reductions_exists_self_object; intros; eauto.
+    simpl  in *;
+      disj_split;
+      subst;
+      simpl in *;
+      repeat map_rewrite;
+      eauto;
+      crush.
+  Qed.
+
+  Lemma arising_external :
+    forall M1 M2 σ, arising M1 M2 σ ->
+               external_self M1 M2 σ.
+  Proof.
+    intros.
+    unfold arising in *.
+    destruct_exists_loo;
+      andDestruct.
+    eauto with loo_db.
+  Qed.
+
   Lemma conseq_true :
     forall M A, M ⊢ A ⊇ (a_true).
-  Admitted.
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    auto with specw_db.
+  Qed.
 
   Lemma conseq_or_comm :
     forall M A1 A2, M ⊢ A1 ∨ A2 ⊇ A2 ∨ A1.
-  Admitted.
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    a_prop;
+      disj_split;
+      auto.
+  Qed.
 
   Lemma caller_ext :
     forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 external.
-  Admitted.
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    match goal with
+    | [H : _ ◎ _ ⊨ _ calls _ ◌ _ ⟨ _ ⟩ |- _] =>
+      inversion H;
+        subst
+    end.
+    match goal with
+    | [H : makes_call _ _ _ _ _  |- _ ] =>
+      inversion H;
+        subst
+    end.
+    apply sat_extrn.
+    match goal with
+    | [H : arising _ _ (_, ?ϕa :: _) |- _ ] =>
+      apply arising_external in H
+    end.
+    unfold external_self, is_external in *.
+    repeat destruct_exists_loo;
+      andDestruct;
+      subst.
+    repeat destruct_exists_loo;
+      andDestruct;
+      subst.
+    simpl_crush.
+    eapply is_ext;
+    eauto.
+  Qed.
 
   Lemma calls_recv :
     forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 access α2.
