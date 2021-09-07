@@ -14,7 +14,7 @@ Module InferenceTactics(L : LanguageDef).
   Module L_Inference := Inference(L).
   Export L_Inference.
 
-  Open Scope chainmail_scope.
+  Open Scope specw_scope.
   Open Scope inference_scope.
 
   Ltac extract1 v' n' :=
@@ -279,7 +279,7 @@ Module InferenceTactics(L : LanguageDef).
       inversion H;
         subst
     end.
-    eauto with chainmail_db.
+    eauto with specw_db.
   Qed.
 
   Lemma conseq_ex2 :
@@ -700,7 +700,7 @@ Module InferenceTactics(L : LanguageDef).
     apply sat_mutind;
       intros;
       raise_simpl;
-      try solve [repeat a_prop; auto with chainmail_db].
+      try solve [repeat a_prop; auto with specw_db].
 
     * admit.
 

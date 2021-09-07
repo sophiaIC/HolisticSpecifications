@@ -4,18 +4,18 @@ Require Import L_def.
 Require Import exp.
 Require Import defs.
 Require Import operational_semantics.
-Require Import chainmail.
+Require Import specw.
 Require Import List.
 Require Export Coq.Lists.ListSet.
 
-Module ChainmailTactics(L : LanguageDef).
+Module SpecWTactics(L : LanguageDef).
 
   Import L.
-  Module L_Chainmail := Chainmail(L).
-  Export L_Chainmail.
+  Module L_SpecW := SpecW(L).
+  Export L_SpecW.
 
-  Open Scope chainmail_scope.
-  Declare Scope chainmail_tactics_scope.
+  Open Scope specw_scope.
+  Declare Scope specw_tactics_scope.
 
   Lemma aval_subst :
     forall x n v, ([x /s n](av_ v)) = (av_ v).
@@ -1006,4 +1006,4 @@ Module ChainmailTactics(L : LanguageDef).
             repeat (try (wrapped_raise_simpl));
             repeat (try (map_raise_simpl))).
 
-End ChainmailTactics.
+End SpecWTactics.

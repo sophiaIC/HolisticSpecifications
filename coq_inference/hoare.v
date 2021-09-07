@@ -5,7 +5,7 @@ Require Import L_def.
 Require Import exp.
 Require Import exp_properties.
 Require Import operational_semantics.
-Require Import chainmail.
+Require Import specw.
 Require Import classical.
 Require Import List.
 Require Import String.
@@ -20,7 +20,7 @@ Module Hoare(L : LanguageDef).
   Export L_Classical.
 
   Open Scope reduce_scope.
-  Open Scope chainmail_scope.
+  Open Scope specw_scope.
 
   Declare Scope hoare_scope.
 
@@ -76,6 +76,6 @@ Module Hoare(L : LanguageDef).
                      M ⊢ {pre: A1} C {post: A2}.
 
   Close Scope hoare_scope.
-  Close Scope chainmail_scope.
+  Close Scope specw_scope.
   Close Scope reduce_scope.
 End Hoare.

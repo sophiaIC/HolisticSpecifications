@@ -5,7 +5,7 @@ Require Import exp.
 Require Import defs.
 Require Import operational_semantics.
 Require Import List.
-Require Import chainmail.
+Require Import specw.
 Require Import hoare.
 
 Module Inference(L : LanguageDef).
@@ -13,10 +13,8 @@ Module Inference(L : LanguageDef).
   Export L.
   Module L_Hoare := Hoare(L).
   Export L_Hoare.
-  (*)Module L_Chainmail := Chainmail(L).
-  Import L_Chainmail.*)
 
-  Open Scope chainmail_scope.
+  Open Scope specw_scope.
   Open Scope reduce_scope.
   Open Scope hoare_scope.
   Declare Scope inference_scope.
@@ -243,7 +241,7 @@ Module Inference(L : LanguageDef).
   Combined Scheme necessity_mutind from onlyThrough_mutind, onlyIf_mutind, onlyIf1_mutind.
 
   Close Scope inference_scope.
-  Close Scope chainmail_scope.
+  Close Scope specw_scope.
   Close Scope reduce_scope.
 
 End Inference.

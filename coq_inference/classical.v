@@ -5,8 +5,8 @@ Require Import L_def.
 Require Import exp.
 Require Import exp_properties.
 Require Import operational_semantics.
-Require Import chainmail.
-Require Import chainmail_tactics.
+Require Import specw.
+Require Import specw_tactics.
 Require Import List.
 Require Import String.
 Open Scope string_scope.
@@ -16,10 +16,10 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Module ClassicalProperties(L : LanguageDef).
 
   Import L.
-  Module L_ChainmailTactics := ChainmailTactics(L).
-  Export L_ChainmailTactics.
+  Module L_SpecWTactics := SpecWTactics(L).
+  Export L_SpecWTactics.
   Open Scope reduce_scope.
-  Open Scope chainmail_scope.
+  Open Scope specw_scope.
 
   Ltac sat_contra_inversion :=
     match goal with
@@ -232,21 +232,21 @@ Module ClassicalProperties(L : LanguageDef).
                             context[?M  ◎ ?σ' ⊨ _]] =>
                           specialize (IH M σ' s')
                         end;
-                 repeat disj_split; auto with chainmail_db].
+                 repeat disj_split; auto with specw_db].
 
     - (* exp *)
       destruct (excluded_middle (exp_satisfaction M σ (subst_list s e)));
-        auto with chainmail_db.
+        auto with specw_db.
 
     - (* class *)
       destruct (excluded_middle (has_class M σ (subst_list s e) c));
-        auto with chainmail_db.
+        auto with specw_db.
 
     - (* all *)
       destruct (excluded_middle (exists x, M ◎ σ ⊭ ([x /s 0] subst_list (list_S s) A)));
         [destruct_exists_loo;
          andDestruct;
-         eauto with chainmail_db|].
+         eauto with specw_db|].
       left.
       apply sat_all;
         intros.
@@ -262,13 +262,13 @@ Module ClassicalProperties(L : LanguageDef).
       destruct (excluded_middle (exists x, M ◎ σ ⊨ ([x /s 0]subst_list (list_S s) A)));
         [destruct_exists_loo;
          andDestruct;
-         eauto with chainmail_db|].
+         eauto with specw_db|].
 
       right;
         apply nsat_ex;
         intros.
       destruct (IHA M σ ((x, 0) :: (list_S s)));
-        eauto with chainmail_db.
+        eauto with specw_db.
       match goal with
       | [ H : ~ _ |- _ ] =>
         contradiction H
@@ -277,7 +277,7 @@ Module ClassicalProperties(L : LanguageDef).
 
     - (* access *)
       destruct (excluded_middle (has_access σ (subst_list s a) (subst_list s a0)));
-        auto with chainmail_db.
+        auto with specw_db.
 
     - (* calls *)
       destruct (excluded_middle (makes_call σ
@@ -285,13 +285,13 @@ Module ClassicalProperties(L : LanguageDef).
                                             (subst_list s a0)
                                             m
                                             (subst_list s p)));
-        auto with chainmail_db.
+        auto with specw_db.
 
     - destruct (excluded_middle (external_obj M σ (subst_list s a)));
-        auto with chainmail_db.
+        auto with specw_db.
 
     - destruct (excluded_middle (internal_obj M σ (subst_list s a)));
-        auto with chainmail_db.
+        auto with specw_db.
 
   Qed.
 
@@ -348,7 +348,7 @@ Module ClassicalProperties(L : LanguageDef).
     destruct sat_excluded_middle
       with (M:=M)
            (σ:=σ)(A:=A1);
-      auto with chainmail_db.
+      auto with specw_db.
   Qed.
 
   Lemma arr_prop2 :
@@ -377,7 +377,7 @@ Module ClassicalProperties(L : LanguageDef).
       M ◎ σ ⊨ (∀x.[A]) <->
       (forall x, M ◎ σ ⊨ ([x /s 0]A)).
   Proof.
-    intros; split; eauto with chainmail_db; intros.
+    intros; split; eauto with specw_db; intros.
     inversion H;
       subst;
       eauto.
@@ -388,13 +388,13 @@ Module ClassicalProperties(L : LanguageDef).
       M ◎ σ ⊨ (∃x.[A]) <->
       (exists x, M ◎ σ ⊨ ([x /s 0] A)).
   Proof.
-    intros; split; eauto with chainmail_db; intros.
+    intros; split; eauto with specw_db; intros.
     inversion H;
       subst.
     - eexists; eauto.
     - repeat destruct_exists_loo;
         andDestruct;
-        eauto with chainmail_db.
+        eauto with specw_db.
   Qed.
 
   (** Lemma 5: Classical (2) *)
@@ -406,7 +406,7 @@ Module ClassicalProperties(L : LanguageDef).
       split;
       intros Ha;
       inversion Ha;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
   (** Lemma 5: Classical (3) *)
@@ -418,7 +418,7 @@ Module ClassicalProperties(L : LanguageDef).
       split;
       intros Ha;
       inversion Ha;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
   Lemma negate_elim_sat :
@@ -450,7 +450,7 @@ Module ClassicalProperties(L : LanguageDef).
               M ◎ σ ⊨ (¬ ¬ A)).
   Proof.
     intros;
-      auto with chainmail_db.
+      auto with specw_db.
   Qed.
 
   Lemma negate_intro_nsat :
@@ -458,7 +458,7 @@ Module ClassicalProperties(L : LanguageDef).
               M ◎ σ ⊭ (¬ ¬ A)).
   Proof.
     intros;
-      auto with chainmail_db.
+      auto with specw_db.
   Qed.
 
   Lemma sat_and_nsat_entails_false :
@@ -477,7 +477,7 @@ Module ClassicalProperties(L : LanguageDef).
       crush.
   Qed.
 
-  Hint Resolve sat_and_nsat_entails_false : chainmail_db.
+  Hint Resolve sat_and_nsat_entails_false : specw_db.
 
   Lemma false_entails_sat_and_nsat :
     forall M A, entails M (a_exp (e_val v_false)) (A ∧ ¬ A).
@@ -496,7 +496,7 @@ Module ClassicalProperties(L : LanguageDef).
     end.
   Qed.
 
-  Hint Resolve false_entails_sat_and_nsat : chainmail_db.
+  Hint Resolve false_entails_sat_and_nsat : specw_db.
 
   (** Lemma 6: (1) *)
   Lemma sat_and_nsat_equiv_false :
@@ -506,7 +506,7 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
   Lemma or_commutative' :
@@ -517,10 +517,10 @@ Module ClassicalProperties(L : LanguageDef).
       intros.
 
     inversion H0;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_commutative' : chainmail_db.
+  Hint Resolve or_commutative' : specw_db.
 
   (** Lemma 6: (4) *)
   Lemma or_commutative :
@@ -530,10 +530,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_commutative : chainmail_db.
+  Hint Resolve or_commutative : specw_db.
 
   Lemma and_commutative' :
     forall M A1 A2, entails M (A1 ∧ A2) (A2 ∧ A1).
@@ -543,10 +543,10 @@ Module ClassicalProperties(L : LanguageDef).
       intros;
       eauto.
     inversion H0;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve and_commutative' : chainmail_db.
+  Hint Resolve and_commutative' : specw_db.
 
   (** Lemma 6: (3) *)
   Lemma and_commutative :
@@ -556,10 +556,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve and_commutative : chainmail_db.
+  Hint Resolve and_commutative : specw_db.
 
   Lemma or_associative_1:
     forall M A1 A2 A3, entails M ((A1 ∨ A2) ∨ A3) (A1 ∨ (A2 ∨ A3)).
@@ -571,10 +571,10 @@ Module ClassicalProperties(L : LanguageDef).
       subst;
       eauto;
       inversion H4;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_associative_1 : chainmail_db.
+  Hint Resolve or_associative_1 : specw_db.
 
   Lemma or_associative_2:
     forall M A1 A2 A3, entails M (A1 ∨ (A2 ∨ A3)) ((A1 ∨ A2) ∨ A3).
@@ -586,10 +586,10 @@ Module ClassicalProperties(L : LanguageDef).
       subst;
       eauto;
       inversion H4;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_associative_2 : chainmail_db.
+  Hint Resolve or_associative_2 : specw_db.
 
   (** Lemma 6: (5) *)
   Lemma or_associative:
@@ -599,10 +599,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_associative : chainmail_db.
+  Hint Resolve or_associative : specw_db.
 
   Lemma and_distributive_1:
     forall M A1 A2 A3, M ⊢ ((A1 ∨ A2) ∧ A3) ⊇ ((A1 ∧ A3) ∨ (A2 ∧ A3)).
@@ -614,10 +614,10 @@ Module ClassicalProperties(L : LanguageDef).
       subst;
       eauto;
       inversion H5;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve and_distributive_1 : chainmail_db.
+  Hint Resolve and_distributive_1 : specw_db.
 
   Lemma and_distributive_2:
     forall M A1 A2 A3, M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ ((A1 ∨ A2) ∧ A3).
@@ -629,10 +629,10 @@ Module ClassicalProperties(L : LanguageDef).
       subst;
       eauto;
       inversion H4;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve and_distributive_2 : chainmail_db.
+  Hint Resolve and_distributive_2 : specw_db.
 
   (** Lemma 6: (6) *)
   Lemma and_distributive:
@@ -642,10 +642,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve and_distributive : chainmail_db.
+  Hint Resolve and_distributive : specw_db.
 
   Lemma or_distributive_1:
     forall M A1 A2 A3, entails M ((A1 ∧ A2) ∨ A3) ((A1 ∨ A3) ∧ (A2 ∨ A3)).
@@ -655,12 +655,12 @@ Module ClassicalProperties(L : LanguageDef).
       intros;
       inversion H0;
       subst;
-      eauto with chainmail_db;
+      eauto with specw_db;
       inversion H4;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_distributive_1 : chainmail_db.
+  Hint Resolve or_distributive_1 : specw_db.
 
   Lemma or_distributive_2:
     forall M A1 A2 A3, entails M ((A1 ∨ A3) ∧ (A2 ∨ A3)) ((A1 ∧ A2) ∨ A3).
@@ -673,10 +673,10 @@ Module ClassicalProperties(L : LanguageDef).
       eauto;
       inversion H5;
       inversion H6;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_distributive_2 : chainmail_db.
+  Hint Resolve or_distributive_2 : specw_db.
 
   (** Lemma 6: (7) *)
   Lemma or_distributive:
@@ -686,10 +686,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve or_distributive : chainmail_db.
+  Hint Resolve or_distributive : specw_db.
 
   Lemma neg_distributive_and_1:
     forall M A1 A2, entails M (¬(A1 ∧ A2))  (¬A1 ∨ ¬A2).
@@ -701,10 +701,10 @@ Module ClassicalProperties(L : LanguageDef).
       subst;
       eauto;
       inversion H4;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve neg_distributive_and_1 : chainmail_db.
+  Hint Resolve neg_distributive_and_1 : specw_db.
 
   Lemma neg_distributive_and_2:
     forall M A1 A2, entails M (¬A1 ∨ ¬A2) (¬(A1 ∧ A2)).
@@ -716,10 +716,10 @@ Module ClassicalProperties(L : LanguageDef).
       subst;
       eauto;
       inversion H4;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve neg_distributive_and_2 : chainmail_db.
+  Hint Resolve neg_distributive_and_2 : specw_db.
 
   (** Lemma 6: (8) *)
   Lemma neg_distributive_and:
@@ -729,10 +729,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve neg_distributive_and : chainmail_db.
+  Hint Resolve neg_distributive_and : specw_db.
 
   Lemma neg_distributive_or_1:
     forall M A1 A2, entails M (¬(A1 ∨ A2)) (¬A1 ∧ ¬A2).
@@ -744,10 +744,10 @@ Module ClassicalProperties(L : LanguageDef).
       subst;
       eauto;
       inversion H4;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve neg_distributive_or_1 : chainmail_db.
+  Hint Resolve neg_distributive_or_1 : specw_db.
 
   Lemma neg_distributive_or_2:
     forall M A1 A2, entails M (¬A1 ∧ ¬A2) (¬(A1 ∨ A2)).
@@ -760,10 +760,10 @@ Module ClassicalProperties(L : LanguageDef).
       eauto;
       inversion H5;
       inversion H6;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve neg_distributive_or_2 : chainmail_db.
+  Hint Resolve neg_distributive_or_2 : specw_db.
 
   (** Lemma 6: (9) *)
   Lemma neg_distributive_or:
@@ -773,10 +773,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve neg_distributive_or : chainmail_db.
+  Hint Resolve neg_distributive_or : specw_db.
 
   Lemma not_ex_x_all_not_1 : 
     forall M A, entails M (¬(∃x.[A])) (∀x.[¬A]).
@@ -793,10 +793,10 @@ Module ClassicalProperties(L : LanguageDef).
     apply sat_all;
       intros.
     apply sat_not.
-    eapply H5; eauto with chainmail_db.
+    eapply H5; eauto with specw_db.
   Qed.
 
-  Hint Resolve not_ex_x_all_not_1 : chainmail_db.
+  Hint Resolve not_ex_x_all_not_1 : specw_db.
 
   Lemma not_ex_x_all_not_2 : 
     forall M A, entails M (∀x.[¬A]) (¬(∃x.[A])).
@@ -824,7 +824,7 @@ Module ClassicalProperties(L : LanguageDef).
     end.
   Qed.
 
-  Hint Resolve not_ex_x_all_not_2 : chainmail_db.
+  Hint Resolve not_ex_x_all_not_2 : specw_db.
 
   (** Lemma 6: (10) *)
   Lemma not_ex_x_all_not : 
@@ -834,10 +834,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve not_ex_x_all_not : chainmail_db.
+  Hint Resolve not_ex_x_all_not : specw_db.
 
   Lemma not_all_x_ex_not_1 : 
     forall M A, entails M (¬(∀x.[A])) (∃x.[¬A]).
@@ -852,12 +852,12 @@ Module ClassicalProperties(L : LanguageDef).
       subst.
 
     apply sat_ex with (x:=x);
-      auto with chainmail_db.
+      auto with specw_db.
 
     apply sat_not; auto.
   Qed.
 
-  Hint Resolve not_all_x_ex_not_1 : chainmail_db.
+  Hint Resolve not_all_x_ex_not_1 : specw_db.
 
   Lemma not_all_x_ex_not_2 : 
     forall M A, entails M (∃x.[¬A]) (¬(∀x.[A])).
@@ -871,11 +871,11 @@ Module ClassicalProperties(L : LanguageDef).
 
     apply sat_not.
     apply nsat_all with (x:=x);
-      auto with chainmail_db.
+      auto with specw_db.
     inversion H4; subst; auto.
   Qed.
 
-  Hint Resolve not_all_x_ex_not_2 : chainmail_db.
+  Hint Resolve not_all_x_ex_not_2 : specw_db.
 
   Lemma not_all_x_ex_not : 
     forall M A, equiv_a M (¬(∀x.[A])) (∃x.[¬A]).
@@ -884,10 +884,10 @@ Module ClassicalProperties(L : LanguageDef).
       unfold equiv_a;
       intros;
       split;
-      eauto with chainmail_db.
+      eauto with specw_db.
   Qed.
 
-  Hint Resolve not_all_x_ex_not : chainmail_db.
+  Hint Resolve not_all_x_ex_not : specw_db.
 
   Lemma entails_implies :
     forall {M M' σ A1 A2}, entails M A1 A2 ->
@@ -900,7 +900,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto.
   Qed.
 
-  Hint Resolve entails_implies : chainmail_db.
+  Hint Resolve entails_implies : specw_db.
 
   Lemma true_satisfied :
     forall M σ, exp_satisfaction M σ (e_true).
@@ -908,7 +908,7 @@ Module ClassicalProperties(L : LanguageDef).
     eapply exp_sat; eauto with exp_db.
   Qed.
 
-  Hint Resolve true_satisfied : chainmail_db.
+  Hint Resolve true_satisfied : specw_db.
 
   Lemma false_not_satisfied :
     forall M σ, ~ M ◎ σ ⊨ (a_exp (e_false)).
@@ -927,7 +927,7 @@ Module ClassicalProperties(L : LanguageDef).
     end.
   Qed.
 
-  Hint Resolve true_satisfied : chainmail_db.
+  Hint Resolve true_satisfied : specw_db.
 
   Lemma false_not_satisfied_corollary :
     forall M σ P, M ◎ σ ⊨ (a_exp (e_false)) ->
@@ -989,16 +989,16 @@ Module ClassicalProperties(L : LanguageDef).
       subst.
     eapply H3;
       eauto;
-    auto with chainmail_db.
+    auto with specw_db.
     a_prop.
     inversion H;
       subst.
     eapply H3;
       eauto.
-    auto with chainmail_db.
+    auto with specw_db.
   Qed.
 
-  Hint Resolve and_distributive_trans_1 : chainmail_db.
+  Hint Resolve and_distributive_trans_1 : specw_db.
 
   Lemma and_distributive_trans_2:
     forall M A1 A2 A3 A, M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ A ->
@@ -1014,17 +1014,17 @@ Module ClassicalProperties(L : LanguageDef).
       subst.
     eapply H3;
       eauto;
-    auto with chainmail_db.
+    auto with specw_db.
     a_prop.
     inversion H;
       subst.
     eapply H3;
       eauto.
-    auto with chainmail_db.
+    auto with specw_db.
   Qed.
 
-  Hint Resolve and_distributive_trans_2 : chainmail_db.
+  Hint Resolve and_distributive_trans_2 : specw_db.
 
-  Close Scope chainmail_scope.
+  Close Scope specw_scope.
   Close Scope reduce_scope.
 End ClassicalProperties.

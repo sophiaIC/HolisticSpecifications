@@ -15,7 +15,7 @@ Module BankAccount(L : LanguageDef).
   Module L_InferenceTactics := InferenceTactics(L).
   Import L_InferenceTactics.
 
-  Open Scope chainmail_scope.
+  Open Scope specw_scope.
   Open Scope reduce_scope.
 
   (** #<h2>#Variables#</h2>#*)
@@ -1496,14 +1496,14 @@ Module BankAccount(L : LanguageDef).
 
   Qed.
 
-  Close Scope chainmail_scope.
+  Close Scope specw_scope.
   Close Scope reduce_scope.
 End BankAccount.
 
 (*
 
 TODO:
-(1) Proof of soundness
+(1) Proof of soundness                                                              X
 (2) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper
 (3) State of the coq proof
 (4) Paragraph of Sandboxing paper

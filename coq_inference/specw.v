@@ -7,13 +7,13 @@ Require Import operational_semantics.
 Require Import List.
 Require Export Coq.Lists.ListSet.
 
-Module Chainmail(L : LanguageDef).
+Module SpecW(L : LanguageDef).
 
   Import L.
   Module L_Semantics := AbstractOperationalSemantics(L).
   Export L_Semantics.
 
-  Declare Scope chainmail_scope.
+  Declare Scope specw_scope.
 
   Open Scope reduce_scope.
 
@@ -21,11 +21,11 @@ Module Chainmail(L : LanguageDef).
   | av_hole : nat -> a_val
   | av_bnd  : value -> a_val.
 
-  Notation "'a♢' n" := (av_hole n)(at level 25) : chainmail_scope.
-  Open Scope chainmail_scope.
-  Notation "'av_' v" := (av_bnd v)(at level 25) : chainmail_scope.
-  Notation "'v_' α" := (v_addr α)(at level 25) : chainmail_scope.
-  Notation "'a_' α" := (av_bnd (v_ α))(at level 25) : chainmail_scope.
+  Notation "'a♢' n" := (av_hole n)(at level 25) : specw_scope.
+  Open Scope specw_scope.
+  Notation "'av_' v" := (av_bnd v)(at level 25) : specw_scope.
+  Notation "'v_' α" := (v_addr α)(at level 25) : specw_scope.
+  Notation "'a_' α" := (av_bnd (v_ α))(at level 25) : specw_scope.
 
   Program Instance eq_a_val : Eq a_val :=
     {
@@ -154,8 +154,8 @@ Module Chainmail(L : LanguageDef).
   | am_hole : nat -> a_mth
   | am_bnd : mth -> a_mth.
 
-  Notation "'am_' m" := (am_bnd m)(at level 40) : chainmail_scope.
-  Notation "'am♢' m" := (am_hole m)(at level 40) : chainmail_scope.
+  Notation "'am_' m" := (am_bnd m)(at level 40) : specw_scope.
+  Notation "'am♢' m" := (am_hole m)(at level 40) : specw_scope.
 
   (** Assertion syntax  *)
 
@@ -184,18 +184,18 @@ Module Chainmail(L : LanguageDef).
   | a_extrn : a_val -> asrt
   | a_intrn : a_val -> asrt.
 
-  Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 30) : chainmail_scope.
-  Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 28) : chainmail_scope.
-  Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 29) : chainmail_scope.
-  Notation "'¬' A" :=(a_neg A)(at level 27) : chainmail_scope.
-  Notation "'∀x.[' A ']'" :=(a_all A)(at level 31) : chainmail_scope.
-  Notation "'∃x.[' A ']'" :=(a_ex A)(at level 31) : chainmail_scope.
-  Notation "x 'internal'" :=(a_intrn x)(at level 26) : chainmail_scope.
-  Notation "x 'external'" :=(a_extrn x)(at level 26) : chainmail_scope.
-  Notation "x 'access' y" :=(a_acc x y)(at level 26) : chainmail_scope.
-  Notation "x 'calls' y '◌' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 26) : chainmail_scope.
-  Notation "'a_true'" := (a_exp (e_true)) (at level 20) : chainmail_scope.
-  Notation "'a_false'" := (a_exp (e_false)) (at level 20) : chainmail_scope.
+  Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 30) : specw_scope.
+  Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 28) : specw_scope.
+  Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 29) : specw_scope.
+  Notation "'¬' A" :=(a_neg A)(at level 27) : specw_scope.
+  Notation "'∀x.[' A ']'" :=(a_all A)(at level 31) : specw_scope.
+  Notation "'∃x.[' A ']'" :=(a_ex A)(at level 31) : specw_scope.
+  Notation "x 'internal'" :=(a_intrn x)(at level 26) : specw_scope.
+  Notation "x 'external'" :=(a_extrn x)(at level 26) : specw_scope.
+  Notation "x 'access' y" :=(a_acc x y)(at level 26) : specw_scope.
+  Notation "x 'calls' y '◌' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 26) : specw_scope.
+  Notation "'a_true'" := (a_exp (e_true)) (at level 20) : specw_scope.
+  Notation "'a_false'" := (a_exp (e_false)) (at level 20) : specw_scope.
 
   Instance a_valSubst : Subst a_val nat value :=
     {
@@ -287,12 +287,12 @@ Module Chainmail(L : LanguageDef).
                           (cname o) ∉ M ->
                           external_obj M (χ, ψ) (a_ α).
 
-  Hint Constructors exp_satisfaction : chainmail_db.
-  Hint Constructors has_class : chainmail_db.
-  Hint Constructors has_access : chainmail_db.
-  Hint Constructors makes_call : chainmail_db.
-  Hint Constructors internal_obj : chainmail_db.
-  Hint Constructors external_obj : chainmail_db.
+  Hint Constructors exp_satisfaction : specw_db.
+  Hint Constructors has_class : specw_db.
+  Hint Constructors has_access : specw_db.
+  Hint Constructors makes_call : specw_db.
+  Hint Constructors internal_obj : specw_db.
+  Hint Constructors external_obj : specw_db.
 
   Reserved Notation "M1 '◎' σ '⊨' A"(at level 40).
   Reserved Notation "M1 '◎' σ '⊭' A"(at level 40).
@@ -494,7 +494,7 @@ Module Chainmail(L : LanguageDef).
 ]]]
    *)
 
-  where "M '◎' σ '⊨' A" := (sat M σ A) : chainmail_scope
+  where "M '◎' σ '⊨' A" := (sat M σ A) : specw_scope
 
   with
     nsat : mdl -> config -> asrt -> Prop :=
@@ -649,7 +649,7 @@ Module Chainmail(L : LanguageDef).
 
   (*time*)
 
-  where "M '◎' σ '⊭' A" := (nsat M σ A) : chainmail_scope.
+  where "M '◎' σ '⊭' A" := (nsat M σ A) : specw_scope.
 
 
   Scheme sat_mut_ind := Induction for sat Sort Prop
@@ -657,14 +657,14 @@ Module Chainmail(L : LanguageDef).
 
   Combined Scheme sat_mutind from sat_mut_ind, nsat_mut_ind.
 
-  Hint Constructors sat nsat : chainmail_db.
+  Hint Constructors sat nsat : specw_db.
 
   Definition mdl_sat (M : mdl)(A : asrt) :=
     forall M' σ0 σ, initial σ0 ->
                M ⦂ M' ⦿ σ0 ⤳⋆ σ ->
                M ◎ σ ⊨ A.
 
-  Notation "M '⊨m' A" := (mdl_sat M A)(at level 40) : chainmail_scope.
+  Notation "M '⊨m' A" := (mdl_sat M A)(at level 40) : specw_scope.
 
   Definition arising (M1 M2 : mdl)(σ : config) :=
     exists σ0, initial σ0 /\ M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ.
@@ -675,7 +675,7 @@ Module Chainmail(L : LanguageDef).
                               M ◎ σ ⊨ A2) ->
                      entails M A1 A2.
 
-  Hint Constructors entails : chainmail_db.
+  Hint Constructors entails : specw_db.
 
   Notation "M '⊢' A1 '⊇' A2" := (entails M A1 A2)(at level 40).
 
@@ -690,7 +690,7 @@ Module Chainmail(L : LanguageDef).
     raise : A -> nat -> A
     }.
 
-  Notation "a '↑' n" := (raise a n)(at level 19) : chainmail_scope.
+  Notation "a '↑' n" := (raise a n)(at level 19) : specw_scope.
 
   Instance raiseNat : Raiseable nat :=
     {
@@ -781,7 +781,7 @@ Module Chainmail(L : LanguageDef).
 
   Definition wrapped := (fun α => ∀x.[ (a♢ 0) internal ∨ ¬ (a♢ 0) access α]).
 
-  Close Scope chainmail_scope.
+  Close Scope specw_scope.
   Close Scope reduce_scope.
 
-End Chainmail.
+End SpecW.
