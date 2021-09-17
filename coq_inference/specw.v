@@ -259,13 +259,13 @@ Module SpecW(L : LanguageDef).
 
   Inductive has_access : config -> a_val -> a_val -> Prop :=
   | acc_self : forall σ α, has_access σ (a_ α) (a_ α)
-  | acc_fld : forall χ ψ α1 o f α2, ⟦ α1 ↦ o ⟧_∈ χ ->
-                               ⟦ f ↦ (v_ α2) ⟧_∈ o.(flds) ->
-                               has_access (χ, ψ) (a_ α1) (a_ α2)
-  | acc_lcl : forall χ ψ x α1 α2, (exists ϕ, In ϕ ψ /\
-                                   ϕ.(this) = α1 /\
-                                   ⟦ x ↦ v_ α2 ⟧_∈ ϕ.(local)) ->
-                             has_access (χ, ψ) (a_ α1) (a_ α2).
+  | acc_fld : forall χ ψ α o f v, ⟦ α ↦ o ⟧_∈ χ ->
+                             ⟦ f ↦ v ⟧_∈ o.(flds) ->
+                             has_access (χ, ψ) (a_ α) (av_ v)
+  | acc_lcl : forall χ ψ x α v, (exists ϕ, In ϕ ψ /\
+                                 ϕ.(this) = α /\
+                                 ⟦ x ↦ v ⟧_∈ ϕ.(local)) ->
+                             has_access (χ, ψ) (a_ α) (av_ v).
 
   Inductive makes_call : config -> a_val -> a_val -> mth -> partial_map name a_val ->
                          Prop :=

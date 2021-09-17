@@ -500,10 +500,59 @@ Module InferenceTactics(L : LanguageDef).
 
   Lemma calls_recv :
     forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 access α2.
-  Admitted.
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    match goal with
+    | [H : _ ◎ _ ⊨ _ calls _ ◌ _ ⟨ _ ⟩ |- _ ] =>
+      inversion H;
+        subst
+    end.
+    match goal with
+    | [H : makes_call _ _ _ _ _  |- _ ] =>
+      inversion H;
+        subst
+    end.
+    apply sat_access.
+    apply acc_lcl with (x:=y).
+    match goal with
+    | [|- exists _, In _ (?ϕ :: _) /\ _ ] =>
+      exists ϕ;
+        repeat split;
+        auto
+    end.
+    apply in_eq.
+
+  Qed.
 
   Lemma calls_param1 :
-    forall M α1 α2 m x v β, M ⊢ α1 calls α2 ◌ m ⟨ ⟦ x ↦ v ⟧ β ⟩ ⊇ α1 access v.
+    forall M a1 a2 a3 m x β,
+      M ⊢ a1 calls a2 ◌ m ⟨ ⟦ x ↦ a_ a3 ⟧ β ⟩ ⊇ a1 access (a_ a3).
+  Proof.
+    intros.
+    apply ent;
+      intros.
+    match goal with
+    | [H : _ ◎ _ ⊨ _ calls _ ◌ _ ⟨ _ ⟩ |- _ ] =>
+      inversion H;
+        subst
+    end.
+    match goal with
+    | [H : makes_call _ _ _ _ _ |- _ ] =>
+      inversion H;
+        subst
+    end.
+    apply sat_access.
+
+    apply acc_lcl with (x:=x).
+    match goal with
+    | [ |- exists _, In _ (?ϕ :: _) /\ _ ] =>
+      exists ϕ;
+        repeat split;
+        simpl in *;
+        auto
+    end. 
   Admitted.
 
   Lemma class_internal :
@@ -598,7 +647,7 @@ Module InferenceTactics(L : LanguageDef).
 
   Lemma and_consequence2 :
     forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
-                        M ⊢ A1 ∧ A2 ⊇ A1 ∧ A2'.
+                   M ⊢ A1 ∧ A2 ⊇ A1 ∧ A2'.
   Admitted.
 
   Lemma conseq_and1 :
@@ -1966,9 +2015,19 @@ Module InferenceTactics(L : LanguageDef).
   Proof.
   Admitted.
 
-  Lemma change_class_absurd :
-    forall M x C, M ⊢ (a_class (e_ x) C) to1 ¬ (a_class (e_ x) C) onlyIf (a_false).
-  Admitted.
+  Parameter class_change_classical_spec :
+    forall M x C m, M ⊢ {pre: a_class (e_ x) C} m {post: a_class (e_ x) C}.
+
+  Lemma forall_neg_exists :
+    forall {A} (P : A -> Prop), ~ (exists a : A, P a) ->
+                       (forall a : A, ~ P a).
+    intros.
+    destruct (excluded_middle (P a));
+      auto.
+    contradiction H.
+    exists a;
+      auto.
+  Qed.
 
   Lemma conseq_not_wrapped :
     forall M x y, M ⊢ x external ∧ x access y ⊇ ¬ wrapped y.
@@ -2029,12 +2088,79 @@ Module InferenceTactics(L : LanguageDef).
       intro x;
       subst_simpl
     | [|- _ ⊢ (∃x.[_]) to _ onlyIf _ ] =>
-      idtac
-    | [|- _ ⊢ (∃x.[_]) to _ onlyIf _ ] =>
-      idtac
+      apply if_ex1;
+      intros x;
+      subst_simpl
+    | [|- _ ⊢ (∃x.[_]) to1 _ onlyIf _ ] =>
+      apply if1_ex1;
+      intro x;
+      subst_simpl
+    | [|- _ ⊢ (∃x.[_]) to _ onlyThrough _ ] =>
+      apply ot_ex1;
+      intro x;
+      subst_simpl
     | [ |- _ ] =>
       fail "no top level existential on the left hand side"
     end.
+
+  Parameter calls_implies_concrete_parameters :
+    forall M x y m β, (forall β', β <> (fun v => Some (av_ v)) ∘ β') -> M ⊢ x calls y ◌ m ⟨ β ⟩ ⊇ (a_false).
+
+  Lemma change_class_absurd :
+    forall M x C, M ⊢ (a_class (e_ x) C) to1 ¬ (a_class (e_ x) C) onlyIf (a_false).
+  Proof.
+    intros.
+    apply if1_internal;
+      intros.
+
+    * specX_cnf_r.
+      introduce_existential_on_left y.
+      destruct (excluded_middle (exists β', ([y /s 0]β) = (fun v => Some (av_ v)) ∘ β')).
+
+      ** destruct_exists_loo;
+           subst.
+         match goal with
+         | [|- _ ⊢ (?Aa ∧ ?Ab ∧ ((av_ ?a) calls ?b ◌ ?c ⟨ [?d /s 0] ?e ⟩ )) to1 _ onlyIf _ ] =>
+           apply if1_conseq1 with (A1:= Aa ∧ Ab ∧ (∃x.[ (a♢ 0) calls b ◌ c ⟨ [ d /s 0 ] e ⟩]))
+         end.
+         extract y 0;
+           subst.
+         match goal with
+         | [|- _ ⊢ ([?a /s 0] ((?Aa ∧ ?Ab) ∧ ((a♢ ?b) calls ?c ◌ ?d ⟨ ?e ⟩ ))) to1 _ onlyIf _ ] =>
+           apply if1_conseq1 with (A1:= Aa ∧ Ab ∧ (∃x.[ (a♢ 0) calls c ◌ d ⟨ e ⟩]))
+         end.
+
+         ***
+           subst_simpl;
+             repeat spec_auto.
+           repeat apply conseq_and2.
+           apply if1_conseq1 with (A1:=∃).
+           apply if1_conseq1;
+             [|apply if1_classical with (β := x0);
+               auto].
+           apply hoare_consequence2 with (A2':=a_class (e_ x) C);
+             [|apply conseq_not_not2].
+           apply hoare_consequence1 with (A1':=a_class (e_ x) C);
+             [apply class_change_classical_spec|spec_auto].
+
+      ** eapply if1_conseq1;
+           [|apply if1_start].
+         repeat apply conseq_and2.
+         apply calls_implies_concrete_parameters;
+           intros.
+         apply forall_neg_exists with (a:=β') in n;
+           auto.
+
+    * match goal with
+      | [|- enc _ _ (¬ (¬ ?Aa)) ] =>
+        apply enc_conseq2 with (A2:=Aa);
+          [apply conseq_not_not2|]
+      end.
+      apply enc_class.
+
+    * apply conseq_not_not2.
+
+  Qed.
 
   Lemma by_changes_and_conseq :
     forall M A1 A2 A,

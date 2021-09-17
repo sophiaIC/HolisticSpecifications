@@ -1510,5 +1510,6 @@ TODO:
 (5) Rename Chainmail -> SpecW and inference -> SpecX                                X
 (6) Prove admitted lemmas in inference_tactics.v or describe their admission
 (7) Write other half of authenticate or write why it is different
-
+(8) separate assumption of hoare logic from it's definition
  *)
+ 
