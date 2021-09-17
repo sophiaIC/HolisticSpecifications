@@ -605,7 +605,7 @@ Module ClassicalProperties(L : LanguageDef).
   Hint Resolve or_associative : specw_db.
 
   Lemma and_distributive_1:
-    forall M A1 A2 A3, M ⊢ ((A1 ∨ A2) ∧ A3) ⊇ ((A1 ∧ A3) ∨ (A2 ∧ A3)).
+    forall M A1 A2 A3, entails M ((A1 ∨ A2) ∧ A3) ((A1 ∧ A3) ∨ (A2 ∧ A3)).
   Proof.
     intros;
       apply ent;
@@ -620,7 +620,7 @@ Module ClassicalProperties(L : LanguageDef).
   Hint Resolve and_distributive_1 : specw_db.
 
   Lemma and_distributive_2:
-    forall M A1 A2 A3, M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ ((A1 ∨ A2) ∧ A3).
+    forall M A1 A2 A3, entails M ((A1 ∧ A3) ∨ (A2 ∧ A3)) ((A1 ∨ A2) ∧ A3).
   Proof.
     intros;
       apply ent;
@@ -976,8 +976,8 @@ Module ClassicalProperties(L : LanguageDef).
 
 
   Lemma and_distributive_trans_1:
-    forall M A1 A2 A3 A, M ⊢ ((A1 ∨ A2) ∧ A3) ⊇ A ->
-                    M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ A.
+    forall M A1 A2 A3 A, entails M ((A1 ∨ A2) ∧ A3) A ->
+                    entails M ((A1 ∧ A3) ∨ (A2 ∧ A3)) A.
   Proof.
     intros.
     apply ent;
@@ -1001,8 +1001,8 @@ Module ClassicalProperties(L : LanguageDef).
   Hint Resolve and_distributive_trans_1 : specw_db.
 
   Lemma and_distributive_trans_2:
-    forall M A1 A2 A3 A, M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ A ->
-                    M ⊢ ((A1 ∨ A2) ∧ A3) ⊇ A.
+    forall M A1 A2 A3 A, entails M ((A1 ∧ A3) ∨ (A2 ∧ A3)) A ->
+                    entails M ((A1 ∨ A2) ∧ A3) A.
   Proof.
     intros.
     apply ent;

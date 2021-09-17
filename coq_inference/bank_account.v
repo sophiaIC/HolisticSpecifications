@@ -1259,7 +1259,7 @@ Module BankAccount(L : LanguageDef).
           end
         end.
         apply and_comm.
-        apply and_distributive_trans_2.
+        apply and_distr_trans2.
         apply or_lr.
 
         * apply or_l.
@@ -1504,9 +1504,9 @@ End BankAccount.
 
 TODO:
 (1) Proof of soundness                                                              X
-(2) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper
-(3) State of the coq proof
-(4) Paragraph of Sandboxing paper
+(2) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper              X
+(3) State of the coq proof                                                          X
+(4) Paragraph of Sandboxing paper                                                   X
 (5) Rename Chainmail -> SpecW and inference -> SpecX                                X
 (6) Prove admitted lemmas in inference_tactics.v or describe their admission
 (7) Write other half of authenticate or write why it is different

@@ -677,8 +677,6 @@ Module SpecW(L : LanguageDef).
 
   Hint Constructors entails : specw_db.
 
-  Notation "M '⊢' A1 '⊇' A2" := (entails M A1 A2)(at level 40).
-
   Definition equiv_a (M : mdl)(A1 A2 : asrt): Prop :=
     (entails M A1 A2) /\ (entails M A2 A1).
 

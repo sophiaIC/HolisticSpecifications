@@ -7,6 +7,7 @@ Require Import exp_properties.
 Require Import operational_semantics.
 Require Import specw.
 Require Import classical.
+Require Import specw_inference.
 Require Import List.
 Require Import String.
 Open Scope string_scope.
@@ -16,15 +17,13 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Module Hoare(L : LanguageDef).
 
   Import L.
-  Module L_Classical := ClassicalProperties(L).
-  Export L_Classical.
+  Module L_SpecWInf := SpecWInference(L).
+  Export L_SpecWInf.
 
   Open Scope reduce_scope.
   Open Scope specw_scope.
 
   Declare Scope hoare_scope.
-
-  Reserved Notation "M '⊢' '{pre:' P '}' m '{post:' Q '}'" (at level 40).
 
   Inductive classical : asrt -> Prop :=
   | cl_exp : forall e, classical (a_exp e)
@@ -53,17 +52,22 @@ Module Hoare(L : LanguageDef).
       β' = (local ϕ) ∘ β ->
       is_call (χ, ψ) x (m_call α m β').
 
-  Inductive hoare_triple : mdl -> asrt -> meth_call -> asrt -> Prop :=
+  Parameter hoare_triple : mdl -> asrt -> meth_call -> asrt -> Prop.
+
+  Notation "M '⊢' '{pre:' P '}' m '{post:' Q '}'" := (hoare_triple M P m Q) (at level 40).
+
+  Inductive ht_semantics : mdl -> asrt -> meth_call -> asrt -> Prop :=
   | ht_r : forall M α m β P Q, (forall M' x σ σ', is_call σ x (m_call α m β) ->
                                         M ◎ σ ⊨ P ->
                                         M ⦂ M' ⦿ σ ⤳ σ' ->
                                         exists v χ ϕ ψ, σ' = (χ, ϕ :: ψ) /\
                                                    ⟦ x ↦ v ⟧_∈ local ϕ /\
                                                    M ◎ σ' ⊨ [v /s 0]Q) ->
-                          M ⊢ {pre: P} (m_call α m β) {post: Q}
+                          ht_semantics M P (m_call α m β) Q.
 
-  where "M '⊢' '{pre:' P '}' m '{post:' Q '}'"
-          := (hoare_triple M P m Q).
+  Parameter hoare_soundness :
+    forall M P m Q, M ⊢ {pre: P} m {post: Q} ->
+               ht_semantics M P m Q.
 
   Parameter hoare_consequence1 :
     forall M A1 C A2 A1', M ⊢ {pre: A1'} C {post: A2} ->
@@ -74,6 +78,9 @@ Module Hoare(L : LanguageDef).
     forall M A1 C A2 A2', M ⊢ {pre: A1} C {post: A2'} ->
                      M ⊢ A2' ⊇ A2 ->
                      M ⊢ {pre: A1} C {post: A2}.
+
+  Parameter class_change_classical_spec :
+    forall M x C m, M ⊢ {pre: a_class (e_ x) C} m {post: a_class (e_ x) C}.
 
   Close Scope hoare_scope.
   Close Scope specw_scope.
