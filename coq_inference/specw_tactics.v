@@ -1006,4 +1006,39 @@ Module SpecWTactics(L : LanguageDef).
             repeat (try (wrapped_raise_simpl));
             repeat (try (map_raise_simpl))).
 
+  Lemma exp_subst_raise_lt :
+    forall (e : exp) v n m, n < m -> ([v /s n] (e ↑ m)) = (([v /s n] e) ↑ m).
+  Proof.
+    intro e;
+      induction e;
+      intros;
+      repeat (subst_simpl;
+              raise_simpl);
+      auto;
+      try solve [try (rewrite IHe1);
+                 try (rewrite IHe2);
+                 try (rewrite IHe3);
+                 try (rewrite IHe);
+                 auto].
+
+    * destruct (le_lt_dec m n);
+        raise_simpl.
+      ** assert (n0 <> S n /\ n0 <> n);
+           [crush|andDestruct].
+         subst_simpl;
+           raise_simpl;
+           auto.
+      ** rewrite ehole_raise_gt;
+           auto.
+         destruct (eq_dec n n0);
+           subst.
+         *** subst_simpl;
+               raise_simpl;
+               auto.
+         *** subst_simpl.
+             rewrite ehole_raise_gt;
+               auto.
+
+  Qed.
+
 End SpecWTactics.

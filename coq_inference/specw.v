@@ -16,6 +16,7 @@ Module SpecW(L : LanguageDef).
   Declare Scope specw_scope.
 
   Open Scope reduce_scope.
+  Open Scope exp_scope.
 
   Inductive a_val : Type :=
   | av_hole : nat -> a_val
@@ -780,6 +781,7 @@ Module SpecW(L : LanguageDef).
   Definition wrapped := (fun α => ∀x.[ (a♢ 0) internal ∨ ¬ (a♢ 0) access α]).
 
   Close Scope specw_scope.
+  Close Scope exp_scope.
   Close Scope reduce_scope.
 
 End SpecW.

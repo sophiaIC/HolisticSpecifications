@@ -13,6 +13,24 @@ Open Scope string_scope.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
+  (**
+     We assume the existence of a syntactic proof system for assertions of
+     the form A1 ⟶ A2 for some module M.
+     We write this relation as M ⊢ A1 ⊇ A2, using the consequence symbol "⊇"
+     instead of "⟶" to avoid conflicts in Coq notation.
+     We further assume soundness of this relation, that is,
+
+     Theorem Soundness of Underlying Logic
+     If M ⊢ A1 ⊇ A2 holds then for all external modules M' and program states σ such
+     that arising M M' σ, we have M ⦿ σ ⊨ A1 ⟶ A2
+
+     Finally, we assume some properties of this proof system.
+     Some of these assumtions mirror typical logical properties such as
+     commutativity of conjunctions and disjunctions,
+     and some are specific to SpecW, but easily provable as sound.
+     In this file, we present and discuss these assumtions, but none should be surprising.
+   **)
+
 Module SpecWInference(L : LanguageDef).
 
   Import L.
@@ -534,12 +552,6 @@ Module SpecWInference(L : LanguageDef).
   Parameter conseq_not_not2 :
     forall M A, M ⊢ A ⊇ ¬ (¬ A).
 
-  Parameter or_dumb1 :
-    forall M A, M ⊢ A ⊇ A ∨ A.
-
-  Parameter or_dumb2 :
-    forall M A, M ⊢ A ∨ A ⊇ A.
-
   Parameter conseq_not_wrapped :
     forall M x y, M ⊢ x external ∧ x access y ⊇ ¬ wrapped y.
 
@@ -550,15 +562,47 @@ Module SpecWInference(L : LanguageDef).
     forall M A1 A2 A3, M ⊢ ((A1 ∨ A2) ∧ A3) ⊇ ((A1 ∧ A3) ∨ (A2 ∧ A3)).
 
   Parameter and_distr2:
-    forall M A1 A2 A3, entails M ((A1 ∧ A3) ∨ (A2 ∧ A3)) ((A1 ∨ A2) ∧ A3).
+    forall M A1 A2 A3, M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ ((A1 ∨ A2) ∧ A3).
 
-  Parameter and_distr_trans1:
+  (*
+    Below we use the assumptions stated above to prove
+    some simple properties of the consequence relation
+   *)
+
+  Lemma or_dumb1 :
+    forall M A, M ⊢ A ⊇ A ∨ A.
+  Proof.
+    intros.
+    apply or_l, conseq_refl.
+  Qed.
+
+  Lemma or_dumb2 :
+    forall M A, M ⊢ A ∨ A ⊇ A.
+  Proof.
+    intros.
+    apply or_lr;
+      apply conseq_refl.
+  Qed.
+
+  Lemma and_distr_trans2:
     forall M A1 A2 A3 A, M ⊢ ((A1 ∨ A2) ∧ A3) ⊇ A ->
                     M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ A.
+  Proof.
+    intros M A1 A2 A3 A Hconseq.
+    eapply conseq_trans;
+      [|apply Hconseq].
+    apply and_distr2.
+  Qed.
 
-  Parameter and_distr_trans2:
+  Lemma and_distr_trans1:
     forall M A1 A2 A3 A, M ⊢ ((A1 ∧ A3) ∨ (A2 ∧ A3)) ⊇ A ->
                     M ⊢ ((A1 ∨ A2) ∧ A3) ⊇ A.
+  Proof.
+    intros M A1 A2 A3 A Hconseq.
+    eapply conseq_trans;
+      [|apply Hconseq].
+    apply and_distr1.
+  Qed.
 
 End SpecWInference.
 

@@ -305,6 +305,16 @@ Module ClassicalProperties(L : LanguageDef).
       auto.
   Qed.
 
+  Lemma not_sat_implies_nsat :
+    forall M σ A, ~ M ◎ σ ⊨ A ->
+             M ◎ σ ⊭ A.
+  Proof.
+    intros.
+    destruct (sat_excluded_middle M σ A);
+      auto.
+    crush.
+  Qed.
+
   (** Lemma 5: Classical (5) *)
   Lemma arr_true :
     forall M σ A1 A2,

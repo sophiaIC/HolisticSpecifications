@@ -16,6 +16,7 @@ Module InferenceTactics(L : LanguageDef).
 
   Open Scope specw_scope.
   Open Scope inference_scope.
+  Open Scope exp_scope.
 
   Ltac extract1 v' n' :=
     match goal with
@@ -465,6 +466,299 @@ Module InferenceTactics(L : LanguageDef).
                  auto].
   Qed.
 
+  Lemma eval_raise' :
+    forall M σ e v, evaluate M σ e v ->
+               forall e' n, e = (e' ↑ n) ->
+                       evaluate M σ e' v.
+  Proof.
+    intros M σ e v Heval;
+      induction Heval;
+      intros.
+
+    * destruct e';
+        simpl in H;
+        inversion H;
+        subst;
+        auto with exp_db.
+
+    * destruct e';
+        simpl in H0;
+        inversion H0;
+        subst;
+        auto with exp_db.
+
+    * destruct e';
+        simpl in H;
+        inversion H;
+        subst;
+        auto with exp_db.
+
+    * destruct e';
+        simpl in H1;
+        inversion H1;
+        subst.
+      eapply v_f_heap.
+      apply IHHeval with (n0:=n);
+        auto.
+      apply H.
+      auto.
+
+    * destruct e'0;
+        simpl in H2;
+        inversion H2;
+        subst.
+      eapply v_f_ghost.
+      ** apply IHHeval1 with (n0:=n);
+           auto.
+      ** apply H.
+      ** apply H0.
+      ** apply H1.
+      ** apply IHHeval2 with (n0:=n);
+           auto.
+      ** apply IHHeval3 with (n:=n);
+           auto.
+         admit.
+
+    * destruct e';
+        inversion H;
+        subst.
+      apply v_if_true.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+
+    * destruct e';
+        inversion H;
+        subst.
+      apply v_if_false.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+
+    * destruct e';
+        inversion H;
+        subst.
+      eapply v_equals.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+
+    * destruct e';
+        inversion H0;
+        subst.
+      eapply v_nequals.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+      auto.
+
+    * destruct e';
+        inversion H0;
+        subst.
+      eapply v_nequals.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+      auto. 
+  Qed.
+
+  Lemma eval_raise :
+    forall M σ e v n, evaluate M σ e v <->
+                 evaluate M σ (e ↑ n) v.
+  Proof.
+    split.
+    * intro Heval.
+      induction Heval;
+        raise_simpl;
+        eauto with exp_db.
+    * intros Heval.
+      induction Heval.
+  Qed.
+
+  Lemma exp_subst_raise_lt :
+    forall (e : exp) x n m, n < m ->
+                       ([x /s n] (e ↑ m)) = (([x /s n] e) ↑ m).
+  Proof.
+    intro e;
+      induction e;
+      intros;
+      repeat (subst_simpl;
+              raise_simpl);
+      try solve [try rewrite IHe;
+                 try rewrite IHe1;
+                 try rewrite IHe2;
+                 try rewrite IHe3;
+                 repeat (rewrite aval_subst_raise_n);
+                 repeat (rewrite map_subst_raise_n);
+                 auto].
+
+    * destruct (le_lt_dec m n).
+      ** raise_simpl.
+         assert (n0 <> n);
+           [crush|].
+         repeat rewrite ehole_neq_subst;
+           [|crush|crush].
+         raise_simpl;
+           auto.
+      ** rewrite ehole_raise_gt;
+           auto.
+         destruct (eq_dec n0 n);
+           subst.
+         subst_simpl;
+           raise_simpl;
+           auto.
+         rewrite ehole_neq_subst;
+           auto.
+         rewrite ehole_raise_gt;
+           auto.
+
+  Qed.
+
+  Lemma aval_subst_raise_lt :
+    forall (a : a_val) x n m, n < m ->
+                         ([x /s n] (a ↑ m)) = (([x /s n] a) ↑ m).
+  Proof.
+    intros a;
+      destruct a;
+      intros;
+      auto.
+
+    destruct (le_lt_dec m n).
+    ** raise_simpl.
+       assert (n0 <> n);
+         [crush|].
+       repeat rewrite ahole_neq_subst;
+         [|crush|crush].
+       raise_simpl;
+         auto.
+    ** rewrite ahole_raise_gt;
+         auto.
+       destruct (eq_dec n0 n);
+         subst.
+       subst_simpl;
+         raise_simpl;
+         auto.
+       rewrite ahole_neq_subst;
+         auto.
+       rewrite ahole_raise_gt;
+         auto.
+  Qed.
+
+  Lemma map_subst_raise_lt :
+    forall (p : partial_map name a_val) x n m,
+      n < m ->
+      ([x /s n] (p ↑ m)) = (([x /s n] p) ↑ m).
+  Proof.
+    intros.
+    apply functional_extensionality;
+      intros.
+    simpl.
+    destruct (p x0);
+      simpl;
+      auto.
+    destruct a;
+      simpl;
+      auto.
+    let H := fresh in
+    destruct (lt_eq_lt_dec m n0) as [H|H];
+      [destruct H|].
+
+    * assert (Hle : m <= n0);
+        [crush|].
+      apply leb_correct in Hle;
+        rewrite Hle.
+      assert (Hneq : n <> S n0);
+        [crush
+        |apply <- Nat.eqb_neq in Hneq;
+         rewrite Hneq].
+      assert (Hneq' : n <> n0);
+        [crush
+        |apply <- Nat.eqb_neq in Hneq';
+         rewrite Hneq'].
+      rewrite Hle.
+      auto.
+
+    * subst.
+      rewrite Nat.leb_refl.
+      assert (Hneq : n <> n0);
+        [crush|].
+      apply <- Nat.eqb_neq in Hneq;
+        rewrite Hneq.
+      assert (Hneq' : n <> S n0);
+        [crush|].
+      apply <- Nat.eqb_neq in Hneq';
+        rewrite Hneq'.
+      assert (Heqb : n0 <=? n0 = true);
+        [apply leb_correct; auto|rewrite Heqb].
+      auto.
+
+    * assert (Hgt : m > n0);
+        [auto
+        |apply Nat.leb_gt in Hgt;
+         rewrite Hgt].
+      destruct (Nat.eq_dec n n0) as [|Heq];
+        subst.
+      ** rewrite Nat.eqb_refl;
+           auto.
+
+      ** apply Nat.eqb_neq in Heq;
+           rewrite Heq.
+         rewrite Hgt.
+         auto.
+  Qed.
+
+  Lemma asrt_subst_raise_lt :
+    forall (A : asrt) x n m,
+      n < m ->
+      ([x /s n] (A ↑ m)) = (([x /s n] A) ↑ m).
+  Proof.
+    intros A;
+      induction A;
+      intros;
+      repeat (subst_simpl;
+              raise_simpl);
+      try solve [raise_simpl;
+                 subst_simpl;
+                 try rewrite exp_subst_raise_lt;
+                 try rewrite IHA;
+                 try rewrite IHA1;
+                 try rewrite IHA2;
+                 repeat (rewrite aval_subst_raise_lt);
+                 repeat (rewrite map_subst_raise_lt);
+                 crush].
+
+  Qed.
+
+  Lemma raise_value_map :
+    forall (m : partial_map name a_val) n,
+      (forall x a,  m x = Some a ->
+               exists v, a = av_ v) ->
+      (m ↑ n) = m.
+  Proof.
+    intros.
+    apply functional_extensionality;
+      intros x.
+    destruct (partial_maps.partial_map_dec x m).
+
+    * destruct_exists_loo.
+      destruct (H x x0) as [v];
+        subst;
+        auto.
+      rewrite H0.
+      simpl.
+      rewrite H0.
+      auto.
+
+    * simpl;
+        rewrite e.
+      auto.
+  Qed.
+
   Lemma conseq_raise_mutind :
     (forall M σ A, M ◎ σ ⊨ A  -> forall n, M ◎ σ ⊨ (A ↑ n)) /\
     (forall M σ A, M ◎ σ ⊭ A  -> forall n, M ◎ σ ⊭ (A ↑ n)).
@@ -472,20 +766,72 @@ Module InferenceTactics(L : LanguageDef).
     apply sat_mutind;
       intros;
       raise_simpl;
-      try solve [repeat a_prop; auto with specw_db].
+      try solve [repeat a_prop; auto with specw_db];
+      try solve [try (apply sat_all);
+                 try (apply sat_ex with (x:=x));
+                 intros;
+                 rewrite asrt_subst_raise_lt;
+                 auto;
+                 apply Nat.lt_0_succ].
 
-    * admit.
+    * apply sat_exp.
+      apply exp_sat.
+      match goal with
+      | [H : exp_satisfaction _ _ _ |- _] =>
+        inversion H;
+          subst
+      end.
+      apply eval_raise;
+        auto.
 
-    * admit.
+    * apply sat_class.
+      match goal with
+      | [H : has_class _ _ _ _ |- _ ] =>
+        inversion H;
+          subst
+      end.
+      match goal with
+      | [α : addr |- _ ] =>
+        apply has_cls with (α := α)
+      end;
+        auto.
+      apply eval_raise;
+        auto.
 
-    * apply sat_all;
-        intros.
+    * inversion h;
+        subst;
+        simpl;
+        auto with specw_db.
+
+    * inversion m0;
+        subst.
+      apply sat_call.
+      rewrite raise_value_map;
+        auto.
+      intros.
       admit.
 
-    * apply sat_ex with (x:=x).
-      admit.
+    * inversion e;
+        subst;
+        auto with specw_db.
 
-  Admitted.
+    * inversion i;
+        subst;
+        auto with specw_db.
+
+    * apply not_sat_implies_nsat;
+        intro Hcontra.
+      match goal with
+      | [H : _ ◎ _ ⊨ _ |- _] =>
+        inversion H;
+          subst
+      end.
+      inversion H2;
+        subst.
+
+
+
+  Qed.
 
   Lemma conseq_raise :
     (forall M σ A, M ◎ σ ⊨ A  -> forall n, M ◎ σ ⊨ (A ↑ n)).

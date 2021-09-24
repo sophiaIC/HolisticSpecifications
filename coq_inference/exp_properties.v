@@ -8,6 +8,8 @@ Require Import defs.
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
 
+Open Scope exp_scope.
+
 Ltac unfold_eval :=
   match goal with
   | [H : _ ∙ _ ⊢ (e_val _) ↪ _ |- _] =>
@@ -85,3 +87,5 @@ Ltac eval_rewrite :=
            eauto;
            subst
          end.
+
+Close Scope exp_scope.

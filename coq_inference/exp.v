@@ -13,6 +13,10 @@ Class Subst (A B C : Type) : Type :=
     sbst : A -> B -> C -> A
   }.
 
+Declare Scope exp_scope.
+
+Open Scope exp_scope.
+
 Notation "'[' c '/s' b ']' a" := (sbst a b c)(at level 80).
 
 Instance substExpVal : Subst exp nat value :=
@@ -151,7 +155,7 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
                              M ∙ σ ⊢ e2 ↪ (v_int i2) ->
                              M ∙ σ ⊢ (e_div e1 e2) ↪ (v_int (i1 / i2))
 
-where "M '∙' σ '⊢' e1 '↪' e2":= (evaluate M σ e1 e2).
+where "M '∙' σ '⊢' e1 '↪' e2":= (evaluate M σ e1 e2) : exp_scope.
 
 Hint Constructors evaluate : exp_db.
 
@@ -195,19 +199,4 @@ Ltac eval_unique_auto :=
      cleanup]
   end.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Close Scope exp_scope.
