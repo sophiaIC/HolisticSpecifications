@@ -1,106 +1,100 @@
-\renewcommand{\sophia}[2][]{\ponders{Sophia}{blue}{#1} \textcolor{blue}{#2}\xspace}
+\newcommand{\sophiaPonder}[2][]{\ponders{Sophia}{blue}{#1} \textcolor{blue}{#2}\xspace}
 \renewcommand{\sophia}[2][]
 
 \section{Introduction}
-\label{s:intro}
-%Current systems are complex, and  built out of many different components of different provenance and different degree of trustworthiness.
 
-%\begin{flushright}
-%  \textit{nice things are nicer than nasty ones}\\
-%  Kingsley Amis, ``Lucky Jim.''
-%\end{flushright}
+Today's complex software has been built 
+over decades by combining modules and components of
+different provenance and different degrees of trustworthiness, and 
+interacts with almost every other program, device, or person.
+Modules are useful and robust only if
+``bad things will never happen'' (safety), as well as ``good things
+will eventually happen'' (liveness)  \cite{Lamport77}. 
+ 
+"Good things happening" is  typically specified formally 
+ through triples consisting of a  precondition, a code snippet, and some
+ postcondition \cite{Hoare69}.
+ For example, if I call the \prg{transfer} function (code snippet) providing the correct 
+ password (pre-condition), then some amount will be transferred from my account (post-condition -
+ the "good thing").
+The precondition is a \emph{sufficient} condition for the code snippet to
+make the good thing happen: given the precondition (eg providing the right 
+password), executing a
+code snippet (eg calling the transfer function) 
+is guaranteed to achieve the postcondition (the money is transferred).
 
-\begin{flushright}
-  \textit{Condition B is hard to formalize, \\since it requires saying precisely what a bad
-plan is,\\ and we do not attempt to do so.}\\
- \cite{byzantine}
-\end{flushright}
-
-The days of single, monolithic programs are long gone.  Contemporary
-software is built over decades, by combining modules and components of
-different provenance and different degrees of trustworthiness, which can
-interact with almost every other program, device, or person.
-In order for the resulting complex system to be correct, we need to be
-able to reason about individual components to ensure that they behave
-correctly, i.e.\ that good things happen when our programs run.
-For example: if I send an email to a valid address, it will be
-delivered to its recipient, or if I provide the right password, I can
-transfer money from one of my bank accounts to another. 
-To prove that good things can
-happen, program verification systems can use witnesses, e.g.\ a
-precondition, a postcondition describing the good thing (the desired
-effect), and a code snippet, whose execution will establish the
-effect, given the precondition.  The critical point here is that the
-precondition is a \emph{sufficient} condition for the code snippet to
-make the good thing happen: given the precondition, executing a
-correct code snippet is guaranteed to achieve the postcondition.
-
-Unfortunately, in a system of any complexity, knowing that good things
-will happen is not enough: we also need to be sure that bad things
-cannot happen. For example: we  need to be sure that an email can
-only be read by the intended recipient; or that someone can only transfer
-money if they provide the account's password. To address this problem,
-we need to consider the \emph{necessary} conditions without which some
-postcondition (good or bad) cannot be achieved:
-it is necessary that someone is sent an email before they can read it;
-it is necessary that the correct password is provided before money can
-be transferred.
-
-%% If a necessary condition can never be achieved, then
-%% bad things guarded by that condition cannot happen. \susan [ I have
-%% a real problem with the last sentence. We don't have necessary
-%% pre-conditions for bad things in the paper - for instance we don't
-%% have a necessary condition ``Passwords can be changed by anyone.''
-%% which we show cannot happen. I want to just remove the sentence.]{} 
-
-The challenge here is twofold: How do we specify the bad things we are
-concerned about, and how do we prove that the bad things we've
-specified do not happen?  These challenges are difficult because we
-cannot refer to just one component of a software system.  A sufficient
-specification can deal with a single component in isolation --- a
-single function for pre- and postconditions; a single class or data
-structure for invariants. A necessary specification, however, must
-provide guarantees which encompass the software system in its
-entirety, and constrain the emergent behaviour of all its components,
-for an open system, all possible sequences of API invocations.
-
-
-%% \sophia[Is this paragraph important? Skip?]{} Rather than considering the sufficient conditions to
-%% achieve a given effect, we express necessary preconditions for the
-%% holistic system. For example, a third party will not get to read my
-%% email unless I forward it to them - the forward is a necessary
-%% precondition for the reading. To reason about necessary conditions we
-%% develop our Logic of Necessity. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% related work bit 
-
-The importance of distinguishing between sufficient and necessary
-specifications of various kinds has a long history in Computer
-Science. \citeauthor{Lamport77} distinguishes between ``good things
-will eventually happen'' (liveness) and ``bad things will never
-happen'' (safety) conditions in his seminal paper on ``Multiprocess
-Programs''.  Type systems ensure entire classes of bad things can't
-happen, preserving execution even if memory structures are greatly
-corrupted \cite{Rinard03}.
+Proving adherence to such specifications  poses considerable challenges, esp in the 
+context of aliasing, re-entrancy, multithreading, memory models, to name a just a few. 
+Such challenges  has been studied intensively over the last  2 decades 
+ \cite{BIMutable,objInvars,DenyGuarantee,RealxedC11} -- again just naming a few.
+ 
+ 
+Our work is concerned with modules' robustness: bad things  will
+not happen, no matter the module's client is benign or malicious.
+\sophiaPonder[I fear this sentence breaks the flow]
+{We go beyond the design by contract approach \cite{Meyer09},  and
+cannot rely that a module's client will stick to the module's contract.}
+\sophiaPonder[shall we cite Swapsies]{For example, a bank module is robust, if it guarantees that 
+in a context where no external agent knows the account's password, the balance of 
+that account will not decrease -- such a guarantee allows me to confidently 
+pass my bank account into untrusted code, in the expectation of receiving some payment.}
+Expressed as a necessary condition, this guarantee says that the 
+balance of a bank account will not be reduced, unless an external agent knows
+the account's password.
 %
-More recently, \citeauthor{ddd} and \citeauthor{sandbox} with their robust safety and
-\citeauthor{FASE} with their holistic systems have tackled open world systems to prevent bad things from happening from untrusted code.
-\citeauthor{ddd} use techniques from security to ensure \jm[]{there} isn't undesirable leakage, \citeauthor{sandbox} build a sandbox and have a sophisticated type system to protect it and \citeauthor{FASE} have
-necessary conditions, which they expressed through temporal
-operators.
+% SD Perhaps this sentence should come later
+% In this paper we propose how  to specify
+%such necessary conditions formally, as well as ways to provide adherence to
+%such specifications.
+ 
+ 
+A multitude of approaches on guarantees that
+bad things will not happen have been proposed at different granularity and 
+for different languages or calculi. \sophiaPonder[should this appear here?]{Our work is the first to
+concentrate on the 
+\emph{emergent behaviour} of modules.}  
+ 
+Type systems have been developed for various programming languages 
+and give relatively coarse-grained guarantees, \emph{e.g.,} 
+ that "message not understood errors" 
+will not be thrown \cite{EiffelCook},
+or that private methods will not called by external modules \cite{JavaAccess},
+or that  no object or method will directly point inside the internal representation of some other object
+\cite{ownaliasDONTUSE},
+or that race conditions will not arise  \cite{mindori} -- again, just naming a few.
 
+ Information-flow control  systems have been developed for
+various calculi and programming languages. Their 
+ guarantees are also coarse-grained:  the contents of high security variables cannot
+be affected by the values of low security variables \cite{Zdancewic:Myers:01,noninteferenceOS}. 
+ 
+Correspondence assertions are more fine-grained. They were proposed for 
+process calculi,  and give guarantees of the form that if one principal
+ ever reaches a certain point in the protocol, then some other principal has 
+ previously reached some other matching point in the protocol  \cite{correspondence}. 
+% SD thought the below was true, but nor think it is not
+% Correspondence assertions have also
+% been proposed for Javascript. 
+A related problem is authorisation policies, which promise that 
+certain actions will not be taken on certain objects
+unless corresponding  rights had been granted
+ \cite{auhtorInDistr}.
+ 
+ 
+\sophiaPonder[TO WORK ON THIS]{Here lots missing:  talk of  T  of Devfriese et al here ..
+ TACAS has 1st order temporal operators to
+ accomodate the temporal aspect -- and no reasoning.
+ }
+ 
+ The contribution of our paper is twofold: we propose Necessity Specs, to describe such necessary conditions,
+ and a Necessity Logic to reason about modules' adherence to such Necessity Specs. 
+ 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-In this paper we introduce
-%
- %% \textit{necessity specifications}:\\
- %% \strut \hspace{1.5in} $\onlyIf {A_1} {A_2} {A_3}$ \\
-%
-\textit{necessity specifications}:
+ 
+Our Necessity Specs allow us to capture \sophiaPonder[need to explain that]{emergent behaviour}.  
+Building on ideas from \citeauthor{FASE},  
+ we introduce
+\textit{necessity specifications} of the following two forms:
 %
 %
 %\hspace{1cm} $\onlyIf {A_1} {A_2} {A_3}$ \\ 
@@ -110,283 +104,121 @@ In this paper we introduce
 %% \end{lstlisting}
 %
 \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-from ${A_1}$ to ${A_2}$ onlyIf ${A_3}$ 
+                   from ${A_1}$ to ${A_2}$ onlyIf ${A_3}$ 
+                    
+                   from ${A_1}$ to ${A_2}$ onlyThrough ${A_3}$
 \end{lstlisting}
 %
-to say a change from a current state satisfying $A_1$ to a future
+The former says that  a change from a current state satisfying $A_1$ to a future
 state satisfying $A_2$ (i.e.\ an effect) is possible only if the necessary condition
 $A_3$ holds in the current state
 %
 (i.e.\ $(A_1 \wedge \Diamond A_2) \longrightarrow A_3$).
-%
+The latter says that a change from a current state satisfying $A_1$ to a future
+state satisfying $A_2$  is possible only if the necessary condition
+$A_3$ holds in some intermediate state.\sophiaPonder[not sure we need to have the latter, 
+and do not have temp logic form of it]{}.
 Unlike \citeauthor{VerX} or \citeauthor{FASE}
 which employ general temporal operators, 
-we support necessity specifications with this explicit
+the necessity operators $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
+are second class, and may nor appear in the assertions $A$.
+%support necessity specifications with this explicit
+% ``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
 %
-``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
-%
-and concomitant specialised inference system.
+%and concomitant specialised inference system.
 %
 %
 Our assertions $A$ support the usual expressions about program state
-(e.g. \prg{x.f > 3}), logical connectives and quantifiers
-(e.g. $\wedge$, $\forall$), and additional predicates
+%(e.g. \prg{x.f > 3}),
+ logical connectives and quantifiers, 
+%(e.g. $\wedge$, $\forall$), 
+and additional predicates
 to capture \textit{provenance} (whether an object $o$'s definition is
 $\internal{\texttt{o}}$ or $\external{\texttt{o}}$) to the current
 module, and \textit{permission} \cite{miller-esop2013} (whether an
 object $o$ has direct access to another object $o'$:
 $\access{\texttt{o}}{\texttt{o'}}$).
  
+The Necessity Logic is based on three main ideas: 
+First, Assertions may be module-internal, ie
+their validity may only be affected by module-internal calls. 
+Second, based on the classical specs of methods 
+\sophiaPonder[here mention Birkedahl recent]{we can infer per-method 
+necessity specs}.
+A special logic allows us to combine per-method necessity specs into per
+module necessity specs.
 
-%% , , and 
-%%  % two assertions that are specific to reasoning about open programs: 
-%%  the following two assertions specific to reasoning about open programs:\sophia[Have 
-%%  we spoken about open earlier on?]{}
-%%  \emph{Provenance:}\sophia[used to be called viewpoint, but I think it is provenance]{}
-%%  an internal object belongs to the module under consideration ($\internal{\texttt{o}}$ ), all others
-%%  belong to   unknown, external, module ($\external{\texttt{o}}$) .  \emph{Access:} 
-%%  which object has access to which other object, $\access{\texttt{o}}{\texttt{o'}}$. 
-%%  Provenance is relevant, because a
-%%  module may make stronger guarantees about its own, internal objects. 
-%%  And Access (or permission in \cite{miller-esop2013}'s work \sophia[need citation here]{}) is relevant because in general,
-%%  access to objects is necessary to
-%%  achieve effects (eg cannot print unless one had access to a printer).
-  
  
-%\footnote{I think this should appear somewhere later: Chainmail appears 
-% to be less rich than Chainmail, however we have been able to specify 
- %all their examples, and in addition, we have a proof system for 
- %\SpecO has a proof system, something lacking 
- %ih Chainmail lacked. }
-%To specify the bad things, we cannot
-%refer to one particular piece of code, % and cannot refer to one witness;
-% instead, we need to make a guarantee which encompasses all possible
-% functions executable by a module in all their possible sequences or even interleavings --
- %we need to consider their \emph{emerging} behaviour.
- %Rather than considering the sufficient conditions to achieve a certain effect,
- %we express the necessary precondition. For example,    a third party 
- %will not get to read my email unless I forward it to them -- the forwarding
-% is a necessary precondition for the reading.
- 
- %To reason about necessary conditions, we develop a special
- %logic with such necessity triples. The most basic such holistic assertions 
- %can be derived from classical assertions (sufficient \jm[old:truples]{triples})
- %under assumptions of encapsulation;
- %they can then be further combined using our logic of necessity.
-
-\subsection{Bank Account Example}
-\label{s:bank}
-  
-Consider \prg{Account} class in module \prg{Mod1}
-that represents a bank account
-with a balance and a password, where funds may be transferred
-between accounts only when sending the account's password:
-%
-% (Note that we assume private fields are accessible ``class-wide''.)
-%
-% (methods may read and write fields of any instance of a class)
-%
-%and that passwords are unforgeable and not enumerable (again as
-%in Java, albeit without reflection).
+%The below is good and perhaps we shpuld use it
+% The challenge here is twofold: How do we specify the bad things we are
+%concerned about, and how do we prove that the bad things we've
+%specified do not happen?  These challenges are difficult because we
+%cannot refer to just one component of a software system.  A sufficient
+%specification can deal with a single component in isolation --- a
+%single function for pre- and postconditions; a single class or data
+%structure for invariants. A necessary specification, however, must
+%provide guarantees which encompass the software system in its
+%entirety, and constrain the emergent behaviour of all its components,
+%for an open system, all possible sequences of API invocations.
+% 
+% 
 %
 % 
-\begin{lstlisting}[language=Chainmail, frame=lines]
-module Mod1
-  class Account
-    field balance:int 
-    field pwd: Password
-    method transfer(dest:Account, pwd':Object) -> void
-      if this.pwd==pwd'
-        this.balance-=100
-        dest.balance+=100
-  class Password
-\end{lstlisting}
-%
-\noindent 
-We can capture the intended
-semantics of the \prg{transfer} method by writing ``classical''
-specifications in terms of pre- and post-conditions ---
-\prg{Mod1}'s implementation of the \prg{transfer} method meets
-this specification.
-
-
-
-\begin{lstlisting}[mathescape=true, frame=lines, language=Chainmail]
-ClassicBankSpec  $\triangleq$
-   method transfer(dest:Account, pwd':Password) -> void {
-       ( PRE:  this.balance=bal1 $\wedge$ this.pwd==pwd' $\wedge$ dest.balance=bal2 $\wedge$ dest=/=this 
-         POST: this.balance == bal1-100 $\wedge$  dest.balance == bal2+100 )
-       ( PRE: this.balance=bal1 $\wedge$ this.pwd=/=pwd' $\wedge$ dest.balance=bal2
-         POST: this.balance == bal1 $\wedge$  dest.balance=bal2 )
-       ( PRE: a : Account $\wedge$ a=/=this $\wedge$ a=/=dest  $\wedge$ a.balance=bal $\wedge$ a.pwd=pwd1
-         POST:  a.balance=bal $\wedge$ a.pwd=pwd1)
-       ( PRE: a : Account $\wedge$ a.pwd=pwd1  
-         POST: a.pwd=pwd1)       
-\end{lstlisting}
-%\footnote{Perhaps omit some of the lines here, but we do need them all in the full discussion}
- 
- 
-
-Now consider the following alternative implementations:
-\prg{Mod2} allows any client to reset its password at any time, while
-\prg{Mod3} first requires the existing password in order to change it.
-The problem is that although the \prg{transfer} method is the same in
-all three alternatives, and although each one satisfies \prg{(ClassicBankSpec)},
-code sequences such as
-%
-\prg{account.set(42); account.transfer(yourAccount, 42)}
-%
-are enough to drain the account in \prg{Mod2} without supplying the password.
-
-%% The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
-%% however, while executing the first and third version of \prg{Account} won't exhibit unwanted behaviour, the second version doesn't preclude it.
-%Namely version II allows any client to change the password of the
-%account, and then to repeatedly withdraw money from it.
-
-  
-% On the other hand, we expect our software -- even if complex -- to provide some simple, high level
-%guarantees, e.g. email addressed to me personally will not be read by a third party unless I explicitly 
-%forwarded it to them.
-%We except  our software to  behave correctly, even when used by a careless or malicious third party. 
-%Such use of a software often consist of a sequence of actions performed on the module. 
-%
-%Software components respond to single actions, 
-%or to sequences of such single actions. 
-%When thinking about a software component we want think about the behaviour of each 
-%action in isolation, but also about the \emph{emergent behaviour}, ie all
-% the possible effects of the combinations of these actions. 
-  
-  
-%% \susan[]{I removed the number on the module name because it isn't
-%% referred to and doesn't need to be} 
- %% \begin{figure}[hbtp]
-\begin{tabular}{lll}
-\begin{minipage}[b]{0.35\textwidth}
-\begin{lstlisting}[language=chainmail, frame=lines]
-module Mod2
-  class Account
-    field balance:int 
-    field pwd: Password 
-    method transfer(..) 
-      ... as earlier ...
-    method set(pwd': Object)
-      this.pwd=pwd'
-      class Password
-\end{lstlisting}
-\end{minipage}
-&\ \ \  \ \   &%
-\begin{minipage}[b]{0.50\textwidth}
-\begin{lstlisting}[language=chainmail, frame=lines]
-module Mod3
-  class Account
-    field balance:int 
-    field pwd: Password 
-    method transfer(..) 
-      ... as earlier ...
-    method set(pwd',pwd'': Object)
-      if (this.pwd==pwd') 
-        this.pwd=pwd''
-  class Password
-\end{lstlisting}
-\end{minipage} 
-\end{tabular}
- %%  \caption{module \prg{AccountMdl} version II,  \ \ \ \ \ \hspace{.7in} \ \ \ \ \ \  module \prg{AccountMdl} version III}
- %% \label{fig:ExampleAccount}
- %% \end{figure}
-
-
-We need to rule out \prg{Mod2} while permitting \prg{Mod3} and
-\prg{Mod1}. The catch is the vulnerability present in \prg{Mod2} is the result
-of  \emph{emergent} behaviour from the interactions of the \prg{set}
-and \prg{transfer} methods --- even though \prg{Mod3} also has a
-\prg{set} method, it does not exhibit the unwanted interaction.
-This is exactly where a necessary condition can help:
-we want to avoid transferring money
-(or more generally, reducing an account's balance)
-\textit{without} the existing account password.  Phrasing the same condition
-the other way around gives us a positive statement that still
-rules out the theft: that money \textit{can only} be
-transferred when the account's password is known.
-In our necessity condition syntax:
-
-%
-%% The flaw in version {\sf{II}} arises from 
-%% can be used to overwrite the
-%% password, and then using the new password \prg{transfer}  can be called.
-% If we want the \prg{Account} class to be robust, we must prohibit the password from being freely available.
-%
-%
-%% In this paper, we show how \textit{necessity specifications} can solve
-%% this progkem.  
-%%  Therefore, we propose a %holistic 
-%%  specification which says that
-%%  the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
-%%  module has access to the password:
-%
-%
- %% Therefore, we propose a %holistic 
- %% specification which says that
- %% the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
- %% module has access to the password:
-%
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-NecessityBankSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
-                      to a.balance < bal
-                      onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
-\end{lstlisting}
-%
-%
+%The importance of distinguishing between sufficient and necessary
+%specifications of various kinds has a long history in Computer
+%Science.
 % 
-%% In more detail, the specification from above says that if in the current
-%% configuration \prg{a} is an \prg{Account},
-%% and in some future configuration \prg{a} will have a balance less than the current one, then,in the \emph{current} configuration
-%% there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to module
- %% \prg{AccountMdl}), and which has access to \prg{a}'s password.
- %
-%% T9hu having access to the password is a necessary condition for the balance to reduce.
-The critical point of this necessity specification is that it is
-expressed in terms of observable effects and the shape of the heap --- the account's balance is reduced 
-and there is external access to the password ($\external{\prg{o}}\ \wedge\ \access{\prg{o}}{\prg{a.pwd}}$)
---- and not in terms of individual methods --- such as
-\prg{set} or \prg{transfer}.
-This gives necessity specifications the
-vital advantage that they constrain
-\textit{implementation} of a bank account with a balance and a
-password, irrespective of the API it
-offers, the services it exports, or the dependencies on other parts of
-the system.
-\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
-   
-% QUESTIONS:
-% \begin{itemize}
-% \item
-% holistic assertion -- different name or say we adopt from FASE; holistic -> comprehensive, integrated, aggregate \susan[I think we should keep holistic]{}
-% \item
-% Name for our logic?  Holistic logic? What is we have a different take on holistic next year? Necessity triples? 
-%\item
-%If our \SpecO is simpler than the FASE Chainmail, then we need to argue that we can express all FASE examples
-% \end{itemize}
+%  Type systems ensure entire classes of bad things can't
+%happen, preserving execution even if memory structures are greatly
+%corrupted \cite{Rinard03}.
+%%
+%More recently, \citeauthor{ddd} and \citeauthor{sandbox} with their robust safety and
+%\citeauthor{FASE} with their holistic systems have tackled open world systems to prevent bad things from happening from untrusted code.
+%\citeauthor{ddd} use techniques from security to ensure \jm[]{there} isn't undesirable leakage, \citeauthor{sandbox} build a sandbox and have a sophisticated type system to protect it and \citeauthor{FASE} have
+%necessary conditions, which they expressed through temporal
+%operators.
+
+In the next section, (\S\ref{s:outline}),  we outline our approach in terms of a motivating example.
+This example shows, among others, that the specification needs to talk about the module as a whole,
+without making reference to the individual methods in that module.
+Moreover, while a module may adhere some such a necessity spec, an
+augmented version may no longer adhere. 
+ 
+
+\subsection{Contributions}
+
+The contributions of this paper are as follows:
+ 
+ \begin{enumerate}
+ \item
+\Chainmail, a language to
+express necessity specifications (\S\ref{s:semantics});
+ \item
+%a logic for proving a module's adherence to its
+%necessity specifications (\S\ref{s:inference});
+%% This logic builds on top of classical pre- post- conditions.
+\begin{description}
+\item [(a)]
+{a logic for raising assertion encapsulation and classical Hoare specifications
+to necessity specifications for any single module interaction (\S\ref{s:module-proof});}
+\item [(b)]
+ {a logic for raising single step necessity specifications for a module to an arbitrary number of steps
+and thus proving module adherence to necessity specifications for any execution, and any combination of module interactions, i.e. emergent behavior (\S\ref{s:emergent-proof});}
+%% This logic builds on top of classical pre- post- conditions.
+\end{description}
+\item
+  a mechanised {Coq} proof of soundness of the logic (\S\ref{s:soundness});
+\item
+  a  {mechanised Coq} proof that % the bank account 
+  our example obeys the necessity
+  specification (\S\ref{s:examples}).
+\end{enumerate}
 
 
-% The rest of the paper is organised as follows: .... 
-%Section
-%~\ref{sect:motivate:Bank} 
-%\sd{gives an example from the literature} which we will use 
-%to elucidate key points of \SpecO.
-%%motivates our work via an example, and then section
-%~\ref{sect:chainmail} presents the \SpecO\ specification
-%language.  Section~\ref{sect:formal} introduces the formal model
-%underlying \SpecO, and then section~\ref{sect:assertions} defines
-%the 
-%semantics of \SpecO's assertions.
-%% SD the below is NOT ture
-%%full details are relegated toappendices.   
-%Section~\ref{sect:example} shows how key points of 
-%exemplar problems can be specified in \SpecO,
-%section~\ref{sect:discussion}
-%discusses our design, \ref{sect:related} considers related
-%work, and section~\ref{sect:conclusion} concludes.
-%We relegate various details to appendices.
+\noindent Finally we place necessity specifications into the context
+of related work (\S\ref{s:related}) and conclude (\S\ref{s:conclusion}).
+The Coq proof of the logic appears in the
+supplementary material.
 
 
 
