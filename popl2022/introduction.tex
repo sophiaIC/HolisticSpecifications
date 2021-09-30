@@ -11,7 +11,8 @@ Modules are useful and robust only if
 ``bad things will never happen'' (safety), as well as ``good things
 will eventually happen'' (liveness)  \cite{Lamport77}. 
  
-"Good things happening" is  typically specified formally 
+ \vspace{.03in}
+``Good things happening'' is  typically specified formally 
  through triples consisting of a  precondition, a code snippet, and some
  postcondition \cite{Hoare69}.
  For example, if I call the \prg{transfer} function (code snippet) providing the correct 
@@ -20,25 +21,32 @@ will eventually happen'' (liveness)  \cite{Lamport77}.
 The precondition is a \emph{sufficient} condition for the code snippet to
 make the good thing happen: given the precondition (eg providing the right 
 password), executing a
-code snippet (eg calling the transfer function) 
+code snippet (eg calling the \prg{transfer} function) 
 is guaranteed to achieve the postcondition (the money is transferred).
 
-Proving adherence to such specifications  poses considerable challenges, esp in the 
-context of aliasing, re-entrancy, multithreading, memory models, to name a just a few. 
-Such challenges  has been studied intensively over the last  2 decades 
- \cite{BIMutable,objInvars,DenyGuarantee,RealxedC11} -- again just naming a few.
+%Proving adherence to such specifications  poses considerable challenges, especially when in the 
+%context of aliasing, re-entrancy, multithreading, memory models, to name a just a few. 
+%Such challenges  have been studied intensively over the last  two decades 
+% \cite{BIMutable,objInvars,DenyGuarantee,RealxedC11} -- again just naming a few.
  
  
-Our work is concerned with modules' robustness: bad things  will
-not happen, no matter the module's client is benign or malicious.
-\sophiaPonder[I fear this sentence breaks the flow]
-{We go beyond the design by contract approach \cite{Meyer09},  and
-cannot rely that a module's client will stick to the module's contract.}
-\sophiaPonder[shall we cite Swapsies]{For example, a bank module is robust, if it guarantees that 
-in a context where no external agent knows the account's password, the balance of 
-that account will not decrease -- such a guarantee allows me to confidently 
-pass my bank account into untrusted code, in the expectation of receiving some payment.}
-Expressed as a necessary condition, this guarantee says that the 
+ 
+
+  \vspace{.03in}
+ ``Bad things not happening'' while using a module and irrespective of whether the module's
+ clients are benign or malicious, is what makes a module  robust. 
+% \sophiaPonder[would love to be able to start sentence with "Bad things ...]{Our work is concerned with a module's robustness: ``bad things  will
+%never happen'', irrespective of whether the module's client is benign or malicious.}
+%\sophiaPonder[I fear this sentence breaks the flow]
+%{We go beyond  ``design by contract'' \cite{Meyer09},  and
+%cannot rely on a module's client sticking to the module's contract.}
+\sophiaPonder[shall we cite Swapsies]{For example, for a bank module to 
+be robust, it must 
+guarantee  that  in a context where no external agent knows the account's password, 
+the balance of 
+that account will not decrease -- such a guarantee allows one to confidently 
+pass their bank account into untrusted code, in the expectation of receiving some payment.}
+Expressed as a \emph{necessary condition}, this guarantee says that the 
 balance of a bank account will not be reduced, unless an external agent knows
 the account's password.
 %
@@ -48,53 +56,75 @@ the account's password.
 %such specifications.
  
  
-A multitude of approaches on guarantees that
-bad things will not happen have been proposed at different granularity and 
-for different languages or calculi. \sophiaPonder[should this appear here?]{Our work is the first to
-concentrate on the 
-\emph{emergent behaviour} of modules.}  
+A multitude of kinds of guarantees have been proposed for ``bad things  will
+not happen''. They differ  in the level of granularity, 
+the target programming language or calculi, and the ways by which 
+the guarantees can be established.
+%We will discuss some of these approaches and compare with the aims of this paper:
+% \sophiaPonder[should this appear here?]{Our work is the first to
+% concentrate on the 
+% \emph{emergent behaviour} of modules.}  
  
-Type systems have been developed for various programming languages 
-and give relatively coarse-grained guarantees, \emph{e.g.,} 
- that "message not understood errors" 
-will not be thrown \cite{EiffelCook},
-or that private methods will not called by external modules \cite{JavaAccess},
-or that  no object or method will directly point inside the internal representation of some other object
-\cite{ownaliasDONTUSE},
-or that race conditions will not arise  \cite{mindori} -- again, just naming a few.
+%Type systems   % have been developed for various programming languages. They 
+% give  relatively coarse-grained guarantees, \emph{e.g.,} 
+% that ``message not understood'' errors 
+%will not be thrown \cite{EiffelCook},
+% private methods will not called by external modules \cite{JavaAccess},
+%  no object or method will directly point inside the internal representation of some other object
+%\cite{ownalias},
+%or that race conditions will not arise  \cite{mindori}. % -- again, just naming a few.
+%\sophiaPonder[]{Drop the types?}
+ 
 
- Information-flow control  systems have been developed for
+\emph{Information-flow control}  systems have been developed for
 various calculi and programming languages. Their 
  guarantees are also coarse-grained:  the contents of high security variables cannot
-be affected by the values of low security variables \cite{Zdancewic:Myers:01,noninteferenceOS}. 
+be affected by the values of low security variables 
+\cite{Zdancewic:Myers:01,noninteferenceOS}. 
  
-Correspondence assertions are more fine-grained. They were proposed for 
-process calculi,  and give guarantees of the form that if one principal
- ever reaches a certain point in the protocol, then some other principal has 
- previously reached some other matching point in the protocol  \cite{correspondence}. 
+\emph{Correspondence assertions} are more fine-grained. Proposed for 
+process calculi, they can guarantee  that if one principal ever reaches a certain point in the protocol, then some other principal has previously reached some other matching point in the protocol; 
+the term \emph{robust safety}  expresses that correspondence assertions are true in the presence of any opponent expressible in the calculus \cite{correspondence}. 
 % SD thought the below was true, but nor think it is not
 % Correspondence assertions have also
 % been proposed for Javascript. 
-A related problem is authorisation policies, which promise that 
+A related problem is \emph{authorisation policies}, which promise that 
 certain actions will not be taken on certain objects
-unless corresponding  rights had been granted
- \cite{auhtorInDistr}.
- 
- 
-\sophiaPonder[TO WORK ON THIS]{Here lots missing:  talk of  T  of Devfriese et al here ..
- TACAS has 1st order temporal operators to
- accomodate the temporal aspect -- and no reasoning.
- }
- 
- The contribution of our paper is twofold: we propose Necessity Specs, to describe such necessary conditions,
- and a Necessity Logic to reason about modules' adherence to such Necessity Specs. 
- 
+unless corresponding  rights had been granted  \cite{auhtorInDistr}.
 
+In   \emph{object capabilities} \cite{MillerPhD},
+effects can only be produced by sending messages to objects,  there
+is no ambient authority, and  objects 
+have unforgeable identities.
+In the context of object capabilities, \citeauthor{ddd} define  \emph{robust safety for Javascript}  
+to mean that the untrusted environment of a program cannot violate 
+its internal invariants, and developed  a verification methodology   to 
+prove   that programs that  export only properly wrapped values  are robustly safe.
+In the same context, \citeauthor{dd} develop Kripke models to reason about 
+the result of execution of some given code in parallel
+with arbitrary, unknown code.  
  
-Our Necessity Specs allow us to capture \sophiaPonder[need to explain that]{emergent behaviour}.  
-Building on ideas from \citeauthor{FASE},  
- we introduce
-\textit{necessity specifications} of the following two forms:
+ More recently,  \citeauthor{VerX} and  \citeauthor{FASE}
+ enriched added temporal operators to specification languages.
+  The former is used to express safety properties of smart contracts;
+ adherence to such specifications is proven through symbolic 
+ execution. The latter is used to express general safety properties; it
+ also includes predicates talking about provenance
+ and access (more below); no proof system has been developed so far.
+ 
+\vspace{.03in}
+Our work is concerned with the safety a module, in the open setting -- where we know nothing about a
+module's client.
+We propose \emph{Necessity Specifications} to describe a module's safety guarantees,
+and \emph{Necessity Logic} to prove a module's adherence to such specifications.
+%
+
+
+\textit{Necessity Specifications}   have one of the following three forms:
+% allow us to capture \sophiaPonder[need to explain that]{emergent behaviour}.  
+% Building on ideas from \citeauthor{FASE},  
+% we introduce
+%\textit{necessity specifications} of the following two forms:
 %
 %
 %\hspace{1cm} $\onlyIf {A_1} {A_2} {A_3}$ \\ 
@@ -104,50 +134,87 @@ Building on ideas from \citeauthor{FASE},
 %% \end{lstlisting}
 %
 \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-                   from ${A_1}$ to ${A_2}$ onlyIf ${A_3}$ 
-                    
-                   from ${A_1}$ to ${A_2}$ onlyThrough ${A_3}$
+       $A$          from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$          from ${A_{curr}}$ to ${A_{fut}}$ onlyThrough ${A_{nec}}$
 \end{lstlisting}
 %
-The former says that  a change from a current state satisfying $A_1$ to a future
-state satisfying $A_2$ (i.e.\ an effect) is possible only if the necessary condition
-$A_3$ holds in the current state
+The first form consists of assertions,  $A$, supporting the usual expressions about program state,
+%%(e.g. \prg{x.f > 3}),
+  logical connectives and quantifiers, 
+%%(e.g. $\wedge$, $\forall$), 
+ and additional predicates
+ to capture \textit{provenance} and access.
+ %(whether an object $o$'s class comes 
+%$\internal{\texttt{o}}$ or $\external{\texttt{o}}$) to the current
+%module, and \textit{permission} \cite{miller-esop2013} (whether an
+%object $o$ has direct access to another object $o'$:
+%$\access{\texttt{o}}{\texttt{o'}}$).
+The second form says that  a change from a current state satisfying $A_{curr}$ to a future
+state satisfying $A_{fut}$ %(i.e.\ the transition  $A_{curr}$ to $A_{fut}$ being an effect) 
+is possible only if the necessary condition
+$A_{nec}$ holds in the current state
 %
-(i.e.\ $(A_1 \wedge \Diamond A_2) \longrightarrow A_3$).
-The latter says that a change from a current state satisfying $A_1$ to a future
-state satisfying $A_2$  is possible only if the necessary condition
-$A_3$ holds in some intermediate state.\sophiaPonder[not sure we need to have the latter, 
-and do not have temp logic form of it]{}.
-Unlike \citeauthor{VerX} or \citeauthor{FASE}
-which employ general temporal operators, 
-the necessity operators $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
-are second class, and may nor appear in the assertions $A$.
-%support necessity specifications with this explicit
-% ``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
-%
-%and concomitant specialised inference system.
-%
-%
-Our assertions $A$ support the usual expressions about program state
-%(e.g. \prg{x.f > 3}),
- logical connectives and quantifiers, 
-%(e.g. $\wedge$, $\forall$), 
-and additional predicates
-to capture \textit{provenance} (whether an object $o$'s definition is
-$\internal{\texttt{o}}$ or $\external{\texttt{o}}$) to the current
-module, and \textit{permission} \cite{miller-esop2013} (whether an
-object $o$ has direct access to another object $o'$:
-$\access{\texttt{o}}{\texttt{o'}}$).
- 
-The Necessity Logic is based on three main ideas: 
-First, Assertions may be module-internal, ie
-their validity may only be affected by module-internal calls. 
-Second, based on the classical specs of methods 
-\sophiaPonder[here mention Birkedahl recent]{we can infer per-method 
-necessity specs}.
-A special logic allows us to combine per-method necessity specs into per
-module necessity specs.
+%(i.e.\ $(A_1 \wedge \Diamond A_2) \longrightarrow A_3$).
+The third form says that a change from a current state satisfying $A_{curr}$ to a future
+state satisfying $A_{fut}$  is possible only if the necessary condition
+$A_{nec}$ holds in some intermediate state.
+ Note, that unlike \citeauthor{VerX} or \citeauthor{FASE}
+ the necessity operators $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
+ are second class; they may nor appear in the assertions $A$.
+%%support necessity specifications with this explicit
+%% ``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
+%%
+%%and concomitant specialised inference system.
 
+Thus, our Necessity Specifications are more fine-grained than information-flow control.
+They may include preservation
+of invariants as in \cite{ddd}, but they go beyond that:   
+Like correspondence assertions, they too express necessary conditions.
+However, the cause of the correspondence assertion is some principal reaching
+a certain point, while in our specifications, it is some change (from a state
+satisfying ${A_{curr}}$ to a state satisfying ${A_{fut}}$).
+This change may be caused through  a whole \emph{sequence} of  function 
+calls on the module, and thus it describes the module's \emph{emergent}
+behaviour. 
+We show the specification of the bank example in  \S\ref{s:bank}.
+
+
+ %\sophiaPonder[not sure we need to have the latter, 
+% and do not have temp logic form of it]{}.
+% For same later section?
+%Unlike \citeauthor{VerX} or \citeauthor{FASE}
+%the necessity operators $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
+%are second class, and may nor appear in the assertions $A$.
+%%support necessity specifications with this explicit
+%% ``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
+%%
+%%and concomitant specialised inference system.
+%%
+%%
+%Our assertions $A$ support the usual expressions about program state
+%%(e.g. \prg{x.f > 3}),
+% logical connectives and quantifiers, 
+%%(e.g. $\wedge$, $\forall$), 
+%and additional predicates
+%to capture \textit{provenance} (whether an object $o$'s definition is
+%$\internal{\texttt{o}}$ or $\external{\texttt{o}}$) to the current
+%module, and \textit{permission} \cite{miller-esop2013} (whether an
+%object $o$ has direct access to another object $o'$:
+%$\access{\texttt{o}}{\texttt{o'}}$).
+ 
+The \textit{Necessity Logic} is based on three main ideas: 
+First, assertions may be module-internal, \textit{i.e.,}
+their validity may only be affected by module-internal calls. 
+Second, leveraging the classical  specifications of methods 
+(\textit{i.e.,} the sufficient conditions) we can obtain per-method
+ necessity specifications; that is, necessary preconditions
+  for a given effect and a given method cal;  at a very abstract level, this is
+similar to  \cite{threoremsFreeSep},.
+Third,  a special proof system allows us to combine 
+per-method
+ necessity specifications and module-internal assertions 
+ to obtain per-module  necessity specifications; these describe a module's
+ emergent behaviour.
+An illustration is shown in  \S\ref{s:approach}.
  
 %The below is good and perhaps we shpuld use it
 % The challenge here is twofold: How do we specify the bad things we are
@@ -179,11 +246,12 @@ module necessity specs.
 %operators.
 
 In the next section, (\S\ref{s:outline}),  we outline our approach in terms of a motivating example.
-This example shows, among others, that the specification needs to talk about the module as a whole,
-without making reference to the individual methods in that module.
-Moreover, while a module may adhere some such a necessity spec, an
-augmented version may no longer adhere. 
- 
+This example demonstrates, among other things, that the specification need  refer  to  individual methods in a module.
+Moreover, adherence to a necessity specification is not monotonic, in the following two senses:
+Adding a method to a module does not necessarily preserve adherence to a Necessity Specification,
+and while separate methods may adhere to a  Necessity Specification, their combination does
+not necessarily do so: Necessity Specifications capture a module's emergent behaviour.
+
 
 \subsection{Contributions}
 
