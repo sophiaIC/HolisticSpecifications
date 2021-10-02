@@ -1,14 +1,14 @@
 
 \section{Outline of our approach}
 \label{s:outline}
+We now give an outline of our approach using the bank account example,   where funds may be transferred between accounts only when sending the account's password.
 
- \subsection{Bank Account Example}
+
+ \subsection{Bank Account -- three modules}
 \label{s:bank}
   
-Consider module \prg{Mod1} which consists   classes  \prg{Password} and  \prg{Account}. It
-represents  bank accounts
-with a balance and a password, where funds may be transferred
-between accounts only when sending the account's password:
+Consider module \prg{Mod1} which consists   classes  \prg{Password} and  \prg{Account}
+with a method called \prg{transfer}:
 %
 % (Note that we assume private fields are accessible ``class-wide''.)
 %
@@ -32,7 +32,8 @@ module Mod1
 %
 \noindent 
 We can capture the intended
-semantics of the \prg{transfer} method by writing ``classical''
+semantics of % the \prg{transfer} method 
+\prg{transfer} by writing ``classical''
 specifications in terms of pre- and post-conditions ---
 \prg{Mod1}'s implementation of the \prg{transfer} method meets
 this specification.
@@ -58,13 +59,6 @@ ClassicBankSpec  $\triangleq$
 Now consider the following alternative implementations:
 \prg{Mod2} allows any client to reset its password at any time, while
 \prg{Mod3} first requires the existing password in order to change it.
-The problem is that although the \prg{transfer} method is the same in
-all three alternatives, and although each one satisfies \prg{(ClassicBankSpec)},
-code sequences such as
-%
-\prg{account.set(42); account.transfer(yourAccount, 42)}
-%
-are enough to drain the account in \prg{Mod2} without supplying the password.
 
 %% The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
 %% however, while executing the first and third version of \prg{Account} won't exhibit unwanted behaviour, the second version doesn't preclude it.
@@ -118,8 +112,16 @@ module Mod3
 \end{minipage} 
 \end{tabular}
 
+The problem is that although the \prg{transfer} method is the same in
+all three alternatives, and although each one satisfies \prg{(ClassicBankSpec)},
+code sequences such as
+%
+\prg{account.set(42); account.transfer(yourAccount, 42)}
+%
+are enough to drain the account in \prg{Mod2} without supplying the password.
 
 
+ \subsection{Bank Account -- the right specification}
 
 We need to rule out \prg{Mod2} while permitting \prg{Mod3} and
 \prg{Mod1}. The catch is the vulnerability present in \prg{Mod2} is the result
@@ -130,10 +132,10 @@ This is exactly where a necessary condition can help:
 we want to avoid transferring money
 (or more generally, reducing an account's balance)
 \textit{without} the existing account password.  Phrasing the same condition
-the other way around gives us a positive statement that still
+the other way around % gives us a positive statement that still
 rules out the theft: that money \textit{can only} be
 transferred when the account's password is known.
-In our necessity condition syntax:
+In \Chainspec   syntax:
 
 %
 %% The flaw in version {\sf{II}} arises from 
@@ -156,9 +158,9 @@ In our necessity condition syntax:
  %% module has access to the password:
 %
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-NecessityBankSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
-                      to a.balance < bal
-                      onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
+NecessityBankSpec  $\triangleq$   from a:Account $\wedge$ a.balance==bal
+                        to a.balance < bal
+                        onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
 \end{lstlisting}
 %
 %
@@ -170,18 +172,28 @@ NecessityBankSpec  $\triangleq$  from a:Account $\wedge$ a.balance==bal
  %% \prg{AccountMdl}), and which has access to \prg{a}'s password.
  %
 %% T9hu having access to the password is a necessary condition for the balance to reduce.
-The critical point of this necessity specification is that it is
+The critical point of this \NecessitySpecification is that it is
 expressed in terms of observable effects and the shape of the heap --- the account's balance is reduced 
 and there is external access to the password ($\external{\prg{o}}\ \wedge\ \access{\prg{o}}{\prg{a.pwd}}$)
 --- and not in terms of individual methods --- such as
 \prg{set} or \prg{transfer}.
-This gives necessity specifications the
+This gives \NecessitySpecifications the
 vital advantage that they constrain
 \textit{implementation} of a bank account with a balance and a
 password, irrespective of the API it
 offers, the services it exports, or the dependencies on other parts of
 the system.
-\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
+
+\sophiaPonder[skip that part?]{This example also demonstrates that 
+%the specification need  refer  to  individual methods in a module.
+%Moreover, 
+adherence to   \NecessitySpecifications not monotonic:
+Adding a method to a module does not necessarily preserve adherence to a \NecessitySpecification.
+Also, while separate methods may adhere to a  \NecessitySpecification, their combination does
+not necessarily do so. Thus, \NecessitySpecifications capture a module's \emph{emergent behaviour}. 
+}
+
+%\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
 
 
 %\subsection{Internal and External Modules, Objects, and Calls}
@@ -206,58 +218,46 @@ distinguish between \emph{\internalC} calls, i.e. calls made % from \externalO o
 
 
 Moreover, because we only require that the guarantees are upheld while 
-  the  \externalM module  is executing, we develop an \emph{external states} semantics, \sophia{I like the term} where
+  the  \externalM module  is executing, we develop an \emph{external states} semantics, where
  any internal calls are executed in one, large, step.
  Note that we do not -- yet -- support calls from
 \internalO objects to \externalO objects.\sophia[we need to think where our system forbids that, ... ?]{} 
  With the external steps semantics,  the executing object (the \prg{this}) is always   external. 
  
-%\subsection{Reasoning about Necessity}
 
-%\footnote{Shall we skip this paragraph?} Our Logic of Necessity is based on the following ingredients: 
-%\textbf{a:} A  % concept of a encapsulation, 
-%way to  establish that a certain effect is \emph{encapsulated}, in the 
-%sense that it can only take place if an \internalC call was made; 
-%\textbf{b:} A way to obtain necessary conditions given an effect and \emph{one}
-% specific \internalC call;
-%\textbf{c:} A way to obtain necessary conditions given a certain encapsulated effect and \emph{any},
-%\emph{single} \internalC call;
-%\textbf{d:} A way to combine one-call   necessary conditions  so as to obtain necessary conditions 
-%for effects over 
-%\emph{any number} of \internalC or \externalC calls.
 
 \subsection{Reasoning about Necessity}
 \label{s:approach}
-
-We  now outline the proof that \prg{Mod3} adheres to \prg{NecessityBankSpec}),
-and  will then use that outline to 
- introduce the main ingredients of our Necessity Logic. The proof consists,
+ 
+The proof that \prg{Mod3} adheres to \prg{NecessityBankSpec} consists,
 broadly, of the following parts:
 
 
 \begin{description}
-\item[P1:] We establish that the balance 
+\item[Part1:] We establish that the balance 
  may change only   through \prg{Mod3}-\internalC calls.  
 
-\item[P2:] 
+\item[Part2:] 
 For each method of \prg{Mod3} (i.e. methods of \prg{Account} and \prg{Password}),  we establish that   
 if the method were called and  caused the  balance to reduce, then, before the call,
 the caller had access  to the password.
 
-\item[P3:]  
-From \textbf{P1} and \textbf{P2}, we obtain that if the balance were to 
+\item[Part3:]  \textbf{(a)} From \textbf{Part1} and \textbf{Part2}, we obtain that if the balance were to 
 reduce in \emph{any}  \emph{single} call, then some
 external object would have to have had access to the password before the call.
 
-\item[P4:] We establish % in the class \prg{Account} in Version\_III 
-that   an external object has access to 
+
+Similarly, we establish % in the class \prg{Account} in Version\_III 
+that     \textbf{(b)} an external object has access to 
 the password after \emph{one} internal call, only if it already had access before that call.
-From that, we establish  that  an external object will have access to 
+
+ 
+\item[Part4:] With the results from \textbf{Part3}.\textbf{(b)}  we obtain
+that  an external object will have access to 
 the password after \emph{any number} of external or internal 
 steps, only if it already had access before these steps.
-
-\item[P5:] Combining  the results from \textbf{P3} and \textbf{P4}, we obtain
-that  \prg{Mod3} satisfies $(NecessityBankSpec)$
+Using that, and \textbf{Part3}.\textbf{(a)} we establish
+ \prg{Mod3} indeed adheres to \prg{NecessityBankSpec}.
 
 \end{description} 
  
