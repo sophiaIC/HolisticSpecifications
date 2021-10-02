@@ -1,6 +1,12 @@
 \newcommand{\sophiaPonder}[2][]{\ponders{Sophia}{blue}{#1} \textcolor{blue}{#2}\xspace}
 \renewcommand{\sophia}[2][]
 
+
+\renewcommand{\Chainmail}{\textit{Necessity}$^{spec}$\xspace}
+\newcommand{\Chainspec}{\textit{Necessity}$^{spec}$\xspace}
+\newcommand{\Chainlogic}{\textit{Necessity}$^{logic}$\xspace}
+\newcommand{\NecessitySpecifications}{Necessity Specifications\xspace}
+\newcommand{\NecessitySpecification}{Necessity Specification\xspace}
 \section{Introduction}
 
 Today's complex software has been built 
@@ -11,59 +17,59 @@ Modules are useful and robust only if
 ``bad things will never happen'' (safety), as well as ``good things
 will eventually happen'' (liveness)  \cite{Lamport77}. 
  
- \vspace{.03in}
-``Good things happening'' is  typically specified formally 
+  \vspace{.03in}
+\emph{Good things happening} are typically specified formally 
  through triples consisting of a  precondition, a code snippet, and some
  postcondition \cite{Hoare69}.
- For example, if I call the \prg{transfer} function (code snippet) providing the correct 
- password (pre-condition), then some amount will be transferred from my account (post-condition -
- the ``good thing'').
-The precondition is a \emph{sufficient} condition for the code snippet to
+ For example,
+ \begin{quote}
+(*)\  \ Calling the \prg{transfer} function  using the correct 
+ password will transfer the money.
+\end{quote}
+  The precondition is a \emph{sufficient} condition for the code snippet to
 make the good thing happen: given the precondition (eg providing the right 
 password), executing a
 code snippet (eg calling the \prg{transfer} function) 
 is guaranteed to achieve the postcondition (the money is transferred).
-
 %Proving adherence to such specifications  poses considerable challenges, especially when in the 
 %context of aliasing, re-entrancy, multithreading, memory models, to name a just a few. 
 %Such challenges  have been studied intensively over the last  two decades 
 % \cite{BIMutable,objInvars,DenyGuarantee,RealxedC11} -- again just naming a few.
- 
- 
- 
 
-  \vspace{.03in}
- ``Bad things not happening'' while using a module and irrespective of whether the module's
- clients are benign or malicious, is what makes a module  robust. 
-% \sophiaPonder[would love to be able to start sentence with "Bad things ...]{Our work is concerned with a module's robustness: ``bad things  will
-%never happen'', irrespective of whether the module's client is benign or malicious.}
+   \vspace{.03in}
+\emph{Bad things not happening}
+   irrespective of whether a module's clients are benign or malicious, is what makes a module  robust. 
 %\sophiaPonder[I fear this sentence breaks the flow]
 %{We go beyond  ``design by contract'' \cite{Meyer09},  and
 %cannot rely on a module's client sticking to the module's contract.}
-\sophiaPonder[shall we cite Swapsies]{For example, for a bank module to 
+{For example}, for a bank module to 
 be robust, it must 
-guarantee  that  in a context where no external agent knows the account's password, 
-the balance of 
-that account will not decrease -- such a guarantee allows one to confidently 
-pass their bank account into untrusted code, in the expectation of receiving some payment.}
-Expressed as a \emph{necessary condition}, this guarantee says that the 
-balance of a bank account will not be reduced, unless an external agent knows
-the account's password.
+guarantee  that
+\begin{quote}
+(**)\  \ The balance of an account does not decrease unless the \prg{transfer} function was called with the  correct password.
+\end{quote}
+%   in a context where no external agent knows the account's password, 
+% the balance of 
+%that account will not decrease -- such a guarantee allows one to confidently 
+% pass their bank account into untrusted code, in the expectation of receiving some payment.}
+The call of \prg{transfer}  with the  correct password is thus
+a \emph{necessary condition} for any reduction of  balance.
+%Condition  -- dropped the word, so as to fill in more; SD
+(**) is crucial in order to confidently pass the bank account into untrusted code, 
+in the expectation of receiving some payment, but without fear
+that a malicious client might instead empty the balance of the account \cite{ELang,miller-esop2013}.
+% Expressed as a \emph{necessary condition}, this guarantee 
 %
 % SD Perhaps this sentence should come later
 % In this paper we propose how  to specify
 %such necessary conditions formally, as well as ways to provide adherence to
 %such specifications.
- 
- 
-A multitude of different guarantees have been proposed for ``bad things  will
-not happen''. They differ  in the level of granularity, 
-the target programming language or calculi, and the ways by which 
+In contrast to ``good things   happening''  which are usually specified with such 
+Hoare triples, for ``bad things  not
+happening'', a multitude of different guarantees have been proposed, differing in the level 
+of granularity, the target programming language or calculi, intended use, and the ways by which 
 the guarantees can be established.
-%We will discuss some of these approaches and compare with the aims of this paper:
-% \sophiaPonder[should this appear here?]{Our work is the first to
-% concentrate on the 
-% \emph{emergent behaviour} of modules.}  
+
  
 %Type systems   % have been developed for various programming languages. They 
 % give  relatively coarse-grained guarantees, \emph{e.g.,} 
@@ -83,7 +89,9 @@ be affected by the values of low security variables
 \cite{Zdancewic:Myers:01,noninteferenceOS}. 
  
 \emph{Correspondence assertions} are more fine-grained. Proposed for 
-process calculi, they can guarantee  that if one principal ever reaches a certain point in the protocol, then some other principal has previously reached some other matching point in the protocol; 
+process calculi, they %can guarantee
+{express}  that if one principal ever reaches a certain point in the protocol, 
+then some other principal has previously reached some other matching point in the protocol; 
 the term \emph{robust safety}  expresses that correspondence assertions are true in the presence of any opponent expressible in the calculus \cite{correspondence}. 
 % SD thought the below was true, but nor think it is not
 % Correspondence assertions have also
@@ -102,84 +110,106 @@ to mean that the untrusted environment of a program cannot violate
 its internal invariants, and developed  a verification methodology   to 
 prove   that programs that  export only properly wrapped values  are robustly safe.
 In the same context, \citeauthor{dd} develop Kripke models to reason about 
-the result of execution of some given code in parallel
+the result of execution of some given code snippet in parallel
 with arbitrary, unknown code.  
+ \cite{threoremsFreeSep} derive usage protocols out of a module's code.
+
+{None} of the approaches outlined so far were developed with
+ the aim to express guarantees such as (**):  
+  Information flow control systems are too
+ coarse grained. Correspondence assertions target process calculi and do not exactly match 
+ the time of the effect to its cause. \citeauthor{ddd} are concerned with the preservation of
+ internal invariants. \citeauthor{dd}   
+ concerned with the \emph{effects} of known code,
+ while \cite{threoremsFreeSep}  reverse-engineer usage protocols.
  
- More recently,  {\sc{VerX}} [\citeauthor{VerX}] and   \emph{Chainmail}  [\citeauthor{FASE}]
- added temporal operators to specification languages.
- {\sc{VerX}} is used to express safety properties of smart contracts;
- adherence to such specifications is proven through symbolic 
- execution.  \emph{Chainmail} is used to express general safety properties; it
- also includes predicates talking about provenance
- and access (more below), but lacks a proof system.
+Recently,  {\sc{VerX}}  \cite{VerX}  and   \emph{Chainmail}  \cite{FASE} 
+ added temporal operators to specification languages, and thus can express necessary conditions.  $(A_1 \wedge \Diamond A_2) \longrightarrow A_3$ says that  $A_3$ is a necessary condition to
+ transition from $A_1$ to $A_2$.
+ Both  {\sc{VerX}}  and   \emph{Chainmail} assertions support the usual 
+   logical connectives and assertions about the current state, and in addition,
+ {\sc{VerX}}  can   talk about function calls,
+ while \emph{Chainmail} can talk about function calls, 
+ and in addition, about \emph{access} (whether an
+ object has direct access to another object -- either through its fields or 
+ through the arguments to a function call),  and about \emph{provenance} (whether an object
+ belongs to current module, or some client, unknown module)
+Access and provenance are inspired from the object capabilities
+ literature \cite{MillerPhD}. 
  
-\vspace{.03in}
-Our work is concerned with the safety of \susan[need something to differentiate our work from previous work]{high level typed modules},
-%a module, 
-in the open setting -- where we know nothing about the
-module's client.
-We propose \emph{Necessity Specifications} to describe a module's safety guarantees,
-and \emph{Necessity Logic} to prove a module's adherence to such specifications.
-%
+% is used to express safety properties of smart contracts;
+% adherence to such specifications is proven through symbolic 
+% execution.  \emph{Chainmail} is used to express general safety properties; it
+% also includes predicates talking about provenance
+% and access (more below), but lacks a proof system.
+ 
+\paragraph{What we \emph{really} need} However, while (**) is a necessary condition  to confidently pass 
+ an account into untrusted code, it is \emph{not} sufficient.
+ (**) does not take  account of the module's \emph{emergent behaviour}.
+ What if the module leaks the password, and what if the nodule allows me to override the
+ password without knowledge of the old one? 
+ What we really need is
+ \begin{quote}
+(***)\  \ The balance of an account does not decrease ever in the future unless some module-external 
+object has access to the account's password now.
+\end{quote}
+With (***) I can confidently pass my account to some untrusted client who
+  does not have
+ knowledge of the password; they may or may not make the payment I was expecting, but I
+ know they will not steal my money \cite{ooToSecurity,miller-esop2013}.
+ Note that (***) cdoes not mention
+ the names of any functions in the module, and 
+ thus can be expressed without reference to the particular API. 
+ 
+
+  Both {\sc{VerX}} and  \emph{Chainmail} can express (**), but {\sc{VerX}}  cannot express (***). 
+  Namely, (***)  requires the concepts of provenance and access.
+ On the other hand, {\sc{VerX}} can prove adherence to  specifications through symbolic 
+  execution, while  \emph{Chainmail}   lacks a proof system. 
+  
+\vspace{.06in}
+
+The work in this paper is the first to express necessity specifications, including those like (***), and 
+also proove adherence to such specifications.
+We propose \Chainmail, a specification language % for   \emph{Necessity Specifications} 
+ to describe a module's safety guarantees,
+and 
+\Chainlogic,   % \emph{Necessity Logic} 
+a logic to prove a module's adherence to such specifications.
+The current work is based on a simple, imperative, typed, object oriented
+language with unforgeable addresses and a rudimentary
+from of encapsulation (like in Smalltalk, fields are private).\footnote{We believe
+ that our approach can be applied to several programming paradigms, and 
+ that mechanisms such as address unforge-ability or field privacy
+ could be replaced 
+ by lower level mechanisms such as capability machines \cite{vanproving,davis2019cheriabi}.
+  }
 
 
-\textit{Necessity Specifications}   have one of the following three forms:
-% allow us to capture \sophiaPonder[need to explain that]{emergent behaviour}.  
-% Building on ideas from \citeauthor{FASE},  
-% we introduce
-%\textit{necessity specifications} of the following two forms:
-%
-%
-%\hspace{1cm} $\onlyIf {A_1} {A_2} {A_3}$ \\ 
-%
-%% \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-%% $\onlyIf {A_1} {A_2} {A_3}$ 
-%% \end{lstlisting}
-%
+ 
+
+%\textit{Necessity Specifications}  are
+\Chainspec supports the usual assertions (incl. calls, provenance,
+and access), or the application of one of two necessity operators shown below.
+Thus, we  have one of the following forms:
 \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
        $A$          from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$          from ${A_{curr}}$ to ${A_{fut}}$ onlyThrough ${A_{nec}}$
 \end{lstlisting}
 %
-The first form says that $A$ always holds, \textit{i.e.} it is a invariant; 
-it consists of assertions,  $A$, supporting the usual expressions about program state,
-%%(e.g. \prg{x.f > 3}),
-  logical connectives and quantifiers, 
-%%(e.g. $\wedge$, $\forall$), 
- and additional predicates
- to capture \textit{provenance} and \textit{access}.
- %(whether an object $o$'s class comes 
-%$\internal{\texttt{o}}$ or $\external{\texttt{o}}$) to the current
-%module, and \textit{permission} \cite{miller-esop2013} (whether an
-%object $o$ has direct access to another object $o'$:
-%$\access{\texttt{o}}{\texttt{o'}}$).
+The first form says that $A$ always holds;  $A$ is an invariant.
 The second form says that  a change from a current state satisfying $A_{curr}$ to a future
 state satisfying $A_{fut}$ %(i.e.\ the transition  $A_{curr}$ to $A_{fut}$ being an effect) 
 is possible only if the necessary condition
-$A_{nec}$ holds in the current state.
-%
-%(i.e.\ $(A_1 \wedge \Diamond A_2) \longrightarrow A_3$).
-The third form says that a change from a current state satisfying $A_{curr}$ to a future
-state satisfying $A_{fut}$  is possible only if the necessary condition
-$A_{nec}$ holds in some intermediate state.
- Note, that unlike \citeauthor{VerX} or \citeauthor{FASE}
- the necessity operators $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
- are second class; they may nor appear in the assertions $A$.
-%%support necessity specifications with this explicit
-%% ``$\onlyIf {A_1} {A_2} {A_3}$'' syntax
-%%
-%%and concomitant specialised inference system.
-
-Thus, our Necessity Specifications are more fine-grained than information-flow control.
-They may include preservation
-of invariants as in \cite{ddd}, but they go beyond that:   
-Like correspondence assertions, they too express necessary conditions.
-However, the cause of the correspondence assertion is some principal reaching
-a certain point, while in our specifications, it is some change (from a state
-satisfying ${A_{curr}}$ to a state satisfying ${A_{fut}}$).
-This change may be caused through  a whole \emph{sequence} of  function 
-calls on the module, and thus it describes the module's \emph{emergent}
-behaviour. 
-We show the specification of the bank example in  \S\ref{s:bank}.
+$A_{nec}$ holds in the \emph{current} state.
+The third form says that a change from %a current state satisfying 
+$A_{curr}$ to % a future state satisfying 
+$A_{fut}$  may happen only if % the necessary condition
+$A_{nec}$ holds in some \emph{intermediate} state.
+Unlike  {\sc{VerX}} and  \emph{Chainmail} 
+ the necessity operators%  $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
+ are second class, and may nor appear in the assertions $A$.
+We formalize (***) % in \Chainspec  
+in  \S\ref{s:bank}.
 
 
  %\sophiaPonder[not sure we need to have the latter, 
@@ -205,20 +235,22 @@ We show the specification of the bank example in  \S\ref{s:bank}.
 %object $o$ has direct access to another object $o'$:
 %$\access{\texttt{o}}{\texttt{o'}}$).
  
-The \textit{Necessity Logic} is based on three main ideas: 
-First, assertions may be module-internal, \textit{i.e.,}
+\Chainlogic is based on four main ideas: 
+First,  the fact that necessity operators are second class, allows us to 
+ separate the proof about necessity from the rest.
+ Second, assertions may be \emph{module-internal}, \textit{i.e.,}
 their validity may only be affected by module-internal calls. 
 Second, leveraging the classical  specifications of methods 
-(\textit{i.e.,} the sufficient conditions) we can obtain per-method
- Necessity Specifications; that is, necessary preconditions
+(\textit{i.e.,} the sufficient conditions) we can obtain per-method-call
+ \NecessitySpecifications; that is, necessary preconditions
   for a given effect and a given method call;  at a very abstract level, this is
-similar to  \cite{threoremsFreeSep},.
-Third,  a special proof system allows us to combine 
+similar to  \cite{threoremsFreeSep}.
+Fourth,  a special proof system allows us to combine 
 per-method
- Necessity Specifications and module-internal assertions 
- to obtain per-module  Necessity Specifications; these describe a module's
+ \NecessitySpecifications and module-internal assertions 
+ to obtain per-module   \NecessitySpecifications; these describe a module's
  emergent behaviour.
-An illustration is shown in  \S\ref{s:approach}.
+We outline the proof for the bank example in  \S\ref{s:approach}.
  
 %The below is good and perhaps we shpuld use it
 % The challenge here is twofold: How do we specify the bad things we are
@@ -249,47 +281,76 @@ An illustration is shown in  \S\ref{s:approach}.
 %necessary conditions, which they expressed through temporal
 %operators.
 
-In the next section, (\S\ref{s:outline}),  we outline our approach in terms of a motivating example.
-This example demonstrates, among other things, that the specification need  refer  to  individual methods in a module.
-Moreover, adherence to a Necessity Specification is not monotonic, in the following two senses:
+% In the next section, (\S\ref{s:outline}),  we outline our approach using the
+% bank account as  a motivating example.%This example demonstrates, among other things, that the specification need  refer  to  individual methods in a module.
+%Moreover, adherence to a Necessity Specification is not monotonic, in the following two senses:
+%Adding a method to a module does not necessarily preserve adherence to a Necessity Specification,
+%and while separate methods may adhere to a  Necessity Specification, their combination does
+%not necessarily do so: Necessity Specifications capture a module's emergent behaviour.
+
+
+\subsection{Paper Organization and Contributions}
+
+In the next section, (\S\ref{s:outline}),  we outline our approach using the
+bank account as  a motivating example. 
+This example demonstrates, among other things, that 
+%the specification need  refer  to  individual methods in a module.
+%Moreover, 
+adherence to a Necessity Specification is not monotonic, in the following two senses:
 Adding a method to a module does not necessarily preserve adherence to a Necessity Specification,
 and while separate methods may adhere to a  Necessity Specification, their combination does
 not necessarily do so: Necessity Specifications capture a module's emergent behaviour.
 
 
-\subsection{Contributions}
-
-The contributions of this paper are as follows:
- 
- \begin{enumerate}
+The contributions of this paper are\begin{enumerate}
  \item
-\Chainmail, a language to
-express Necessity Specifications (\S\ref{s:semantics});
+\Chainspec, a language to
+express Necessity Specifications (\S\ref{s:semantics}). Even though \Chainspec is
+less expressive than \Chainspec, we believe that it is expressive enough: we demonstrate this
+by encoding all examples from \cite{FASE} in \Chainspec (\S\ref{s:outline}). 
  \item
-%a logic for proving a module's adherence to its
-%necessity specifications (\S\ref{s:inference});
-%% This logic builds on top of classical pre- post- conditions.
-\begin{description}
-\item [(a)]
-{a logic for raising assertion encapsulation and classical Hoare specifications
-to Necessity Specifications for any single module interaction (\S\ref{s:module-proof});}
-\item [(b)]
- {a logic for raising single step Necessity Specifications for a module to an arbitrary number of steps
-and thus proving module adherence to Necessity Specifications for any execution, and any combination of module interactions, i.e. emergent behavior (\S\ref{s:emergent-proof});}
-%% This logic builds on top of classical pre- post- conditions.
-\end{description}
-\item
-  a mechanised {Coq} proof of soundness of the logic (\S\ref{s:soundness});
-\item
-  a  {mechanised Coq} proof that % the bank account 
-  our example obeys the Necessity
-  Specification (\S\ref{s:examples}).
+\Chainlogic, a logic for proving a module's adherence to its
+ \NecessitySpecifications (\S\ref{s:inference}), and a proof of soundness of the logic, (\S\ref{s:soundness}),
+ mechanized in Coq. 
+ \item
+A    proof that % the bank account 
+  our bank module obeys its \NecessitySpecification, using   \Chainlogic  (\S\ref{s:examples}). This is also mechanized in Coq.
 \end{enumerate}
+ 
+ 
+ 
+% \begin{enumerate}
+% \item
+%\Chainmail, a language to
+%express Necessity Specifications (\S\ref{s:semantics});
+% \item
+%%a logic for proving a module's adherence to its
+%%necessity specifications (\S\ref{s:inference});
+%%% This logic builds on top of classical pre- post- conditions.
+%\begin{description}
+%\item [(a)]
+%{a logic for raising assertion encapsulation and classical Hoare specifications
+%to Necessity Specifications for any single module interaction (\S\ref{s:module-proof});}
+%\item [(b)]
+% {a logic for raising single step Necessity Specifications for a module to an arbitrary number of steps
+%and thus proving module adherence to Necessity Specifications for any execution, and any combination of module interactions, i.e. emergent behavior (\S\ref{s:emergent-proof});}
+%%% This logic builds on top of classical pre- post- conditions.
+%\end{description}
+%\item
+%  a mechanised {Coq} proof of soundness of the logic (\S\ref{s:soundness});
+%\item
+%  a  {mechanised Coq} proof that % the bank account 
+%  our example obeys the Necessity
+%  Specification (\S\ref{s:examples}).
+%\end{enumerate}
 
 
-\noindent Finally we place Necessity Specifications into the context
-of related work (\S\ref{s:related}) and conclude (\S\ref{s:conclusion}).
-The Coq proof of the logic appears in the
+\noindent Finally, we discuss % place Necessity Specifications into the context of
+ related work (\S\ref{s:related}) and conclude (\S\ref{s:conclusion}).
+The Coq proofs of 
+(2) and (3) above % soundness of \Chainspec, and the adherence of the
+% bank module to it \NecessitySpecification 
+appear in the
 supplementary material.
 
 
