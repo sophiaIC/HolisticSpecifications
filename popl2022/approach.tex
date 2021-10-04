@@ -1,13 +1,14 @@
 
+
 \section{Outline of our approach}
 \label{s:outline}
-We now give an outline of our approach using the bank account example,   where funds may be transferred between accounts only when sending the account's password.
+We now give an outline of our approach using a bank account example,   where funds may be transferred between accounts only if the account's password has been supplied.
 
 
  \subsection{Bank Account -- three modules}
 \label{s:bank}
   
-Module \prg{Mod1}   consists   classes  \prg{Password} and  \prg{Account}
+Module \prg{Mod1}   consists   of classes  \prg{Password} and  \prg{Account}
 with a method called \prg{transfer}:
 %
 % (Note that we assume private fields are accessible ``class-wide''.)
@@ -34,8 +35,8 @@ module Mod1
 We can capture the intended
 semantics of % the \prg{transfer} method 
 \prg{transfer} % by writing
-through a ``classical''
-specification  in terms of pre- and post-conditions ---
+through a pre and postconditions  JML-style\cite{Leavens-etal07}  ``classical''
+specification.
 \prg{Mod1}'s implementation of the \prg{transfer} method meets
 this specification.
 
@@ -113,19 +114,19 @@ module Mod3
 \end{minipage} 
 \end{tabular}
 
-The problem is that although the \prg{transfer} method is the same in
-all three alternatives, and although each one satisfies \prg{(ClassicBankSpec)},
-code sequences such as
+Although the \prg{transfer} method is the same in
+all three alternatives, and each one satisfies \prg{(ClassicBankSpec)},
+code such as
 %
-\prg{account.set(42); account.transfer(yourAccount, 42)}
+\prg{account.set(42); account.transfer(yours, 42)}
 %
-are enough to drain the account in \prg{Mod2} without supplying the password.
+are enough to drain the account in \prg{Mod2} without knowing the password.
 
 
  \subsection{Bank Account -- the right specification}
 
-We need to rule out \prg{Mod2} while permitting \prg{Mod3} and
-\prg{Mod1}. The catch is the vulnerability present in \prg{Mod2} is the result
+We need to rule out \prg{Mod2} while permitting \prg{Mod1} and
+\prg{Mod3}. The catch is the vulnerability present in \prg{Mod2} is the result
 of  \emph{emergent} behaviour from the interactions of the \prg{set}
 and \prg{transfer} methods --- even though \prg{Mod3} also has a
 \prg{set} method, it does not exhibit the unwanted interaction.
@@ -224,7 +225,7 @@ Moreover, because we only require that the guarantees are upheld while
  any internal calls are executed in one, large, step.
  Note that we do not -- yet -- support calls from
 \internalO objects to \externalO objects.\sophia[we need to think where our system forbids that, ... ?]{} 
- With the external steps semantics,  the executing object (the \prg{this}) is always   external. 
+ With external steps semantics,  the executing object (the \prg{this}) is always   external. 
  
 
 
@@ -239,7 +240,7 @@ broadly, of the following parts:
 \item[Part1] We establish that  \textbf{(a)} the balance may only change through  
 \prg{Mod3}-internal calls.
 Also,  \textbf{(b)},   external accessibility to an account's password may 
-only be obtained through  {Mod3}-internal calls -- that is,  the property that
+only be obtained through  \prg{Mod3}-internal calls -- that is,  the property that
 no external object has access to the password can only be invalidated through an internal call.
  
 \item[Part2] We establish  for each method of \prg{Mod3} (i.e. each method in \prg{Account} and \prg{Password}) that if the method is called, then 
@@ -256,11 +257,11 @@ reduce in \emph{any}  \emph{single} step -- whether an internal call, or any ext
     
  
 \item[Part4] From \textbf{(e)} we obtain that  \textbf{(g)}   if the balance reduces in any 
-number of steps, then at some intermediate step  \prg{transfer} was called with   the correct password.
+number of steps, then at some step  \prg{transfer} was called with   the correct password.
 From  \textbf{(g)}  we obtain that \textbf{(h)} if the balance reduces in any 
 number of steps, then at some intermediate step some external object had access to the password.
-From \textbf{(f)} we obtain that  \textbf{(i)}  external accessibility to the password will not be provided by any sequence of step.
-Using  \textbf{(h)} and  \textbf{(i)} we obtain    we establish that
+From \textbf{(f)} we obtain that  \textbf{(i)}  external accessibility to the password will not be provided by any sequence of steps.
+Using  \textbf{(h)} and  \textbf{(i)}  we establish that
  \prg{Mod3} indeed adheres to \prg{NecessityBankSpec}.
 
 \end{description} 
@@ -270,7 +271,7 @@ We  now outline  the  formal concepts and ideas used in the four parts   from ab
 
 \begin{description}
 \item[Part1] 
-We  call assertion $A$  as
+We  say assertion $A$  is
 \emph{encapsulated} by  module $M$, if  $A$ can be invalidated only through
   $M$-\internalC calls. In short, an $M$-\internalC call is a \emph{necessary} condition for
 invalidation of $A$.
@@ -287,7 +288,7 @@ a single, specified, method call.
 % 
 %In \textbf{P2},   a necessary condition for the  reduction of \prg{a.balance}  after the call \prg{a.transfer(a',pwd)} is that the caller had access to \prg{a.password} before the call.
 
-We addressed that   challenge % of the inference of necessary conditions 
+We address this  challenge % of the inference of necessary conditions 
  by leveraging the sufficient conditions from classical specifications:
 If the negation of a method's
  classical postcondition implies  the effect we are interested in, then the negation of the 
@@ -301,9 +302,9 @@ More in \S\ref{s:classical-proof}.
   
 %\item[from effect and single step to necessary condition]
 \item[Part3]
-Here we infer   \emph{per-step-conditions}, i.e., a 
+Here we infer a \emph{per-step-condition}, i.e., a 
  necessary condition given an effect and
-a single,  unspecified step. This step could be an internal call, or any kind of external step.
+a single, unspecified step. This step could be an internal call, or any kind of external step.
 
 %In \textbf{P3},   a necessary condition for the  reduction of \prg{a.balance}  after \emph{any}
 %step, is that the caller  had access to \prg{a.password} before the call.
@@ -311,7 +312,7 @@ a single,  unspecified step. This step could be an internal call, or any kind of
 %access to \prg{a.password}  after \emph{any}
 %step, is that that object had access to \prg{a.password} before the call.
 
-For $M$-encapsulated effects, we can infer such one-step
+For $M$-encapsulated effects, \susan[We haven't seen M-encaps before]{}we can infer such one-step
 necessary conditions by combining the necessary conditions for that effect from 
 all   methods in $M$. We also have  expected sub-structural rules, \emph{e.g.,} 
  like the rule of consequence.
