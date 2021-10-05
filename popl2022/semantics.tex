@@ -27,6 +27,10 @@ the full definitions. % syntax and operational semantics.
 Here we outline the definitions, and  introduce the concepts most relevant to the
 treatment of the open world guarantees.
 
+\jm[]{\Loo fields are private in the way fields in Java are private,
+the privacy is class-wide, i.e. they may only be read or written to by 
+objects of the same class.}
+
 A \Loo state $\sigma$ consists of a 
 heap $\chi$, and a  {stack $\psi$, which is a sequence of frames $\phi$}.
 A frame $\phi$ consists of
@@ -48,8 +52,8 @@ when the external module is executing, and are not concerned if they are
 temporarily broken by the internal module. Therefore, we are only interested in states where the
 executing object (the \prg{this}) is an external object. 
 For this, we define the  \emph{external state semantics}, of the form 
-$\reduction{M_1}{M_2}{\sigma}{\sigma'}$, where $M_1$ is the external
-module, and $M_2$ is the internal module, and where we
+$\reduction{M}{M'}{\sigma}{\sigma'}$, where $M$ is the external
+module, and $M'$ is the internal module, and where we
 collapse all internal steps into one single step.
 
  
@@ -66,19 +70,19 @@ collapse all internal steps into one single step.
 \label{def:pair-reduce}
 For  
 % If we say "internal module", it is sounds as something makes the module be internal
-  modules $M_1$,  $M_2$, and program states $\sigma$, $\sigma'$, 
-we say that $\ \ \ \ \ \ \ \ \reduction{M_1}{M_2}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exists a 
+  modules $M$,  $M'$, and program states $\sigma$, $\sigma'$, 
+we say that $\ \ \ \ \ \ \ \ \reduction{M}{M'}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exists a 
 $n\in\mathbb{N}$, such that
 \begin{itemize}
 % SD changed because the old version was slightly wrong
 \item
 $\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
 \item
-$M_1 \circ M_2, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
+$M \circ M', \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
 \item
-$\class{\sigma}{\sigma.\prg{this}}, \class{\sigma'}{\sigma'.\prg{this}}\in M_2$,
+$\class{\sigma}{\sigma.\prg{this}}, \class{\sigma'}{\sigma'.\prg{this}}\in M'$,
 \item
-$\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$\ \ \ for all $i\in [1..n)$.
+$\class{\sigma_i}{\sigma_i.\prg{this}} \in M$\ \ \ for all $i\in [1..n)$.
 \end{itemize} 
 %$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$ for all $0 \leq i \leq n$
 %
@@ -100,7 +104,7 @@ $\class{\sigma}{x}$. This function looks up
 the class of   the object referred by variable $x$ in the heap of $\sigma$. 
   % for a specific variable in a specific program.
 % SD not a variable, and no program.
-We also use module linking, $M_1\circ M_2$. The operator $\circ$
+We also use module linking, $M\circ M'$. The operator $\circ$
  %  results in the union of two disjoint modules.
 combines the two modules into one module in the obvious way, provided that their 
 domains are disjoint.
@@ -156,15 +160,15 @@ $\reductions{M}{M'}{\sigma_0}{\sigma}$.
 % Definition \ref{def:arising} uses the definition for 
 In the definition above we used \emph{Initial} states, 
 % he definition of which can be found in  Definition \ref{def:initial}. 
-which  characterise states at the start of program execution.
+which  characterize states at the start of program execution.
 The heap of an initial state should  contain a single object of class \prg{Object}, and
 the  stack should consist of a single frame, whose local variable map contains only the 
 mapping of \prg{this} to the single object, and whose continuation may be any statement.
 % to be executed.
 More in Definition \ref{def:initial}. 
-In Definition \ref{def:arising} We also use the notation $\reductions{M_1}{M_2}{\sigma}{\sigma'}$ to denote
+In Definition \ref{def:arising}, \jm[was capitalized]{we} also use the notation $\reductions{M}{M'}{\sigma}{\sigma'}$ to denote
 zero or more reduction steps starting at state $\sigma$ and ending at state $\sigma$, in the context of internal module 
-$M_1$ and external module $M_2$.
+$M$ and external module $M'$.
 
 Finally, \Loo has a simple class based type system with the following properties:
 \begin{description}
@@ -176,10 +180,8 @@ Methods of non-\prg{enclosed} classes may not return objects of \prg{enclosed} c
 Modules are typed in isolation of other modules, thereby implicitly prohibiting
 method calls from internal objects to external objects.
 \end{description}
-The type system is not very important, and fairly simple in it's 
-definition. It's only importance is in enforcing the above 
-constraints for purposes of encapsulation, a related but somewhat orthogonal 
-topic.
+The type system is not \jm[]{fundamental to the definition of either \Chainspec or \Chainlogic,
+and is included to allow a simple and convenient system for proving encapsulation of \SpecO assertions.}
 
 
 \subsection{\SpecO}
@@ -396,14 +398,16 @@ That object may be either \internalO or \externalO.
 \begin{definition}[Wrapped]
 $\wrapped{o}\ \triangleq\ \all{x}{\neg \access{x}{o}\ \vee\ \internal{x}}$
 \end{definition}
-Wrapped is critical as it captures the conditions under which 
-necessitates an interaction
-with the \internalM module. If for example, only \internalO
+Wrapped is critical as it captures the conditions under \jm[]{an interaction
+with the \internalM module is necessary}. 
+\jm[]{As an example, consider the Bank Account example from Section \ref{s:outline}: if} only \internalO
 objects have access to an account's password, then
 it follows that access to the password may not 
 be gained except by an interaction with the \internalM
 module, and subsequently if the \internalM module
 is secure we know that the password may not be leaked.
+\jm[]{This predicate forms as core aspect of Part 2 mentioned in Section \ref{s:outline},
+and is elaborated on more in Section \ref{s:classical-proof}.}
  
  
 
@@ -470,7 +474,7 @@ is secure we know that the password may not be leaked.
 \Chainmail extends \SpecO with novel 
 %\emph{Necessity Specifications}.
 \sophiaPonder[]{\emph{necessity operators}}.
-In this Section we define the syntax (Dwf. \ref{f:holistic-syntax}) and semantics (Def. \ref{d:necessOpers})
+In this Section we define the syntax (Def. \ref{f:holistic-syntax}) and semantics (Def. \ref{d:necessOpers})
 of
 \emph{\NecessitySpecifications}.
 We have the following three operators:
@@ -559,7 +563,9 @@ by cases over the \sophiaPonder[we were saying three forms]{four}possible syntac
 For any assertions $A$, $A_1$, $A_2$, and $A$,  we define \\
 
 
-$\bullet$ \ $\satisfies{M}{{A}}$ \ \ \ iff\ \ \ for all $M'$, $\sigma$,\ if $\arising{M}{M'}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$.\\
+$\bullet$ \ $\satisfies{M}{{A}}$ \ \ \ iff\ \ \ for all $M'$, $\sigma$,\ if $\arising{M}{M'}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$. (see Def. \ref{def:mdl-sat})\\
+
+%$\bullet$ \ $\satisfies{M}{{A}}$ \ \ \ as defined in \ref{def:mdl-sat} \\
 
 $\bullet$ \ $\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ \ \ iff\ \  for all $M'$, $\sigma$, $\sigma'$, such that $\arising{M}{M'}{\sigma}$; \\ % and\\
 
@@ -684,12 +690,12 @@ the necessity precondition.}
 
 
 
-\subsection{Encapsulation}
+\subsection{Assertion Encapsulation}
 \jm[lemmas? does A => enc(A') imply A => enc($\neg$A')?]{}
  %In order to reason about necessary requirements in an open world,
 % and those assertions that may change due 
 % to computation by external, unknown code.
-In the introduction we used the concept of encapsulation of \SpecO assertions 
+In the Section \ref{s:outline} we used the concept of encapsulation of \SpecO assertions 
  when proving adherence to \Chainmail Necessity Specifications.
 An assertion $A$ is encapsulated by a module $M$ if it cannot be invalidated unless an
 internal method is called. 
