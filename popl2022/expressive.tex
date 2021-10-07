@@ -126,3 +126,46 @@ DAOSpec2 $\triangleq$ from d : DAO $\wedge$ p : Object
             nxt d.balance(p) = m
             onlyIf $\calls{\prg{p}}{\prg{d}}{\prg{repay}}{\prg{\_}}$ $\wedge$ m = 0 $\vee$ $\calls{\prg{p}}{\prg{d}}{\prg{join}}{\prg{m}}$ $\vee$ d.balance(p) = m
 \end{lstlisting}
+
+\jm[]{\subsubsection{Safe}
+\cite{FASE} used an unrealistic but demonstrative running example of a Safe, where a treasure 
+was secured within a \texttt{Safe} object, and access to the treasure was only granted by 
+providing the correct password. The code snippet below provides the original definition of \texttt{Safe}
+from \cite{FASE}.}
+\begin{lstlisting}[frame=lines]
+class Safe{
+   field treasure 
+   field secret 
+   method take(scr){
+      if (secret==scr) then {
+         t=treasure
+         treasure = null
+         return t }  }
+ }
+\end{lstlisting}
+\jm[]{To secure the \texttt{Safe} against improper leaking of either the password and treasure,
+\cite{FASE} require that a necessary precondition to the treasure ever being removed from the safe 
+is current knowledge of the password by some external object. Unfortunately the above definition 
+does not satisfy this property, as it is possible for the secret of one \texttt{Safe} to be hidden
+within another \texttt{Safe}, whose secret is externally known. One fix to this is by using types to 
+disallow such a scenario.}
+\begin{lstlisting}[frame=lines]
+class Secret{}
+class Treasure{}
+class Safe{
+   field treasure : Treasure
+   field secret   : Secret
+   method take(scr : Secret){
+      if (secret==scr) then {
+         t=treasure
+         treasure = null
+         return t }  }
+ }
+\end{lstlisting}
+\jm[]{Using \Nec, we express \texttt{SafeSpec}, that ensures the safety of the version of \texttt{Safe} with types.}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+SafeSpec $\triangleq$ from s : Safe $\wedge$ s.treasure != null
+            to s.treasure == null
+            onlyIf $\neg$ wrapped(s.secret)
+\end{lstlisting}
+
