@@ -1,337 +1,769 @@
+\section{The Meaning of Necessity}
+\label{s:semantics}
+
+ % There are three, related, forms of necessity specifications, i.e. $\onlyIf {A_1} {A_2} {A_3}$,
+% $\onlyIf {A_1} {A_2} {A_3}$, and 
+% $\onlyThrough {A_1} {A_2} {A_3}$, $\onlyIf {A_1} {A_2} {A_3}$.
+In this section we define our \Nec specification language.
+In order to do that, we first define 
+an underlying programming language \Loo  (\S \ref{sub:Loo}).
+%===============
+%old
+%\jm[]{Given its minimal features, we base \Loo on \LangOO, as defined by 
+%\cite{FASE}. While \LangOO was untyped, \Loo includes a simple type
+%system to allow for simple type based proofs of encapsulation.}
+%================
+modification to description of type system. Not sure if this is clear enough.]{
+We base \Loo on \LangOO, as defined by 
+\cite{FASE}. Whereas \LangOO was untyped, \Loo 
+%includes a simple type
+%system to allow for
+has type based restrictions on external access to private data.}
+We then  define an assertion language, \SpecO,  which can talk about
+ the contents of the state, as well about 
+  of provenance and permission and control (\S \ref{sub:SpecO}).
+Finally, we define the syntax and semantics of our \Nec specification language  (\S \ref{s:holistic-guarantees}).
 
 
-\section{Outline of our approach}
-\label{s:outline}
-We now give an outline of our approach using a bank account example,   where funds may be transferred between accounts only if the account's password has been supplied.
+\subsection{\Loo}
+\label{sub:Loo} 
+\jm[TODO: mention the type system and the restriction on external method calls]{}
+% We introduce a simple object-oriented language, \Loo, upon 
+% which our specification language sits.
+ \Loo is a  simple  imperative,
+class based, typed, object oriented language.
+\susan[Java fields are package private not class private - are fields so important that we need to say this?]{Fields are private to the class where they are defined.}
+ Given the simplicity of \Loo, we do not
+define it here, instead, we direct the reader to Appendix \ref{app:loo} for 
+the full definitions. % syntax and operational semantics.
+Here we introduce the concepts most relevant to the
+treatment of the open world guarantees.
+%\jm[]{\Loo fields are private in the way fields in Java are private,
+%the privacy is class-wide, i.e. they may only be read or written to by 
+%objects of the same class.}
 
 
- \subsection{Bank Account -- three modules}
-\label{s:bank}
-  
-Module \prg{Mod1}   consists   of classes  \prg{Password} and  \prg{Account}
-with a method called \prg{transfer}:
+A \Loo state $\sigma$ consists of a 
+heap $\chi$, and a  {stack $\psi$, which is a sequence of frames $\phi$}.
+A frame $\phi$ consists of
+local variable map, and a continuation, i.e. a sequence of statements to be executed.
+ A statement may assign to variables, create new objects and push them to the heap, 
+perform field reads and writes on objects,  or
+ call methods on those objects. 
+
+%Program 
+Execution is  performed in the context of a module $M$. Modules are mappings
+from class names to class definitions. 
+Execution has the format  $M, \sigma \leadsto \sigma'$, it is a small-step, unsurprising semantics,   c.f. Appendix \ref{app:loo}.
+The   continuation of the top frame contains the statements currently being executed.
+ % chopped, as generic 
+ % There are several properties  of \Loo that are important to the central topic of this paper. 
+ 
+As discussed in \S \ref{s:approach}, we are interested in guarantees which hold
+when the external module is executing, and are not concerned if they are
+temporarily broken by the internal module. Therefore, we are only interested in states where the
+executing object (the \prg{this}) is an external object. 
+For this, we define the  \emph{external state semantics}, of the form 
+$\reduction{M}{M'}{\sigma}{\sigma'}$, where $M$ is the external
+module, and $M'$ is the internal module, and where we
+collapse all internal steps into one single step.
+
+ 
+% SD removed, as disagreed with some of what is said below
+% which allow us to 
+%we define two forms of the operational semantics for \Loo, one in Fig. \ref{f:loo-semantics}
+%that is unsurprising and details the execution of specific 
+%statements in the language, and a second called \emph{external state semantics} 
+%that models that open world, where the components of a program can
+%have both known (\internalO) and unknown (\externalO) provenance.
+
+
+\begin{definition}[External State Semantics]
+\label{def:pair-reduce}
+For  
+% If we say "internal module", it is sounds as something makes the module be internal
+  modules $M$,  $M'$, and program states $\sigma$, $\sigma'$, 
+we say that $\ \ \ \ \ \ \ \ \reduction{M}{M'}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exists a 
+$n\in\mathbb{N}$, such that
+\begin{itemize}
+% SD changed because the old version was slightly wrong
+\item
+$\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
+\item
+$M \circ M', \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
+\item
+$\class{\sigma}{\sigma.\prg{this}}, \class{\sigma'}{\sigma'.\prg{this}}\in M'$,
+\item
+$\class{\sigma_i}{\sigma_i.\prg{this}} \in M$\ \ \ for all $i\in [1..n)$.
+\end{itemize} 
+%$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$ for all $0 \leq i \leq n$
 %
-% (Note that we assume private fields are accessible ``class-wide''.)
-%
-% (methods may read and write fields of any instance of a class)
-%
-%and that passwords are unforgeable and not enumerable (again as
-%in Java, albeit without reflection).
-%
-% 
-\begin{lstlisting}[language=Chainmail, frame=lines]
-module Mod1
-  class Account
-    field balance:int 
-    field pwd: Password
-    method transfer(dest:Account, pwd':Object) -> void
-      if this.pwd==pwd'
-        this.balance-=100
-        dest.balance+=100
-  class Password
-\end{lstlisting}
-%
-\noindent 
-We can capture the intended
-semantics of % the \prg{transfer} method 
-\prg{transfer} % by writing
-through  a pre and postcondition 
-JML-style\cite{Leavens-etal07}  ``classical''
-specification, \sophiaPonder[]{-- all free variables are are universally quantified.}
-\prg{Mod1}'s implementation of the \prg{transfer} method meets
-this specification.
+%$\class{\sigma}{\sigma.\prg{this}}\ \in\ M_2$ and
+%\item
+%$\class{\sigma'}{\sigma'.\prg{this}}\ \in\ M_2$ and 
+%\end{itemize} 
+%%and
+%%\begin{itemize}
+%%\item
+%%$\exec{M_1\ \circ\ M_2}{\sigma}{\sigma'}$ or
+%%\item
+%$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$ for all $0 \leq i \leq n$
+%\end{itemize}
+\end{definition}
+In Definition \ref{def:pair-reduce}  % of external state semantics makes reference to a 
+we  use  the function
+$\class{\sigma}{x}$. This function looks up 
+the class of   the object referred by variable $x$ in the heap of $\sigma$. 
+  % for a specific variable in a specific program.
+% SD not a variable, and no program.
+We also use module linking, $M\circ M'$. The operator $\circ$
+ %  results in the union of two disjoint modules.
+combines the two modules into one module in the obvious way, provided that their 
+domains are disjoint.
+Full details in  Appendix \ref{app:loo}.
+\begin{figure}[htb]
+  \vspace*{-2.5mm}
+  \begin{center}
+   \begin{minipage}{0.80\textwidth}
+     \begin{center}
+       \includegraphics[width=\linewidth]{diagrams/VisibleStates.pdf}
+     \end{center}
+   \end{minipage}
+   \end{center}
+   \vspace*{-2.5mm}
+   \caption{External States Semantics
+     (Def. \ref{def:pair-reduce}). %
+     % 
+     (a) $\exec{{\color{blue}M} \circ {\color{orange}M'}}{\sigma_1}{\ldots}\leadsto \sigma_9$
+     (b) $\reduction{{\color{blue}M}}{{\color{orange}M'}}{\sigma_2}{\ldots}\leadsto \sigma_9$
+     (c) $\reduction{{\color{orange}M'}}{{\color{blue}M}}{\sigma_1}{\ldots}\leadsto \sigma_8$
+     from \cite{FASE}}
+   \label{fig:VisibleStates}
+ \end{figure}
+ 
+Fig. \ref{fig:VisibleStates} provides a simple graphical description of 
+our external states semantics, showing how given a single execution 
+comprised of code from two different modules, we can consider either
+the complete execution as in (a), the external state execution when $M'$ is external (b), and the external state execution when $M$ is external  in (c).
+ 
 
 
 
-\begin{lstlisting}[mathescape=true, frame=lines, language=Chainmail]
-ClassicBankSpec  $\triangleq$
-   method transfer(dest:Account, pwd':Password) -> void {
-       ( PRE:  this.balance=bal1 $\wedge$ this.pwd==pwd' $\wedge$ dest.balance=bal2 $\wedge$ dest=/=this 
-         POST: this.balance == bal1-100 $\wedge$  dest.balance == bal2+100 )
-       ( PRE: this.balance=bal1 $\wedge$ this.pwd=/=pwd' $\wedge$ dest.balance=bal2
-         POST: this.balance == bal1 $\wedge$  dest.balance=bal2 )
-       ( PRE: a : Account $\wedge$ a=/=this $\wedge$ a=/=dest  $\wedge$ a.balance=bal $\wedge$ a.pwd=pwd1
-         POST:  a.balance=bal $\wedge$ a.pwd=pwd1)
-       ( PRE: a : Account $\wedge$ a.pwd=pwd1  
-         POST: a.pwd=pwd1)       
-\end{lstlisting}
-%\footnote{Perhaps omit some of the lines here, but we do need them all in the full discussion}
+
+
+In this work we are interested in guarantees which are upheld by the internal 
+module. Moreover,    these guarantees  need to be satisfied only at `reachable' states,
+and need not be satisfied at states that are
+not reachable -- this is described formally in Definition \ref{def:arising}. 
+Reachable states are those that  may arise by external states execution
+of  a given internal module linked with an external module.
+We describe the states of interest as the \emph{arising states}. 
+
+
+
+\begin{definition}[Arising Program State]
+\label{def:arising}
+For   modules $M$ and  $M'$, a program state $\sigma$ is 
+said to be an \emph{arising} state, formally \ \ \ $\arising{M}{M'}{\sigma}$,\ \ \ 
+if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
+$\reductions{M}{M'}{\sigma_0}{\sigma}$.
+\end{definition}
+
+% Definition \ref{def:arising} uses the definition for 
+In the definition above we used \emph{Initial} states, 
+% he definition of which can be found in  Definition \ref{def:initial}. 
+which  characterize states at the start of program execution.
+The heap of an initial state should  contain a single object of class \prg{Object}, and
+the  stack should consist of a single frame, whose local variable map contains only the 
+mapping of \prg{this} to the single object, and whose continuation may be any statement.
+% to be executed.
+More in Definition \ref{def:initial}. 
+In Definition \ref{def:arising}, we also use the notation $\reductions{M}{M'}{\sigma}{\sigma'}$ to denote
+zero or more reduction steps starting at state $\sigma$ and ending at state $\sigma'$, in the context of internal module 
+$M$ and external module $M'$.
+
+%%========================
+%%old
+%Finally, \Loo has a simple class based type system with the following properties:
+%\begin{description}
+%\item[(1)]
+%Classes may be optionally annotated as \prg{enclosed}
+%\item[(2)]
+%Methods of non-\prg{enclosed} classes may not return objects of \prg{enclosed} classes
+%\item[(3)]
+%Modules are typed in isolation of other modules, thereby implicitly prohibiting
+%method calls from internal objects to external objects.
+%\end{description}
+%The type system \jm[]{is included to allow a simple and convenient way to prove encapsulation of \SpecO assertions,
+%however it is not fundamental to the definition of either the  \Nec specification language or logic, and could easily be substituted out 
+%for any other encapsulation system.}
+%%==================================
+\jm[]{Finally, \Loo has a simple class based type system where 
+classes may be optionally annotated as \enclosed. An object 
+of an \enclosed type may not be accessed by module-external
+objects. This helps simplify the demonstrative proof of the running 
+Bank Account example (\S\ref{s:examples}). In order to enforce this 
+restriction, methods of non-\enclosed classes are prohibited from
+returning \enclosed objects.}
+
+\jm[]{\Loo's type system has one further implication: modules are typed 
+in isolation of other modules, thereby implicitly prohibiting
+method calls from internal objects to external objects.}
+
+\jm[]{The type system is included to allow a simple and convenient way to prove that access to certain 
+objects is restricted. This restriction simplifies the proof of our running example to a manageable degree,
+however it is not fundamental to the definition of either the  \Nec specification language or logic, 
+and could easily be removed.}
+
+
+\subsection{\SpecO}
+\label{sub:SpecO}
+\SpecO extends the expressiveness of standard specification languages
+with assertion forms capturing key concepts of software security:
+ \emph{permission}, \emph{provenance}, and \emph{control}.
+ \emph{Permission} and \emph{Provenance} are inspired by the capabilities literature, while
+\emph{Control} assists construction of proofs.
+%That is, \SpecO specifications are able to specify which objects have
+%access to which other object (\emph{permission}), whether an object's origin
+%is internal or external to known code (\emph{viewpoint}), or which objects call which 
+%methods (\emph{control}). 
+
+\subsubsection{Syntax}
+
+%\begin{figure}[t]
+%\footnotesize
+%\[
+%\begin{syntax}
+%\syntaxElement{A}{}
+%		{
+%		\syntaxline
+%				{e}
+%				{e : C}
+%				{\neg A}
+%				{A\ \wedge\ A}
+%				{A\ \vee\ A}
+%				{\all{x}{A}}
+%				{\ex{x}{A}}
+%		\endsyntaxline
+%		}
+%		{
+%		\syntaxline
+%				{\access{x}{y}}
+%				{\internal{x}}
+%				{\external{x}}
+%		\endsyntaxline
+%		}
+%		{
+%		\syntaxline
+%				{\calls{x}{y}{m}{\overline{z}}}
+%		\endsyntaxline
+%		}
+%\endSyntaxElement\\
+%\end{syntax}
+%\]
+%\caption{\SpecO Assertions}
+%\label{f:chainmail-syntax}
+%\end{figure}
+%
+
+\begin{definition}
+Assertions ($A$) in the basic specification language, \SpecO, are defined as follows
+
+\label{f:chainmail-syntax}
+%\footnotesize
+\[
+\begin{syntax}
+\syntaxElement{A}{}
+		{
+		\syntaxline
+				{e}
+				{e : C}
+				{\neg A}
+				{A\ \wedge\ A}
+				{A\ \vee\ A}
+				{\all{x}{A}}
+				{\ex{x}{A}}
+		\endsyntaxline
+		}
+		{
+		\syntaxline
+				{\access{x}{y}}
+				{\internal{x}}
+				{\external{x}}
+%		\endsyntaxline
+%		}
+%		{
+%		\syntaxline
+				{\calls{x}{y}{m}{\overline{z}}}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+
+
+\end{definition}
+
+
+Def. \ref{f:chainmail-syntax} gives the assertion syntax of \SpecO. % the \SpecO specification language.
+An assertion may be an expression, a class assertion, the usual connectives and quantifiers, along 
+with the following non-standard assertion forms:
+\begin{itemize}
+\item
+\emph{Permission} ($\access{x}{y}$): % Which objects have access to which other objects (i.e.
+  $x$ has access to $y$.
+\item
+{\emph{Provenance}} ($\internal{x}$ and $\external{y}$): %Which objects are internal or external to our component.
+ $x$ is internal, and $y$ is external.
+\item
+\emph{Control} ($\calls{x}{y}{m}{\overline{z}}$): 
+$x$ calls method $m$ on object $y$ with arguments $\overline{z}$.
+\end{itemize}
+
+\subsubsection{Semantics of \SpecO}
+The semantics of \SpecO assertions is given in Definition \ref{def:chainmail-semantics}. 
+\SpecO makes use of several language features of 
+\Loo that can be found in Appendix \ref{app:loo}. Specifically, $\eval{M}{\sigma}{e}{v}$
+is the evaluation relation for expressions, and is interpreted as expression $e$ evaluates
+to value $v$ in the context of program state $\sigma$, with module $M$. The full
+semantics of expression evaluation are given in Fig. \ref{f:evaluation}. It should 
+be noted that expressions in \Loo may be recursively defined, and thus evaluation may not
+necessarily terminate, however the logic remains classical because recursion is restricted
+to expressions, and not generally to assertions.
+
+Further, Definition \ref{def:chainmail-semantics} uses the interpretation of variables
+within a specific frame or state: i.e. $\interpret{\phi}{x} = v$, meaning that $x$ maps to
+value $v$ in the local variable map of frame $\phi$, and $\interpret{\sigma}{x} = v$ meaning $x$ 
+maps to value $v$ in the top most frame of $\sigma$'s stack. And the term  $\interpret{\sigma}{x.f} = v$
+has the obvious meaning.
+
+
+\begin{definition}[Satisfaction of \SpecO Assertions] 
+\label{def:chainmail-semantics}
+We define satisfaction of an assertion $A$ by a program state $\sigma$ with internal module $M$ as:
+\begin{itemize}
+\item
+$\satisfiesA{M}{\sigma}{e}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\true}$
+\item
+$\satisfiesA{M}{\sigma}{e : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\alpha}$ \textit{and} $\class{\sigma}{\alpha} = C$
+\item
+$\satisfiesA{M}{\sigma}{\neg A}$ \ \ \ iff \ \ \  ${M},{\sigma}\nvDash{A}$
+\item
+$\satisfiesA{M}{\sigma}{A_1\ \wedge\ A_2}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma}{A_1}$ and 
+$\satisfiesA{M}{\sigma}{A_2}$
+\item
+$\satisfiesA{M}{\sigma}{A_1\ \vee\ A_2}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma}{A_1}$ or 
+$\satisfiesA{M}{\sigma}{A_2}$
+\item
+$\satisfiesA{M}{\sigma}{\all{x}{A}}$ \ \ \ iff \ \ \  
+$\satisfiesA{M}{\sigma[x \mapsto \alpha]}{A}$, \ 
+\ \ for some $x$ fresh in $\sigma$, and for all $\alpha\!\in\!\sigma.\prg{heap}$.
+\item
+$\satisfiesA{M}{\sigma}{\ex{x}{A}}$ \ \ \ iff \ \ \  
+$\satisfiesA{M}{\sigma[x \mapsto \alpha]}{A}$, \ 
+\ \ for some $x$ fresh in $\sigma$, and for some $ \alpha\!\in\!\sigma.\prg{heap}$. 
+\item
+$\satisfiesA{M}{\sigma}{\access{x}{y}}$ \ \ \ iff \ \ \  
+\begin{itemize}
+\item
+$\interpret{\sigma}{x.f}={\interpret{\sigma}{y}}$ for some $f$, \  or
+\item
+there exists some $z$, and some frame $\phi$ in the stack of $\sigma$ such that {$\interpret{\sigma}{x}=\interpret{\phi}{\prg{this}}$}, {and $\interpret{\sigma}{y}=\interpret{\phi}{z}$}
+\end{itemize}
+\item
+$\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \  
+$\textit{classOf}(\sigma,x) \in M$
+\item
+$\satisfiesA{M}{\sigma}{\external{x}}$ \ \ \ iff \ \ \  
+$\textit{classOf}(\sigma,x) \not\in M$
+\item
+$\satisfiesA{M}{\sigma}{\calls{x}{y}{m}{z_1, \ldots, z_n}}$ \ \ \ iff \ \ \ 
+\begin{itemize}
+\item
+$\sigma.\prg{contn} = (\_ := y'.m(z'_1,\ldots,z'_n))$, % and is superfluous, enums are ands, unless expltly stated   
+\item
+$\satisfiesA{M}{\sigma}{x = \prg{this}}$
+%$\interpret{\sigma}{x} = \interpret{\sigma}{\prg{this}}$  % and
+\item
+$\satisfiesA{M}{\sigma}{y = y'}$
+%$\sd{\interpret{\sigma}{y} = \interpret{\sigma}{y'}}$ % and
+\item
+$\satisfiesA{M}{\sigma}{z_i = z'_i}$\ \ \ for all $1\!\leq i\!\leq n$
+%$\interpret{\sigma}{z_i} = \interpret{\sigma}{z'_i}$ \ \ \ for all $1\!\leq i\!\leq n$
+\end{itemize}
+\end{itemize}
+\end{definition}
+
+ 
+Finally, we define what it means for a module to satisfy an assertion:
+a module $M$ satisfies an assertion $A$, if all states $\sigma$
+arising from external steps execution of that
+module with any other external module, satisfy $A$. 
+ 
+\begin{definition} [Assertion Satisfaction by Modules]
+\label{def:mdl-sat}
+For a module $M$ and assertion $A$, we say that\ \  $\satisfies{M}{A}$ \ \ if and only if 
+for all modules $M'$, and all $\sigma$, if $\arising{M'}{M}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$.
+\end{definition}
+
+
+% Thus, satisfaction by a module  allows us to talk 
+% about what is true for a given module without introducing the 
+% details of specific program configurations, a critical component 
+% of constructing our Logic of Necessity in Section \ref{s:inference}. 
+
+A proof system for such assertions is indicated by a judgment of the form $\proves{M}{A}$. 
+We will not define such a judgment, and just rely on its existence (cf. Theorem 3.2).
+We define soundness of such a judgment in the usual way:
+
+\begin{definition}[Soundness of \SpecO Provability]
+\label{ax:specW-prove-soundness}
+A judgment of the form $M \vdash A$ is \emph{sound}, if for all
+  all modules $M$ and assertions $A$, \ if $\proves{M}{A}$ then $\satisfies{M}{A}$.
+\end{definition}
+
+\subsubsection{Wrapping}
+
+We define a useful shorthand: the $\wrapped{}$ predicate  states 
+that only \internalO objects have access to some object.
+That object may be either \internalO or \externalO.
+\begin{definition}[Wrapped]
+$\wrapped{o}\ \triangleq\ \all{x}{\neg \access{x}{o}\ \vee\ \internal{x}}$
+\end{definition}
+Wrapped is critical as it captures the conditions under \jm[]{an interaction
+with the \internalM module is necessary}. 
+\jm[]{As an example, consider the Bank Account example from Section \ref{s:outline}: if} only \internalO
+objects have access to an account's password, then
+it follows that access to the password may not 
+be gained except by an interaction with the \internalM
+module, and subsequently if the \internalM module
+is secure we know that the password cannot be leaked.
+\jm[]{This predicate forms a core aspect of Part 2 mentioned in Section \ref{s:outline},
+and is elaborated on more in Section \ref{s:classical-proof}.}
  
  
 
-Now consider the following alternative implementations:
-\prg{Mod2} allows any client to reset its password at any time, while
-\prg{Mod3} first requires the existing password in order to change it.
+%\begin{figure}[t]
+%\begin{mathpar}
+%\infer
+%		{M;\ M',\ \sigma\ \vdash\ e : \prg{intrnl}}
+%		{M;\ M',\ \sigma\ \vdash\ e : \prg{encap}}
+%		\and
+%\infer
+%		{M;\ M',\ \sigma\ \vdash\ e : \prg{intrnl}}
+%		{M;\ M',\ \sigma\ \vdash\ e.f : \prg{encap}}
+%		\and
+%\infer
+%		{M;\ M',\ \sigma\ \vdash\ e : \prg{intrnl}}
+%		{M;\ M',\ \sigma\ \vdash\ e.g(e') : \prg{encap}}
+%\end{mathpar}
+%\caption{Encapsulated Expressions}
+%\label{f:intrnl}
+%\end{figure}
+	
+%	\begin{figure}[h]
+%	\[
+%	\begin{array}{llr}
+%	A & ::= & \textit{Assertions}\\  
+%	| & e & \\
+%	| & e\ :\ C & \\
+%	| & e\ \in\ S & \\
+%	| & A\ \prg{in}\ S & \\
+%	| & \access{x}{y} \\
+%	| & \internal{x} \\
+%	| & \external{x} \\
+%%	| & \mut x y f &\\
+%%	| & \gives x y z &\\
+%	| & \calls{x}{y}{m}{args} \\
+%	| & \changes{S}{A} \\
+%	| & \neg A & \\
+%	| & A\ \wedge\ A & \\
+%	| & A\ \vee\ A & \\
+%	| & A\ \longrightarrow\ A & \\
+%	| & \forall\ x.\ [A] & \\
+%	| & \exists\ x.\ [A] & \\
+%	| & \forall\ S.\ [A] & \\
+%	| & \exists\ S.\ [A] &
+%	\end{array}
+%%	\begin{array}{llr}
+%%	s & ::= & \textit{Source}\\
+%%	| & \prg{int} & \\
+%%	| & \prg{ext} & \\
+%%	| & \_ &
+%%	\end{array}
+%	\]
+%	\caption{Assertions}
+%	\label{f:assertions_triple2}
+%	\end{figure}
 
-%% The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
-%% however, while executing the first and third version of \prg{Account} won't exhibit unwanted behaviour, the second version doesn't preclude it.
-%Namely version II allows any client to change the password of the
-%account, and then to repeatedly withdraw money from it.
 
-  
-% On the other hand, we expect our software -- even if complex -- to provide some simple, high level
-%guarantees, e.g. email addressed to me personally will not be read by a third party unless I explicitly 
-%forwarded it to them.
-%We except  our software to  behave correctly, even when used by a careless or malicious third party. 
-%Such use of a software often consist of a sequence of actions performed on the module. 
-%
-%Software components respond to single actions, 
-%or to sequences of such single actions. 
-%When thinking about a software component we want think about the behaviour of each 
-%action in isolation, but also about the \emph{emergent behaviour}, ie all
-% the possible effects of the combinations of these actions. 
-  
-  
 
-\begin{tabular}{lll}
-\begin{minipage}[b]{0.35\textwidth}
-\begin{lstlisting}[language=chainmail, frame=lines]
-module Mod2
-  class Account
-    field balance:int 
-    field pwd: Password 
-    method transfer(..) 
-      ... as earlier ...
-    method set(pwd': Object)
-      this.pwd=pwd'
-      
-  class Password
+
+
+\subsection {\Nec Specifications}
+\label{s:holistic-guarantees}
+
+Our \Nec specification language extends \SpecO with novel 
+%\emph{Necessity Specifications}.
+\sophiaPonder[]{\emph{necessity operators}}.
+In this Section we define its syntax (Def. \ref{f:holistic-syntax}) and semantics 
+%(Def. \ref{d:necessOpers}) 
+(Def. \ref{def:necessity-semantics})
+%of
+%\emph{\NecessitySpecifications}.
+We have the following three operators:
+
+% described below:
+
+
+
+
+
+\paragraph{Only If}
+[$\onlyIf{A_1}{A_2}{A}$]: If an arising program state satisfies $A_1$, and after some execution, a state program state satisfying $A_2$ is reached, 
+then the original program state must have also satisfied $A$.
+e.g. if the balance of a bank account changes over time, then there must be some external object in the current 
+program state that has access to the account's password.
+
+\paragraph{Single-Step Only If}
+[$\onlyIfSingle{A_1}{A_2}{A}$]: If an arising program state satisfies $A_1$, and after a single step of execution, a state satisfying $A_2$ is reached, 
+then the original program state must have also satisfied $A$.
+e.g. if the balance of a bank account changes over a single execution step, then that execution step must be a method call to the bank \prg{transfer} method.
+
+\paragraph{Only Through}
+[$\onlyThrough{A_1}{A_2}{A}$]: If an arising program state satisfies $A_1$, and after some execution, a state satisfying $A_2$ is reached, then program execution must have passed through some state satisfying $A$.
+e.g. if the balance of an account changes over time, then the bank's \prg{transfer} method must have been called 
+in some intermediate state. Note 
+that the intermediate state where $A$ is true might be the initial state,
+or final state.
+
+%\begin{figure}[t]
+\begin{definition}
+Assertions ($H$)
+% in   \Chainmail \NecessitySpecifications  
+are defined as follows:
+% \footnotesize
+
+\[
+\begin{syntax}
+\syntaxElement{H}{}
+		{
+		\syntaxline
+				{A}
+				{\onlyIf{A_1}{A_2}{A_3}}
+				{\onlyThrough{A_1}{A_2}{A_3}}
+		\endsyntaxline
+		}
+		{
+		\syntaxline
+				{\onlyIfSingle{A_1}{A_2}{A_3}}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+%\caption{Syntax of \Chainmail Necessity Specifications}
+\label{f:holistic-syntax}
+\end{definition}
+%\end{figure}
+
+
+All three operators talk about assertions satisfied in the 
+current state as well as of assertions satisfied in some future state. 
+These assertions may contain variables, whose denotation might change during
+program execution: the 
+map may change, variables may be overwritten, or the entire local variable maps may be lost on a method return.
+For this reason, before we provide the semantics of our \Nec specification language, we first introduce an adaptation operator
+to account for variable renaming throughout the execution of a program.
+\begin{definition}
+\label{d:adapt}
+$\adapt{\sigma'}{\sigma} \triangleq (\chi, \{\prg{local} := \beta[\overline{z} \mapsto \beta(\overline{z}')], \prg{contn}:= [\overline{z'}/\overline{z}]c\} : \psi)$
+where 
+\begin{itemize}
+\item
+$\sigma = (\_, \{\prg{local}:=\beta; \prg{contn}:=\_\} : \_)$, and
+$\sigma' = (\chi, \{\prg{local}:=\beta', \prg{contn}:=c\} : \psi)$
+\item
+$dom(\beta') = \overline{z'}$, $dom(\beta) \cap \overline{z} = \emptyset$, and $|\overline{z'}| = |\overline{z}|$
+\end{itemize}
+\end{definition}
+\jm[]{Def. \ref{d:adapt} allows satisfaction to take variable renaming during evaluation into account. 
+As an example, consider the following code snippet.}
+\begin{lstlisting}[frame=lines]
+x.f := y
+x := z
 \end{lstlisting}
-\end{minipage}
-&\ \ \  \ \   &%
-\begin{minipage}[b]{0.50\textwidth}
-\begin{lstlisting}[language=chainmail, frame=lines]
-module Mod3
-  class Account
-    field balance:int 
-    field pwd: Password 
-    method transfer(..) 
-      ... as earlier ...
-    method set(pwd',pwd'': Object)
-      if (this.pwd==pwd') 
-        this.pwd=pwd''
-  class Password
-\end{lstlisting}
-\end{minipage} 
-\end{tabular}
-
-Although the \prg{transfer} method is the same in
-all three alternatives, and each one satisfies \prg{(ClassicBankSpec)},
-code such as
-%
-\prg{account.set(42); account.transfer(yours, 42)}
-%
-are enough to drain the account in \prg{Mod2} without knowing the password.
+\jm[]{After the evaluation of line 1 , \texttt{x} has access to \texttt{y}, however when we overwrite \texttt{x} in line 2, 
+this is no longer necessarily true, as \texttt{x} might now refer to a different object, even though the object previously referred to 
+by \texttt{x} has not changed. A similar issue might occur when either calling a method, or returning from a method, as 
+the entire variable map changes under such circumstances. Adaptation (Def. \ref{d:adapt}) provides a convenient way to refer to 
+objects across time, while ignoring rewrites and new frames.}
 
 
- \subsection{Bank Account -- the right specification}
-\label{s:bankSpecEx}
+We can now define our semantics,  $M \models H$, 
+%the semantics of the Necessity Specifications,
+%  in Definition \ref{def:necessity-semantics}.  The definition goes 
+by cases over the \sophiaPonder[we were saying three forms]{four}possible syntactic forms of $H$: 
 
-We need to rule out \prg{Mod2} while permitting \prg{Mod1} and
-\prg{Mod3}. The catch is the vulnerability present in \prg{Mod2} is the result
-of  \emph{emergent} behaviour from the interactions of the \prg{set}
-and \prg{transfer} methods --- even though \prg{Mod3} also has a
-\prg{set} method, it does not exhibit the unwanted interaction.
-This is exactly where a necessary condition can help:
-we want to avoid transferring money
-(or more generally, reducing an account's balance)
-\textit{without} the existing account password.  Phrasing the same condition
-the other way around % gives us a positive statement that still
-rules out the theft: that money \textit{can only} be
-transferred when the account's password is known.
-In \Nec  syntax:
 
-%
-%% The flaw in version {\sf{II}} arises from 
-%% can be used to overwrite the
-%% password, and then using the new password \prg{transfer}  can be called.
-% If we want the \prg{Account} class to be robust, we must prohibit the password from being freely available.
-%
-%
-%% In this paper, we show how \textit{necessity specifications} can solve
-%% this progkem.  
-%%  Therefore, we propose a %holistic 
-%%  specification which says that
-%%  the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
-%%  module has access to the password:
-%
-%
- %% Therefore, we propose a %holistic 
- %% specification which says that
- %% the \prg{balance} of an \prg{Account} reduces only if an object which does not belong to the
- %% module has access to the password:
-%
+\noindent
+\begin{definition}[\Nec Semantics]\susan[Can this be called Semantics or Necessity Specification Language]{}\jm[used to be called ``Necessity Specifications'']{}
+\label{def:necessity-semantics}
+For any assertions $A$, $A_1$, $A_2$, and $A$,  we define \\
+
+
+$\bullet$ \ $\satisfies{M}{{A}}$ \ \ \ iff\ \ \ for all $M'$, $\sigma$,\ if $\arising{M}{M'}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$. (see Def. \ref{def:mdl-sat})\\
+
+%$\bullet$ \ $\satisfies{M}{{A}}$ \ \ \ as defined in \ref{def:mdl-sat} \\
+
+$\bullet$ \ $\satisfies{M}{\onlyIf {A_1}{A_2}{A}}$ \ \ iff\ \  for all $M'$, $\sigma$, $\sigma'$, such that $\arising{M}{M'}{\sigma}$; \\ % and\\
+
+\begin{tabular}{lr}
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A_1}$  & \rdelim\}{3}{3mm}[$\;\;\;\Rightarrow\;\;\;$  $\satisfiesA{M}{\sigma}{A}$] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{A_2}$   \\
+$\;\;\;\;$- $\reductions{M}{M'}{\sigma}{\sigma'}$   \\
+\end{tabular}\\ 
+
+$\bullet$ \  $\satisfies{M}{\onlyIfSingle {A_1}{A_2}{A}}$\ \ iff\ \   for all $M'$, $\sigma$,   $\sigma'$, such that $\arising{M}{M'}{\sigma}$: \\
+
+\begin{tabular}{lr}
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A_1}$  & \rdelim\}{3}{3mm}[$\;\;\;\Rightarrow\;\;\;$  $\satisfiesA{M}{\sigma}{A}$] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{A_2}$   \\
+$\;\;\;\;$- $\reduction{M}{M'}{\sigma}{\sigma'}$   \\
+\end{tabular}\\ 
+
+%% here as it was 
+%$\bullet$ \  $\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ \ \ iff\ \  for all $M'$, $\sigma$,   $\sigma'$, such that $\arising{M}{M'}{\sigma}$, and \\
+%\begin{tabular}{lr}
+%$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A_1}$  & 
+%\rdelim\}{3}{3mm}%[\makecell{Some really \\ longer text}]
+%[$\;\;\;\Rightarrow\;\;\;$\pbox{9cm}{then for all $\sigma_1, \ldots, \sigma_n$ such that $\reduction{M}{M'}{\sigma}{\sigma_1}\leadsto \ldots \sigma_n \leadsto \sigma'$
+%there exists some $\sigma_i$ such that $\satisfiesA{M}{\sigma_i \triangleleft \sigma}{A}$ where $0\leq i \leq n$, or $\satisfiesA{M}{\sigma}{A}$, or $\satisfiesA{M}{\sigma' \triangleleft \sigma}{A}$}] \\
+%$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{A_2}$   \\
+%$\;\;\;\;$- $\reductions{M}{M'}{\sigma}{\sigma'}$   \\
+%\end{tabular}\\ 
+%$\bullet$ \  $\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ \ \ iff\ \  for all $M'$, $\sigma_1$,   $\sigma_n$, such that $\arising{M}{M'}{\sigma}$: \\
+  
+$\bullet$ \  $\satisfies{M}{\onlyThrough {A_1}{A_2}{A}}$ \ \ iff\ \  for all $M'$, $\sigma_1$,   $\sigma_n$, such that $\arising{M}{M'}{\sigma_1}$: \\
+
+\begin{tabular}{lr}
+$\;\;\;\;$- $\satisfiesA{M}{\sigma_1}{A_1}$  & 
+\rdelim\}{3}{3mm}%[\makecell{Some really \\ longer text}]
+[$\;\;\;\Rightarrow\;\;\;$\pbox{9cm}{$\forall \sigma_2, \ldots, \sigma_{n-1}$.  \\ 
+(\ \ $\forall i\!\in\![1..n).\ \reduction{M}{M'}{\sigma_i}{\sigma_{i+1}}$   \ $\Rightarrow$
+$\exists i\!\in\![1..n]. \  \satisfiesA{M}{\sigma_i \triangleleft \sigma_1}{A}$ \ \ )   }] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma_n\triangleleft \sigma}{A_2}$   \\
+$\;\;\;\;$- $\reductions{M}{M'}{\sigma}{\sigma_n}$   \\
+\end{tabular} 
+\end{definition} 
+
+
+
+ 
+%With our language as defined in Definition \ref{def:necessity-semantics},
+We are now able to state what the necessary preconditions to critical functions in 
+software are, including safety properties of software in the open world. The semantics
+of \emph{Single-Step Only If} allow for the statement of such necessary preconditions
+for any execution step for any program to achieve a certain outcome. The semantics
+of \emph{Only If} and \emph{Only Through} allow us to raise these necessary preconditions
+to any arbitrary number of execution steps, and thus allow for reasoning about 
+the execution of an entire program.
+ 
+Looking back at the example from the Introduction,   it holds that
+\\
+\strut $\hspace{1in}$ \prg{Mod1} $\models$ \prg{NecessityBankSpec}
+ \\
+\strut $\hspace{1in}$ \prg{Mod2} $\not\models$ \prg{NecessityBankSpec}
+ \\
+\strut $\hspace{1in}$ \prg{Mod3} $\models$ \prg{NecessityBankSpec}
+ 
+
+ 
+For more specification examples, consider the
+bank account discussed in Section \ref{s:intro}. We have already shown
+how we can specify knowledge of an account's password using \prg{NecessityBankSpec},
+but we are also able to write other useful properties about the bank account. 
+ 
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-NecessityBankSpec  $\triangleq$   from a:Account $\wedge$ a.balance==bal
-                        to a.balance < bal
-                        onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
+NecessityBankSpec'  $\triangleq$  from a:Account $\wedge$ a.balance==bal
+                       nxt a.balance < bal
+                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{\_, \_, \_}}$]
 \end{lstlisting}
-%
-%
-% 
-%% In more detail, the specification from above says that if in the current
-%% configuration \prg{a} is an \prg{Account},
-%% and in some future configuration \prg{a} will have a balance less than the current one, then,in the \emph{current} configuration
-%% there must exist some object \prg{o}, which is \emph{external} to our module (does not belong to module
- %% \prg{AccountMdl}), and which has access to \prg{a}'s password.
- %
-%% T9hu having access to the password is a necessary condition for the balance to reduce.
-The critical point of this \Nec specification is that it is
-expressed in terms of observable effects and the shape of the heap --- the account's balance is reduced 
-and there is external access to the password ($\external{\prg{o}}\ \wedge\ \access{\prg{o}}{\prg{a.pwd}}$)
---- and not in terms of individual methods --- such as
-\prg{set} or \prg{transfer}.
-This gives our specifications the
-vital advantage that they constrain
-\textit{implementation} of a bank account with a balance and a
-password, irrespective of the API it
-offers, the services it exports, or the dependencies on other parts of
-the system.
-
-%\sophiaPonder[skip that part?]
-{This example also demonstrates that 
-%the specification need  refer  to  individual methods in a module.
-%Moreover, 
-adherence to   \Nec specifications is not monotonic:
-Adding a method to a module does not necessarily preserve adherence to a specification.
-And while separate methods may adhere to a  specification, their combination does
-not necessarily do so. Thus, \Nec specifications capture a module's \emph{emergent behaviour}. 
-}
-
-%\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
-
-
-%\subsection{Internal and External Modules, Objects, and Calls}
-
-\subsection{Internal and External objects and calls}
-\label{s:concepts}
-
-Our work concentrates on guarantees made for the \emph{open} setting; that is, a given module
-$M$ is programmed in such a robust manner
-%\sophia[We had agreed no to say "robust", but I think it is OK here. Alternatively, say defensively robust?]{}
- that execution of $M$ together with \emph{any} \externalM 
-module $M'$ will uphold these guarantees. In the tradition of
-visible states semantics, we are  only interested in upholding the guarantees while 
-$M'$, the  \externalM module,  is executing.   
- We therefore distinguish between \emph{\internalO} and
-\emph{\externalO} objects: those that belong to classes defined in $M$, and the rest. Similarly, we 
-distinguish between \emph{\internalC} calls, i.e. calls made % from \externalO objects
- to \internalO objects, and \emph{\externalC} calls, i.e. calls made % from \externalC objects
- to \externalC objects. % We are less
-% interested in calls made from \internalO objects to \internalO objects, because we only need 
-% establish the guarantees when the \externalM module is executing. And we 
-
-
-Moreover, because we only require that the guarantees are upheld while 
-  the  \externalM module  is executing, we develop an \emph{external states} semantics, where
- any internal calls are executed in one, large, step.
- Note that we do not -- yet -- support calls from
-\internalO objects to \externalO objects.\sophia[we need to think where our system forbids that, ... ?]{} 
- With external steps semantics,  the executing object (the \prg{this}) is always   external. 
+ 
+\prg{NecessityBankSpec$^\prime$} states that if over a single step the balance of an account decreases, then it must have occurred as 
+a result of a call to \prg{transfer}.
+ 
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+NecessityBankSpec''  $\triangleq$  from a:Account $\wedge$ a.password == pwd
+                        to a.password != pwd
+                        onlyThrough $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\calls{\prg{o}}{\prg{a}}{\prg{set}}{\prg{pwd, \_}}$]
+\end{lstlisting}
+ 
+\prg{NecessityBankSpec$^{\prime\prime}$} states that if over an arbitrary number of execution steps, the password of an account changes,
+then it follows that there must have been some intervening execution step that was a call to \prg{set} on the account 
+with the correct password. Both of these specifications are important, and are both used as intermediate steps
+when we present the full proof of \prg{NecessityBankSpec} later in Section \ref{s:examples}.
+\Nec thus provides us with a rich language for talking about the necessary conditions
+under which critical actions within of our software are allowed to occur. 
+%\jm[]{It is worth discussing the semantics of \Nec specifications and their 
+%relation to typical logical consequence and Hoare logic. A classical Hoare triple, 
+%$\hoare{P}{C}{Q}$, denotes that any program state that satisfies $P$, after execution 
+%of program $C$, will result in a program state that satisfies $Q$. Thus, $P$ represents 
+%a subset of program states that after execution of $C$ results in a program state satisfying $Q$.
+%Conversely, $Q$ represents a superset of program states resulting from the execution of $C$ in 
+%a program state satisfying $P$. Thus, we can soundly strengthen the left hand side ($P$), and weaken
+%the right hand side ($Q$). This intuition extends to all three specifications. 
+%For example, from \prg{NecessityBankSpec'}, while it is somewhat contrived, we are able to
+%strengthen the ``left hand side'' by adding information, and weaken the ``right hand side'', 
+%and conclude that}
+%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+%NecessityBankSpec'''  $\triangleq$  from a:Account $\wedge$ a.balance == bal $\wedge$ bal == x + y $\wedge$ y > 0
+%                       nxt a.balance == x
+%                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a}}$]
+%\end{lstlisting}
+%\jm[]{This follows because in the above specification, (a)\prg{x < bal}, and thus \prg{a.balance = x} implies and $a.balance < bal$,
+%and (b) if an object calls a method on another object, it follows that it has access to that object.
+%More generally, given a Single-Step Only-If specification, 
+%$\onlyIfSingle{A_1}{A_2}{A}$, $A_1$ and $A_2$ represent a subset of single step execution paths starting from a program state 
+%satisfying $A_1$ and reaching a program state satisfying $A_2$, that have $A$ as a necessary precondition. 
+%In the same way the converse is true, i.e. $A$ represents a superset of initial program states
+%for execution starting at a state satisfying $A_1$ and reaching a state satisfying $A_2$ after a single step of execution.
+%As with Hoare logic, we are able to soundly strengthen the left hand side ($A_1$ and $A_2$)
+%and strengthen the right hand side ($A$). This intuition also extends to Only-If and Only-Through specifications. 
+%In some places later in this paper, we use the distinction ``\emph{left hand side}'' of a \Nec specification
+%to denote the two left most assertions in the specification, and ``\emph{right hand side}'' to denote
+%the necessity precondition.}
  
 
 
-\subsection{Reasoning about Necessity}
-\label{s:approach}
- 
-The proof that \prg{Mod3} adheres to \prg{NecessityBankSpec} consists,
-broadly, of the following parts:
 
 
-\begin{description}
-\item[Part 1] We establish that  \textbf{(a)} the balance may only change through  
-\prg{Mod3}-internal calls.
-Also,  \textbf{(b)},   external accessibility to an account's password may 
-only be obtained through  \prg{Mod3}-internal calls -- that is,  the property that
-no external object has access to the password can only be invalidated through an internal call.
- 
-\item[Part 2] We establish  for each method of \prg{Mod3} (i.e. each method in \prg{Account} and \prg{Password}) that if the method is called, then 
- \textbf{(c)},  if it  causes the  balance to reduce, then the method called was
- \prg{transfer} and the correct password was provided, and 
-  \textbf{(d)} it will not provide external accessibility to the password.
+\subsection{Assertion Encapsulation}
+\jm[lemmas? does A => enc(A') imply A => enc($\neg$A')?]{}
+ %In order to reason about necessary requirements in an open world,
+% and those assertions that may change due 
+% to computation by external, unknown code.
+In Section \ref{s:outline} we used the concept of encapsulation of \SpecO assertions 
+ when proving adherence to \Nec specifications.
+An assertion $A$ is encapsulated by a module $M$ if it cannot be invalidated unless an
+internal method is called. 
+Here we refine this concept, to allow for ``conditional'' encapsulation:
+$M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
+$A'$ cannot be invalidated, unless a method from $M$ was called.
 
- \item[Part 3]  From \textbf{(a)}  and  \textbf{(c)} we obtain that \textbf{(e)}  if the balance were to 
-reduce in \emph{any}  \emph{single} step -- whether an internal call, or any external step --
- the method called was
- \prg{transfer} and the correct password was provided. Similarly,   from
- \textbf{(b)}  and  \textbf{(d)} we obtain that \textbf{(f)}
- external accessibility to the password will not be provided by any single step.
-    
- 
-\item[Part 4] From \textbf{(e)} we obtain that  \textbf{(g)}   if the balance reduces in any 
-number of steps, then at some step  \prg{transfer} was called with   the correct password.
-From  \textbf{(g)}  we obtain that \textbf{(h)} if the balance reduces in any 
-number of steps, then at some intermediate step some external object had access to the password.
-From \textbf{(f)} we obtain that  \textbf{(i)}  external accessibility to the password will not be provided by any sequence of steps.
-Using  \textbf{(h)} and  \textbf{(i)}  we establish that
- \prg{Mod3} indeed adheres to \prg{NecessityBankSpec}.
+\begin{definition}[Assertion Encapsulation]
+\label{def:encapsulation}
+For % an internal module. -- SDL internal is nit an inherrent property
+a module $M$ and assertion $A$, we define an assertion $A'$ as being 
+encapsulated, written\ \  $M\ \vDash A\ \Rightarrow\ \encaps{A'}$, \ \ if and only if
+%$M\ \vDash\ \onlyIfSingle{A}{\neg A}{\calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}}$
+for all external modules $M'$, and program states $\sigma$ and $\sigma'$
+such that $\arising{M}{M'}{\sigma}$:
 
-\end{description} 
- 
-\noindent
-We  now outline  the  formal concepts and ideas used in the four parts   from above:
-
-\begin{description}
-\item[Part 1] 
-We  say assertion $A$  is
-\emph{encapsulated} by  module $M$, if  $A$ can be invalidated only through
-  $M$-\internalC calls. In short, an $M$-\internalC call is a \emph{necessary} condition for
-invalidation of $A$.
-% In \textbf{P1}, the assertion \prg{a:Account\! $\wedge$\! a.balance=bal} is encapsulated by \prg{Mod3}.
-
-Determining encapsulation is a challenge, but not central to this work.
-We therefore outline a rudimentary types-based algorithm, and relegate more
-approaches to further work.
-  
-\item[Part 2]
- Here we infer a \emph{per-method-condition}, i.e., a 
- necessary condition given an effect and
-a single, specified, method call. 
-% 
-%In \textbf{P2},   a necessary condition for the  reduction of \prg{a.balance}  after the call \prg{a.transfer(a',pwd)} is that the caller had access to \prg{a.password} before the call.
-
-We address this  challenge % of the inference of necessary conditions 
- by leveraging the sufficient conditions from classical specifications:
-If the negation of a method's
- classical postcondition implies  the effect we are interested in, then the negation of the 
- classical precondition  is the necessary precondition for the effect and the method call.
-More in \S\ref{s:classical-proof}.  
- % Thus, 
- %  a method's sufficient conditions are used to infer a method's and effect's necessary conditions.
-
-
-
-  
-%\item[from effect and single step to necessary condition]
-\item[Part 3]
-Here we infer a \emph{per-step-condition}, i.e., a 
- necessary condition given an effect and
-a single, unspecified step. This step could be an internal call, or any kind of external step.
-
-%In \textbf{P3},   a necessary condition for the  reduction of \prg{a.balance}  after \emph{any}
-%step, is that the caller  had access to \prg{a.password} before the call.
-%And similarly in \textbf{P4},   a necessary condition for an external object's
-%access to \prg{a.password}  after \emph{any}
-%step, is that that object had access to \prg{a.password} before the call.
-
-For effects encapsulated by $M$, we can infer such one-step
-necessary conditions by combining the necessary conditions for that effect from 
-all   methods in $M$. We also have  expected sub-structural rules, \emph{e.g.,} 
- like the rule of consequence.
-More in \S\ref{s:module-proof}.
-
-
-
-%\item[from effect to necessary conditions]
-\item[Part 4]
-  
-We now infer the \emph{emergent} behaviour out of the many possible 
-single steps.  This part is crucial;   remember that while \prg{Mod2} satisfies  
-(***) for one single step, it does not satisfy it for any number of steps. More in \S\ref{s:emergent-proof}.
- 
-\end{description} 
-
-\noindent
-Note, that at no point do we inspect method bodies: we rely on type annotations
- to infer encapsulation, and on classical pre-, post- conditions to infer per-method conditions.
-
+\begin{tabular}{lr}
+$\;\;\;\;$- $\reduction{M}{M'}{\sigma}{\sigma'}$  & \rdelim\}{4}{3mm}[$\;\;\;\Rightarrow\;\;\;$  $\exists x,\ \overline{z}. (\satisfiesA{M}{\sigma}{\calls{\_}{x}{m}{\overline{\sd{z}}}\ \wedge\ \internal{x}})$] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A}$   \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A'}$   \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A'}$   \\
+\end{tabular}
+\end{definition}
