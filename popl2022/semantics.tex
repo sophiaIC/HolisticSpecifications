@@ -7,9 +7,16 @@
 In this section we define our \Nec specification language.
 In order to do that, we first define 
 an underlying programming language \Loo  (\S \ref{sub:Loo}).
-\jm[]{Given its minimal features, we base \Loo on \LangOO, as defined by 
+%===============
+%old
+%\jm[]{Given its minimal features, we base \Loo on \LangOO, as defined by 
+%\cite{FASE}. While \LangOO was untyped, \Loo includes a simple type
+%system to allow for simple type based proofs of encapsulation.}
+%================
+\jm[modification to description of type system. Not sure if this is clear enough.]{
+Given its minimal features, we base \Loo on \LangOO, as defined by 
 \cite{FASE}. While \LangOO was untyped, \Loo includes a simple type
-system to allow for simple type based proofs of encapsulation.}
+system to allow for simple type based restrictions on external access to private data.}
 We then  define an assertion language, \SpecO,  which can talk about
  the contents of the state, as well about 
   of provenance and permission and control (\S \ref{sub:SpecO}).
@@ -173,19 +180,38 @@ In Definition \ref{def:arising}, \jm[was capitalized]{we} also use the notation 
 zero or more reduction steps starting at state $\sigma$ and ending at state $\sigma$, in the context of internal module 
 $M$ and external module $M'$.
 
-Finally, \Loo has a simple class based type system with the following properties:
-\begin{description}
-\item[(1)]
-Classes may be optionally annotated as \prg{enclosed}
-\item[(2)]
-Methods of non-\prg{enclosed} classes may not return objects of \prg{enclosed} classes
-\item[(3)]
-Modules are typed in isolation of other modules, thereby implicitly prohibiting
-method calls from internal objects to external objects.
-\end{description}
-The type system \jm[]{is included to allow a simple and convenient way to prove encapsulation of \SpecO assertions,
-however it is not fundamental to the definition of either the  \Nec specification language or logic, and could easily be substituted out 
-for any other encapsulation system.}
+%%========================
+%%old
+%Finally, \Loo has a simple class based type system with the following properties:
+%\begin{description}
+%\item[(1)]
+%Classes may be optionally annotated as \prg{enclosed}
+%\item[(2)]
+%Methods of non-\prg{enclosed} classes may not return objects of \prg{enclosed} classes
+%\item[(3)]
+%Modules are typed in isolation of other modules, thereby implicitly prohibiting
+%method calls from internal objects to external objects.
+%\end{description}
+%The type system \jm[]{is included to allow a simple and convenient way to prove encapsulation of \SpecO assertions,
+%however it is not fundamental to the definition of either the  \Nec specification language or logic, and could easily be substituted out 
+%for any other encapsulation system.}
+%%==================================
+\jm[]{Finally, \Loo has a simple class based type system where 
+classes may be optionally annotated as \enclosed. An object 
+of an \prg{enclosed} type may not be accessed by module-external
+objects. This helps simplify the demonstrative proof of the running 
+Bank Account example (\S\ref{s:examples}). In order to enforce this 
+restriction, methods of non-\enclosed classes are prohibited from
+returning \enclosed objects.}
+
+\jm[]{\Loo's type system has one further implication: modules are typed 
+in isolation of other modules, thereby implicitly prohibiting
+method calls from internal objects to external objects.}
+
+\jm[]{The type system is included to allow a simple and convenient way to prove that access to certain 
+objects is restricted. This restriction simplifies the proof of our running example to a manageable degree,
+however it is not fundamental to the definition of either the  \Nec specification language or logic, 
+and could easily be removed.}
 
 
 \subsection{\SpecO}
@@ -675,37 +701,36 @@ NecessityBankSpec''  $\triangleq$  from a:Account $\wedge$ a.password == pwd
 then it follows that there must have been some intervening execution step that was a call to \prg{set} on the account 
 with the correct password. Both of these specifications are important, and are both used as intermediate steps
 when we present the full proof of \prg{NecessityBankSpec} later in Section \ref{s:examples}.
-
 \Nec thus provides us with a rich language for talking about the necessary conditions
 under which critical actions within of our software are allowed to occur. 
-\jm[]{It is worth discussing the semantics of \Nec specifications and their 
-relation to typical logical consequence and Hoare logic. A classical Hoare triple, 
-$\hoare{P}{C}{Q}$, denotes that any program state that satisfies $P$, after execution 
-of program $C$, will result in a program state that satisfies $Q$. Thus, $P$ represents 
-a subset of program states that after execution of $C$ results in a program state satisfying $Q$.
-Conversely, $Q$ represents a superset of program states resulting from the execution of $C$ in 
-a program state satisfying $P$. Thus, we can soundly strengthen the left hand side ($P$), and weaken
-the right hand side ($Q$). This intuition extends to all three specifications. 
-For example, from \prg{NecessityBankSpec'}, while it is somewhat contrived, we are able to
-strengthen the ``left hand side'' by adding information, and weaken the ``right hand side'', 
-and conclude that}
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-NecessityBankSpec'''  $\triangleq$  from a:Account $\wedge$ a.balance == bal $\wedge$ bal == x + y $\wedge$ y > 0
-                       nxt a.balance == x
-                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a}}$]
-\end{lstlisting}
-\jm[]{This follows because in the above specification, (a)\prg{x < bal}, and thus \prg{a.balance = x} implies and $a.balance < bal$,
-and (b) if an object calls a method on another object, it follows that it has access to that object.
-More generally, given a Single-Step Only-If specification, 
-$\onlyIfSingle{A_1}{A_2}{A}$, $A_1$ and $A_2$ represent a subset of single step execution paths starting from a program state 
-satisfying $A_1$ and reaching a program state satisfying $A_2$, that have $A$ as a necessary precondition. 
-In the same way the converse is true, i.e. $A$ represents a superset of initial program states
-for execution starting at a state satisfying $A_1$ and reaching a state satisfying $A_2$ after a single step of execution.
-As with Hoare logic, we are able to soundly strengthen the left hand side ($A_1$ and $A_2$)
-and strengthen the right hand side ($A$). This intuition also extends to Only-If and Only-Through specifications. 
-In some places later in this paper, we use the distinction ``\emph{left hand side}'' of a \Nec specification
-to denote the two left most assertions in the specification, and ``\emph{right hand side}'' to denote
-the necessity precondition.}
+%\jm[]{It is worth discussing the semantics of \Nec specifications and their 
+%relation to typical logical consequence and Hoare logic. A classical Hoare triple, 
+%$\hoare{P}{C}{Q}$, denotes that any program state that satisfies $P$, after execution 
+%of program $C$, will result in a program state that satisfies $Q$. Thus, $P$ represents 
+%a subset of program states that after execution of $C$ results in a program state satisfying $Q$.
+%Conversely, $Q$ represents a superset of program states resulting from the execution of $C$ in 
+%a program state satisfying $P$. Thus, we can soundly strengthen the left hand side ($P$), and weaken
+%the right hand side ($Q$). This intuition extends to all three specifications. 
+%For example, from \prg{NecessityBankSpec'}, while it is somewhat contrived, we are able to
+%strengthen the ``left hand side'' by adding information, and weaken the ``right hand side'', 
+%and conclude that}
+%\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+%NecessityBankSpec'''  $\triangleq$  from a:Account $\wedge$ a.balance == bal $\wedge$ bal == x + y $\wedge$ y > 0
+%                       nxt a.balance == x
+%                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a}}$]
+%\end{lstlisting}
+%\jm[]{This follows because in the above specification, (a)\prg{x < bal}, and thus \prg{a.balance = x} implies and $a.balance < bal$,
+%and (b) if an object calls a method on another object, it follows that it has access to that object.
+%More generally, given a Single-Step Only-If specification, 
+%$\onlyIfSingle{A_1}{A_2}{A}$, $A_1$ and $A_2$ represent a subset of single step execution paths starting from a program state 
+%satisfying $A_1$ and reaching a program state satisfying $A_2$, that have $A$ as a necessary precondition. 
+%In the same way the converse is true, i.e. $A$ represents a superset of initial program states
+%for execution starting at a state satisfying $A_1$ and reaching a state satisfying $A_2$ after a single step of execution.
+%As with Hoare logic, we are able to soundly strengthen the left hand side ($A_1$ and $A_2$)
+%and strengthen the right hand side ($A$). This intuition also extends to Only-If and Only-Through specifications. 
+%In some places later in this paper, we use the distinction ``\emph{left hand side}'' of a \Nec specification
+%to denote the two left most assertions in the specification, and ``\emph{right hand side}'' to denote
+%the necessity precondition.}
  
 
 
