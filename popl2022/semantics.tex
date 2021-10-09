@@ -1,45 +1,51 @@
-\section{The meaning of Necessity}
+
+\section{The Meaning of Necessity}
 \label{s:semantics}
 
- % There are three, related, forms of necessity specifications, i.e. $\onlyIf {A_1} {A_2} {A_3}$,
-% $\onlyIf {A_1} {A_2} {A_3}$, and 
-% $\onlyThrough {A_1} {A_2} {A_3}$, $\onlyIf {A_1} {A_2} {A_3}$.
+ 
 In this section we define our \Nec specification language.
-In order to do that, we first define 
-an underlying programming language \Loo  (\S \ref{sub:Loo}).
-%===============
-%old
-%\jm[]{Given its minimal features, we base \Loo on \LangOO, as defined by 
-%\cite{FASE}. While \LangOO was untyped, \Loo includes a simple type
-%system to allow for simple type based proofs of encapsulation.}
-%================
-\jm[modification to description of type system. Not sure if this is clear enough.]{
-Given its minimal features, we base \Loo on \LangOO, as defined by 
-\cite{FASE}. While \LangOO was untyped, \Loo includes a simple type
-system to allow for simple type based restrictions on external access to private data.}
+%In order to do that, 
+\scd{We} first define 
+an underlying programming language, \Loo  (\S \ref{sub:Loo}).
+%modification to description of type system. Not sure if this is clear enough.]{
+%We base \Loo on \LangOO, as defined by 
+%\cite{FASE}. Whereas \LangOO was untyped, \Loo 
+%%includes a simple type
+%%system to allow for
+%has type based restrictions on external access to private data.}
 We then  define an assertion language, \SpecO,  which can talk about
- the contents of the state, as well about 
-  of provenance and permission and control (\S \ref{sub:SpecO}).
-Finally, we define define the syntax and semantics of our \Nec specification language  (\S \ref{s:holistic-guarantees}).
-
+ the contents of the state, as well \scd{as about} 
+provenance, permission and control (\S \ref{sub:SpecO}).
+Finally, we define the syntax and semantics of 
+\Nec specifications  (\S \ref{s:holistic-guarantees}).
+% our \Nec specification language  (\S \ref{s:holistic-guarantees}).
 
 
 \subsection{\Loo}
 \label{sub:Loo} 
-\jm[TODO: mention the type system and the restriction on external method calls]{}
-% We introduce a simple object-oriented language, \Loo, upon 
-% which our specification language sits.
- \Loo is a  simple  imperative,
-class based, typed, object oriented language. 
-Given the simplicity of \Loo, we do not
-define it here, instead, we direct the reader to Appendix \ref{app:loo} for 
-the full definitions. % syntax and operational semantics.
-Here we outline the definitions, and  introduce the concepts most relevant to the
+%\jm[TODO: mention the type system and the restriction on external method calls]{}
+%% We introduce a simple object-oriented language, \Loo, upon 
+%% which our specification language sits.
+ \Loo is a  simple  imperative, \scd{sequential}, 
+class based, typed, object oriented language.
+%\susan[Java fields are package private not class private - are fields so important that we need to say this?]{Fields are private to the class where they are defined.}
+ Given its simplicity, %  the simplicity of \Loo, we do notdefine it here, instead, 
+ we direct the reader to App. \ref{app:loo} for 
+the full definitions, \scd{and} introduce here only % syntax and operational semantics.
+ the concepts most relevant to the
 treatment of the open world guarantees.
+%\jm[]{\Loo fields are private in the way fields in Java are private,
+%the privacy is class-wide, i.e. they may only be read or written to by 
+%objects of the same class.}
+\scd{\Loo is based} on \LangOO from
+\cite{FASE}, \scd{with some small variations}, as well as 
+the addition of a % while \LangOO is untyped, \Loo 
+ a simple type system -- more in \sophiaPonder[TODO]{reference}.
+%has type based restrictions on external access to private data.}
+%\sophiaPonder[added]{Note that the operational semantics only allows filed
+%update if the receiver and the object being updated belong to the same class,
+%and only allows method calls 
 
-\jm[]{\Loo fields are private in the way fields in Java are private,
-the privacy is class-wide, i.e. they may only be read or written to by 
-objects of the same class.}
 
 A \Loo state $\sigma$ consists of a 
 heap $\chi$, and a  {stack $\psi$, which is a sequence of frames $\phi$}.
@@ -50,152 +56,119 @@ perform field reads and writes on objects,  or
  call methods on those objects. 
 
 %Program 
-Execution is  performed in the context of a module $M$. Modules are mappings
+ Modules are mappings
 from class names to class definitions. 
-Execution has the format  $M, \sigma \leadsto \sigma'$, it is a small-step, unsurprising semantics,   c.f. Appendix \ref{app:loo}.
-The   continuation of the top frame contains the statements currently being executed.
+Execution takes place in the context of  a module $M$ and   \scd{a state $\sigma$}.
+It is % Execution
+ \scd{defined} through a small-step, unsurprising, semantics, of the form \ \ 
+   $M, \sigma \leadsto \sigma'$,\  c.f. App. \ref{app:loo}.
+The   continuation of the top frame contains the statements \scd{that will be} % currently being 
+executed next.
  % chopped, as generic 
  % There are several properties  of \Loo that are important to the central topic of this paper. 
  
 As discussed in \S \ref{s:approach}, we are interested in guarantees which hold
-when the external module is executing, and are not concerned if they are
+\sophiaPonder[need to remind reader of internal/external]{during execution of an internal, 
+known, trusted module $M$ when linked together with any
+unknown, untrusted, module $M'$.} These guarantees need only hold 
+when the external module is executing; \scd{we} are not concerned if they are
 temporarily broken by the internal module. Therefore, we are only interested in states where the
 executing object (the \prg{this}) is an external object. 
-For this, we define the  \emph{external state semantics}, of the form 
-$\reduction{M}{M'}{\sigma}{\sigma'}$, where $M$ is the external
-module, and $M'$ is the internal module, and where we
+To express our focus on external states, we define the  \emph{external states semantics}, of the form 
+$\reduction{M'}{M}{\sigma}{\sigma'}$, where $M'$ is the external
+module, and $M$ is the internal module, and where we
 collapse all internal steps into one single step.
 
  
-% SD removed, as disagreed with some of what is said below
-% which allow us to 
-%we define two forms of the operational semantics for \Loo, one in Fig. \ref{f:loo-semantics}
-%that is unsurprising and details the execution of specific 
-%statements in the language, and a second called \emph{external state semantics} 
-%that models that open world, where the components of a program can
-%have both known (\internalO) and unknown (\externalO) provenance.
-
 
 \begin{definition}[External State Semantics]
 \label{def:pair-reduce}
 For  
 % If we say "internal module", it is sounds as something makes the module be internal
-  modules $M$,  $M'$, and program states $\sigma$, $\sigma'$, 
-we say that $\ \ \ \ \ \ \ \ \reduction{M}{M'}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exists a 
-$n\in\mathbb{N}$, such that
+  modules $M$,  $M'$, and % program
+   states $\sigma$, $\sigma'$, 
+we say that $\ \ \ \ \ \ \ \ \reduction{M'}{M}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exist 
+$n\in\mathbb{N}$, \scd{and states $\sigma_0$,...$\sigma_n$}, such that
 \begin{itemize}
-% SD changed because the old version was slightly wrong
 \item
 $\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
 \item
-$M \circ M', \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
+$M' \circ M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
 \item
-$\class{\sigma}{\sigma.\prg{this}}, \class{\sigma'}{\sigma'.\prg{this}}\in M'$,
+$\class{\sigma}{\scd{\prg{this}}}, \class{\sigma'}{\scd{\prg{this}}}\in M'$,
 \item
-$\class{\sigma_i}{\sigma_i.\prg{this}} \in M$\ \ \ for all $i\in [1..n)$.
+$\class{\sigma_i}{\scd{\prg{this}}} \in M$\ \ \ for all $i\in [1..n)$.
 \end{itemize} 
-%$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$ for all $0 \leq i \leq n$
-%
-%$\class{\sigma}{\sigma.\prg{this}}\ \in\ M_2$ and
-%\item
-%$\class{\sigma'}{\sigma'.\prg{this}}\ \in\ M_2$ and 
-%\end{itemize} 
-%%and
-%%\begin{itemize}
-%%\item
-%%$\exec{M_1\ \circ\ M_2}{\sigma}{\sigma'}$ or
-%%\item
-%$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.\prg{this}} \in M_1$ for all $0 \leq i \leq n$
-%\end{itemize}
 \end{definition}
-In Definition \ref{def:pair-reduce}  % of external state semantics makes reference to a 
-we  use  the function
-$\class{\sigma}{x}$. This function looks up 
-the class of   the object referred by variable $x$ in the heap of $\sigma$. 
-  % for a specific variable in a specific program.
-% SD not a variable, and no program.
-We also use module linking, $M\circ M'$. The operator $\circ$
- %  results in the union of two disjoint modules.
-combines the two modules into one module in the obvious way, provided that their 
+\scd{The function $\class{\sigma}{\_}$ is overloaded:}
+  applied to a variable, 
+$\class{\sigma}{x}$  looks up the variable $x$ in the top frame of $\sigma$, and returns the 
+class of the corresponding object in the  heap of $\sigma$,
+\scd{while  applied to an address, $\class{\sigma}{\alpha}$  returns
+the class of   the object referred by address $\alpha$ in the heap of $\sigma$.}
+ The module linking operator $\circ$, applied to two modules, $M\circ M'$, 
+ combines the two modules into one module in the obvious way, provided their
 domains are disjoint.
-Full details in  Appendix \ref{app:loo}.
+Full details in  App. \ref{app:loo}.
 \begin{figure}[htb]
-  \vspace*{-2.5mm}
-  \begin{center}
-   \begin{minipage}{0.80\textwidth}
-     \begin{center}
-       \includegraphics[width=\linewidth]{diagrams/VisibleStates.pdf}
-     \end{center}
-   \end{minipage}
-   \end{center}
-   \vspace*{-2.5mm}
+%  \vspace*{-2.5mm}
+%  \begin{center}
+%   \begin{minipage}{0.80\textwidth}
+%     \begin{center}
+%       \includegraphics[width=\linewidth]{diagrams/VisibleStates.pdf}
+%     \end{center}
+%   \end{minipage}
+%   \end{center}
+%   \vspace*{-2.5mm}
+TODO new figure. \scd{should only have (A) and (B)}
    \caption{External States Semantics
      (Def. \ref{def:pair-reduce}). %
      % 
-     (a) $\exec{{\color{blue}M} \circ {\color{orange}M'}}{\sigma_1}{\ldots}\leadsto \sigma_9$
-     (b) $\reduction{{\color{blue}M}}{{\color{orange}M'}}{\sigma_2}{\ldots}\leadsto \sigma_9$
-     (c) $\reduction{{\color{orange}M'}}{{\color{blue}M}}{\sigma_1}{\ldots}\leadsto \sigma_8$
-     from \cite{FASE}}
+     (A) $\exec{{\color{blue}M'} \circ {\color{orange}M}}{\sigma_1}{\ldots}\leadsto \sigma_9$\ \ \and \ \ \ 
+     (B) $\reduction{{\color{blue}M'}}{{\color{orange}M}}{\sigma_2}{\ldots}\leadsto \sigma_9$
+    %  (c) $\reduction{{\color{orange}M'}}{{\color{blue}M}}{\sigma_1}{\ldots}\leadsto \sigma_8$
+    }
    \label{fig:VisibleStates}
  \end{figure}
  
 Fig. \ref{fig:VisibleStates} provides a simple graphical description of 
-our external states semantics, showing how given a single execution 
-comprised of code from two different modules, we can consider either
-the complete execution as in (a), the external state execution when $M'$ is external (b), and the external state execution when $M$ is external  in (c).
- 
+our external states semantics: \scd{(A) is the ``normal'' execution after 
+linking two modules into one: \ $M' \circ M, ... \leadsto ...$. While (B) is the
+ external states execution when $M'$ is external,\   $\reduction{M'}{M}{...}{...}$.}
+\sophiaPonder[ALL; please read and check]{
+Note that whether a module is external or internal only depends on how the modules  are
+ used -- nothing in the module itself renders it internal or external. For example, in
+ $\reduction{M_1}{M_2}{...}{...}$ the external module is $M_1$,
+  while in  $\reduction{M_2}{M_1}{...}{...}$  the external module is $M_2$.}
+
+\sophiaPonder[moved to earlier]{We  use} the notation\ \  $\reductions{M'}{M}{\sigma}{\sigma'}$ \ 
+to denote
+zero or more % reduction 
+\scd{steps} starting at state $\sigma$ and ending at state $\sigma'$, in the context of internal module 
+$M$ and external module $M'$.
+ \sophiaPonder[better connection, avoided repetition, tighten]{Not only are we unconcerned 
+with internal states, 
+ we are also unconcerned with  states which cannot ever arise from execution.
+\emph{Arising} states are those that  may arise by external states execution
+starting at some initial configuration:}
 
 
 
-
-
-In this work we are interested in guarantees which are upheld by the internal 
-module. Moreover,    these guarantees  need to be satisfied only at `reachable' states,
-and need not be satisfied at states that are
-not reachable -- this is described formally in Definition \ref{def:arising}. 
-Reachable states are those that  may arise by external states execution
-of  a given internal module linked with \emph{any} external module.
-We describe the states of interest as the \emph{arising states}. 
-
-
-
-\begin{definition}[Arising Program State]
+\begin{definition}[Arising  States]
 \label{def:arising}
-For   modules $M$ and  $M'$, a program state $\sigma$ is 
-said to be an \emph{arising} state, formally \ \ \ $\arising{M}{M'}{\sigma}$,\ \ \ 
+For   modules $M$ and  $M'$, a % program
+ state $\sigma$ is 
+\scd{called} an \emph{arising} state, formally \ \ \ $\arising{M}{M'}{\sigma}$,\ \ \ 
 if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
-$\reductions{M}{M'}{\sigma_0}{\sigma}$.
+$\reductions{M'}{M}{\sigma_0}{\sigma}$.
 \end{definition}
 
-% Definition \ref{def:arising} uses the definition for 
-In the definition above we used \emph{Initial} states, 
-% he definition of which can be found in  Definition \ref{def:initial}. 
-which  characterize states at the start of program execution.
-The heap of an initial state should  contain a single object of class \prg{Object}, and
-the  stack should consist of a single frame, whose local variable map contains only the 
-mapping of \prg{this} to the single object, and whose continuation may be any statement.
-% to be executed.
-More in Definition \ref{def:initial}. 
-In Definition \ref{def:arising}, \jm[was capitalized]{we} also use the notation $\reductions{M}{M'}{\sigma}{\sigma'}$ to denote
-zero or more reduction steps starting at state $\sigma$ and ending at state $\sigma$, in the context of internal module 
-$M$ and external module $M'$.
+\scd{A state is \emph{Initial}} 
+if its heap contains a single object of class \prg{Object}, and
+its  stack   consists of a single frame, whose local variable map is a
+mapping from \prg{this} to the single object, and whose continuation \scd{is}  any statement.
+More in Def. \ref{def:initial}and Def. \ref{def:arising}.
 
-%%========================
-%%old
-%Finally, \Loo has a simple class based type system with the following properties:
-%\begin{description}
-%\item[(1)]
-%Classes may be optionally annotated as \prg{enclosed}
-%\item[(2)]
-%Methods of non-\prg{enclosed} classes may not return objects of \prg{enclosed} classes
-%\item[(3)]
-%Modules are typed in isolation of other modules, thereby implicitly prohibiting
-%method calls from internal objects to external objects.
-%\end{description}
-%The type system \jm[]{is included to allow a simple and convenient way to prove encapsulation of \SpecO assertions,
-%however it is not fundamental to the definition of either the  \Nec specification language or logic, and could easily be substituted out 
-%for any other encapsulation system.}
-%%==================================
 \jm[]{Finally, \Loo has a simple class based type system where 
 classes may be optionally annotated as \enclosed. An object 
 of an \enclosed type may not be accessed by module-external
@@ -216,58 +189,43 @@ and could easily be removed.}
 
 \subsection{\SpecO}
 \label{sub:SpecO}
-\SpecO extends the expressiveness of standard specification languages
-with assertion forms capturing key concepts of software security:
- \emph{permission}, \emph{provenance}, and \emph{control}.
-%That is, \SpecO specifications are able to specify which objects have
-%access to which other object (\emph{permission}), whether an object's origin
-%is internal or external to known code (\emph{viewpoint}), or which objects call which 
-%methods (\emph{control}). 
+\SpecO extends \sophiaPonder[drop: the expressiveness]{}   standard %specification 
+\scd{assertion} languages
+with  forms capturing key concepts of software security:
+ \emph{Permission}, \emph{Provenance}, and \emph{Control}.
+\sophiaPonder[]{We define the syntax and semantics of \SpecO, and introduce the concert
+ of assertion encapsulation, as well as some simple means by which we can establish it.}
+% assists construction of proofs.
+ 
+\subsubsection{Syntax of of \SpecO}
+The syntanx of \SpecO  % assertions 
+is given in
+Def. \ref{f:chainmail-syntax}.% the \SpecO specification language.
+\scd{\SpecO assertions are a subset of the assertions supported by \emph{Chainmail.}}
+An assertion may be an expression,   \scd{a membership to a class}, the usual connectives and quantifiers, along 
+with the following non-standard assertion forms:
+\begin{itemize}
+\item
+\emph{Permission} ($\access{x}{y}$):  
+  $x$ has access to $y$.
+\item
+{\emph{Provenance}} ($\internal{x}$ and $\external{y}$):   $x$ is internal, and $y$ is external.
+\item
+\emph{Control} ($\calls{x}{y}{m}{\overline{z}}$): 
+$x$ calls method $m$ on object $y$ with arguments $\overline{z}$.
+\end{itemize}
+\sophiaPonder[swap capitalization]{} 
+ \emph{Permission} and \emph{provenance} are inspired by the capabilities literature.
+\scd{\emph{Control} allows tighter  characterisation of the cause of effects --  particularly
+useful for the specification of large APIs.}
 
-\subsubsection{Syntax}
-
-%\begin{figure}[t]
-%\footnotesize
-%\[
-%\begin{syntax}
-%\syntaxElement{A}{}
-%		{
-%		\syntaxline
-%				{e}
-%				{e : C}
-%				{\neg A}
-%				{A\ \wedge\ A}
-%				{A\ \vee\ A}
-%				{\all{x}{A}}
-%				{\ex{x}{A}}
-%		\endsyntaxline
-%		}
-%		{
-%		\syntaxline
-%				{\access{x}{y}}
-%				{\internal{x}}
-%				{\external{x}}
-%		\endsyntaxline
-%		}
-%		{
-%		\syntaxline
-%				{\calls{x}{y}{m}{\overline{z}}}
-%		\endsyntaxline
-%		}
-%\endSyntaxElement\\
-%\end{syntax}
-%\]
-%\caption{\SpecO Assertions}
-%\label{f:chainmail-syntax}
-%\end{figure}
-%
 
 \begin{definition}
-Assertions ($A$) in the basic specification language, \SpecO, are defined as follows
+Assertions ($A$) \scd{in}  
+\SpecO are defined as follows:
 
 \label{f:chainmail-syntax}
-%\footnotesize
-\[
+ \[
 \begin{syntax}
 \syntaxElement{A}{}
 		{
@@ -301,48 +259,47 @@ Assertions ($A$) in the basic specification language, \SpecO, are defined as fol
 \end{definition}
 
 
-Def. \ref{f:chainmail-syntax} gives the assertion syntax of \SpecO. % the \SpecO specification language.
-An assertion may be an expression, a class assertion, the usual connectives and quantifiers, along 
-with the following non-standard assertion forms:
-\begin{itemize}
-\item
-\emph{Permission} ($\access{x}{y}$): % Which objects have access to which other objects (i.e.
-  $x$ has access to $y$.
-\item
-{\emph{Provenance}} ($\internal{x}$ and $\external{y}$): %Which objects are internal or external to our component.
- $x$ is internal, and $y$ is external.
-\item
-\emph{Control} ($\calls{x}{y}{m}{\overline{z}}$): 
-$x$ calls method $m$ on object $y$ with arguments $\overline{z}$.
-\end{itemize}
-\emph{Permission} and \emph{Provenance} are inspired by the capabilities literature, while
-\emph{Control} assists construction of proofs.
 
 \subsubsection{Semantics of \SpecO}
-The semantics of \SpecO assertions is given in Definition \ref{def:chainmail-semantics}. 
-The definition of the semantics of \SpecO makes use of several language features of 
-\Loo that can be found in Appendix \ref{app:loo}. Specifically, $\eval{M}{\sigma}{e}{v}$
-is the evaluation relation for expressions, and is interpreted as expression $e$ evaluates
-to value $v$ in the context of program state $\sigma$, with module $M$. The full
-semantics of expression evaluation are given in Fig. \ref{f:evaluation}. It should 
-be noted that expressions in \Loo may be recursively defined, and thus evaluation may not
-necessarily terminate, however the logic remains classical because recursion is restricted
+The semantics of \SpecO  % assertions 
+is \scd{given} in Def. \ref{def:chainmail-semantics}. 
+% \SpecO makes use of several language features of 
+\sophiaPonder[used to say "several" -- is it so?]{}
+% \Loo that can be found in App. \ref{app:loo}. Specifically, $\eval{M}{\sigma}{e}{v}$
+\scd{We   use the evaluation relation, $\eval{M}{\sigma}{e}{v}$,
+which says that the expression $e$ evaluates
+to value $v$ in the context of state $\sigma$ and module $M$.
+Note} that expressions in \Loo may be recursively defined, and thus evaluation 
+\scd{need not always} % may not necessarily 
+ terminate. Nevertheless, the logic of $A$ remains classical because recursion is restricted
 to expressions, and not generally to assertions.
+\sophiaPonder[JULIAN: Do we have such a proof indeed?]{We have taken this approach from \cite{FASE}, which also contains a proof that assertions are classical}
+%  The full
+Find the (unsurprising) semantics of $\hookrightarrow$   in Fig. \ref{f:evaluation}. 
 
-Further, Definition \ref{def:chainmail-semantics} uses the interpretation of variables
-within a specific frame or state: i.e. $\interpret{\phi}{x} = v$, meaning that $x$ maps to
-value $v$ in the local variable map of frame $\phi$, and $\interpret{\sigma}{x} = v$ meaning $x$ 
-maps to value $v$ in the top most frame of $\sigma$'s stack. And the term  $\interpret{\sigma}{x.f} = v$
-has the obvious meaning.
+\scd{We also use several shorthands:}  
+ $\interpret{\phi}{x} = v$  means that $x$ maps to
+value $v$ in the local variable map of frame $\phi$, and $\interpret{\sigma}{x} = v$ means that $x$ 
+maps to value $v$ in the top most frame of $\sigma$'s stack. The term  $\interpret{\sigma}{x.f} = v$
+has the obvious meaning. \scd{The terms $\sigma.\prg{stack}$,  resp. $\sigma.\prg{contn}$, resp. $\sigma.\prg{heap}$     mean the stack, resp. the continuation at the
+top frame of $\sigma$, resp. the heap of $\sigma$.
+The term $\alpha\!\in\!\sigma.\prg{heap}$ means that $\alpha$ is in the domain of the heap of $\sigma$,
+while $C\in M$ means that class $C$ is in the domain of module $M$. The term \emph{$x$ fresh in $\sigma$} means that $x$ is not in the variable map of the top frame of $\sigma$, while the substitution  $\sigma[x \mapsto \alpha]$ is applied to the top frame of $\sigma$. } 
 
 
-\begin{definition}[Satisfaction of \SpecO Assertions] 
+\begin{definition}[Satisfaction % of \SpecO 
+of Assertions
+\scd{by a module and a state}] 
 \label{def:chainmail-semantics}
-We define satisfaction of an assertion $A$ by a program state $\sigma$ with internal module $M$ as:
-\begin{itemize}
+We define satisfaction of an assertion $A$ by a % program 
+state $\sigma$ with \sophiaPonder[used to say "internal" I think this was wrong]{}
+ module $M$ as:
+\begin{enumerate}
 \item
+\label{cExpr}
 $\satisfiesA{M}{\sigma}{e}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\true}$
 \item
+\label{cClass}
 $\satisfiesA{M}{\sigma}{e : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\alpha}$ \textit{and} $\class{\sigma}{\alpha} = C$
 \item
 $\satisfiesA{M}{\sigma}{\neg A}$ \ \ \ iff \ \ \  ${M},{\sigma}\nvDash{A}$
@@ -355,70 +312,137 @@ $\satisfiesA{M}{\sigma}{A_2}$
 \item
 $\satisfiesA{M}{\sigma}{\all{x}{A}}$ \ \ \ iff \ \ \  
 $\satisfiesA{M}{\sigma[x \mapsto \alpha]}{A}$, \ 
-\ \ for some $x$ fresh in $\sigma$, and for all $\alpha\!\in\!\sigma.\prg{heap}$.
+\ \ \ for some $x$ fresh in $\sigma$, and for all $\alpha\!\in\!\sigma.\prg{heap}$.
 \item
 $\satisfiesA{M}{\sigma}{\ex{x}{A}}$ \ \ \ iff \ \ \  
 $\satisfiesA{M}{\sigma[x \mapsto \alpha]}{A}$, \ 
 \ \ for some $x$ fresh in $\sigma$, and for some $ \alpha\!\in\!\sigma.\prg{heap}$. 
 \item
+\label{cAccess}
 $\satisfiesA{M}{\sigma}{\access{x}{y}}$ \ \ \ iff \ \ \  
-\begin{itemize}
+\begin{enumerate}
 \item
-$\interpret{\sigma}{x.f}={\interpret{\sigma}{y}}$ for some $f$, \  or
+\label{c1}
+$\interpret{\sigma}{x.f}={\interpret{\sigma}{y}}$ for some $f$, \\
+  or
 \item
-there exists some $z$, and some frame $\phi$ in the stack of $\sigma$ such that {$\interpret{\sigma}{x}=\interpret{\phi}{\prg{this}}$}, {and $\interpret{\sigma}{y}=\interpret{\phi}{z}$}
-\end{itemize}
+\label{c2}
+{$\interpret{\sigma}{x}=\interpret{\phi}{\prg{this}}$}, {and $\interpret{\sigma}{y}=\interpret{\phi}{z}$}\ \ \ \
+for some variable $z$, and some frame $\phi$ in $\sigma.
+\prg{stack}$.
+\end{enumerate}
 \item
+\label{cInternal}
 $\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \  
 $\textit{classOf}(\sigma,x) \in M$
 \item
+\label{cExternal}
 $\satisfiesA{M}{\sigma}{\external{x}}$ \ \ \ iff \ \ \  
 $\textit{classOf}(\sigma,x) \not\in M$
 \item
+\label{cCall}
 $\satisfiesA{M}{\sigma}{\calls{x}{y}{m}{z_1, \ldots, z_n}}$ \ \ \ iff \ \ \ 
-\begin{itemize}
+\begin{enumerate}
 \item
-$\sigma.\prg{contn} = (\_ := y'.m(z'_1,\ldots,z'_n))$, % and is superfluous, enums are ands, unless expltly stated   
+$\sigma.\prg{contn} = (w := y'.m(z'_1,\ldots,z'_n)\scd{; s})$,\ \ \scd{for some 
+variable $w$, and some statement $s$},
 \item
 $\satisfiesA{M}{\sigma}{x = \prg{this}}$
-%$\interpret{\sigma}{x} = \interpret{\sigma}{\prg{this}}$  % and
-\item
-$\satisfiesA{M}{\sigma}{y = y'}$
-%$\sd{\interpret{\sigma}{y} = \interpret{\sigma}{y'}}$ % and
+\ \ and \ \ 
+$\satisfiesA{M}{\sigma}{y = y'}$,
 \item
 $\satisfiesA{M}{\sigma}{z_i = z'_i}$\ \ \ for all $1\!\leq i\!\leq n$
-%$\interpret{\sigma}{z_i} = \interpret{\sigma}{z'_i}$ \ \ \ for all $1\!\leq i\!\leq n$
-\end{itemize}
-\end{itemize}
+\end{enumerate}
+\end{enumerate}
 \end{definition}
 
+%\noindent
+\scd{ %$\satisfiesA{M}{\sigma}
+The assertion ${\access{x}{y}}$ (defined in  \ref{cAccess})
+requires  that $x$ has access to $y$
+either through a field of $x$ (case \ref{c1}),
+or through some call in the stack, where $x$ is the receiver and $y$ is one of the
+arguments (case \ref{c2}).
+ The assertion %$\satisfiesA{M}{\sigma}
+ ${\calls{x}{y}{m}{z_1, \ldots, z_n}}$  (defined in \ref{cCall}) 
+requires that the current receiver (\prg{this}) is $x$, and that it calls the method $m$ on $y$ with
+ arguments $z_1$, ... $z_n$.\footnote{It does \emph{not} mean  that somewhere in the 
+ call stack there exists a call from $x$ to $y.m(...)$.}
+ Note that in most cases, satisfaction of an assertion only depends on the state $\sigma$, but it
+does depend on the module in the case of expressions (\ref{cExpr}), class membership
+(\ref{cClass}), and internal or external provenance (\ref{cInternal} and \ref{cExternal}).}
+
+
+\scd{We now} define what it means for a module to satisfy an assertion:
+ $M$ satisfies  $A$ if any state arising from external steps execution of that
+module with any other external module  satisfies $A$. 
  
-Finally, we define what it means for a module to satisfy an assertion:
-a module $M$ satisfies an assertion $A$, if all states $\sigma$
-arising from external steps execution of that
-module with any other external module, satisfy $A$. 
- 
-\begin{definition} [Assertion Satisfaction by Modules]
+\begin{definition} [Satisfaction % of \SpecO 
+of Assertions
+\scd{by a module}] 
 \label{def:mdl-sat}
 For a module $M$ and assertion $A$, we say that\ \  $\satisfies{M}{A}$ \ \ if and only if 
 for all modules $M'$, and all $\sigma$, if $\arising{M'}{M}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$.
 \end{definition}
 
-
-% Thus, satisfaction by a module  allows us to talk 
-% about what is true for a given module without introducing the 
-% details of specific program configurations, a critical component 
-% of constructing our Logic of Necessity in Section \ref{s:inference}. 
-
-A proof system for such assertions is indicated by a judgment of the form $\proves{M}{A}$. 
-We will not define such a judgment, and just rely on its existence (cf. Theorem 3.2).
+ 
+\scd{In the current work we assume the existence of proof system that judges}
+$\proves{M}{A}$, to prove  satisfaction of assertions. 
+ We will not define such a judgment, but will rely on its existence (\emph{c.f.,} Thm. \ref{thm:soundness}).
 We define soundness of such a judgment in the usual way:
 
 \begin{definition}[Soundness of \SpecO Provability]
 \label{ax:specW-prove-soundness}
-A judgment of the form $M \vdash A$ is \emph{sound}, if for all
+A judgment of the form $M \vDash A$ is \emph{sound}, if for all
   all modules $M$ and assertions $A$, \ if $\proves{M}{A}$ then $\satisfies{M}{A}$.
 \end{definition}
+
+\subsection{Assertion Encapsulation, Wrapping, and Types}
+ 
+In Sec. \ref{s:outline} we saw how   encapsulation of \SpecO assertions 
+ is used to prove adherence to \Nec specifications.
+We said that   $A$ is encapsulated by  $M$ if it cannot be invalidated unless an
+internal method was called. 
+Here we refine this concept, to allow for ``conditional'' encapsulation:
+$M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
+$A'$ cannot be invalidated, unless a method from $M$ was called.
+
+\begin{definition}[Assertion Encapsulation]
+\label{def:encapsulation}
+\sd{An assertion $A'$ is \emph{encapsulated} by module $M$ and assertion $A$, written as}\ \  $M\ \vDash A\ \Rightarrow\ \encaps{A'}$, \ \ if and only if
+for all external modules $M'$, and all states $\sigma$, $\sigma'$
+such that $\arising{M}{M'}{\sigma}$:
+
+\begin{tabular}{lr}
+$\;\;\;\;$- $\reduction{M'}{M}{\sigma}{\sigma'}$  & \rdelim\}{3}{4mm}[$\;\;\;\Rightarrow\;\;\;$  $\exists x,\ \overline{z}. (\ \satisfiesA{M}{\sigma}{\calls{\_}{x}{m}{\overline{z}} \wedge\ \internal{x}}\ )$] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A \wedge  A'}$ \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A'}$   
+\end{tabular} 
+\end{definition}
+
+We use ${\sigma' \triangleleft \sigma}$ to indicate the state as in $\sigma'$ but
+with the variable bindings as in the top frame from $\sigma$. We will explain 
+${\sigma' \triangleleft \sigma}$ in more detial in \sophiaPonder[TOADD]{xxx}, but 
+we fist look at some examples.
+In both \prg{Mod2} and \prg{Mod3} the \prg{balance} of an account cannot change
+unless an internal method was called:
+\\
+\strut \hspace{1cm}
+$\prg{Mod2}\ \vDash \prg{a}:\prg{Account}\ \Rightarrow\ \encaps{\prg{a.balance}=\prg{bal}}$
+\\
+\strut \hspace{1cm}
+$\prg{Mod3}\ \vDash \prg{a}:\prg{Account}\ \Rightarrow\ \encaps{\prg{a.balance}=\prg{bal}}$
+\\
+On the other hand, for any module $M$, accessibility from an external object is \emph{not} encapsulated
+\\
+\strut \hspace{1cm}
+$M \nvDash {\external o} \wedge o':\prg{Object} \Rightarrow\ {\encaps{\access{o}{o'}}}$
+\\
+On the other hand, accessibility to an object which is only accessible from internals object, is \emph{indeed} encapsulated:
+\\
+\strut \hspace{1cm}
+$M \nvDash \all{x}{\neg \access{x}{o}\ \vee\ \internal{x}} y:\prg{Object} \Rightarrow\ {\encaps{\not(\access{x}{y}}}$
+
 
 \subsubsection{Wrapping}
 
@@ -444,16 +468,16 @@ and is elaborated on more in Section \ref{s:classical-proof}.}
 %\begin{figure}[t]
 %\begin{mathpar}
 %\infer
-%		{M;\ M',\ \sigma\ \vdash\ e : \prg{intrnl}}
-%		{M;\ M',\ \sigma\ \vdash\ e : \prg{encap}}
+%		{M;\ M',\ \sigma\ \vDash\ e : \prg{intrnl}}
+%		{M;\ M',\ \sigma\ \vDash\ e : \prg{encap}}
 %		\and
 %\infer
-%		{M;\ M',\ \sigma\ \vdash\ e : \prg{intrnl}}
-%		{M;\ M',\ \sigma\ \vdash\ e.f : \prg{encap}}
+%		{M;\ M',\ \sigma\ \vDash\ e : \prg{intrnl}}
+%		{M;\ M',\ \sigma\ \vDash\ e.f : \prg{encap}}
 %		\and
 %\infer
-%		{M;\ M',\ \sigma\ \vdash\ e : \prg{intrnl}}
-%		{M;\ M',\ \sigma\ \vdash\ e.g(e') : \prg{encap}}
+%		{M;\ M',\ \sigma\ \vDash\ e : \prg{intrnl}}
+%		{M;\ M',\ \sigma\ \vDash\ e.g(e') : \prg{encap}}
 %\end{mathpar}
 %\caption{Encapsulated Expressions}
 %\label{f:intrnl}
@@ -518,18 +542,25 @@ We have the following three operators:
 
 
 \paragraph{Only If}
-[$\onlyIf{A_1}{A_2}{A}$]: If an arising program state satisfies $A_1$, and after some execution, a state program state satisfying $A_2$ is reached, 
-then the original program state must have also satisfied $A$.
+[$\onlyIf{A_1}{A_2}{A}$]: If an arising % program
+  state satisfies $A_1$, and after some execution, a state % program 
+  state satisfying $A_2$ is reached, 
+then the original %program 
+state must have also satisfied $A$.
 e.g. if the balance of a bank account changes over time, then there must be some external object in the current 
-program state that has access to the account's password.
+%program 
+state that has access to the account's password.
 
 \paragraph{Single-Step Only If}
-[$\onlyIfSingle{A_1}{A_2}{A}$]: If an arising program state satisfies $A_1$, and after a single step of execution, a state satisfying $A_2$ is reached, 
-then the original program state must have also satisfied $A$.
+[$\onlyIfSingle{A_1}{A_2}{A}$]: If an arising %program
+  state satisfies $A_1$, and after a single step of execution, a state satisfying $A_2$ is reached, 
+then the original %program 
+state must have also satisfied $A$.
 e.g. if the balance of a bank account changes over a single execution step, then that execution step must be a method call to the bank \prg{transfer} method.
 
 \paragraph{Only Through}
-[$\onlyThrough{A_1}{A_2}{A}$]: If an arising program state satisfies $A_1$, and after some execution, a state satisfying $A_2$ is reached, then program execution must have passed through some state satisfying $A$.
+[$\onlyThrough{A_1}{A_2}{A}$]: If an arising %program 
+ state satisfies $A_1$, and after some execution, a state satisfying $A_2$ is reached, then program execution must have passed through some state satisfying $A$.
 e.g. if the balance of an account changes over time, then the bank's \prg{transfer} method must have been called 
 in some intermediate state. Note 
 that the intermediate state where $A$ is true might be the initial state,
@@ -598,7 +629,7 @@ the entire variable map changes under such circumstances. Adaptation (Def. \ref{
 objects across time, while ignoring rewrites and new frames.}
 
 
-We can now define our semantics,  $M \models H$, 
+We can now define our semantics,  $M \vDash H$, 
 %the semantics of the Necessity Specifications,
 %  in Definition \ref{def:necessity-semantics}.  The definition goes 
 by cases over the \sophiaPonder[we were saying three forms]{four}possible syntactic forms of $H$: 
@@ -669,11 +700,11 @@ the execution of an entire program.
  
 Looking back at the example from the Introduction,   it holds that
 \\
-\strut $\hspace{1in}$ \prg{Mod1} $\models$ \prg{NecessityBankSpec}
+\strut $\hspace{1in}$ \prg{Mod1} $\vDash$ \prg{NecessityBankSpec}
  \\
-\strut $\hspace{1in}$ \prg{Mod2} $\not\models$ \prg{NecessityBankSpec}
+\strut $\hspace{1in}$ \prg{Mod2} $\not\vDash$ \prg{NecessityBankSpec}
  \\
-\strut $\hspace{1in}$ \prg{Mod3} $\models$ \prg{NecessityBankSpec}
+\strut $\hspace{1in}$ \prg{Mod3} $\vDash$ \prg{NecessityBankSpec}
  
 
  
@@ -732,36 +763,4 @@ under which critical actions within of our software are allowed to occur.
 %to denote the two left most assertions in the specification, and ``\emph{right hand side}'' to denote
 %the necessity precondition.}
  
-
-
-
-
-\subsection{Assertion Encapsulation}
-\jm[lemmas? does A => enc(A') imply A => enc($\neg$A')?]{}
- %In order to reason about necessary requirements in an open world,
-% and those assertions that may change due 
-% to computation by external, unknown code.
-In Section \ref{s:outline} we used the concept of encapsulation of \SpecO assertions 
- when proving adherence to \Nec specifications.
-An assertion $A$ is encapsulated by a module $M$ if it cannot be invalidated unless an
-internal method is called. 
-Here we refine this concept, to allow for ``conditional'' encapsulation:
-$M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
-$A'$ cannot be invalidated, unless a method from $M$ was called.
-
-\begin{definition}[Assertion Encapsulation]
-\label{def:encapsulation}
-For % an internal module. -- SDL internal is nit an inherrent property
-a module $M$ and assertion $A$, we define an assertion $A'$ as being 
-encapsulated, written\ \  $M\ \vDash A\ \Rightarrow\ \encaps{A'}$, \ \ if and only if
-%$M\ \vDash\ \onlyIfSingle{A}{\neg A}{\calls{x}{y}{m}{\overline{z}}\ \wedge\ \external{x}\ \wedge\ \internal{y}}$
-for all external modules $M'$, and program states $\sigma$ and $\sigma'$
-such that $\arising{M}{M'}{\sigma}$:
-
-\begin{tabular}{lr}
-$\;\;\;\;$- $\reduction{M}{M'}{\sigma}{\sigma'}$  & \rdelim\}{4}{3mm}[$\;\;\;\Rightarrow\;\;\;$  $\exists x,\ \overline{z}. (\satisfiesA{M}{\sigma}{\calls{\_}{x}{m}{\overline{\sd{z}}}\ \wedge\ \internal{x}})$] \\
-$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A}$   \\
-$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A'}$   \\
-$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A'}$   \\
-\end{tabular}
-\end{definition}
+ 
