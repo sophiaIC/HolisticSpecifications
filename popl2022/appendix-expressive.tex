@@ -1,0 +1,92 @@
+\subsection{More about the Expressiveness of \Nec Specifications}
+\label{s:expressiveness:appendix}
+
+ We continue the comparison of expresiveness between \emph{Chainmail} and \Nec, by 
+ considering the examples studied in \ref{FASE}.
+ 
+\subsubsection{ERC20}
+The ERC20\cite{ERC20} is a widely used token standard describing the basic functionality of any Ethereum-based token 
+contract. This functionality includes issuing tokens, keeping track of tokens belonging to participants, and the 
+transfer of tokens between participants. Tokens may only be transferred if there are sufficient tokens in the 
+participant's account, and if either they (using the \prg{transfer} method) or someone authorized by the participant (using the \prg{transferFrom} method) initiated the transfer. 
+
+We specify these necessary conditions here using \Nec. Firstly, \prg{ERC20Spec1} 
+says that if the balance of a participant's account is ever reduced by some amount $m$, then
+that must have occurred as a result of a call to the \prg{transfer} method with amount $m$ by the participant,
+or the \prg{transferFrom} method with the amount $m$ by some other participant.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+ERC20Spec1 $\triangleq$ from e : ERC20 $\wedge$ e.balance(p) = m + m' $\wedge$ m > 0
+              nxt e.balance(p) = m'
+              onlyIf $\exists$ p' p''.[$\calls{\prg{p'}}{\prg{e}}{\prg{transfer}}{\prg{p, m}}$ $\vee$ 
+                     e.allowed(p, p'') $\geq$ m $\wedge$ $\calls{\prg{p''}}{\prg{e}}{\prg{transferFrom}}{\prg{p', m}}$]
+\end{lstlisting}
+Secondly, \prg{ERC20Spec2} specifies under what circumstances some participant \prg{p'} is authorized to 
+spend \prg{m} tokens on behalf of \prg{p}: either \prg{p} approved \prg{p'}, \prg{p'} was previously authorized,
+or \prg{p'} was authorized for some amount \prg{m + m'}, and spent \prg{m'}.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+ERC20Spec2 $\triangleq$ from e : ERC20 $\wedge$ p : Object $\wedge$ p' : Object $\wedge$ m : Nat
+              nxt e.allowed(p, p') = m
+              onlyIf $\calls{\prg{p}}{\prg{e}}{\prg{approve}}{\prg{p', m}}$ $\vee$ 
+                     (e.allowed(p, p') = m $\wedge$ 
+                      $\neg$ ($\calls{\prg{p'}}{\prg{e}}{\prg{transferFrom}}{\prg{p, \_}}$ $\vee$ 
+                              $\calls{\prg{p}}{\prg{e}}{\prg{allowed}}{\prg{p, \_}}$)) $\vee$
+                     $\exists$ p''. [e.allowed(p, p') = m + m' $\wedge$ $\calls{\prg{p'}}{\prg{e}}{\prg{transferFrom}}{\prg{p'', m'}}$]
+\end{lstlisting}
+
+\subsubsection{DAO}
+The Decentralized Autonomous Organization (DAO)~\cite{Dao}  is a well-known Ethereum contract allowing 
+participants to invest funds. The DAO famously was exploited with a re-entrancy bug in 2016, 
+and lost \$50M. Here we provide specifications that would have secured the DAO against such a 
+bug. \prg{DAOSpec1} says that no participant's balance may ever exceed the ether remaining 
+in DAO.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+DAOSpec1 $\triangleq$ from d : DAO $\wedge$ p : Object
+            to d.balance(p) > d.ether
+            onlyIf false
+\end{lstlisting}
+Note that \prg{DAOSpec1} enforces a class invariant of \prg{DAO}, something that could be enforced
+by traditional specifications uing class invariants.
+The second specification \prg{DAOSpec2} states that if after some single step of execution, a participant's balance is \prg{m}, then 
+either 
+\begin{description}
+\item[(a)] this occurred as a result of joining the DAO with an initial investment of \prg{m}, 
+\item[(b)] the balance is \prg{0} and they've just withdrawn their funds, or 
+\item[(c) ]the balance was \prg{m} to begin with
+\end{description}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+DAOSpec2 $\triangleq$ from d : DAO $\wedge$ p : Object
+            nxt d.balance(p) = m
+            onlyIf $\calls{\prg{p}}{\prg{d}}{\prg{repay}}{\prg{\_}}$ $\wedge$ m = 0 $\vee$ $\calls{\prg{p}}{\prg{d}}{\prg{join}}{\prg{m}}$ $\vee$ d.balance(p) = m
+\end{lstlisting}
+
+\sophiaPonder[small changes over Julian's]{\subsubsection{Safe}
+\cite{FASE} used as a running example   a Safe, where a treasure 
+was secured within a \texttt{Safe} object, and access to the treasure was only granted by 
+providing the correct password. }
+\ Using \Nec, we express \texttt{SafeSpec}, that requires that the treasure cannot be 
+removed from the safe without knowledge of the secret.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+SafeSpec $\triangleq$ from s : Safe $\wedge$ s.treasure != null
+            to s.treasure == null
+            onlyIf $\neg$ wrapped(s.secret)
+\end{lstlisting}
+
+The module  \prg{SafeModule} described  below satisfies  \prg{SafeSpec}.
+
+\begin{lstlisting}[frame=lines]
+module SafeModule
+     class Secret{}
+     class Treasure{}
+     class Safe{
+         field treasure : Treasure
+         field secret : Secret
+         method take(scr : Secret){
+              if (this.secret==scr) then {
+                   t=treasure
+                   this.treasure = null
+                   return t } 
+          }
+ }
+\end{lstlisting}
+
+ 

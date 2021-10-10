@@ -1,153 +1,112 @@
-\subsection{Expressiveness of \Nec Specifications}
+\subsection{More Examples,   Expressiveness of \Nec}
+% do not say \Nec Specifications
+% because it is language that is expressive, not the specification
 \label{s:expressiveness}
 
-Both the object capability literature and more recently the smart contract literature are rich sources for exemplars to try \Nec on. Ensuring that a visited web page cannot leak your confidential data was looked at by \citeauthor{dd}. It is interesting to see how straightforward it is to state assertions that protect the exemplars from attacks that have caused grief in the past.
+We now consider some more specifications, and discuss whether given modules satisfy them.
+
+ \subsubsection{More examples of the Bank}\sophiaPonder[quite different from earlier; check please]{}
+Looking back at the example from the Sect. \ref{s:outline},   it holds that
+\\
+\strut % $\hspace{.6in}$ \prg{Mod1} $\vDash$ \prg{NecessityBankSpec}
+ % \\ \strut 
+ $\hspace{.6in}$ \prg{Mod2} $\nvDash$ \prg{NecessityBankSpec}
+  $\hspace{.6in}$ \prg{Mod3} $\vDash$ \prg{NecessityBankSpec}
+ 
+
+ 
+% SD dropped the below -- not that useful
+% For more specification examples, consider the
+%bank account discussed in Section \ref{s:intro}. We have already shown
+%how we can specify knowledge of an account's password using \prg{NecessityBankSpec},
+%but we are also able to write other useful properties about the bank account. 
+
+ 
+Consider now another four \Nec specifications:
+ 
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+NecessityBankSpec$_a$  $\triangleq$  from a:Account $\wedge$ a.balance==bal  nxt a.balance < bal
+                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a.pwd}}$]                                           
+
+NecessityBankSpec$_b$  $\triangleq$  from a:Account $\wedge$ a.balance==bal  nxt a.balance < bal
+                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{\_, \_, \_}}$]
+                       
+NecessityBankSpec$_c$  $\triangleq$  from a:Account $\wedge$ a.balance==bal to a.balance < bal
+                       onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{\_, \_, \_}}$]
+                       
+NecessityBankSpec$_d$  $\triangleq$  from a:Account $\wedge$ a.balance==bal to a.balance < bal
+                       onlyTrough $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{\_, \_, \_}}$]
+\end{lstlisting}
 
 
-\subsubsection{DOM}
+The specification \prg{NecessityBankSpec}$_a$ states that
+the balance of an account decreases \emph{in one step}, only if an external object has access to the 
+password. It is similar to \prg{NecessityBankSpec}, with the difference that the
+decrease   takes place in \emph{one} step, rather than in \emph{a number} of steps.
+%
+Interestingly, even though \prg{Mod2} does not satisfy \prg{NecessityBankSpec}, it does satisfy \prg{NecessityBankSpec}$_a$.
+\\
+\strut $\hspace{.6in}$ \prg{Mod2} $\vDash$ \prg{NecessityBankSpec}$_a$
+$\hspace{.6in}$ \prg{Mod3} $\vDash$ \prg{NecessityBankSpec}$_a$
+
+The specifications \prg{NecessityBankSpec}$_b$ and  \prg{NecessityBankSpec}$_c$ are similar:
+they both say that a decrease of the balance can only happen if the current statement is a call to \prg{transfer}. They differ in that the former considers   a \emph{single} step, while the latter allows for \emph{any number} of steps. 
+ \prg{NecessityBankSpec}$_d$ says that such a decrease is only possible if some \emph{intermediate}
+ step called \prg{transfer}.
+ All three 
+ modules satisfy 
+\prg{NecessityBankSpec}$_b$ and \prg{NecessityBankSpec}$_d$,  and none satisfy \prg{NecessityBankSpec}$_c$. That is:
+%\\
+%\strut $\hspace{1in}$ \prg{Mod1} $\vDash$ \prg{NecessityBankSpec}$_b$
+ \\
+\strut $\hspace{.6in}$ \prg{Mod2} $\vDash$ \prg{NecessityBankSpec}$_b$
+$\hspace{.6in}$ \prg{Mod3} $\vDash$ \prg{NecessityBankSpec}$_b$
+ \\
+\strut $\hspace{.6in}$ \prg{Mod2} $\vDash$ \prg{NecessityBankSpec}$_d$
+$\hspace{.6in}$ \prg{Mod3} $\vDash$ \prg{NecessityBankSpec}$_d$
+%\strut $\hspace{1in}$ \prg{Mod1} $\nvDash$ \prg{NecessityBankSpec}$_c$
+ \\
+\strut $\hspace{.6in}$ \prg{Mod2} $\nvDash$ \prg{NecessityBankSpec}$_c$
+ $\hspace{.6in}$ \prg{Mod3} $\nvDash$ \prg{NecessityBankSpec}$_c$
+
+
 \label{ss:DOM}
 
-The key structure underlying a web browser is the Domain Object Model
-(DOM), a recursive composite tree structure of objects that represent
-everything display in a browser window.  Each window has a single DOM
-tree which includes both the page's main content and also third party
-content such as advertisements. To ensure third party content cannot
-affect a page's main content,
-specifications for attenuation for the DOM were proposed in
-\textit{Devriese et al:}   \cite{dd}. 
-
-This example deals with a tree of DOM nodes: Access to a DOM node
-gives access to all its parent and children nodes, and the ability to
-modify the node's properties. However, as the top nodes of the tree
+\subsubsection{The DOM}  \sophiaPonder[renamed Wrapper to Proxy]{  
+The DOM example is the motivating example in \cite{dd}. 
+It deals with a tree of DOM nodes: Access to a DOM node
+gives access to all its \prg{parent} and \prg{children} nodes, and the ability to
+modify the node's \prg{property} -- where  \prg{parent}, \prg{children} and \prg{property}
+are fields in class \prg{Node}. However, as the top nodes of the tree
 usually contain privileged information, while the lower nodes contain
-less crucial third-party information, we want to be able to limit  access given to third parties to only the lower part of the DOM tree. We do this through a \prg{Wrapper}, which has a field \prg{node} pointing to a \prg{Node}, and a field \prg{height} which restricts the range of \prg{Node}s which may be modified through the use of the particular \prg{Wrapper}. Namely, when you hold a \prg{Wrapper}  you can modify the \prg{property} of all the descendants of the    \prg{height}-th ancestors of the \prg{node} of that particular \prg{Wrapper}. It is not difficult to write such a \prg{Wrapper}; a possible implementation  appears in Figure \ref{fig:DOM}.
-\begin{figure}[htb]
-\begin{tabular}{llll}
-\ \ &
-\begin{minipage}{0.45\textwidth}
-\begin{lstlisting}
-method usingWrappers(unknwn){
-   n1=Node(null,"fixed"); 
-   n2=Node(n1,"robust"); 
-   n3=Node(n2,"const"); 
-   n4=Node(n3,"volatile");
-   n5=Node(n4,"variable");
-   n6=Node(n5,"ethereal");
-   w=Wrapper(n5,1);
-   
-   unknwn.untrusted(w);
-   
-   assert n2.property=="robust" 
-   ...
+less crucial third-party information, we want to be able to limit 
+ access given to third parties to only the lower part of the DOM tree. We do this through a \prg{Proxy} class, which has a field \prg{node} pointing to a \prg{Node}, and a field \prg{height} is a number which restricts the range of \prg{Node}s which may be modified through the use of the particular \prg{Proxy}. Namely, when you hold a \prg{Proxy}  you can modify the \prg{property} of all the descendants of the    \prg{height}-th ancestors of the \prg{node} of that particular \prg{Proxy}.  We say that
+\prg{pr} has \emph{modification-capabilities} on \prg{nd}, where \prg{pr} is
+a  \prg{Proxy} and \prg{nd} is a \prg{Node}, if the \prg{pr.height}-th  \prg{parent}
+of the node at \prg{pr.node} is an ancestor of \prg{nd}.
 }
-\end{lstlisting}
-\end{minipage}
-& & 
-\begin{minipage}{0.75\textwidth}
-\includegraphics[width=\linewidth, trim=145  320 60 105,clip]{diagrams/DOM.pdf}
-\strut \\
-\strut \\
-
-\end{minipage}
-\end{tabular}
- \vspace*{-4.5mm}
-\caption{\prg{Wrapper}s protecting \prg{Node}s from~\cite{FASE}}
-\label{fig:DOM}
-\end{figure}
-In  Fig. \ref{fig:DOM}, a wrapper \prg{w} is defined, wrapping node \prg{n5}, with 
-height \prg{1}. This provides \prg{unknwn} (some unknown client object) the capability to modify 
-properties of \prg{n5}, and any nodes \prg{1} layer above and any of their descendants (i.e. node \prg{n3} and \prg{n6}), but no more.
 
 
-
-\prg{DOMSpec} states that if the property of a node in a DOM tree changes,
-it follows that either some non-node, non-wrapper object presently has 
-access to a node of the DOM tree, or to some wrapper with access to some 
-ancestor of the node that was modified.
+The specification \prg{DOMSpec} states that if the \prg{property} of a node changes,
+then some external object presently has 
+access to a node of the DOM tree, or to some \prg{Proxy} with modification-caapbilties
+to the node that was modified.
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-DOMSpec $\triangleq$ from nd : Node $\wedge$ nd.property = p
-            to nd.property != p
-            onlyIf $\exists$ o.[$\neg$ o : Node $\wedge$ $\neg$ o : Wrapper $\wedge$ 
-                        ($\exists$ nd' : Node.[$\access{\prg{o}}{\prg{nd'}}$] $\vee$ 
-                         $\exists$ w : Wrapper, k : $\mathbb{N}$.[$\access{\prg{o}}{\prg{w}}$ $\wedge$ nd.parnt$^{\prg{k}}$ = w.node.parnt$^{\prg{w.height}}$] )]
+DOMSpec $\triangleq$ from nd : Node $\wedge$ nd.property = p  to nd.property != p
+          onlyIf $\exists$ o.[ $\external {\prg{o}}$ $\wedge$ 
+                       $( \  \exists$ nd':Node.[ $\access{\prg{o}}{\prg{nd'}}$ ]  $\vee$ 
+                         $\exists$ pr:Proxy,k:$\mathbb{N}$.[$\, \access{\prg{o}}{\prg{pr}}$ $\wedge$ nd.parent$^{\prg{k}}$=pr.node.parent$^{\prg{pr.height}}$ ] $\,$ ) $\,$ ]
 \end{lstlisting}
 
-\subsubsection{ERC20}
-The ERC20\cite{ERC20} is a widely used token standard describing the basic functionality of any Ethereum-based token 
-contract. This functionality includes issuing tokens, keeping track of tokens belonging to participants, and the 
-transfer of tokens between participants. Tokens may only be transferred if there are sufficient tokens in the 
-participant's account, and if either they (using the \prg{transfer} method) or someone authorized by the participant (using the \prg{transferFrom} method) initiated the transfer. 
-
-We specify these necessary conditions here using \Nec. Firstly, \prg{ERC20Spec1} 
-says that if the balance of a participant's account is ever reduced by some amount $m$, then
-that must have occurred as a result of a call to the \prg{transfer} method with amount $m$ by the participant,
-or the \prg{transferFrom} method with the amount $m$ by some other participant.
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-ERC20Spec1 $\triangleq$ from e : ERC20 $\wedge$ e.balance(p) = m + m' $\wedge$ m > 0
-              nxt e.balance(p) = m'
-              onlyIf $\exists$ p' p''.[$\calls{\prg{p'}}{\prg{e}}{\prg{transfer}}{\prg{p, m}}$ $\vee$ 
-                     e.allowed(p, p'') $\geq$ m $\wedge$ $\calls{\prg{p''}}{\prg{e}}{\prg{transferFrom}}{\prg{p', m}}$]
-\end{lstlisting}
-Secondly, \prg{ERC20Spec2} specifies under what circumstances some participant \prg{p'} is authorized to 
-spend \prg{m} tokens on behalf of \prg{p}: either \prg{p} approved \prg{p'}, \prg{p'} was previously authorized,
-or \prg{p'} was authorized for some amount \prg{m + m'}, and spent \prg{m'}.
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-ERC20Spec2 $\triangleq$ from e : ERC20 $\wedge$ p : Object $\wedge$ p' : Object $\wedge$ m : Nat
-              nxt e.allowed(p, p') = m
-              onlyIf $\calls{\prg{p}}{\prg{e}}{\prg{approve}}{\prg{p', m}}$ $\vee$ 
-                     (e.allowed(p, p') = m $\wedge$ 
-                      $\neg$ ($\calls{\prg{p'}}{\prg{e}}{\prg{transferFrom}}{\prg{p, \_}}$ $\vee$ 
-                              $\calls{\prg{p}}{\prg{e}}{\prg{allowed}}{\prg{p, \_}}$)) $\vee$
-                     $\exists$ p''. [e.allowed(p, p') = m + m' $\wedge$ $\calls{\prg{p'}}{\prg{e}}{\prg{transferFrom}}{\prg{p'', m'}}$]
-\end{lstlisting}
-
-\subsubsection{DAO}
-The Decentralized Autonomous Organization (DAO)~\cite{Dao}  is a well-known Ethereum contract allowing 
-participants to invest funds. The DAO famously was exploited with a re-entrancy bug in 2016, 
-and lost \$50M. Here we provide specifications that would have secured the DAO against such a 
-bug. \prg{DAOSpec1} says that no participant's balance may ever exceed the ether remaining 
-in DAO.
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-DAOSpec1 $\triangleq$ from d : DAO $\wedge$ p : Object
-            to d.balance(p) > d.ether
-            onlyIf false
-\end{lstlisting}
-Note that \prg{DAOSpec1} enforces a class invariant of \prg{DAO}, something that could be enforced
-by traditional specifications uing class invariants.
-The second specification \prg{DAOSpec2} states that if after some single step of execution, a participant's balance is \prg{m}, then 
-either 
-\begin{description}
-\item[(a)] this occurred as a result of joining the DAO with an initial investment of \prg{m}, 
-\item[(b)] the balance is \prg{0} and they've just withdrawn their funds, or 
-\item[(c) ]the balance was \prg{m} to begin with
-\end{description}
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-DAOSpec2 $\triangleq$ from d : DAO $\wedge$ p : Object
-            nxt d.balance(p) = m
-            onlyIf $\calls{\prg{p}}{\prg{d}}{\prg{repay}}{\prg{\_}}$ $\wedge$ m = 0 $\vee$ $\calls{\prg{p}}{\prg{d}}{\prg{join}}{\prg{m}}$ $\vee$ d.balance(p) = m
-\end{lstlisting}
-
-\jm[]{\subsubsection{Safe}
-\cite{FASE} used an unrealistic but demonstrative running example of a Safe, where a treasure 
-was secured within a \texttt{Safe} object, and access to the treasure was only granted by 
-providing the correct password. The code snippet below provides the definition of \texttt{Safe}}
-\begin{lstlisting}[frame=lines]
-class Secret{}
-class Treasure{}
-class Safe{
-   field treasure : Treasure
-   field secret   : Secret
-   method take(scr : Secret){
-      if (secret==scr) then {
-         t=treasure
-         treasure = null
-         return t }  }
- }
-\end{lstlisting}
-\jm[]{Using \Nec, we express \texttt{SafeSpec}, that ensures the safety of the version of \texttt{Safe} with types.}
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-SafeSpec $\triangleq$ from s : Safe $\wedge$ s.treasure != null
-            to s.treasure == null
-            onlyIf $\neg$ wrapped(s.secret)
-\end{lstlisting}
+\subsubsection{Expressiveness}
+\sophiaPonder[new]{As stated earlier, \Nec is less expressive than
+\emph{Chainmail} or {\sc{VerX}}. Nevertheless, we believe that
+it  is expressive enough for the purpose of 
+expressing robustness requirements. 
+In order to investigate the expressiveness of \Nec 
+we compared with
+examples provided in the literature. In this section we considered the DOM example, 
+proposed by  \citeauthor{dd}. In the appendix, in Sec. \ref{s:expressiveness:appendix},
+we compare with examples proposed by  \citeauthor{FASE}.}
+ 
 
