@@ -244,88 +244,185 @@ With external steps semantics,  the executing object (\prg{this}) is always   ex
 Note that we do not support calls from
 \internalO objects to \externalO objects.
  
+
+\newcommand{\vertsp}{\vspace{.03in}} 
  
-
-
 \subsection{Reasoning about Necessity}
 \label{s:approach}
 
-We can now outline out 
-proof that \prg{Mod3} adheres to \prg{NecessityBankSpec}:
-
-
-\begin{description}
-\item[Part 1] We establish that  \textbf{(a)} the balance may only change through  
-\prg{Mod3}-internal calls.
-Also,  \textbf{(b)},   external accessibility to an account's password may 
-only be obtained through  \prg{Mod3}-internal calls -- that is,  the property that
-no external object has access to the password can only be invalidated through an internal call.
- 
-\item[Part 2] We establish  for each method of \prg{Mod3} (\ie each method in \prg{Account} and \prg{Password}) that if the method is called, then 
- \textbf{(c)},  if it  causes the  balance to reduce, then the method called was
- \prg{transfer} and the correct password was provided, and 
-  \textbf{(d)} it will not provide external accessibility to the password.
-
- \item[Part 3]  From \textbf{(a)}  and  \textbf{(c)} we obtain that \textbf{(e)}  if the balance were to 
-reduce in \emph{any}  \emph{single} step -- whether an internal call, or any external step --
- the method called was
- \prg{transfer} and the correct password was provided. Similarly,   from
- \textbf{(b)}  and  \textbf{(d)} we obtain that \textbf{(f)}
- external accessibility to the password will not be provided by any single step.
-    
- 
-\item[Part 4] From \textbf{(e)} we obtain that  \textbf{(g)}   if the balance reduces in any 
-number of steps, then at some step  \prg{transfer} was called with   the correct password.
-From  \textbf{(g)}  we obtain that \textbf{(h)} if the balance reduces in any 
-number of steps, then at some intermediate step some external object had access to the password.
-From \textbf{(f)} we obtain that  \textbf{(i)}  external accessibility to the password will not be provided by any sequence of steps.
-Using  \textbf{(h)} and  \textbf{(i)}  we establish that
- \prg{Mod3} indeed adheres to \prg{NecessityBankSpec}.
-
-\end{description} 
- 
-\noindent
-This proof relies on the following novel ideas and definitions:
+\scd{We now give a sketch of the   novel concepts we developed in  \Nec logic.
+For illustration, we  outline  a proof} that  \prg{Mod3} adheres to \prg{NecessityBankSpec}.
+% we developoed in this work
 
 \begin{description}
-\item[Part 1] 
-We  say assertion $A$  is
+\item[Part 1: Assertion Encapsulation.]  
+% \scd{We  introduce the concept} of  \emph{assertion  encapulation}: 
+% \scd{We define that an}
+\scd{An} assertion $A$  is
 \emph{encapsulated} by  module $M$, if  $A$ can be invalidated only through
-  $M$-\internalC calls. In short, an $M$-\internalC call is a \emph{necessary} condition for
+ % $M$-\internalC calls. 
+ \scd{calls to methods defined in $M$}.
+  In other words, a  \sophiaPonder[said $M$-\internalC call]{call to  $M$}  is a \emph{necessary} condition for
 invalidation of $A$.
+\sophiaPonder[said: Our formalisation -- but I think what I say is stronger]{Our \Nec logic}  is parametric with respect to the 
+particular encapsulation
+mechanism: here we rely on rudimentary annotations inspired by confinement types
+\cite{confined}.
 % In \textbf{P1}, the assertion \prg{a:Account\! $\wedge$\! a.balance=bal} is encapsulated by \prg{Mod3}.
 %%%
 %%%Determining encapsulation is a challenge, but not central to this work.
 %%%We therefore outline a rudimentary types-based algorithm, and relegate more
 %%%approaches to further work.
 %%%
-Our formalisation is parametric with respect to the encapsulation
-mechanism: here we rely on rudimentary annotations inspired by confinement types
-\cite{confined}.
-  
-\item[Part 2]
- Here we infer a \emph{per-method-condition}, \ie., a 
- necessary condition given an effect and
-a single, specified, method call. 
-% 
-%In \textbf{P2},   a necessary condition for the  reduction of \prg{a.balance}  after the call \prg{a.transfer(a',pwd)} is that the caller had access to \prg{a.password} before the call.
-We address this  challenge % of the inference of necessary conditions 
- by leveraging the sufficient conditions from classical specifications:
+
+\vertsp
+
+For our proof, we establish that  \textbf{(a)} the balance is encapsulated 
+by \prg{Mod3}, and  \textbf{(b)},   external accessibility to an account's password may 
+only be obtained through  \sophiaPonder[said: \prg{Mod3}-internal] calls to \prg{Mod3} -- that is,  the property that
+no external object has access to the password is encapsulated by \prg{Mod3}.
+
+\vertsp
+ 
+ 
+\item[Part 2: Per-method conditions]   % \emph{per-method-condition}, \ie., a 
+are  necessary conditions for   given  effect and
+  given single, specified, method call. 
+To infer these, we  leverage   sufficient conditions 
+from classical specifications: % Namely, if 
 If the negation of a method's
- classical postcondition implies  the effect we are interested in, then the negation of the 
- classical precondition  is the necessary precondition for the effect and the method call.
-More in \S\ref{s:classical-proof}.  
- % Thus, 
+ classical postcondition implies  \scd{a given effect}, %the effect we are interested in,
+  then the negation of the 
+ classical precondition  is a necessary precondition for the effect and the method call. 
+More in \S\ref{s:classical-proof}. 
+
+\vertsp
+
+For our proof, we establish  for each method of \prg{Mod3} (\ie each method in \prg{Account} and \prg{Password}) that if the method is called, then 
+ \textbf{(c)},  if it  causes the  balance to reduce, then the method called was
+ \prg{transfer} and the correct password was provided, and 
+  \textbf{(d)} it will not provide external accessibility to the password.
+  
+\vertsp
+
+ 
+
+ \item[Part 3: Single-step conditions] are
+ necessary conditions for a given  effect and
+a single, \emph{unspecified} step. This step could be an internal call, or any kind of external step.
+  % 
+    For effects encapsulated by $M$, we can infer such single-step
+ conditions by combining the per-method conditions for that effect from 
+all   methods in $M$. 
+% We also have  expected sub-structural rules,\eg  like the rule of consequence.
+% Drop above, as we dor 
+More in \S\ref{s:module-proof}.
+ 
+\vertsp
+
+For our proof, from \textbf{(a)}  and  \textbf{(c)} we obtain that \textbf{(e)}  if the balance were to 
+reduce in \emph{any}  \emph{single} step -- whether an internal call, or any external step --
+ the method called was
+ \prg{transfer} and the correct password was provided. Similarly,   from
+ \textbf{(b)}  and  \textbf{(d)} we obtain that \textbf{(f)}
+ external accessibility to the password will not be provided by any single step.
+ 
+\vertsp
+
+ 
+\item[Part 4: Emergent behaviour] is the behaviour than can be observed by
+any number of steps. 
+We infer the \emph{emergent} behaviour out of the conditions of many possible 
+single steps.  
+This part is crucial;   remember that while \prg{Mod2} satisfies  
+(S3) for one single step, it does not satisfy it for any number of steps. More in \S\ref{s:emergent-proof}.
+
+\vertsp
+
+For our proof, from \textbf{(e)} we obtain that  \textbf{(g)}   if the balance reduces in any 
+number of steps, then at some step  \prg{transfer} was called with   the correct password.
+From  \textbf{(g)}  we obtain that \textbf{(h)} if the balance reduces in any 
+number of steps, then at some intermediate step some external object had access to the password.
+From \textbf{(f)} we obtain that  \textbf{(i)}  external accessibility to the password will not be provided by any sequence of steps.
+Using  \textbf{(h)} and  \textbf{(i)}  we establish that
+ \prg{Mod3} indeed adheres to \prg{NecessityBankSpec}.
+ 
+\end{description} 
+  
+\noindent
+
+
+  % Thus, 
  %  a method's sufficient conditions are used to infer a method's and effect's necessary conditions.
+
+%\begin{description}
+%\item[Part 1] We establish that  \textbf{(a)} the balance may only change through  
+%\prg{Mod3}-internal calls.
+%Also,  \textbf{(b)},   external accessibility to an account's password may 
+%only be obtained through  \prg{Mod3}-internal calls -- that is,  the property that
+%no external object has access to the password can only be invalidated through an internal call.
+% 
+%\item[Part 2] We establish  for each method of \prg{Mod3} (\ie each method in \prg{Account} and \prg{Password}) that if the method is called, then 
+% \textbf{(c)},  if it  causes the  balance to reduce, then the method called was
+% \prg{transfer} and the correct password was provided, and 
+%  \textbf{(d)} it will not provide external accessibility to the password.
+%
+% \item[Part 3]  From \textbf{(a)}  and  \textbf{(c)} we obtain that \textbf{(e)}  if the balance were to 
+%reduce in \emph{any}  \emph{single} step -- whether an internal call, or any external step --
+% the method called was
+% \prg{transfer} and the correct password was provided. Similarly,   from
+% \textbf{(b)}  and  \textbf{(d)} we obtain that \textbf{(f)}
+% external accessibility to the password will not be provided by any single step.
+%    
+% 
+%\item[Part 4] From \textbf{(e)} we obtain that  \textbf{(g)}   if the balance reduces in any 
+%number of steps, then at some step  \prg{transfer} was called with   the correct password.
+%From  \textbf{(g)}  we obtain that \textbf{(h)} if the balance reduces in any 
+%number of steps, then at some intermediate step some external object had access to the password.
+%From \textbf{(f)} we obtain that  \textbf{(i)}  external accessibility to the password will not be provided by any sequence of steps.
+%Using  \textbf{(h)} and  \textbf{(i)}  we establish that
+% \prg{Mod3} indeed adheres to \prg{NecessityBankSpec}.
+%
+%\end{description} 
+% 
+%\noindent
+%
+%
+%\begin{description}
+%\item[Part 1] 
+%We  say assertion $A$  is
+%\emph{encapsulated} by  module $M$, if  $A$ can be invalidated only through
+%  $M$-\internalC calls. In short, an $M$-\internalC call is a \emph{necessary} condition for
+%invalidation of $A$.
+%% In \textbf{P1}, the assertion \prg{a:Account\! $\wedge$\! a.balance=bal} is encapsulated by \prg{Mod3}.
+%%%%
+%%%%Determining encapsulation is a challenge, but not central to this work.
+%%%%We therefore outline a rudimentary types-based algorithm, and relegate more
+%%%%approaches to further work.
+%%%%
+%Our formalisation is parametric with respect to the encapsulation
+%mechanism: here we rely on rudimentary annotations inspired by confinement types
+%\cite{confined}.
+%  
+%\item[Part 2]
+% Here we infer a \emph{per-method-condition}, \ie., a 
+% necessary condition given an effect and
+%a single, specified, method call. 
+%% 
+%%In \textbf{P2},   a necessary condition for the  reduction of \prg{a.balance}  after the call \prg{a.transfer(a',pwd)} is that the caller had access to \prg{a.password} before the call.
+%We address this  challenge % of the inference of necessary conditions 
+% by leveraging the sufficient conditions from classical specifications:
+%If the negation of a method's
+% classical postcondition implies  the effect we are interested in, then the negation of the 
+% classical precondition  is the necessary precondition for the effect and the method call.
+%More in \S\ref{s:classical-proof}.  
+% % Thus, 
+% %  a method's sufficient conditions are used to infer a method's and effect's necessary conditions.
 
 
 
   
 %\item[from effect and single step to necessary condition]
-\item[Part 3]
-Here we infer a \emph{per-step-condition}, \ie., a 
- necessary condition given an effect and
-a single, unspecified step. This step could be an internal call, or any kind of external step.
 
 %In \textbf{P3},   a necessary condition for the  reduction of \prg{a.balance}  after \emph{any}
 %step, is that the caller  had access to \prg{a.password} before the call.
@@ -333,22 +430,12 @@ a single, unspecified step. This step could be an internal call, or any kind of 
 %access to \prg{a.password}  after \emph{any}
 %step, is that that object had access to \prg{a.password} before the call.
 
-For effects encapsulated by $M$, we can infer such one-step
-necessary conditions by combining the necessary conditions for that effect from 
-all   methods in $M$. We also have  expected sub-structural rules,\eg
- like the rule of consequence.
-More in \S\ref{s:module-proof}.
+
 
 
 
 %\item[from effect to necessary conditions]
-\item[Part 4]
-  
-We now infer the \emph{emergent} behaviour out of the many possible 
-single steps.  This part is crucial;   remember that while \prg{Mod2} satisfies  
-(***) for one single step, it does not satisfy it for any number of steps. More in \S\ref{s:emergent-proof}.
  
-\end{description} 
 
 \noindent
 Note that our proofs of necessity do not inspect method
