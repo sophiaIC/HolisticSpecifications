@@ -17,6 +17,71 @@ Proving module-wide \jm[]{Single-Step} \Nec specifications by combining per-meth
 Raising necessary conditions to construct proofs of emergent behaviour (\S \ref{s:emergent-proof})
 \end{description}
 
+\subsection {Assertion Encapsulation}
+\label{s:encaps-proof}
+
+\jm[]{In Sec. \ref{s:outline} we identified proof of assertion encapsulation
+as \textbf{Part 1} of proving adherence to a \Nec specification.
+Sec. \ref{s:semantics:encaps} defined the semantics of assertion encapsulation.
+Encapsulation is a deep topic that is well studied in the literature, 
+and is not the focus of this paper. For now, we simply assume the existence 
+of a proof system for encapsulation as it is secondary to the central topic 
+of this paper. We need only assert that such an algorithmic proof system 
+must be sound (Def. \ref{lem:encap-soundness}). }
+
+\begin{definition}[Encapsulation Soundness]
+\label{lem:encap-soundness}
+A judgment of the form $\proves{M}{\givenA{A}{\encaps{A}}}$  is\  \emph{sound}, \ if 
+for all modules $M$, and assertions $A_1$ and $A_2$, if 
+$\proves{M}{\givenA{A_1}{\encaps{A_2}}}$ then $\satisfies{M}{\givenA{A_1}{\encaps{A_2}}}$.
+\end{definition}
+
+
+The construction of such an algorithmic system is not central to our work,
+because, as we shall see in later sections, our logic 
+does not rely on the specifics of an encapsulation algorithm, only its soundness.
+
+% For the purposes of the examples presented later in the paper, 
+\jm[]{For the purposes of proving examples, we define a rudimentary system for proving encapsulation in Apdx. \ref{s:encap-proof}, Fig. \ref{f:asrt-encap}.}
+\jm[]{This encapsulation system is sound but not complete,
+and is based, in part, on the footprint of expressions, and 
+the fact that the evaluation of expressions containing no external objects
+cannot change from state to state, except as a result of internal computation.
+The encapsulation system also includes several rules for proving 
+the encapsulation of assertions containing access, most importantly 
+that $\wrapped{x}$ is always encapsulated. Thus, if $x$ is $\wrapped{}$, 
+then internal computation is required to make $x$ not $\wrapped{}$. The full description of this system is given in
+Apdx. \ref{s:encap-proof}.} 
+%\jm[]{We use that proof system for the proofs in Section \ref{s:examples}, but, as
+%we said, the exact nature of that system is of little importance to this work. }
+\susan[I commented out the last sentence as I don't think it provides new information.]{}
+
+\subsection{Per-Method \Nec Specifications}
+\label{s:classical-proof}
+In this section we detail how we use classical specifications
+to construct per-method \Nec specifications. 
+That is, for some method $m$ in class $C$, we construct a specifications of the form:
+$$\onlyIfSingle{A_1\ \wedge\ x : C\ \wedge\ \calls{\_}{x}{m}{\ldots}}{A_2}{A}$$
+Thus, $A$ is a necessary precondition to reaching $A_2$ from $A_1$ via a method call $m$ to an object of class $C$.
+In order to do this
+note that if a precondition and a certain statement is \emph{sufficient}
+to achieve a particular result, then the negation of that precondition
+is \emph{necessary} to achieve the negation of the result after executing that statment.
+Specifically, 
+using classical Hoare logic, if $\hoare{P}{s}{Q}$ is true, then 
+it follows that $\neg P$ is a \emph{necessary precondition} for $\neg Q$ to 
+hold following the execution of $\prg{s}$.
+
+We do not define a new assertion language and Hoare logic.
+ Rather, we rely on prior work on such Hoare logics,
+  and assume some underlying logic that can be used 
+to prove  \emph{classical assertions}. 
+Classical assertions are a subset of \SpecO, comprising only those 
+assertions that are commonly present in other specification languages.
+We provide this subset in Def. \ref{f:classical-syntax}. That is, classical assertions
+are restricted to expressions, class assertions, the usual connectives, negation, 
+implication, and the usual quantifiers.
+
 
 \begin{definition}
 %\begin{figure}[tbp]
@@ -45,71 +110,6 @@ Classical assertions, $P$, $Q$, are defined as follows
 \label{f:classical-syntax}
 % \end{figure}
 \end{definition}
-
-\subsection {Assertion Encapsulation}
-\label{s:encaps-proof}
-
-As already stated in Sec. \ref{s:outline}, the first step in proving adherence to a \Nec specification
-is to prove that an assertion is encapsulated, \jm[]{that is, an assertion may only be invalidated by 
-a method call to the internal module.}
-We assume the existence of  
-an proof system for constructing proofs of assertion encapsulation, 
-written $\proves{M}{\givenA{A_1}{\encaps{A_2}}}$.
-Such an algorithmic system should be sound, in the sense  defined below:
-
-\begin{definition}[Encapsulation Soundness]
-\label{lem:encap-soundness}
-A judgment of the form $\proves{M}{\givenA{A}{\encaps{A}}}$  is\  \emph{sound}, \ if 
-for all modules $M$, and assertions $A_1$ and $A_2$, if 
-$\proves{M}{\givenA{A_1}{\encaps{A_2}}}$ then $\satisfies{M}{\givenA{A_1}{\encaps{A_2}}}$.
-\end{definition}
-
-
-The construction of such an algorithmic system is not central to our work,
-because, as we shall see in later sections, our logic 
-does not rely on the specifics of an encapsulation algorithm, only its soundness.
-
-% For the purposes of the examples presented later in the paper, 
-\jm[]{We define a rudimentary system for proving encapsulation in Apdx. \ref{s:encap-proof}, Fig. \ref{f:asrt-encap}.}
-\jm[]{This encapsulation system is sound but not complete,
-and is based, in part, on the footprint of expressions, and 
-the fact that the evaluation of expressions containing no external objects
-cannot change from state to state, except as a result of internal computation.
-The encapsulation system also includes several rules for proving 
-the encapsulation of assertions containing access, most importantly 
-that $\wrapped{x}$ is always encapsulated. Thus, if only internal
-objects have access to $x$, then internal computation is required in order
-to gain access to it. The full description of this system is given in
-Apdx. \ref{s:encap-proof}.} 
-%\jm[]{We use that proof system for the proofs in Section \ref{s:examples}, but, as
-%we said, the exact nature of that system is of little importance to this work. }
-\susan[I commented out the last sentence as I don't think it provides new information.]{}
-
-\subsection{Per-Method \Nec Specifications}
-\label{s:classical-proof}
-In this section we detail how we use classical specifications
-to construct per-method \Nec specifications. 
-That is, for some method $m$ in class $C$, we construct a specifications of the form:
-$$\onlyIfSingle{A_1\ \wedge\ x : C\ \wedge\ \calls{\_}{x}{m}{\ldots}}{A_2}{A}$$
-Thus, $A$ is a necessary precondition to reaching $A_2$ from $A_1$ via a method call $m$ to an object of class $C$.
-In order to do this
-note that if a precondition and a certain statement is \emph{sufficient}
-to achieve a particular result, then the negation of that precondition
-is \emph{necessary} to achieve the negation of the result after executing that statment.
-Specifically, 
-using classical Hoare logic, if $\hoare{P}{s}{Q}$ is true, then 
-it follows that $\neg P$ is a \emph{necessary precondition} for $\neg Q$ to 
-hold following the execution of $\prg{s}$.
-
-We do not define a new assertion language and Hoare logic.
- Rather, we rely on prior work on such Hoare logics,
-  and assume some underlying logic that can be used 
-to prove  \emph{classical assertions}. 
-Classical assertions are a subset of \SpecO, comprising only those 
-assertions that are commonly present in other specification languages.
-We provide this subset in Fig. \ref{f:classical-syntax}. That is, classical assertions
-are restricted to expressions, class assertions, the usual connectives, negation, 
-implication, and the usual quantifiers.
 
 
 We assume that there exists some classical specification
@@ -172,9 +172,8 @@ We can explain this also as follows: If the triple $.. \vdash \{R_1 \wedge R2\}\
 
  
 \textsc{If1-Wrapped} states that a method which does not return an object $y$ 
-preserves the ``wrappedness'' of that object $y$. 
-This rule is sound, 
-because we do not support calls from internal code to external code
+preserves the ``wrappedness'' of $y$. 
+This rule is sound, as we do not support calls from internal to external code (see Sec. \ref{types})
 -- in further work we plan to weaken this requirement, and will  
 strengthen this rule.
 In more detail,  \textsc{If1-Wrapped}   states that if $P$ is
@@ -184,7 +183,7 @@ it follows that $P$ is a necessary precondition to leak $y$.
 \textsc{If1-Wrapped}  is essentially  a specialized version of \textsc{If1-Classical}
 for the $\wrapped{}$ predicate. Since $\wrapped{}$ is not a classical
 assertion, we cannot use Hoare logic to reason about necessary conditions
-for leaking of data.
+for invalidating $\wrapped{}$.
  
  
  
@@ -289,7 +288,7 @@ We now raise per-method \Nec specifications
 to per-step \Nec specifications. 
 The rules appear in Fig. \ref{f:only-if-single}.
 
-\textsc{If1-Internal} is central. It
+\textsc{If1-Internal} 
  lifts a per-method \Nec specification to a per-step \Nec specification.
 Any \Nec specification which is satisfied for any method
 calls sent to any object in a module, is satisfied for \emph{any step}, even
@@ -305,8 +304,8 @@ weaken the necessary pre-condition.
 
 There are two disjunction introduction rules: 
 (a) \textsc{If1-$\vee$I1} states that any execution
-starting from a state satisfying some disjunction and reaches some future state, 
-must pass through the either a necessary 
+starting from a state satisfying some disjunction that reaches some future state, 
+must pass through either a necessary 
 intermediate state for the first branch, or a necessary 
 intermediate state for the second branch.
 (b) \textsc{If1-$\vee$I2} states that any execution 
@@ -405,7 +404,7 @@ for an existential in the state resulting from the execution.
 \subsection{Emergent \Nec Specifications}
 \label{s:emergent-proof}
 
-\jm[]{The final step is to raise per-step \Nec specifications to 
+\jm[]{We now show how per-step \Nec specifications are raised to 
 multiple step \Nec specifications, allowing the specification
 of emergent behavior. Fig. \ref{f:only-through} present some of the rules for the 
 construction of proofs for \emph{Only Through}, while Fig. \ref{f:only-if}
@@ -476,6 +475,12 @@ a sound encapsulation inference system, $\proves{M}{\givenA{A}{\encaps{A'}}}$,
 \begin{proof}
 by induction on the derivation of $\proves{M}{S}$.
 \end{proof}
+\jm[]{The proof of soundness (Theorem. \ref{thm:soundness}) proves
+that our proof system for \Nec adheres to the semantics of \Nec specifications.
+We make two assumptions for soundness: (1) a sound proof system for assertion encapsulation, 
+and (2) a sound proof system for \SpecO. It is notable that \Nec is parametric with both 
+of these judgments.}
+
 We have mechanized the proof of Theorem \ref{thm:soundness} in Coq. This 
 proof can be found in the associated artifact. 
 The   Coq formalism deviates slightly from the system as
