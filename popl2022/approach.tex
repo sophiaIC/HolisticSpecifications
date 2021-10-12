@@ -2,15 +2,16 @@
 
 \section{Outline of our approach}
 \label{s:outline}
-We now give an outline of our approach %using a bank account example,   where funds may be transferred between accounts only if the account's password has been supplied.
-\sophiaPonder[more succinct]{expanding on the bank example from earlier.}
+%We now give an outline of our approach %using a bank account example,   where funds may be transferred between accounts only if the account's password has been supplied.
+%\sophiaPonder[more succinct]{expanding on the bank example from earlier.}
 
 
  \subsection{Bank Account -- three modules}
 \label{s:bank}
   
-Module \prg{Mod1}   consists   of classes  \prg{Password} and  \prg{Account}
-with a \prg{transfer} method:
+Module \prg{Mod1} consists of the \prg{Account} class with a
+\prg{transfer} method, and an empty 
+\prg{Password} class where each instance models a unique password.
 %
 % (Note that we assume private fields are accessible ``class-wide''.)
 %
@@ -37,7 +38,7 @@ We can capture the intended
 semantics of % the \prg{transfer} method 
 \prg{transfer} % by writing
 through  a pre and postcondition 
-JML-style\cite{Leavens-etal07}  ``classical''
+JML-style \cite{Leavens-etal07}  ``classical''
 specification
 %\sophiaPonder[]{
 -- note, all free variables are are universally quantified.
@@ -64,8 +65,8 @@ ClassicBankSpec  $\triangleq$
  
 
 Now consider the following alternative implementations:
-\prg{Mod2} allows any client to reset its password at any time, while
-\prg{Mod3} first requires the existing password in order to change it.
+\prg{Mod2} allows any client to reset an account's password at any time, while
+\prg{Mod3} requires the existing password in order to change it.
 
 %% The method \prg{transfer} in all three versions of the class \prg{Account} satisfies the (ClassicSpec), 
 %% however, while executing the first and third version of \prg{Account} won't exhibit unwanted behaviour, the second version doesn't preclude it.
@@ -125,14 +126,14 @@ code such as
 %
 \prg{account.set(42); account.transfer(yours, 42)}
 %
-are enough to drain the account in \prg{Mod2} without knowing the password.
+is enough to drain the account in \prg{Mod2} without knowing the password.
 
 
  \subsection{Bank Account -- the right specification}
 \label{s:bankSpecEx}
 
 We need to rule out \prg{Mod2} while permitting \prg{Mod1} and
-\prg{Mod3}. The catch is the vulnerability present in \prg{Mod2} is the result
+\prg{Mod3}. The catch is that the vulnerability present in \prg{Mod2} is the result
 of  \emph{emergent} behaviour from the interactions of the \prg{set}
 and \prg{transfer} methods --- even though \prg{Mod3} also has a
 \prg{set} method, it does not exhibit the unwanted interaction.
@@ -181,10 +182,12 @@ NecessityBankSpec  $\triangleq$   from a:Account $\wedge$ a.balance==bal
  %
 %% T9hu having access to the password is a necessary condition for the balance to reduce.
 The critical point of this \Nec specification is that it is
-expressed in terms of observable effects and the shape of the heap --- the account's balance is reduced 
-and there is external access to the password ($\external{\prg{o}}\ \wedge\ \access{\prg{o}}{\prg{a.pwd}}$)
---- and not in terms of individual methods --- such as
-\prg{set} or \prg{transfer}.
+expressed in terms of observable effects (the account's balance is
+reduced: \prg{a.balance < bal}) and the shape of the heap 
+(external access to the password:x
+$\external{\prg{o}}\ \wedge\ \access{\prg{o}}{\prg{a.pwd}}$) 
+rather than in terms of individual methods such as
+\prg{set} and \prg{transfer}.
 This gives our specifications the
 vital advantage that they can be used to constrain
 \textit{implementation} of a bank account with a balance and a
@@ -197,9 +200,10 @@ the system.
 %the specification need  refer  to  individual methods in a module.
 %Moreover, 
 adherence to   \Nec specifications is not monotonic:
-Adding a method to a module does not necessarily preserve adherence to a specification.
-And while separate methods may adhere to a  specification, their combination does
-not necessarily do so. Thus, \Nec specifications capture a module's \emph{emergent behaviour}. 
+adding a method to a module does not necessarily preserve adherence to
+a specification, 
+and while separate methods may adhere to a  specification, their combination does
+not necessarily do so. This is why we say \Nec specifications capture a module's \emph{emergent behaviour}. 
 }
 
 %\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
@@ -210,36 +214,44 @@ not necessarily do so. Thus, \Nec specifications capture a module's \emph{emerge
 \subsection{Internal and External objects and calls}
 \label{s:concepts}
 
-Our work concentrates on guarantees made for the \emph{open} setting; that is, a given module
-$M$ is programmed in such a robust manner
+Our work concentrates on guarantees made in an \emph{open} setting; that is, a given module
+$M$ must be programmed so that %in such a robust manner
 %\sophia[We had agreed no to say "robust", but I think it is OK here. Alternatively, say defensively robust?]{}
- that execution of $M$ together with \emph{any} \externalM 
+execution of $M$ together with \emph{any} \externalM 
 module $M'$ will uphold these guarantees. In the tradition of
 visible states semantics, we are  only interested in upholding the guarantees while 
-$M'$, the  \externalM module,  is executing.   
- We therefore distinguish between \emph{\internalO} and
-\emph{\externalO} objects: those that belong to classes defined in $M$, and the rest. Similarly, we 
-distinguish between \emph{\internalC} calls, i.e. calls made % from \externalO objects
- to \internalO objects, and \emph{\externalC} calls, i.e. calls made % from \externalC objects
+$M'$, the  \emph{\externalM} module, is executing. A module can
+temporarily break its own invariants,
+%%just as a class or monitor can
+%%break their invariants,
+so long as the broken invariants are never visible externally.
+   
+We therefore distinguish between \emph{\internalO}
+objects --- instances of classes defined in $M$ ---
+and \emph{\externalO} objects defined in any other module, and
+between \emph{\internalC} calls made % from \externalO objects
+ to \internalO objects and \emph{\externalC} calls made % from \externalC objects
  to \externalC objects. % We are less
 % interested in calls made from \internalO objects to \internalO objects, because we only need 
 % establish the guarantees when the \externalM module is executing. And we 
-
-
-Moreover, because we only require that the guarantees are upheld while 
-  the  \externalM module  is executing, we develop an \emph{external states} semantics, where
+%
+%
+Because we only require guarantees while 
+the  \externalM module  is executing,
+we develop an \emph{external states} semantics, where
  any internal calls are executed in one, large, step.
- Note that we do not -- yet -- support calls from
+With external steps semantics,  the executing object (\prg{this}) is always   external. 
+Note that we do not support calls from
 \internalO objects to \externalO objects.
- With external steps semantics,  the executing object (the \prg{this}) is always   external. 
+ 
  
 
 
 \subsection{Reasoning about Necessity}
 \label{s:approach}
- 
-The proof that \prg{Mod3} adheres to \prg{NecessityBankSpec} consists,
-broadly, of the following parts:
+
+We can now outline out 
+proof that \prg{Mod3} adheres to \prg{NecessityBankSpec}:
 
 
 \begin{description}
@@ -273,7 +285,7 @@ Using  \textbf{(h)} and  \textbf{(i)}  we establish that
 \end{description} 
  
 \noindent
-We  now outline  the  formal concepts and ideas used in the four parts   from above:
+This proof relies on the following novel ideas and definitions:
 
 \begin{description}
 \item[Part 1] 
@@ -282,10 +294,14 @@ We  say assertion $A$  is
   $M$-\internalC calls. In short, an $M$-\internalC call is a \emph{necessary} condition for
 invalidation of $A$.
 % In \textbf{P1}, the assertion \prg{a:Account\! $\wedge$\! a.balance=bal} is encapsulated by \prg{Mod3}.
-
-Determining encapsulation is a challenge, but not central to this work.
-We therefore outline a rudimentary types-based algorithm, and relegate more
-approaches to further work.
+%%%
+%%%Determining encapsulation is a challenge, but not central to this work.
+%%%We therefore outline a rudimentary types-based algorithm, and relegate more
+%%%approaches to further work.
+%%%
+Our formalisation is parametric with respect to the encapsulation
+mechanism: here we rely on rudimentary annotations inspired by confinement types
+\cite{confined}.
   
 \item[Part 2]
  Here we infer a \emph{per-method-condition}, i.e., a 
@@ -335,6 +351,7 @@ single steps.  This part is crucial;   remember that while \prg{Mod2} satisfies
 \end{description} 
 
 \noindent
-Note, that at no point do we inspect method bodies: we rely on type annotations
- to infer encapsulation, and on classical pre and postconditions to infer per-method conditions.
+Note that our proofs of necessity do not inspect method
+bodies: we rely on simple annotations to infer encapsulation, and on
+classical pre and postconditions to infer per-method conditions. 
 
