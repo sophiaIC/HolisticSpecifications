@@ -66,14 +66,26 @@ of the bank account specification using our \Nec logic.
 
 \paragraph{The Bank Account Module}
 \jm[]{The Bank Account defined in this section differs from that of Sec. \ref{s:outline}.
-We modify the Bank Account in order to demonstrate how using \Nec logic 
+\prg{Mod4} is different to \prg{Mod3} in the following  Bank Account in order to demonstrate how using \Nec logic 
 we are able to deal several challenges that come with more complex data structures and specifications.
 These challenges are 
 \begin{description}
-\item[(1)] Specifications defined using ghost fields.
+\item[(1)] Specifications defined using ghost fields -- in this case \prg{b.getBal(a)} returns the balance of account \prg{a} in \prg{Bank} \prg{b}.
 \item[(2)] Modules with multiple classes and methods that all must be considered when constructing proofs about emergent behavior.
 \item[(3)] How ownership systems can be used to construct proofs for \Nec specifications -- even the simple ownership captured by \enclosed classes in \Loo.
 \end{description}}
+
+
+\jm[]{We rewrite \texttt{NecessityBankSpec} to use the ghost field, \texttt{getBal},
+and not simply the balance field as in \texttt{Mod1}, \texttt{Mod2}, and \texttt{Mod3}.}
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+NecessityBankSpec $\triangleq$ from b:Bank $\wedge$ b.getBal(a)=bal 
+                     to b.getBal(a) < bal
+                     onlyIf $\neg\wrapped{\prg{a}}$
+\end{lstlisting}
+That is, if the balance of an account ever decreases, it must be true that some object external to
+\prg{Mod4} has access to the password of that account. 
+
 \jm[]{We provide the implementation of \jm[]{\prg{Mod4}} in Fig. \ref{f:ex-bank-short}.
 In \prg{Mod4}, we separate the balance 
 of an account into a ledger that is stored within a bank. Thus, 
@@ -85,7 +97,8 @@ to their \texttt{balance}.}
 
 A \prg{Bank} consists of a \prg{Ledger}, a method for transferring 
 funds between accounts (\prg{transfer}), and a ghost field, \prg{balance}
-for looking up the balance of an account at a bank.\footnote{A \Nec specification is independent of the implementation details of the code. It would need to hold for an account whose implementation did not use a ledger or ghost variables to hold balances.}
+for looking up the balance of an account at a bank.
+%\footnote{A \Nec specification is independent of the implementation details of the code. It would need to hold for an account whose implementation did not use a ledger or ghost variables to hold balances.}
 A \prg{Ledger} is
 a mapping from \prg{Account}s to their balances. For brevity
 our implementation only includes two accounts (\prg{acc1} and \prg{acc2}),
@@ -106,17 +119,6 @@ that state that
 \item[(3)] and the \prg{transfer} method in \prg{Bank} results in a decreased balance to the \prg{from} \prg{Account} \emph{only if} the correct password is supplied, and
 \item[(4)] every other method in \prg{Mod4} never modifies any balance in any \prg{Bank}.
 \end{description}}
-
-
-\jm[]{We rewrite \texttt{NecessityBankSpec} to use the ghost field, \texttt{getBal},
-and not simply the balance field as in \texttt{Mod1}, \texttt{Mod2}, and \texttt{Mod3}.}
-\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
-NecessityBankSpec $\triangleq$ from b:Bank $\wedge$ b.getBal(a)=bal 
-                     to b.getBal(a) < bal
-                     onlyIf $\neg\wrapped{\prg{a}}$
-\end{lstlisting}
-That is, if the balance of an account ever decreases, it must be true that some object external to
-\prg{Mod4} has access to the password of that account. 
 
 \jm[]{While both the implementation and the specification being proven have changed from that of
 \ref{s:outline}, the structure of the proofs do retain broad similarities. In particular the proof in this section 
@@ -149,9 +151,9 @@ and finally we (4) prove \emph{emergent} \Nec specifications.}
 \subsection{Part 1: Assertion Encapsulation}
 \label{s:BA-encap}
 We base the soundness of our encapsulation of the type system of \Loo, and use the proof rules given in Fig.s \ref{f:intrnl} and \ref{f:asrt-encap}.
-\jm[]{Informally $\intrnl{e}$ indicates that the evaluation of expression $e$ requires references no external objects, and $\encaps{A}$ indicates 
-that internal computation is necessary for a change in satisfaction of $A$. The full details of $\intrnl{}$ and $\encaps{}$ are given in 
-Apdx. \ref{s:encap-proof}}
+\jm[]{Informally, $\intrnl{e}$ indicates that any objects inspected during the evaluation of expression $e$ are internal. $\encaps{A}$ (see Sec. \ref{s:inference}) indicates 
+that internal computation is necessary for a change in satisfaction of $A$. Rudimentary algorithms for proving $\intrnl{}$ and $\encaps{}$ are given in 
+Apdx. \ref{s:encap-proof}, and used here.}
 We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
 %\begin{figure}[h]
 \begin{proofexample}
@@ -455,7 +457,7 @@ PasswordLeak $\triangleq$ from a:Account $\wedge$ a.password=p $\wedge$ wrapped<
 \end{lstlisting}
 \jm[]{We provide the proofs of these in Apdx. \ref{app:BankAccount}, but describe the construction of the proof of \prg{BalanceChange} here:
 by application of the rules/results
- \textbf{AuthBalChange}, \textbf{changePassBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, \textbf{BalanceEncaps}, and \textsc{If1-Internal}.}
+ \prg{AuthBalChange}, \prg{changePassBalChange}, \prg{Ledger::TransferBalChange}, \prg{Bank::TransferBalChange}, \prg{BalanceEncaps}, and \textsc{If1-Internal}.}
 %
 %by combining the results from \ref{s:BA-encap} and \ref{s:BA-classical} using \textsc{If1-Internal}. 
 %Again, we elide the details of the proof of \prg{PasswordChange} and \prg{PasswordLeak} as they are similar to that
@@ -509,7 +511,7 @@ If there was a call where the \prg{Account}'s password
 was used, then there must have been an intermediate program state
 when some external object had access to the password.
 \item [(3)]
-Either that password was the same password as in the initial 
+Either that password was the same password as in the \jm[]{starting} 
 program state, or it was different:
 \begin{description}
 \item [(Case A)]
