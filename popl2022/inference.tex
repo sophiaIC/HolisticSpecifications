@@ -20,14 +20,88 @@ Raising necessary conditions to construct proofs of emergent behaviour (\S \ref{
 \subsection {Assertion Encapsulation}
 \label{s:encaps-proof}
 
-\jm[]{In Sec. \ref{s:outline} we identified proof of assertion encapsulation
-as \textbf{Part 1} of proving adherence to a \Nec specification.
-Sec. \ref{s:semantics:encaps} defined the semantics of assertion encapsulation.
-Encapsulation is a deep topic that is well studied in the literature, 
+\jm[]{In Sec. \ref{s:outline} we used proof of assertion encapsulation
+in our proof of adherence to \Nec specifications. In this section we 
+define the semantics of assertion encapsulation and discuss the requirements 
+for a proof system for assertion encapsulation. We do not define an encapsulation 
+proof system as encapsulation is not the central focus of this paper, and \Nec logic 
+is parametric on such a system. We do however informally discuss a rudimentary 
+encapsulation proof system that we use to prove a practical example adheres to its \Nec specification.}
+
+
+\subsubsection{Assertion Encapsulation Semantics}
+
+In Sec. \ref{s:outline} we said that   $A$ is encapsulated by  $M$ if it cannot be invalidated unless an
+internal method was called. 
+Here we refine this concept, to allow for ``conditional'' encapsulation:
+$M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
+$A'$ cannot be invalidated, unless a method from $M$ was called.
+
+\begin{definition}[Assertion Encapsulation]
+\label{def:encapsulation}
+\sd{An assertion $A'$ is \emph{encapsulated} by module $M$ and assertion $A$, written as}\ \  $M\ \vDash A\ \Rightarrow\ \encaps{A'}$, \ \ if and only if
+for all external modules $M'$, and all states $\sigma$, $\sigma'$
+such that $\arising{M}{M'}{\sigma}$:
+
+\begin{tabular}{lr}
+$\;\;\;\;$- $\reduction{M'}{M}{\sigma}{\sigma'}$  & \rdelim\}{3}{4mm}[$\;\;\;\Rightarrow\;\;\;$  $\exists x,\ \overline{z}. (\ \satisfiesA{M}{\sigma}{\calls{\_}{x}{m}{\overline{z}} \wedge\ \internal{x}}\ )$] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A \wedge  A'}$ \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A'}$   
+\end{tabular} 
+\end{definition}
+
+%\susan[I found this confusing. If you omit the highlighted sentence it is easier to understand.]{We use ${\sigma' \triangleleft \sigma}$ for the state as in $\sigma'$ but with the variable bindings as in the top frame from $\sigma$.} 
+We will define 
+${\sigma' \triangleleft \sigma}$ in  Def. \ref{d:adapt}, but 
+we first look at some examples.
+In both \prg{Mod2} and \prg{Mod3} the \prg{balance} of an account cannot change
+unless an internal method was called:
+\\
+\strut \hspace{1cm}
+$\prg{Mod2}\ \vDash \prg{a}:\prg{Account}\ \Rightarrow\ \encaps{\prg{a.balance}=\prg{bal}}$
+\\
+\strut \hspace{1cm}
+$\prg{Mod3}\ \vDash \prg{a}:\prg{Account}\ \Rightarrow\ \encaps{\prg{a.balance}=\prg{bal}}$
+
+%\susan[Does this help the story move on? I would omit it]{
+%Note that encapsulation of an assertion does not imply encapsulation of its negation; 
+%for example $\wrapped{o}$ is encapsulated, but $\neg  \wrapped{o}$ is not.}
+
+
+\subsubsection{Types}
+\label{types}
+
+\sophiaPonder[modified]{To allow for an easy way to judge encapsulation of
+assertions, we assume a very simple type system, where field, method arguments
+and method results are annotated with classes, and the type system checks 
+that field assignments, method calls, and method returns adhere to these expectations.
+Because the type system is so simple, we do not include its specification in the paper.
+Note however, that the type system} has one further implication: modules are typed 
+in isolation, thereby implicitly prohibiting
+method calls from internal objects to external objects. 
+
+\sophiaPonder[]{Based on this type system, we define a predicate $Intrnl(e)$, in Apdx. \ref{s:encap-proof},
+which asserts that any object reads during the evaluation of $e$ are internal.
+Thus, any assertion that only involves $Intrnl(\_)$ expressions is encapsulated, more in Apdx. \ref{s:encap-proof}.}
+
+\sophiaPonder[]{Finally, a further small addition to the type system 
+assists the knowledge that an object is wrapped: Classes may
+be annotated as \enclosed. A \enclosed object  
+cannot be accessed by external objects; that is, it is always wrapped. 
+The type system needs to ensure that objects of \enclosed type
+are never returned from method bodies, this is even simpler than in \cite{confined}. 
+\susan[I would omit this]{Again, we omit the detailed description of this
+simple type system.
+}}
+
+\subsubsection{Proving Assertion Encapsulation}
+
+As we have already stated at the beginning of this section,
+encapsulation is a deep topic that is well studied in the literature, 
 and is not the focus of this paper. For now, we simply assume the existence 
 of a proof system for encapsulation as it is secondary to the central topic 
 of this paper. We need only assert that such an algorithmic proof system 
-must be sound (Def. \ref{lem:encap-soundness}). }
+must be sound (Def. \ref{lem:encap-soundness}).
 
 \begin{definition}[Encapsulation Soundness]
 \label{lem:encap-soundness}
