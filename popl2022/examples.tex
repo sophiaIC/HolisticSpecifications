@@ -28,7 +28,7 @@ module Mod4
       {if pwd == this.password
         this.password := newPwd}
 
-  class hidden Ledger
+  class confined Ledger
     field acc1:Account
     field bal1:int
     field acc2:Account
@@ -167,37 +167,37 @@ We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
 \begin{proofexample}
 \proofsteps{\prg{BalanceEncaps}}
 	{\begin{proofexample}
-		\proofsteps{\prg{aIntrnl}}
+		\proofsteps{\prg{aEnc}}
 			{\proofstepwithrule
 			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{a}}}}$}
-				{by \textsc{Intrnl-Obj}}
+				{by \textsc{Enc$_e$-Obj}}
 		}
 		\endproofsteps
 	\end{proofexample}
 		}
 	{\begin{proofexample}
-		\proofsteps{\prg{bIntrnl}}
+		\proofsteps{\prg{bEnc}}
 			{\proofstepwithrule
 			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{b}}}}$}
-				{by \textsc{Intrnl-Obj}}
+				{by \textsc{Enc$_e$-Obj}}
 		}
 		\endproofsteps
 	\end{proofexample}
 		}
 	{\begin{proofexample}
-		\proofsteps{\prg{getBalIntrnl}}
+		\proofsteps{\prg{getBalEnc}}
 			{\proofstepwithrule
 			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{b.getBal(a)}}}}$}
-				{by \prg{aIntrnl}, \prg{bIntrnl}, and \textsc{Intrnl-Ghost}}
+				{by \prg{aEnc}, \prg{bEnc}, and \textsc{Enc$_e$-Ghost}}
 		}
 		\endproofsteps
 	\end{proofexample}
 		}
 	{\begin{proofexample}
-		\proofsteps{\prg{balIntrnl}}
+		\proofsteps{\prg{balEnc}}
 			{\proofstepwithrule
 			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{bal}}}}$}
-				{by \textsc{Intrnl-Int}}
+				{by \textsc{Enc$_e$-Int}}
 		}
 		\endproofsteps
 	\end{proofexample}
@@ -205,7 +205,7 @@ We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
 		{\proofstepwithrule
 			{
 			$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\encaps{\prg{b.getBal(a)=bal}}}}$
-			}{by \prg{getBalIntrnl}, \prg{balIntrnl}, \textsc{Enc-Intrnl}}}
+			}{by \prg{getBalEnc}, \prg{balEnc}, \textsc{Enc-Exp}}}
 \endproofsteps
 \end{proofexample}\\
 We omit the proof of $\encaps{\prg{a.password=pwd}}$, as its construction is very similar to that of $\encaps{\prg{b.getBal(a)=bal}}$.
@@ -225,7 +225,7 @@ to prove of \prg{authenticate}:
 \item[\textbf{\prg{AuthBalChange}}:] any change to the balance of an account may only occur if call to \prg{transfer} on the \prg{Bank} with the correct password is made. 
 This may seem counter-intuitive as it is not possible to make two method calls (\prg{authenticate} and \prg{transfer}) at the same time, however we are able to prove this by first proving the 
 absurdity that \prg{authenticate} is able to modify any balance.
-\item[\textbf{\prg{AuthPwdLeak}}:] any call to \prg{authenticate} may only ``un-\prg{wrap}'' an object if \prg{false} is first satisfied -- clearly an absurdity.
+\item[\textbf{\prg{AuthPwdLeak}}:] any call to \prg{authenticate} may only invalidate \wrapped{\prg{a.password}} (for any account \prg{a}) if \prg{false} is first satisfied -- clearly an absurdity.
 \end{description}}
 
 \paragraph{\emph{\textbf{\prg{AuthBalChange}}}}First we use the classical specification of the \prg{authenticate} method in \prg{Account} to prove that a call to \prg{authenticate} can only result in 
@@ -275,7 +275,7 @@ This proof is presented as \prg{AuthBalChange} below.
 	\end{proofexample}
 }
 
-\paragraph{\emph{\textbf{\prg{AuthPwdLeak}}}} The proof of \prg{AuthPwdLeak} is given below, and is proven by application of classical Hoare logic rules and \textsc{If1-Wrapped}.
+\paragraph{\emph{\textbf{\prg{AuthPwdLeak}}}} The proof of \prg{AuthPwdLeak} is given below, and is proven by application of classical Hoare logic rules and \textsc{If1-Inside}.
 
 %We provide the statements of the specifications for the remaining methods in the module below,
 %%(\textbf{changePassBalChange}, \textbf{Ledger::TransferBalChange}, and \textbf{Bank::TransferBalChange}), 
@@ -397,7 +397,7 @@ This proof is presented as \prg{AuthBalChange} below.
 						{$\neg \wrapped{\_}$}
 						{false}
 						}
-					{by \textsc{If1-Wrapped}}
+					{by \textsc{If1-Inside}}
 			}
 		\endproofsteps
 	\end{proofexample}
@@ -452,15 +452,15 @@ In order to prove the final result in the next section,
 we need to prove three per-step \Nec specifications: \prg{BalanceChange}, \prg{PasswordChange}, and \prg{PasswordLeak}.
 \begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
 BalanceChange $\triangleq$ from  a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal
-                 nxt b.getBal(a) < bal
+                 next b.getBal(a) < bal
                  onlyIf $\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$
                  
 PasswordChange $\triangleq$ from a:Account $\wedge$ a.password=p
-                  nxt $\neg$ a.password != p
+                  next $\neg$ a.password != p
                   onlyIf $\calls{\_}{\prg{a}}{\prg{changePass}}{\prg{a.password}, \_}$
                   
-PasswordLeak $\triangleq$ from a:Account $\wedge$ a.password=p $\wedge$ wrapped<p>
-                  nxt $\neg$ wrapped<p>
+PasswordLeak $\triangleq$ from a:Account $\wedge$ a.password=p $\wedge$ inside<p>
+                  next $\neg$ inside<p>
                   onlyIf false
 \end{lstlisting}
 \jm[]{We provide the proofs of these in Appendix \ref{app:BankAccount}, but describe the construction of the proof of \prg{BalanceChange} here:

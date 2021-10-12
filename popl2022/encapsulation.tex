@@ -37,9 +37,9 @@ We provide a simple \jm[]{proof} system for assertion encapsulation (Definition 
 that is proving a change in satisfaction of an assertion depends on computation from the internal module. 
 As encapsulation is not the core topic of this paper, we keep this relatively simple.
 
-\jm[]{To assist in the definition of our simple encapsulation system, we internal expressions ($\intrnl{\_}$);
-i.e. expressions that are composed entirely of either internal objects or primitves (i.e. integers or booleans).}
-\jm[]{\begin{definition}[Internal Expressions]
+\jm[]{To assist in the definition of our simple encapsulation system, we define internally evaluated expressions ($\intrnl{\_}$);
+i.e. expressions whose evaluation only inspects internal objects or primitves (i.e. integers or booleans).}
+\jm[]{\begin{definition}[Internally Evaluated Expressions]
 For all modules $M$, assertions $A$, and expressions $e$, 
 $\satisfies{M}{\givenA{A}{\intrnl{e}}}$ if and only if for all states $\sigma$
 such that $\satisfiesA{M}{\sigma}{A}$, we have for all variables $x$, and heap locations $\alpha$
@@ -59,10 +59,10 @@ Assertion encapsulation: $\proves{M}{\givenA{A}{\encaps{A'}}}$
 \end{itemize}
 
 Fig. \ref{f:intrnl} gives proof rules for an expression comprising purely internal objects.
-\jm[]{Primitives are \prg{Intrnl} (\textsc{Intrnl-Int}, \textsc{Intrnl-Null}, \textsc{Intrnl-True}, and \textsc{Intrnl-False}).
-Addresses of internal objects are \prg{Intrnl} (\textsc{Intrnl-Obj}). Field accesses with internal types of \prg{Intrnl} expressions
-are themselves \prg{Intrnl} (\textsc{Intrnl-Field}). Ghost field accesses annotated as \texttt{intrnl} on \prg{Intrl} 
-expressions are themselves \prg{Intrnl} (\textsc{Intrnl-Ghost}).}
+\jm[]{Primitives are $Enc_e$ (\textsc{Enc$_e$-Int}, \textsc{Enc$_e$-Null}, \textsc{Enc$_e$-True}, and \textsc{Enc$_e$-False}).
+Addresses of internal objects are $Enc_e$ (\textsc{Enc$_e$-Obj}). Field accesses with internal types of $Enc_e$ expressions
+are themselves $Enc_e$ (\textsc{Enc$_e$-Field}). Ghost field accesses annotated as $Enc_e$ on $Enc_e$ 
+expressions are themselves $Enc_e$ (\textsc{Enc$_e$-Ghost}).}
 
 \begin{figure}[t]
 \footnotesize
@@ -70,22 +70,22 @@ expressions are themselves \prg{Intrnl} (\textsc{Intrnl-Ghost}).}
 \infer
 		{}
 		{\proves{M}{\givenA{A}{\intrnl{i}}}}
-		\quad(\textsc{Intrnl-Int})
+		\quad(\textsc{Enc$_e$-Int})
 		\and
 \infer
 		{}
 		{\proves{M}{\givenA{A}{\intrnl{\nul}}}}
-		\quad(\textsc{Intrnl-Null})
+		\quad(\textsc{Enc$_e$-Null})
 		\and
 \infer
 		{}
 		{\proves{M}{\givenA{A}{\intrnl{\true}}}}
-		\quad(\textsc{Intrnl-True})
+		\quad(\textsc{Enc$_e$-True})
 		\and
 \infer
 		{}
 		{\proves{M}{\givenA{A}{\intrnl{\false}}}}
-		\quad(\textsc{Intrnl-False})
+		\quad(\textsc{Enc$_e$-False})
 		\and
 \infer
 		{
@@ -95,7 +95,7 @@ expressions are themselves \prg{Intrnl} (\textsc{Intrnl-Ghost}).}
 		{
 		\proves{M}{\givenA{A}{\intrnl{\alpha}}}
 		}
-		\quad(\textsc{Intrnl-Obj})
+		\quad(\textsc{Enc$_e$-Obj})
 		\and
 \infer
 		{
@@ -107,7 +107,7 @@ expressions are themselves \prg{Intrnl} (\textsc{Intrnl-Ghost}).}
 		{
 		\proves{M}{\givenA{A}{\intrnl{e.f}}}
 		}
-		\quad(\textsc{Intrnl-Field})
+		\quad(\textsc{Enc$_e$-Field})
 		\and
 \infer
 		{
@@ -120,7 +120,7 @@ expressions are themselves \prg{Intrnl} (\textsc{Intrnl-Ghost}).}
 		{
 		\proves{M}{\givenA{A}{\intrnl{e_1.g(e_2)}}}
 		}
-		\quad(\textsc{Intrnl-Ghost})
+		\quad(\textsc{Enc$_e$-Ghost})
 \end{mathpar}
 \caption{Internal Proof Rules}
 \label{f:intrnl}
@@ -128,13 +128,13 @@ expressions are themselves \prg{Intrnl} (\textsc{Intrnl-Ghost}).}
 
 \jm[]{Fig. \ref{f:asrt-encap} gives proof rules for whether an assertion is encapsulated, that is whether 
 a change in satisfaction of an assertion requires interaction with the internal module.
-An \prg{Intrl} expression is also an encapsulated assertion (\textsc{Enc-Intrnl}). A field
-access on an \prg{Intrnl} expression is an encapsulated expression. Binary and ternary operators
+An \prg{Intrl} expression is also an encapsulated assertion (\textsc{Enc-Exp}). A field
+access on an encapsulated expression is an encapsulated expression. Binary and ternary operators
 applied to encapsulated expressions are themselves encapsulated assertions (\textsc{Enc-=}, \textsc{Enc-+}, \textsc{Enc-<}, \textsc{Enc-If}).
 An internal object may only lose access to another object via internal computation (\textsc{Enc-IntAccess}).
-Only internal computation may grant external access to a $\wrapped{\_}$ object (\textsc{Enc-Wrapped}$_1$).
+Only internal computation may grant external access to an $\wrapped{\_}$ object (\textsc{Enc-Inside}$_1$).
 If an object is $\wrapped{\_}$, then nothing (not even internal objects) may gain access
-to that object except by internal computation (\textsc{Enc-Wrapped}$_2$).
+to that object except by internal computation (\textsc{Enc-Inside}$_2$).
 If an assertion $A_1$ implies assertion $A_2$, then $A_1$ implies the encapsulation of any assertion that
 $A_2$ does. Further, if an assertion is encapsulated, then any assertion that is implied by it is also encapsulated.
 These two rules combine into the encasulation rule for consequence (\textsc{Enc-Conseq}).}
@@ -145,7 +145,7 @@ These two rules combine into the encasulation rule for consequence (\textsc{Enc-
 \infer
 		{\proves{M}{\givenA{A}{\intrnl{e}}}}
 		{\proves{M}{\givenA{A}{\encaps{e}}}}
-		\quad(\textsc{Enc-Intrnl})
+		\quad(\textsc{Enc-Exp})
 		\and
 \infer
 		{\proves{M}{\givenA{A}{\intrnl{e}}}}
@@ -201,12 +201,12 @@ These two rules combine into the encasulation rule for consequence (\textsc{Enc-
 \infer
 		{}
 		{\proves{M}{\givenA{A}{\encaps{\wrapped{x}}}}}
-		\quad(\textsc{Enc-Wrapped}_1)
+		\quad(\textsc{Enc-Inside}_1)
 		\and
 \infer
 		{\proves{M}{A\ \longrightarrow\ \wrapped{x}}}
 		{\proves{M}{\givenA{A}{\encaps{\neg \access{x}{y}}}}}
-		\quad(\textsc{Enc-Wrapped}_2)
+		\quad(\textsc{Enc-Inside}_2)
 		\and
 \infer
 		{
