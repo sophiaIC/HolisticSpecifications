@@ -27,13 +27,12 @@ module Mod4
     method changePass(pwd:Object, newPwd:Object):void
       {if pwd == this.password
         this.password := newPwd}
-
   class confined Ledger
     field acc1:Account
     field bal1:int
     field acc2:Account
     field bal2:int
-    ghost intrnl getBal(acc):int=
+    ghost intrnl balance(acc):int=
       if acc == acc1
         bal1
       else if acc == acc2
@@ -46,11 +45,9 @@ module Mod4
        else if from == acc2 && to == acc1
          bal1 := bal1 + amt
          bal2 := bal2 - amt}
-      
-
   class Bank
     field book:Ledger
-    ghost intrnrl getBal(acc):int=book.getBal(acc)
+    ghost intrnrl balance(acc):int=book.balance(acc)
     method transfer(pwd:Object, amt:int, from:Account, to:Account):void
       {if (from.authenticate(pwd))
          book.transfer(amt, from, to)}
@@ -74,21 +71,20 @@ this allows us  to demonstrate how   \Nec logic
 \scd{deals} with  challenges that come with more complex data structures and specifications.
 These challenges are 
 \begin{description}
-\item[(1)] Specifications defined using ghost fields -- in this case \prg{b.getBal(a)} returns the balance of account \prg{a} in \prg{Bank} \prg{b}.
+\item[(1)] Specifications defined using ghost fields -- in this case \prg{b.balance(a)} returns the balance of account \prg{a} in \prg{Bank} \prg{b}.
 \item[(2)] Modules with several \sophiaPonder[said multiple]{}  classes and methods; \scd{they all} must be considered when constructing proofs about emergent behavior.
 \item[(3)] \sophiaPonder[said: How ownership systems can be used to construct proofs for \Nec specifications -- ]{}
 \sophiaPonder[]{The construction of a proof of assertion encapsulation. Such a proof is necessary  here because
- the ghost field \prg{bal} reads several  fields. We use our 
+ the ghost field \prg{balance} reads several  fields. We use our 
  simple confinement system,}   captured by \enclosed classes in \Loo.
 \end{description}
 
 
-\jm[]{}\sophiaPonder[said: We rewrite]{} The \texttt{NecessityBankSpec} will use the ghost field, \texttt{getBal},
+\jm[]{}\sophiaPonder[said: We rewrite]{} The \texttt{NecessityBankSpec} will use the ghost field, \texttt{balance},
 and not simply the balance field as in \texttt{Mod1}, \texttt{Mod2}, and \texttt{Mod3}. 
 \begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
-NecessityBankSpec $\triangleq$ from b:Bank $\wedge$ b.getBal(a)=bal 
-                     to b.getBal(a) < bal
-                     onlyIf $\neg\wrapped{\prg{a}}$
+NecessityBankSpec $\triangleq$ from b:Bank $\wedge$ b.balance(a)=bal 
+                     to b.balance(a) < bal   onlyIf $\neg\wrapped{\prg{a}}$
 \end{lstlisting}
 That is, if the balance of an account ever decreases, it must be true that some object external to
 \prg{Mod4} has access to the password of that account. 
@@ -162,14 +158,14 @@ We base the soundness of our encapsulation of the type system of \Loo, and use t
 \jm[]{Informally, $\intrnl{e}$ indicates that any objects inspected during the evaluation of expression $e$ are internal. $\encaps{A}$ (see Section \ref{s:inference}) indicates 
 that internal computation is necessary for a change in satisfaction of $A$. Rudimentary algorithms for proving $\intrnl{}$ and $\encaps{}$ are given in 
 Appendix \ref{s:encap-proof}, and used here.}
-We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
+We provide the proof for the encapsulation of \prg{b.balance(a)} below\\
 %\begin{figure}[h]
 \begin{proofexample}
 \proofsteps{\prg{BalanceEncaps}}
 	{\begin{proofexample}
 		\proofsteps{\prg{aEnc}}
 			{\proofstepwithrule
-			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{a}}}}$}
+			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{a}}}}$}
 				{by \textsc{Enc$_e$-Obj}}
 		}
 		\endproofsteps
@@ -178,7 +174,7 @@ We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
 	{\begin{proofexample}
 		\proofsteps{\prg{bEnc}}
 			{\proofstepwithrule
-			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{b}}}}$}
+			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{b}}}}$}
 				{by \textsc{Enc$_e$-Obj}}
 		}
 		\endproofsteps
@@ -187,7 +183,7 @@ We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
 	{\begin{proofexample}
 		\proofsteps{\prg{getBalEnc}}
 			{\proofstepwithrule
-			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{b.getBal(a)}}}}$}
+			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{b.balance(a)}}}}$}
 				{by \prg{aEnc}, \prg{bEnc}, and \textsc{Enc$_e$-Ghost}}
 		}
 		\endproofsteps
@@ -196,7 +192,7 @@ We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
 	{\begin{proofexample}
 		\proofsteps{\prg{balEnc}}
 			{\proofstepwithrule
-			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\intrnl{\prg{bal}}}}$}
+			{$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{bal}}}}$}
 				{by \textsc{Enc$_e$-Int}}
 		}
 		\endproofsteps
@@ -204,11 +200,11 @@ We provide the proof for the encapsulation of \prg{b.getBal(a)} below\\
 		}
 		{\proofstepwithrule
 			{
-			$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.getBal(a)=bal}}{\encaps{\prg{b.getBal(a)=bal}}}}$
+			$\proves{\prg{Mod4}}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\encaps{\prg{b.balance(a)=bal}}}}$
 			}{by \prg{getBalEnc}, \prg{balEnc}, \textsc{Enc-Exp}}}
 \endproofsteps
 \end{proofexample}\\
-We omit the proof of $\encaps{\prg{a.password=pwd}}$, as its construction is very similar to that of $\encaps{\prg{b.getBal(a)=bal}}$.
+We omit the proof of $\encaps{\prg{a.password=pwd}}$, as its construction is very similar to that of $\encaps{\prg{b.balance(a)=bal}}$.
 %\caption{Proof of encapsulation of \prg{b.getBal(a)=bal}}
 %\end{figure}
 
@@ -241,32 +237,32 @@ This proof is presented as \prg{AuthBalChange} below.
 		\proofsteps{AuthBalChange}
 			{\proofstepwithrule
 				{\hoareEx
-						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.getBal(a$^\prime$)=bal}
+						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal}
 						{a.authenticate(pwd)}
-						{b.getBal(a$^\prime$) == bal}
+						{b.balance(a$^\prime$) == bal}
 						}
 					{by classical spec.}
 			}
 			{\proofstepwithrule
 				{\hoareEx
-						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.getBal(a$^\prime$)=bal $\wedge$ $\neg$ false}
+						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal $\wedge$ $\neg$ false}
 						{a.authenticate(pwd)}
-						{$\neg$ b.getBal(a$^\prime$) < bal}
+						{$\neg$ b.balance(a$^\prime$) < bal}
 						}
 					{by classical Hoare logic}
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
-						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.getBal(a$^\prime$)=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
-						{b.getBal(a$^\prime$) < bal}
+						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
+						{b.balance(a$^\prime$) < bal}
 						{false}
 						}
 					{by \textsc{If1-Classical}}
 			}
 			{\proofstepwithrule
-				{\onlyIfSingleEx
-						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.getBal(a$^\prime$)=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
-						{b.getBal(a$^\prime$) < bal}
+				{\onlyIfSingleExAlt
+						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
+						{b.balance(a$^\prime$) < bal}
 						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a$^\prime$.password, amt, a$^\prime$, to}}$}
 						}
 					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
@@ -451,8 +447,8 @@ The next step is to construct proofs of necessary conditions for
 In order to prove the final result in the next section,
 we need to prove three per-step \Nec specifications: \prg{BalanceChange}, \prg{PasswordChange}, and \prg{PasswordLeak}.
 \begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
-BalanceChange $\triangleq$ from  a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal
-                 next b.getBal(a) < bal   onlyIf $\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$
+BalanceChange $\triangleq$ from  a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal
+                 next b.balance(a) < bal   onlyIf $\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$
                  
 PasswordChange $\triangleq$ from a:Account $\wedge$ a.password=p
                   next $\neg$ a.password != p   onlyIf $\calls{\_}{\prg{a}}{\prg{changePass}}{\prg{a.password}, \_}$
@@ -536,39 +532,39 @@ as \textbf{(Case A)}.
 \begin{proofexample}
 \proofsteps{\prg{NecessityBankSpec}}
 	{\proofstepwithrule{\onlyThroughExAlt
-				{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal}
-				{b.getBal(a) < bal}
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal}
+				{b.balance(a) < bal}
 				{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$}
 				}
 			{by \textsc{Changes} and \prg{BalanceChange}}}
 	{\proofstepwithrule{\onlyThroughExAlt
-				{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal}
-				{b.getBal(a) < bal}
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal}
+				{b.balance(a) < bal}
 				{$\exists$ o.[$\external{\prg{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a.password}}$]}
 				}
 			{by $\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Calls-Args}}}
 	{\proofstepwithrule{\onlyThroughExAlt
-				{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
-				{b.getBal(a) < bal}
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
 				{$\neg$$\wrapped{\prg{a.password}}$}
 				}
 			{by $\longrightarrow$}}
 	{\proofstepwithrule{\onlyThroughEx
-				{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
-				{b.getBal(a) < bal}
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
 				{$\neg$$\wrapped{\prg{a.password}}$ $\wedge$ (a.password=pwd $\vee$ a.password != pwd)}
 				}
 			{by $\longrightarrow$ and \textsc{Excluded Middle}}}
 	{\proofstepwithrule{\onlyThroughEx
-				{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
-				{b.getBal(a) < bal}
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
 				{($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password=pwd) $\vee$\\
 				($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password != pwd)}
 				}
 			{by $\longrightarrow$}}
 	{\proofstepwithrule{\onlyThroughExAlt
-				{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
-				{b.getBal(a) < bal}
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
 				{$\neg$$\wrapped{\prg{pwd}}$ $\vee$
 				a.password != pwd}
 				}
@@ -578,13 +574,13 @@ as \textbf{(Case A)}.
 	\proofsteps{Case A ($\neg\wrapped{\prg{pwd}}$)}
 			{\proofstepwithrule
 				{\onlyIfExAlt
-					{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
 					{$\neg$$\wrapped{\prg{pwd}}$}
 					{$\wrapped{\prg{pwd}}\ \vee \neg\wrapped{\prg{pwd}}$}
 					}
 				{by \textsc{If-}$\longrightarrow$ and \textsc{Excluded Middle}}}
 			{\proofstepwithrule{\onlyIfExAlt
-					{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
 					{$\neg$$\wrapped{\prg{pwd}}$}
 					{$\neg\wrapped{\prg{pwd}}$}
 					}
@@ -596,19 +592,19 @@ as \textbf{(Case A)}.
 	\begin{proofexample}
 	\proofsteps{Case B (\prg{a.password != pwd})}
 		{\proofstepwithrule{\onlyThroughExAlt
-					{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
 					{a.password != pwd}
 					{$\calls{\_}{\prg{a}}{\prg{changePass}}{\prg{pwd}, \_}$}
 					}
 				{by \textsc{Changes} and \textsc{PasswordChange}}}
 		{\proofstepwithrule{\onlyThroughExAlt
-					{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
 					{a.password != pwd}
 					{$\neg\wrapped{\prg{pwd}}$}
 					}
 				{by $\vee$E and \prg{PasswordLeak}}}
 		{\proofstepwithrule{\onlyIfExAlt
-					{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
 					{a.password != pwd}
 					{$\neg\wrapped{\prg{pwd}}$}
 					}
@@ -617,8 +613,8 @@ as \textbf{(Case A)}.
 	\end{proofexample}
 	}
 	{\proofstepwithrule{\onlyIfExAlt
-				{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ a.password=pwd}
-				{b.getBal(a) < bal}
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
 				{$\neg\wrapped{\prg{pwd}}$}
 				}
 			{by \textbf{Case A}, \textbf{Case B}, \textsc{If-}$\vee$I$_2$, and \textsc{If-}$\longrightarrow$}}
