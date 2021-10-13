@@ -752,8 +752,9 @@ Proof.
 Qed.
 
 Inductive classOf : config -> addr -> cls -> Prop :=
-| cls_of : forall χ ψ α o, χ α = Some o ->
-                      classOf (χ, ψ) α (cname o).
+| cls_of : forall χ ψ α o C, χ α = Some o ->
+                      cname o = C ->
+                      classOf (χ, ψ) α C.
 
 Definition Object := classID 0.
 

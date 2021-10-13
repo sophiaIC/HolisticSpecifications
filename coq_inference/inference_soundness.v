@@ -133,10 +133,144 @@ Module Soundness(L : LanguageDef).
     eapply pair_reductions_external_self; eauto.
   Qed.
 
-  Parameter class_cannot_change :
-    forall M M' σ1 σ2, M ⦂ M' ⦿ σ1 ⤳⋆ σ2 ->
-                  forall x C, M ◎ σ1 ⊨ a_class (e_ x) C ->
-                         M ◎ σ2 ⊨ a_class (e_ x) C.
+  Lemma reduction_class_cannot_change :
+    forall M σ σ', M ∙ σ ⤳ σ' ->
+              forall x C, classOf σ x C ->
+                     classOf σ' x C.
+  Proof.
+    intros M σ σ' Hred;
+      induction Hred;
+      intros;
+      try solve [match goal with
+                 | [H : classOf _ _ _ |- _] =>
+                   inversion H;
+                   subst
+                 end;
+                 eapply cls_of;
+                 eauto].
+
+    * match goal with
+      | [H : classOf _ _ _ |- _] =>
+        inversion H;
+          subst
+      end.
+      destruct (eq_dec x0 α);
+        subst.
+      ** simpl_crush.
+         match goal with
+         | [|- classOf (⟦ _ ↦ ?o' ⟧ _, _) _ _] =>
+           apply cls_of with (o:=o')
+         end;
+           simpl;
+           auto.
+         repeat map_rewrite.
+      ** apply cls_of with (o:=o0);
+           auto.
+         repeat map_rewrite.
+
+    * match goal with
+      | [H : classOf _ _ _ |- _] =>
+        inversion H;
+          subst
+      end.
+      inversion H0;
+        subst.
+      assert (inc α <> x);
+        [apply (max_χ_neq χ) with (b:=o); auto|].
+      apply cls_of with (o:=o);
+        auto.
+      repeat map_rewrite.
+
+  Qed.
+
+  Lemma internal_reductions_class_cannot_change :
+    forall M M' σ σ', M ⦂ M' ⦿ σ ⤳… σ' ->
+                 forall x C, classOf σ x C ->
+                        classOf σ' x C.
+  Proof.
+    intros M M' σ σ' Hred;
+      induction Hred;
+      intros.
+
+    * eapply reduction_class_cannot_change;
+        eauto.
+
+    * eapply reduction_class_cannot_change;
+        eauto.
+  Qed.
+
+  Lemma pair_reduction_class_cannot_change :
+    forall M M' σ σ', M ⦂ M' ⦿ σ ⤳ σ' ->
+                 forall x C, classOf σ x C ->
+                        classOf σ' x C.
+  Proof.
+    intros M M' σ σ' Hred;
+      induction Hred;
+      intros.
+
+    * eapply reduction_class_cannot_change;
+        eauto.
+      eapply internal_reductions_class_cannot_change;
+        eauto.
+
+    * eapply reduction_class_cannot_change;
+        eauto.
+  Qed.
+
+  Lemma pair_reductions_class_cannot_change :
+    forall M M' σ σ', M ⦂ M' ⦿ σ ⤳⋆ σ' ->
+                 forall x C, classOf σ x C ->
+                        classOf σ' x C.
+  Proof.
+    intros M M' σ σ' Hred;
+      induction Hred;
+      intros;
+      auto.
+
+    apply IHHred.
+    eapply pair_reduction_class_cannot_change;
+      eauto.
+  Qed.
+
+  Lemma classOf_is_sat_class :
+    forall M σ α C, classOf σ α C ->
+               M ◎ σ ⊨ (a_class (e_ α) C).
+  Proof.
+    intros.
+    inversion H;
+      subst.
+    apply sat_class.
+    apply has_cls with (α:=α);
+      auto with exp_db.
+  Qed.
+
+  Lemma sat_class_is_classOf :
+    forall M σ α C, M ◎ σ ⊨ (a_class (e_ α) C) ->
+               classOf σ α C.
+  Proof.
+    intros.
+    inversion H;
+      subst.
+    inversion H3;
+      subst.
+    inversion H0;
+      subst.
+    apply cls_of with (o:=o);
+      auto.
+  Qed.
+
+  Lemma pair_reductions_class_cannot_change_asrt :
+    forall M M' σ σ', M ⦂ M' ⦿ σ ⤳⋆ σ' ->
+                 forall x C, M ◎ σ ⊨ a_class (e_ x) C ->
+                        M ◎ σ' ⊨ a_class (e_ x) C.
+  Proof.
+    intros.
+    apply classOf_is_sat_class.
+    eapply pair_reductions_class_cannot_change;
+      eauto.
+    eapply sat_class_is_classOf;
+      eauto.
+  Qed.
 
   Parameter no_external_calls :
     forall M1 M2 M σ1 σ2, M1 ⋄ M2 ≜ M ->
@@ -838,7 +972,7 @@ Module Soundness(L : LanguageDef).
       apply nsat_implies_not_sat in H1.
       contradiction.
       apply nsat_not.
-      eapply class_cannot_change;
+      eapply pair_reductions_class_cannot_change_asrt;
         eauto.
 
     - necessity_soundness_simpl.
