@@ -122,6 +122,8 @@ Module Inference(L : LanguageDef).
   | if_ex2 : forall M A1 A2 A, (forall y, M ⊢ A1 to ([y /s 0] A2) onlyIf A) ->
                           M ⊢ A1 to (∃x.[A2]) onlyIf A
 
+  | if_class : forall M x C, M ⊢ (a_class (e_ x) C) to ¬ (a_class (e_ x) C) onlyIf (a_false)
+
 (*)  | if_all : forall M A1 A2 A, (forall y, M ⊢ A1 to A2 onlyIf ([y /s 0] A)) ->
                           M ⊢ A1 to A2 onlyIf (∀x.[A])*)
 

@@ -5,7 +5,7 @@ Require Import exp.
 Require Import defs.
 Require Import operational_semantics.
 Require Import List.
-Require Import chainmail.
+Require Import specw.
 Require Import hoare.
 Require Import inference.
 
@@ -32,7 +32,7 @@ Module Soundness(L : LanguageDef).
   Module L_Inference := Inference(L).
   Import L_Inference.
 
-  Open Scope chainmail_scope.
+  Open Scope specw_scope.
   Open Scope reduce_scope.
 
   Definition encapsulated (M : mdl)(A A' : asrt) :=
@@ -132,6 +132,11 @@ Module Soundness(L : LanguageDef).
     end.
     eapply pair_reductions_external_self; eauto.
   Qed.
+
+  Parameter class_cannot_change :
+    forall M M' σ1 σ2, M ⦂ M' ⦿ σ1 ⤳⋆ σ2 ->
+                  forall x C, M ◎ σ1 ⊨ a_class (e_ x) C ->
+                         M ◎ σ2 ⊨ a_class (e_ x) C.
 
   Parameter no_external_calls :
     forall M1 M2 M σ1 σ2, M1 ⋄ M2 ≜ M ->
@@ -317,6 +322,9 @@ Module Soundness(L : LanguageDef).
   Proof.
     intros; eapply prs_trans;
       eauto with reduce_db.
+    apply prs_refl.
+    eapply pair_reduction_end_external_self;
+      eauto.
   Qed.
 
   Hint Resolve pair_reduction_is_pair_reductions : reduce_db.
@@ -356,7 +364,10 @@ Module Soundness(L : LanguageDef).
         eapply prs_trans; eauto.
       + exists σ1, σ;
           repeat split;
-          auto with reduce_db chainmail_db.
+          auto with reduce_db specw_db.
+        apply prs_refl.
+        eapply pair_reduction_start_external_self;
+          eauto.
   Qed.
 
   (*  Lemma if1_classical*)
@@ -429,6 +440,7 @@ Module Soundness(L : LanguageDef).
   Proof.
     intros.
     destruct (calls_is_call M σ α m β H1).
+    apply hoare_soundness in H.
     inversion H;
       subst.
     specialize (H11 M' x σ σ').
@@ -619,6 +631,8 @@ Module Soundness(L : LanguageDef).
         exists σ2'; repeat split; auto
       end.
       apply prs_refl.
+      eapply pair_reductions_end_external_self;
+        eauto.
 
     - necessity_soundness_simpl.
       match goal with
@@ -637,14 +651,37 @@ Module Soundness(L : LanguageDef).
         repeat split; eauto with reduce_db.
 
     - necessity_soundness_simpl.
-      eauto with reduce_db.
+      exists σ1;
+        split;
+        auto.
+      apply prs_refl.
+      eapply pair_reductions_start_external_self;
+        eauto.
 
     - necessity_soundness_simpl.
       apply H in H3;
         auto.
-      destruct_exists_loo;
-        andDestruct.
-      necessity_soundness_simpl.
+      * destruct_exists_loo;
+          andDestruct.
+        necessity_soundness_simpl.
+        exists σ;
+          repeat split;
+          auto.
+        eapply entails_implies;
+          [ apply entails_inf_soundness
+           |
+           |apply Hb0];
+          eauto.
+      * eapply entails_implies;
+          [ apply entails_inf_soundness
+           |
+           |apply H1];
+          eauto.
+      * eapply entails_implies;
+          [ apply entails_inf_soundness
+           |
+           |apply H2];
+          eauto.
 
     - necessity_soundness_simpl.
       + apply H in H4;
@@ -737,18 +774,24 @@ Module Soundness(L : LanguageDef).
         auto.
 
     - necessity_soundness_simpl.
-      + apply H in H4;
-          auto;
-          destruct_exists_loo;
-          andDestruct;
-          necessity_soundness_simpl.
-      + apply H0 in H4;
-          auto;
-          a_prop;
-          auto.
-        destruct_exists_loo;
-          andDestruct.
-        a_prop.
+      unfold onlyif in H.
+      specialize (H M' σ1 σ2).
+      eapply entails_implies;
+        [apply entails_inf_soundness, e1
+        |apply H0
+        |].
+      apply H;
+        auto.
+      * eapply entails_implies;
+          [apply entails_inf_soundness
+          |
+          |apply H1];
+          eauto.
+      * eapply entails_implies;
+          [apply entails_inf_soundness
+          |
+          |apply H2];
+          eauto.
 
     - necessity_soundness_simpl.
       apply H in H4;
@@ -756,7 +799,19 @@ Module Soundness(L : LanguageDef).
         destruct_exists_loo;
         andDestruct;
         necessity_soundness_simpl.
-      apply H0 in Ha;
+      eapply H0 in H4;
+        auto;
+        repeat destruct_exists_loo;
+        andDestruct;
+        necessity_soundness_simpl;
+        auto.
+
+    - necessity_soundness_simpl.
+      apply H in H4;
+        auto;
+        destruct_exists_loo;
+        andDestruct;
+        necessity_soundness_simpl;
         auto.
 
     - necessity_soundness_simpl.
@@ -778,6 +833,13 @@ Module Soundness(L : LanguageDef).
       specialize (H x).
       necessity_soundness_simpl;
         auto.
+
+    - necessity_soundness_simpl.
+      apply nsat_implies_not_sat in H1.
+      contradiction.
+      apply nsat_not.
+      eapply class_cannot_change;
+        eauto.
 
     - necessity_soundness_simpl.
       apply classical_to_necessary in h.
@@ -800,64 +862,97 @@ Module Soundness(L : LanguageDef).
         auto.
 
     -  necessity_soundness_simpl.
-       assert (Ha : encapsulated M A1 (¬ A2));
+        assert (Ha : encapsulated M A1 (¬ A2));
          [apply encapsulation_soundness; auto|].
        unfold encapsulated in Ha.
        specialize (Ha M' σ1 σ2);
          repeat auto_specialize.
+       assert (Hdup : M ◎ σ1 ⊨ A1);
+         [auto|].
+       eapply entails_implies in H1;
+         [
+         |apply entails_inf_soundness, e0
+         |apply H0].
        apply nsat_not, sat_not in H2;
          auto_specialize;
          repeat destruct_exists_loo;
          a_prop.
+
        destruct internal_call
          with (M:=M)(A1:=A1)(A2:=¬ A2)
               (M':=M')(σ:=σ1)(σ':=σ2);
          auto.
+
        + apply encapsulation_soundness;
            auto.
-       + destruct_exists_loo;
-           andDestruct;
-           repeat destruct_exists_loo.
+
+       + destruct H4 as [C].
+         andDestruct.
+         destruct Hb0 as [a1].
+         destruct H4 as [m].
+         destruct H4 as [β].
          inversion Ha0;
            subst.
-         inversion H13;
-           subst.
-         destruct (exists_subst f0 0 (v_ α)) as [β Hex].
-         specialize (H (cname o0) x2 m0 x1 β).
-         repeat auto_specialize.
-         assert (m0 ∈ c_meths x2).
-         * assert (exists α1 α2, x0 = α1 /\ x = α2).
-           ** inversion H5;
+         destruct (exists_subst β 0 (v_ a1)) as [β' Hex].
+         specialize (H C x0 m x β').
+         auto_specialize.
+         assert (m ∈ c_meths x0).
+
+         * inversion H4;
+             subst.
+           inversion H9;
+             subst.
+           apply pair_reduction_implies_reduction in
+               H3.
+           repeat destruct_exists_loo;
+             andDestruct.
+           inversion Hb;
+             subst.
+           rewrite H12 in H20;
+             inversion H20;
+             subst.
+           simpl_crush.
+           inversion Ha1;
+             subst.
+           inversion H11;
+             subst.
+           simpl_crush.
+           inversion H13;
+             subst.
+           simpl_crush.
+           assert (Hrewrite : M (cname o1) = M0 (cname o1));
+             [|].
+           ** inversion Ha0;
                 subst.
-              inversion H16;
-                subst.
-              eauto.
-           ** repeat destruct_exists_loo;
-                andDestruct;
-                subst.
-              destruct (calls_method_exists) with
-                  (M:=M)(σ:=(χ,ψ))(α1:=α)(α2:=x1)
-                  (m:=m0)(β:=[v_ α /s 0] β)(C:=cname o0)(CDef:=x2)
-                  (M':=M')(σ':=σ2);
+              unfold extend.
+              destruct (partial_maps.partial_map_dec (cname o1) M) as [Hz|Hz];
                 auto.
+              *** destruct Hz as [Cz Hz];
+                    rewrite Hz;
+                    auto.
+
+              *** simpl_crush.
+
+           ** rewrite <- Hrewrite in *.
+              rewrite H5 in H23.
+              inversion H23;
+                subst.
               eauto.
+
          * auto_specialize.
-           unfold onlyif1 in *.
-           specialize (H M' (χ, ψ) σ2);
-             repeat auto_specialize.
-           apply H;
+           apply H in H3;
              auto.
-           ** a_prop;
-                auto.
-              apply sat_ex with (x:=v_ α).
-              subst_simpl.
-              rewrite <- Hex.
-              auto.
-           ** inversion H2;
-                subst.
-              inversion H17;
-                subst.
-              auto.
+           a_prop;
+             auto.
+           apply sat_ex with (x:=v_ a1).
+           subst_simpl;
+             subst;
+             auto.
+           inversion H2;
+             subst.
+           inversion H10;
+             subst.
+           auto.
 
     - necessity_soundness_simpl.
       unfold onlyif in *.
@@ -869,10 +964,22 @@ Module Soundness(L : LanguageDef).
         auto;
         necessity_soundness_simpl;
         auto.
-      apply pair_reduction_is_pair_reductions in H3.
-      necessity_soundness_simpl.
-      eapply entails_implies;
+      * eapply entails_implies;
+          [apply entails_inf_soundness, e1
+          |eauto
+          |apply H3].
+      * eapply entails_implies;
+          [apply entails_inf_soundness, e
+          |eauto
+          |apply H1].
+      * eapply entails_implies;
+          [apply entails_inf_soundness, e0
+          |eauto
+          |apply H2].
+        eapply arising_trans.
         eauto.
+        apply pair_reduction_is_pair_reductions in H3.
+        auto.
 
     - necessity_soundness_simpl.
 
@@ -919,6 +1026,8 @@ Module Soundness(L : LanguageDef).
         auto.
 
   Qed.
+
+
 
 
 End Soundness.

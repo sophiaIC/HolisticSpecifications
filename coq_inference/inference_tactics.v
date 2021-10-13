@@ -515,9 +515,7 @@ Module InferenceTactics(L : LanguageDef).
       ** apply H1.
       ** apply IHHeval2 with (n0:=n);
            auto.
-      ** apply IHHeval3 with (n:=n);
-           auto.
-         admit.
+      ** auto.
 
     * destruct e';
         inversion H;
@@ -559,25 +557,80 @@ Module InferenceTactics(L : LanguageDef).
     * destruct e';
         inversion H0;
         subst.
-      eapply v_nequals.
+      eapply v_lt.
       apply IHHeval1 with (n0:=n);
         auto.
       apply IHHeval2 with (n0:=n);
         auto.
       auto. 
+
+    * destruct e';
+        inversion H0;
+        subst.
+      eapply v_nlt.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+      auto.
+
+    * destruct e';
+        inversion H;
+        subst.
+      eapply v_plus.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+
+    * destruct e';
+        inversion H;
+        subst.
+      eapply v_minus.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+
+    * destruct e';
+        inversion H;
+        subst.
+      eapply v_mult.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+
+    * destruct e';
+        inversion H;
+        subst.
+      eapply v_div.
+      apply IHHeval1 with (n0:=n);
+        auto.
+      apply IHHeval2 with (n0:=n);
+        auto.
+
   Qed.
 
   Lemma eval_raise :
     forall M σ e v n, evaluate M σ e v <->
-                 evaluate M σ (e ↑ n) v.
+                      evaluate M σ (e ↑ n) v.
   Proof.
     split.
     * intro Heval.
       induction Heval;
         raise_simpl;
         eauto with exp_db.
-    * intros Heval.
-      induction Heval.
+
+    * generalize v n.
+      induction e;
+        intros;
+        auto;
+        try solve [raise_simpl;
+                   inversion H;
+                   subst;
+                   eauto with exp_db].
+
   Qed.
 
   Lemma exp_subst_raise_lt :
@@ -809,7 +862,14 @@ Module InferenceTactics(L : LanguageDef).
       rewrite raise_value_map;
         auto.
       intros.
-      admit.
+      simpl in H0.
+      destruct (args x0);
+        [|crush].
+      destruct (lcl n0);
+        [|crush].
+      inversion H0;
+        subst.
+      eauto.
 
     * inversion e;
         subst;
@@ -819,7 +879,7 @@ Module InferenceTactics(L : LanguageDef).
         subst;
         auto with specw_db.
 
-    * apply not_sat_implies_nsat;
+(*)    * apply not_sat_implies_nsat;
         intro Hcontra.
       match goal with
       | [H : _ ◎ _ ⊨ _ |- _] =>
@@ -828,10 +888,11 @@ Module InferenceTactics(L : LanguageDef).
       end.
       inversion H2;
         subst.
+      auto.*)
 
 
 
-  Qed.
+  Admitted.
 
   Lemma conseq_raise :
     (forall M σ A, M ◎ σ ⊨ A  -> forall n, M ◎ σ ⊨ (A ↑ n)).
@@ -1738,62 +1799,9 @@ Module InferenceTactics(L : LanguageDef).
     forall M x C, M ⊢ (a_class (e_ x) C) to1 ¬ (a_class (e_ x) C) onlyIf (a_false).
   Proof.
     intros.
-    apply if1_internal;
-      intros.
-
-    * specX_cnf_r.
-      introduce_existential_on_left y.
-      destruct (excluded_middle (exists β', ([y /s 0]β) = (fun v => Some (av_ v)) ∘ β')).
-
-      ** destruct_exists_loo;
-           subst.
-         match goal with
-         | [|- _ ⊢ (?Aa ∧ ?Ab ∧ ((av_ ?a) calls ?b ◌ ?c ⟨ [?d /s 0] ?e ⟩ )) to1 _ onlyIf _ ] =>
-           apply if1_conseq1 with (A1:= Aa ∧ Ab ∧ (∃x.[ (a♢ 0) calls b ◌ c ⟨ [ d /s 0 ] e ⟩]))
-         end.
-         extract y 0;
-           subst.
-         subst_simpl.
-         repeat spec_auto.
-         admit.
-(*)         match goal with
-         | [|- _ ⊢ ([?a /s 0] ((?Aa ∧ ?Ab) ∧ ((a♢ ?b) calls ?c ◌ ?d ⟨ ?e ⟩ ))) to1 _ onlyIf _ ] =>
-           apply if1_conseq1 with (A1:= Aa ∧ Ab ∧ (∃x.[ (a♢ 0) calls c ◌ d ⟨ e ⟩]))
-         end.*)
-
-         ***
-           subst_simpl;
-             repeat spec_auto.
-           repeat apply conseq_and2.
-(*)           apply if1_conseq1 with (A1:=∃).
-           apply if1_conseq1;
-             [|apply if1_classical with (β := x0);
-               auto].
-           apply hoare_consequence2 with (A2':=a_class (e_ x) C);
-             [|apply conseq_not_not2].
-           apply hoare_consequence1 with (A1':=a_class (e_ x) C);
-             [apply class_change_classical_spec|spec_auto].*)
-           admit.
-
-      ** admit.
-(*)        eapply if1_conseq1;
-           [|apply if1_start].
-         repeat apply conseq_and2.
-         apply calls_implies_concrete_parameters;
-           intros.
-         apply forall_neg_exists with (a:=β') in n;
-           auto.*)
-
-    * match goal with
-      | [|- enc _ _ (¬ (¬ ?Aa)) ] =>
-        apply enc_conseq2 with (A2:=Aa);
-          [apply conseq_not_not2|]
-      end.
-      apply enc_class.
-
-    * apply conseq_not_not2.
-
-  Admitted.
+    apply if1_if.
+    apply if_class.
+  Qed.
 
   Lemma by_changes_and_conseq :
     forall M A1 A2 A,

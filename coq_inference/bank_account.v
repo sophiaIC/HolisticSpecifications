@@ -1259,7 +1259,7 @@ Module BankAccount(L : LanguageDef).
           end
         end.
         apply and_comm.
-        apply and_distr_trans2.
+        apply and_distr_trans1.
         apply or_lr.
 
         * apply or_l.
@@ -1498,18 +1498,4 @@ Module BankAccount(L : LanguageDef).
 
   Close Scope specw_scope.
   Close Scope reduce_scope.
-End BankAccount.
-
-(*
-
-TODO:
-(1) Proof of soundness                                                              X
-(2) Add paragraph about if_ex1 and if_ex2 - the new rules in the paper              X
-(3) State of the coq proof                                                          X
-(4) Paragraph of Sandboxing paper                                                   X
-(5) Rename Chainmail -> SpecW and inference -> SpecX                                X
-(6) Prove admitted lemmas in inference_tactics.v or describe their admission        X
-(7) Write other half of authenticate or write why it is different
-(8) separate assumption of hoare logic from it's definition                         X
- *)
- 
+End BankAccount. 
