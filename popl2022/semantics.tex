@@ -2,14 +2,13 @@
 \label{s:semantics}
 
  
-In this section we define our \Nec specification language.
-We first define 
-an underlying programming language, \Loo  (\S \ref{sub:Loo}).
-We then  define an assertion language, \SpecO,  which can talk about
- the contents of the state, as well as about
-provenance, permission and control (\S \ref{sub:SpecO}).
-Finally, we define the syntax and semantics of \susan[]{our full language for writing}
-\Nec specifications  (\S \ref{s:holistic-guarantees}).
+In this section we define our \Nec specification language.  We first
+define an underlying programming language, \Loo (\S \ref{sub:Loo}).
+We then define an assertion language, \SpecO, which can talk about the
+contents of the state, as well as about provenance, permission and
+control (\S \ref{sub:SpecO}).  Finally, we define the syntax and
+semantics of \susan[]{our full language for writing} \Nec
+specifications (\S \ref{s:holistic-guarantees}).
 
 
 \subsection{\Loo}
@@ -653,26 +652,71 @@ is as follows:
 %\end{figure}
 
 
+\kjx{
+\subsubsection{Adaptation: viewing the future through the lens of the past.}
+%
+%
+Consider a specification that says for an account's balance to go down
+from 100 to 50, a \prg{transfer} method must be called on that account:}
+%% \onlyThrough{$\prg{a}:\prg{Account} \wedge \prg{a.balance}=100$}
+%%   {$\prg{a.balance}=50$}
+%%   {$\calls{\_}{a}{transfer}{\_,\_}$}
+%
+%%NecessityBankSpec  $\triangleq$
+%
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+                    from a:Account $\wedge$ a.balance == 100
+                        to a.balance == 50
+                        onlyIf $\calls{\_}{\prg{a}}{\prg{transfer}}{\_,\_}$
+\end{lstlisting}
+%
+%
+%
+%
+\kjx{
+This specifications can refers to three different program states: at
+the start when the balance is 100; and the end when it's 50; and
+somewhere between when \prg{transfer} is called.  For this
+specification to make sense, the bindings of variables like \prg{a}
+must refer to the same object in each state, in particular, bindings
+over the future states must refer to the same object as in the past
+state. (Because \Loo's objects' classes, types, or fields never change
+and are never deleted from the heap, we can at least be sure any
+object that exists in some state will still exist in all arising future
+states).
+}
 
-\subsubsection{Adapting the future for the present.}  
-\jm[I moved adaptation here because it didn't really fit in 3.2]{\Nec specifications may refer to program state at two, or even three different points in time, which introduces the 
-potential for variable name clashes between different program states.} 
-\jm[]{To deal with this} \sophiaPonder[new]{we introduce the adaptation operation $\adapt {\_} {\_}$ to allow us to
-``see a  state   through the lens of another state''.
-Assume, for example a state $\sigma_0$ which satisfies $A_0$ where $A_0 \triangleq \prg{a}:\prg{Account} \wedge \prg{a.balance}=100$.
-Assume that $\sigma_1$ is the result of executing $\prg{a.transfer(p,10)}$ where \prg{p} is \prg{a}'s password, while $\sigma_2$ is the result of executing $\prg{a=new Account}$. 
-We have that $\satisfiesA {...}{\sigma_0} {A_0}$, and 
-${...},{\sigma_1} \nvDash{A_0}$, and $ {...}{\sigma_2}\nvDash {A_0}$. However, the difference between
-the two executions is that the former modified the object at \prg{a}, and the latter did not; it only modified
-the mapping for variable \prg{a}. Therefore, we want to define an adaptation operator, such that
-${...},{\adapt {\sigma_1} {\sigma_0}} \nvDash{A_0}$ but $\satisfiesA {...}{\adapt {\sigma_2} {\sigma_0}} {A_0}$.}
-
-\sophiaPonder[]{In the definition below, the heap of $\adapt{\sigma'}{\sigma}$ is taken from
-$\sigma'$, and the stack is   mostly taken from $\sigma'$, except that the variable map of the
-top frame consists of the variable map of the top frame of $\sigma$, expanded
-with fresh variables ($\overline{v}$) 
-to correspond to the variables of the top frame of $\sigma'$, and in the continuation the free variables are renamed to $\overline{v}$.}
-
+\kjx{
+%potential for variable name clashes between different program states.
+  We deal with this via an \emph{adaptation} operator \cite{FASE}. We
+  write
+  $\adapt {\sigma'} {\sigma}$
+  to view a future state $\sigma'$ from the perspective of a current
+  (or past) state $\sigma$. 
+%  
+%  To deal with this we introduce the adaptation operation $\adapt {\_}
+%  {\_}$ to allow us to
+%  
+%``see a  state   through the lens of another state''.
+%Assume, for example a state $\sigma_0$ which satisfies $A_0$ where
+%$A_0 \triangleq \prg{a}:\prg{Account} \wedge \prg{a.balance}=100$. 
+%% Assume that $\sigma_1$ is the result of executing $\prg{a.transfer(p,10)}$ where \prg{p} is \prg{a}'s password, while $\sigma_2$ is the result of executing $\prg{a=new Account}$. 
+%% We have that $\satisfiesA {...}{\sigma_0} {A_0}$, and 
+%% ${...},{\sigma_1} \nvDash{A_0}$, and $ {...}{\sigma_2}\nvDash {A_0}$. However, the difference between
+%% the two executions is that the former modified the object at \prg{a}, and the latter did not; it only modified
+%% the mapping for variable \prg{a}. Therefore, we want to define an adaptation operator, such that
+%% ${...},{\adapt {\sigma_1} {\sigma_0}} \nvDash{A_0}$ but $\satisfiesA {...}{\adapt {\sigma_2} {\sigma_0}} {A_0}$.
+%
+%
+%
+Def.\ref{d:adapt} shows how $\adapt{\sigma'}{\sigma}$ constructs a new
+state, taking the heap and most of the stack from the future state 
+$\sigma'$. We replace the top frame's variable map 
+with the variable map from the top frame of the past state $\sigma$,
+avoiding name clashes by renaming the 
+variables in the top frame of $\sigma'$ with fresh variables
+($\overline{v}$) and renaming free variables in the continuation similarly.
+}
 
 %
 %
