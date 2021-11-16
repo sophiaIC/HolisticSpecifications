@@ -328,7 +328,7 @@ DAOSpec1 $\triangleq$ from d : DAO $\wedge$ p : Object
             to d.balance(p) > d.ether
             onlyIf false
 \end{lstlisting}
-
+	
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 DAOSpec2 $\triangleq$ from d : DAO $\wedge$ p : Object
             next d.balance(p) = m
@@ -376,6 +376,102 @@ that exposing \prg{s.treasure} in a single step requires a call \prg{s.take(s.se
 Then using \textsc{Changes} we raise the \emph{per-step} \Nec specification to
 a general \Nec specification for all executions. Finally it is enough to show 
 that it is not possible to expose \prg{s.secret} to get the desired result.
+
+\section{Crowdsale}
+
+\Loo lacks some of the features of solidity (in particular the ability to refer to the caller of a method), 
+and thus it is not possible to encode the Crowdsale example in \Loo. It is however
+possible to construct proofs of parts of the specifications in Crowdsale in \Nec if we imagine 
+a version of \Nec built upon Solidity.
+
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+R0 $\triangleq$ {e : Escrow $\wedge$ e.deposit(p) = m $\wedge$ e.balance = m + n}
+        e.claimRefund(p)
+      {e.deposit(p) = 0 $\wedge$ e.balance = n}
+\end{lstlisting}
+\prg{R0} can be encoded as a traditional Hoare specification.
+
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+R1 $\triangleq$ e : Escrow $\wedge$ e.State != SUCCESS $\longrightarrow$ sum(e.deposits) $\leq$ e.balance
+\end{lstlisting}
+\prg{R1} is encoded as a property that is true in all program states, and 
+as such falls under our assumed logic.
+
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+R2_1 $\triangleq$ from e : Escrow $\wedge$ _ calls e.withdraw()
+        to _ calls e.claimRefund(_)
+        onlyIf false
+\end{lstlisting}
+\begin{description}
+\item[1.] Prove that for all \prg{e : Escrow} and \prg{c : Crowdsale}, \prg{e.State}, \prg{c.closedTime}, \prg{c.raised}, and \prg{c.goal} are enclosed by the Crowdsale module.
+\item[2.] Prove for all methods \prg{m} in \prg{Crowdsale} and \prg{Escrow}, the goal is never changed:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+{c : Crowdsale $\wedge$ c.goal = x }
+c.m()
+{c.goal = x}
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+{e : Escrow $\wedge$ c : Crowdsale $\wedge$ c.goal = x }
+e.m()
+{c.goal = x}
+\end{lstlisting}
+\item[3.] Similarly to \textbf{2}, prove that \prg{closedTime} is never changed, and \prg{raised} is never decreased.
+\item[4.] From \textbf{2}, \textbf{3}, and \textsc{If1-Internal} we get that \prg{goal}, and \prg{closedTime} are never changed 
+and \prg{raised} is never decreased, due to \emph{any} single step computation. We subsequently extend this property to an arbitrary number of steps.
+\item[5.] Following similar reasoning as in the previous steps, we prove:
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+from e : Escrow $\wedge$ c : Crowdsale $\wedge$ e.State == SUCCESS $\wedge$ e.owner == c
+next e.State == REFUND
+onlyIf now > c.closeTime $\wedge$ c.raised < c.goal $\wedge$ _ calls c.close()
+\end{lstlisting}
+\item[6.] We then need to prove a slightly different property to show that if the escrow state is changed to \prg{REFUND},
+then \prg{c.raised} can never be equal to or greater than \prg{c.goal}.
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+from e : Escrow $\wedge$ c : Crowdsale $\wedge$ e.State == SUCCESS $\wedge$ e.owner == c
+to e.State == REFUND $\wedge$ c.raised >= c.goal
+onlyIf false
+\end{lstlisting}
+\item[7.] Prove
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+from e : Escrow $\wedge$ _ calls e.claimRefund(_)
+next true
+onlyIf e.State == REFUND
+\end{lstlisting}
+\item[8.] Prove
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+from e : Escrow $\wedge$ _ calls e.withdraw()
+next true
+onlyIf e.State == SUCCESS
+\end{lstlisting}
+\item[9.] Prove
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+from e : Escrow $\wedge$ e.State == REFUND
+next e.State != REFUND
+onlyIf false
+\end{lstlisting}
+\item[10.] extend \textbf{7} to get 
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+from e : Escrow $\wedge$ _ calls e.claimRefund(_)
+to true
+onlyIf e.State == REFUND
+\end{lstlisting}
+\end{description}
+\jm[]{Julian: This is interesting. It is quite an involved proof. If we can prove it, assuming some solidity language features,
+then it will show we can construct fairly complex proofs.}
+
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+R2_2 $\triangleq$ from e : Escrow $\wedge$ _ calls e.claimRefund(_)
+        to _ calls e.withdraw()
+        onlyIf false
+\end{lstlisting}
+Proof follows the similarly to \prg{R2\_1}
+
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+R3 $\triangleq$ from e : Escrow
+      to e.claimRefund(_)
+      onlyIf sum(e.deposits) < goal
+\end{lstlisting}
+
 
  
 
