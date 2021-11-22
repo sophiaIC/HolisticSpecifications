@@ -1,0 +1,87 @@
+A:
+from e : Escrow /\ e.state == WITHDRAWN
+to e.state == REFUNDED
+onlyIf false
+
+B:
+from e : Escrow /\ e.state == REFUNDED
+to e.state == WITHDRAWN
+onlyIf false
+
+-----------------------
+A
+-----------------------
+
+1:
+
+an escrow can only go from a non-refunded state to a refunded state
+by a call to claimRefund in a refundable state
+
+from e : Escrow /\ e.state != REFUNDED
+to e.state == REFUNDED
+onlyThrough _ calls e.claimRefund(_) /\ e.state == REFUNDABLE
+
+2:
+
+an escrow can only go from a non-refundable state to a refundable
+state by a call to close on the Crowdsale when the closing time has been reached
+and the goal has not been raised
+
+from e : Escrow /\ e.state != REFUNDABLE /\ c : Crowdsale /\ e.owner == c
+to e.state == REFUNDABLE
+onlyThrough _ calls c.close() /\ now > c.closeTime /\ c.raised < c.goal
+
+
+3:
+
+once the goal has been raised, it cannot fall below that goal
+
+from c : Crowdsale /\ c.raised >= c.goal
+to c.raised < c.goal
+onlyIf false
+
+4:
+
+from 2 & 3 we get that
+an escrow cannot go from a non-refunded, non-refundable state
+to a refunded state once the goal has been raised
+
+from e : Escrow /\ e.state != REFUNDABLE /\ e.state != REFUNDED /\
+     c : Crowdsale /\ e.owner == c /\ c.raised >= c.goal
+to e.state == REFUNDED
+onlyIf false
+
+5:
+
+a crowdsale/escrow can only go from the initial state to a withdrawn state
+through a state where the goal has been raised
+
+from e : Escrow /\ e.state == OPEN /\ c : Crowdsale /\ e.owner == c /\ now < c.closeTime /\ c.raised < c.goal
+to e.state == WITHDRAWN
+onlyThrough c.raised >= c.goal
+
+6:
+
+from 3 & 5 we get that if an escrow has been withdrawn, it follows that the goal
+has been raised:
+
+e : Escrow /\ c : Crowdsale /\ e.owner == c /\ e.state == WITHDRAWN -> c.raised >= c.goal
+
+(Julian: we do not have a rule that allows us to construct proofs as in 6, although
+such a rule could be designed to reason based on initial states of objects using
+Necessity and the constructor)
+
+7:
+
+4 & 6 give the desired result
+
+from c : Crowdsale /\ e : Escrow /\ e.state == WITHDRAWN
+to e.state == REFUNDED
+onlyIf False
+
+==========================================================================
+
+B:
+
+similar to A
+
