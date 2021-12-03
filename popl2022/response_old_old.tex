@@ -1,0 +1,141 @@
+We sincerely thank the reviewers for detailed and thoughtful comments, and for the opportunity this gives us to explain our work better
+
+***General Comments***
+
+**G1: external calls**
+
+Necessity does not --yet-- support calls of external methods from within internal modules. This is, indeed, a limitation, but it is not uncommon in the related literature. For example, VerX [Permenev et al] work on effectively call-back free contracts, while and [Grossman 2018] and  [Albert 2020] on drastically restricting the effect of a callback on a contract. Therefore, we argue that a treatment of  external calls in Necessity would bring some further complexity, and would  detract from the main focus of our paper.  
+
+We cannot promise a full treatment of external calls by end February. But we can share out current thinking:  As a first approach, we will require that the arguments to external calls do not include internal objects, except for the receiver and parameters (thus ensuring that external accessibility of internal methods does not increase); we would rely on the classical pre- and post- conditions of the internal methods -- as we currently do. As a more advanced approach, we will develop extensions to classical Hoare Logics, which would allow us to reason about points in the code where external calls are being made. This would be the first time we could be inspecting the code in the bodies of the functions.
+
+[Grossman 2018] Shelly Grossman, Ittai Abraham, Guy Golan-Gueta, Yan Michalevsky, Noam Rinetzky, Mooly Sagiv, and Yoni Zohar. Online detection of effectively callback free objects with applications to smart contracts. In Symposium on Principles of Programming Languages, POPL. ACM, 2018.
+
+[Albert 2020] Elvira Albert, Shelly Grossman, Noam Rinetzky, Clara Rodríguez-Núñez, Albert Rubio, and Mooly Sagiv. 2020. Taming Callbacks for Smart Contract Modularity. Proc. ACM Program. Lang. 4, OOPSLA, Article 209, 2020
+
+
+**G2:  overlap with Chainmail**
+
+It is true that some of the Necessity definitions, and their encodings, are inspired by the work of FASE2020, 
+and as such there may be some similarities between the two formalisms, but these similarities do not extend to the contributions of our paper: the Necessity language and proof system, 
+the soundness result, and the example of the proof system. Where there are similarities, these either have been explicitly stated in the paper (eg. permission, provenance, and control),
+or are common coq idioms (eg. variable substitution).
+SD: We both use the Chippala's library we do not share further code. 
+
+
+** G3: The Definition of $\triangle$ -- adaptation **
+
+Adaptation is indeed an important definition to the paper, but is not a central contribution. We propose the following ammended explanation to clarify both it's importance, and it's meaning:
+
+``We deal with this via an \emph{adaptation} operator \cite{FASE}. We
+  write
+  $\adapt {\sigma'} {\sigma}$
+  to view a future state $\sigma'$ from the perspective of a current
+  (or past) state $\sigma$.
+
+Adaptation is a variable renaming operator that ensures that variable names 
+used at one point in the execution refer to the same object at a future point in the execution. 
+This is necessary as, within assertions, objects are referenced using variable names, and not unique and immutable identifiers.
+During program execution variables may be either overwritten or lost from scope, and as such using the same variable name at 
+different points in execution has little meaning unless there is a way to rewrite variables so that their intended meaning can 
+be preserved. Adapting one program state with a second allows variables in the second state to point to the same object in the first.
+
+Def.\ref{d:adapt} shows how $\adapt{\sigma'}{\sigma}$, constructs a new
+state, taking the heap and most of the stack from the future state 
+$\sigma'$. We replace the top frame's variable map 
+with the variable map from the top frame of the past state $\sigma$,
+avoiding name clashes by renaming the 
+variables in the top frame of $\sigma'$ with fresh variables
+($\overline{v}$) and renaming free variables in the continuation similarly.''
+
+
+
+%Def.\ref{d:adapt} shows how $\adapt{\sigma'}{\sigma}$ constructs a new
+%state, taking the heap and most of the stack from the future state 
+%$\sigma'$. We replace the top frame's variable map 
+%with the variable map from the top frame of the past state $\sigma$,
+%avoiding name clashes by renaming the 
+%variables in the top frame of $\sigma'$ with fresh variables
+%($\overline{v}$) and renaming free variables in the continuation similarly.''
+
+
+** G4: Advantage over VerX/Chainmail (rev4) **
+
+
+** G5: Is access deep? **
+
+Access is not deep, and only refers to objects that an object has direct access to via a field or within the context of the current scope. If access were defined transitively, then
+many objects would be defined as having access that they could not gain a direct reference to. As an example, an object may have access to an account, but it could never leverage
+that access to gain access to the password.
+
+%Access is not deep, and only refers to objects that an object has direct access to via a field or within the context of the current scope. This does not pose a question of soundness for
+%Necessity, as Necessity is only concerned with the necessary preconditions required for program state to change, and in the case of access what are the necessary preconditions to 
+%gaining access. The underlying language upon which Necessity is presented restricts field reads and writes to objects of the containing class. This means that field reads (and writes) 
+%are necessarily encapsulated by the internal module, that is, internal module code is required to read internal module fields. Fundamentally this is a question of encapsulation and the 
+%semantics of the language, and not of Necessity. If the semantics of TooL where such that objects were generally able to gain access to the fields of their fields, then access to internally 
+%enclosed objects would not be said to be encapsulated, and If1-Inside would not be applicable when constructing a proof around such access.
+
+ 
+
+*** Proposed Changes ***
+
+We thank the reviewers for the proposed improvements, which we plan implement
+
+C0: external
+
+C1: Move the clarifying examples to section 2, and explain better
+ie write the explanations
+
+C2: Rename Mod1, Mod2, Mod3 to Mod_{basic}, ....
+
+C3: move the definition of "inside" to ...
+
+C4: make consistent use of Section/Section
+
+C5: encapsulation -- better explanation
+
+Assertion encapsulation captures a property that is essential to proofs of safety in the open world: certain operations may only occur within as the result of internal module method calls, thus, the satisfaction of properties that depend on such operations may only change as a result of internal module code. The simplest such operation in a Java-like language would be the mutation of a field of an object of an internal class. Satisfaction of assertions about the value of such a field may only change as a result of internal code being executed. Assertions are therefore not "encapsulated" by some arbitrary code, but rather by the internal module, and thus only programs that contain method calls to the internal module are able to invalidate those assertions. In the reviewer's example where C' = C; x := x, if C contains internal method calls that invalidate some assertion A, then so does C'.
+ 
+C6: adaptation -- better explanation
+
+We propose to adopt the explanations given in G
+
+C7: change the bank account example to be the same?
+ 
+ We chose the more complex form of the bank account example in order to show case some of the features of Necessity, specifically:
+1) The ability to reason about ghost fields, and not just simply values within fields
+2) More complex data structures which allows for more potentially complex forms of emergent behavior
+
+The reviewers make a good point that this example is potentially too complex for an initial proof example, as such we will 
+replace this example with the simpler version, and mechanise that proof using Coq by 11 February. We will retain the existing proof as part 
+of the appendix for the purposes of exhibiting the more sophisticated aspects of Necessity.
+ 
+C8: make the section 2.4 top-down?
+
+C9: emergent behaviour 
+
+ The reviewer correctly identifies that we did not sufficiently indicate what we meant by ``emergent behavior''. We propose the follow change 
+to Section 1, where ``emergent behavior'' is first mentioned:
+
+``(S2) does not take account of the module's \emph{emergent behavior}. That is, (S2) does not consider the behavior that emerges from the interaction between the 
+\texttt{transfer} method, and the other methods of the bank module. What if the module leaks the password?''
+
+ 
+C10: and we will implement
+ 
+
+
+*** Detailed Response -- per reviewer ***
+
+Reviewer A:
+
+Reviewer B:
+
+Reviewer C:
+
+Reviewer D:
+
+Bibliography
+
+
+
+QUESTIONS for us
