@@ -36,7 +36,11 @@ Novelty {#novelty .unnumbered}
 
 Our Necessity operators are novel and we do not believe that our
 operator can be encoded into either VerX or Chainmail.\[Susan: is this
-true?\]
+true?\] Neither VerX, or Chainmail, are able to refer to two program
+states in an execution, and then another third program state that lies
+between them. This is a core component of necessary preconditions,
+describing necessary intermediate operations or program states required
+to achieve specific outcomes.
 
 Whereas both VerX and Necessity deal with protecting code from unknown
 code, VerX is Smart Contracts specific whereas Necessity is not domain
@@ -168,12 +172,19 @@ is, (S2) does not consider the behaviour that emerges from the
 interaction between the `transfer` method, and the other methods of the
 bank module. What if the module leaks the password?"
 
-#### Bank Account example
+#### **Bank Account example**
 
 The formal proof of the bank account example is very heavy weight given
 how straightforward the introductory example is. This is because we
-didn't prove the existing bank account example but did a more
-complicated one to show off more features of Necessity.
+wished to show off more sophisticated features of Necessity:
+
+-   Proofs involving complex properties expressed using ghost fields,
+    and not just proofs on field values.
+
+-   Proofs of a more complex module and data structures, where emergent
+    behavior arises across multiple classes. The ability to write proofs
+    of an entire module with many interoperating classes is an important
+    strength of Necessity.
 
 Change List
 ===========
@@ -224,6 +235,61 @@ We will move the clarifying examples to Section 2.
 The largest piece of work is the proof and that shouldn't take more than
 a week so we believe that we can make substantial improvements in
 presentation before mid January.
+
+### Reviewer A {#reviewer-a .unnumbered}
+
+-   Streamline Introduction: we will move the related work to the
+    related work section
+
+-   Rework Section 2 to be clearer: we will make the outline of the
+    proof structure in Section 2 clearer, at a higher level, and more
+    concise.
+
+-   We will change the order of $M$ and $M'$ in the definition of
+    Arising.
+
+-   We will make clear which state is the original state.
+
+-   We will clarify Def. 3.9, provide a clearer description and
+    definition.
+
+-   Ensure consistent usage of Section vs. section.
+
+### Reviewer B {#reviewer-b .unnumbered}
+
+-   Fix the flow of the paper. Present a "consistent high-level story"
+
+-   Clarify the differences between Necessity and Chainmail and VerX.
+
+-   Be more explicit about the reasons and justifications for
+    restricting external method calls
+
+-   Provide better names for Mod1, Mod2, Mod3, etc
+
+-   Emphasize the separation of Necessity from the inspection of code.
+
+-   Clarify why shallow access is necessary
+
+-   Restate NecessityBankSpec in 3.4.1
+
+-   Provide better justification, explanation, and intuition for the
+    example specifications in 3.4
+
+-   Include a brief description of the expressiveness earlier in the
+    paper than 3.4.3
+
+-   Explain why the restriction on return values is sufficient in
+    If1-Inside
+
+### Reviewer C {#reviewer-c .unnumbered}
+
+-   Rephrase the liveness and safety verification in the Section 1.
+
+-   Rewrite Section 2.4. (Julian: Reviewer B appreciated this, but
+    neither C nor A did)
+
+-   Replace Section 5 with the simpler, original bank account example,
+    and move the current one to the appendix.
 
 Response
 ========
@@ -284,10 +350,15 @@ in sequence.*
 
 *176-181: Is what you describe here really inherent to your necessity
 logic? Isn't it rather a consequence of - where - you check the validity
-of your specifications?*
+of your specifications?* **(Julian: I'm not entirely sure what to put
+here.)**
 
 *182: I find the term \"not monotonic\" misplaced here. Isn't it obvious
-that adding more behavior can invalidate more stuff?*
+that adding more behavior can invalidate more stuff?* **Perhaps this is
+obvious, although it is an important point, and one that is not true of
+many existing specification languages where specifications are
+restricted to a single function. Proofs in Necessity take a holistic
+view of a module.**
 
 *192: One could draw a comparison to loop invariants: While pushing a
 loop invariant through a loop body, the invariant can (and likely will)
@@ -298,7 +369,11 @@ before and after the call.*
 *199: \"the executing object (this) is always external\". Without your
 formal semantics presented later, this sentence (snippet) is very
 confusing. Intuitively, \"this\" is always an internal thing because it
-is the name that an objects gives to itself, internally.*
+is the name that an objects gives to itself, internally.* **Yes, `this`
+is always internal to the executing object, however, in this paper, when
+we use the words "internal" and "external", we are generally referring
+"internal" or "external" to a specific module. We will amend the paper
+to make this clearer.**
 
 *Section 2.4, I must say, I find extremely tedious and very difficult to
 follow. I firmly believe that this can be streamlined to that one must
@@ -307,12 +382,16 @@ explained later. E.g. it is not clear (and also does not become apparent
 from the explanations in Sec. 2.4) why one needs to construct from
 'per-method conditions' the 'single-step conditions'. And is this really
 important in order to get an overview of the approach that the paper is
-taking?*
+taking?* **Julian: thoughts?**
 
 *In 206, it is again stated that an assertion A, i.e. a logical formula
 A, can be encapsulated by a module. Later, in l.211, it is said that
 'balance' is encapsulated. But balance is a term, not a formula. What
-does it mean to invalidate a term? I don't get it.*
+does it mean to invalidate a term? I don't get it.* **As in other
+specification languages, expression (including both fields and ghost
+fields) are themselves assertions. While it is true that it usually
+would not make sense to say that the field `balance`, it's equality to
+some value could be invalidated.**
 
 *I214.5: \"Per-method conditions are necessary conditions for given
 effect and given single, specified, method call.\" I do not understand
@@ -325,34 +404,52 @@ bodies\" This makes absolutely no sense to me. How can I infer - or
 more: 'prove' - anything about an object C (the code) without looking at
 C? This needs an explanation. In the explanation that follows you
 mention pre and postconditions of methods, but how can I prove pre- and
-postconditions of methods, if I cannot look at the methods?*
+postconditions of methods, if I cannot look at the methods?* **Necessity
+proofs do not inspect method bodies. Necessity does rely on traditional
+pre- and post- conditions which, as you say, does rely on inspecting
+code. Pre- and post- conditions are an area that is well researched, and
+thus such specifications can be outsourced to existing logics and tools.
+In fact Necessity is parametric with such a system, and does not impose
+further code inspection.**
 
-*253.5: What is an \"unsurprising\" language?*
+*253.5: What is an \"unsurprising\" language?* **TooL is a very simple
+imperative, class based, object oriented language, whose semantics
+should not surprise anyone.**
 
 *I263 following: At this point I was wondering, which of Mod1, Mod2,
 Mod3 is internal, what is external? It would be good to refer back to
 that example and point out to the reader what is supposed to be internal
-and what external.*
+and what external.* **Necessity is a specification for programs in the
+open world. In this paper we characterize the "internal" as the module
+we are specifying, and the "external" as the unknown open world. Under
+this characterization, `Mod1`, `Mod2`, and `Mod3` all represent
+different implementation of a bank account being specified, and thus are
+all "internal" with respect to the open world.**
 
 *IDef. 3.2: Why would one write Arising(M, Y, sigma) iff \... Y; M,
 sigma-0 \... Why flip the order of M and Y? Does that not cause
 unnecessary confusion? Or is there a good reason to flip the order?*
+**This is a good point. We will make this change.**
 
-*I 349-350 why should x be fresh in sigma?*
+*I 349-350 why should x be fresh in sigma?* **x is fresh in sigma
+because it is used to refer to the object being quantified. It is alpha
+(the location in the heap) that should not be fresh in sigma.**
 
 *I393-394: \"If an arising state \... then the original state must have
 \...\" What is the \"original state\"? The arising one? Or the initial
 state that arises from the definition of arising states? If it is the
 former, I'd suggest \"If an arising state $\sigma$ \... then $\sigma$
-must have\...\".*
+must have\...\".* **Yes, the original state is arising. We will make
+this change and clarify this in the text.**
 
 *Def. 3.8: It would be good to ostentatiously clarify that necessity
 specifications cannot nest, i.e. the nonterminal S does not appear on
 the right-hand side of the grammar. Only nonterminals A and those come
-from the language Assert, I suppose.*
+from the language Assert, I suppose.* **Yes, that is correct. We will
+make this change to the text.**
 
 *417: It is undefined what - means. There exists a value? For any value?
-It depends on the formula?*
+It depends on the formula?* **Yes, \_ means for any value.**
 
 *Def. 3.9: Again, to me this is absolutely central. It definitely needs
 - more- explanations and a lot of intuition. See also above.
@@ -368,10 +465,15 @@ the definition $\triangleleft$ is described/explained in not enough
 detail (for me). But I also firmly believe that the definition of the
 semantics of the necessity modalities deserves to be provided some
 intuition. In particular an intuition of how $\triangleleft$ defines
-these semantics.*
+these semantics.* **We refer the reviewer to G for our explanation of
+adaptation.**
 
 *482: I believe that it deserves an explenation why no module satisfies
-NecessityBankSpec-c. It is not obvious to me.*
+NecessityBankSpec-c. It is not obvious to me.* **For an account's
+balance to change after some number of execution steps, `a.transfer`
+must be called in some intermediate state. It is not necessary that that
+call to `a.transfer` must occur in the first program state of that chain
+(as implied by OnlyIf).**
 
 *Sec. 3.4.2: This example is completely inaccessible and handwavy to
 me.*
@@ -380,7 +482,8 @@ me.*
 here. Why almost? Because here there is the half-sentence \"we have to
 interpret one assertion in two different states\" that provides a little
 bit of intuition on how $\triangleleft$ helps in this definition. But it
-is not enough intuition for me.*
+is not enough intuition for me.* **We refer the reviewer to G for our
+explanation of adaptation.**
 
 Reviewer 30B {#reviewer-30b .unnumbered}
 ------------
@@ -395,30 +498,34 @@ authors go straight from saying that there are three new operators to a
 lot of detail on the first of those. The paper here would flow better if
 the authors gave an informal description of all three operators (to give
 the reader an intuition for what's coming next) rather than going
-straight into gory detail.
+straight into gory detail. **We will rework the Introduction to be less
+technical, and better introduce the concepts within the paper.**
 
 99: the authors state that necessity operators are second-class, but
 don't really justify this choice or explore its consequences, and it is
 never returned to. I'm not sure if the necessity operators being
 second-class is actually the right choice, and especially at this point
 in the paper, where I as a reader don't yet fully understand them, this
-statement throws me off.
+statement throws me off. **Julian: thoughts?**
 
 200: when you make an assumption like this one, please justify it to the
 reader rather than simply saying "Note \..." Especially for such an
 important assumption, as this one, it is unsatisfying as a reader to be
-left wondering why you have done this.
+left wondering why you have done this. **We refer the reviewer to G for
+our explanation of our choice around external method calls.**
 
 205: you refer to Mod1, Mod2, Mod3, etc. many times, but their names are
 not descriptive at all. This was the point where I got mildly annoyed at
 having to go back and check which implementation Mod3 was. I suggest
 renaming the modules to something that describes their properties, e.g.
-Mod3 could become "SafePwdSet" or something like that.
+Mod3 could become "SafePwdSet" or something like that. **We will make
+this change.**
 
 243: you might consider emphasizing this point more: it is a strength of
 your approach that it doesn't make many assumptions about how these
 annotations are checked, and so is compatible with lots of existing
-work.
+work. **Yes, we will highlight this more when we rework the presentation
+of the paper.**
 
 335: thanks for defining your shorthands rather than just using them and
 making us guess what they mean :)
@@ -436,7 +543,8 @@ defined to be false in a case like the one I mentioned above? If so,
 that seems to me like a "soundness" problem in the sense that it
 violates what I as a specification writer would expect that
 specification to mean, and therefore might result in
-incorrectly-specified code.
+incorrectly-specified code. **We refer the reviewer to G for our
+explanation of access.**
 
 382: inside is a very useful concept. I might consider mentioning it
 earlier, perhaps by working it into one of the examples in section 2.
@@ -448,10 +556,12 @@ section rather than as a subsection, with a short justification saying
 something like "we now present some examples to give the reader an idea
 of the expressiveness of our approach"; you didn't explain that that was
 the goal of the example section in this draft until the very end of the
-section!
+section! **Thank you for pointing this out. We will amend this in our
+presentation rework.**
 
 463: I suggest re-stating the original NecessityBankSpec here so that
-it's easier to compare with the a-d variations.
+it's easier to compare with the a-d variations. **We will make this
+change.**
 
 486: please explain what you want the reader to take away from these
 examples! Why is it important that e.g. both Mod2 and Mod3 satisfy b and
@@ -465,42 +575,35 @@ ensure that objects of a confined type only must never be returned from
 method bodies. What if a confined type is accessible from the field of a
 returned object? Maybe your type system forbids this (I expect that it
 does!), but the presentation of it here is a bit confusing, perhaps just
-because you've given so few details.
+because you've given so few details. **Indeed, the type system does
+forbid it. We will add clarity here.**
 
 619: can you comment on how hard it would be to modify your system to
 support this? It seems like it is important if you want to use this
-system to validate a realistic program.
+system to validate a realistic program. **It is hard to say how
+difficult it would be to add this, but it would likely require some work
+developing aspects of a more traditional specification language to
+detect and specify certain kinds of external method calls. It is notable
+that other work in the area makes the assumption that methods are
+"effectively call-back free" [@Permenev]. This would likely guide our
+approach as a starting point.**
 
 819: it is not easy to see this unless you introduce another data
 structure, like a list, to hold the arbitrarily-many accounts. Since you
 don't allow internal code to call into external libraries, you'd have to
 define the list yourself, so this would actually be quite the project.
+**Technically the restriction does not allow calls to unknown, and thus
+unspecifiable, code. If the List library code was known, and specifiable
+then we could extend the example. Even if we did allow for external
+method calls, it would not be possible to write specifications about
+those calls as the effects of such a call would be unknown.**
 
 1036-1042: there seems to be a lot of overlap between the present work
 and Chainmail. You might want to spend another sentence or two here
-discussing the differences.
+discussing the differences. **We will add this to our revision.**
 
 Reviewer 30C {#reviewer-30c .unnumbered}
 ------------
-
-Section 1: I'm not sure if paraphrasing liveness and safety is a good
-idea because liveness/safety verification in the traditional sense is
-also reasoning about sufficient conditions for good things to eventually
-happen or for bad things to never happen. The point here is the
-distinction between sufficient and necessary conditions about the
-behavior of a program.
-
-Section 2.4 doesn't work very well (at least for a first reading)
-because it is written in a bottom-up manner. I had no idea why assertion
-encapsulation is the first step because I didn't have a big picture how
-necessity specification might be verified. Explaining backwards from
-Part 4 to 1 may work better (but I'm not sure\...).
-
-It seem to me that it can be hard to show assertion encapsulation
-because of universal quantification over all external modules and
-states. The existence of a type system and a proof system for assertion
-encapusulation, which is discussed in 4.1.3, is nice and plausible but I
-find the discussion on Enc(A) handwaving and the
 
 Section 1: I'm not sure if paraphrasing liveness and safety is a good
 idea because liveness/safety verification in the traditional sense is
