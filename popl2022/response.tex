@@ -96,7 +96,36 @@ pages="420--440",
 \begin{document}
 \maketitle
 \section{Overview}
-We sincerely thank the reviewers for detailed and thoughtful comments, and for the opportunity this gives us to explain our work better. We feel the concerns fall into three areas. The technical concern is that Necessity does not yet support calls of external methods from within internal modules. There is a level of contribution concern as to how different it is from Chainmail and VerX. Finally, there are several areas where the presentation of our ideas should be made clearer. The changes we describe in this response could comfortably be made before the February deadline.
+We sincerely thank the reviewers for detailed and thoughtful comments, and for the opportunity this gives us to explain our work better. 
+
+
+
+\subsection*{The fundamental argument}
+
+Our fundamental argument is that \prg{Mod1} and \prg{Mod3} are "fit for purpose", while \prg{Mod2} is not -- hope all reviewers agree on that.
+Moreover, that (S2), i.e. an account's balance does not decrease unless transfer was called with the correct password, is satisfied by all three modules; namely, (S3) does not preclude \prg{Mod2}, which allows the password to be overwritten. On the other hand, (S3), ie that the balance of an account does not decrease ever in the future unless some external object has access to the account's current password, is satisfied by the "good" modules \prg{Mod1} and \prg{Mod3} and not by the "bad" module \prg{Mod2}. This is, we argue, sufficient motivation to study Necessity specifications. 
+
+Reviewer D argues further that (S3) is not strong enough when we operate in an environment where an external module has access to the password. Indeed, in such a case, all bets are off. However, (S3) does guarantee that if the account is passed to a context where no external object has access to the password, then the balance will not be modified. Namely, the "active" external objects  in the context of the callee are a subset of the "active" external objects  in the context of the caller.  In further work, we plan to extend Hoare logics, so as to make this guarantee formal.
+
+There are some subtle distinctions between Necessity specifications, which we summarized in section 3.4.1, but should explain in more detail. 
+
+In particular, \prg{NecessityBankSpec}$_c$, defined as 
+\texttt{from a:Account $\wedge$ a.balance==bal to a.balance < bal
+ onlyIf $\exists$ o.[$\langle$o external$\rangle$ $\wedge$ $\langle$o calls a.transfer(\_, \_, \_)$\rangle$]}
+, mandates that if the balance should decrease after any number of execution steps, then the \emph{first} step was a call  to \prg{transfer}. This is clearly not satisfied by \emph{any} of the three modules; consider, as a counterexample, the code \prg{b=new Account; c=new Accoiunt; x=x+1; a.transfer(...); c=new Account}. This code \emph{does} call \prg{transfer}, but not in the first step.
+
+On the other hand,   \prg{NecessityBankSpec}$_d$, defined as 
+\texttt{
+from a:Account $\wedge$ a.balance==bal to a.balance < bal
+onlyThrough $\exists$ o.[$\langle$o external$\rangle$ $\wedge$ $\langle$o calls a.transfer(\_, \_, \_)$\rangle$]
+}, is slightly weaker, in that it mandates that if the balance should decrease after \emph{any} number of execution steps, then the \emph{some} step was a call  to \prg{transfer}.  
+
+Finally, we could add a further variation, \prg{NecessityBankSpec}$_e$, defined as 
+\texttt{from a:Account $\wedge$ a.balance==bal next a.balance < bal
+ onlyIf $\exists$ o.[$\langle$o external$\rangle$ $\wedge$ $\langle$o calls a.transfer(\_, \_, \_)$\rangle$]}
+  PLEASE write this out, which would mandate  that if the balance should decrease after \emph{one} execution step, then that step was a call  to \prg{transfer} and the right password was passed. This is satisfied by all three modules, and is, in fact, the formal description of $(S2)$.
+
+We feel the concerns fall into three areas. The technical concern is that Necessity does not yet support calls of external methods from within internal modules. There is a level of contribution concern as to how different it is from Chainmail and VerX. Finally, there are several areas where the presentation of our ideas should be made clearer. The changes we describe in this response could comfortably be made before the February deadline.
 
 \subsection*{External calls}
 
@@ -104,7 +133,7 @@ Necessity does not --yet-- support calls of external methods from within interna
 
 \subsection*{Novelty}
 
-Our Necessity operators are novel and we do not believe that our {\tt{onlyThrough}} operator can be encoded into either VerX or Chainmail.[Susan: is this true?] Neither VerX, or Chainmail, are able to refer to two program states in an execution, and then another third program state that lies between them. This is a core component of necessary preconditions, describing necessary intermediate operations or program states required to achieve specific outcomes.
+Our Necessity operators are novel and we do not believe that our {\tt{onlyThrough}} operator can be encoded into either VerX or Chainmail, or using traditional temporal logic operators. Neither VerX, Chainmail, or temporal logic operators, are able to refer to two program states in an execution, and then another third program state that lies between them. This is a core component of necessary preconditions, describing necessary intermediate operations or program states required to achieve specific outcomes.
 
 Whereas both VerX and Necessity deal with protecting code from unknown code, VerX is Smart Contracts specific whereas Necessity is not domain specific.  The technology used is also different: VerX is a model checker whereas Necessity programs are proven using Coq.
 
@@ -116,21 +145,6 @@ the soundness result, and the proven examples have no equivalents in Chainmail.
 % of the proof system. 
 %Where there are similarities, these either have been explicitly stated in the paper (eg. permission, provenance, and control), or are common coq idioms (eg. variable substitution).
 For the Coq code both Chainmail and Necessity use Chlipala's CpdtTactics library~\citep{Chlipala}, but do not share any other code.
-
-\subsection*{The fundamental argument}
-
-Our fundamental argument is that \prg{Mod1} and \prg{Mod3} are "fit for purpose", while \prg{Mod2} is not -- hope all reviewers agree on that.
-Moreover, that (S2), i.e. an account's balance does not decrease unless transfer was called with the correct password, is satisfied by all three modules; namely, (S3) does not preclude \prg{Mod2}, which allows the password to be overwritten. On the other hand, (S3), ie that the balance of an account does not decrease ever in the future unless some external object has access to the account's current password, is satisfied by the "good" modules \prg{Mod1} and \prg{Mod3} and not by the "bad" module \prg{Mod2}. This is, we argue, sufficient motivation to study Necessity specifications. 
-
-Reviewer D argues further that (S3) is not strong enough when we operate in an environment where an external module has access to the password. Indeed, in such a case, all bets are off. However, (S3) does guarantee that if the account is passed to a context where no external object has access to the password, then the balance will not be modified. Namely, the "active" external objects  in the context of the callee are a subset of the "active" external objects  in the context of the caller.  In further work, we plan to extend Hoare logics, so as to make this guarantee formal.
-
-There are some subtle distinctions between Necessity specifications, which we summarized in section 3.4.1, but should explain in more detail. 
-
-In particular, \prg{NecessityBankSpec}$_c$, defined as PLEASE ADD DEF here, mandates that if the balance should decrease after any number of execution steps, then the \emph{first} step was a call  to \prg{transfer}. This is clearly not satisfied by \emph{any} of the three modules; consider, as a counterexample, the code \prg{b=new Account; c=new Accoiunt; x=x+1; a.transfer(...); c=new Account}. This code \emph{does} call \prg{transfer}, but not in the first step.
-
-On the other hand,   \prg{NecessityBankSpec}$_d$, defined as PLEASE ADD DEF here, is slightly weaker, in that it mandates that if the balance should decrease after \emph{any} number of execution steps, then the \emph{some} step was a call  to \prg{transfer}.  
-
-Finally, we could add a further variation, \prg{NecessityBankSpec}$_e$, defined as "from a:Account .. next a.balance<bal onlyIf ..." PLEASE write this out, which would mandate  that if the balance should decrease after \emph{one} execution step, then that step was a call  to \prg{transfer} and the right password was passed. This is satisfied by all three modules, and is, in fact, the formal description of $(S2)$.
 
 \subsection*{Presentation}
 
@@ -188,13 +202,17 @@ and as such render \texttt{<x access y>} as almost meaningless, and any safety s
 
 \paragraph{\textbf{Assertion encapsulation}} captures a property that is essential to proofs of safety in the open world: certain operations may only occur as the result of internal module method calls, thus, the satisfaction of properties that depend on such operations may only change as a result of internal module code. The simplest such operation in a Java-like language would be the mutation of a field of an object of an internal class. Satisfaction of assertions about the value of such a field may only change as a result of internal code being executed. Assertions are therefore not ``encapsulated'' by some arbitrary code, but rather by the internal module, and thus only programs that contain method calls to the internal module are able to invalidate those assertions. In the reviewer's example where C' = C; x := x, if C contains internal method calls that invalidate some assertion A, then so does C'.
 
-\paragraph{Emergent Behaviour} 
+(TODO: Sophia)
+
+\paragraph{\textbf{Emergent Behaviour}} 
 %The reviewer correctly identifies that we did not sufficiently indicate what we meant by ``emergent behavior''. We propose the follow change 
 %to Section 1, where ``emergent behavior'' is first mentioned:
-The first reviewer had difficulty understanding what we meant by emergent behaviour but surmised that it meant that  ``no single procedure call is capable of breaking the necessity specification, but a sequence of calls can very well be''. That is correct.
+Reviewer A had difficulty understanding what we meant by emergent behaviour but surmised that it meant that  ``no single procedure call is capable of breaking the necessity specification, but a sequence of calls can very well be''. That is correct.
 
 ``(S2) does not take account of the module's \emph{emergent behavior}. That is, (S2) does not consider the behaviour that emerges from the interaction between the 
 \texttt{transfer} method, and the other methods of the bank module. What if the module leaks the password?''
+
+(Julian: Move the above text to the propoesed changes)
 
 \paragraph{\textbf{Bank Account example}} The formal proof of the bank account example is very heavy weight given how straightforward the introductory example is. 
 This is because we wished to show off more sophisticated features of Necessity:
