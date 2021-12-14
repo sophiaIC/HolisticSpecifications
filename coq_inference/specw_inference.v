@@ -604,6 +604,22 @@ Module SpecWInference(L : LanguageDef).
     apply and_distr1.
   Qed.
 
+  Parameter lt_eq_gt_conseq1 :
+    forall M x y, M ⊢ (a_exp (x ⩻ y)) ⊇ (¬ a_exp (x ⩵ y)) ∧ (¬ a_exp (y ⩻ x)).
+
+  Parameter lt_eq_gt_conseq2 :
+    forall M x y, M ⊢  (¬ a_exp (x ⩵ y)) ∧ (¬ a_exp (y ⩻ x)) ⊇ (a_exp (x ⩻ y)).
+
+  Parameter not_lt_eq_gt_conseq1 :
+    forall M x y, M ⊢ ¬ (a_exp (x ⩻ y)) ⊇ (a_exp (x ⩵ y)) ∨ (a_exp (y ⩻ x)).
+
+  Parameter not_lt_eq_gt_conseq2 :
+    forall M x y, M ⊢  (a_exp (x ⩵ y)) ∨ (a_exp (y ⩻ x)) ⊇ ¬ (a_exp (x ⩻ y)).
+
+  Parameter neg_conseq :
+    forall M A1 A2, M ⊢ A1 ⊇ A2 ->
+               M ⊢ ¬ A2 ⊇ ¬ A1.
+
 End SpecWInference.
 
 

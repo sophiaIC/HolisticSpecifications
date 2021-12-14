@@ -115,8 +115,8 @@ Module BankAccount(L : LanguageDef).
     forall a β, BankMdl ⊢ ((a_class (e_ a) Account) ∧
                       ∃x.[(a♢ 0) calls (a_ a) ◌ transfer ⟨ β ⟩ ])
                    ⊇
-                   (∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ a) ◌ transfer ⟨ ⟦ destAcc ↦ a♢ 1 ⟧
-                                                                    ⟦ pwd ↦ a♢ 2 ⟧
+                   (∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ a) ◌ transfer ⟨ ⟦ pwd ↦ a♢ 1 ⟧
+                                                                    ⟦ destAcc ↦ a♢ 2 ⟧
                                                                     empty⟩ ]]]).
 
   Parameter setPasswordParameters :
@@ -128,12 +128,22 @@ Module BankAccount(L : LanguageDef).
 
   (** #<h2># Reduce Balance #</h2># *)
 
-  Parameter transferBalanceChangeSpecification :
+(*)  Parameter transferBalanceChangeSpecification :
     forall a a' b β bal, BankMdl ⊢ {pre: (a_class (e_ a') Account) ∧
                                     (¬ a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal))) ∧
                                     (a_class (e_ a) Account)}
                             m_call a transfer β
-                            {post: ¬ a_exp ((e_acc_f (e_ b) balance) ⩻ (e_int bal))}.
+                            {post: ¬ a_exp ((e_acc_f (e_ b) balance) ⩻ (e_int bal))}.*)
+
+  Parameter transferBalanceChangeSpecification :
+    forall a a' a'' p p' bal β,
+      BankMdl ⊢ {pre: (a_class (e_ a) Account) ∧
+                      (¬ a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal))) ∧
+                      (a_class (e_ a') Account) ∧
+                      (¬ ((a_exp ((e_acc_f (e_ a) password) ⩵ (e_val p))) ∧
+                          (a_exp (e_ a' ⩵ e_ a))))}
+              m_call a' transfer (⟦ pwd ↦ p'⟧ ⟦ destAcc ↦ a'' ⟧ β)
+              {post: ¬ a_exp (e_acc_f (e_ a) balance ⩻ (e_int bal))}.
 
   Parameter setPasswordBalanceChangeSpecification :
     forall a a' β bal, BankMdl ⊢ {pre: (a_class (e_ a') Account) ∧
@@ -161,14 +171,14 @@ Module BankAccount(L : LanguageDef).
       repeat spec_auto.
   Qed.
 
-  Lemma bankTransferBalChange :
-    forall a bal a',
+  Lemma transferBalChange :
+    forall a bal a' a'' p,
       BankMdl ⊢ ((a_class (e_ a) Account) ∧
                  (¬ a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal))) ∧
                  (a_class (e_ a') Account) ∧
-                 (∃x.[∃x.[∃x.[ (a♢ 0) calls (a_ a') ◌ transfer ⟨ ⟦ pwd ↦ a♢ 1  ⟧
-                                                                   ⟦ destAcc ↦ a♢ 2 ⟧
-                                                                   empty  ⟩]]]))
+                 (∃x.[ (a♢ 0) calls (a_ a') ◌ transfer ⟨ ⟦ pwd ↦ av_ p ⟧
+                                                           ⟦ destAcc ↦ av_ a'' ⟧
+                                                           empty  ⟩]))
               to1 (a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal)))
               onlyIf (∃x.[ ∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ transfer ⟨ ⟦ pwd ↦ a♢ 1 ⟧
                                                                         ⟦ destAcc ↦ a♢ 2 ⟧
@@ -180,45 +190,63 @@ Module BankAccount(L : LanguageDef).
     specX_cnf_r.
 
     apply if1_ex1;
-      intro p.
+      intro o.
     subst_simpl.
 
     eapply if1_conseq3;
       [
       | apply if1_andI
           with (A':= (a_exp (e_acc_f (e_ a) password ⩵ e_val p)) ∧
-                     (a_exp (e_ a' ⩵ e_ a)))].
+                     (a_exp (e_ a' ⩵ e_ a)));
+      [apply if1_start|]].
 
-    * commutativity.
-      specX
-      introduce_existential_on_left x.
-      specX_cnf_r.
+    * apply and_comm.
       commutativity.
-      substitute_equality a'.
-      substitute_equality (v_ b').
-      there_exists_on_right m.
+      commutativity.
+      commutativity.
+      commutativity.
+      commutativity.
+      commutativity.
+      substitute_equality (v_ a').
       there_exists_on_right a''.
       there_exists_on_right p.
-      there_exists_on_right x.
+      there_exists_on_right o.
       repeat spec_auto.
 
-    * apply if1_classical with (β:=⟦ pwd ↦ p ⟧
-                                     ⟦ fromAcc ↦ a' ⟧
-                                     ⟦ toAcc ↦ a'' ⟧
-                                     ⟦ amt ↦ m ⟧
-                                     empty);
-        [|repeat compose_simpl; auto].
-
-      match goal with
-      | [|- _ ⊢ {pre: _ } _ {post: ¬ a_exp (?e1 ⩻ ?e2)}] =>
-        eapply hoare_consequence2 with (A2':=a_exp (e1 ⩵ e2))
+    * match goal with
+      | [|- _ ⊢ (?A ∧ _ calls ?x ◌ ?m ⟨ ?β ⟩) to1 _ onlyIf _] =>
+      eapply if1_conseq1
+        with (A1:=A ∧ ∃x.[ a♢ 0 calls x ◌ m ⟨ β ⟩]);
+        [repeat spec_auto
+        |]
       end.
 
-      ** eapply hoare_consequence1.
-         apply transferBalanceChangeSpecification with (p:=p).
-         repeat spec_auto.
+      ** repeat apply conseq_and2.
+         apply conseq_ex2.
+         exists o.
+         subst_simpl.
+         spec_auto.
 
-      ** apply eq_implies_not_lt.
+      ** apply if1_classical with (β:=⟦ pwd ↦ p ⟧
+                                        ⟦ destAcc ↦ a'' ⟧
+                                        empty);
+           [|repeat compose_simpl; auto].
+
+(*      match goal with
+      | [|- _ ⊢ {pre: _ } _ {post: ¬ a_exp (?e1 ⩻ ?e2)}] =>
+        eapply hoare_consequence2 with (A2':=a_exp (e1 ⩵ e2))
+      end.*)
+
+      *** eapply hoare_consequence1.
+          apply transferBalanceChangeSpecification.
+          repeat spec_auto.
+          repeat specX_cnf_r.
+          repeat apply conseq_and2.
+          repeat spec_auto.
+          **** eapply conseq_trans; [|apply neg_distr_and_2];
+                 apply or_l, conseq_refl.
+          **** eapply conseq_trans; [|apply neg_distr_and_2];
+                 spec_auto.
 
   Qed.
 
@@ -227,225 +255,107 @@ Module BankAccount(L : LanguageDef).
     | [ Hclass : ⟦ ?C' ↦ ?CDef' ⟧_∈ BankMdl,
                  Hmeth : ?m' ∈ c_meths ?CDef' |- _ ] =>
       destruct (BankMdlMethods C' CDef' m' Hclass Hmeth);
-      [|disj_split];
       andDestruct;
       subst
     end.
 
   Lemma balanceChange :
-    forall a b bal,
+    forall a bal,
       BankMdl ⊢ ((a_class (e_ a) Account) ∧
-                 (a_class (e_ b) Bank) ∧
-                 (¬ (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))))
-              to1 (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
-              onlyIf (∃x.[ ∃x.[ ∃x.[ ∃x.[ (a♢ 0) calls (a_ b) ◌ transfer ⟨ ⟦ pwd ↦ a♢ 1 ⟧
-                                                                             ⟦ fromAcc ↦ a_ a ⟧
-                                                                             ⟦ toAcc ↦ a♢ 2 ⟧
-                                                                             ⟦ amt ↦ a♢ 3 ⟧
-                                                                             empty  ⟩ ∧
-                                          (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 1)))]]]]).
+                 (¬ (a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal)))))
+              to1 (a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal)))
+              onlyIf (∃x.[ ∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ transfer ⟨ ⟦ pwd ↦ a♢ 1 ⟧
+                                                                         ⟦ destAcc ↦ a♢ 2 ⟧
+                                                                         empty  ⟩ ∧
+                                     (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 1)))]]]).
   Proof.
     intros.
-    apply if1_internal.
+    apply if1_internal;
+      [| |repeat spec_auto].
 
     * intros.
       (* Case Analysis of all possible method calls to BankMdl objects *)
       BankMdlMethodsCases.
+      disj_split;
+        subst.
 
-      (* Bank Methods*)
-      ** eapply if1_conseq1;
-           [
-           |].
+      (* transfer *)
+      ** eapply if1_conseq1.
 
-         (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
          *** apply conseq_and.
+
              **** apply conseq_and1, conseq_refl.
+
              **** eapply conseq_trans;
-                    [apply conseq_and
-                       with (A1:= a_class (e_ α) Bank);
-                     [ spec_auto
-                     | repeat apply conseq_and2; apply conseq_refl]
-                    |].
-                  apply bankTransferParameters.
+                    [ apply conseq_and
+                        with (A1:=a_class (e_ α) Account);
+                      [spec_auto
+                      |repeat apply conseq_and2; apply conseq_refl]
+                     |].
+                  apply transferParameters.
 
          *** specX_cnf_r.
-             apply if1_ex1;
-               intro m;
-               subst_simpl.
-             specX_cnf_r.
              apply if1_ex1;
                intro a'';
                subst_simpl.
              specX_cnf_r.
              apply if1_ex1;
-               intro a';
+               intro p;
                subst_simpl.
+             apply transferBalChange.
 
-             apply bankTransferBalChange.
+      (* setPassword *)
+      ** eapply if1_conseq1.
 
-      (* Ledger methods*)
-      ** eapply if1_conseq1;
-           [
-           |].
-
-         (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
          *** apply conseq_and.
              **** apply conseq_and1, conseq_refl.
              **** eapply conseq_trans;
                     [apply conseq_and
-                       with (A1:= a_class (e_ α) Ledger);
+                       with (A1:= a_class (e_ α) Account);
                      [ spec_auto
                      | repeat apply conseq_and2; apply conseq_refl]
                     |].
-                  apply ledgerTransferParameters.
+                  apply setPasswordParameters.
 
-         *** specX_cnf_r;
-               apply if1_ex1;
-               intros;
+         *** specX_cnf_r.
+             apply if1_ex1;
+               intro p1;
                subst_simpl.
-             specX_cnf_r;
-               apply if1_ex1;
-               intros;
-               subst_simpl.
-             specX_cnf_r;
-               apply if1_ex1;
-               intros;
+             specX_cnf_r.
+             apply if1_ex1;
+               intro p2;
                subst_simpl.
 
              apply if1_conseq3
                with (A3:= a_false);
                [apply conseq_absurd
                |].
-             eapply if1_conseq1;
-               [
-               |apply ledgerTransferBalChange].
-             repeat spec_auto.
-             **** specX_cnf_r.
-                  introduce_existential_on_left x.
-                  specX_cnf_r.
-                  apply conseq_and2, conseq_and2, conseq_and2, conseq_and1, conseq_refl.
-             **** repeat apply conseq_and2;
-                    apply conseq_refl.
-
-      (* Account methods*)
-      ** (* case analysis of Account methods*)
-        disj_split;
-          subst.
-
-        (* authenticate *)
-         *** eapply if1_conseq1;
-               [
-               |].
-
-             (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
-             **** apply conseq_and.
-                  *****
-                    apply conseq_and1, conseq_refl.
-                  ***** eapply conseq_trans;
-                    [apply conseq_and
-                       with (A1:= a_class (e_ α) Account);
-                     [ spec_auto
-                     | repeat apply conseq_and2; apply conseq_refl]
-                    |].
-                  apply authenticateParameters.
-
-             **** specX_cnf_r;
-                    apply if1_ex1;
-                    intros;
-                    subst_simpl.
-
-                  apply if1_conseq3
-                    with (A3:= a_false);
-                    [apply conseq_absurd
-                    |].
-                  eapply if1_conseq1;
-                    [
-                    |apply authBalChange].
-                  repeat spec_auto.
-                  ***** specX_cnf_r.
-                  introduce_existential_on_left x.
-                  specX_cnf_r.
-                  apply conseq_and2, conseq_and2, conseq_and2, conseq_and1, conseq_refl.
-                  *****
-                    repeat apply conseq_and2;
-                    apply conseq_refl.
-
-         (* changePassword *)
-         *** eapply if1_conseq1;
-               [
-               |].
-
-             (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
-             **** apply conseq_and.
-                  *****
-                    apply conseq_and1, conseq_refl.
-                  ***** eapply conseq_trans;
-                    [apply conseq_and
-                       with (A1:= a_class (e_ α) Account);
-                     [ spec_auto
-                     | repeat apply conseq_and2; apply conseq_refl]
-                    |].
-                  apply changePasswordParameters.
-
-             **** specX_cnf_r;
-                    apply if1_ex1;
-                    intros;
-                    subst_simpl.
-                  specX_cnf_r;
-                    apply if1_ex1;
-                    intros;
-                    subst_simpl.
-
-                  apply if1_conseq3
-                    with (A3:= a_false);
-                    [apply conseq_absurd
-                    |].
-                  eapply if1_conseq1;
-                    [
-                    |apply changePasswordBalChange].
-                  repeat spec_auto.
-                  *****
-                    apply conseq_and1, conseq_and2, conseq_refl.
-
-                  *****
-                    repeat apply conseq_and2;
-                    apply conseq_refl.
+             apply setPasswordBalChange.
 
     (* encapsulation *)
-    * eapply enc_conseq2;
-        [apply eq_implies_not_lt
-        |apply enc_eq].
+    * eapply enc_conseq1;
+        [apply not_lt_eq_gt_conseq2 |apply not_lt_eq_gt_conseq1|].
+      apply enc_or.
+      ** apply enc_eq; [apply enc_fld|apply enc_value].
+         apply i_obj with (C:=Account).
+         spec_auto.
+         exists AccountDef.
+         auto.
 
-      **  apply enc_eintrnl.
-          apply i_ghost with (C:=Bank)(CDef:=BankDef)(e:=getBalanceBody);
-            auto;
-            repeat spec_auto.
-          *** apply i_obj with (C:=Bank).
-              spec_auto.
-              exists BankDef.
-              auto.
-
-          *** apply i_obj with (C:=Account).
-              spec_auto.
-              exists AccountDef.
-              auto.
-
-      **  apply enc_eintrnl;
-            apply i_int.
-
-    * spec_auto.
+      ** apply enc_lt;
+           [apply enc_value|apply enc_fld].
+         apply i_obj with (C:=Account).
+         spec_auto.
+         exists AccountDef.
+         auto.
   Qed.
 
+  (* wrapped contains an existential, so the index (i.e. a♢ 1) is incremented *)
   Lemma balanceChange' :
-    forall a b bal,
+    forall a bal,
       BankMdl ⊢ ((a_class (e_ a) Account) ∧
-                 (a_class (e_ b) Bank) ∧
-                 (¬ a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal))))
-              to (a_exp ((e_acc_g (e_ b) getBalance (e_ a)) ⩻ (e_int bal)))
+                 (¬ a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal))))
+              to (a_exp ((e_acc_f (e_ a) balance) ⩻ (e_int bal)))
               onlyThrough (∃x.[ ¬ wrapped (a♢ 1) ∧
                                 (a_exp (e_acc_f (e_ a) password ⩵ (e♢ 0)))]).
   Proof.
@@ -465,26 +375,18 @@ Module BankAccount(L : LanguageDef).
 
       ** apply if1_conseq3 with (A3:=a_false);
            [apply conseq_absurd|].
-         eapply if1_conseq2;
-           [apply neg_distr_and_1|].
-         apply if1_orI2.
 
-         *** eapply if1_conseq1;
-               [|apply change_class_absurd].
-             spec_auto.
-
-         *** eapply if1_conseq1;
-               [|apply change_class_absurd].
-             spec_auto.
+         eapply if1_conseq1;
+           [|apply change_class_absurd].
+         spec_auto.
 
       ** eapply if1_conseq2;
            [apply conseq_not_not1|].
          eapply if1_conseq3;
            [|apply balanceChange].
-         introduce_existential_on_left m.
-         introduce_existential_on_left a''.
+         introduce_existential_on_left a'.
          introduce_existential_on_left p.
-         introduce_existential_on_left x.
+         introduce_existential_on_left o.
          there_exists_on_right p.
          repeat spec_auto.
 
@@ -496,111 +398,25 @@ Module BankAccount(L : LanguageDef).
 
   (** #<h2># Change Password #</h2>#  *)
 
-  Parameter authenticate_PasswordChangeSpecification :
+  Parameter transfer_PasswordChangeSpecification :
     forall a a' p β, BankMdl ⊢ {pre: (a_class (e_ a') Account) ∧
                                 (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
                                 (a_class (e_ a) Account)}
-                        m_call a' authenticate β
+                        m_call a' transfer β
                         {post: a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))}.
-
-  Lemma authenticate_PasswordChange :
-    forall a a' p p', BankMdl ⊢ (a_class (e_ a) Account ∧
-                            (a_exp (e_acc_f (e_ a) password ⩵ e_ p)) ∧
-                            (a_class (e_ a') Account) ∧
-                            (∃x.[ (a♢ 0) calls (a_ a') ◌ authenticate ⟨ ⟦ pwd ↦ av_ p' ⟧ empty ⟩ ]))
-                         to1 (¬ a_exp (e_acc_f (e_ a) password ⩵ e_ p))
-                         onlyIf a_false.
-  Proof.
-    intros.
-
-    apply if1_classical with (β:=⟦ pwd ↦ p' ⟧ empty);
-      [|repeat compose_simpl; auto].
-    eapply hoare_consequence2;
-      [|apply conseq_not_not2].
-    eapply hoare_consequence1;
-      [apply authenticate_PasswordChangeSpecification|].
-    repeat spec_auto.
-  Qed.
-
-  Parameter changePassword_PasswordChangeSpecification :
-    forall a a' p p' β, BankMdl ⊢ {pre: (a_class (e_ a) Account) ∧
-                                   (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                                   (a_class (e_ a') Account) ∧
-                                   (¬ (a_exp ((e_ a') ⩵ (e_ a)) ∧
-                                       a_exp ((e_val p') ⩵ (e_ p))))}
-                           m_call a' changePassword (⟦ pwd ↦ p' ⟧  β)
-                           {post: a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))}.
-
-  Lemma changePassword_PasswordChange :
-    forall a a' p p' p'', BankMdl ⊢ (a_class (e_ a) Account ∧
-                                (a_exp (e_acc_f (e_ a) password ⩵ e_ p)) ∧
-                                (a_class (e_ a') Account) ∧
-                                (∃x.[ (a♢ 0) calls (a_ a') ◌ changePassword ⟨ ⟦ pwd ↦ av_ p' ⟧
-                                                                                ⟦ newPwd ↦ av_ p'' ⟧ empty ⟩ ]))
-                             to1 (¬ a_exp (e_acc_f (e_ a) password ⩵ e_ p))
-                             onlyIf (a_exp ((e_ a') ⩵ (e_ a)) ∧
-                                     a_exp ((e_val p') ⩵ (e_ p))).
-  Proof.
-    intros.
-
-    apply if1_classical with (β:=⟦ pwd ↦ p' ⟧ ⟦ newPwd ↦ p'' ⟧ empty);
-      [|repeat compose_simpl; auto].
-    eapply hoare_consequence2;
-      [|apply conseq_not_not2].
-    eapply hoare_consequence1;
-      [apply changePassword_PasswordChangeSpecification|].
-    repeat spec_auto.
-  Qed.
-
-  Parameter ledgerTransfer_PasswordChangeSpecification :
-    forall a l p β, BankMdl ⊢ {pre: (a_class (e_ a) Account) ∧
-                                (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                                (a_class (e_ l) Ledger)}
-                        m_call l ledgerTransfer β
-                        {post: a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))}.
-
-  Lemma ledgerTransfer_PasswordChange :
-    forall a p l a' a'' m, BankMdl ⊢ (a_class (e_ a) Account ∧
-                                 (a_exp (e_acc_f (e_ a) password ⩵ e_ p)) ∧
-                                 (a_class (e_ l) Ledger) ∧
-                                 (∃x.[ (a♢ 0) calls (a_ l) ◌ ledgerTransfer ⟨ ⟦ fromAcc ↦ av_ a' ⟧
-                                                                                ⟦ toAcc ↦ av_ a'' ⟧
-                                                                                ⟦ amt ↦ av_ m ⟧ empty ⟩ ]))
-                              to1 (¬ a_exp (e_acc_f (e_ a) password ⩵ e_ p))
-                              onlyIf a_false.
-  Proof.
-    intros.
-
-    apply if1_classical with (β:=⟦ fromAcc ↦ a' ⟧ ⟦ toAcc ↦ a'' ⟧ ⟦ amt ↦ m ⟧ empty);
-      [|repeat compose_simpl; auto].
-    eapply hoare_consequence2;
-      [|apply conseq_not_not2].
-    eapply hoare_consequence1;
-      [apply ledgerTransfer_PasswordChangeSpecification|].
-    repeat spec_auto.
-  Qed.
-
-  Parameter transfer_PasswordChangeSpecification :
-    forall a p b β, BankMdl ⊢ {pre: (a_class (e_ a) Account) ∧
-                               (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                               (a_class (e_ b) Bank)}
-                       m_call b transfer β
-                       {post: a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))}.
 
   Lemma transfer_PasswordChange :
-    forall a p b p' a' a'' m, BankMdl ⊢ (a_class (e_ a) Account ∧
-                                    (a_exp (e_acc_f (e_ a) password ⩵ e_ p)) ∧
-                                    (a_class (e_ b) Bank) ∧
-                                    (∃x.[ (a♢ 0) calls (a_ b) ◌ transfer ⟨ ⟦ pwd ↦ av_ p' ⟧
-                                                                             ⟦ fromAcc ↦ av_ a' ⟧
-                                                                             ⟦ toAcc ↦ av_ a'' ⟧
-                                                                             ⟦ amt ↦ av_ m ⟧ empty ⟩ ]))
-                                 to1 (¬ a_exp (e_acc_f (e_ a) password ⩵ e_ p))
-                                 onlyIf a_false.
+    forall a a' a'' p p', BankMdl ⊢ (a_class (e_ a) Account ∧
+                                (a_exp (e_acc_f (e_ a) password ⩵ e_ p)) ∧
+                                (a_class (e_ a') Account) ∧
+                                (∃x.[ (a♢ 0) calls (a_ a') ◌ transfer ⟨ ⟦ pwd ↦ av_ p' ⟧
+                                                                          ⟦ destAcc ↦ av_ a'' ⟧ empty ⟩ ]))
+                             to1 (¬ a_exp (e_acc_f (e_ a) password ⩵ e_ p))
+                             onlyIf a_false.
   Proof.
     intros.
 
-    apply if1_classical with (β:= ⟦ pwd ↦ p' ⟧ ⟦ fromAcc ↦ a' ⟧ ⟦ toAcc ↦ a'' ⟧ ⟦ amt ↦ m ⟧ empty);
+    apply if1_classical with (β:=⟦ pwd ↦ p' ⟧ ⟦ destAcc ↦ a'' ⟧ empty);
       [|repeat compose_simpl; auto].
     eapply hoare_consequence2;
       [|apply conseq_not_not2].
@@ -609,18 +425,52 @@ Module BankAccount(L : LanguageDef).
     repeat spec_auto.
   Qed.
 
+  Parameter setPassword_PasswordChangeSpecification :
+    forall a a' p p' β, BankMdl ⊢ {pre: (a_class (e_ a) Account) ∧
+                                   (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
+                                   (a_class (e_ a') Account) ∧
+                                   (¬ (a_exp ((e_ a') ⩵ (e_ a)) ∧
+                                       a_exp ((e_val p') ⩵ (e_ p))))}
+                           m_call a' setPassword (⟦ pwd ↦ p' ⟧ β)
+                           {post: a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))}.
+
+  Lemma setPassword_PasswordChange :
+    forall a a' p p' p'', BankMdl ⊢ (a_class (e_ a) Account ∧
+                                (a_exp (e_acc_f (e_ a) password ⩵ e_ p)) ∧
+                                (a_class (e_ a') Account) ∧
+                                (∃x.[ (a♢ 0) calls (a_ a') ◌ setPassword ⟨ ⟦ pwd ↦ av_ p' ⟧
+                                                                             ⟦ pwd' ↦ av_ p'' ⟧ empty ⟩ ]))
+                             to1 (¬ a_exp (e_acc_f (e_ a) password ⩵ e_ p))
+                             onlyIf (a_exp ((e_ a') ⩵ (e_ a)) ∧
+                                     a_exp ((e_val p') ⩵ (e_ p))).
+  Proof.
+    intros.
+
+    apply if1_classical with (β:=⟦ pwd ↦ p' ⟧ ⟦ pwd' ↦ p'' ⟧ empty);
+      [|repeat compose_simpl; auto].
+    eapply hoare_consequence2;
+      [|apply conseq_not_not2].
+    eapply hoare_consequence1;
+      [apply setPassword_PasswordChangeSpecification|].
+    repeat spec_auto.
+  Qed.
+
   Lemma passwordChange :
     forall a p, BankMdl ⊢ (a_class (e_ a) Account ∧
                       (a_exp (e_acc_f (e_ a) password ⩵ e_ p)))
                    to1 (¬ a_exp (e_acc_f (e_ a) password ⩵ e_ p))
-                   onlyIf (∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ changePassword ⟨ ⟦ pwd ↦ a_ p ⟧ ⟦ newPwd ↦ a♢ 1 ⟧ empty  ⟩ ] ]).
+                   onlyIf (∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ setPassword ⟨ ⟦ pwd ↦ a_ p ⟧
+                                                                           ⟦ pwd' ↦ a♢ 1 ⟧ empty  ⟩ ] ]).
   Proof.
     intros.
     apply if1_internal.
 
     * intros.
       BankMdlMethodsCases.
+      disj_split;
+        subst.
 
+      (* transfer *)
       ** apply if1_conseq3
            with (A3:=a_false);
            [apply conseq_absurd|].
@@ -633,22 +483,20 @@ Module BankAccount(L : LanguageDef).
              **** apply conseq_and1, conseq_refl.
              **** eapply conseq_trans;
                     [apply conseq_and
-                       with (A1:= a_class (e_ α) Bank);
+                       with (A1:= a_class (e_ α) Account);
                      [ spec_auto
                      | repeat apply conseq_and2; apply conseq_refl]
                     |].
-                  apply bankTransferParameters.
+                  apply transferParameters.
 
-         *** do 4 (specX_cnf_r;
+         *** do 2 (specX_cnf_r;
                    apply if1_ex1;
                    intros;
                    subst_simpl).
              apply transfer_PasswordChange.
 
-      ** apply if1_conseq3
-           with (A3:=a_false);
-           [apply conseq_absurd|].
-         eapply if1_conseq1;
+      (*set password*)
+      ** eapply if1_conseq1;
            [|].
 
          (** Using the type system to get actual paramters.
@@ -657,78 +505,32 @@ Module BankAccount(L : LanguageDef).
              **** apply conseq_and1, conseq_refl.
              **** eapply conseq_trans;
                     [apply conseq_and
-                       with (A1:= a_class (e_ α) Ledger);
+                       with (A1:= a_class (e_ α) Account);
                      [ spec_auto
                      | repeat apply conseq_and2; apply conseq_refl]
                     |].
-                  apply ledgerTransferParameters.
+                  apply setPasswordParameters.
 
-         *** do 3 (specX_cnf_r;
+         *** do 2 (specX_cnf_r;
                    apply if1_ex1;
                    intros;
                    subst_simpl).
-             apply ledgerTransfer_PasswordChange.
-
-      ** disj_split;
-         subst.
-         *** apply if1_conseq3
-               with (A3:=a_false);
-               [apply conseq_absurd|].
-             eapply if1_conseq1;
-               [|].
-
-             (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
-             **** apply conseq_and.
-                  ***** apply conseq_and1, conseq_refl.
-                  ***** eapply conseq_trans;
-                    [apply conseq_and
-                       with (A1:= a_class (e_ α) Account);
-                     [ spec_auto
-                     | repeat apply conseq_and2; apply conseq_refl]
-                    |].
-                  apply authenticateParameters.
-
-             **** do 1 (specX_cnf_r;
-                        apply if1_ex1;
-                        intros;
-                        subst_simpl).
-                  apply authenticate_PasswordChange.
-
-         *** eapply if1_conseq1;
-               [|].
-
-             (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
-             **** apply conseq_and.
-                  ***** apply conseq_and1, conseq_refl.
-                  ***** eapply conseq_trans;
-                    [apply conseq_and
-                       with (A1:= a_class (e_ α) Account);
-                     [ spec_auto
-                     | repeat apply conseq_and2; apply conseq_refl]
-                    |].
-                  apply changePasswordParameters.
-
-             **** do 2 (specX_cnf_r;
-                        apply if1_ex1;
-                        intros;
-                        subst_simpl).
-                  eapply if1_conseq3;
-                    [|apply if1_andI;
-                      [apply if1_start|apply changePassword_PasswordChange]].
-                  commutativity.
-                  introduce_existential_on_left x.
-                  there_exists_on_right y.
-                  there_exists_on_right x.
-                  specX_cnf_r.
-                  substitute_equality (v_ α).
-                  substitute_equality y0.
-                  spec_auto.
+             eapply if1_conseq3;
+               [|apply if1_andI;
+                 [apply if1_start|apply setPassword_PasswordChange]].
+             commutativity.
+             introduce_existential_on_left x.
+             there_exists_on_right y.
+             there_exists_on_right x.
+             specX_cnf_r.
+             substitute_equality (v_ α).
+             substitute_equality y0.
+             spec_auto.
 
     (* encapsulation *)
-    * eapply enc_conseq2;
+    * eapply enc_conseq1;
         [apply conseq_not_not2
+        |apply conseq_not_not1
         |apply enc_eq].
 
       ** apply enc_fld.
@@ -747,39 +549,11 @@ Module BankAccount(L : LanguageDef).
   (** #<h2># Leak Password #</h2># *)
   (** TODO: add to paper: Sematic protection not syntactic protection **)
 
-  Parameter passwordLeakAuthenticateSpecification :
-    forall a a' p β, BankMdl ⊢ {pre: (a_exp ((e_acc_f (e_ a') password) ⩵ (e_ p))) ∧
-                                (a_class (e_ a')  Account) ∧
-                                (a_class (e_ a) Account)}
-                        m_call a authenticate β
-                        {post: ¬ a_exp ((e♢ 0) ⩵ (e_ p))}.
-
-
-  Lemma authenticatePasswordLeak :
-    forall a a' p p', BankMdl ⊢ ((a_exp ((e_acc_f (e_ a') password) ⩵ (e_ p))) ∧
-                            (a_class (e_ a') Account) ∧
-                            (wrapped (a_ p)) ∧
-                            (a_class (e_ a) Account) ∧
-                            (∃x.[ (a♢ 0) calls (a_ a) ◌ authenticate ⟨ ⟦ pwd ↦ (av_ p') ⟧ empty⟩]))
-                         to1 ¬ wrapped (a_ p)
-                         onlyIf (a_false).
-  Proof.
-    intros.
-    apply if1_wrapped with (β:=⟦ pwd ↦ p' ⟧ empty).
-
-    * eapply hoare_consequence1;
-        [apply passwordLeakAuthenticateSpecification with (a':=a')|].
-      repeat spec_auto.
-
-    * repeat compose_simpl;
-        auto.
-  Qed.
-
   Parameter passwordLeakChangePasswordSpecification :
     forall a a' p β, BankMdl ⊢ {pre: (a_exp ((e_acc_f (e_ a') password) ⩵ (e_ p))) ∧
                                 (a_class (e_ a')  Account) ∧
                                 (a_class (e_ a) Account)}
-                        m_call a changePassword β
+                        m_call a setPassword β
                         {post: ¬ a_exp ((e♢ 0) ⩵ (e_ p))}.
 
 
@@ -788,13 +562,13 @@ Module BankAccount(L : LanguageDef).
                                (a_class (e_ a') Account) ∧
                                (wrapped (a_ p)) ∧
                                (a_class (e_ a) Account) ∧
-                               (∃x.[ (a♢ 0) calls (a_ a) ◌ changePassword ⟨ ⟦ pwd ↦ (av_ p1) ⟧
-                                                                              ⟦ newPwd ↦ (av_ p2) ⟧ empty⟩]))
+                               (∃x.[ (a♢ 0) calls (a_ a) ◌ setPassword ⟨ ⟦ pwd ↦ (av_ p1) ⟧
+                                                                           ⟦ pwd' ↦ (av_ p2) ⟧ empty⟩]))
                             to1 ¬ wrapped (a_ p)
                             onlyIf (a_false).
   Proof.
     intros.
-    apply if1_wrapped with (β:=⟦ pwd ↦ p1 ⟧ ⟦ newPwd ↦ p2 ⟧ empty).
+    apply if1_wrapped with (β:=⟦ pwd ↦ p1 ⟧ ⟦ pwd' ↦ p2 ⟧ empty).
 
     * eapply hoare_consequence1;
         [apply passwordLeakChangePasswordSpecification with (a':=a')|].
@@ -804,62 +578,31 @@ Module BankAccount(L : LanguageDef).
         auto.
   Qed.
 
-  Parameter passwordLeakLedgerTransferSpecification :
-    forall a l p β, BankMdl ⊢ {pre: (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                               (a_class (e_ a)  Account) ∧
-                               (a_class (e_ l) Ledger) ∧
-                               ¬ (a_false)}
-                       m_call l ledgerTransfer β
-                       {post: ¬ a_exp ((e♢ 0) ⩵ (e_ p))}.
+  Parameter passwordLeakTransferSpecification :
+    forall a a' p β, BankMdl ⊢ {pre: (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
+                                (a_class (e_ a)  Account) ∧
+                                (a_class (e_ a') Account) ∧
+                                ¬ (a_false)}
+                        m_call a' transfer β
+                        {post: ¬ a_exp ((e♢ 0) ⩵ (e_ p))}.
 
 
-  Lemma ledgerTransferLeak :
-    forall a l p m f t, BankMdl ⊢ ((a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                              (a_class (e_ a) Account) ∧
-                              (wrapped (a_ p)) ∧
-                              (a_class (e_ l) Ledger) ∧
-                              (∃x.[ (a♢ 0) calls (a_ l) ◌ ledgerTransfer ⟨ ⟦ fromAcc ↦ (av_ f) ⟧
-                                                                             ⟦ toAcc ↦ (av_ t) ⟧
-                                                                             ⟦ amt ↦ (av_ m) ⟧ empty⟩]))
-                           to1 ¬ wrapped (a_ p)
-                           onlyIf (a_false).
+  Lemma transferLeak :
+    forall a a' p p' a'', BankMdl ⊢ ((a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
+                                (a_class (e_ a) Account) ∧
+                                (wrapped (a_ p)) ∧
+                                (a_class (e_ a') Account) ∧
+                                (∃x.[ (a♢ 0) calls (a_ a') ◌ transfer ⟨ ⟦ pwd ↦ (av_ p') ⟧
+                                                                          ⟦ destAcc ↦ (av_ a'') ⟧
+                                                                          empty⟩]))
+                             to1 ¬ wrapped (a_ p)
+                             onlyIf (a_false).
   Proof.
     intros.
-    apply if1_wrapped with (β:=⟦ fromAcc ↦ f ⟧ ⟦ toAcc ↦ t ⟧ ⟦ amt ↦ m ⟧ empty).
+    apply if1_wrapped with (β:=⟦ pwd ↦ p' ⟧ ⟦ destAcc ↦ a'' ⟧ empty).
 
     * eapply hoare_consequence1;
-        [apply passwordLeakLedgerTransferSpecification with (a:=a)|].
-      repeat spec_auto.
-
-    * repeat compose_simpl;
-        auto.
-  Qed.
-
-  Parameter passwordLeakBankTransferSpecification :
-    forall a b p β, BankMdl ⊢ {pre: (a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                               (a_class (e_ a)  Account) ∧
-                               (a_class (e_ b) Bank) ∧
-                               ¬ (a_false)}
-                       m_call b transfer β
-                       {post: ¬ a_exp ((e♢ 0) ⩵ (e_ p))}.
-
-  Lemma bankTransferLeak :
-    forall a b p p' m f t, BankMdl ⊢ ((a_exp ((e_acc_f (e_ a) password) ⩵ (e_ p))) ∧
-                                 (a_class (e_ a) Account) ∧
-                                 (wrapped (a_ p)) ∧
-                                 (a_class (e_ b) Bank) ∧
-                                 (∃x.[ (a♢ 0) calls (a_ b) ◌ transfer ⟨ ⟦ pwd ↦ (av_ p') ⟧
-                                                                          ⟦ fromAcc ↦ (av_ f) ⟧
-                                                                          ⟦ toAcc ↦ (av_ t) ⟧
-                                                                          ⟦ amt ↦ (av_ m) ⟧ empty⟩]))
-                              to1 ¬ wrapped (a_ p)
-                              onlyIf (a_false).
-  Proof.
-    intros.
-    apply if1_wrapped with (β:= ⟦ pwd ↦ p' ⟧ ⟦ fromAcc ↦ f ⟧ ⟦ toAcc ↦ t ⟧ ⟦ amt ↦ m ⟧ empty).
-
-    * eapply hoare_consequence1;
-        [apply passwordLeakBankTransferSpecification with (a:=a)|].
+        [apply passwordLeakTransferSpecification with (a:=a)|].
       repeat spec_auto.
 
     * repeat compose_simpl;
@@ -879,8 +622,10 @@ Module BankAccount(L : LanguageDef).
     * intros.
       (* Case Analysis of all possible method calls to BankMdl objects *)
       BankMdlMethodsCases.
+      disj_split;
+        subst.
 
-      (* Bank Methods*)
+      (* transfer *)
       ** eapply if1_conseq1;
            [
            |].
@@ -891,27 +636,26 @@ Module BankAccount(L : LanguageDef).
              **** apply conseq_and1, conseq_refl.
              **** eapply conseq_trans;
                     [apply conseq_and
-                       with (A1:= a_class (e_ α) Bank);
+                       with (A1:= a_class (e_ α) Account);
                      [ spec_auto
                      | repeat apply conseq_and2; apply conseq_refl]
                     |].
-                  apply bankTransferParameters.
+                  apply transferParameters.
 
-         *** do 4 (specX_cnf_r;
+         *** do 2 (specX_cnf_r;
                    apply if1_ex1;
                    intros;
                    subst_simpl).
 
            eapply if1_conseq1;
-               [|apply bankTransferLeak with (p:=p)(a:=a)(b:=α)].
+               [|apply transferLeak with (p:=p)(a:=a)(a':=α)].
              repeat spec_auto.
              repeat apply conseq_and2.
              apply conseq_refl.
 
-      (* Ledger methods*)
+      (* changePassword *)
       ** eapply if1_conseq1;
-           [
-           |].
+           [|].
 
          (** Using the type system to get actual paramters.
              TODO: Need to make into a tactic **)
@@ -919,17 +663,13 @@ Module BankAccount(L : LanguageDef).
              **** apply conseq_and1, conseq_refl.
              **** eapply conseq_trans;
                     [apply conseq_and
-                       with (A1:= a_class (e_ α) Ledger);
+                       with (A1:= a_class (e_ α) Account);
                      [ spec_auto
                      | repeat apply conseq_and2; apply conseq_refl]
                     |].
-                  apply ledgerTransferParameters.
+                  apply setPasswordParameters.
 
          *** specX_cnf_r;
-               apply if1_ex1;
-               intros;
-               subst_simpl.
-             specX_cnf_r;
                apply if1_ex1;
                intros;
                subst_simpl.
@@ -944,95 +684,15 @@ Module BankAccount(L : LanguageDef).
                |].
              eapply if1_conseq1;
                [
-               |apply ledgerTransferLeak with (a:=a)(l:=α)].
+                  |apply changePasswordLeak with (a':=a)(a:=α)].
              repeat spec_auto.
-             specX_cnf_r.
-             introduce_existential_on_left x.
-             specX_cnf_r.
-             there_exists_on_right x.
-             repeat apply conseq_and2.
-             apply conseq_refl.
-
-      (* Account methods*)
-      ** (* case analysis of Account methods*)
-        disj_split;
-          subst.
-
-        (* authenticate *)
-         *** eapply if1_conseq1;
-               [
-               |].
-
-             (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
-             **** apply conseq_and.
-                  *****
-                    apply conseq_and1, conseq_refl.
-                  ***** eapply conseq_trans;
-                    [apply conseq_and
-                       with (A1:= a_class (e_ α) Account);
-                     [ spec_auto
-                     | repeat apply conseq_and2; apply conseq_refl]
-                    |].
-                  apply authenticateParameters.
-
-             **** specX_cnf_r;
-                    apply if1_ex1;
-                    intros;
-                    subst_simpl.
-
-                  apply if1_conseq3
-                    with (A3:= a_false);
-                    [apply conseq_absurd
-                    |].
-                  eapply if1_conseq1;
-                    [
-                    |apply authenticatePasswordLeak with (a':=a)(a:=α)].
-                  repeat spec_auto.
-                  repeat apply conseq_and2;
-                    apply conseq_refl.
-
-         (* changePassword *)
-         *** eapply if1_conseq1;
-               [
-               |].
-
-             (** Using the type system to get actual paramters.
-             TODO: Need to make into a tactic **)
-             **** apply conseq_and.
-                  *****
-                    apply conseq_and1, conseq_refl.
-                  ***** eapply conseq_trans;
-                    [apply conseq_and
-                       with (A1:= a_class (e_ α) Account);
-                     [ spec_auto
-                     | repeat apply conseq_and2; apply conseq_refl]
-                    |].
-                  apply changePasswordParameters.
-
-             **** specX_cnf_r;
-                    apply if1_ex1;
-                    intros;
-                    subst_simpl.
-                  specX_cnf_r;
-                    apply if1_ex1;
-                    intros;
-                    subst_simpl.
-
-                  apply if1_conseq3
-                    with (A3:= a_false);
-                    [apply conseq_absurd
-                    |].
-                  eapply if1_conseq1;
-                    [
-                    |apply changePasswordLeak with (a':=a)(a:=α)].
-                  repeat spec_auto.
-                  repeat apply conseq_and2;
-                    apply conseq_refl.
+             repeat apply conseq_and2;
+               apply conseq_refl.
 
     (* encapsulation *)
-    * eapply enc_conseq2;
+    * eapply enc_conseq1;
         [apply conseq_not_not2
+        |apply conseq_not_not1
         |].
 
       apply enc_wrapped1.
@@ -1040,19 +700,16 @@ Module BankAccount(L : LanguageDef).
     * eapply conseq_trans;
         [|apply conseq_not_not2].
       spec_auto.
-
-
   Qed.
 
   (** BankSpec **)
 
   Lemma necessityBankSpec :
-    forall a b bal p, BankMdl ⊢ (a_class (e_ a) Account ∧ 
-                            a_class (e_ b) Bank ∧
-                            (¬ a_exp (e_acc_g (e_ b) getBalance (e_ a) ⩻ (e_int bal))) ∧
-                            (a_exp (e_acc_f (e_ a) password ⩵ (e_ p))))
-                         to (a_exp (e_acc_g (e_ b) getBalance (e_ a) ⩻ (e_int bal)))
-                         onlyIf ¬ wrapped (a_ p).
+    forall a bal p, BankMdl ⊢ (a_class (e_ a) Account ∧
+                          (¬ a_exp (e_acc_f (e_ a) balance ⩻ (e_int bal))) ∧
+                          (a_exp (e_acc_f (e_ a) password ⩵ (e_ p))))
+                       to (a_exp (e_acc_f (e_ a) balance ⩻ (e_int bal)))
+                       onlyIf ¬ wrapped (a_ p).
   Proof.
     intros.
     apply if_trans with (A':= ¬ wrapped (a_ p) ∨ ¬ (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)))).
@@ -1185,8 +842,8 @@ Module BankAccount(L : LanguageDef).
 
       * (* Case B *)
         apply if_trans
-          with (∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ changePassword ⟨ ⟦ pwd ↦ a_ p ⟧
-                                                                   ⟦ newPwd ↦ a♢ 1 ⟧ empty  ⟩ ] ]).
+          with (∃x.[ ∃x.[ (a♢ 0) calls (a_ a) ◌ setPassword ⟨ ⟦ pwd ↦ a_ p ⟧
+                                                                ⟦ pwd' ↦ a♢ 1 ⟧ empty  ⟩ ] ]).
 
         ** apply ot_conseq1 with (A1:=(a_class (e_ a) Account ∧
                                        (a_exp (e_acc_f (e_ a) password ⩵ (e_ p))))).

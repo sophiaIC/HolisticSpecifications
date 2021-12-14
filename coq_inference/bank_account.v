@@ -599,26 +599,51 @@ Module BankAccount(L : LanguageDef).
                     apply conseq_refl.
 
     (* encapsulation *)
-    * eapply enc_conseq2;
-        [apply eq_implies_not_lt
-        |apply enc_eq].
+    * eapply enc_conseq1;
+        try solve [apply neg_conseq;
+                   try apply lt_eq_gt_conseq1;
+                   try apply lt_eq_gt_conseq2].
+      eapply enc_conseq1;
+        [apply neg_distr_and_2|spec_auto|].
+      apply enc_or.
+      ** eapply enc_conseq1;
+           [apply conseq_not_not2|apply conseq_not_not1|].
+         apply enc_eq.
 
-      **  apply enc_eintrnl.
-          apply i_ghost with (C:=Bank)(CDef:=BankDef)(e:=getBalanceBody);
-            auto;
-            repeat spec_auto.
-          *** apply i_obj with (C:=Bank).
-              spec_auto.
-              exists BankDef.
-              auto.
+         ***  apply enc_eintrnl.
+              apply i_ghost with (C:=Bank)(CDef:=BankDef)(e:=getBalanceBody);
+                auto;
+                repeat spec_auto.
+              **** apply i_obj with (C:=Bank).
+                   spec_auto.
+                   exists BankDef.
+                   auto.
 
-          *** apply i_obj with (C:=Account).
-              spec_auto.
-              exists AccountDef.
-              auto.
+              **** apply i_obj with (C:=Account).
+                   spec_auto.
+                   exists AccountDef.
+                   auto.
 
-      **  apply enc_eintrnl;
-            apply i_int.
+         *** apply enc_eintrnl, i_int.
+
+      ** eapply enc_conseq1;
+           [apply conseq_not_not2|apply conseq_not_not1|].
+         apply enc_lt.
+
+         *** apply enc_eintrnl, i_int.
+
+         *** apply enc_eintrnl, i_ghost with (C:=Bank)(CDef:=BankDef)(e:=getBalanceBody);
+               auto;
+               repeat spec_auto.
+             **** apply i_obj with (C:=Bank).
+                  spec_auto.
+                  exists BankDef.
+                  auto.
+
+             **** apply i_obj with (C:=Account).
+                  spec_auto.
+                  exists AccountDef.
+                  auto.
 
     * spec_auto.
   Qed.
@@ -910,9 +935,10 @@ Module BankAccount(L : LanguageDef).
                   spec_auto.
 
     (* encapsulation *)
-    * eapply enc_conseq2;
-        [apply conseq_not_not2
-        |apply enc_eq].
+    * eapply enc_conseq1;
+        [apply conseq_not_not2|apply conseq_not_not1|].
+
+      apply enc_eq.
 
       ** apply enc_fld.
          apply i_obj with (C:=Account).
@@ -1214,9 +1240,8 @@ Module BankAccount(L : LanguageDef).
                     apply conseq_refl.
 
     (* encapsulation *)
-    * eapply enc_conseq2;
-        [apply conseq_not_not2
-        |].
+    * eapply enc_conseq1;
+        [apply conseq_not_not2|apply conseq_not_not1|].
 
       apply enc_wrapped1.
 

@@ -68,9 +68,14 @@ Module Inference(L : LanguageDef).
   | enc_wrapped1 : forall M A α, enc M A (wrapped α)
   | enc_wrapped2 : forall M A α1 α2, M ⊢ A ⊇ (wrapped α2) ->
                                 enc M A (¬ α1 access α2)
-  | enc_conseq2 : forall M A1 A2 A, M ⊢ A2 ⊇ A1 ->
-                               enc M A A2 ->
-                               enc M A A1
+  | enc_conseq1 : forall M A1 A2 A, M ⊢ A1 ⊇ A2 ->
+                               M ⊢ A2 ⊇ A1 ->
+                               enc M A A1 ->
+                               enc M A A2
+  | enc_conseq2 : forall M A1 A2 A, M ⊢ A1 ⊇ A2 ->
+                               M ⊢ A ⊇ A1 ->
+                               enc M A A1 ->
+                               enc M A A2
   | enc_or : forall M A1 A2 A, enc M A A1 ->
                           enc M A A2 ->
                           enc M A (A1 ∨ A2)
