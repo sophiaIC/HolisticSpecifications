@@ -1,47 +1,50 @@
-
 Dear reviewers 
 
-Thank you for the guidance on the resubmission of our work. We look forward to following
-and to the feedback we will then receive from you. In the mean time, we would be grateful
-for clarification on the following two points:
+Thank you for the guidance on the resubmission of our work. We look forward to our
+writing the 2nd version and  to the feedback we will then receive from you. 
+In the mean time, we would be grateful for clarification on the following two points:
 
 **1. Completion of Coq proofs**
 
 > The Coq proof should be completed: currently it has so many admits.
 
-We believe that at most one proof should be completed. Namely, the Coq proof has 
-39  admissions, which fall into the following 3 categories:
- - 1st Category: 1 admission in a file that does not form part of the proof 
-- 2nd Category: 37 admissions of properties of the assumed proof system 
+We believe that at most one proof should be completed. 
+
+Namely, the Coq proof has 39  admissions, which fall into the following 
+3 categories:
+ - *1st Category*: 1 admission in a file that does not form part of the proof 
+- *2nd Category*: 37 admissions of properties of the assumed proof system 
     of specifications of the form M |- A
-- 3rd Category: 1 admission relating to variable rewriting in assertions
+- *3rd Category*: 1 admission relating to variable rewriting in assertions
 
- 
-The 2nd Category is about trivial properties of the  assumed logic, relating to 
-proofs of consequence  (eg. A1 /\ A2 -> A1), and properties of expressions 
-(eg. x < y -> x != y). In the paper (line 731) we are assuming a sound such logic.
-These properties are not interesting; they are not required in the proof of our main
-Theorem (4.4), and thus have no impact on the results of the paper.
+The 2nd Category is about expected properties of the assumed logic, relating to 
+proofs of consequence  (eg. `A1 /\ A2 -> A1`), and properties of expressions 
+(eg. `x < y -> x != y`). In the paper (line 731) we are assuming a sound such logic,
+and outline it in Appendix E. The proof of such properties would be standard.
 
- These properties are required in the proof of the Bank Account example.  We
- could assume them explicitly, and this xxx JULIAN what write here xxx, but 
- simply admitting them makes ???? 
+These properties are not required in the proof  of our main Theorem (4.4) --
+in fact the Theorem holds for any sound proof system   `M |- A`. Thus, there
+properties  have no impact on the main result of our paper.
+But these properties were used in the proof of the Bank Account example --
+we explain that at the start of file `inference_soundness.v`. This is why we used
+the Coq keyword `admit`,  but we can instead use the `parameter` keyword.   
 
 The 3rd Category was initially admitted as it is not very interesting, and proofs 
 relating to variable rewrites are well known to be vastly more complex than they 
-are interesting."
+are interesting. 
 
 *Our proposal:*
-- We will address the 1st Category  by deleting the file containing it.
 
-- We propose that we should explain in the  paper why we simply admit these
-properties.
+`P1`:  We will address the 1st Category  by deleting the file containing it.
 
-- We are happy to take the reviewers guidance as to whether we should complete
+`P2`:  We will explain in the paper why we simply admit the properties from
+ the 2nd Category.
+
+`P3`: We will take the reviewers' guidance as to whether we should complete
 the proof for the 3rd Category, or explain the reasons for omitting it.
 
-We will also add to the coq proofs a file describing the contents of each *.v file 
-and what properties we admitted and why, and what other properties we were
+`P4`: We will add to the Coq proofs a file describing the contents of each *.v file, 
+ what properties we admitted and why, and what other properties we were
 parametric over and why, with references back to the paper.
 
 **2. Unrealistic motivating example**
@@ -55,7 +58,7 @@ This is a good point, and we thank the reviewers for pointing out that we should
 have expanded:
 
 We are not clear what is meant by "an interface to allow someone to get the 
-correct password". Such a function (called, say, getPassword) is expressible
+correct password". Such a function (called, say, `getPassword`) is expressible
 in the language, and we could add it to our example. But if the module allowed 
 a client to read an account's password without prior knowledge of the password, 
 then the module would no longer be robust, because anybody with access to
@@ -63,32 +66,50 @@ the account would be able to take the money out of the account.
 
 On the other hand, Mod_3 does support initialization of the password, through
 execution of the following code
-	"p1=new Object; a=new Account(); a.setPassword(null,p1)"
-namely, object creation, ie "new Account()" initializes the account's password
-to "null", and thus the call "a.setPassword(null,p1)" will succesfully set the password
-to p1. 
+
+	p1=new Object; a=new Account(); a.setPassword(null,p1)
+
+Namely, object creation, (`new Account()`) initializes the account's password
+to `null`, and thus the call `a.setPassword(null,p1)` will succesfully set the password
+to `p1`. 
 
 *Our proposal* 
-We will add explanations as per above, to explain how object intialization works 
-in our current approach. 
 
-*Appendix*
-------------
+`P5`: We will add explanations as per above, showing how object intialization works 
+in our approach. 
+
+------
+**Appendix**
+
 More details about point 2, for the interested reviewer.
 
-If we assumed some "unknown" method "m_unknown", and "untrusted" 
-object "o_untrust", the following sequence
-        "p1=new Object; a=new Account(); a.setPassword(null,p1); o_untrust.m_unknown(a)"
-would guarantee that no money will be removed during the call "o_untrust.m_unknown(a)"
--- because no external objects involved in that call have access to p1.  
+If we assumed some "unknown" method `m_unknown`, and "untrusted" 
+object `o_untrust`, and some account `a0` with some money in it, and with password
+`p0`, then, the following code
 
-This, of course, opens the question as to how we would initialize the account 
-so that it contains some money. This again can be done using the language what we have
-provided. We would follow the approach from [Mark Samuel Miller, Chip Morningstar, and Bill 
-Frantz. 2000. Capability-based Financial Instruments: From Object to Capabilities] and have a 
-Bank object, with Accounts belong to that Bank. The Accounts may transfer moneys across 
-each other only if the belong to the same Bank, and only Bank's may create Accounts 
-belonging to them. We could give the code for this, but it would require another page, which
-Is not central to the contribution of this work, and therefore propose not to do that.
-	
+         `a=new Account(); a0.transfer(p0,100); o_untrust.m_unknown(a)`
+
+gives _no_ guarantee about the call `o_untrust.m_unknown(a)` not removing the money in the account `a`, while
+
+        `p1=new Object; a=new Account();  a.setPassword(null,p1);`
+        `a0.transfer(p0,100);  o_untrust.m_unknown(a)`
+
+_does_ guarantee that no money will be removed during the call `o_untrust.m_unknown(a)`
+-- because no external objects involved in that call have access to `p1`.  
+
+One may now ask how we would initialize the account so that it contains some money, 
+without adding methods to class `Account` which make it possible to just create money
+out of thin air. We can do this (initialize the money) in the language we have
+provided: add a function, which pays money into the account only while the password 
+is still `null`. Or, even better, we could follow the approach  from [Mark Samuel Miller, 
+Chip Morningstar, and Bill Frantz. 2000. Capability-based Financial Instruments: 
+From Object to Capabilities] and have a `Bank` object, with `Account`s belonging 
+to that `Bank`. The `Account`s may transfer moneys across 
+each other only if they belong to the same `Bank`, and only `Bank`s may create `Account`s 
+belonging to them. We could give the code for this, but it would require another page, 
+discussing issues that are not central to the contribution of this work. Therefore,
+we propose not to do that, but are happy to take the reviewers' guidance.
+
+------
+We are looking forward to your answer whether you agree with our proposals `P1`,`P2`,`P3`, `P4` and `P5`, and thank you, again, for your interest.
  
