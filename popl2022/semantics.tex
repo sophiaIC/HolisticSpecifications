@@ -664,55 +664,74 @@ of the execution.
 
 \subsection{\scd{SD's proposal for motivation of adaptation}}
 
-We shall now give semantics to   the three necessity operators. In order to do that, we first need to define an auxiliary, renaming operator 
-$\adapt{}{}$ for states, where
- $\adapt{\sigma'}{\sigma}$ maps the variables in the top frame of a state $\sigma'$ according to the variables in 
+We will now give the semantics of the three necessity operators. To do that, we   need to define the auxiliary renaming operator 
+$\adapt{}{}$  defined on states: 
+ $\adapt{\sigma'}{\sigma}$ is a state whose heap is as in  $\sigma'$, but which maps the variables in the top frame according to the the tope frame in
  ${\sigma}$. 
+
+\vspace{.02in}
 
  Here is why the operator $\adapt{}{}$ is needed: A naive, first approach to defining the semantics of 
 $\onlyIf{A_1}{A_2}{A}$, would have   the following form: %\footnote{roughly, as we omitted mentioning the module}  
 
 \noindent
-$ (Def\_1st\_Attempt): \\
-\strut\ \ \ \ \ \ \ \  M \models \onlyIf{A_1}{A_2}{A}\\
-\strut\ \ \ \ \ \ \ \  \strut\ \ \ \ \ \ \ \  \mbox{iff} \\
-\strut\ \ \ \ \ \ \ \ \forall M', \sigma,\sigma'.[\  \arising{M'}{M}{\sigma} \wedge \sigma \models {A_1} \wedge \sigma' \models {A_2} \wedge \sigma \leadsto^* \sigma' \ \longrightarrow\  \sigma \models A \ ] $
+$\strut\ \ \ \           (Def\_1): \\
+\strut\ \ \ \        M \models \onlyIf{A_1}{A_2}{A}\\
+\strut\ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \  \strut\ \ \ \ \ \ \ \  \mbox{iff} \\
+\strut\ \ \ \       \forall M', \sigma,\sigma'.[\  \arising{M}{M'}{\sigma}\ \wedge \ M, \sigma \models {A_1}\  \wedge\  M';M, \sigma \leadsto^* \sigma' \   \wedge \ M, \sigma' \models {A_2}\ \ \ \longrightarrow\  \  \  M, \sigma \models A \ ] $
 
-Namely, a module $M$ satisfies the specification $ \onlyIf{A_1}{A_2}{A}$ if for all states $\sigma$ that arise from execution of $M$ linked with any arbitrary further module $M'$, and any further states $\sigma'$ which are reachable from  $\sigma$, if $\sigma$ satisfies $A_1$ and $\sigma'$ satisfies $A_2$, then $\sigma$ must also satisfy $A$.
+\vspace{.02in}
 
-$(Def\_1st\_Attempt)$, captures the main aspects of $\onlyIf{\_}{\_}{\_}$ specifications, but has one problem:
- it does not take into account that the variable bindings in $\sigma'$ might be different to those in $\sigma$. We will explain
+$ (Def\_1)$ says that a module $M$ satisfies   $ \onlyIf{A_1}{A_2}{A}$ if for all states $\sigma$ that arise from execution of $M$ linked with any arbitrary further module $M'$, and any further states $\sigma'$ which are reachable from  $\sigma$, if $\sigma$ satisfies $A_1$ and $\sigma'$ satisfies $A_2$, then $\sigma$ must also satisfy $A$.
+%
+$(Def\_1)$  captures the main aspects of $\onlyIf{\_}{\_}{\_}$ specifications, but has one problem:
+ it does not take into account that the variable bindings in $\sigma'$ might be different from those in $\sigma$. We will explain
  why this is an issue in terms of an example.
  
-Assume  we had a module  $M_{ownr\_imm}$ which defined accounts with immutable owners. We can express 
-that the owners are immutable through $(Spec_{ownr\_imm})$, defined as 
+Assume  we had a module  $M_{o\_imm}$ which defined accounts with immutable owners. We can express 
+that the owners are immutable through $(Spec_{o\_imm})$, defined below
 
 \noindent
-$\strut\ \   Spec_{ownr\_imm}\\
-\strut\ \ \ \ \ \ \ \triangleq\\
-\strut\ \ \ \  \onlyIf{\prg{a:Account} \wedge \prg{o}\!\neq\!\prg{null} \wedge \prg{a.owner}\!=\!{\prg{o}}}{ \prg{a.owner}\!\neq\!{\prg{o}}}{\prg{false}}$
+$\strut\ \ \ \        Spec_{o\_imm}  \ \ \ \ \ \ \  \triangleq \\
+% \strut\ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \  \strut\ \ \ \ \ \ \ \  \triangleq\\
+\strut\ \ \ \        \onlyIf{\ \prg{a:Account} \wedge \prg{o}\!\neq\!\prg{null} \wedge \prg{a.owner}\!=\!{\prg{o}}\ }{\  \prg{a.owner}\!\neq\!{\prg{o}}\ }{\ \prg{false}\ }$
 
 \noindent
-Namely, $(Spec_{ownr\_imm})$ asserts that once initialized, the value of the field \prg{owner} becomes immutable. \footnote{There exists no state $\sigma$, where the value $\prg{a.owner}$ is not \prg{null}, and might change at some point in the future.} And we would expect that
+Namely, $(Spec_{o\_imm})$ asserts that once initialized, the value of the field \prg{owner} becomes immutable. \footnote{There exists no state $\sigma$, where the value $\prg{a.owner}$ is not \prg{null}, and might change at some point in the future.} And we would have the expectation that $M_{o\_imm}$ would satisfy $Spec_{o\_imm}$,
 
-$(Expectation) \ \ \ M_{ownr\_imm}\ \models Spec_{ownr\_imm}$
+\noindent
+$\strut\ \ \ \        (Expectn) \ \ \ M_{o\_imm}\ \models Spec_{o\_imm}$
 
-However, according to $(Def\_1st\_Attempt)$, the $(Expectation)$ does not hold!  
-As a counterexample, assume a state $\sigma_1$ where   $\sigma_1 \models \prg{o}\neq \prg{null} \wedge \prg{a.owner}=\prg{o}$, and 
+\vspace{.02in}
+
+However, according to $(Def\_1)$, the $(Expectn)$ does not hold!  
+As a counterexample, consider a state $\sigma_1$ where   
+$M_{o\_imm},\sigma_1 \models \prg{o}\neq \prg{null} \wedge \prg{a.owner}=\prg{o}$, and 
 $\sigma_1$'s continuation is \prg{o:=new Object}. 
  By executing the continuation, 
- we obtain a $\sigma_2$, where $\sigma_1 \leadsto  \sigma_2$ and where $\sigma_2  \models \prg{a.owner}\neq{\prg{o}}$. 
- The latter is the case, because the value of \prg{o} is different in $\sigma_1$ and $\sigma_2$.  
+ we obtain a $\sigma_2$, where $...;\sigma_1 \leadsto  \sigma_2$. 
+ Then, because  the value of \prg{o} is different in $\sigma_1$ and $\sigma_2$, 
+ we have that $M_{o\_imm},\sigma_2  \models \prg{a.owner}\neq{\prg{o}}$.  
+ 
+ \vspace{.02in}
+ This means, that in $ (Def\_1)$, when we consider whether $\sigma'$ satisfies $A_2$, we need to use the heap from $\sigma'$, but the variable bindings from $\sigma$.
+ This is what the renaming operator $\adapt{\sigma'}{\sigma}$   
+ does -- more details in   Def.\ref{d:adapt}.   With such an operator, we refine our earlier attempt, and improve $(Def_1)$ as follows
 
- This is why we introduced the  renaming operator $\adapt{\sigma'}{\sigma}$  which modifies $\sigma'$ slightly, so the frame of $\sigma$ and $\sigma'$ are identical.  With such an operator, we refine our earlier attempt as follows
-$ (Def\_Finlt): \\
-\strut\ \ \ \ \ \ \ \  M \models \onlyIf{A_1}{A_2}{A}\\
-strut\ \ \ \ \ \ \ \  strut\ \ \ \ \ \ \ \  \mbox{iff} \\
-\strut\ \ \ \ \ \ \ \ \forall M', \sigma,\sigma'.[\  \arising{M'}{M}{\sigma} \wedge \sigma \models {A_1} \wedge \adapt{\sigma'}{\sigma}  \models {A_2} \wedge \sigma \leadsto^* \sigma' \ \longrightarrow\  \sigma \models A \ ] $
+\noindent 
+$\strut\ \ \ \      (Def\_2): \\
+\strut\ \ \ \   M \models \onlyIf{A_1}{A_2}{A}\\
+\strut\ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \  \strut\ \ \ \ \ \ \ \  \mbox{iff} \\
+\strut\ \ \ \ \ \   \forall M', \sigma,\sigma'.[\  \arising{M}{M'}{\sigma}\ \wedge \ M, \sigma \models {A_1}\  \wedge\  M';M, \sigma \leadsto^* \sigma' \   \wedge \ M,  \adapt{\sigma'}{\sigma}  \models {A_2}\ \ \ \longrightarrow\  \  \  M, \sigma \models A \ ] $
 
-
-
-\scd{It remains to define the operator $adapt$ ...}
+ \vspace{.04in}
+ 
+We now consider the definition of $\adapt{\sigma'}{\sigma}$ in some more detail:
+We already said that $\adapt{\sigma'}{\sigma}$ should be a state whose heap is
+identical to that of ${\sigma'}$m and whose tope frame maps variables in the
+same manner as the top frame of $\sigma$. However, we cannot just copy the 
+top frame of ${\sigma}$ onto the top frame of $\adapt{\sigma'}{\sigma}$, because 
+.... HERE TO EXPLAI WHY WE NEED TO RENAME IN THE CONTINUATUION 
 
 \subsubsection{Adaptation: viewing the future through the lens of the past.}
 %
