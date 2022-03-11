@@ -6,15 +6,15 @@ Today's   software has been built
 over decades by combining modules and components of
 different provenance and 
 %different degrees of 
-trustworthiness. It 
-is open, interacting with other programs, devices, and people.
+trustworthiness, and
+is \emph{open}, interacting with other programs, devices, and people.
 %In \jm{the \emph{open world}, where programs interact with untrusted code,} 
 %complex 
 {Software needs} to be both  {\emph{correct}} ({programs do what they are supposed to}) and  % (liveness)  
-{\emph{robust}} ({programs don't do what they aren't supposed to, even in the presence of untrusted code}). % (safety), 
+{\emph{robust}} ({programs don't do what they aren't supposed to, even in the presence of untrusted \sd{clients|}}). % (safety), 
 %\vspace{.03in}
 %\jm{or more specifically, modules need to be \emph{robust}(modules are safe, even in the presence of untrusted code).}
- {This work  addresses the robustness of modules: \sd{how it can be specified, and how adherence to the specification can be verified}.}
+ {This work  addresses the robustness of modules and APIs: {how it can be specified, and how adherence to the specification can be verified}.}
 
  {Correctness is} typically specified formally 
  through \citeasnoun{Hoare69} triples consisting of a  precondition, a code snippet, and some
@@ -40,11 +40,12 @@ will always achieve the postcondition (the money is transferred).
 %\sophiaPonder[I fear this sentence breaks the flow]
 %{We go beyond  ``design by contract'' \cite{Meyer09},  and
 %cannot rely on a module's client sticking to the module's contract.}
-\sd{However, \Scorrect does not make the   bank module 
- \emph{robust}; for example, what if it were possible to take ten percent of the
- balance  from an account
- through a further method defined in the module?
- A first approach to specify robustness would require}
+However, \Scorrect does not make the   bank module 
+ \emph{robust}; for example, what  
+ if it were possible to \sd{take money out of the account through some otther method than \prg{transfer} which did not
+ require knowledge of the passwoird?}
+%  take ten percent of the  balance  from an account  through a further method defined in the module?
+ A first approach to specify robustness could be:
  
 
 \begin{quote}
@@ -176,73 +177,121 @@ With \SrobustB, I can confidently pass my account to some untrusted client who
 \vspace{.04in}
  
  \subsection{Earlier works on Robustness} 
-This paper is not the first work to address the problem of robustness:
+Our paper is not the first   to address the problem of robustness:
 % In contrast to \jm{correctness}  which is usually specified with \sophiaPonder{why talk again about Hiare triples}% such 
 % Hoare triples,  
-\sophiaPonder[dropped the mention of correctness here]{A multitude of different 
+ {\sd{Several} 
 kinds of} guarantees have been proposed for  robustness, differing in the level 
-of granularity,   target  language or calculi, and intended use:
+of granularity,   target  language or calculi, and intended use. \sd{To name a few,}
 object capabilities  \cite{MillerPhD, dd, threoremsFreeSep}, 
 information control flow \cite{Zdancewic:Myers:01,noninteferenceOS}, 
 and correspondence assertions \cite{Maffeis:aiamb:thesis00}
 all
 ensure some level of robust safety. 
-\jm[is this true??? what claim can we make here? \sd{why not the cali you made?}]{However, to our knowledge, 
+{However, to our knowledge, 
 our work is the first that is able to 
 express specifications of the form (S$_{\text{robust}_2}$), along with a system
 for formally verifying such specifications.}
-.
- 
 
-  Both {\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE} can express \SrobustA but
-  {\sc{VerX}}  cannot express \SrobustB, because 
-\SrobustB  requires the concepts of provenance (``external object'') and
-  permission (``has access to''x).
-On the other hand, {\sc{VerX}} can prove adherence to  specifications through symbolic 
-  execution, while  \emph{Chainmail}   lacks a proof system. 
-%     \sd{Moreover,}  correspondence assertions cannot express (S$_{\text{robust}_2}$): they lack
-%    support for provenance, and ways to match the time of an effect to that of the
-%    condition.%}
- % On the other hand, 
+\sd{Our work is related} to  {\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE}.
+Both these approaches can express necessary conditions
+  like \SrobustA. For this, they \sd{both employ
+  temporal operators and implication, for example,  \SrobustA
+ could take a form like} 
+\\
+ $\strut ~ \strut  \prg{a:Account} \ \wedge\ \prg{a.balance==bal}  \ \wedge\ \textbf{Next}(\prg{a.balance<bal}) $\\
+ $\strut ~ \hspace{2in} \strut \strut \strut \longrightarrow\    \textbf{calls}\, \prg{a.transfer(\_,a.password)}$
+ \\
+\sd{ However, to express \SrobustB, one also needs what we call \emph{capability operators}, which talk about 
+ provenance (``external object'') and
+  permission (``\prg{x} has access to \prg{y}"'). 
+   {\sc{VerX}}  does not support capability operators, and thus cannot express   \SrobustB, 
+   while  \emph{Chainmail} does support capability operators, and can express  \SrobustB. 
+}  
+ {\sc{VerX}} comes with a symbolic 
+  execution system which to demonstrate adherence to  specifications while  \emph{Chainmail}  has no such system.
+  
+\sd{Temporal operators in {\sc{VerX}}   and  \emph{Chainmail}  are fist class, ie may appear in any assertions 
+and form new assertions. This makes{\sc{VerX}}   and  \emph{Chainmail} very expressive,
+and allows specifications which talk about any number of points in time.
+However, this expressivity comes at the cost of making it very difficult to develop a logic to
+prove adherence to such specifications.}
   
 \vspace{.04in}
 
 \subsection{This work}
-This work introduces \Nec, which consists of a specification language for expressing a module's safety guarantees such as \SrobustB, and a logic 
-%is  the first to express necessity specifications, including those like (***), and also
+This work introduces \Nec, which consists of a specification language for expressing a module's safety guarantees 
+% such as \SrobustB, 
+and a logic 
 to prove adherence to such specifications.
-We adopted % have been inspired by   
+
+For the specification language we adopted % have been inspired by   
 \emph{Chainmail}'s %approach to add
-  capability operators, \sophiaPonder[we should have introduced the capability operators before talking about them]{}
-but we replaced its temporal operators with  {our novel}
+  capability operators, 
+but we replaced its temporal operators with  {our three novel}
   \emph{necessity} operators. 
-  These simplifications enabled us to develop our proof logic. 
+ One such necessity operator is
+ 
+ \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
+                                from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$ 
+\end{lstlisting}
+%  %      $A$          from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$          from ${A_{curr}}$ to ${A_{fut}}$ onlyThrough ${A_{nec}}$
+The  form   {above} says that % $A$ always holds;  $A$ is an invariant.
+%The second form says that  
+a  {transition} from a current state satisfying assertion $A_{curr}$ to a future
+state satisfying $A_{fut}$ %(i.e.\ the transition  $A_{curr}$ to $A_{fut}$ being an effect) 
+is possible only if the   necessary 
+condition
+$A_{nec}$ holds in the \emph{current} state.
+%The third form says that a change from %a current state satisfying 
+%$A_{curr}$ to % a future state satisfying 
+%$A_{fut}$  may happen only if % the necessary condition
+%$A_{nec}$ holds in some \emph{intermediate} state.
+The other two operators express either \emph{necessary conditions} for
+\emph{single-step} transitions % from  $A_{curr}$  states to a   $A_{fut}$ states,
+or \emph{intermediate} conditions for \emph{any} transitions.
+% from a $A_{curr}$ -state t  $A_{fut}$  states.
+}
+Using this operator, we can formulate  \SrobustB % in \Chainspec  
+as
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+$\text{\SrobustB}$  $\triangleq$   from a:Account $\wedge$ a.balance==bal
+               to a.balance < bal
+               onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
+\end{lstlisting}
+Namely, a transition from a \sd{current} state where an account's balance is \prg{bal}, to a \sd{future} state where 
+it has decreased, may \emph{only} occur if \sd{in the current state} some unknown client object  has access to that account's password. 
+More discussion in \S\ref{s:bankSpecEx}. 
+
+  
+Unlike  \emph{Chainmail}'s temporal operatots, 
+ the necessity operators %  $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
+ are second class, and may not appear in the assertions $A$.
+Being second class allows us to separate proofs about necessity from other proofs.
+\jm[Not sure if it makes sense to put this here. My thinking was that it might help with the intuition of the logic early on if the form can be lined up with the english definition of (S3). \sd{I do not follow the argumet. to discuss}]{}
+ This simplification enabled us to develop our proof logic. 
 %We propose \Chainmail, a specification language % for   \emph{Necessity Specifications} 
 % to describe a module's safety guarantees,
 %and 
 %\Chainlogic,   % \emph{Necessity Logic} 
 %a logic to prove a module's adherence to such specifications.
-The current work is based on a simple, imperative, typed, object oriented
-language with unforgeable addresses and private fields.\footnote{We believe
- that our approach is applicable to several programming paradigms, and 
- that   unforgeability and privacy
- can be replaced 
- by lower level mechanisms such as capability machines \cite{vanproving,davis2019cheriabi}.
-  }
 
-\jm[not sure if this should go here ...]{
-Unlike other work on specifying robust safety for software,} \Nec allows proofs of not just simple safety 
+
+
+\jm[not sure if this should go here ...\sd{Actually, not sure what is said here is true} Here what it said, but I think it breaks the flow
+Unlike other work on specifying robust safety for software,  \Nec allows proofs of not just simple safety 
 specifications, but specifications that rely on reasoning about emergent behavior and complex interactions 
 across a module's interface (such as \SrobustB).
 Further, beyond unforgeability and privacy, \Nec is agnostic about much of the specifics
-of module implementation, only that module code can be verified using some Hoare logic. This is a significant advantage, as it makes \Nec broadly applicable to any such languages that use Hoare logic to establish correctness.\sophiaPonder[it is not
-a matter of language]{}
+of module implementation, only that module code can be verified using some Hoare logic. 
+This is a significant advantage, as it makes \Nec broadly applicable to any such languages that use Hoare logic to establish correctness.. \sd{it is not
+a matter of language}]{}
 
 
 %\textit{Necessity Specifications}  are
-\Nec supports the usual assertions, $A$, (including permission, provenance,
-and control), as well as three \jm[]{novel} necessity 
-{operators. We now show one of these operators} 
+%\Nec supports the usual assertions, $A$, (including permission, provenance,
+%and control), as well as three \jm[]{novel} necessity 
+%{operators. We now show one of these operators} 
 % shown below.
 % \susan[Needs to be laid out differently to put the four forms in]{}
 % Thus, we  have % one  of  the two -- omitting, as there are three!
@@ -251,40 +300,7 @@ and control), as well as three \jm[]{novel} necessity
 %\begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
 %       $A$          from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$          from ${A_{curr}}$ to ${A_{fut}}$ onlyThrough ${A_{nec}}$
 %\end{lstlisting}
-\begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-                                from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$ 
-\end{lstlisting}
-%  %      $A$          from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$          from ${A_{curr}}$ to ${A_{fut}}$ onlyThrough ${A_{nec}}$
-The  form   {above} says that % $A$ always holds;  $A$ is an invariant.
-%The second form says that  
-a  {transition} from a current state satisfying $A_{curr}$ to a future
-state satisfying $A_{fut}$ %(i.e.\ the transition  $A_{curr}$ to $A_{fut}$ being an effect) 
-is possible only if the necessary condition
-$A_{nec}$ holds in the \emph{current} state.
-%The third form says that a change from %a current state satisfying 
-%$A_{curr}$ to % a future state satisfying 
-%$A_{fut}$  may happen only if % the necessary condition
-%$A_{nec}$ holds in some \emph{intermediate} state.
- {The other two operators express either \emph{necessary conditions} for
-\emph{single-step} transitions % from  $A_{curr}$  states to a   $A_{fut}$ states,
-or \emph{intermediate} conditions for \emph{any} transitions.
-% from a $A_{curr}$ -state t  $A_{fut}$  states.
-}
-Unlike  \emph{Chainmail}, 
- the necessity operators %  $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
- are second class, and may not appear in the assertions $A$.
-Being second class allows us to separate proofs about necessity from other proofs.
-\jm[Not sure if it makes sense to put this here. My thinking was that it might help with the intuition of the logic early on if the form can be lined up with the english definition of (S3).]
-{We provide} a description of the formalization of \SrobustB % in \Chainspec  
-in  \S\ref{s:bankSpecEx}, but give the formal statement here as an example to help with 
-the reader's intuition. 
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-$\text{\SrobustB}$  $\triangleq$   from a:Account $\wedge$ a.balance==bal
-                  to a.balance < bal
-                  onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
-\end{lstlisting}
-A transition from a \sd{current} state where an account's balance is \prg{bal}, to a \sd{future} state where 
-it has decreased, may \emph{only} occur if \sd{in the current state} some unknown client object  has access to that account's password. 
+ 
 
 
  %\sophiaPonder[not sure we need to have the latter, 
@@ -312,7 +328,7 @@ it has decreased, may \emph{only} occur if \sd{in the current state} some unknow
 
 
  
-\Nec logic is based on four main ideas: 
+The \Nec logic is based on four main ideas: 
 First, some assertions are \emph{encapsulated}, \ie
 their validity may only be affected by internal calls. 
 % \susan[same question - is may the correct word? This said module-internal before I edited it.]{}
@@ -328,6 +344,16 @@ per-method \Nec specifications and encapsulated assertions
  emergent behavior.
 More in \S\ref{s:approach}.
  
+ 
+  The current work is based on a simple, imperative, typed, object oriented
+language with unforgeable addresses and private fields.\footnote{We believe
+ that our approach is applicable to several programming paradigms, and 
+ that   unforgeability and privacy
+ can be replaced 
+ by lower level mechanisms such as capability machines \cite{vanproving,davis2019cheriabi}.
+}
+
+
 %The below is good and perhaps we shpuld use it
 % The challenge here is twofold: How do we specify the bad things we are
 %concerned about, and how do we prove that the bad things we've
