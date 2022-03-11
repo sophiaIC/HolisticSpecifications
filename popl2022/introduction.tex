@@ -21,7 +21,7 @@ is open, interacting with other programs, devices, and people.
  postcondition. 
  For example, \sd{for a bank module,  we may specify for bank accounts that:}
  \begin{quote}
-(S$_{\text{correct}}$)\ \ Calling \prg{transfer} using the correct password will transfer the money.
+\Scorrect\ \ Calling \prg{transfer} using the correct password will transfer the money.
 \end{quote}
 The precondition is a \emph{sufficient} condition for the {code snippet to behave correctly}: 
 assuming termination, the precondition (\eg providing the right 
@@ -40,7 +40,7 @@ will always achieve the postcondition (the money is transferred).
 %\sophiaPonder[I fear this sentence breaks the flow]
 %{We go beyond  ``design by contract'' \cite{Meyer09},  and
 %cannot rely on a module's client sticking to the module's contract.}
-\sd{However, (S$_{\text{correct}}$) does not make the   bank module 
+\sd{However, \Scorrect does not make the   bank module 
  \emph{robust}; for example, what if it were possible to take ten percent of the
  balance  from an account
  through a further method defined in the module?
@@ -48,38 +48,44 @@ will always achieve the postcondition (the money is transferred).
  
 
 \begin{quote}
-(S$_{\text{robust}_1}$)\ \ An account's balance does not decrease unless \prg{transfer} was called 
+\SrobustA\ \ An account's balance does not decrease unless \prg{transfer} was called 
 with the correct password.
 \end{quote}
 
 Calling \prg{transfer}  with the  correct password is 
 a \emph{necessary condition} for reducing the account's  balance.
 Condition   
-(S$_{\text{robust}_1}$) is \sd{crucial for robustness, but it is not strong enough:
+\SrobustA is \sd{crucial for robustness, but it is not strong enough:
 it does not give   enough guarantees in order to confidently pass the bank account into untrusted code, 
 in the expectation of receiving some payment, but without fear
 that a malicious client might steal my money \cite{ELang,miller-esop2013}.}
 %While crucial, (S$_{\text{robust}_1}$) is not strong enough to ensure robustness of 
  % an account.
-\sd{Namely,} (S$_{\text{robust}_1}$) does not take  account of the module's \emph{emergent behavior}.
+\sd{Namely,} \SrobustA does not take  account of the module's \emph{emergent behavior}.
  What if the module provided further methods which leaked the password,  
  {or allowed for it to be arbitrarily changed}?
+ \jm{That is, the intent of \SrobustA (knowledge of the password is required to decrease the balance) may be 
+ subverted by other procedures in the bank account interface.
+ While no single procedure call is capable of breaking the intent of \SrobustA, a sequence of calls might.}
 { %For robustness, 
  \sophiaPonder[dropped "for robustness", as I think there are many kinds of robustness"]{What} we really need is
  \begin{quote}
-(S$_{\text{robust}_2}$)\  \ The balance of an account does not \jm[]{\emph{ever}} decrease in the future unless some external 
+\SrobustB\  \ The balance of an account does not \jm[]{\emph{ever}} decrease in the future unless some external 
 object \jm[]{\emph{now}} has access to the account's current password.
 \end{quote}
-\jm{(S$_{\text{robust}_2}$) is a much stronger guarantee than (S$_{\text{robust}_1}$).}\sophiaPonder[mathematically speaking, it is not!]{}
-With (S$_{\text{robust}_2}$), I can confidently pass my account to some untrusted client who
+\jm{\SrobustB more accurately provides the guarantee needed to secure the bank account than \SrobustA does.}\sophiaPonder[mathematically speaking, it is not!]{}
+With \SrobustB, I can confidently pass my account to some untrusted client who
   does not have
  knowledge of the password; they may or may not make the payment I was expecting, but I
  know they will not \sd{be able to} steal my money \cite{ooToSecurity,miller-esop2013}.
- Note that (S$_{\text{robust}_2}$)  does not mention
+ Note that \SrobustB  does not mention
  the names of any functions in the module, and 
  thus can be expressed without reference to any particular API ---
- indeed (S$_{\text{robust}_2}$) can constrain \emph{any} API with an account, an account
- balance, and a password.
+ indeed \SrobustB can constrain \emph{any} API with an account, an account
+ balance, and a password. \jm{Finally, \SrobustB takes into account 
+ the \emph{emergent behavior} of the bank account: that is, a single method call 
+ is not considered in isolation, rather, the functionality of the entire module is
+ specified, including all combinations of method calls.}
 
 
  
@@ -188,9 +194,9 @@ for formally verifying such specifications.}
 .
  
 
-  Both {\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE} can express (S$_{\text{robust}_1}$) but
-  {\sc{VerX}}  cannot express (S$_{\text{robust}_2}$), because 
-(S$_{\text{robust}_2}$)  requires the concepts of provenance (``external object'') and
+  Both {\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE} can express \SrobustA but
+  {\sc{VerX}}  cannot express \SrobustB, because 
+\SrobustB  requires the concepts of provenance (``external object'') and
   permission (``has access to''x).
 On the other hand, {\sc{VerX}} can prove adherence to  specifications through symbolic 
   execution, while  \emph{Chainmail}   lacks a proof system. 
@@ -202,7 +208,7 @@ On the other hand, {\sc{VerX}} can prove adherence to  specifications through sy
 \vspace{.04in}
 
 \subsection{This work}
-This work introduces \Nec, which consists of a specification language for expressing a module's safety guarantees such as (S$_{\text{robust}_2}$), and a logic 
+This work introduces \Nec, which consists of a specification language for expressing a module's safety guarantees such as \SrobustB, and a logic 
 %is  the first to express necessity specifications, including those like (***), and also
 to prove adherence to such specifications.
 We adopted % have been inspired by   
@@ -227,7 +233,7 @@ language with unforgeable addresses and private fields.\footnote{We believe
 \jm[not sure if this should go here ...]{
 Unlike other work on specifying robust safety for software,} \Nec allows proofs of not just simple safety 
 specifications, but specifications that rely on reasoning about emergent behavior and complex interactions 
-across a module's interface (such as (S$_{\text{robust}_2}$)).
+across a module's interface (such as \SrobustB).
 Further, beyond unforgeability and privacy, \Nec is agnostic about much of the specifics
 of module implementation, only that module code can be verified using some Hoare logic. This is a significant advantage, as it makes \Nec broadly applicable to any such languages that use Hoare logic to establish correctness.\sophiaPonder[it is not
 a matter of language]{}
@@ -269,11 +275,11 @@ Unlike  \emph{Chainmail},
  are second class, and may not appear in the assertions $A$.
 Being second class allows us to separate proofs about necessity from other proofs.
 \jm[Not sure if it makes sense to put this here. My thinking was that it might help with the intuition of the logic early on if the form can be lined up with the english definition of (S3).]
-{We provide} a description of the formalization of (S$_{\text{robust}_2}$) % in \Chainspec  
+{We provide} a description of the formalization of \SrobustB % in \Chainspec  
 in  \S\ref{s:bankSpecEx}, but give the formal statement here as an example to help with 
 the reader's intuition. 
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-(S$_{\prg{robust}_2}$)  $\triangleq$   from a:Account $\wedge$ a.balance==bal
+$\text{\SrobustB}$  $\triangleq$   from a:Account $\wedge$ a.balance==bal
                   to a.balance < bal
                   onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
 \end{lstlisting}
