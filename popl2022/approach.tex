@@ -9,9 +9,11 @@
  \subsection{Bank Account -- three modules}
 \label{s:bank}
   
-Module \ModA consists of the \prg{Account} class with a
-\prg{transfer} method, and an empty 
-\prg{Password} class where each instance models a unique password.
+Module \ModA consists of an empty 
+\prg{Password} class, and an  \prg{Account} class with a password, and a balance, an \prg{init} method to 
+initialize the password, and 
+a
+\prg{transfer} method. \sophiaPonder[chopped "where each instance models a unique password", because NOT TRUE!!]{}
 %
 % (Note that we assume private fields are accessible ``class-wide''.)
 %
@@ -30,6 +32,9 @@ module $\ModA$
       if this.pwd==pwd'
         this.balance-=100
         dest.balance+=100
+     method init(pwd:Pasword) -> void
+      if this.pwd==null
+        this.pwd=pwd'
   class Password
 \end{lstlisting}
 %
@@ -95,8 +100,10 @@ module $\ModB$
   class Account
     field balance:int 
     field pwd: Password 
-    method transfer(..) 
+    method transfer(..) ...
       ... as earlier ...
+    method init(...) ...
+       ... as earlier ...
     method set(pwd': Password)
       this.pwd=pwd'
       
@@ -112,6 +119,8 @@ module $\ModC$
     field pwd: Password 
     method transfer(..) 
       ... as earlier ...
+    
+    
     method set(pwd',pwd'': Password)
       if (this.pwd==pwd') 
         this.pwd=pwd''
@@ -122,17 +131,17 @@ module $\ModC$
 
 Although the \prg{transfer} method is the same in
 all three alternatives, and each one satisfies \Sclassic,
-code such as
-%
-\prg{account.set(42); account.transfer(yours, 42)}
-%
-is enough to drain the account in \ModB without knowing the password.
+code \sophiaPonder[this this needs space, hence line break]{such as}
+\\ 
+$\ \strut \hspace{.2in} $ \prg{an\_account.set(42); an\_account.transfer(42,roque\_account)}
+\\ 
+is enough to drain  \prg{an\_account} in \ModB without knowing the password.
 
 
  \subsection{Bank Account -- the right specification}
 \label{s:bankSpecEx}
 
-We need to rule out \ModA while permitting \ModA and
+We need \sophiaPonder[is that clear?]{a specification with which to} rule out \ModB while permitting \ModA and
 \ModC. The catch is that the vulnerability present in \ModB is the result
 of  \emph{emergent} behaviour from the interactions of the \prg{set}
 and \prg{transfer} methods --- even though \ModC also has a
@@ -144,7 +153,10 @@ we want to avoid transferring money
 the other way around % gives us a positive statement that still
 rules out the theft: that money \textit{can only} be
 transferred when the account's password is known.
-In \Nec  syntax:\sophiaPonder[we are repeating something from section 1]{}
+
+
+In \Nec  syntax, and \sd{recalling section \ref{intro:this:work}, }
+ 
 
 %
 %% The flaw in version {\sf{II}} arises from 
@@ -167,9 +179,13 @@ In \Nec  syntax:\sophiaPonder[we are repeating something from section 1]{}
  %% module has access to the password:
 %
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-(S$_{\prg{robust}_2}$)   $\triangleq$   from a:Account $\wedge$ a.balance==bal
-           to a.balance < bal
-           onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
+$\text{\SrobustA}$  $\triangleq$   from a:Account $\wedge$ a.balance==bal
+               next a.balance < bal
+               onlyIf $\exists$ o,a'. [$\external{\texttt{o}}$ $\wedge$ $\calls{\texttt{o}}{\texttt{a}}{\texttt{transfer}}{\texttt{a.pwd},\texttt{a'}} $]    
+$\text{\SrobustB}$  $\triangleq$   from a:Account $\wedge$ a.balance==bal
+               to a.balance < bal
+               onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]    
+           
 \end{lstlisting}
 %
 %
@@ -181,7 +197,12 @@ In \Nec  syntax:\sophiaPonder[we are repeating something from section 1]{}
  %% \prg{AccountMdl}), and which has access to \prg{a}'s password.
  %
 %% T9hu having access to the password is a necessary condition for the balance to reduce.
-The critical point of this \Nec specification is that it is
+
+\sd{Indeed, all three modules   satisfy  \SrobustA;  this demonstrates that \SrobustA is not
+strong enough. On the other hand, \ModA and \ModC satisfy \SrobustB, while \ModB does not.  }
+
+A critical point of \SrobustB % this \Nec specification 
+is that it is
 expressed in terms of observable effects (the account's balance is
 reduced: \prg{a.balance < bal}) and the shape of the heap 
 (external access to the password:
@@ -195,22 +216,66 @@ password, irrespective of the API it
 offers, the services it exports, or the dependencies on other parts of
 the system.
 
-%\sophiaPonder[skip that part?]
-{This example also demonstrates that 
-%the specification need  refer  to  individual methods in a module.
-%Moreover, 
+ This example also demonstrates that 
 adherence to   \Nec specifications is not monotonic:
 adding a method to a module does not necessarily preserve adherence to
 a specification, 
 and while separate methods may adhere to a  specification, their combination does
-not necessarily do so. This is why we say \Nec specifications capture a module's \emph{emergent behaviour}. 
-}
+not necessarily do so. 
+\sd{For example, \ModA satisfies \SrobustB, while \ModB does not.}
+This is why we say that \Nec   specifications capture a module's \emph{emergent behaviour}. 
+ 
 
 %\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
+\subsubsection{How applicable is  \SrobustB?}
 
+Finally, \sd{note that \SrobustB is applicable even though \emph{some} external objects may have access
+to the account's password. 
+Namely, if the account is passed to a scope which does not know the password, we 
+know that its balance is guaranteed not to decrease, even though it may increase. 
+}
 
-%\subsection{Internal and External Modules, Objects, and Calls}
+ 
+We illustrate this through the following simplified code snippet.
+ 
 
+\begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
+module $\ModExt$
+     ...
+    method expecting_payment(untrusted:Object){ 
+        a = new Account;
+        p = new Password; 
+        a.set(null,p);
+        ...
+        ...
+        untrusted.make_payment(a);
+        ...
+        ...
+    }
+}
+\end{lstlisting}
+ 
+
+\sd{The method \prg{expecting\_payment} has as argument an external object \prg{untrusted}, of unknown provenance.
+The method \prg{expecting\_payment} creates a new \prg{Account} and initializes its password. 
+Assume that class \prg{Account} is from a module wich staisfied \SrobustB.}
+
+\sd{Thus, 
+in the scope of the method\prg{expecting\_payment} external objects have access to the password, 
+and the balance may be decreased 
+while executing the code between lines 7 and 8, or the code between lines 9 and 10. 
+However, if the code in lines 7-8 does not leak the password to \prg{untrusted}, then no external object
+in  the scope of the call \prg{make\_payment} at line 9 has access to the password, and 
+even though we are calling   an untrusted object, \SrobustB guarantees that it
+ will not be able to take any money out of  \prg{a}.
+}
+
+\sd{The purpose of the current paper is being able to express specifications like \SrobustB, and
+and being able to prove adherence. In further work we want to develop logics to leverage such specifications, and put 
+arguments like the informal one of this section onto formal foundations.
+}
+
+ 
 \subsection{Internal and External objects and calls}
 \label{s:concepts}
 
