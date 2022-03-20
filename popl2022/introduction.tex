@@ -8,43 +8,29 @@ different provenance and
 %different degrees of 
 trustworthiness, and
 is \emph{open}, interacting with other programs, devices, and people.
-%In \jm{the \emph{open world}, where programs interact with untrusted code,} 
-%complex 
-{Software needs} to be both  {\emph{correct}} ({programs do what they are supposed to}) and  % (liveness)  
-{\emph{robust}} ({programs don't do what they aren't supposed to, even in the presence of untrusted \sd{clients|}}). % (safety), 
-%\vspace{.03in}
-%\jm{or more specifically, modules need to be \emph{robust}(modules are safe, even in the presence of untrusted code).}
+{Software needs} to be both  {\emph{correct}} ({programs do what they are supposed to}) and   
+{\emph{robust}} ({programs don't do what they aren't supposed to, even in the presence of untrusted  {clients}}).  
  {This work  addresses the robustness of modules and APIs: {how it can be specified, and how adherence to the specification can be verified}.}
 
  {Correctness is} typically specified formally 
- through \citeasnoun{Hoare69} triples consisting of a  precondition, a code snippet, and some
+ through \citeasnoun{Hoare69} triples consisting of a  precondition, a code snippet, and a
  postcondition. 
- For example, \sd{for a bank module,  we may specify for bank accounts that:}
+ For example,  {for a bank module,  we may specify:}
  \begin{quote}
-\Scorrect\ \ Calling \prg{transfer} using the correct password will transfer the money.
+\Scorrect\ \ Calling \prg{transfer} on \sd{an account and using the account's password} will transfer the money.
 \end{quote}
 The precondition is a \emph{sufficient} condition for the {code snippet to behave correctly}: 
 assuming termination, the precondition (\eg providing the right 
 password) guarantees that
 the code (\eg call the \prg{transfer} function)
 will always achieve the postcondition (the money is transferred).
-
-%Proving adherence to such specifications  poses considerable challenges, especially when in the 
-%context of aliasing, re-entrancy, multithreading, memory models, to name a just a few. 
-%Such challenges  have been studied intensively over the last  two decades 
-% \cite{BIMutable,objInvars,DenyGuarantee,RealxedC11} -- again just naming a few.
-
-    \vspace{.03in}
+ 
+    \vspace{.05in}
     % I think we need the vspace
  
-%\sophiaPonder[I fear this sentence breaks the flow]
-%{We go beyond  ``design by contract'' \cite{Meyer09},  and
-%cannot rely on a module's client sticking to the module's contract.}
-However, \Scorrect does not make the   bank module 
- \emph{robust}; for example, what  
- if it were possible to \sd{take money out of the account through some otther method than \prg{transfer} which did not
- require knowledge of the passwoird?}
-%  take ten percent of the  balance  from an account  through a further method defined in the module?
+ \Scorrect  describes \sd{the \emph{correct use} of the module, but is \emph{not} concerned with its \emph{robustness}.}
+\sd{For example, can I pass an account to foreign untrusted code, in the expectation of receiving a payment,
+but without fear that a malicious client might use the account to steal my money \cite{ELang}?}
  A first approach to specify robustness could be:
  
 
@@ -53,44 +39,38 @@ However, \Scorrect does not make the   bank module
 with the correct password.
 \end{quote}
 
-Calling \prg{transfer}  with the  correct password is 
+\SrobustA gives   the guarantee that it is not possible to  take money out of the account through some other method than \prg{transfer} which did not
+ require knowledge of the password.
+  Calling \prg{transfer}  with the  correct password is 
 a \emph{necessary condition} for reducing the account's  balance.
-Condition   
-\SrobustA is \sd{crucial for robustness, but it is not strong enough:
-it does not give   enough guarantees in order to confidently pass the bank account into untrusted code, 
-in the expectation of receiving some payment, but without fear
-that a malicious client might steal my money \cite{ELang,miller-esop2013}.}
-%While crucial, (S$_{\text{robust}_1}$) is not strong enough to ensure robustness of 
- % an account.
-\sd{Namely,} \SrobustA does not take  account of the module's \emph{emergent behavior}.
+
+%Condition    % \SrobustA is a specification, and NOT a condition!
+\SrobustA is  crucial, but  not   enough:
+it does not take  account of the module's \emph{emergent behaviour},
+ \sd{that is, does not cater for the potential interplay of several methods offered by the module.}
  What if the module provided further methods which leaked the password,  
  {or allowed for it to be arbitrarily changed}?
- \jm{That is, the intent of \SrobustA (knowledge of the password is required to decrease the balance) may be 
- subverted by other procedures in the bank account interface.
- While no single procedure call is capable of breaking the intent of \SrobustA, a sequence of calls might.}
-{ %For robustness, 
- \sophiaPonder[dropped "for robustness", as I think there are many kinds of robustness"]{What} we really need is
+\sophiaPonder[drop?]{ While no single procedure call is capable of breaking the intent of \SrobustA, a sequence of calls might.}
+{What} we really need is
  \begin{quote}
-\SrobustB\  \ The balance of an account does not \jm[]{\emph{ever}} decrease in the future unless some external 
-object \jm[]{\emph{now}} has access to the account's current password.
+\SrobustB\  \ The balance of an account does not {\emph{ever}} decrease in the future unless some external 
+object  {\emph{now}} has access to the account's current password.
 \end{quote}
-\jm[]{While \SrobustA specifies how the outside world may reduce our bank 
-balance, \SrobustB describes the conditions under which we can be assured that 
-our bank balance is safe from malicious code.}
 With \SrobustB, I can confidently pass my account to some untrusted client who
-  does not have
+ does not have
  knowledge of the password; they may or may not make the payment I was expecting, but I
  know they will not \sd{be able to} steal my money \cite{ooToSecurity,miller-esop2013}.
  Note that \SrobustB  does not mention
  the names of any functions in the module, and 
  thus can be expressed without reference to any particular API ---
  indeed \SrobustB can constrain \emph{any} API with an account, an account
- balance, and a password. \jm{Finally, \SrobustB takes into account 
- the \emph{emergent behavior} of the bank account: that is, a single method call 
- is not considered in isolation, rather, the functionality of the entire module is
- specified, including all combinations of method calls.}
-
-
+ balance, and a password.
+% \sd[this is great, but I think should go somewhere later on']{\jm{Finally, \SrobustB takes into account 
+% the \emph{emergent behavior} of the bank account: that is, a single method call 
+% is not considered in isolation, rather, the functionality of the entire module is
+% specified, including all combinations of method calls.}
+%}
+ 
  
 %Type systems   % have been developed for various programming languages. They 
 % give  relatively coarse-grained guarantees, \emph{e.g.,} 
@@ -179,12 +159,13 @@ With \SrobustB, I can confidently pass my account to some untrusted client who
 \vspace{.04in}
  
  \subsection{Earlier works on Robustness} 
-Our paper is not the first   to address the problem of robustness:
+Our paper is not the first   to address % the problem of 
+\sd{robustness}:
 % In contrast to \jm{correctness}  which is usually specified with \sophiaPonder{why talk again about Hiare triples}% such 
 % Hoare triples,  
- {\sd{Several} 
-kinds of} guarantees have been proposed for  robustness, differing in the level 
-of granularity,   target  language or calculi, and intended use. \sd{To name a few,}
+ {\sd{Many} 
+kinds of} guarantees have been proposed,  \sophiaPonder[dropped: "proposed for  robustness"]{}, differing in the level 
+of granularity,   target  language or calculi, and intended use.  {To name a few,}
 object capabilities  \cite{MillerPhD, dd, threoremsFreeSep}, 
 information control flow \cite{Zdancewic:Myers:01,noninteferenceOS}, 
 and correspondence assertions \cite{Maffeis:aiamb:thesis00}
@@ -195,25 +176,26 @@ our work is the first that is able to
 express specifications of the form (S$_{\text{robust}_2}$), along with a system
 for formally verifying such specifications.}
 
-\sd{Our work is related} to  {\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE}.
+{Our work is related} to  {\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE}.
 Both these approaches can express necessary conditions
-  like \SrobustA. For this, they \sd{both employ
+  like \SrobustA. For this, they  {both employ
   temporal operators and implication, for example,  \SrobustA
  could take a form like} 
 \\
- $\strut ~ \strut  \prg{a:Account} \ \wedge\ \prg{a.balance==bal}  \ \wedge\ \textbf{Next}(\prg{a.balance<bal}) $\\
+ $\strut ~  ~ \hspace{.1in} \strut  \prg{a:Account} \ \wedge\ \prg{a.balance==bal}  \ \wedge\ \textbf{next}(\prg{a.balance<bal}) $\\
  $\strut ~ \hspace{2in} \strut \strut \strut \longrightarrow\    \textbf{calls}\, \prg{a.transfer(\_,a.password)}$
  \\
-\sd{ However, to express \SrobustB, one also needs what we call \emph{capability operators}, which talk about 
+ { However, to express \SrobustB, one also needs what we call \emph{capability operators}, which talk about 
  provenance (``external object'') and
   permission (``\prg{x} has access to \prg{y}"'). 
    {\sc{VerX}}  does not support capability operators, and thus cannot express   \SrobustB, 
    while  \emph{Chainmail} does support capability operators, and can express  \SrobustB. 
 }  
  {\sc{VerX}} comes with a symbolic 
-  execution system which to demonstrate adherence to  specifications while  \emph{Chainmail}  has no such system.
+  execution system which can demonstrate adherence to  specifications, but without a proof logic, % to prove adherence,
+   while so far, \emph{Chainmail}  \sd{has neither symbolic execution system, nor a proof logic.}
   
-\sd{Temporal operators in {\sc{VerX}}   and  \emph{Chainmail}  are fist class, ie may appear in any assertions 
+ {Temporal operators in {\sc{VerX}}   and  \emph{Chainmail}  are fist class, ie may appear in any assertions 
 and form new assertions. This makes{\sc{VerX}}   and  \emph{Chainmail} very expressive,
 and allows specifications which talk about any number of points in time.
 However, this expressivity comes at the cost of making it very difficult to develop a logic to
@@ -229,12 +211,15 @@ to prove adherence to such specifications.
 
 For the specification language we adopted % have been inspired by   
 \emph{Chainmail}'s %approach to add
-  capability operators, but had a crucial insight: the flexibility afforded through the
-  unrestricted combination of temporal operators with all other logical connectives 
- creates an expressive power that is unused in the applications, and makes
- the development of a proof system very difficult.
- Therefore, \jm[]{in searching for a sweet spot between expressiveness and the ability to 
- prove examples}, we replaced the temporal operators with  {our three novel}
+  capability operators. For the 
+  temporal operators, we observed that while their
+   unrestricted combination   with  other logical connectives allows us to talk about any
+   number of points in time, the examples found in the literature\footnote{here we should add ALL the works, ie
+   Devriese, MaxPlank, VerX, and us} talk about two or at most three such points.
+  
+ \sd{This lead to the  crucial insight} that we could merge the temporal operators into three
+ %Therefore, \jm[]{in searching for a sweet spot between expressiveness and the ability to 
+ %prove examples}, we replaced the temporal operators with  {our three novel}
   \emph{necessity} operators. 
  One such necessity operator is
  
@@ -257,7 +242,6 @@ The other two operators express either \emph{necessary conditions} for
 \emph{single-step} transitions % from  $A_{curr}$  states to a   $A_{fut}$ states,
 or \emph{intermediate} conditions for \emph{any} transitions.
 % from a $A_{curr}$ -state t  $A_{fut}$  states.
-}
 Using this operator, we can formulate  \SrobustB % in \Chainspec  
 as
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
@@ -265,16 +249,20 @@ $\text{\SrobustB}$  $\triangleq$   from a:Account $\wedge$ a.balance==bal
                to a.balance < bal
                onlyIf $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
 \end{lstlisting}
-Namely, a transition from a \sd{current} state where an account's balance is \prg{bal}, to a \sd{future} state where 
-it has decreased, may \emph{only} occur if \sd{in the current state} some unknown client object  has access to that account's password. 
+Namely, a transition from a  {current} state where an account's balance is \prg{bal}, to a  {future} state where 
+it has decreased, may \emph{only} occur if  {in the current state} some unknown client object  
+has access to that account's password. 
 More discussion in \S\ref{s:bankSpecEx}. 
 
   
 Unlike  \emph{Chainmail}'s temporal operators, 
  the necessity operators %  $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
- are second class, and may not appear in the assertions $A$.
-Being second class allows us to separate proofs about necessity from other proofs.
+ are second class, and may not appear in the assertions ($A$).
+\sophiaPonder[Do not understand "Being second class allows us to separate proofs about necessity from other proofs."]{}
  This simplification enabled us to develop our proof logic. 
+ Thus, we believe that we have reached a \sd{sweet spot between expressiveness and 
+ provability.}
+ %prove examples}, we replaced the temporal operators with  {our three novel}
 %We propose \Chainmail, a specification language % for   \emph{Necessity Specifications} 
 % to describe a module's safety guarantees,
 %and 
@@ -408,8 +396,8 @@ The contributions of this paper are:\begin{enumerate}
 %\Chainspec, a 
 A language to
 express \Nec specifications (\S\ref{s:semantics}) that is  expressive
-enough to encode the \emph{Chainmail} examples from \citeasnoun{FASE}. 
-% in \Chainspec (\S\ref{s:expressiveness}). 
+\sophiaPonder[this bit may diminish our contribution!]{enough to encode the \emph{Chainmail} examples from \citeasnoun{FASE}. }
+
  \item
 %\Chainlogic, a 
 A logic for proving a module's adherence to 
@@ -417,7 +405,7 @@ A logic for proving a module's adherence to
 both mechanized in Coq. 
  \item
 A proof in our logic % the bank account 
-  that our bank module obeys its \Nec specification (\S\ref{s:examples}), mechanized in Coq.
+  that our bank module obeys its \Nec specification (\S\ref{s:examples}), \sd{also} mechanized in Coq.
 \end{enumerate}
 
 
@@ -437,10 +425,10 @@ A proof in our logic % the bank account
 %}
 
 Our formalization of \Nec % has a number of limitations: it
-\sd{  is 
+{  is 
 parametric} with respect to assertion
 satisfaction, encapsulation, and the type system.
- {\sd{Moreover, in line} with other work in the literature,} we forbid 
+{{Moreover, in line} with other work in the literature,} we forbid 
 ``callbacks'' out to external objects; and
 classical specifications require explicit framing.
 We will discuss these  issues % limitations 
@@ -450,5 +438,5 @@ related work (\S\ref{s:related}) and consider our overall conclusions
 %
 The Coq proofs of 
 (2) and (3) above appear in the
-supplementary material, along with Appendices containing expanded 
+supplementary material, along with \sd{a}ppendices containing expanded 
 definitions and further examples.
