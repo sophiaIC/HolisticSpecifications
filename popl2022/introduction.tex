@@ -266,8 +266,7 @@ More discussion in \S\ref{s:bankSpecEx}.
   
 Unlike  \emph{Chainmail}'s temporal operators, 
  the necessity operators %  $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
- are second class, and may not appear in the assertions \susan[or delete]{(\eg  ${A_{curr}}$)}. 
-\sophiaPonder[Do not understand ``Being second class allows us to separate proofs about necessity from other proofs.'']{}
+ are second class, and may not appear in the assertions  {(\eg  ${A_{curr}}$)}. 
  This simplification enabled us to develop our proof logic. 
  Thus, we believe that we have reached a \sd{sweet spot between expressiveness and 
  provability.}
@@ -331,7 +330,29 @@ Unlike  \emph{Chainmail}'s temporal operators,
  \susan[Probably the encapsulation statement should be the last introduced as a 'pruning'? technique.]{\Nec specifications are high level system wide properties. Our problem was how to develop a logic that would enable us to prove that code 
 adhered to such specifications.  Our Eureka moment came when we realised that all the information we required was hiding in the classical specifications in the program functions. Of course it was not straightforward to extract what we needed, but we came up with a successful technique.}
  
- 
+ \sd{The \Nec logic is based on the crucial insight that the specification $\onlyIf{A_1} {A_2} {A_3}$ is 
+logically equivalent
+ with $\forall \prg{stmts}. \{ A_1 \wedge \neg A_3\} \prg{stmts} \{ \neg A_2 \}$ -- that is,
+ with an infinite number of Hoare triples.
+We want to leverage prior work on program verification, however, Hoare logics only reason about given, known, statements.
+ To solve that problem, we had three breakthroughs:
+ \begin{itemize}
+ \item
+ First, we  leverage Hoare logic to reason about one particular method call. Namely, the \Nec specification
+$ \onlyIfSingle {A_1 \neg A3 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}} } } {\ A_2} {A_3}$ is logically equivalent with the  Hoare triple 
+$ \{ A_1 \wedge \neg A_3 \} \prg{x.m(ys)} \{ \neg A_2 \}$.
+ \item Second, if an assertion $A_2$  is \emph{encapsulated} by a module (ie the only way we can go from a 
+ state that satisfies it to a state that does not, is through a call to a method in that module), then
+ $ \onlyIfSingle {A_1 \wedge  A_2} {\neg A_2} {A_3}$ is logically equivalent with the finite conjuction
+ $ \onlyIfSingle {A_1 \wedge A_2 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}}}\  } {\neg A_2} {A_3}$
+ for all methods of that module.
+  \item Third, an inference system combines several specifications to reason about the
+  emergent behaviour, for example 
+   $ \onlyThrough  {A_1} {A_2} {A_3}$  and $ \onlyIf  {A_1} {A_3} {A_4}$ implies that
+   $ \onlyIf  {A_1} {A_3} {A_4}$.
+ \end{itemize}
+}
+
 The \Nec logic is based on four main ideas: 
 First, some assertions are \emph{encapsulated}, \ie
 their validity may only be affected by internal calls. 
@@ -347,6 +368,8 @@ per-method \Nec specifications and encapsulated assertions
  to obtain per-module   \Nec specifications; these describe a module's
  emergent behavior.
 More in \S\ref{s:approach}.
+
+
  
   The current work is based on a simple, imperative, typed, object oriented
 language with unforgeable addresses and private fields.\footnote{We believe
