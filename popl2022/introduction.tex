@@ -268,7 +268,7 @@ Unlike  \emph{Chainmail}'s temporal operators,
  the necessity operators %  $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
  are second class, and may not appear in the assertions  {(\eg  ${A_{curr}}$)}. 
  This simplification enabled us to develop our proof logic. 
- Thus, we believe that we have reached a \sd{sweet spot between expressiveness and 
+ Thus, we \sophiaPonder[Drop: "believe that we"]{have reached} a \sd{sweet spot between expressiveness and 
  provability.}
  %prove examples}, we replaced the temporal operators with  {our three novel}
 %We propose \Chainmail, a specification language % for   \emph{Necessity Specifications} 
@@ -329,55 +329,58 @@ Unlike  \emph{Chainmail}'s temporal operators,
 
  \susan[Probably the encapsulation statement should be the last introduced as a 'pruning'? technique.\sd{SD: agrre}]{\Nec specifications are high-level, system-wide properties. Our problem was how to develop a logic that would enable us to prove that code 
 adhered to such specifications.  Our Eureka moment came when we realised that all the information we required was hiding in the classical specifications in the program functions. Of course it was not straightforward to extract what we needed, but we came up with a successful technique.}
+\sophiaPonder[I think we need to make the brown stuff fit better the next paragraph.]{}
  
  \sd{The \Nec logic is based on the crucial insight that the specification $\onlyIf{A_1} {A_2} {A_3}$ is 
 logically equivalent
  with $\forall \prg{stmts}. \{ A_1 \wedge \neg A_3\} \prg{stmts} \{ \neg A_2 \}$ -- that is,
- with an infinite number of Hoare triples.
-We want to leverage prior work on program verification, however, Hoare logics only reason about given, known, statements.
- To solve that problem, we had three breakthroughs:
+ with an infinite conjunction  of Hoare triples.
+We want to leverage prior work on program verification, however, we have the problem that Hoare logics only reason about given, known, statements.
+ Three breakthroughs lead to the solution of that problem:
  \begin{itemize}
  \item
  First, we  leverage Hoare logic to reason about one particular method call. Namely, the \Nec specification
-$ \onlyIfSingle {A_1 \neg A3 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}} } } {\ A_2} {A_3}$ is logically equivalent with the  Hoare triple 
-$ \{ A_1 \wedge \neg A_3 \} \prg{x.m(ys)} \{ \neg A_2 \}$.
- \item Second, if an assertion $A_2$  is \emph{encapsulated} by a module (ie the only way we can go from a 
- state that satisfies it to a state that does not, is through a call to a method in that module), then
- $ \onlyIfSingle {A_1 \wedge  A_2} {\neg A_2} {A_3}$ is logically equivalent with the finite conjuction
- $ \onlyIfSingle {A_1 \wedge A_2 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}}}\  } {\neg A_2} {A_3}$
- for all methods of that module.
+$ \onlyIfSingle {(A_1 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}} } )} {A_2} {A_3}$ is logically equivalent with the  Hoare triple 
+$ \{ A_1 \wedge \neg A_3 \} \ \prg{x.m(ys)}\  \{ \neg A_2 \}$.
+ \item 
+ Second, if an assertion $A_2$  is \emph{encapsulated} by a module (ie the only way we can go from a 
+ state that satisfies $A_2$ to a state that does not, is through a call to a method in that module), then
+\sophiaPonder[slightly different in main text, have simplified here; hope it does not create confusion]{ $ \onlyIfSingle {A_1 \wedge \neq A_2} { A_2} {A_3}$ is logically equivalent with the finite conjunction
+ $ \onlyIfSingle {(\, A_1 \wedge \neg A_2 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}}}\, )} {A_2} {A_3}$
+ for all methods of that module.}
   \item Third, an inference system combines several specifications to reason about the
   emergent behaviour, for example 
    $ \onlyThrough  {A_1} {A_2} {A_3}$  and $ \onlyIf  {A_1} {A_3} {A_4}$ implies that
    $ \onlyIf  {A_1} {A_3} {A_4}$.
  \end{itemize}
+More in \S\ref{s:approach}.
 }
 
-The \Nec logic is based on four main ideas: 
-First, some assertions are \emph{encapsulated}, \ie
-their validity may only be affected by internal calls. 
-% \susan[same question - is may the correct word? This said module-internal before I edited it.]{}
-Second, by leveraging the classical  specifications of methods 
-(\ie the sufficient conditions) we can obtain per-method-call
- \Nec specifications; that is, necessary preconditions
-  for a given effect and a given method call (at a very abstract level, this is
-similar to \citeasnoun{threoremsFreeSep}).
-Third we infer a per-step-condition, \ie, a necessary condition given an effect and a single, unspecified step. This step could be an internal call, or any kind of external step.
-Fourth,  a novel proof system allows us to combine 
-per-method \Nec specifications and encapsulated assertions 
- to obtain per-module   \Nec specifications; these describe a module's
- emergent behavior.
-More in \S\ref{s:approach}.
+%The \Nec logic is based on four main ideas: 
+%First, some assertions are \emph{encapsulated}, \ie
+%their validity may only be affected by internal calls. 
+%% \susan[same question - is may the correct word? This said module-internal before I edited it.]{}
+%Second, by leveraging the classical  specifications of methods 
+%(\ie the sufficient conditions) we can obtain per-method-call
+% \Nec specifications; that is, necessary preconditions
+%  for a given effect and a given method call (at a very abstract level, this is
+%similar to \citeasnoun{threoremsFreeSep}).
+%Third we infer a per-step-condition, \ie, a necessary condition given an effect and a single, unspecified step. This step could be an internal call, or any kind of external step.
+%Fourth,  a novel proof system allows us to combine 
+%per-method \Nec specifications and encapsulated assertions 
+% to obtain per-module   \Nec specifications; these describe a module's
+% emergent behavior.
+%More in \S\ref{s:approach}.
 
 
  
   The current work is based on a simple, imperative, typed, object oriented
-language with unforgeable addresses and private fields.\footnote{We believe
+language with unforgeable addresses and private fields. We believe
  that our approach is applicable to several programming paradigms, and 
  that   unforgeability and privacy
  can be replaced 
  by lower level mechanisms such as capability machines \cite{vanproving,davis2019cheriabi}.
-}
+ 
 
 
 %The below is good and perhaps we shpuld use it
