@@ -132,7 +132,7 @@ to denote zero or more  steps starting at state $\sigma$ and ending at state $\s
 $M$ and external module $M'$.
  %Not only are we unconcerned 
 %with internal states,  we are also unconcerned with  states which cannot ever arise from execution.
-We are not concerned with either internal states nor states that cannot ever arise.
+We are concerned neither with internal states nor states that can never arise.
 {A state $\sigma$ is \emph{arising},}  written $\arising{M'}{M}{\sigma}$, {if it  may arise by external states} execution
 starting at some initial configuration:
 
@@ -449,15 +449,30 @@ such an example in Section \ref{s:examples}.
 
 
 
-\subsection {\Nec Specifications}
+
+%% \kjx{KJX EVIL EVIL NEWPAGE JUST BELOW HERE!!!! EVIL EVIL EVIL EVIL}
+%% \newpage
+
+
+\subsection {\Nec operators}
 \label{s:holistic-guarantees}
 
-Our \Nec specification language extends \SpecO with novel 
- \emph{necessity operators}.
-In this section we define its syntax (Definition \ref{f:holistic-syntax}) and semantics 
-(Definition \ref{def:necessity-semantics}).
-We have the following three operators:
+Our \Nec specification language extends \SpecO with three novel 
+ \emph{necessity operators}:
+%% In this section we define its syntax (Definition \ref{f:holistic-syntax}) and semantics 
+%% (Definition \ref{def:necessity-semantics}).
+%% We have the following three operators:
  
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -486,71 +501,75 @@ state must have also satisfied $A$.
 % in some intermediate state. Note 
 --  the   \emph{intermediate} state % state where $A$ is true
 satisfying $A$ might be the \emph{starting}  
-or the \emph{final} state.
-\end{description} 
+state, the \emph{final} state, or any state inbetween.
+\end{description}
 
-%\begin{figure}[t]
-\begin{definition}[\Nec Syntax] The syntax of
-\Nec  Specifications ($S$)
-% in   \Chainmail   
-is as follows:
-% \footnotesize
 
-\footnotesize
-\[
-\begin{syntax}
-\syntaxElement{S}{}
-		{
-		\syntaxline
-				{A}
-				{\onlyIf{A_1}{A_2}{A_3}}
-				{\onlyThrough{A_1}{A_2}{A_3}}
-		\endsyntaxline
-		}
-		{
-		\syntaxline
-				{\onlyIfSingle{A_1}{A_2}{A_3}}
-		\endsyntaxline
-		}
-\endSyntaxElement\\
-\end{syntax}
-\]
-%\caption{Syntax of \Chainmail Necessity Specifications}
-\label{f:holistic-syntax}
-\end{definition}
-%\end{figure}
-\normalsize
+\label{sec:adapt:motivate}
+\noindent Necessity operators can explicitly constrain two or even three states,
+and implcitly constrain many states in between. The following 
+ specification  \Sadapt 
+ says that for an account's balance to go  
+ from 150 in one state down to 50 some subsequent state, 
+% in \emph{one} step,
+ \prg{transfer} must have been be called on that account in between:
+%
+%
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+$\text{\Sadapt}$  $\triangleq$  from a:Account $\wedge$ a.balance == 100
+                    to a.balance == 50
+                    onlyThrough $\calls{\_}{\prg{a}}{\prg{transfer}}{\_,\_}$
+\end{lstlisting}
+%
+\Sadapt  refers to at least two different states: at 
+the start, whenever the balance of \prg{a} is 150, and after any number of steps
+whenever the balance of \prg{a} is 50. The specification requires
+that such a change can only be caused by a call to \prg{transfer}:
+that call could be in the current (starting) state, in which case
+presumably the balance will be 50 in the immediately following state,
+or with any number of intervening states, where for \text{every}
+future state where the balance is 50, there must have been a call to
+\prg{transfer} between that state and every past state where the
+balance was 150.
 
 
 
-\paragraph{Relationship with Temporal Logic, and implications between \Nec Operators}
-\sd{Two of the three \Nec operators can be encoded in temporal logic.
-Namely, ${\onlyIf{A_1}{A_2}{A_3}}$ expressed on temporal logic would be
-$A_1\ \wedge\ \Diamond A_2\ \longrightarrow\ A$, while
- $\onlyIfSingle{A_1}{A_2}{A}$ would be $\ A_1\ \wedge\ \bigcirc A_2\ \longrightarrow\ A$ ---
-remember that in temporal logic, $\Diamond$ indicates the future,  and  $\bigcirc$ indicates the next step.
- However, $\onlyThrough{A_1}{A_2}{A}$ cannot be encoded, because the state where $A$ 
- holds must be between the state where $A_1$ holds, and the state where$A_2$ holds; and
- this must be so on \emph{any execution} path leading from $A_1$ to $A_2$.
-}
-
-The three \Nec \ operators % sd dropped " defined in Def. \ref{f:holistic-syntax}" as obvious
-can be related by generality. 
+\paragraph{Relationship between Necessity Operators}
+The three \Nec \ operators
+are related by generality. 
 %An 
 \emph{Only If} ($\onlyIf{A_1}{A_2}{A}$) implies
   \emph{Single-Step Only If} ($\onlyIfSingle{A_1}{A_2}{A}$), since if $A$ is 
 a necessary precondition for multiple steps, then it must be a necessary 
 precondition for a single step. \emph{Only If} also implies 
 an \emph{Only Through}, where the intermediate state is the starting state
-of the execution.
-%This relationship can be better observed when we 
-%encode the \Nec operators with traditional temporal operators:
-%\jm[]{\begin{description}
-%\item[Only If:] $\onlyIf{A_1}{A_2}{A}\ \equiv\ A_1\ \wedge\ \Diamond A_2\ \longrightarrow\ A$
-%\item[Single-Step Only If:] $\onlyIfSingle{A_1}{A_2}{A}\ \equiv\ A_1\ \wedge\ \bigcirc A_2\ \longrightarrow\ A$
-%\item[Only Through:] $\onlyThrough{A_1}{A_2}{A}\ \equiv\ (A_1\ \longrightarrow\ (\Diamond (A\ \wedge\ \Diamond A_2) \vee \neg \Diamond A_2))$
-%\end{description}
-%}
+of the execution.  There is no further relationship between 
+\emph{Single-Step Only If} and \emph{Only Through}.
+
+
+\paragraph{Relationship with Temporal Logic}
+Two of the three \Nec operators can be expressed in traditional
+  temporal logic: 
+  ${\onlyIf{A_1}{A_2}{A_3}}$
+can be expressed  %%put in to get better line breaks
+ as 
+ $A_1\ \wedge\ \Diamond A_2\ \longrightarrow\ A$, and
+ $\onlyIfSingle{A_1}{A_2}{A}$
+can be expressed  %%put in to get better line breaks
+ as $\ A_1\ \wedge\ \bigcirc A_2\ \longrightarrow\ A$
+ (where $\Diamond$ denotes any future state,  and
+ $\bigcirc$ denotes the next state).
+ Critically, 
+$\onlyThrough{A_1}{A_2}{A}$ cannot be encoded in temporal logics
+  without ``nominals'' (explicit state references), because the state where $A$ 
+ holds must be between the state where $A_1$ holds, and the state
+ where$A_2$ holds; and this must be so on \emph{every} execution path
+ from $A_1$ to  $A_2$ \cite{hybridLogic2021,nominal-seplogic2020}.
+ TLA+, for example, cannot describe ``only through'' conditions
+ \cite{tlabook}, but we have found ``only through'' conditions critical
+ to our proofs. 
+
+
 
 %\subsection{\scd{SD's proposal for motivation of adaptation}}
 %
@@ -624,67 +643,103 @@ of the execution.
 %....}
 %% HERE TO EXPLAI WHY WE NEED TO RENAME IN THE CONTINUATUION 
 
-\subsubsection{Adaptation: viewing the future through the lens of the \sd{present}.}
-\label{sec:adapt:motivate}
-In order to give \sd{semantics to \Nec operators we need the auxiliary concept 
-of adaptation.}
-%We will first describe why adaptation is needed, then will give the semantics of
-%\Nec operators, and then will give the full definition of adaptation.
-As a motivation,
-\sd{consider the   specification  \Sadapt  from below. 
-It says that for an account's balance to go  
-from 100 down to 50 in \emph{one} step,   \prg{transfer}  must be called in
-the current state: }
-%% \onlyThrough{$\prg{a}:\prg{Account} \wedge \prg{a.balance}=100$}
-%%   {$\prg{a.balance}=50$}
-%%   {$\calls{\_}{a}{transfer}{\_,\_}$}
-%
-%%NecessityBankSpec  $\triangleq$
-%
 
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-$\text{\Sadapt}$  $\triangleq$  from a:Account $\wedge$ a.balance == 100
-                    next a.balance == 50
-                    onlyIf $\calls{\_}{\prg{a}}{\prg{transfer}}{\_,\_}$
-\end{lstlisting}
-%
-%
-%
-%
-\sd{\Sadapt  refers to two different states: at
-the start, when the balance of \prg{a} is 100, and  after one step, when 
-the balance of \prg{a} is 50.
- \Sadapt  requires that such a change in \prg{balance} can only be caused by a call to \prg{transfer}.}
-The first approach to giving semantics of \Sadapt might be:  if $..,\sigma_1 \models \prg{a.balance==100}$,
-and  $.., \sigma_1 \leadsto \sigma_2$ and $\sigma_2 \models \prg{a.balance==50}$,
-then $\sigma_1$'s continuation starts with a call to \prg{a.transfer}.
+ 
 
-\sd{But what if in $\sigma_1$ there were another account, \prg{a1} with balance 50, and what
-if the assignment \prg{a=a1} is executed? 
-%If we allowed for such assignments to variables, we would be unable to satisfy \Sadapt!
-Such an assignment would allow us to reach a $\sigma_2$ where $\sigma_2 \models \prg{a.balance==50}$
-without calling \prg{a.transfer}. It looks as if \Sadapt cannot be satisfied!
-}
 
-\sd{Obviously, \Sadapt  \emph{is}   satisfied by \ModA, \ModB and \ModC. 
-For this,  when we consider the future state, the binding for \prg{a}  must be the same 
-as that from the current state, even though we may have assigned to \prg{a}  in the mean time.
-This is the remit of the adaptation operator: $\adapt {\sigma'} {\sigma}$ keeps the heap from $\sigma'$,
-and renames the variables
-in the top stack frame of  $\sigma'$ so that    all variables defined in $\sigma$ have the same 
-bindings  $\adapt {\sigma'} {\sigma}$ as in   $\sigma$.
-The  semantics of \Sadapt is:\  if $..,\sigma_1 \models \prg{a.balance==100}$,
-and  $.., \sigma_1 \leadsto \sigma_2$ and $..., \boldsymbol{\adapt {\sigma_2}{\sigma_1}} \models \prg{a.balance==50}$,
-then $\sigma_1$'s continuation starts with a call to \prg{a.transfer}.
-}
- \sophiaPonder[I want to drop: (Because \Loo's objects' classes, types, or fields never change
-and are never deleted from the heap, we can at least be sure any
-object that exists in some state will still exist in all arising future
-states).]{}
 
-We next use the operator $\adapt{}{}$ to give semantics to 
-\Nec specifications, and after that will
-give the full definition of $\adapt{}{}$ in section \ref{sub:adapt:full}.
+
+
+
+
+
+%%%%%% SOPHIA's VERSION KEPT IN TOTO BUT COMMENTED OUT
+%%%%%% SOPHIA's VERSION KEPT IN TOTO BUT COMMENTED OUT
+%%%%%% SOPHIA's VERSION KEPT IN TOTO BUT COMMENTED OUT
+
+%%  \subsubsection{Adaptation: viewing the future through the lens of the \sd{present}.}
+%% \label{sec:adapt:motivate}
+%% In order to give \sd{semantics to \Nec operators we need the auxiliary concept 
+%% of adaptation.}
+%% %We will first describe why adaptation is needed, then will give the semantics of
+%% %\Nec operators, and then will give the full definition of adaptation.
+%% As a motivation,
+%% \sd{consider the   specification  \Sadapt  from below. 
+%% It says that for an account's balance to go  
+%% from 100 down to 50 in \emph{one} step,   \prg{transfer}  must be called in
+%% the current state: }
+%% %% \onlyThrough{$\prg{a}:\prg{Account} \wedge \prg{a.balance}=100$}
+%% %%   {$\prg{a.balance}=50$}
+%% %%   {$\calls{\_}{a}{transfer}{\_,\_}$}
+%% %
+%% %%NecessityBankSpec  $\triangleq$
+%% %
+
+%% \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+%% $\text{\Sadapt}$  $\triangleq$  from a:Account $\wedge$ a.balance == 100
+%%                     next a.balance == 50
+%%                     onlyIf $\calls{\_}{\prg{a}}{\prg{transfer}}{\_,\_}$
+%% \end{lstlisting}
+%% %
+%% %
+%% %
+%% %
+%% \sd{\Sadapt  refers to two different states: at
+%% the start, when the balance of \prg{a} is 100, and  after one step, when 
+%% the balance of \prg{a} is 50.
+%%  \Sadapt  requires that such a change in \prg{balance} can only be caused by a call to \prg{transfer}.}
+%% The first approach to giving semantics of \Sadapt might be:  if $..,\sigma_1 \models \prg{a.balance==100}$,
+%% and  $.., \sigma_1 \leadsto \sigma_2$ and $\sigma_2 \models \prg{a.balance==50}$,
+%% then $\sigma_1$'s continuation starts with a call to \prg{a.transfer}.
+
+%% \sd{But what if in $\sigma_1$ there were another account, \prg{a1} with balance 50, and what
+%% if the assignment \prg{a=a1} is executed? 
+%% %If we allowed for such assignments to variables, we would be unable to satisfy \Sadapt!
+%% Such an assignment would allow us to reach a $\sigma_2$ where $\sigma_2 \models \prg{a.balance==50}$
+%% without calling \prg{a.transfer}. It looks as if \Sadapt cannot be satisfied!
+%% }
+
+%% \sd{Obviously, \Sadapt  \emph{is}   satisfied by \ModA, \ModB and \ModC. 
+%% For this,  when we consider the future state, the binding for \prg{a}  must be the same 
+%% as that from the current state, even though we may have assigned to \prg{a}  in the mean time.
+%% This is the remit of the adaptation operator: $\adapt {\sigma'} {\sigma}$ keeps the heap from $\sigma'$,
+%% and renames the variables
+%% in the top stack frame of  $\sigma'$ so that    all variables defined in $\sigma$ have the same 
+%% bindings  $\adapt {\sigma'} {\sigma}$ as in   $\sigma$.
+%% The  semantics of \Sadapt is:\  if $..,\sigma_1 \models \prg{a.balance==100}$,
+%% and  $.., \sigma_1 \leadsto \sigma_2$ and $..., \boldsymbol{\adapt {\sigma_2}{\sigma_1}} \models \prg{a.balance==50}$,
+%% then $\sigma_1$'s continuation starts with a call to \prg{a.transfer}.
+%% }
+%%  \sophiaPonder[I want to drop: (Because \Loo's objects' classes, types, or fields never change
+%% and are never deleted from the heap, we can at least be sure any
+%% object that exists in some state will still exist in all arising future
+%% states).]{}
+
+%%%%%% SOPHIA's VERSION KEPT IN TOTO BUT COMMENTED OUT
+%%%%%% SOPHIA's VERSION KEPT IN TOTO BUT COMMENTED OUT
+%%%%%% SOPHIA's VERSION KEPT IN TOTO BUT COMMENTED OUT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+%% We next use the operator $\adapt{}{}$ to give semantics to 
+%% \Nec specifications, and after that will
+%% give the full definition of $\adapt{}{}$ in section \ref{sub:adapt:full}.
  
 
 
@@ -704,6 +759,42 @@ give the full definition of $\adapt{}{}$ in section \ref{sub:adapt:full}.
 
 We    define  when a module $M$ satisfies  specifications $S$, written as $M \vDash S$, 
 by cases over the four possible syntactic forms: 
+
+
+%%%%KJX: THIS IS MORALLY IMPORTANT BUT PRACTICALY insignificant
+%\begin{figure}[t]
+\begin{definition}[\Nec Syntax]
+%%%  The syntax of\Nec  Specifications ($S$):
+% in   \Chainmail   
+%%%%is as follows:
+% \footnotesize
+
+\footnotesize
+\[
+\begin{syntax}
+\syntaxElement{S}{}
+		{
+		\syntaxline
+				{A}
+				{\onlyIf{A_1}{A_2}{A_3}}
+				{\onlyThrough{A_1}{A_2}{A_3}}
+		\endsyntaxline
+		}
+		{
+		\syntaxline
+				{\onlyIfSingle{A_1}{A_2}{A_3}}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+%\caption{Syntax of \Chainmail Necessity Specifications}
+\label{f:holistic-syntax}
+\end{definition}
+%\end{figure}
+\normalsize
+
+
 
 
 \noindent
@@ -745,35 +836,121 @@ $\;\;\;\;$- $\reductions{M'}{M}{\sigma}{\sigma_n}$   \\
 \end{tabular} 
 \end{definition} 
 
-\subsubsection{Adaptation - full definition}
+\subsubsection{Adaptation}
 \label{sub:adapt:full}
-We now \sd{give the full definition of the $\adapt{}{}$ operator.}
-\sd{We have already seen in section \ref{sec:adapt:motivate} that % the variable map % from the top frame 
-  $\adapt  {\sigma'}{\sigma}$
-must interpret the variable map from the viewpoint of $\sigma$. }
-\sd{
-In addition, it must also interpret the continuation in  $\adapt  {\sigma'}{\sigma}$
-from the viewpoint of $\sigma$. }
 
-\sd{To see why this is needed, take  states $\sigma$ and $\sigma'$ where 
-$\interpret {\sigma}{\prg{a}}\neq \interpret {\sigma}{\prg{a1}}$,
-  the continuation in $\sigma$ is $\prg{a=a1;}$ $\prg{a.transfer}(...)$, and   execution of \prg{a=a1} leads
-  from $\sigma$  to $\sigma'$. 
-  We then have that $.. \sigma'  \models {\calls{...}{\prg{a}}{\prg{transfer}}{...}}$ and
-  $... \sigma'  \models {\calls{...}{\prg{a1}}{\prg{transfer}}{...}}$. 
-  The definition of $\adapt  {\sigma'}{\sigma}$ should  give % be so that 
-  $... \adapt  {\sigma'}{\sigma}  \not\models {\calls{...}{\prg{a}}{\prg{transfer}}{...}}$ and % so that
-   $... \adapt  {\sigma'}{\sigma} \models {\calls{...}{\prg{a1}}{\prg{transfer}}{...}}$
+The defintion of the necessity operators
+(Definition~\ref{def:necessity-semantics}) is straightforward, apart from one
+quirk: we write $\adapt  {\sigma'}{\sigma}$  (best read as ``$\sigma'$ seen
+from $\sigma$'', although one recalcitrant author prefers ``$\sigma'$
+adapted to $\sigma$'') to deal with the fact that necessity operators
+can involve several states.% (\ref{sec:adapt:motivate}). 
+%
+To see the problem, 
+consider a na{\"\i}ve approach to giving semantics to \Sadapt:  if
+$..,\sigma_1 \models \prg{a.balance==100}$, 
+and  $.., \sigma_1 \leadsto \sigma_2$ and $\sigma_2 \models \prg{a.balance==50}$,
+then $\sigma_1$'s continuation starts with a call to \prg{a.transfer}.
+If $\sigma_1$ happened to have another account \prg{a1} with balance
+50, and the assignment \prg{a=a1} was executed, we would 
+reach a $\sigma_2$ where $\sigma_2 \models \prg{a.balance==50}$
+without \prg{a.transfer} having been called: indeed, without the
+account \prg{a} from $\sigma_1$'s balance having changed at all!
+(Haskell programmers will probably feel at home here). 
+%%
+%% . It looks as if \Sadapt cannot be satisfied!
+%% }
+%%
+%% KJX - don't see why it looks that way, but its' clealr a wrong interpretation.
+%%
+%% \sd{Obviously, \Sadapt  \emph{is}   satisfied by \ModA, \ModB and
+%% \ModC.
+%%
+
+
+This is the remit of the adaptation operator: when we consider the
+future state, we must ``see it from'' the perspective of the current
+state; the binding for variables such as \prg{a} must be from the
+current state, even though we may have assigned to them in the mean
+time.  Thus, $\adapt {\sigma'} {\sigma}$ keeps the heap from $\sigma'$,
+and renames the variables
+in the top stack frame of  $\sigma'$ so that all variables defined in $\sigma$ have the same 
+bindings
+%?  ($\adapt {\sigma'} {\sigma}$)
+as in   $\sigma$; the continuation must be adapted similarly (see
+Fig.~\ref{fig:Adaptation}).
+%
+%
+\begin{figure}[htbp]
+\begin{tabular}{clclc}
+ \begin{minipage}{0.27\textwidth}
+ $\sigma:$\\
+ ~ \\
+ \includegraphics[width=\linewidth]{diagrams/adapt1.png}
+   \end{minipage}
+ & \ \ \ &
+ \begin{minipage}{0.27\textwidth}
+  $\sigma':$\\
+  ~ \ \\
+  \includegraphics[width=\linewidth]{diagrams/adapt2.png}
+   \end{minipage}
+   & \ \ \  &
+    \begin{minipage}{0.27\textwidth}
+$\adapt {\sigma'}{\sigma}:$\\
+~ \\
+  \includegraphics[width=\linewidth]{diagrams/adapt3.png}
+   \end{minipage}
+\end{tabular}
+\caption{Illustrating adaptation
 }
+\label{fig:Adaptation}
+\end{figure}
 
-\sd{To achieve the adaptations in the variable map and the continuation, in Def. \ref{d:adapt} below,
- we introduce fresh variables  $\overline{y}$ -- as many as in the $\sigma'$ top frame variable map
+
+
+
+Under adaptation, the semantics of \Sadapt is:\  if $..,\sigma_1 \models \prg{a.balance==100}$,
+and  $.., \sigma_1 \leadsto \sigma_2$ and $..., \boldsymbol{\adapt {\sigma_2}{\sigma_1}} \models \prg{a.balance==50}$,
+then $\sigma_1$'s continuation starts with a call to \prg{a.transfer};
+where every reference to \prg{a} in any part of the necessity operator
+refers to the object bound to that variable in the initial state.
+%
+Fig.~\ref{fig:Adaptation} illustrates this semantics. In state $\sigma$ the variable \prg{a} points to an \prg{Account}
+object with password \prg{pwd1}, and balance \prg{150},  the variable \prg{a1} points to an \prg{Account}
+object with password \prg{pwd2}, and balance \prg{50}, and the continuation is $\prg{a.transfer}(\prg{10},...);$ \prg{a=a1;} $\prg{a.transfer}(\prg{20},...)$. 
+We reach $\sigma'$ by executing the first two statements from the continuation.
+In $\adapt {\sigma'}{\sigma}$ we introduce the fresh variable \prg{y}, and replace \prg{a1} by \prg{y} in the continuation.
+
+
+
+%% We now \sd{give the full definition of the $\adapt{}{}$ operator.}
+%% \sd{We have already seen in section \ref{sec:adapt:motivate} that % the variable map % from the top frame 
+%%   $\adapt  {\sigma'}{\sigma}$
+%% must interpret the variable map from the viewpoint of $\sigma$. }
+%% \sd{
+%% In addition, it must also interpret the continuation in  $\adapt  {\sigma'}{\sigma}$
+%% from the viewpoint of $\sigma$. }
+
+%% \sd{To see why this is needed, take  states $\sigma$ and $\sigma'$ where 
+%% $\interpret {\sigma}{\prg{a}}\neq \interpret {\sigma}{\prg{a1}}$,
+%%   the continuation in $\sigma$ is $\prg{a=a1;}$ $\prg{a.transfer}(...)$, and   execution of \prg{a=a1} leads
+%%   from $\sigma$  to $\sigma'$. 
+%%   We then have that $.. \sigma'  \models {\calls{...}{\prg{a}}{\prg{transfer}}{...}}$ and
+%%   $... \sigma'  \models {\calls{...}{\prg{a1}}{\prg{transfer}}{...}}$. 
+%%   The definition of $\adapt  {\sigma'}{\sigma}$ should  give % be so that 
+%%   $... \adapt  {\sigma'}{\sigma}  \not\models {\calls{...}{\prg{a}}{\prg{transfer}}{...}}$ and % so that
+%%    $... \adapt  {\sigma'}{\sigma} \models {\calls{...}{\prg{a1}}{\prg{transfer}}{...}}$
+%% }
+
+Definition~\ref{d:adapt} gives the full definition of the $\adapt{}{}$
+operator
+(equivalent to the \emph{adaptation} operator from \cite{FASE}).
+We introduce fresh variables  $\overline{y}$ -- as many as in the $\sigma'$ top frame variable map
 -- $dom(\beta')=\overline{x}$,  and $|\overline{y}| = |\overline{x}|$.  
 We extend $\sigma$'s variable map ($\beta$), so that it also maps $\overline{y}$ 
 in the way that  $\sigma'$'s variable map ($\beta'$) maps its local variables -- $\beta'' =  \beta[\overline{y} \mapsto \sd{\beta'(\overline{x})}]$. We rename $\overline{x}$   in $\sigma'$ continuation
 to $\overline{y}$ --  $\kappa''=[\overline{y}/\overline{x}]\kappa'$.
-}
-Our Definition is equivalent to the  \emph{adaptation} operator from \cite{FASE}. 
+
 %We
 %  write
 %  $\adapt {\sigma'} {\sigma}$
@@ -829,6 +1006,17 @@ $dom(\beta')=\overline{x}$,  and $|\overline{y}| = |\overline{x}|$,\  and\  $\ov
 %\end{definition}
 
 
+
+\sd{Strictly speaking, $\adapt {}{}$  does not define one  unique state: Because  variables $\overline{y}$ 
+are arbitrarily chosen,   $\adapt {}{}$ describes an infinite set of states. These states satisfy the same assertions
+and therefore are   equivalent with each 
+other.
+This is why it is sound to  use $\adapt {}{}$  as an operator, rather than as a set.
+}
+
+
+
+
 %We are now able to state what the necessary preconditions to critical functions in 
 %software are, including safety properties of software in the open world. The semantics
 %of \emph{Single-Step Only If} allow for the statement of such necessary preconditions
@@ -839,47 +1027,12 @@ $dom(\beta')=\overline{x}$,  and $|\overline{y}| = |\overline{x}|$,\  and\  $\ov
 % 
 
 
-\sophiaPonder[Julian, you had written "Adaptation may seem complex, however ...." I find such sentences "defeatist" -- propose we remove it. yes?]{}
-\jm[yes]{}
-
-In Fig. \ref{fig:Adaptation}, we illustrate the viewpoint adaptation operator. In state $\sigma$ the variable \prg{a} points to an \prg{Account}
-object with password \prg{pwd1}, and balance \prg{100},  the variable \prg{a1} points to an \prg{Account}
-object with password \prg{pwd2}, and balance \prg{50}, and the continuation is $\prg{a.transfer}(\prg{10},...);$ \prg{a=a1;} $\prg{a.transfer}(\prg{20},...)$. 
-We reach $\sigma'$ by executing the first two statements from the continuation.
-In $\adapt {\sigma'}{\sigma}$ we introduce the fresh variable \prg{y}, and replace \prg{a1} by \prg{y} in the continuation.
+%% \sophiaPonder[Julian, you had written "Adaptation may seem complex, however ...." I find such sentences "defeatist" -- propose we remove it. yes?]{}
+%% \jm[yes]{}
 
 
-\begin{figure}[htbp]
-\begin{tabular}{clclc}
- \begin{minipage}{0.27\textwidth}
- $\sigma:$\\
- ~ \\
- \includegraphics[width=\linewidth]{diagrams/adapt1.png}
-   \end{minipage}
- & \ \ \ &
- \begin{minipage}{0.27\textwidth}
-  $\sigma':$\\
-  ~ \ \\
-  \includegraphics[width=\linewidth]{diagrams/adapt2.png}
-   \end{minipage}
-   & \ \ \  &
-    \begin{minipage}{0.27\textwidth}
-$\adapt {\sigma'}{\sigma}:$\\
-~ \\
-  \includegraphics[width=\linewidth]{diagrams/adapt3.png}
-   \end{minipage}
-\end{tabular}
-\caption{Illustrating adaptation
-}
-\label{fig:Adaptation}
-\end{figure}
 
-\sd{Strictly speaking, $\adapt {}{}$  does not define one  unique state: Because  variables $\overline{y}$ 
-are arbitrarily chosen,   $\adapt {}{}$ describes an infinite set of states. These states satisfy the same assertions
-and therefore are   equivalent with each 
-other.
-This is why it is sound to  use $\adapt {}{}$  as an operator, rather than as a set.
-}
+
 
 
 %SD chopped below; find it too "generic"
