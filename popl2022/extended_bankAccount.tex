@@ -1,164 +1,46 @@
-\section{Proof of Adherence to \SrobustB}
+\section{Proof of \ModD's Adherence to \SrobustB}
 \label{app:examples}
 
-In this section we return to the Bank Account example, 
-providing a full proof and
-the accompanying Coq formalism includes a mechanized version.
+\sd{We now describe  the poof that \ModD's adheres to \SrobustB;
+the accompanying Coq formalism includes a mechanized version.}
 
 
-As we stated in Section \ref{sub:SpecO}, 
+\sophiaPonder[should these issues not have already been said in section 4]{As we stated} in Section \ref{sub:SpecO}, 
 we assume the existence of a proof system for judgments
 of the form $\proves{M}{A}$, denoting that in 
 any arising program state, with internal module $M$, $A$ is satisfied. 
-In this section, we make use of several rules that under such a logic should be sound.
-We provide a description of these rules in Appendix \ref{app:assert_logic}. 
+We \sd{list}   these rules in Appendix \ref{app:assert_logic}. 
 %\jm[]{Further, recall that as per Def. \ref{def:necessity-semantics},
 %$\satisfies{M}{A}$ is defined for arising program states, and thus by Theorem \ref{thm:soundness},
 %if $\proves{M}{A}$, it follows that for all arising program states in the context fo internal 
 %module $M$, $A$ is satisfied.}
 
-\begin{figure}[t]
-\begin{lstlisting}[mathescape=true, frame=lines]
-module $\ModD$
-  class Account
-    field password:Object
-    method authenticate(pwd:Object):bool
-      {return pwd == this.password}
-    method changePass(pwd:Object, newPwd:Object):void
-      {if pwd == this.password
-        this.password := newPwd}
-  class confined Ledger
-    field acc1:Account
-    field bal1:int
-    field acc2:Account
-    field bal2:int
-    ghost intrnl balance(acc):int=
-      if acc == acc1
-        bal1
-      else if acc == acc2
-        bal2
-      else -1
-    method transfer(amt:int, from:Account, to:Account):void
-      {if from == acc1 && to == acc2
-         bal1 := bal1 - amt
-         bal2 := bal2 + amt
-       else if from == acc2 && to == acc1
-         bal1 := bal1 + amt
-         bal2 := bal2 - amt}
-  class Bank
-    field book:Ledger
-    ghost intrnrl balance(acc):int=book.balance(acc)
-    method transfer(pwd:Object, amt:int, from:Account, to:Account):void
-      {if (from.authenticate(pwd))
-         book.transfer(amt, from, to)}
-\end{lstlisting}
-\caption{Bank Account Module}
-\label{f:ex-bank-short}
-\end{figure}
-We devote the rest of this section to the \jm[]{proof}  
-\sophiaPonder[]{expressed in    \Nec logic
-of a module's adherence to the Bank Account specification.}
-%  \jm[]{a variation on} our
-% running example of a Bank Account using our \Nec logic.
-\sophiaPonder[dropped: along with a proof 
-of the bank account specification  using our \Nec logic.]{}
-
-\paragraph{The Bank Account Module \ModD}
-\sophiaPonder[]{In this section we define \ModD, a new Bank Account implementation, which   differs from that of Section \ref{s:outline}.}
-\ModD is more complex than \ModC; \sophiaPonder[dropped: in the following  Bank Account]{} 
-this allows us  to demonstrate how   \Nec logic 
-%we are able to deal 
-\scd{deals} with  challenges that come with more complex data structures and specifications.
-These challenges are 
-\begin{description}
-\item[(1)] Specifications defined using ghost fields -- in this case \prg{b.balance(a)} returns the balance of account \prg{a} in \prg{Bank} \prg{b}.
-\item[(2)] Modules with several \sophiaPonder[said multiple]{}  classes and methods; \scd{they all} must be considered when constructing proofs about emergent behaviour.
-\item[(3)] \sophiaPonder[said: How ownership systems can be used to construct proofs for \Nec specifications -- ]{}
-\sophiaPonder[]{The construction of a proof of assertion encapsulation. Such a proof is necessary  here because
- the ghost field \prg{balance} reads several  fields. We use our 
- simple confinement system,}   captured by \enclosed classes in \Loo.
-\end{description}
-
-
-\jm[]{}\sophiaPonder[said: We rewrite]{} The \SrobustB will use the ghost field, \texttt{balance},
-and not simply the balance field as in \ModA, \ModB, and \ModC. 
-\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
-$\SrobustB$ $\triangleq$ from b:Bank $\wedge$ b.balance(a)=bal 
-                     to b.balance(a) < bal   onlyIf $\neg\wrapped{\prg{a}}$
-\end{lstlisting}
-That is, if the balance of an account ever decreases, it must be true that some object external to
-\ModD has access to the password of that account. 
-
-\jm[]{We provide the implementation of \jm[]{\ModD} in Figure \ref{f:ex-bank-short}.
-In \ModD, we move the balance 
-of an account into a ledger that is stored within a bank. Thus, 
-the module \ModD (Figure \ref{f:ex-bank}) consists of 3 classes: (1) \texttt{Account} that
-maintains a password, (2) \texttt{Bank}, a public interface 
-for transferring money from one account to another, and (3) \texttt{Ledger},
-a private class, annotated as \enclosed, used to map \texttt{Account} objects
-to their balances. }
-\susan[I removed the tt as there is no balance in Mod4]{}
-
-A \prg{Bank} consists of a \prg{Ledger}, a method for transferring 
-funds between accounts (\prg{transfer}), and a ghost field, \prg{balance}
-for looking up the balance of an account at a bank.
-%\footnote{A \Nec specification is independent of the implementation details of the code. It would need to hold for an account whose implementation did not use a ledger or ghost variables to hold balances.}
-A \prg{Ledger} is
-a mapping from \prg{Account}s to their balances. For brevity
-our implementation only includes two accounts (\prg{acc1} and \prg{acc2}),
-but it is easy to see how this could extend to a \prg{Ledger}
-of arbitrary size. \prg{Ledger} is annotated as \enclosed, and as 
-such the type system ensures our required encapsulation properties.
-Finally, an \prg{Account} has some \prg{password} object, and 
-methods to authenticate a provided password (\prg{authenticate}), 
-change the password (\prg{changePass}).
-
-
-\jm[]{Note, Figure \ref{f:ex-bank-short} does not provide the classical specifications of \ModD, 
-which can be found in full in Appendix \ref{app:BankAccount}. Informally, we introduce classical specifications
-that state that 
-\begin{description}
-\item[(1)] no method returns the password, 
-\item[(2)] the \prg{transfer} method in \prg{Ledger} results in a decreased balance to the \prg{from} \prg{Account},
-\item[(3)] and the \prg{transfer} method in \prg{Bank} results in a decreased balance to the \prg{from} \prg{Account} \emph{only if} the correct password is supplied, and
-\item[(4)] every other method in \ModD never modifies any balance in any \prg{Bank}.
-\end{description}}
-
-\jm[]{While both the implementation and the specification being proven have changed from that of
+ 
+Even though both the implementation and the specification being proven differ from those in \S
 \ref{s:outline}, the structure of the proofs do retain broad similarities. In particular the proof in this section 
-follows the outline of our reasoning given in Sec. \ref{s:approach}}: we prove \jm[]{(1) encapsulation of \jm[]{the account balance and password}, 
-(2) \emph{per-method} \Nec specifications on all \ModD methods, (3) \emph{per-step} \Nec specifications for changing the balance and password,
-and finally (4) the \emph{emergent} \Nec specification \SrobustB.}
-%\begin{description}
-%\item[Part 1:]
-%\jm[]{We prove assertion \emph{encapsulation} for key assertions in the proof.}
-%We prove that both \prg{b.getBal(a)=bal} and \prg{a.password=pwd} are encapsulated using the 
-%encapsulation system laid out in Apdx. \ref{s:encap-proof}.
-%\item[Part 2:]
-%\jm[]{We prove \emph{per-method} \Nec specifications for \ModD.}
-%We use classical specifications to prove that only a call to \prg{Bank::transfer} 
-%with the correct password may be used to decrease the balance of an account. Similarly, we
-%use classical specifications to prove that no method can leak or illegally overwrite the password of an account.
-%Note, it is this proof step that fails for \ModB, as the password may be overwritten. Further, in the 
-%proof, there is no distinction made between leaking and overwriting of the password, as both properties allow for external 
-%objects to have no access to the password, but in the next moment have access to that password.
-%\item[Part 3:]
-%\jm[]{We prove \emph{per-step} \Nec specifications for \ModD.}
-%We combine the per-method necessary preconditions along with the encapsulation of \prg{b.getBal(a)=bal} to arrive at a per-step
-%necessary precondition for reducing the balance using \emph{any} method in \jm[]{\ModD}. Similarly, 
-%we show that \emph{no} step may leak the password of an account.
-%\item[Part 4:]
-%\jm[]{Finally, we prove \emph{emergent} \Nec specifications.} We use our \Nec logic and the results of A, B, and C, to prove the emergent behaviour specified in \prg{NecessityBankSpec}.
-%\end{description}
+follows the outline of our reasoning given in Sec. \ref{s:approach}.
+Namely, we prove:\\
+\begin{enumerate}
+\item
+encapsulation of the account's balance and   password;
+\item \emph{per-method} \Nec specifications on all \ModD methods,  
+\item \emph{per-step} \Nec specifications for changing the balance and password, 
+and finally 
+\item the \emph{emergent} \Nec specification \SrobustB. 
+\end{enumerate}
 
-%\clearpage
-\subsection{Part 1: Assertion Encapsulation}
+\noindent
+\sd{We now discuss each of these four parts of the proof.}
+
+ \subsection{Part 1: Assertion Encapsulation}
 \label{s:BA-encap}
-We base the soundness of our encapsulation of the type system of \Loo, and use the proof rules given in Figures \ref{f:intrnl} and \ref{f:asrt-encap}.
-\jm[]{Informally, $\intrnl{e}$ indicates that any objects inspected during the evaluation of expression $e$ are internal. $\encaps{A}$ (see Section \ref{s:inference}) indicates 
+\sophiaPonder[Do we need all that: We base the soundness of our encapsulation of the type system of \Loo, and use the proof rules given in Figures \ref{f:intrnl} and \ref{f:asrt-encap}.
+ Informally, $\intrnl{e}$ indicates that any objects inspected during the evaluation of expression $e$ are internal. $\encaps{A}$ (see Section \ref{s:inference}) indicates 
 that internal computation is necessary for a change in satisfaction of $A$. Rudimentary algorithms for proving $\intrnl{}$ and $\encaps{}$ are given in 
-Appendix \ref{s:encap-proof}, and used here.}
-We provide the proof for the encapsulation of \prg{b.balance(a)} below\\
+Appendix \ref{s:encap-proof}, and used here.]{}
+% We provide the proof for the 
+Using \sd{the rudimentary algorithms for proving $\intrnl{}$ and $\encaps{}$ from
+Appendix \ref{s:encap-proof}  we prove encapsulation of \prg{b.balance(a)}} as  below\\
 %\begin{figure}[h]
 \begin{proofexample}
 \proofsteps{\prg{BalanceEncaps}}
@@ -212,7 +94,8 @@ We omit the proof of $\encaps{\prg{a.password=pwd}}$, as its construction is ver
 \label{s:BA-classical}
 We now provide proofs for necessary preconditions on a per-method basis, leveraging 
 classical specifications.
-\jm[]{These proof steps are quite verbose, and for this reason, we only focus on proofs
+\sophiaPonder[It said "These proof steps are quite verbose" ..." -- please do not say that, put it in a positive way]{}
+\sd{Here we  focus on proofs
 of \prg{authenticate} from the \prg{Account} class.}
 
 \jm[]{There are two \emph{per-method} \Nec specifications that we need
@@ -224,11 +107,13 @@ absurdity that \prg{authenticate} is able to modify any balance.
 \item[\textbf{\prg{AuthPwdLeak}}:] any call to \prg{authenticate} may only invalidate \wrapped{\prg{a.password}} (for any account \prg{a}) if \prg{false} is first satisfied -- clearly an absurdity.
 \end{description}}
 
-\paragraph{\emph{\textbf{\prg{AuthBalChange}}}}First we use the classical specification of the \prg{authenticate} method in \prg{Account} to prove that a call to \prg{authenticate} can only result in 
-a decrease in balance in a single step if there were in fact a call to \prg{transfer} to the \prg{Bank}. This may seem 
+\paragraph{\emph{\textbf{\prg{AuthBalChange}}}}
+First we use the classical specification of the \prg{authenticate} method in \prg{Account} to prove that a call to \prg{authenticate} can only result in a decrease in balance in a single step if there were in fact a call to \prg{transfer} to the \prg{Bank}. 
+This may seem 
 odd at first, and impossible to prove, however we leverage the fact that we are first able to prove that \prg{false}
 is a necessary condition to decreasing the balance, or in other words, it is not possible to decrease the balance by a
-call to \prg{authenticate}. We then use the proof rule \textsc{Absurd} to prove our desired necessary condition.
+call to \prg{authenticate}. 
+We then use the proof rule \textsc{Absurd} to prove our desired necessary condition.
 This proof is presented as \prg{AuthBalChange} below.
 \\
 \noindent
@@ -272,6 +157,8 @@ This proof is presented as \prg{AuthBalChange} below.
 }
 
 \paragraph{\emph{\textbf{\prg{AuthPwdLeak}}}} The proof of \prg{AuthPwdLeak} is given below, and is proven by application of classical Hoare logic rules and \textsc{If1-Inside}.
+
+\sophiaPonder[Do we want to show the other proofs? Or at least list what else is proven?]{}
 
 %We provide the statements of the specifications for the remaining methods in the module below,
 %%(\textbf{changePassBalChange}, \textbf{Ledger::TransferBalChange}, and \textbf{Bank::TransferBalChange}), 
@@ -459,6 +346,7 @@ PasswordLeak $\triangleq$ from a:Account $\wedge$ a.password=p $\wedge$ inside<p
 \jm[]{We provide the proofs of these in Appendix \ref{app:BankAccount}, but describe the construction of the proof of \prg{BalanceChange} here:
 by application of the rules/results
  \prg{AuthBalChange}, \prg{changePassBalChange}, \prg{Ledger::TransferBalChange}, \prg{Bank::TransferBalChange}, \prg{BalanceEncaps}, and \textsc{If1-Internal}.}
+ \sophiaPonder[somethif missing. Where is Appendix F?]{}
 %
 %by combining the results from \ref{s:BA-encap} and \ref{s:BA-classical} using \textsc{If1-Internal}. 
 %Again, we elide the details of the proof of \prg{PasswordChange} and \prg{PasswordLeak} as they are similar to that
@@ -512,7 +400,7 @@ If there was a call where the \prg{Account}'s password
 was used, then there must have been an intermediate program state
 when some external object had access to the password.
 \item [(3)]
-Either that password was the same password as in the \jm[]{starting} 
+Either that password was the same password as in the {starting} 
 program state, or it was different:
 \begin{description}
 \item [(Case A)]
@@ -521,10 +409,10 @@ it is impossible to leak the password, it follows that some external object
 must have had access to the password initially.
 \item [(Case B)]
 If the password is different from the initial password, 
-then there must have been an \jm[]{intermediate} program state when it 
+then there must have been an  {intermediate} program state when it 
 changed. By \prg{PasswordChange} we know that this must have occurred
 by a call to \prg{changePassword} with the correct password. Thus,
-there must be a some \jm[]{intermediate} program state where the initial
+there must be a some  {intermediate} program state where the initial
 password is known. From here we proceed by the same reasoning 
 as \textbf{(Case A)}.
 \end{description}
