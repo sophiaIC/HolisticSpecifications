@@ -1,6 +1,7 @@
-\section{Crowdsale}
-\jm[]{It is notable that \Nec is able to encode the motivating example of \citeasnoun{VerX}: 
-an escrow smart contract that ensures that the contract may not be maliciously coerced.
+\subsection{Crowdsale}
+\jm[]{\Nec is able to encode the motivating example of \citeasnoun{VerX}: 
+an escrow smart contract that ensures that the contract may not be coerced to 
+pay out or refund more money than has been raised.
 The motivating \prg{Crowdsale} example consists of a \prg{Crowdsale} contract 
 for crowd sourcing funding. A \prg{Crowdsale} object consists of an \prg{Escrow} object,
 an amount raised, a funding goal, and a closing time in which the goal must be met for 
@@ -15,33 +16,29 @@ be less than the balance of the escrow.
 then subsequently claim a refund or visa versa.
 \prg{R3} states that if the funding goal is ever met, then no one may subsequently claim a refund.}
 
-\kjx{\textbf{WHAT LANGUAGE ARE THESE IN?  NEEDS TO BE \Loo}}
-
 \begin{figure}[htb]
 \begin{lstlisting}[language=chainmail]
-contract Crowdsale {
+class Crowdsale {
 Escrow escrow;
-  uint256 closeTime;
-  uint256 raised = 0;
-  uint256 goal = 10000 * 10**18;
-  function constructor() {
-    escrow = new Escrow(0x1234);
-    closeTime = now + 30 days;
+  closeTime, raised, goal : int;
+  method init() {
+    if escrow == null
+      escrow := new Escrow(new Object);
+    	  closeTime := now + 30 days;
+    	  raised := 0;
+    	  goal := 10000 * 10**18;
   }
-  function invest() payable {
-    require(raised < goal);
-    // fix: uncomment pre-condition below:
-    // require(now<=closeTime);
-    escrow.deposit.value(msg.value)(msg.sender);
-    raised += msg.value;
+  method invest(investor : Object, value : int) {
+    if raised < goal
+      escrow.deposit(investor, value);
+      raised += value;
   }
-  function close() {
-    require(now > closeTime || raised >= goal);
-    if (raised >= goal) {
-      escrow.close();
-    } else {
-      escrow.refund();
-    }
+  method close() {
+    if now > closeTime || raised >= goal
+      if raised >= goal
+        escrow.close();
+      else
+        escrow.refund();
   }
 }
 \end{lstlisting}
@@ -51,32 +48,32 @@ Escrow escrow;
 
 \begin{figure}[htb]
 \begin{lstlisting}[language=chainmail]
-contract Escrow {
-  address owner, beneficiary;
-  mapping(address => uint256) deposits;
-  enum State {OPEN, SUCCESS, REFUND}
-  State state = OPEN;
-  constructor(address b) {
-    owner = msg.sender;
-    beneficiary = b;
+confined class Escrow {
+  owner, beneficiary : Object;
+  mapping(Object => uint256) deposits;
+  OPEN, SUCCESS, REFUND : Object;
+  state : Object;
+  method init(o : Object, b : Object) {
+    if owner == null || beneficiary == null
+      owner := o;
+      beneficiary := b;
+      OPEN := new Object; SUCCESS := new Object; REFUND := new Object;
+      state := OPEN;
+      
+  method close() {state = SUCCESS;}
+  method refund() {state = REFUND;}
+  method deposit(value : int, p : Object) {
+    deposits[p] := deposits[p] + value;
   }
-  modifier onlyOwner {
-    require(msg.sender == owner);
+  method withdraw() {
+    if state == SUCCESS
+      return this.balance;
   }
-  function close() onlyOwner {state = SUCCESS;}
-  function refund() onlyOwner {state = REFUND;}
-  function deposit(address p) onlyOwner payable {
-    deposits[p] = deposits[p] + msg.value;
-  }
-  function withdraw() {
-    require(state == SUCCESS);
-    beneficiary.transfer(this.balance);
-  }
-  function claimRefund(address p) {
-    require(state == REFUND);
-    uint256 amount = deposits[p];
-    deposits[p] = 0;
-    p.call.value(amount)();
+  method claimRefund(p : Object) {
+    if state == REFUND
+      int amount := deposits[p];
+      deposits[p] := 0;
+      return amount;
   }
 }
 \end{lstlisting}
@@ -88,7 +85,7 @@ contract Escrow {
 \begin{lstlisting}[mathescape=true, language=chainmail]
 (R0) $\triangleq$ e : Escrow $\wedge$ $\calls{\_}{\prg{e}}{\prg{claimRefund}}{\prg{p}}$
           next e.balance = nextBal onlyIf nextBal = e.balance - e.deposits(p)
-(R1) $\triangleq$ e : Escrow $\wedge$ e.state $\neq$ SUCCESS $\longrightarrow$ sum(deposits) $\leq$ e.balance
+(R1) $\triangleq$ e : Escrow $\wedge$ e.state $\neq$ e.SUCCESS $\longrightarrow$ sum(deposits) $\leq$ e.balance
 (R2_1) $\triangleq$ e : Escrow $\wedge$ $\calls{\_}{\prg{e}}{\prg{withdraw}}{\prg{\_}}$
            to $\calls{\_}{\prg{e}}{\prg{claimRefund}}{\prg{\_}}$ onlyIf false
 (R2_2) $\triangleq$ e : Escrow $\wedge$ $\calls{\_}{\prg{e}}{\prg{claimRefund}}{\prg{\_}}$
