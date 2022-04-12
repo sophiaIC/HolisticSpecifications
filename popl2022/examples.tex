@@ -10,7 +10,7 @@ pass our account to unknown, potentially malicious code, we wish to prove that o
 \SrobustB to use the $\wrapped{\_}$ predicate.
 \begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
 $\SrobustB$ $\triangleq$ from a:Account $\wedge$ a.Account=bal 
-               to a.balance < bal   onlyIf $\neg\wrapped{\prg{a.password}}$
+               to a.balance < bal   onlyIf $\neg\wrapped{\prg{a.pwd}}$
 \end{lstlisting}
 That is, if the balance to my account ever decreases, then some external
 object must know my password. 
@@ -19,6 +19,7 @@ If only I know my password, then I know my money is safe.
 Here we provide a proof that \ModC satisfies \SrobustB. 
 \jm[removed repeat of \ModC]{}%We recall \ModC in Fig. \ref{f:ex-bank-short1}.
 \jm[]{An outline of this proof has already been discussed in \S \ref{s:approach}.}
+\jm[]{A more complex variant of this example that employs ghost fields and a ledger of accounts can be found in Appendix \ref{app:examples}.}
 
 %\begin{figure}[t]
 %\begin{lstlisting}[mathescape=true, frame=lines]
@@ -43,7 +44,7 @@ Here we provide a proof that \ModC satisfies \SrobustB.
 
 \subsection{Part 1: Assertion Encapsulation}
 \label{s:BA-encap}
-The first part of the proof is proving that the \prg{Account} \prg{balance}, \prg{password}, \jm[]{and external accessibility to the password} are 
+The first part of the proof is proving that the \prg{Account} \prg{balance}, \prg{pwd}, \jm[]{and external accessibility to the password} are 
 encapsulated properties. That is, for the \prg{balance} to change (i.e. for \prg{a.balance = bal} to be invalidated), 
 internal computation is required. We use a conservative approach to an encapsulation system, detailed in App. \ref{s:encap-proof}, 
 and provide the proof steps below.
@@ -86,26 +87,26 @@ and provide the proof steps below.
 \end{proofexample}
 \end{figure}
 \jm[I'm not sure if this last note is necessary.]{
-\textbf{\prg{aEnc}} and \textbf{\prg{balanceEnc}} state that \prg{a} is an internal object,
-and thus only internal computation may write to its field \prg{balance}.
+\textbf{\prg{aEnc}} and \textbf{\prg{balanceEnc}} state that 
+\jm[]{\prg{a} and \prg{a.balance} are encapsulated}.
 \textbf{\prg{balEnc}} states that since bal is an integer, it's value is constant
-and may not change, and thus we can trivially say that if its value ever 
-changed (which it never will), that must have happened internally.
-These combine to prove that the assertion \prg{a.balance = bal} is an 
-encapsulated one, and thus requires internal computation to invalidate.
-Note: it may seem odd to say that the variable \prg{bal} never changes, but 
-remember \prg{bal} refers to a specific integer value at a point in time, and 
-the adaptation operator (\S \ref{sub:adapt:full}) allows us to recall that 
-value even after potential rewrites.
+and may not change, and thus is encapsulated.
+These combine to prove that the assertion \prg{a.balance = bal} is encapsulated.
+Note: it may seem odd to say that the integer \prg{bal} \jm[]{ or the address
+\prg{a} is encapsulated}, but 
+\jm[]{what we are really saying is that their values may only change 
+through internal computation, and since they are both values themselves, 
+they will never change due to \emph{any} computation, regardless of where 
+that computation occurs.}
 }
 
 \jm[]{
-We similarly prove that \prg{a.password} may only be 
+We similarly prove that \prg{a.pwd} may only be 
 changed via internal computation (\textbf{\prg{PwdEncaps}}), and
-\wrapped{\prg{a.password}} may only be invalidated by 
+\wrapped{\prg{a.pwd}} may only be invalidated by 
 internal computation (\textbf{\prg{PwdInsideEncaps}}). 
 That is, if only internal objects have access
-to an account's \prg{password}, then only internal computation may grant 
+to an account's \prg{pwd}, then only internal computation may grant 
 access to an external object.
 }
 \begin{figure}[h]
@@ -113,7 +114,7 @@ access to an external object.
 \proofsteps{\prg{PwdEncaps}}
 		{\proofstepwithrule
 			{
-			$\proves{\ModC}{\givenA{\prg{a:Account}}{\encaps{\prg{a.password=p}}}}$
+			$\proves{\ModC}{\givenA{\prg{a:Account}}{\encaps{\prg{a.pwd=p}}}}$
 			}{by \textsc{Enc$_e$-Obj}, \textsc{Enc-Field}, and \textsc{Enc-Eq}}}
 \endproofsteps
 \end{proofexample}
@@ -172,7 +173,7 @@ then \prg{transfer} must have been called.
 				{\onlyIfSingleExAlt
 						{a, a$^\prime$:Account $\wedge$ a$^\prime$.balance=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{set}}{\prg{\_, \_}}$}
 						{a$^\prime$.balance < bal}
-						{$\calls{\_}{\prg{a}^\prime}{\prg{transfer}}{\prg{\_, a$^\prime$.password}}$}
+						{$\calls{\_}{\prg{a}^\prime}{\prg{transfer}}{\prg{\_, a$^\prime$.pwd}}$}
 						}
 					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
 			}
@@ -182,10 +183,10 @@ then \prg{transfer} must have been called.
 \end{figure}
 \jm[]{
 \textbf{\prg{SetPwdLeak}} demonstrates how we employ classical Hoare logic
-to prove that a method does not leak access to some data (in this case the \prg{password}).
+to prove that a method does not leak access to some data (in this case the \prg{pwd}).
 Using \textsc{If1-Inside}, we reason that since the return value of \prg{set} is
 \prg{void}, and \prg{set} is prohibited from making external method calls,
-no call to \prg{set} can result in an object (external or otherwise) gaining access to the \prg{password}.
+no call to \prg{set} can result in an object (external or otherwise) gaining access to the \prg{pwd}.
 }
 \begin{figure}[h]
 {
@@ -193,7 +194,7 @@ no call to \prg{set} can result in an object (external or otherwise) gaining acc
 		\proofsteps{SetPwdLeak}
 			{\proofstepwithrule
 				{\hoareEx
-						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ a.password == pwd}
+						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ a.pwd == p}
 						{\prg{res}=a$^\prime$.set(\_, \_)}
 						{res != pwd}
 						}
@@ -201,15 +202,15 @@ no call to \prg{set} can result in an object (external or otherwise) gaining acc
 			}
 			{\proofstepwithrule
 				{\hoareEx
-						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ a.password == pwd $\wedge$ $\neg$ false}
+						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ a.pwd == p $\wedge$ $\neg$ false}
 						{\prg{res}=a$^\prime$.set(\_, \_)}
-						{res != pwd}
+						{res != p}
 						}
 					{by Hoare logic}
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
-						{$\wrapped{\prg{pwd}}$ $\wedge$ a, a$^\prime$:Account $\wedge$ a.password=pwd $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{set}}{\_, \_}$}
+						{$\wrapped{\prg{pwd}}$ $\wedge$ a, a$^\prime$:Account $\wedge$ a.pwd=p $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{set}}{\_, \_}$}
 						{$\neg \wrapped{\_}$}
 						{false}
 						}
@@ -228,9 +229,9 @@ statements below, but omit their proofs.}
 		\proofsteps{SetPwdChange}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
-						{a, a$^\prime$:Account $\wedge$ a$^\prime$.password=p $\wedge$ $\calls{\_}{\prg{a}}{\prg{set}}{\prg{\_, \_}}$}
-						{$\neg$ a.password = p}
-						{$\calls{\_}{\prg{a}^\prime}{\prg{set}}{\prg{a$^\prime$.password, \_}}$}
+						{a, a$^\prime$:Account $\wedge$ a$^\prime$.pwd=p $\wedge$ $\calls{\_}{\prg{a}}{\prg{set}}{\prg{\_, \_}}$}
+						{$\neg$ a.pwd = p}
+						{$\calls{\_}{\prg{a}^\prime}{\prg{set}}{\prg{a$^\prime$.pwd, \_}}$}
 						}
 					{by \textsc{If1-Classical}}
 			}
@@ -244,7 +245,7 @@ statements below, but omit their proofs.}
 				{\onlyIfSingleExAlt
 						{a, a$^\prime$:Account $\wedge$ a$^\prime$.balance=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{\_, \_}}$}
 						{a$^\prime$.balance < bal}
-						{$\calls{\_}{\prg{a}^\prime}{\prg{transfer}}{\prg{\_, a$^\prime$.password}}$}
+						{$\calls{\_}{\prg{a}^\prime}{\prg{transfer}}{\prg{\_, a$^\prime$.pwd}}$}
 						}
 					{by \textsc{If1-Classical}}
 			}
@@ -256,7 +257,7 @@ statements below, but omit their proofs.}
 		\proofsteps{TransferPwdLeak}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
-						{$\wrapped{\prg{pwd}}$ $\wedge$ a, a$^\prime$:Account $\wedge$ a.password=pwd $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{transfer}}{\_, \_}$}
+						{$\wrapped{\prg{pwd}}$ $\wedge$ a, a$^\prime$:Account $\wedge$ a.pwd=p $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{transfer}}{\_, \_}$}
 						{$\neg \wrapped{\_}$}
 						{false}
 						}
@@ -270,9 +271,9 @@ statements below, but omit their proofs.}
 		\proofsteps{TransferPwdChange}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
-						{a, a$^\prime$:Account $\wedge$ a$^\prime$.password=p $\wedge$ $\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{\_, \_}}$}
-						{$\neg$ a.password = p}
-						{$\calls{\_}{\prg{a}^\prime}{\prg{set}}{\prg{a$^\prime$.password, \_}}$}
+						{a, a$^\prime$:Account $\wedge$ a$^\prime$.pwd=p $\wedge$ $\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{\_, \_}}$}
+						{$\neg$ a.pwd = p}
+						{$\calls{\_}{\prg{a}^\prime}{\prg{set}}{\prg{a$^\prime$.pwd, \_}}$}
 						}
 					{by \textsc{If1-Classical}}
 			}
@@ -295,7 +296,7 @@ in program state require specific preconditions.
 				{\onlyIfSingleExAlt
 						{a:Account $\wedge$ a.balance=bal}
 						{a.balance < bal}
-						{$\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{\_, a.password}}$}
+						{$\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{\_, a.pwd}}$}
 						}
 					{by \textbf{\prg{BalEncaps}}, \textbf{\prg{SetBalChange}}, \textbf{TransferBalChange}, and \textsc{If1-Internal}}
 			}
@@ -307,9 +308,9 @@ in program state require specific preconditions.
 		\proofsteps{PasswordChange}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
-						{a:Account $\wedge$ a.password=p}
-						{$\neg$ a.password = bal}
-						{$\calls{\_}{\prg{a}}{\prg{set}}{\prg{a.password, \_}}$}
+						{a:Account $\wedge$ a.pwd=p}
+						{$\neg$ a.pwd = bal}
+						{$\calls{\_}{\prg{a}}{\prg{set}}{\prg{a.pwd, \_}}$}
 						}
 					{by \textbf{\prg{PwdEncaps}}, \textbf{\prg{SetPwdChange}}, \textbf{TransferPwdChange}, and \textsc{If1-Internal}}
 			}
@@ -321,7 +322,7 @@ in program state require specific preconditions.
 		\proofsteps{PasswordLeak}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
-						{a:Account $\wedge$ a.password=p $\wedge$ $\wrapped{\prg{p}}$}
+						{a:Account $\wedge$ a.pwd=p $\wedge$ $\wrapped{\prg{p}}$}
 						{$\neg$ $\wrapped{\prg{p}}$}
 						{false}
 						}
@@ -370,13 +371,13 @@ as \textbf{(Case A)}.
 	{\proofstepwithrule{\onlyThroughExAlt
 				{a:Account $\wedge$ a.balance=bal}
 				{a.balance < bal}
-				{$\calls{\_}{\prg{a}}{\prg{transfer}}{\_, \prg{a.password}}$}
+				{$\calls{\_}{\prg{a}}{\prg{transfer}}{\_, \prg{a.pwd}}$}
 				}
 			{by \textsc{Changes} and \prg{BalanceChange}}}
 	{\proofstepwithrule{\onlyThroughExAlt
 				{a:Account $\wedge$ a.balance=bal}
 				{b.balance(a) < bal}
-				{$\neg$$\wrapped{\prg{a.password}}$}
+				{$\neg$$\wrapped{\prg{a.pwd}}$}
 				}
 			{by $\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Calls-Args}}}
 %	{\proofstepwithrule{\onlyThroughExAlt
@@ -386,23 +387,23 @@ as \textbf{(Case A)}.
 %				}
 %			{by $\longrightarrow$}}
 	{\proofstepwithrule{\onlyThroughEx
-				{a:Account $\wedge$ a.balance=bal $\wedge$ a.password=pwd}
+				{a:Account $\wedge$ a.balance=bal $\wedge$ a.pwd=p}
 				{a.balance < bal}
-				{$\neg$$\wrapped{\prg{a.password}}$ $\wedge$ (a.password=pwd $\vee$ a.password != pwd)}
+				{$\neg$$\wrapped{\prg{a.pwd}}$ $\wedge$ (a.pwd=p $\vee$ a.pwd != p)}
 				}
 			{by $\longrightarrow$ and \textsc{Excluded Middle}}}
 	{\proofstepwithrule{\onlyThroughEx
-				{a:Account $\wedge$ a.balance=bal $\wedge$ a.password=pwd}
+				{a:Account $\wedge$ a.balance=bal $\wedge$ a.pwd=p}
 				{a.balance < bal}
-				{($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password=pwd) $\vee$\\
-				($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password != pwd)}
+				{($\neg$$\wrapped{\prg{a.pwd}}$ $\wedge$ a.pwd=p) $\vee$\\
+				($\neg$$\wrapped{\prg{a.pwd}}$ $\wedge$ a.pwd != p)}
 				}
 			{by $\longrightarrow$}}
 	{\proofstepwithrule{\onlyThroughExAlt
-				{a:Account $\wedge$ a.balance=bal $\wedge$ a.password=pwd}
+				{a:Account $\wedge$ a.balance=bal $\wedge$ a.pwd=p}
 				{a.balance < bal}
-				{$\neg$$\wrapped{\prg{pwd}}$ $\vee$
-				a.password != pwd}
+				{$\neg$$\wrapped{\prg{p}}$ $\vee$
+				a.pwd != p}
 				}
 			{by $\longrightarrow$}}
 	{
@@ -410,15 +411,15 @@ as \textbf{(Case A)}.
 	\proofsteps{Case A ($\neg\wrapped{\prg{pwd}}$)}
 			{\proofstepwithrule
 				{\onlyIfExAlt
-					{a:Account $\wedge$ a.balance=bal $\wedge$ a.password=pwd}
-					{$\neg$$\wrapped{\prg{pwd}}$}
-					{$\wrapped{\prg{pwd}}\ \vee \neg\wrapped{\prg{pwd}}$}
+					{a:Account $\wedge$ a.balance=bal $\wedge$ a.pwd=p}
+					{$\neg$$\wrapped{\prg{p}}$}
+					{$\wrapped{\prg{p}}\ \vee \neg\wrapped{\prg{p}}$}
 					}
 				{by \textsc{If-}$\longrightarrow$ and \textsc{Excluded Middle}}}
 			{\proofstepwithrule{\onlyIfExAlt
 					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
-					{$\neg$$\wrapped{\prg{pwd}}$}
-					{$\neg\wrapped{\prg{pwd}}$}
+					{$\neg$$\wrapped{\prg{p}}$}
+					{$\neg\wrapped{\prg{p}}$}
 					}
 				{by $\vee$E and \prg{PasswordLeak}}}
 	\endproofsteps
@@ -426,32 +427,32 @@ as \textbf{(Case A)}.
 	}
 	{
 	\begin{proofexample}
-	\proofsteps{Case B (\prg{a.password != pwd})}
+	\proofsteps{Case B (\prg{a.pwd != p})}
 		{\proofstepwithrule{\onlyThroughExAlt
 					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
-					{a.password != pwd}
-					{$\calls{\_}{\prg{a}}{\prg{set}}{\prg{pwd}, \_}$}
+					{a.pwd != p}
+					{$\calls{\_}{\prg{a}}{\prg{set}}{\prg{p}, \_}$}
 					}
 				{by \textsc{Changes} and \textsc{PasswordChange}}}
 		{\proofstepwithrule{\onlyThroughExAlt
-					{a:Account $\wedge$ a.balance=bal $\wedge$ a.password=pwd}
-					{a.password != pwd}
-					{$\neg\wrapped{\prg{pwd}}$}
+					{a:Account $\wedge$ a.balance=bal $\wedge$ a.pwd=p}
+					{a.pwd != p}
+					{$\neg\wrapped{\prg{p}}$}
 					}
 				{by $\vee$E and \prg{PasswordLeak}}}
 		{\proofstepwithrule{\onlyIfExAlt
-					{a:Account $\wedge$ a.balance=bal $\wedge$ a.password=pwd}
-					{a.password != pwd}
-					{$\neg\wrapped{\prg{pwd}}$}
+					{a:Account $\wedge$ a.balance=bal $\wedge$ a.pwd=p}
+					{a.pwd != p}
+					{$\neg\wrapped{\prg{p}}$}
 					}
 				{by \textbf{Case A} and \textsc{Trans}}}
 	\endproofsteps
 	\end{proofexample}
 	}
 	{\proofstepwithrule{\onlyIfExAlt
-				{a:Account $\wedge$ a.balance=bal $\wedge$ a.password=pwd}
+				{a:Account $\wedge$ a.balance=bal $\wedge$ a.pwd=p}
 				{b.balance(a) < bal}
-				{$\neg\wrapped{\prg{pwd}}$}
+				{$\neg\wrapped{\prg{p}}$}
 				}
 			{by \textbf{Case A}, \textbf{Case B}, \textsc{If-}$\vee$I$_2$, and \textsc{If-}$\longrightarrow$}}
 \endproofsteps
