@@ -1,24 +1,47 @@
-\section{Proof of Adherence of \ModC to \SrobustB}
+\section{Proving that \ModC satisifes \SrobustB}
 \label{s:examples}
-In this section we revisit our example from Sections \ref{s:intro} and \ref{s:outline}:
-specifying a robust bank account. 
+We now revisit our example from  \S  \ref{s:intro} and \ref{s:outline},
+and outline a proof that \ModC satisfies \SrobustB. 
+A \sd{summary} of this proof has already been discussed in \S \ref{s:approach}.
+ A more complex variant of this example that employs ghost fields and a ledger of accounts can be found in Appendix \ref{app:examples}. 
+
+ 
 Recall that an \prg{Account} includes %a \prg{balance} field, and a \prg{transfer} method, along with any other fields and methods. 
-\susan[]{ at least a \prg{balance} field, and a \prg{transfer} method.}
-In order to confidently 
+ at least a  field \sd{or ghost field} called \prg{balance}, and a method called \prg{transfer}. 
+\sophiaPonder[I thought we had agreed no to repeat these things: In order to confidently 
 pass our account to unknown, potentially malicious code, we wish to prove that our 
-\prg{Account} and the module that contains \prg{Account} satisfies \SrobustB. Below we rephrase 
+\prg{Account} and the module that contains \prg{Account} satisfies \SrobustB.]{}
+%
+ We first rephrase 
 \SrobustB to use the $\wrapped{\_}$ predicate.
 \begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
-$\SrobustB$ $\triangleq$ from a:Account $\wedge$ a.Account=bal 
-               to a.balance < bal   onlyIf $\neg\wrapped{\prg{a.pwd}}$
+$\SrobustB$ $\triangleq$ from a:Account $\wedge$ a.balance=bal 
+          to a.balance < bal onlyIf $\neg\wrapped{\prg{a.pwd}}$
 \end{lstlisting}
-That is, if the balance to my account ever decreases, then some external
-object must know my password. 
+\sophiaPonder[I thought we had agreed to get rid of repeating such things: That is, if the balance to my account ever decreases, then some external
+object must know my password: 
 %Or conversely, 
-If only I know my password, then I know my money is safe. 
-Here we provide a proof that \ModC satisfies \SrobustB. 
-An outline of this proof has already been discussed in \S \ref{s:approach}.
-\jm[]{A more complex variant of this example that employs ghost fields and a ledger of accounts can be found in Appendix \ref{app:examples}.}
+If only I know my password, then I know my money is safe.]{}
+
+\sophiaPonder[JULIAN, check whether this part is necessary!]{We next revisit the   \funcSpec from \S \ref{s:bank} and derive the following 
+\prg{PRE}- and \prg{POST}-conditions. The first two pairs of \prg{PRE}-, \prg{POST}-conditions correspond to the first two \prg{ENSURES}
+clauses from \S \ref{s:bank}, while the next two pairs correspond to the \prg{MODIFIES}-clause. The current expression in terms
+of \prg{PRE}- and \prg{POST}-conditions is weaker than the one in , and is not modular. However, it is sufficient for the purposes
+of proving adherence to  \SrobustB.}
+
+\begin{lstlisting}[mathescape=true, frame=lines, language=Chainmail]
+$\Sclassic$  $\triangleq$
+   method transfer(dest:Account, pwd':Password) -> void  
+      (PRE: this.balance$=$bal1 $\wedge$ dest.balance$=$bal2 $\wedge$ this.pwd$=$pwd' $\wedge$ this$\neq$dest
+       POST: this.balance=bal1-100 $\wedge$ dest.balance=bal2+100)
+      (PRE: this.balance$=$bal1 $\wedge$ dest.balance$=$bal2 $\wedge$ (this.pwd$\neq$pwd' $\vee$ this$\neq$dest)
+       POST: this.balance=bal1 $\wedge$ dest.balance=bal)
+      (PRE: a:Account $\wedge$ a.balance$=$bal $\wedge$ a$\neq$this $\wedge$ a$\neq$dest 
+       POST: a.balance=bal)          
+      (PRE: a:Account $\wedge$ a.pwd$=$pwd1  
+       POST: a.pwd=pwd1)         
+\end{lstlisting}
+
 
 %\begin{figure}[t]
 %\begin{lstlisting}[mathescape=true, frame=lines]
@@ -43,7 +66,7 @@ An outline of this proof has already been discussed in \S \ref{s:approach}.
 
 \subsection{Part 1: Assertion Encapsulation}
 \label{s:BA-encap}
-The first part of the proof is proving that the \prg{Account} \prg{balance}, \prg{pwd}, and external accessibility to the password are 
+The first part of the proof \sophiaPonder[is proving]{demonstrates} that the \prg{balance}, \prg{pwd}, and external accessibility to the password are 
 encapsulated properties. That is, for the \prg{balance} to change (i.e. for \prg{a.balance = bal} to be invalidated), 
 internal computation is required. We use a conservative approach to an encapsulation system, detailed in App. \ref{s:encap-proof}, 
 and provide the proof steps below.

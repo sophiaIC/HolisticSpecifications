@@ -2,15 +2,15 @@
 
 \section{Outline of our approach}
 \label{s:outline}
-
-
-\jm[add introduction to Section 2]{
-In this Section we outline our work  
-by giving an overview of our running example, the Bank Account (\S\ref{s:bank} and \ref{s:bankSpecEx}),
-how we model the open world (\S\ref{s:concepts}), 
-and finally the structure of our proof system and how we reason 
+ 
+In this Section we outline our \sd{approach}:  
+we \sd{revisit} our running example, the Bank Account (\S\ref{s:bank},   \sd{give 
+the \Nec specs} \ref{s:bankSpecEx}),
+   outline how we model the open world (\S\ref{s:concepts}), 
+and outline the structure of our proof system and % outline 
+how we reason 
 about \Nec specifications (\S\ref{s:approach}).
-}
+ 
 
  \subsection{Bank Account -- three modules}
 \label{s:bank}
@@ -45,36 +45,24 @@ module $\ModA$
 \end{lstlisting}
 %
 \noindent 
-We can capture the intended
-semantics of  
-\prg{transfer}  
-through  {a}  \funcSpec with pre- and postconditions as \emph{e.g.,} in \cite{Leavens-etal07,dafny13},
-with ``explicit framing'' --   
- {rather than \prg{modifies}-clauses we give assertions   about preservation of values.}
- %\sophiaPonder[]{
-%-- note that we always treat all free variables as universally quantified.
-%}
-\ModA's implementation of the \prg{transfer} method meets
+We can capture the intended semantics of   \prg{transfer}  
+through  {a}  \funcSpec with pre- and post- conditions and \prg{MODIFIES} clauses as \emph{e.g.,} in \citeauthor{Leavens-etal07,dafny13}.
+The implementation of  \prg{transfer} in module  $\ModA$ meets
 this specification.
-
-
 
 \begin{lstlisting}[mathescape=true, frame=lines, language=Chainmail]
 $\Sclassic$  $\triangleq$
-   method transfer(dest:Account, pwd':Password) -> void {
-       ( PRE:  this.balance$=$bal1 $\wedge$ this.pwd$=$pwd' $\wedge$ dest.balance$=$bal2 $\wedge$ dest$\neq$this 
-         POST: this.balance$=$bal1-100 $\wedge$  dest.balance$=$bal2+100 )
-       ( PRE: this.balance$=$bal1 $\wedge$ this.pwd$\neq$pwd' $\wedge$ dest.balance=bal2
-         POST: this.balance$=$bal1 $\wedge$  dest.balance$=$bal2 )
-       ( PRE: a : Account $\wedge$ a$\neq$this $\wedge$ a$\neq$dest  $\wedge$ a.balance$=$bal
-         POST:  a.balance$=$bal)
-       ( PRE: a : Account $\wedge$ a.pwd$=$pwd1  
-         POST: a.pwd$=$pwd1)       
+   method transfer(dest:Account, pwd':Password) -> void  
+      ENSURES:
+            this.pwd$=$pwd' $\wedge$ this$\neq$dest  $\longrightarrow$  
+            this.balance$_{post} =$this.balance$_{pre}$-100 $\wedge$ dest.balance$_{post} =$dest.balance$_{pre}$+100
+      ENSURES:
+            this.pwd$\neq$pwd' $\vee$ this$=$dest  $\longrightarrow$ 
+            this.balance$_{post} =$this.balance$_{pre}$ $\wedge$ dest.balance$_{post} =$dest.balance$_{pre}$ 
+      MODIFIES:  this.balance, dest.balance        
 \end{lstlisting}
-%\footnote{Perhaps omit some of the lines here, but we do need them all in the full discussion}
  
  
-
 Now consider the following alternative implementations:
 \ModB allows any client to reset an account's password at any time;
 \ModC requires the existing password in order to change it.
