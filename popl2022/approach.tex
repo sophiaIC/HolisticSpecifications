@@ -8,9 +8,10 @@ we  revisit  our running example, the Bank Account (\S\ref{s:bank}),
 \sd{introduce the three necessity operators (\S \ref{s:approach:necopers})},  \sd{give 
 the \Nec specs} (\S \ref{s:bankSpecEx}),
    outline how we model the open world (\S\ref{s:concepts}), 
-and outline the structure of our proof system and % outline 
-how we reason 
-about \Nec specifications (\S\ref{s:approach}).
+give the main ideas of our proof system (\S\ref{s:approach})
+and   outline 
+how we use it to reason 
+about adherence to \Nec specifications  (\S\ref{s:all:outline:proof}).
  
 
  \subsection{Bank Account -- three modules}
@@ -302,7 +303,7 @@ even though we are calling   an untrusted object, \SrobustB guarantees that \prg
  
 
  
-\subsection{Internal and External modules, objects and calls}
+\subsection{Internal and external modules, objects, and calls}
 \label{s:concepts}
 
 Our work concentrates on guarantees made in an \emph{open} setting; that is, a given module
@@ -314,10 +315,11 @@ $M'$, the  \emph{\externalM} module, is executing. A module can
 temporarily break its own invariants,
 so long as the broken invariants are never visible externally.
    
-We therefore distinguish between \emph{\internalO}
+We therefore distinguish between  \emph{\internalO}
 objects --- instances of classes defined in $M$ ---
-and \emph{\externalO} objects defined in any other module, and
-between \emph{\internalC} calls  (from either an internal or an external object)  made % from \externalO objects
+and \emph{\externalO} objects defined in any other module.
+We also distinguish between
+  \emph{\internalC} calls  (from either an internal or an external object)  made % from \externalO objects
  to \internalO objects and \emph{\externalC} calls made % from \externalC objects
  to \externalC objects. 
  \sd{Looking at the code snippet from \S \ref{sec:how}, the call to \prg{set} on line 6 is an 
@@ -334,15 +336,16 @@ the  \externalM module  is executing,
 we develop an \emph{external states} semantics, where
  any internal calls are executed in one, large, step.
 With external steps semantics,  the executing object (\prg{this}) is always   external. 
-Note that we \sd{currently} do not support calls from
-\internalO objects to \externalO objects.
+  In line  with other work in the literature \cite{Permenev, Grossman, Albert}, we currently forbid 
+  calls from internal to  external objects
+  -- \sd{further details on call-backs in \S\ref{s:related}. }
 
 \sd{For the purposes of the current work we are only interested in one internal, and one external module.
 But the interested reader might ask: what if there is more than one external module?
-The answer is that from the point of view of the internal module, all external modules are considered as one;
+The answer is that from the internal module's viewpoint, all external modules are considered as one;
 for this we provide a module linking operator with  the expected semantics -- more details in Def. \ref{def:pair-reduce} and \S \ref{app:loo}. 
 But from the external module's viewpoint, there may be more than one external module: for example, in \S \ref{sec:how}, 
-module $\ModParam{1}$ in external to the module   implementing class \prg{Account}, and the module 
+module $\ModParam{1}$ is external to the module   implementing class \prg{Account}, and the module 
 implementing the class of \prg{untrusted} is external to
 $\ModParam{1}$.
 }
@@ -369,50 +372,64 @@ $\ModParam{1}$.
 
 \newcommand{\vertsp} {\vspace{.05in}} 
  
-\subsection{Reasoning about Necessity}
+\subsection{Reasoning about \Nec}
 \label{s:approach}
 
-Our logic  
- is built on top of   
- two existing and widely studied topics:
- \funcSpecs and encapsulation. That is, we assume the existence of
- some proof logic for proving traditional pre- and post-conditions for functions, 
- along with a property we refer to as \emph{assertion encapsulation}.
- We say that an assertion is \emph{encapsulated} if \sophiaPonder[no need for "and only if"]{} invalidation 
- of that assertion by program execution requires a method call to the 
- \emph{internal} module. We discuss assertion encapsulation in more detail in \S \ref{s:encaps-proof}.
+\sd{We will now outline the key ingredients of  our logic with which we prove
+that modules obey \Nec specifications. 
+% In this logic, 
+We will use the auxiliary concept that % of \emph{assertion encapsulation}: 
+an assertion $A$ is \emph{encapsulated} by
+a module $M$, if  $A$  can only be invalidated through 
+a call to a method from $M$ -- more   in \S \ref{s:encaps-proof}.}
+
  
- 
- {
- We base \Nec logic on two crucial insights:
- (1) if an assertion $A$ is encapsulated by a module $M$, then a call to $M$ is a \emph{necessary} pre-condition to invalidating $A$,
- and (2) that the specification $\onlyIf{A_1} {A_2} {A_3}$ is 
-logically equivalent
-% with 
-{to}
- $\forall \prg{stmts}. \{ A_1 \wedge \neg A_3\} \prg{stmts} \{ \neg A_2 \}$ -- that is,
- with an infinite conjunction  of Hoare triples.}
+% is built on top of   
+% two existing and widely studied topics:
+% \funcSpecs and encapsulation. That is, we assume the existence of
+% some proof logic for proving traditional pre- and post-conditions for functions, 
+% along with a property we refer to as \emph{assertion encapsulation}.
+% We say that an assertion is \emph{encapsulated} if \sophiaPonder[no need for "and only if"]{} invalidation 
+% of that assertion by program execution requires a method call to the 
+% \emph{internal} module. We discuss assertion encapsulation in more detail in \S \ref{s:encaps-proof}.
+% 
+%  (1) if an assertion $A$ is encapsulated by a module $M$, then a call to $M$ is a \emph{necessary} pre-condition to invalidating $A$,
+% and (2) that the specification $\onlyIf{A_1} {A_2} {A_3}$ is 
+%logically equivalent
+%% with 
+%{to}
+
+The \Nec logic is based on the crucial insight that the specification\\
+\strut $\hspace{1in}$  $\onlyIf{A_1} {A_2} {A_3}$
+\\
+ is  logically equivalent {to} \\
+ \strut $\hspace{1in}$  $\forall \prg{stmts}. \{ A_1 \wedge \neg A_3\} \prg{stmts} \{ \neg A_2 \}$\\
+ -- that is,
+ with an \emph{infinite} conjunction  of Hoare triples. 
  {This leaves the challenge that no Hoare logics support such infinite conjunctions.
- Three breakthroughs lead to our solution of that challenge:}
+ Three breakthroughs helped us address   that challenge:}
+  
  \begin{description}
  \item
- [Per-method specs] 
+ [From Hoare triples to per-call specs] 
   The Hoare triple 
 $ \{ A_1 \wedge \neg A_3 \} \ \prg{x.m(ys)}\  \{ \neg A_2 \}$ is logically equivalent 
  {to} the specification
 $ \onlyIfSingle {(A_1 \wedge  \calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}} )} {A_2} {A_3}$.  
-With this, we can leverage Hoare triples to reason about \sd{about any call  to one particular method }.  
+% Thus, we   leverage Hoare triples to \sophiaPonder[it said "reason about" -- I think this was wrong]
+% obtain \Nec specs {about specific calls. }   
  
  \item 
- [Per-step specs] % Second, 
- If an assertion $A_2$  is \emph{encapsulated} by a module (\ie the only way we can go from a 
- state that satisfies $A_2$ to a state that does not, is through a call to a method in that module), then
+ [From per-call specs to per-step specs] % Second, 
+ If an assertion $A_2$  is \emph{encapsulated} by a module -- and thus the only way from a 
+ state that satisfies $A_2$ to a state that does not, is through a call to a method in that module -- then
 {the
 \emph{finite conjunction}
-of {$ \onlyIfSingle {(\, A_1 \wedge A_2 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}}}\, )} {\neg  A_2} {A_3}$}
- for all methods of that module is logically equivalent 
+that all methods of that module {$ \onlyIfSingle {(\, A_1 \wedge A_2 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\prg{ys}}}\, )} {\neg  A_2} {A_3}$}
+  is logically equivalent 
  {to}
 {$ \onlyIfSingle {A_1 \wedge A_2} {\neg A_2} {A_3}$. }}
+ 
   \item [Proof logic  for emergent behaviour] %an inference system 
   combines several specifications to reason about the
   emergent behaviour, \emph{e.g.,} 
@@ -436,7 +453,7 @@ of {$ \onlyIfSingle {(\, A_1 \wedge A_2 \wedge {\calls{\_}{\prg{x}}{\prg{m}}{\pr
 %along with two additions: (a) \funcSpecs, and (b) assertion encapsulation. 
 
 {
-Thus, our system} consists of four parts (five including \funcSpecs):
+  Thus, our system} consists of four parts (five including \funcSpecs):
 (\textbf{Part 1}) assertion encapsulation, (\textbf{Part 2}) \jm[]{per-method} specifications, 
 (\textbf{Part 3}) per-step specifications, and (\textbf{Part 4}) specifications of emergent behaviour.
 The structure of the system, and the dependency of each part on preceding parts is given in Fig. \ref{fig:dependency}.
@@ -454,26 +471,35 @@ prove specifications of emergent behaviour.
    \label{fig:dependency}
  \end{figure}
 
-{\Nec consists of specifications of necessary conditions and a logic for proving those specifications: parts 2, 3, and 4.
+% {\Nec consists of specifications of necessary conditions and a logic for proving those specifications: parts 2, 3, and 4.
 %The remaining parts are assertion encapsulation (part 1) and \funcSpecs.
-}
+%}
 %\jm[]{As previously stated, an} assertion $A$  is
 %\emph{encapsulated} by  module $M$, if  $A$ can be invalidated only through
 %calls to methods defined in $M$.
 %  In other words, a  call to  $M$  is a \emph{necessary} condition for
 %invalidation of $A$.
 Our \Nec logic  is parametric with respect to the 
-particular encapsulation
-mechanism: examples in this paper rely on rudimentary annotations inspired by confinement types
-\cite{confined}, but could just as easily rely some other language mechanism such as ownership types.
-\jm[]{For the purposes of our examples,} \funcSpecs are assumed, and not 
-included as part of the proof system, as they have been well covered in the literature.
-{\jm[]{This is a key strength of our approach:
-\Nec (parts 2, 3, and 4) and our results are } agnostic as to how \jm[]{both assertion encapsulation and \funcSpecs} are proven.
-As a result we can leverage the results of many different approaches.
+\sophiaPonder[read "particular encapsulation
+mechanism" -- I think it is wrong]{the way we ascertain whether an assertion
+is encapsulated and the way we obtain \funcSpecs.}
+As a result we can leverage  results from many different approaches.
 Further, our proofs of \Nec do not inspect method
 bodies: we rely on simple annotations to infer encapsulation, and
-\sd{on} pre and post-conditions  to infer per-method conditions. }
+\sd{on} pre and post-conditions  to infer per-method conditions. 
+
+% Because we rely on some external mechanism to obtain \funcSpecs, we never need to inspect method bodies
+% when proving \Nec specifications.
+
+
+%\jm[]{For the purposes of our examples,} \funcSpecs are assumed, and not 
+%included as part of the proof system, as they have been well covered in the literature.
+%{\jm[]{This is a key strength of our approach:
+%\Nec (parts 2, 3, and 4) and our results are } agnostic as to how \jm[]{both assertion encapsulation and \funcSpecs} are proven.
+%As a result we can leverage the results of many different approaches.
+%Further, our proofs of \Nec do not inspect method
+%bodies: we rely on simple annotations to infer encapsulation, and
+%\sd{on} pre and post-conditions  to infer per-method conditions. }
  
 
 
@@ -537,7 +563,14 @@ bodies: we rely on simple annotations to infer encapsulation, and
 %assumed logic for proving classical pre- and postconditions.
 %These dependencies are shown in Fig. \ref{fig:dependency}.}
  
-For illustration, we  outline  a proof that  \ModC adheres to \SrobustB.
+ \subsection{Outline of the proof that  \ModC obeys \SrobustB}
+ \label{s:all:outline:proof}
+ 
+For illustration, we  outline  a proof that  \ModC adheres to \SrobustB. 
+note that for illustration purposes, in this paper we show how assertion encapsulation can be proven
+based on simple annotations inspired by confinement types
+\cite{confined}; we could just as easily rely  on other language mechanisms,  \emph{e.g.,} ownership types,
+\sd{or even develop custom  logics.}
  
 \begin{description}
 \item[Part 1: Assertion Encapsulation.]  \

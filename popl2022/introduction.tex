@@ -15,12 +15,19 @@
 % of invalid inputs or stressful environmental conditions.  
 
 {Software needs} to be both {\emph{correct}} ({programs do what they
-  are supposed to}) and {\emph{robust}} ({programs \emph{only} do what
-  they are supposed to}). {We use robustness to refer
-  to \emph{robust safety}, a term 
-  used in both the security~\cite{gordonJefferyRobustSafety, Bugliesi:resource-aware} and object capabilities literature~\cite{ddd} to mean that
-programs don't do what they aren't supposed to do, even in the
-presence of untrusted or malicious {clients}}.
+  are supposed to}) and {\emph{robust}} ({programs \emph{only} do what they are supposed to}). 
+ \sd{We use the term \emph{robust} as a generalisation of \emph{robust safety}~\cite{gordonJefferyRobustSafety, Bugliesi:resource-aware,ddd}  whereby a module or process or ADT is \emph{robustly safe} if its execution preserves some safety guarantees even when run together with unknown,   unverified, potentially malicious client code. 
+ The particular safety guarantees vary across the literature. 
+We are interested in \emph{program-specific} safety guarantees which describe  \emph{necessary conditions}
+ for some effect to take place.
+In this work we propose how to specify such necessary conditions, and how to prove that modules adhere to such specifications.}   
+ 
+ We motivate the need for  necessary conditions for effects through an example:
+%  {We use robustness to refer
+%  to \emph{robust safety}, a term 
+%  used in both the security~\cite{gordonJefferyRobustSafety, Bugliesi:resource-aware} and object capabilities literature~\cite{ddd} to mean that
+%programs don't do what they aren't supposed to do, even in the
+%presence of untrusted or malicious {clients}}.
 % robust = The degree to which a system or component can function correctly in the presence 
 % of invalid inputs or stressful environmental conditions.  
 {Correctness is} {traditionally} specified
@@ -46,7 +53,8 @@ will always achieve the postcondition (the money is transferred).
     % I think we need the vspace
  
 %While 
-\Scorrect  describes  {the \emph{correct use} of the module, but is \emph{not} concerned with its \emph{robustness}.}
+\Scorrect  describes  {the \emph{correct use} of the  \sophiaPonder[we said "the module"
+but I think tis is not what we meant]{particular function}, but is \emph{not} concerned with the \sd{module's} \emph{robustness}.}
 {For example, can I pass an account to foreign untrusted code, in the expectation of receiving a payment,
 but without fear that a malicious client might use the account to steal my money \cite{ELang}?}
  A first  {attempt} to specify robustness could be:
@@ -58,16 +66,17 @@ with the correct password.
 \end{quote}
 
 Specification \SrobustA % gives   the guarantee 
-{guarantees} that it is not possible to  take money out of the account through some method other than \prg{transfer}
-{or without providing the password}.
+{guarantees} that it is not possible to  take money out of the account 
+% through some method other than \prg{transfer}
+\sd{without calling \prg{transfer} and} without providing the password.
   Calling \prg{transfer}   with the  correct password is 
-a \emph{necessary condition} for reducing the account's  balance.
+a \emph{necessary condition} for \sd{(the effect of)} reducing the account's  balance.
 
 \SrobustA is  crucial, but  not   enough:
 it does not take  account of the module's \emph{emergent behaviour},
 {that is, does not cater for the potential interplay of several methods offered by the module.}
- What if the module provided further methods which leaked the password,  
- {or allowed for it to be arbitrarily changed}?
+ What if the module provided further methods which leaked the password?  
+%  {or allowed for it to be arbitrarily changed}?
 { While no single procedure call is capable of breaking the intent of \SrobustA, a sequence of calls might.}
 {What} we really need is
  \begin{quote}
@@ -80,7 +89,7 @@ With \SrobustB, I can confidently pass my account to  {any, potentially untruste
 %they may or may not make the payment I was expecting, 
 but I know 
 %they will not  {be able to} steal my money 
- {that my money will not be stolen} \cite{ooToSecurity,miller-esop2013}. 
+ {that my money will not be stolen} \cite{ooToSecurity}. 
  Note that \SrobustB  does not mention
  the names of any functions in the module, and 
  thus can be expressed without reference to any particular API ---
@@ -97,7 +106,7 @@ information control flow \cite{Zdancewic:Myers:01,noninteferenceOS},
  sandboxing  \cite{robustSafetyPatrignani,sandbox},
 robust linear temporal logic   \cite{RLTL2022} -- to name a few. %are some of the proposals to ensure some level of robust safety. 
 {Most of these  %works 
-propose \emph{generic} robustness guarantees (\emph{e.g.} no dependencies from high values to low values),
+propose \emph{generic}  guarantees (\emph{e.g.} no dependencies from high values to low values),
 while we work with  \emph{problem-specific} guarantees  (\emph{e.g.} no decrease in balance without access to password).}
 {{{\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE} also work on problem-specific guarantees.}
 Both these approaches are able to express necessary conditions
@@ -117,7 +126,7 @@ Both these approaches are able to express necessary conditions
 \label{intro:this:work}
 {In this paper we introduce \Nec,} the first approach that is able to  both express and prove
 robustness specifications such as  \SrobustB.
-{Developing a specification language with a proof logic that is able to prove properties such as \SrobustB is complex
+{Developing a specification language with a proof logic that is able to prove properties such as \SrobustB % is complex
 and must tread a fine line: the language must be rich enough to express complex specifications; temporal operators are needed along with object capability style operators 
 that describe \emph{permission} and \emph{provenance}, while also being simple enough that proof rules might be devised.}
 
@@ -192,11 +201,11 @@ logically equivalent
  $\forall \prg{stmts}. \{ A_1 \wedge \neg A_3\} \prg{stmts} \{ \neg A_2 \}$.
  And there do not exist logics to reason about such infinite intersections.}
 
- The solution arose from three observations: (1) proofs of \Nec specifications
- in the open world must be based around encapsulation and permission,
+\sd{We addressed the challenge} through three observations: (1) proofs of \Nec specifications
+\sophiaPonder[chopped: " in the open world"]{} can be based around encapsulation and permission,
  (2) \Nec specifications of emergent behaviour can be built up from \Nec specifications on individual 
- functions, which (3) in turn can be encoded as traditional \funcSpecs. 
- 
+ functions, which (3) in turn can be \sd{obtained} from \emph{traditional} \funcSpecs and encapsulation.
+ %
 %%The Eureka moment was the realisation that all the information we required was hiding  { in the individual methods' classical specifications:}
 %The Eureka moment \jm[four? is 2 an observation?]{arose from four crucial observations:} %{ in the individual methods' classical specifications:}
 %\jm[]{\begin{enumerate}
@@ -212,16 +221,16 @@ logically equivalent
 %Necessary preconditions to functions can be encoded using functional specifications.
 %\end{enumerate}}
 %%\jm[]{These four observations are the basis of \Nec.}
-  
-
-\vspace{.02in}
+ % \vspace{.02in}
 {A strength of our} work % formalization of \Nec  
 is {that it is
 parametric} with respect to assertion
-satisfaction, encapsulation, {and functional specifications, all of which are well covered in the literature}.
-Moreover, in line  with other work in the literature \cite{Permenev, Grossman, Albert}, we forbid 
-calls from internal to  { \color{blue}\texttt{external}} objects (ie unknown objects
-whose code has not been checked) -- \sd{further details on call-backs in \S\ref{s:related}. }
+satisfaction, encapsulation, {and functional specifications, all of which are well covered in the literature},
+\sd{and offer several off-the-shelf solutions.}
+\sophiaPonder[chopped about callbacks, and added to section 2.4]{}
+% In line  with other work in the literature \cite{Permenev, Grossman, Albert}, we forbid 
+% calls from internal to  { \color{blue}\texttt{external}} objects (ie unknown objects
+% whose code has not been checked) -- \sd{further details on call-backs in \S\ref{s:related}. }
  
 
 
@@ -245,9 +254,10 @@ A logic for proving a module's adherence to \susan[]{its}
 both mechanised in Coq. 
  \item
 A proof in our logic % the bank account 
-  that our bank module obeys the \Nec specification \SrobustB (\S\ref{s:examples}),     mechanised in Coq.
+  that our bank module \sd{obeys} % the \Nec specification 
+  \SrobustB (\S\ref{s:examples}),     mechanised in Coq.
   And a proof that
-  a richer bank module which uses ghostfields and internal classes  obeys  \SrobustB (\S\ref{app:BankAccount}),
+  a richer bank module which uses ghostfields and confined classes  obeys  \SrobustB (\S\ref{app:BankAccount}),
   also mechanised in Coq.
 \item \ {Examples taken from the literature  (\S\ref{s:expressiveness} and \S\ref{s:expressiveness:appendix}) specified in \Nec  .}
 
