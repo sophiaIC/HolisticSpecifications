@@ -4,8 +4,9 @@
 \label{s:outline}
  
 In this Section we outline our \sd{approach}:  
-we \sd{revisit} our running example, the Bank Account (\S\ref{s:bank}),   \sd{give 
-the \Nec specs} (\ref{s:bankSpecEx}),
+we  revisit  our running example, the Bank Account (\S\ref{s:bank}),  
+\sd{introduce the three necessity operators (\S \ref{s:approach:necopers})},  \sd{give 
+the \Nec specs} (\S \ref{s:bankSpecEx}),
    outline how we model the open world (\S\ref{s:concepts}), 
 and outline the structure of our proof system and % outline 
 how we reason 
@@ -117,7 +118,7 @@ is enough to drain  \prg{an\_account} in \ModB without knowing the password.
 \label{s:approach:necopers}
 
 \sd{We need  a specification that rules out \ModB while permitting \ModA and
-\ModC.  For this we will be using  on of the  three necessity operators mentioned in  \S \ref{intro:this:work}. These operators are:}
+\ModC.  For this, we will be using  one of the  three necessity operators mentioned in  \S \ref{intro:this:work}. These operators are:}
 \\
 $ \strut \hspace{1.7in} \onlyIf {A_{curr}} {A_{fut}} {A_{nec}} $ \\
 $ \strut \hspace{1.7in}   \onlyIfSingle {A_{curr}} {A_{fut}} {A_{nec}} $ \\
@@ -219,10 +220,11 @@ In \Nec  syntax, and \sd{recalling \S \ref{intro:this:work}, and \ref{s:approach
  %
 %% T9hu having access to the password is a necessary condition for the balance to reduce.
 
-\noindent
+ 
  \sd{\SrobustA does not fit the bill: all three modules   satisfy  it.
  % \SrobustA;  this demonstrates that \SrobustA is not strong enough. 
  But  \SrobustB does fit the bill: \ModA and \ModC satisfy \SrobustB, while \ModB does not.}
+ 
 A critical point of \SrobustB % this \Nec specification 
 is that it is
 expressed in terms of observable effects (the account's balance is
@@ -249,22 +251,27 @@ This is why we say that \Nec   specifications capture a module's \emph{emergent 
  
 
 %\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
-\subsubsection{How applicable is  \SrobustB?}
+\subsubsection{How \sd{useful} is  \SrobustB?}
 \label{sec:how}
-Finally,  {note that \SrobustB is applicable even though \emph{some} external objects may have access
-to the account's password. 
-Namely, if the account is passed to a scope which does not know the password, we 
-know that its balance is guaranteed not to decrease. %, even though it may increase. 
-}
 
- 
-We illustrate this through the following simplified code snippet.
+\sd{One might think that \SrobustB was not useful: Normally, there will exist somewhere in the heap
+at least one external object  
+with access to the password --  if no such object existed, then the money in the account would be un-usable. 
+And if such an object did exist, then the guarantee given by \SrobustB might seem vacuous.}
+
+\sd{
+This is \emph{not} so: there may exist  
+scopes of execution  from which such external objects with access to the password
+are not (transitively) reachable. In such scopes,
+\SrobustB  guarantees that the balance of the account will not decrease.
+}
+We illustrate this through the following  code snippet:
  
 
 \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-module $\ModExt$
+module $\ModParam{1}$
      ...
-    method expecting_payment(untrusted:Object)
+    method cautious(untrusted:Object)
         a = new Account
         p = new Password
         a.set(null,p)
@@ -274,42 +281,38 @@ module $\ModExt$
 \end{lstlisting}
  
 
- The method \prg{expecting\_payment} has as  argument an external object \prg{untrusted}, of unknown provenance.
+\sd{The method \prg{cautious} has as  argument an external object \prg{untrusted}, of unknown provenance.
 \sd{It} creates a new \prg{Account} and initializes its password. 
+In the scope of  this method,  external objects with access to the password are reachable:
+thus,  during execution of  line 7, or   line \sd{9} the balance may decrease.
+}
 
-Assume that class \prg{Account} is from a module which satisfies \SrobustB. 
-Then, 
-in the scope of  method \prg{expecting\_payment} external objects have access to the password, 
-and the balance may decrease  
-during execution of  line 7, or   line \sd{9}. 
-%\susan[Is this what you want to say? What if the code in line 8 does leak the password?
-%\sd{I had errors in the lines. The code in line 8 cannot leak the password as it does not have it}]{}
-However, if the code in line \sd{7} does not leak the password to \prg{untrusted}, then no external object
-in  the scope of the call \prg{make\_payment} at line 8 has access to the password, and then,
+\sd{Assume that class \prg{Account} is from a module which satisfies \SrobustB. 
+Assume also that the code in line \sd{7} does not leak the password to \prg{untrusted}. Then no external object
+reachable from the scope of execution of \prg{make\_payment} at line 8 has access to the password.
+Therefore, 
 even though we are calling   an untrusted object, \SrobustB guarantees that \prg{untrusted}
  will not be able to take any money out of  \prg{a}.
- 
+ }
 %\susan[I think this paragraph doesn't add, if anything it has a hostage to fortune. I would just remove it.
 %\sd{agreed, and removed}]{}
 % The purpose of the current paper is being able to express specifications like \SrobustB, and
 %and being able to prove adherence. In further work we want to develop logics to leverage such specifications, putting
 %informal arguments as the  one of this section onto formal foundations.
  
+ 
 
  
-\subsection{Internal and External objects and calls}
+\subsection{Internal and External modules, objects and calls}
 \label{s:concepts}
 
 Our work concentrates on guarantees made in an \emph{open} setting; that is, a given module
-$M$ must be programmed so that %in such a robust manner
-%\example[We had agreed no to say "robust", but I think it is OK here. Alternatively, say defensively robust?]{}
+$M$ must be programmed so that 
 execution of $M$ together with \emph{any} \externalM 
 module $M'$ will uphold these guarantees. In the tradition of
 visible states semantics, we are  only interested in upholding the guarantees while 
 $M'$, the  \emph{\externalM} module, is executing. A module can
 temporarily break its own invariants,
-%%just as a class or monitor can
-%%break their invariants,
 so long as the broken invariants are never visible externally.
    
 We therefore distinguish between \emph{\internalO}
@@ -317,7 +320,12 @@ objects --- instances of classes defined in $M$ ---
 and \emph{\externalO} objects defined in any other module, and
 between \emph{\internalC} calls  (from either an internal or an external object)  made % from \externalO objects
  to \internalO objects and \emph{\externalC} calls made % from \externalC objects
- to \externalC objects. % We are less
+ to \externalC objects. 
+ \sd{Looking at the code snippet from \S \ref{sec:how}, the call to \prg{set} on line 6 is an 
+ internal call, while the call to \prg{make\_payment} is an external call -- from the external 
+ object  prg{this}  to the external object \prg{untrusted}.}
+ 
+ % We are less
 % interested in calls made from \internalO objects to \internalO objects, because we only need 
 % establish the guarantees when the \externalM module is executing. And we 
 %
@@ -327,8 +335,19 @@ the  \externalM module  is executing,
 we develop an \emph{external states} semantics, where
  any internal calls are executed in one, large, step.
 With external steps semantics,  the executing object (\prg{this}) is always   external. 
-Note that we do not support calls from
+Note that we \sd{currently} do not support calls from
 \internalO objects to \externalO objects.
+
+\sd{For the purposes of the current work we are only interested in one internal, and one external module.
+But the interested reader might ask: what if there are more than one external modules?
+The answer is that from the point of view of the internal module, all external modules 
+are considered as one through
+a module linking operator with  the expected semantics -- full details in  \S \ref{app:loo}. 
+But from the external module's viewpoint, there may be more than one external module; for example, in \S \ref{sec:how}, 
+module $\ModParam{1}$ in external to the module   implementing class \prg{Account}, and the module 
+implementing the class of \prg{untrusted} is external to
+$\ModParam{1}$.
+}
 
 %\section{Encapsulation}
 %\label{s:outline:encapsulation}
