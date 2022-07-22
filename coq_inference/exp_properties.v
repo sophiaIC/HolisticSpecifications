@@ -1,9 +1,9 @@
 Require Export Arith.
 Require Import List.
 
-Require Import chainmail.CpdtTactics.
-Require Import chainmail.common.
-Require Import chainmail.exp.
+Require Import necessity.CpdtTactics.
+Require Import necessity.common.
+Require Import necessity.exp.
 Require Import defs.
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.

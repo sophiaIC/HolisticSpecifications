@@ -5,19 +5,19 @@ Require Import exp.
 Require Import defs.
 Require Import operational_semantics.
 Require Import List.
-Require Import specw.
+Require Import assert.
 Require Import hoare.
 
-Module Inference(L : LanguageDef).
+Module Necessity(L : LanguageDef).
 
   Export L.
   Module L_Hoare := Hoare(L).
   Export L_Hoare.
 
-  Open Scope specw_scope.
+  Open Scope assert_scope.
   Open Scope reduce_scope.
   Open Scope hoare_scope.
-  Declare Scope inference_scope.
+  Declare Scope necessity_scope.
 
   Reserved Notation "M '⊢' A1 'to' A2 'onlyIf' A3" (at level 40).
   Reserved Notation "M '⊢' A1 'to' A2 'onlyThrough' A3" (at level 40).
@@ -65,9 +65,8 @@ Module Inference(L : LanguageDef).
   | enc_lt : forall M A e1 e2, enc_exp M A e1 ->
                           enc_exp M A (e2) ->
                           enc M A (a_exp (e1 ⩻ e2))
-  | enc_wrapped1 : forall M A α, enc M A (wrapped α)
-  | enc_wrapped2 : forall M A α1 α2, M ⊢ A ⊇ (wrapped α2) ->
-                                enc M A (¬ α1 access α2)
+  | enc_wrapped1 : forall M A n, enc M A (wrapped (a♢ n))
+  | enc_wrapped2 : forall M a C, enc M (a_class (e_ a) C) (wrapped (a_ a))
   | enc_conseq1 : forall M A1 A2 A, M ⊢ A1 ⊇ A2 ->
                                M ⊢ A2 ⊇ A1 ->
                                enc M A A1 ->
@@ -76,6 +75,9 @@ Module Inference(L : LanguageDef).
                                M ⊢ A ⊇ A1 ->
                                enc M A A1 ->
                                enc M A A2
+  | enc_conseq3 : forall M A1 A2 A, M ⊢ A2 ⊇ A1 ->
+                               enc M A1 A ->
+                               enc M A2 A
   | enc_or : forall M A1 A2 A, enc M A A1 ->
                           enc M A A2 ->
                           enc M A (A1 ∨ A2)
@@ -92,6 +94,9 @@ Module Inference(L : LanguageDef).
                          enc_exp M A (e_acc_f e f).
 
   Hint Constructors enc : inference_db.
+
+  Definition no_free (A : asrt) :=
+    forall (x : value) (n : nat), ([x /s n] A) = A.
 
   Inductive only_if : mdl -> asrt -> asrt -> asrt -> Prop :=
   | if_start  : forall M A1 A2, M ⊢ A1 to A2 onlyIf A1
@@ -170,17 +175,11 @@ Module Inference(L : LanguageDef).
   | ot_trans2   : forall M A1 A2 A A', M ⊢ A1 to A2 onlyThrough A' ->
                                        M ⊢ A' to A2 onlyThrough A ->
                                        M ⊢ A1 to A2 onlyThrough A
-(*  | ot_inv      : forall M A1 A2 A3 A, M ⊢ A to ¬ A onlyThrough a_exp (e_false) ->
-                                       M ⊢ A1 to A2 onlyThrough A3 ->
-                                       M ⊢ A1 ∧ A to A2 onlyThrough A3 ∧ A*)
 
   | ot_ex1 : forall M A1 A2 A, (forall y, M ⊢ ([y /s 0] A1) to A2 onlyThrough A) ->
                           M ⊢ (∃x.[A1]) to A2 onlyThrough A
   | ot_ex2 : forall M A1 A2 A, (forall y, M ⊢ A1 to ([y /s 0] A2) onlyThrough A) ->
                           M ⊢ A1 to (∃x.[A2]) onlyThrough A
-
-(*)  | ot_all : forall M A1 A2 A, (forall y, M ⊢ A1 to A2 onlyThrough ([y /s 0] A)) ->
-                          M ⊢ A1 to A2 onlyThrough (∀x.[A])*)
 
   where
   "M '⊢' A1 'to' A2 'onlyThrough' A3" := (only_through M A1 A2 A3)
@@ -189,6 +188,7 @@ Module Inference(L : LanguageDef).
   | if1_classical : forall M P1 α C m β β' P2 P,
       M ⊢ {pre: (P1 ∧ (a_class (e_addr α) C) ∧ ¬ P) } (m_call α m β) {post: ¬ P2} ->
       β' = (fun v => Some (av_ v)) ∘ β  ->
+      no_free P2 ->
       M ⊢ (P1 ∧ (a_class (e_addr α) C) ∧ (∃x.[ (a♢ 0) calls (a_ α) ◌ m ⟨ β' ⟩])) to1 P2 onlyIf P
 
   | if1_wrapped : forall M α C P P' m β β' α',
@@ -230,9 +230,6 @@ Module Inference(L : LanguageDef).
   | if1_ex2 : forall M A1 A2 A, (forall y, M ⊢ A1 to1 ([y /s 0] A2) onlyIf A) ->
                            M ⊢ A1 to1 (∃x.[A2]) onlyIf A
 
-(*)  | if1_all : forall M A1 A2 A, (forall y, M ⊢ A1 to1 A2 onlyIf ([y /s 0] A)) ->
-                           M ⊢ A1 to1 A2 onlyIf (∀x.[A])*)
-
   where
   "M '⊢' A1 'to1' A2 'onlyIf' A3" := (only_if1 M A1 A2 A3).
 
@@ -245,8 +242,8 @@ Module Inference(L : LanguageDef).
 
   Combined Scheme necessity_mutind from onlyThrough_mutind, onlyIf_mutind, onlyIf1_mutind.
 
-  Close Scope inference_scope.
-  Close Scope specw_scope.
+  Close Scope necessity_scope.
+  Close Scope assert_scope.
   Close Scope reduce_scope.
 
-End Inference.
+End Necessity.

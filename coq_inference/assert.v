@@ -7,13 +7,13 @@ Require Import operational_semantics.
 Require Import List.
 Require Export Coq.Lists.ListSet.
 
-Module SpecW(L : LanguageDef).
+Module Assert(L : LanguageDef).
 
   Import L.
   Module L_Semantics := AbstractOperationalSemantics(L).
   Export L_Semantics.
 
-  Declare Scope specw_scope.
+  Declare Scope assert_scope.
 
   Open Scope reduce_scope.
   Open Scope exp_scope.
@@ -22,11 +22,11 @@ Module SpecW(L : LanguageDef).
   | av_hole : nat -> a_val
   | av_bnd  : value -> a_val.
 
-  Notation "'a♢' n" := (av_hole n)(at level 25) : specw_scope.
-  Open Scope specw_scope.
-  Notation "'av_' v" := (av_bnd v)(at level 25) : specw_scope.
-  Notation "'v_' α" := (v_addr α)(at level 25) : specw_scope.
-  Notation "'a_' α" := (av_bnd (v_ α))(at level 25) : specw_scope.
+  Notation "'a♢' n" := (av_hole n)(at level 25) : assert_scope.
+  Open Scope assert_scope.
+  Notation "'av_' v" := (av_bnd v)(at level 25) : assert_scope.
+  Notation "'v_' α" := (v_addr α)(at level 25) : assert_scope.
+  Notation "'a_' α" := (av_bnd (v_ α))(at level 25) : assert_scope.
 
   Program Instance eq_a_val : Eq a_val :=
     {
@@ -155,8 +155,8 @@ Module SpecW(L : LanguageDef).
   | am_hole : nat -> a_mth
   | am_bnd : mth -> a_mth.
 
-  Notation "'am_' m" := (am_bnd m)(at level 40) : specw_scope.
-  Notation "'am♢' m" := (am_hole m)(at level 40) : specw_scope.
+  Notation "'am_' m" := (am_bnd m)(at level 40) : assert_scope.
+  Notation "'am♢' m" := (am_hole m)(at level 40) : assert_scope.
 
   (** Assertion syntax  *)
 
@@ -185,18 +185,18 @@ Module SpecW(L : LanguageDef).
   | a_extrn : a_val -> asrt
   | a_intrn : a_val -> asrt.
 
-  Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 30) : specw_scope.
-  Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 28) : specw_scope.
-  Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 29) : specw_scope.
-  Notation "'¬' A" :=(a_neg A)(at level 27) : specw_scope.
-  Notation "'∀x.[' A ']'" :=(a_all A)(at level 31) : specw_scope.
-  Notation "'∃x.[' A ']'" :=(a_ex A)(at level 31) : specw_scope.
-  Notation "x 'internal'" :=(a_intrn x)(at level 26) : specw_scope.
-  Notation "x 'external'" :=(a_extrn x)(at level 26) : specw_scope.
-  Notation "x 'access' y" :=(a_acc x y)(at level 26) : specw_scope.
-  Notation "x 'calls' y '◌' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 26) : specw_scope.
-  Notation "'a_true'" := (a_exp (e_true)) (at level 20) : specw_scope.
-  Notation "'a_false'" := (a_exp (e_false)) (at level 20) : specw_scope.
+  Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 30) : assert_scope.
+  Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 28) : assert_scope.
+  Notation "A1 '∨' A2" :=(a_or A1 A2)(at level 29) : assert_scope.
+  Notation "'¬' A" :=(a_neg A)(at level 27) : assert_scope.
+  Notation "'∀x.[' A ']'" :=(a_all A)(at level 31) : assert_scope.
+  Notation "'∃x.[' A ']'" :=(a_ex A)(at level 31) : assert_scope.
+  Notation "x 'internal'" :=(a_intrn x)(at level 26) : assert_scope.
+  Notation "x 'external'" :=(a_extrn x)(at level 26) : assert_scope.
+  Notation "x 'access' y" :=(a_acc x y)(at level 26) : assert_scope.
+  Notation "x 'calls' y '◌' m '⟨' vMap '⟩'" :=(a_call x y m vMap)(at level 26) : assert_scope.
+  Notation "'a_true'" := (a_exp (e_true)) (at level 20) : assert_scope.
+  Notation "'a_false'" := (a_exp (e_false)) (at level 20) : assert_scope.
 
   Instance a_valSubst : Subst a_val nat value :=
     {
@@ -280,20 +280,21 @@ Module SpecW(L : LanguageDef).
 
   Inductive internal_obj : mdl -> config -> a_val -> Prop :=
   | is_int : forall M χ ψ α o, ⟦ α ↦ o ⟧_∈ χ ->
-                          (cname o) ∈ M ->
-                          internal_obj M (χ, ψ) (a_ α).
+                               (cname o) ∈ M ->
+                               (cname o) <> Object ->
+                               internal_obj M (χ, ψ) (a_ α).
 
   Inductive external_obj : mdl -> config -> a_val -> Prop :=
   | is_ext : forall M χ ψ α o, ⟦ α ↦ o ⟧_∈ χ ->
                           (cname o) ∉ M \/ cname o = Object ->
                           external_obj M (χ, ψ) (a_ α).
 
-  Hint Constructors exp_satisfaction : specw_db.
-  Hint Constructors has_class : specw_db.
-  Hint Constructors has_access : specw_db.
-  Hint Constructors makes_call : specw_db.
-  Hint Constructors internal_obj : specw_db.
-  Hint Constructors external_obj : specw_db.
+  Hint Constructors exp_satisfaction : assert_db.
+  Hint Constructors has_class : assert_db.
+  Hint Constructors has_access : assert_db.
+  Hint Constructors makes_call : assert_db.
+  Hint Constructors internal_obj : assert_db.
+  Hint Constructors external_obj : assert_db.
 
   Reserved Notation "M1 '◎' σ '⊨' A"(at level 40).
   Reserved Notation "M1 '◎' σ '⊭' A"(at level 40).
@@ -495,7 +496,7 @@ Module SpecW(L : LanguageDef).
 ]]]
    *)
 
-  where "M '◎' σ '⊨' A" := (sat M σ A) : specw_scope
+  where "M '◎' σ '⊨' A" := (sat M σ A) : assert_scope
 
   with
     nsat : mdl -> config -> asrt -> Prop :=
@@ -650,7 +651,7 @@ Module SpecW(L : LanguageDef).
 
   (*time*)
 
-  where "M '◎' σ '⊭' A" := (nsat M σ A) : specw_scope.
+  where "M '◎' σ '⊭' A" := (nsat M σ A) : assert_scope.
 
 
   Scheme sat_mut_ind := Induction for sat Sort Prop
@@ -658,14 +659,14 @@ Module SpecW(L : LanguageDef).
 
   Combined Scheme sat_mutind from sat_mut_ind, nsat_mut_ind.
 
-  Hint Constructors sat nsat : specw_db.
+  Hint Constructors sat nsat : assert_db.
 
   Definition mdl_sat (M : mdl)(A : asrt) :=
     forall M' σ0 σ, initial σ0 ->
                M ⦂ M' ⦿ σ0 ⤳⋆ σ ->
                M ◎ σ ⊨ A.
 
-  Notation "M '⊨m' A" := (mdl_sat M A)(at level 40) : specw_scope.
+  Notation "M '⊨m' A" := (mdl_sat M A)(at level 40) : assert_scope.
 
   Definition arising (M1 M2 : mdl)(σ : config) :=
     exists σ0, initial σ0 /\ M1 ⦂ M2 ⦿ σ0 ⤳⋆ σ.
@@ -676,7 +677,7 @@ Module SpecW(L : LanguageDef).
                               M ◎ σ ⊨ A2) ->
                      entails M A1 A2.
 
-  Hint Constructors entails : specw_db.
+  Hint Constructors entails : assert_db.
 
   Definition equiv_a (M : mdl)(A1 A2 : asrt): Prop :=
     (entails M A1 A2) /\ (entails M A2 A1).
@@ -689,7 +690,7 @@ Module SpecW(L : LanguageDef).
     raise : A -> nat -> A
     }.
 
-  Notation "a '↑' n" := (raise a n)(at level 19) : specw_scope.
+  Notation "a '↑' n" := (raise a n)(at level 19) : assert_scope.
 
   Instance raiseNat : Raiseable nat :=
     {
@@ -780,8 +781,8 @@ Module SpecW(L : LanguageDef).
 
   Definition wrapped := (fun α => ∀x.[ (a♢ 0) internal ∨ ¬ (a♢ 0) access α]).
 
-  Close Scope specw_scope.
+  Close Scope assert_scope.
   Close Scope exp_scope.
   Close Scope reduce_scope.
 
-End SpecW.
+End Assert.

@@ -20,9 +20,9 @@ Module Crowdsale(L : LanguageDef).
 
   (** #<h2>#Variables#</h2>#*)
 
-  (** #<h2>#Account Class#</h2># *)
+  (** #<h2>#Crowdsale Class#</h2># *)
 
-  Definition Account := classID 100.
+  Definition Crowdsale := classID 100.
 
   Definition password := fieldID 101.
 

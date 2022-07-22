@@ -4,18 +4,19 @@ Require Import L_def.
 Require Import exp.
 Require Import defs.
 Require Import operational_semantics.
-Require Import inference.
+Require Import necessity.
 Require Import List.
 Require Export Coq.Lists.ListSet.
+Require Import Coq.Logic.FunctionalExtensionality.
 
-Module InferenceTactics(L : LanguageDef).
+Module NecessityTactics(L : LanguageDef).
 
   Import L.
-  Module L_Inference := Inference(L).
-  Export L_Inference.
+  Module L_Necessity := Necessity(L).
+  Export L_Necessity.
 
-  Open Scope specw_scope.
-  Open Scope inference_scope.
+  Open Scope assert_scope.
+  Open Scope necessity_scope.
   Open Scope exp_scope.
 
   Ltac extract1 v' n' :=
@@ -270,7 +271,7 @@ Module InferenceTactics(L : LanguageDef).
       eauto with inference_db.
   Qed.
 
-  Hint Resolve if_start_conseq : inference_db.
+  Hint Resolve if_start_conseq : necessity_db.
 
   Lemma if1_andE :
     forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ∧ A' ->
@@ -819,7 +820,7 @@ Module InferenceTactics(L : LanguageDef).
     apply sat_mutind;
       intros;
       raise_simpl;
-      try solve [repeat a_prop; auto with specw_db];
+      try solve [repeat a_prop; auto with assert_db];
       try solve [try (apply sat_all);
                  try (apply sat_ex with (x:=x));
                  intros;
@@ -854,7 +855,7 @@ Module InferenceTactics(L : LanguageDef).
     * inversion h;
         subst;
         simpl;
-        auto with specw_db.
+        auto with assert_db.
 
     * inversion m0;
         subst.
@@ -873,26 +874,90 @@ Module InferenceTactics(L : LanguageDef).
 
     * inversion e;
         subst;
-        auto with specw_db.
+        auto with assert_db.
 
     * inversion i;
         subst;
-        auto with specw_db.
+        auto with assert_db.
 
-(*)    * apply not_sat_implies_nsat;
-        intro Hcontra.
-      match goal with
-      | [H : _ ◎ _ ⊨ _ |- _] =>
-        inversion H;
-          subst
-      end.
-      inversion H2;
+    * apply nsat_exp.
+      intro Hcontra.
+      inversion Hcontra;
         subst.
-      auto.*)
+      apply eval_raise in H.
+      eauto with assert_db.
 
+    * apply nsat_class.
+      intros Hcontra;
+        inversion Hcontra;
+        subst.
+      apply eval_raise in H.
+      eauto with assert_db.
 
+    * apply nsat_all with (x:=x).
+      specialize (H (S n0)).
+      rewrite <- asrt_subst_raise_lt in H;
+        crush.
 
-  Admitted.
+    * apply nsat_ex;
+        intros.
+      specialize (H x (S n0)).
+      rewrite asrt_subst_raise_lt;
+        crush.
+
+    * apply nsat_access.
+      destruct a1 as [x1|v1];
+        destruct a2 as [x2|v2];
+        auto;
+        intro Hcontra;
+        inversion Hcontra.
+
+    * apply nsat_call.
+      destruct (excluded_middle (forall x a, (⟦ x ↦ a⟧_∈ β) -> exists v, a = av_ v)).
+      ** rewrite raise_value_map;
+           auto.
+         destruct a1 as [x1|v1];
+           destruct a2 as [x2|v2];
+           auto;
+           intro Hcontra;
+           inversion Hcontra.
+      ** intros Hcontra;
+           inversion Hcontra;
+           subst.
+         contradiction n1;
+           intros.
+         apply equal_f with (x1:=x0) in H2;
+           simpl in H2.
+         destruct (args x0);
+           auto.
+         *** destruct (lcl n2);
+               destruct (β x0);
+               try solve [crush].
+                  destruct a0.
+                  try solve [crush].
+                  inversion H0;
+                    subst;
+                    eauto.
+         *** destruct (β x0);
+               try solve [crush].
+
+    * apply nsat_extrn.
+      destruct a as [x|v];
+        simpl;
+        auto.
+      intro Hcontra;
+        inversion Hcontra;
+        subst.
+
+    * apply nsat_intrn.
+      destruct a as [x|v];
+        simpl;
+        auto.
+      intro Hcontra;
+        inversion Hcontra;
+        subst.
+
+  Qed.
 
   Lemma conseq_raise :
     (forall M σ A, M ◎ σ ⊨ A  -> forall n, M ◎ σ ⊨ (A ↑ n)).
@@ -1817,5 +1882,5 @@ Module InferenceTactics(L : LanguageDef).
     auto.
   Qed.
 
-End InferenceTactics.
+End NecessityTactics.
 

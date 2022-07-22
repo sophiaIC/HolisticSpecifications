@@ -1,9 +1,9 @@
 Require Export Arith.
 Require Import List.
 
-Require Import chainmail.CpdtTactics.
-Require Import chainmail.common.
-Require Import chainmail.defs.
+Require Import necessity.CpdtTactics.
+Require Import necessity.common.
+Require Import necessity.defs.
 
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
@@ -21,9 +21,20 @@ Module Type LanguageDef.
   (* read visibility *)
   Parameter visible_r : mdl -> config -> addr -> value -> Prop.
   (* field read visibility *)
-  Parameter visible_rf : mdl -> config -> addr -> addr -> fld -> Prop.
+  Inductive visible_rf : mdl -> config -> addr -> addr -> fld -> Prop :=
+  | vis_rf : forall M χ ψ a1 a2 o1 o2 f, χ a1 = Some o1 ->
+                                    χ a2 = Some o2 ->
+                                    (cname o1) = (cname o2) ->
+                                    (cname o1) ∈ M ->
+                                    visible_rf M (χ, ψ) a1 a2 f.
+
   (* write visibility *)
-  Parameter visible_w : mdl -> config -> addr -> addr -> fld -> Prop.
+  Inductive visible_w : mdl -> config -> addr -> addr -> fld -> Prop :=
+  | vis_w : forall M χ ψ a1 a2 o1 o2 f, χ a1 = Some o1 ->
+                                    χ a2 = Some o2 ->
+                                    (cname o1) = (cname o2) ->
+                                    (cname o1) ∈ M ->
+                                    visible_w M (χ, ψ) a1 a2 f.
   (* method visibility *)
   Parameter visible_m : mdl -> config -> addr -> addr -> mth -> Prop.
   (* constructor visibility *)

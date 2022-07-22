@@ -5,13 +5,13 @@ Require Import exp.
 Require Import defs.
 Require Import operational_semantics.
 Require Import List.
-Require Import specw.
+Require Import assert.
 Require Import hoare.
-Require Import inference.
+Require Import necessity.
 
 (***
 In this file we present the soundness argument. The final soundness proof of
-SpecX as described in the paper can be found at the bottom of this file as
+Necessity as described in the paper can be found at the bottom of this file as
 
 ===> Theorem necessity_triple_soundness
 
@@ -29,10 +29,10 @@ We make several assumptions:
 Module Soundness(L : LanguageDef).
 
   Export L.
-  Module L_Inference := Inference(L).
-  Import L_Inference.
+  Module L_Necessity := Necessity(L).
+  Import L_Necessity.
 
-  Open Scope specw_scope.
+  Open Scope assert_scope.
   Open Scope reduce_scope.
 
   Definition encapsulated (M : mdl)(A A' : asrt) :=
@@ -272,15 +272,6 @@ Module Soundness(L : LanguageDef).
       eauto.
   Qed.
 
-  Parameter no_external_calls :
-    forall M1 M2 M σ1 σ2, M1 ⋄ M2 ≜ M ->
-                     M ∙ σ1 ⤳ σ2 ->
-                     (exists χ ϕ ψ x, σ1 = (χ, ϕ :: ψ) /\
-                                 ((exists s, contn ϕ = c_ (rtrn x ;; s)) \/
-                                  contn ϕ = (c_rtrn x))) ->
-                     external_self M1 M2 σ1 ->
-                     external_self M1 M2 σ2.
-
   Axiom internal_is_encapsulated :
     forall M A e, intrnl M A e ->
              encapsulated M A (a_exp e).
@@ -498,7 +489,7 @@ Module Soundness(L : LanguageDef).
         eapply prs_trans; eauto.
       + exists σ1, σ;
           repeat split;
-          auto with reduce_db specw_db.
+          auto with reduce_db assert_db.
         apply prs_refl.
         eapply pair_reduction_start_external_self;
           eauto.
@@ -561,9 +552,6 @@ Module Soundness(L : LanguageDef).
         auto.
   Qed.
 
-  Definition no_free (A : asrt) :=
-    forall (x : value) (n : nat), ([x /s n] A) = A.
-
   Lemma classical_with_calls :
     forall M P α m β Q, M ⊢ {pre: P} (m_call α m β) {post: Q} ->
                    no_free Q ->
@@ -585,15 +573,19 @@ Module Soundness(L : LanguageDef).
       auto.
   Qed.
 
-  Parameter sat_implies_no_free_variables :
-    forall M σ A, M ◎ σ ⊨ A ->
-             no_free A.
-
-  Parameter neg_no_free :
+  Lemma neg_no_free :
     forall A, no_free A -> no_free (¬ A).
+  Proof.
+    unfold no_free in *;
+      intros.
+    subst_simpl.
+    rewrite H;
+      auto.
+  Qed.
 
   Lemma classical_to_necessary :
     forall M P1 P2 α m β Q, M ⊢ {pre: P1 ∧ ¬ P2} (m_call α m β) {post: ¬ Q} ->
+                       no_free Q ->
                        onlyif1 M (P1 ∧ (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩])) Q P2.
   Proof.
     intros.
@@ -601,28 +593,36 @@ Module Soundness(L : LanguageDef).
     destruct (sat_excluded_middle M σ1 (P1 ∧ ¬ P2)).
     - apply classical_with_calls with (α:=α)(m:=m)(β:=β)(Q:=¬ Q)(P:=P1 ∧ ¬ P2)(M':=M')(σ':=σ2) in H4;
         auto;
-      [| eapply neg_no_free, sat_implies_no_free_variables; eauto].
+      [| eapply neg_no_free; eauto].
       destruct (sat_excluded_middle M σ1 P2);
         auto.
-      apply sat_not in H6.
       a_prop.
     - inversion H5;
         subst.
-      + apply sat_not in H9;
+      + inversion H6;
+          subst;
           a_prop.
-      + inversion H9;
-          auto.
+        * apply sat_not in H11.
+          a_prop.
+
+        * inversion H11;
+            subst;
+            auto.
   Qed.
 
-  (*  Lemma if1_wrapped*)
+  (*
+    The assumed type system prohibits the calling of
+    external methods from internal code. From this the
+    below follows, i.e. that if a call x := y.m(args)
+    and a is leaked as a result of that method call,
+    then a was returned
+   *)
 
   Parameter wrapped_necessary_condition :
-    forall M α C m β α' P P',  M ⊢ {pre: P' ∧ (a_class (e_ α) C) ∧ ¬ P} (m_call α m β) {post: ¬ (a_exp (e♢ 0 ⩵ (e_addr α')))} ->
-                          onlyif1 M (P' ∧ a_class (e_ α) C ∧
-                                     (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩]) ∧
-                                     wrapped (a_ α')) (¬ wrapped (a_ α')) P.
-
-  (*  Lemma if1_internal*)
+    forall M α C m β α' P P', M ⊢ {pre: P' ∧ (a_class (e_ α) C) ∧ ¬ P} (m_call α m β) {post: ¬ (a_exp (e♢ 0 ⩵ (e_addr α')))} ->
+                         onlyif1 M (P' ∧ a_class (e_ α) C ∧
+                                    (∃x.[ a♢ 0 calls a_ α ◌ m ⟨ (fun v : value => Some (av_ v)) ∘ β ⟩]) ∧
+                                    wrapped (a_ α')) (¬ wrapped (a_ α')) P.
 
   Lemma internal_call :
     forall M A1 A2, encapsulated M A1 A2 ->
@@ -984,6 +984,7 @@ Module Soundness(L : LanguageDef).
         auto.
       a_prop;
         auto.
+      auto.
 
     - necessity_soundness_simpl.
       apply wrapped_necessary_condition in h.

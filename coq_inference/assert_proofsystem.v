@@ -5,7 +5,7 @@ Require Import L_def.
 Require Import exp.
 Require Import exp_properties.
 Require Import operational_semantics.
-Require Import specw.
+Require Import assert.
 Require Import classical.
 Require Import List.
 Require Import String.
@@ -31,14 +31,14 @@ Require Import Coq.Logic.FunctionalExtensionality.
      In this file, we present and discuss these assumtions, but none should be surprising.
    **)
 
-Module SpecWInference(L : LanguageDef).
+Module AssertProofSystem(L : LanguageDef).
 
   Import L.
   Module L_Classical := ClassicalProperties(L).
   Export L_Classical.
 
   Open Scope reduce_scope.
-  Open Scope specw_scope.
+  Open Scope assert_scope.
 
   Declare Scope hoare_scope.
 
@@ -604,7 +604,7 @@ Module SpecWInference(L : LanguageDef).
     apply and_distr1.
   Qed.
 
-  Parameter lt_eq_gt_conseq1 :
+   Parameter lt_eq_gt_conseq1 :
     forall M x y, M ⊢ (a_exp (x ⩻ y)) ⊇ (¬ a_exp (x ⩵ y)) ∧ (¬ a_exp (y ⩻ x)).
 
   Parameter lt_eq_gt_conseq2 :
@@ -620,323 +620,7 @@ Module SpecWInference(L : LanguageDef).
     forall M A1 A2, M ⊢ A1 ⊇ A2 ->
                M ⊢ ¬ A2 ⊇ ¬ A1.
 
-End SpecWInference.
+  Parameter eq_exp_exists_eq_addr :
+    forall M e a, M ⊢ (a_exp (e_eq e (e_ a))) ⊇  (∃x.[a_exp (e_eq (e♢ 0) (e_ a))]).
 
-
-(*
-
-
-  Lemma conseq_true :
-    forall M A, M ⊢ A ⊇ (a_true).
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    auto with specw_db.
-  Qed.
-
-  Lemma conseq_or_comm :
-    forall M A1 A2, M ⊢ A1 ∨ A2 ⊇ A2 ∨ A1.
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    a_prop;
-      disj_split;
-      auto.
-  Qed.
-
-  Lemma caller_ext :
-    forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 external.
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    match goal with
-    | [H : _ ◎ _ ⊨ _ calls _ ◌ _ ⟨ _ ⟩ |- _] =>
-      inversion H;
-        subst
-    end.
-    match goal with
-    | [H : makes_call _ _ _ _ _  |- _ ] =>
-      inversion H;
-        subst
-    end.
-    apply sat_extrn.
-    match goal with
-    | [H : arising _ _ (_, ?ϕa :: _) |- _ ] =>
-      apply arising_external in H
-    end.
-    unfold external_self, is_external in *.
-    repeat destruct_exists_loo;
-      andDestruct;
-      subst.
-    repeat destruct_exists_loo;
-      andDestruct;
-      subst.
-    simpl_crush.
-    eapply is_ext;
-    eauto.
-  Qed.
-
-  Lemma calls_recv :
-    forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ α1 access α2.
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    match goal with
-    | [H : _ ◎ _ ⊨ _ calls _ ◌ _ ⟨ _ ⟩ |- _ ] =>
-      inversion H;
-        subst
-    end.
-    match goal with
-    | [H : makes_call _ _ _ _ _  |- _ ] =>
-      inversion H;
-        subst
-    end.
-    apply sat_access.
-    apply acc_lcl with (x:=y).
-    match goal with
-    | [|- exists _, In _ (?ϕ :: _) /\ _ ] =>
-      exists ϕ;
-        repeat split;
-        auto
-    end.
-    apply in_eq.
-
-  Qed.
-
-  Lemma calls_param1 :
-    forall M a1 a2 a3 m x β,
-      M ⊢ a1 calls a2 ◌ m ⟨ ⟦ x ↦ a_ a3 ⟧ β ⟩ ⊇ a1 access (a_ a3).
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    match goal with
-    | [H : _ ◎ _ ⊨ _ calls _ ◌ _ ⟨ _ ⟩ |- _ ] =>
-      inversion H;
-        subst
-    end.
-    match goal with
-    | [H : makes_call _ _ _ _ _ |- _ ] =>
-      inversion H;
-        subst
-    end.
-    apply sat_access.
-
-    apply acc_lcl with (x:=x).
-    match goal with
-    | [ |- exists _, In _ (?ϕ :: _) /\ _ ] =>
-      exists ϕ;
-        repeat split;
-        simpl in *;
-        auto
-    end. 
-  Admitted.
-
-  Lemma class_internal :
-    forall M α C, C ∈ M -> M ⊢ a_class (e_addr α) C ⊇ (a_ α) internal.
-  Admitted.
-
-  Lemma recv_not_wrapped :
-    forall M α1 α2 m β, M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (α2).
-  Admitted.
-
-  Lemma param_not_wrapped :
-    forall M α1 α2 x p m β, ⟦ x ↦ p ⟧_∈ β -> M ⊢ α1 calls α2 ◌ m ⟨ β ⟩ ⊇ ¬ wrapped (p).
-  Admitted.
-
-  Lemma inside_wrapped :
-    forall M α C Def, ⟦ C ↦ Def ⟧_∈ M ->
-                 annot Def = inside ->
-                 M ⊢ a_class (e_addr α) C ⊇ wrapped (a_ α).
-  Admitted.
-
-  Lemma fld_type :
-    forall M e C CDef f D, ⟦ C ↦ CDef ⟧_∈ M ->
-                           ⟦ f ↦ (t_cls D) ⟧_∈ c_fields CDef ->
-                           M ⊢ a_class e C ⊇ a_class ((e_acc_f e f)) D.
-  Admitted.
-
-  Lemma conseq_absurd :
-    forall M A, M ⊢ (a_exp (e_false)) ⊇ A.
-  Admitted.
-
-  Lemma conseq_refl :
-    forall M A, M ⊢ A ⊇ A.
-  Admitted.
-
-  Lemma neg_false :
-    forall M A, M ⊢ (A ∧ ¬ A) ⊇ (a_exp (e_false)).
-  Admitted.
-
-  Lemma conseq_trans :
-    forall M A1 A2 A3, M ⊢ A1 ⊇ A2 ->
-                       M ⊢ A2 ⊇ A3 ->
-                       M ⊢ A1 ⊇ A3.
-  Admitted.
-
-  Lemma conseq_excluded_middle :
-    forall M A, M ⊢ (a_exp (e_true)) ⊇ (A ∨ ¬ A).
-  Admitted.
-
-  Lemma eq_implies_not_lt :
-    forall M e1 e2, M ⊢ (a_exp (e1 ⩵ e2)) ⊇ (¬ a_exp (e1 ⩻ e2)).
-  Admitted.
-
-  Lemma lt_implies_not_eq :
-    forall M e1 e2, M ⊢ (a_exp (e1 ⩻ e2)) ⊇ (¬ a_exp (e1 ⩵ e2)).
-  Admitted.
-
-  Lemma not_false_is_true :
-    forall M, M ⊢ (¬ a_exp (e_false)) ⊇ (a_exp (e_true)).
-  Admitted.
-
-  Lemma true_is_not_false :
-    forall M, M ⊢ (a_exp (e_true)) ⊇ (¬ a_exp (e_false)).
-  Admitted.
-
-  Lemma and_true1 :
-    forall M A, M ⊢ (A ∧ (a_exp (e_true))) ⊇ A.
-  Admitted.
-
-  Lemma and_true2 :
-    forall M A, M ⊢ A ⊇ (A ∧ (a_exp (e_true))).
-  Admitted.
-
-  Lemma and_comm :
-    forall M A1 A2 A, M ⊢ (A1 ∧ A2) ⊇ A ->
-                 M ⊢ (A2 ∧ A1) ⊇ A.
-  Admitted.
-
-  Lemma and_assoc1 :
-    forall M A A1 A2 A3, M ⊢ (A1 ∧ A2 ∧ A3) ⊇ A ->
-                    M ⊢ (A1 ∧ (A2 ∧ A3)) ⊇ A.
-  Admitted.
-
-  Lemma and_assoc2 :
-    forall M A A1 A2 A3, M ⊢ A1 ∧ (A2 ∧ A3) ⊇ A ->
-                    M ⊢ (A1 ∧ A2) ∧ A3 ⊇ A.
-  Admitted.
-
-  Lemma and_consequence1 :
-    forall M A1 A1' A2, M ⊢ A1 ⊇ A1' ->
-                   M ⊢ A1 ∧ A2 ⊇ A1' ∧ A2.
-  Admitted.
-
-  Lemma and_consequence2 :
-    forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
-                   M ⊢ A1 ∧ A2 ⊇ A1 ∧ A2'.
-  Admitted.
-
-  Lemma conseq_and1 :
-    forall M A1 A1' A2, M ⊢ A1 ⊇ A1' ->
-                        M ⊢ A1 ∧ A2 ⊇ A1'.
-  Admitted.
-
-  Lemma conseq_and2 :
-    forall M A1 A2 A2', M ⊢ A2 ⊇ A2' ->
-                        M ⊢ A1 ∧ A2 ⊇ A2'.
-  Admitted.
-
-  Lemma conseq_and :
-    forall M A A1 A2,  M ⊢ A ⊇ A1 ->
-                  M ⊢ A ⊇ A2 ->
-                  M ⊢ A ⊇ A1 ∧ A2.
-  Admitted.
-
-  (* (∀ M ⊢ [y / x] \longright)*)
-  Lemma conseq_ex1 :
-    forall M A1 A2, (forall x, M ⊢ [x /s 0] A1 ⊇ A2) ->
-               M ⊢ (∃x.[A1]) ⊇ A2.
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    inversion H1;
-      subst.
-    specialize (H x).
-    inversion H;
-      subst.
-    eapply H2;
-      eauto.
-  Qed.
-
-(*)  Lemma conseq_ex_and1 :
-    forall M A1 A2, M ⊢ (∃x.[A1]) ∧ A2 ⊇ (∃x.[A1 ∧ A)])*)
-
-  Lemma conseq_ex_and1 :
-    forall M A1 A2 A, (forall x, M ⊢ A1 ∧ ([x /s 0] A2) ⊇ A) ->
-                 M ⊢ A1 ∧ (∃x.[A2]) ⊇ A.
-  Proof.
-    intros.
-    apply ent;
-      intros.
-    a_prop.
-    match goal with
-    | [H : _ ◎ _ ⊨ ∃x.[_] |- _] =>
-      inversion H;
-        subst
-    end.
-    eauto with specw_db.
-  Qed.
-
-  Lemma conseq_ex2 :
-    forall M A1 A2, (exists x, M ⊢ A1 ⊇ [x /s 0] A2) ->
-               M ⊢ A1 ⊇ ∃x.[A2].
-  Admitted.
-
-  Lemma subst_eq :
-    forall M x y z A1 A2, M ⊢ [y /s z] A1 ⊇ A2 ->
-                     M ⊢ [x /s z] (a_exp (e♢ z ⩵ e_val y) ∧ A1) ⊇ A2.
-  Admitted.
-
-  Lemma caller_unique :
-    forall M v v' a a' m m' β β',
-      M ⊢ (av_ v) calls a ◌ m ⟨ β ⟩ ∧ (av_ v') calls a' ◌ m' ⟨ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
-  Admitted.
-
-  Lemma recv_unique :
-    forall M v v' a a' m m' β β',
-      M ⊢ a calls (av_ v) ◌ m ⟨ β ⟩ ∧ a' calls (av_ v) ◌ m' ⟨ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
-  Admitted.
-
-  Lemma param_unique :
-    forall M a1 a1' a2 a2' m m' x v v' β β',
-      M ⊢ a1 calls a2 ◌ m ⟨ ⟦ x ↦ (av_ v) ⟧ β ⟩ ∧ a1' calls a2' ◌ m' ⟨ ⟦ x ↦ (av_ v') ⟧ β' ⟩ ⊇ (a_exp ((e_val v) ⩵ (e_val v'))).
-  Admitted.
-
-  Lemma neg_distr_and_1 :
-    forall M A1 A2, M ⊢ ¬ (A1 ∧ A2) ⊇ ¬ A1 ∨ ¬ A2.
-  Admitted.
-
-  Lemma neg_distr_and_2 :
-    forall M A1 A2, M ⊢ ¬ A1 ∨ ¬ A2 ⊇ ¬ (A1 ∧ A2).
-  Admitted.
-
-  Lemma neg_distr_or_1 :
-    forall M A1 A2, M ⊢ ¬ (A1 ∨ A2) ⊇ ¬ A1 ∧ ¬ A2.
-  Admitted.
-
-  Lemma neg_distr_or_2 :
-    forall M A1 A2, M ⊢ ¬ A1 ∧ ¬ A2 ⊇ ¬ (A1 ∨ A2).
-  Admitted.
-
-  Lemma or_l :
-    forall M A A1 A2, M ⊢ A ⊇ A1 ->
-                 M ⊢ A ⊇ A1 ∨ A2.
-  Admitted.
-
-  Lemma or_r :
-    forall M A A1 A2, M ⊢ A ⊇ A2 ->
-                 M ⊢ A ⊇ A1 ∨ A2.
-  Admitted.
-
-  Lemma or_lr :
-    forall M A1 A2 A, M ⊢ A1 ⊇ A ->
-                 M ⊢ A2 ⊇ A ->
-                 M ⊢ (A1 ∨ A2) ⊇ A.
-  Admitted.
- *)
+End AssertProofSystem.

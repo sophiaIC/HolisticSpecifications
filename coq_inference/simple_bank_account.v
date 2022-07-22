@@ -5,17 +5,17 @@ Require Import L_def.
 Require Import defs.
 Require Import common.
 Require Import exp.
-Require Import inference_tactics.
+Require Import necessity_tactics.
 Require Import CpdtTactics.
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Module BankAccount(L : LanguageDef).
+Module SimpleBankAccount(L : LanguageDef).
 
   Export L.
-  Module L_InferenceTactics := InferenceTactics(L).
-  Import L_InferenceTactics.
+  Module L_NecessityTactics := NecessityTactics(L).
+  Import L_NecessityTactics.
 
-  Open Scope specw_scope.
+  Open Scope assert_scope.
   Open Scope reduce_scope.
 
   (** #<h2># Password Class #</h2># *)
@@ -62,6 +62,12 @@ Module BankAccount(L : LanguageDef).
 
   Definition BankMdl := (⟦ Account ↦ AccountDef ⟧
                            ⟦ Password  ↦ PasswordDef ⟧ empty).
+
+
+  (*simple type extraction: the type of the password of any account is Password*)
+  Axiom password_class_is_Password :
+    forall a p, BankMdl ⊢ (a_class (e_ a) Account ∧ (a_exp (e_acc_f (e_ a) password ⩵ (e_ p)))) ⊇
+                   (a_class (e_ p) Password).
 
   Lemma BankMdlMethods :
     forall C CDef m, ⟦ C ↦ CDef ⟧_∈ BankMdl ->
@@ -164,11 +170,15 @@ Module BankAccount(L : LanguageDef).
   Proof.
     intros.
     eapply if1_classical with (β := ⟦ pwd ↦ p ⟧ ⟦ pwd' ↦ p' ⟧ empty);
-      [|repeat compose_simpl; auto].
+      [|repeat compose_simpl; auto|].
     eapply hoare_consequence1.
     * apply setPasswordBalanceChangeSpecification.
     * specX_cnf_r.
       repeat spec_auto.
+    * unfold no_free;
+        intros;
+        subst_simpl;
+        auto.
   Qed.
 
   Lemma transferBalChange :
@@ -230,7 +240,7 @@ Module BankAccount(L : LanguageDef).
       ** apply if1_classical with (β:=⟦ pwd ↦ p ⟧
                                         ⟦ destAcc ↦ a'' ⟧
                                         empty);
-           [|repeat compose_simpl; auto].
+           [|repeat compose_simpl; auto|unfold no_free; intros; subst_simpl; auto].
 
 (*      match goal with
       | [|- _ ⊢ {pre: _ } _ {post: ¬ a_exp (?e1 ⩻ ?e2)}] =>
@@ -417,7 +427,7 @@ Module BankAccount(L : LanguageDef).
     intros.
 
     apply if1_classical with (β:=⟦ pwd ↦ p' ⟧ ⟦ destAcc ↦ a'' ⟧ empty);
-      [|repeat compose_simpl; auto].
+      [|repeat compose_simpl; auto|unfold no_free; intros; subst_simpl; auto].
     eapply hoare_consequence2;
       [|apply conseq_not_not2].
     eapply hoare_consequence1;
@@ -447,7 +457,7 @@ Module BankAccount(L : LanguageDef).
     intros.
 
     apply if1_classical with (β:=⟦ pwd ↦ p' ⟧ ⟦ pwd' ↦ p'' ⟧ empty);
-      [|repeat compose_simpl; auto].
+      [|repeat compose_simpl; auto|unfold no_free; intros; subst_simpl; auto].
     eapply hoare_consequence2;
       [|apply conseq_not_not2].
     eapply hoare_consequence1;
@@ -695,7 +705,12 @@ Module BankAccount(L : LanguageDef).
         |apply conseq_not_not1
         |].
 
-      apply enc_wrapped1.
+      apply enc_conseq3 with (A1:=a_class (e_addr a) Account
+                                  ∧ (a_exp (e_acc_f (e_addr a) password ⩵ (e_addr p))));
+        [repeat spec_auto|].
+      apply enc_conseq3 with (A1:=a_class (e_ p) Password);
+        [apply password_class_is_Password|].
+      apply enc_wrapped2.
 
     * eapply conseq_trans;
         [|apply conseq_not_not2].
@@ -970,6 +985,6 @@ Module BankAccount(L : LanguageDef).
 
   Qed.
 
-  Close Scope specw_scope.
+  Close Scope assert_scope.
   Close Scope reduce_scope.
-End BankAccount. 
+End SimpleBankAccount.
