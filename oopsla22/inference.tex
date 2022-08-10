@@ -29,7 +29,7 @@ Proving Assertion Encapsulation (\S \ref{s:encaps-proof})
 \item[(Part 2)]
 Proving Per-Method \Nec specifications from \funcSpecs for a single internal method (\S \ref{s:classical-proof})
 \item[(Part 3)]
-Proving Per-Step \Nec specifications by combining per-method \Nec specifications (\S \ref{s:module-proof})
+Proving Per-Step \Nec specifications by combining \jm[]{per-call} \Nec specifications (\S \ref{s:module-proof})
 \item[(Part 4)]
 Raising necessary conditions to construct proofs of emergent behaviour (\S \ref{s:emergent-proof})
 \end{description}
@@ -68,19 +68,19 @@ computation to be invalidated.
 Assertion encapsulation models the notion that if an
 assertion $A'$ is encapsulated by module $M$, then the validity of that
 assertion can only be changed via that module. In \Loo, that means by
-calls to objects defined in $M$ but that are accessible from the
+calls to objects defined in $M$ but \jm[removed: that are]{} accessible from the
 outside.
 %
 We provide a definition: $A'$ is encapsulated if whenever
-we go from state $\sigma$ to $\sigma'$, and when the value of $A'$
-changes (i.e.\ to $\neg A'$) then we must have called a method on one
+we go from state $\sigma$ to $\sigma'$, and when $A'$
+\jm[]{is invalidated} (i.e.\ to $\neg A'$) then we must have called a method on one
 of $M$'s internal objects.
 %
-In fact we rely on a slightly more subtle underlying definition,
+In fact we rely on a slightly more subtle \jm[removed: underlying]{} definition,
 ``conditional'' encapsulation where 
 $M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
 $A'$ cannot be invalidated, unless a method from $M$ was called.
-
+\jm[sophia asked if caller should be external, and if that is in coq - it is not in coq, but is implicit given the operational semantics of \Loo and the definition of Arising]{}
 
 \begin{definition}[Assertion Encapsulation]
 \label{def:encapsulation}
@@ -145,10 +145,9 @@ $\proves{M}{\givenA{A}{\encaps{A'}}}$ then $\satisfies{M}{\givenA{A}{\encaps{A'}
 \end{definition}
 
 \noindent 
-The key consequence of soundness is that an object inside a
-  module ($\wrapped{o}$) 
-  will always be encapsulated, in the sense that it can only leak out
-  of the module via an internal call.
+The key consequence of soundness is that \jm[]{for an object $o$, $\wrapped{o}$ is encapsulated}. i.e. \jm[]{If an} object \jm[]{is only accessible by module internal objects,}
+  \jm[]{then it will only ever subsequently be accessible externally} via an internal call.
+  \jm[I'm not sure this paragraph should exist. It's key, but does it belong here or add anything?]{}
 
 %% % For the purposes of the examples presented later in the paper, 
 %% \jm[]{For the purposes of proving examples, we define a rudimentary system for proving encapsulation in Appendix \ref{s:encap-proof}, Figure \ref{f:asrt-encap}.}
@@ -187,7 +186,7 @@ assists the knowledge that an object is \inside: Classes may
 be annotated as \enclosed. A \enclosed object  
 cannot be accessed by external objects; that is, it is always \inside. 
 The type system needs to ensure that objects of \enclosed type
-are never returned from method bodies, this is even simpler than in \cite{confined}. 
+are never returned from method bodies, this is even simpler than in \cite{confined} \jm[]{not sure what to do with this sentence}. 
 Again, we omit the detailed description of this
 simple type system.
 
@@ -245,9 +244,9 @@ $
 \end{definition}
 
 
-We assume that there exists some \funcSpec
+We assume that there exists some
 proof system  that allows us to prove 
-specifications of the form  $M\ \vdash\ \hoare{P}{\prg{s}}{Q}$. 
+specifications of the form  $\proves{M}{\hoare{P}{\prg{s}}{Q}}$.
 This implies that we can also have guarantees of  
 $$M\ \vdash\ \hoare{P}{\prg{res} = x.m(\overline{z})}{Q}$$
 That is,   % if we assume we are able to prove for some method $m$
@@ -256,6 +255,10 @@ That is,   % if we assume we are able to prove for some method $m$
 with the precondition $P$ results in a program state that 
 satisfies postcondition $Q$, where the returned value is represented
 by \prg{res} in $Q$.
+\jm[]{We further assume that such a proof system is sound, i.e. that 
+if $\proves{M}{\hoare{P}{\prg{res = x.m($\overline{z}$)}}{Q}}$, then 
+for every program state $\sigma$ that satisfies $P$, the execution of the method call \prg{x.m($\overline{z}$)}
+results in a program state satisfying $Q$.}
 As we have previously discussed (see \S \ref{s:approach}), we build \Nec specifications
 on top of \funcSpecs using the fact that $\neg P$ is a necessary pre-condition 
 to $\neg Q$ being true after the method execution.
@@ -303,9 +306,9 @@ These are rules whose conclusion have the form Single-Step Only If.
  
 
  \textsc{If1-Classical} states that  
-\jm[]{if by some classical logic, the execution of $x.m(\overline{z})$, with precondition $P \wedge \neg P_1$,
+if by some classical logic, the execution of $x.m(\overline{z})$, with precondition $P \wedge \neg P_1$,
 has a resulting state satisfying postcondition $\neg P_2$, then $P_1$ is a \emph{necessary} precondition to the 
-resulting state satisfying $P_2$.}
+resulting state satisfying $P_2$.
 
 \jm[I removed the old bit that was here because I felt we had already explained this several times before.]{}
 % any state which satisfies $P_1$ and $\neg P$ and executes  the method $m$ on an \jm[typo]{object} of class $C$, leads to a state that satisfies $\neg P_2$, then, any state which satisfies $P_1$ and calls $m$ on an object of class $C$ will lead to a state that satisfies $P_2$ only if the original state also satisfied $P$.
@@ -314,31 +317,34 @@ resulting state satisfying $P_2$.}
 
 
  
-\textsc{If1-Inside} states that a method which does not return an object $y$ 
-preserves the ``insideness'' of $y$. 
+%\textsc{If1-Inside} states that a method which does not return an object $y$ 
+%preserves the ``insideness'' of $y$. 
+\jm[]{\textsc{If1-Inside} states that if given the precondition $\neg P$, the result of a function call
+$x.m(\overline{z})$ is not $y$, then $P$ is a necessary pre-condition to invalidate $\wrapped{y}$ by calling
+$x.m(\overline{z})$}.
 In more detail,  \textsc{If1-Inside} states that if $P$ is
 a necessary precondition for returning an object $y$, then 
-it follows that $P$ is a necessary precondition \jm[]{for a call $x.m(\overline{z}$) to 
-result in an external object gaining access to} $y$.
-\jm[]{At first glance this rule might seem unsound, however the restriction on 
-external calls ensures soundness of this rule.}
-\jm[]{There are only four ways
+it follows that $P$ is a necessary precondition for a call $x.m(\overline{z}$) to 
+result in an external object gaining access to $y$.
+At first glance this rule might seem unsound, however the restriction on 
+external calls ensures soundness of this rule.
+There are only four ways
 an object $x$ might gain access to another object $y$: 
 (1) $y$ is created by $x$ as the result of a \prg{new} expression, 
 (2) $y$ is written to some field of $x$, 
 (3) $y$ is passed to $x$ as an argument to a method call on $x$,
-or (4) $y$ is returned to $x$ as the result of a method call from an object $z$ that has access to $y$.}
-\jm[]{The rules in Fig. \ref{f:classical->singlestep} are only concerned with 
+or (4) $y$ is returned to $x$ as the result of a method call from an object $z$ that has access to $y$.
+The rules in Fig. \ref{f:classical->singlestep} are only concerned with 
 effects on program state resulting from a method call to some internal object, and thus (1) and (2) need not be considered as 
 neither object creation or field writes may result in an external object gaining access from an internal object.
 Since we are only concerned with describing how internal objects grant access to external objects,
 our restriction on external method calls within internal code prohibits (3) from occuring. Finally,
-(4) is described by \textsc{If1-Inside}.}
-In further work we plan to weaken \jm[]{the restriction on external method calls}, and will  
+(4) is described by \textsc{If1-Inside}.
+In further work we plan to weaken the restriction on external method calls, and will  
 strengthen this rule.
-\jm[]{Note that}\textsc{If1-Inside}  is essentially  a specialized version of \textsc{If1-Classical}
+Note that\textsc{If1-Inside}  is essentially  a specialized version of \textsc{If1-Classical}
 for the $\wrapped{\_}$ predicate. Since $\wrapped{\_}$ is not a classical
-assertion, we cannot use \jm[]{\funcSpecs} to reason about necessary conditions
+assertion, we cannot use \funcSpecs to reason about necessary conditions
 for invalidating $\wrapped{\_}$.
  
  
@@ -353,10 +359,10 @@ for invalidating $\wrapped{\_}$.
 \infer
 	{
 	\left[\infer{\textit{for all}\ \ C \in dom(M)\ \ \textit{and}\ \  m \in M(C).\prg{mths}, \\\\
-				\proves{M}{\onlyIfSingle
+				[\proves{M}{\onlyIfSingle
 								{A_1\ \wedge\ x : C\ \wedge\ \calls{\_}{x}{m}{\overline{z}}}
 								{A_2}
-								{A_3}}}{}\right]\\
+								{A_3}}]}{}\right]\\
 	\proves{M}{A_1\ \longrightarrow\ \neg A_2}\\
 	\proves{M}{\givenA{A_1}{\encaps{A_2}}}
 	}
@@ -430,7 +436,7 @@ for invalidating $\wrapped{\_}$.
 \label{f:only-if-single}
 \end{figure}
 
-\sdr[no breakthrough]{The second key idea in \S \ref{s:approaxh}} allows us to
+\sdr[no breakthrough]{The second key idea in \S \ref{s:approach}} allows us to
 \sdr[rephrase]{leverage several per-method \Nec specifications 
 to obtain one per-step \Nec specification:}
 %We now  {use our second breakthrough observation (\S \ref{intro:this:work}):}
@@ -563,7 +569,7 @@ must have $A$ as a necessary precondition.
 \subsection{Emergent \Nec Specifications}
 \label{s:emergent-proof}
 
-\sdr[no breakthrough]{The third key idea in \S \ref{s:approaxh}} allows us to
+\sdr[no breakthrough]{The third key idea in \S \ref{s:approach}} allows us to
 \sdr[rephrase]{leverage one per-step \Nec specification to obtain 
 multiple step \Nec specifications, as well as the combination 
 of several such multiple step \Nec specifications to obtain further multiple step \Nec specifications.}
@@ -596,27 +602,32 @@ then there must be some specific intermediate state where that change occurred.}
  enabler for
  % in allowing for 
  proofs of 
-emergent properties. It is this rule that ultimately connects program 
-execution to encapsulated properties.
+emergent properties.
+\jm[]{Since proofs of necessary pre-conditions are concerned with change in program state,
+proofs typically hinge around when certain properties of the program state change. For example,
+under what conditions does our balance decrease?}
+%It is this rule that ultimately connects program 
+%execution to encapsulated properties.
 
-It may seem natural that \textsc{Changes} should take the more
+It \jm[]{might} seem natural \jm[]{that} \textsc{Changes} \jm[]{had} the more
 general form:
 $$\infer{\proves{M}{\onlyIfSingle{A_1}{A_2}{A_3}}}{\proves{M}{\onlyThrough{A_1}{A_2}{A_3}}}$$
-This would not be sound because a 
+\jm[]{Such a rule} would not be sound because a 
 transition from a state satisfying $A_1$ to one satisfying $A_2$  is not required to occur in a single step;
 however  a change in satisfaction for a specific assertion (\ie $A$ to $\neg A$) can \emph{only} take place in a single step.
 
-\textsc{Trans}$_1$ and \textsc{Trans}$_2$  {are transitivity rules}
-that  {state} that necessary conditions to reach intermediate states or 
+\textsc{Trans}$_1$ and \textsc{Trans}$_2$  {are \jm[]{rules about transitivity.}}
+\jm[]{They} {state} that necessary conditions to reach intermediate states or 
 proceed from intermediate states are themselves necessary intermediate states. 
-Finally, \emph{Only Through} includes \textsc{End}, stating that the ending condition is 
-a necessary intermediate condition.
+\jm[moved]{Any \emph{Only If} specification entails the corresponding
+ \emph{Only Through} specification (\textsc{If}).}
+\jm[]{Finally, \textsc{End} states that the ending condition is 
+a necessary intermediate condition.}
 %
-Moreover, any \emph{Only If} specification entails the corresponding
- \emph{Only Through} specification (\textsc{If}).
-\emph{Only If} also includes a transitivity rule (\textsc{If-Trans}), but 
+
+\emph{Only If} also includes a rule for transitivity (\textsc{If-Trans}), but 
 since the necessary condition must be true in the beginning state,
-there is only a single rule. \textsc{If-Class} \jm[]{expresses that}
+there is only a single rule. \textsc{If-Class} expresses that
 an object's class never changes.
 Finally, any starting condition is
 itself a necessary precondition (\textsc{If-Start}). 
