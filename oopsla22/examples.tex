@@ -5,8 +5,9 @@ and outline a proof that \ModC satisfies \SrobustB.
 A {summary} of this proof has already been discussed in \S \ref{s:approach}.
  A more complex variant of this example that employs   can be found in Appendix \ref{app:examples}.
  \sdN{It demonstrates dealing with modules consisting of several classes some of which are confined, and
- with the use ghost fields
- defined through functions, and proofs of assertion encapsulation when such assertions involve reading the values of 
+ which use ghost fields
+ defined through functions; it also demonstrates proofs of assertion encapsulation of assertions 
+ which involve reading the values of 
  several fields.}
  
 Recall that an \prg{Account} includes %a \prg{balance} field, and a \prg{transfer} method, along with any other fields and methods. 
@@ -64,9 +65,18 @@ $\SclassicP$  $\triangleq$
 \subsection{Part 1: Assertion Encapsulation}
 \label{s:BA-encap}
 The first part of the proof demonstrates that the \prg{balance}, \prg{pwd}, and external accessibility to the password are 
-encapsulated properties. That is, for the \prg{balance} to change (i.e. for \prg{a.balance = bal} to be invalidated), 
-internal computation is required. We use a conservative approach to an encapsulation system, detailed in \jm[]{Appendix} \ref{s:encap-proof}, 
+encapsulated properties. That is, for the \prg{balance} to change (i.e. for \prg{a.balance = bal} to be invalidated), or for 
+or for the encapsulation of \prg{a.pwd} to be broken (ie for a transition from ${\wrapped{\prg{a,pwd}}}$ to $\neg {\wrapped{\prg{a.pwd}}}$),
+internal computation is required. 
+
+We use \sdNr[used to say "a conservative approach to an encapsulation system" but "conservative" here means sound]{a simple encapsulation system}, detailed in \jm[]{Appendix} \ref{s:encap-proof}, 
 and provide the proof steps below.
+\textbf{\prg{aEnc}} and \textbf{\prg{balanceEnc}} state that 
+\jm[]{\prg{a} and \prg{a.balance}} satisfy \sdN{the \textsc{Enc$_e$} predicate. That is, if any objects' contents are to be
+looked up during execution of these expressions, then these objects are internal.}
+\textsc{Enc}$_e$(\prg{a}) holds because no object's contents is looked up,
+while \textsc{Enc}$_e$(\prg{a.balance}) holds because \prg{balance} is a field of \prg{a}, and \prg{a} is
+internal.
 \\
 \begin{figure}[h]
 \begin{proofexample}
@@ -105,20 +115,25 @@ and provide the proof steps below.
 \endproofsteps
 \end{proofexample}
 \end{figure}
-\textbf{\prg{aEnc}} and \textbf{\prg{balanceEnc}} state that 
-\jm[]{\prg{a} and \prg{a.balance} are encapsulated}.
-{Moreover,} \textbf{\prg{balEnc}} states that since bal is an integer, {its} value is constant
-and may not change, and thus is encapsulated.
-These combine to prove that the assertion \prg{a.balance = bal} is encapsulated.
-Note: it may seem odd to say that the integer \prg{bal}  { or the address
-\prg{a} is encapsulated};  {but remember that their value cannot change, and thus they
-vacuously sasfy the definition of encapsulation.}
 
-We similarly prove that \prg{a.pwd} {is encapsulated} (\textbf{\prg{PwdEncaps}}), and
+
+\sdN{Moreover},  \textbf{\prg{balEnc}} states that \prg{bal} satisfies \sdN{the \textsc{Enc}$_e$ predicate}
+-- it is an integer, and no object look-up is involved in its calculation.
+% used to say
+% since bal is an integer, {its} value is constant and may not change, and thus is encapsulated.
+\textbf{\prg{balanceEnc}} and \textbf{\prg{balEnc}} combine to prove that the assertion \prg{a.balance = bal} is encapsulated --
+%Note: it may seem odd to say that the integer \prg{bal}  { or the address
+%\prg{a} is encapsulated};  {but remember that their value cannot change, and thus they
+%vacuously sarisfy the definition of encapsulation.}
+\sdN{only internal object lookups are involved in the validity of that assertion, and therefore only 
+internal computation may cause it to be invalidated.}
+
+
+\sdN{Using similar reasoning, we} prove that \prg{a.pwd} {is encapsulated} (\textbf{\prg{PwdEncaps}}), and
 that \wrapped{\prg{a.pwd}} {is encapsulated} (\textbf{\prg{PwdInsideEncaps}}). 
-That is, if only internal objects have access
-to an account's \prg{pwd}, then only internal computation may grant \jm[]{access to \prg{pwd}}
- to an external object.
+\sdNr[I chopped the below "That is, if only internal objects have access
+to an account's \prg{pwd}, then only internal computation may grant  access to \prg{pwd} 
+ to an external object." as it only repeats the definition.]{}
 
 \begin{figure}[h]
 \begin{proofexample}
@@ -139,17 +154,27 @@ to an account's \prg{pwd}, then only internal computation may grant \jm[]{access
 \end{proofexample}
 \end{figure}
 
+\sdNr[removing references to Hoare logic.]{}
+
 \subsection{Part 2: Per-Method \Nec Specifications}
 \label{s:BA-classical}
 Part 2 proves necessary preconditions for each method in 
-the module interface. We employ the observation that
-we can build necessary preconditions on top of classical 
-Hoare logic (\S \ref{s:classical-proof}).
-\textbf{\prg{SetBalChange}} uses classical Hoare logic
+the module interface. 
+%We employ the observation that
+%we can build necessary preconditions on top of classical 
+\sdN{We employ the rules from  \S \ref{s:classical-proof} which describe how to derive 
+necessary preconditions from \funcSpecs.
+}
+%Hoare logic (\S \ref{s:classical-proof}).
+
+\textbf{\prg{SetBalChange}} uses a 
+ \funcSpec and a rule of consequence
+% classical Hoare logic
 to prove that the \prg{set} method in \prg{Account}
 never modifies the \prg{balance}. We then use \textsc{If1-Classical}
 and our \Nec logic to prove that if it ever did change (a logical absurdity),
 then \prg{transfer} must have been called.
+\footnote{**** CAREFULL, the conclusion in the second line was {$\neg$ a$^\prime$.balance = bal < bal }}
 \begin{figure}[htb]
 {
 	\begin{proofexample}
@@ -166,9 +191,10 @@ then \prg{transfer} must have been called.
 				{\hoareEx
 						{a, a$^\prime$:Account $\wedge$ a$^\prime$.balance = bal $\wedge$ $\neg$ false}
 						{a.set(\_, \_)}
-						{$\neg$ a$^\prime$.balance = bal < bal}
+						{$\neg$ a$^\prime$.balance < bal }
 						}
-					{by Hoare logic}
+					{by 
+					\sdN{rule of consequence}} %Hoare logic}
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
@@ -190,7 +216,8 @@ then \prg{transfer} must have been called.
 	\end{proofexample}
 }
 \end{figure}
-\textbf{\prg{SetPwdLeak}} demonstrates how we employ classical Hoare logic
+
+\sdN{Similarly,} in \textbf{\prg{SetPwdLeak}}  we employ \funcSpecs % classical Hoare logic
 to prove that a method does not leak access to some data (in this case the \prg{pwd}).
 Using \textsc{If1-Inside}, we reason that since the return value of \prg{set} is
 \prg{void}, and \prg{set} is prohibited from making external method calls,
@@ -213,7 +240,7 @@ no call to \prg{set} can result in an object (external or otherwise) gaining acc
 						{\prg{res}=a$^\prime$.set(\_, \_)}
 						{res != p}
 						}
-					{by Hoare logic}
+					{by \sdN{rule of consequence}} % Hoare logic}
 			}
 			{\proofstepwithrule
 				{\onlyIfSingleExAlt
@@ -293,8 +320,9 @@ statements, but omit their proofs.
 \subsection{Part 3: Per-Step \Nec Specifications}
 Part 3 builds upon the proofs of Parts 1 and 2 to 
 construct proofs of necessary preconditions, not for single method execution, 
-but any single execution step. That is, a proof that for
-\emph{any} single step in program execution, \jm[]{potentially dangerous} changes
+but \sdN{for} any single execution step. That is, a proof that for
+\emph{any} single step in program execution, \sdNr[removed "potentially dangerous", since such proof
+steps apply whether the changes are potentially dangerous or not]{} changes
 in program state require specific preconditions.
 \begin{figure}[htb]
 {
