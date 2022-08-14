@@ -22,20 +22,20 @@ proofs of the \Nec specifications defined in \S \ref{s:holistic-guarantees}.
 %Raising necessary conditions to construct proofs of emergent behaviour (\S \ref{s:emergent-proof})
 %\end{description}
 As discussed in \S \ref{s:approach},
-\sdr[]{such proofs consist} of 
+\sdNr[]{such proofs consist} of 
 \jm[]{four parts}: % proof of a \Nec specification:
 \begin{description} 
 \item[(Part 1)]
 Proving Assertion Encapsulation (\S \ref{s:encaps-proof})
 \item[(Part 2)]
-Proving Per-Method \Nec specifications from \funcSpecs for a single internal method (\S \ref{s:classical-proof})
+Proving Per-Method \Nec specifications for a single internal method from the \funcSpec of that method (\S \ref{s:classical-proof})
 \item[(Part 3)]
-Proving Per-Step \Nec specifications by combining \jm[]{per-call} \Nec specifications (\S \ref{s:module-proof})
+Proving Per-Step \Nec specifications by combining \sdNr[replaced per-call by per-method, as the prev sentence talks of per-method]{per-method} \Nec specifications (\S \ref{s:module-proof})
 \item[(Part 4)]
-Raising necessary conditions to construct proofs of emergent behaviour (\S \ref{s:emergent-proof})
+Raising necessary conditions to construct proofs of \sdN{properties of} emergent behaviour (\S \ref{s:emergent-proof})
 \end{description}
 
-\sdr[replace concer by part, and reword]{The first part is, to a certain extent, orthogonal to the main aims of our work;
+\sdr[replace concern by part, and reword]{Part 1 is, to a certain extent, orthogonal to the main aims of our work;
 in this paper we propose a simple approach based on the type system, while also acknowledging that 
 better solutions are possible.
 For Parts 2-4, we  came up with the key ideas outlined in  \S \ref{s:approach}, which we
@@ -48,62 +48,77 @@ develop in more detail in \S \ref{s:classical-proof}-\S \ref{s:emergent-proof}.}
 %In Section \ref{s:outline} we needed to prove that an assertion
 %was encapsulated within a module while showing adherence to \Nec specifications.
 {
-A key component of constructing \Nec proofs 
-is identifying properties that require internal (and thus known)
-computation to be invalidated. 
+%A key component of constructing 
+\sdNr[reword]{\Nec proofs 
+often leverage the fact that some assertions cannot be invalidated unless some 
+} internal (and thus known)
+computation took place. 
 {We refer to this property as \emph{Assertion Encapsulation}.}
 }
-    \Nec is parametric over the details of the encapsulation
-    model \cite{TAME2003}:  Appendix~\ref{s:encap-proof} and
-    Figure~\ref{f:asrt-encap}  present a 
+\sdNr[reword, and banned model]{In this work, we define the property $M\ \vDash A'\ \Rightarrow\ \encaps{A}$, which states that
+under the conditions described by assertion $A'$, the assertion $A$ is encapsulated by module $M$.
+We  do not mandate how this property should be derived -- instead, we rely on a judgment 
+$M\ \vdash A'\ \Rightarrow\ \encaps{A}$ provided b y some external system. 
+Thus, \Nec is parametric over the derivation of the encapsulation
+     judgment; in fact, several ways are possible \cite{TAME2003,ownEncaps,objInvars}. In Appendix~\ref{s:encap-proof} and
+    Figure~\ref{f:asrt-encap}  we present a 
     rudimentary system that is sufficient to support our example
-    proof.  The key judgement we rely  upon is \textit{assertion
-      encapsulation} that describes whether an assertion is
-    encapsulated within a module. 
+    proof. } 
 
 
 \subsubsection{Assertion Encapsulation Semantics}
 
 %%% WHY THE FUCK IS A' the subject and A the aux assertion???
+\sdNr[somebody wrote "WHY THE FUCK IS A' the subject and A the aux assertion", and they were right, so I swapped A and A']{}
+\sdNr[also, no "models the notion"]{}
 
-Assertion encapsulation models the notion that if an
-assertion $A'$ is encapsulated by module $M$, then the validity of that
-assertion can only be changed via that module. In \Loo, that means by
+\sdNr[]{As we said earlier,  an assertion $A$  is  encapsulated by a module $M$ under condition $A'$,
+if in all possible states which arise from module $M$ with any other module $M'$, and which satisfy $A'$, 
+the validity of $A$} 
+\sdr[shortened, but all is here]{ can only be changed via computations internal to that module} -- \emph{i.e.},  via a call to
+% In \Loo, that means by
+%calls to objects defined in $M$ but \jm[removed: that are]{} accessible from the
+%outside.
+%%
+%We provide a definition: $A'$ is encapsulated if whenever
+%we go from state $\sigma$ to $\sigma'$, and when $A'$
+%\jm[]{is invalidated} (i.e.\ to $\neg A'$) then we must have called a method on one
+%of $M$'s internal objects.
+%%
+%In fact we rely on a slightly more subtle \jm[removed: underlying]{} definition,
+%``conditional'' encapsulation where 
+%$M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
+%$A'$ cannot be invalidated, unless 
+a method from $M$.
+In \Loo, that means by
 calls to objects defined in $M$ but \jm[removed: that are]{} accessible from the
 outside.
-%
-We provide a definition: $A'$ is encapsulated if whenever
-we go from state $\sigma$ to $\sigma'$, and when $A'$
-\jm[]{is invalidated} (i.e.\ to $\neg A'$) then we must have called a method on one
-of $M$'s internal objects.
-%
-In fact we rely on a slightly more subtle \jm[removed: underlying]{} definition,
-``conditional'' encapsulation where 
-$M\ \vDash A\ \Rightarrow\ \encaps{A'}$ expresses that in states which satisfy $A$, the assertion 
-$A'$ cannot be invalidated, unless a method from $M$ was called.
 \jm[sophia asked if caller should be external, and if that is in coq - it is not in coq, but is implicit given the operational semantics of \Loo and the definition of Arising]{}
 
 \begin{definition}[Assertion Encapsulation]
 \label{def:encapsulation}
-An assertion $A'$ is \emph{encapsulated} by module $M$ and assertion $A$, written as\ \  $M\ \vDash A\ \Rightarrow\ \encaps{A'}$, \ \ if and only if
+An assertion $A$ is \emph{encapsulated} by module $M$ and assertion $A'$, written as\ \  $M\ \vDash A'\ \Rightarrow\ \encaps{A}$, \ \ if and only if
 for all external modules $M'$, and all states $\sigma$, $\sigma'$
 such that $\arising{M'}{M}{\sigma}$:
 
 \begin{tabular}{lr}
 $\;\;\;\;$- $\reduction{M'}{M}{\sigma}{\sigma'}$  & \rdelim\}{3}{4mm}[$\;\;\;\Rightarrow\;\;\;$  $\exists x,\ m,\ \overline{z}. (\ \satisfiesA{M}{\sigma}{\calls{\_}{x}{m}{\overline{z}} \wedge\ \internal{x}}\ )$] \\
-$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A'}$ \\
 $\;\;\;\;$- $\satisfiesA{M}{\sigma}{A \wedge  A'}$ \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A}$ \\
 \end{tabular} 
 \end{definition}
 
 
 \noindent
-This definition   uses adaptation 
-${\sigma' \triangleleft \sigma}$
-because we have to interpret one assertion in two different states.
+\sdN{Note that this definition   uses adaptation, 
+${\sigma' \triangleleft \sigma}$. We need that,
+because we  interpret the assertion $A$ in the current state ,$\sigma$, and the assertion $\neg A$ in 
+the future state, $\sigma' \triangleleft \sigma$.
+}
+
 Revisiting the examples from \S~\ref{s:outline}, % we can see
-both \ModB and \ModC encapsulate the \jm[]{equality of the \prg{balance} of an account to some value \prg{bal}, 
-because the invalidation of it} requires calling a method on an internal object.
+both \ModB and \ModC encapsulate   the \jm[]{equality of the \prg{balance} of an account to some value \prg{bal}: }
+\sdr[]{This equality can only be invalidated} through calling  methods on internal objects.
 %
 \\
 \strut \hspace{1cm}
@@ -116,12 +131,23 @@ $\ModC\ \vDash \prg{a}:\prg{Account}\ \Rightarrow\ \encaps{\prg{a.balance}=\prg{
 %Note that encapsulation of an assertion does not imply encapsulation of its negation; 
 %for example $\wrapped{o}$ is encapsulated, but $\neg  \wrapped{o}$ is not.}
 
-{Therefore,  code that does not contain 
+\noindent 
+%The key consequence of soundness is that -- SD dropped; it is   not a consequence of soundness!
+\sdN{Moreover, the property that an object is only accessible from module-internal objects is encapsulated, that is, for all \prg{o}, and all modules $M$:}
+\\
+\strut \hspace{1cm}
+$M\ \vDash \prg{o}:\prg{Object}\ \Rightarrow\ \encaps{\wrapped{\prg{o}}}$
+
+\noindent
+\sdN{This is so because any object which is only internally accessible} can become
+  \jm[]{externally accessible} only via an internal call.
+
+\sdN{In general},  code that does not contain 
 calls to a certain module is guaranteed not to invalidate any assertions encapsulated by that module.
  Assertion encapsulation has been used in proof systems to {address}   the  {frame} problem
- \cite{objInvars,encaps}.}
+ \cite{objInvars,encaps}. 
 
-\subsubsection{Proving Assertion Encapsulation}
+\subsubsection{\sdN{Deriving} Assertion Encapsulation}
 
 %As we have already stated at the beginning of this section,
 %encapsulation is a deep topic that is well studied in the literature, 
@@ -135,20 +161,21 @@ calls to a certain module is guaranteed not to invalidate any assertions encapsu
 %% because, as we shall see in later sections, our logic 
 %% does not rely on the specifics of an encapsulation algorithm, only its soundness.
 
-Our logic does not rely on the specifics of the encapsulation
-  model, but only its soundness:
+Our logic does not \sd{deal with, nor} rely on, the specifics of  how   encapsulation
+\sdN{is derived}.
+  % model, 
+\sdN{Instead, it relies} on an encapsulation judgment and expects it to be sound:
 
 \begin{definition}[Encapsulation Soundness]
 \label{lem:encap-soundness}
-A judgement of the form $\proves{M}{\givenA{A}{\encaps{A}}}$  is\  \emph{sound}, \ if 
+A judgement of the form $\proves{M}{\givenA{A'}{\encaps{A}}}$  is\  \emph{sound}, \ if 
 for all modules $M$, and assertions $A$ and $A'$, if 
-$\proves{M}{\givenA{A}{\encaps{A'}}}$ then $\satisfies{M}{\givenA{A}{\encaps{A'}}}$.
+$\proves{M}{\givenA{A'}{\encaps{A}}}$ then $\satisfies{M}{\givenA{A'}{\encaps{A}}}$.
 \end{definition}
 
-\noindent 
-The key consequence of soundness is that \jm[]{for an object $o$, $\wrapped{o}$ is encapsulated}. i.e. \jm[]{If an} object \jm[]{is only accessible by module internal objects,}
-  \jm[]{then it will only ever subsequently be accessible externally} via an internal call.
-  \jm[I'm not sure this paragraph should exist. It's key, but does it belong here or add anything?]{}
+
+  \jm[I'm not sure this paragraph should exist. It's key, but does it belong here or add anything?
+  \sdN{I modified the paragraph on types}]{}
 
 %% % For the purposes of the examples presented later in the paper, 
 %% \jm[]{For the purposes of proving examples, we define a rudimentary system for proving encapsulation in Appendix \ref{s:encap-proof}, Figure \ref{f:asrt-encap}.}
@@ -166,30 +193,33 @@ The key consequence of soundness is that \jm[]{for an object $o$, $\wrapped{o}$ 
 
 
 
-\subsubsection{Types}
+\paragraph{Types for Assertion Encapsulation}
 \label{types}
+\sdNr[I have unified the two separate descriptions of the types system.]{}
+%To allow for an easy way to judge encapsulation of
+\sdN{Even though the derivation of assertion encapsulation  is not the focus of this paper, 
+for illustrative purposes, we will ouitline %here how it can be derived with the use of 
+now a  very simple type system which supports such derivations.}
+We assume that 
+%assertions, we assume a very simple type system, where 
+field declarations, method arguments
+and method results are annotated with class names, and that classes may  
+be annotated as \enclosed. A  \enclosed object  
+cannot be accessed by external objects; that is, it is always \inside. 
 
-To allow for an easy way to judge encapsulation of
-assertions, we assume a very simple type system, where field, method arguments
-and method results are annotated with classes, and the type system checks 
-that field assignments, method calls, and method returns adhere to these expectations.
-Because the type system is so simple, we do not include its specification in the paper.
+The type system then checks 
+that field assignments, method calls, and method returns adhere to these expectations,
+and in particular, that objects of \enclosed type
+are never returned from method bodies 
+\sdN{-- this is a simplified version of the type system described in \cite{confined}.}
+Because the type system is so simple, we do not include its formalization in the paper.
 Note however, that the type system has one further implication: modules are typed 
 in isolation, thereby implicitly prohibiting
 method calls from internal objects to external objects. 
 
 Based on this type system, we define a predicate $\intrnl{e}$, in Appendix \ref{s:encap-proof},
-which asserts that any object reads during the evaluation of $e$ are internal.
-Thus, any assertion that only involves $\intrnl{\_}$ expressions is encapsulated, more in Appendix \ref{s:encap-proof}.
-
-Finally, a further small addition to the type system 
-assists the knowledge that an object is \inside: Classes may
-be annotated as \enclosed. A \enclosed object  
-cannot be accessed by external objects; that is, it is always \inside. 
-The type system needs to ensure that objects of \enclosed type
-are never returned from method bodies, this is even simpler than in \cite{confined} \jm[]{not sure what to do with this sentence}. 
-Again, we omit the detailed description of this
-simple type system.
+which asserts that any \sdN{objects read} during the evaluation of $e$ are internal.
+Thus, any assertion that only involves $\intrnl{\_}$ expressions is encapsulated -- more in Appendix \ref{s:encap-proof}.
 
 \subsection{Per-Method \Nec Specifications}
 \label{s:classical-proof}
@@ -200,7 +230,7 @@ $$\onlyIfSingle{A_1\ \wedge\ x : C\ \wedge\ \calls{\_}{x}{m}{\ldots}}{A_2}{A}$$
 Thus, $A$ is a necessary precondition for reaching $A_2$ from $A_1$ via a method call $m$ to an object of class $C$.
 %In order to do this
 % Our first breakthrough observation (\S \ref{intro:this:work})
-\sdr[no breakthrough]{The first key idea in \S \ref{s:approach}}
+{The first key idea in \S \ref{s:approach}}
 is that if a precondition and a certain statement is \emph{sufficient}
 to achieve a particular result, then the negation of that precondition
 is \emph{necessary} to achieve the negation of the result after executing that statement.
@@ -307,8 +337,9 @@ These are rules whose conclusion have the form Single-Step Only If.
  
 
  \textsc{If1-Classical} states that  
-if by some classical logic, the execution of $x.m(\overline{z})$, with precondition $P \wedge \neg P_1$,
-has a resulting state satisfying postcondition $\neg P_2$, then $P_1$ is a \emph{necessary} precondition to the 
+if \sdNr[dropped "by some classical logic" because usually classical logics are first order logics]{}  the execution of $x.m(\overline{z})$, with precondition $P \wedge \neg P_1$,
+%has a resulting 
+\sdN{leads} to a state satisfying postcondition $\neg P_2$, then $P_1$ is a \emph{necessary} precondition to the 
 resulting state satisfying $P_2$.
 
 \jm[I removed the old bit that was here because I felt we had already explained this several times before.]{}
@@ -320,16 +351,19 @@ resulting state satisfying $P_2$.
  
 %\textsc{If1-Inside} states that a method which does not return an object $y$ 
 %preserves the ``insideness'' of $y$. 
-\jm[]{\textsc{If1-Inside} states that if given the precondition $\neg P$, the result of a function call
-$x.m(\overline{z})$ is not $y$, then $P$ is a necessary pre-condition to invalidate $\wrapped{y}$ by calling
-$x.m(\overline{z})$}.
-In more detail,  \textsc{If1-Inside} states that if $P$ is
-a necessary precondition for returning an object $y$, then 
-it follows that $P$ is a necessary precondition for a call $x.m(\overline{z}$) to 
+\jm[]{\textsc{If1-Inside} states} that if  \sdNr{simpliified} the precondition $\neg P$ guarantees that the result of
+the call $x.m(\overline{z})$  
+ is not $y$, then $P$ is a necessary pre-condition to invalidate $\wrapped{y}$ by calling
+$x.m(\overline{z})$.
+In more detail, \sdNr[added details]{ the premise} of \textsc{If1-Inside} implies that  $P$ is
+a necessary precondition for \sdN{the call $x.m(\overline{z})$ to return} an object $y$; this, in turn,
+implies that    $P$ is a necessary precondition for the call $x.m(\overline{z}$) to 
 result in an external object gaining access to $y$.
-At first glance this rule might seem unsound, however the restriction on 
-external calls ensures soundness of this rule.
-There are only four ways
+At first glance this rule might seem unsound, however the 
+\sdN{rule is applicable only to external states semantics, which means that}
+the call  $x.m(\overline{z})$ is an 
+external call; this ensures soundness of the rule.
+\sdN{Namely,} there are only four ways
 an object $x$ might gain access to another object $y$: 
 (1) $y$ is created by $x$ as the result of a \prg{new} expression, 
 (2) $y$ is written to some field of $x$, 
@@ -337,7 +371,7 @@ an object $x$ might gain access to another object $y$:
 or (4) $y$ is returned to $x$ as the result of a method call from an object $z$ that has access to $y$.
 The rules in Fig. \ref{f:classical->singlestep} are only concerned with 
 effects on program state resulting from a method call to some internal object, and thus (1) and (2) need not be considered as 
-neither object creation or field writes may result in an external object gaining access from an internal object.
+neither object creation or field writes may result in an external object gaining access \sdNr[was from]{to}  an internal object.
 Since we are only concerned with describing how internal objects grant access to external objects,
 our restriction on external method calls within internal code prohibits (3) from occuring. Finally,
 (4) is described by \textsc{If1-Inside}.
@@ -437,21 +471,21 @@ for invalidating $\wrapped{\_}$.
 \label{f:only-if-single}
 \end{figure}
 
-\sdr[no breakthrough]{The second key idea in \S \ref{s:approach}} allows us to
-\sdr[rephrase]{leverage several per-method \Nec specifications 
+{The second key idea in \S \ref{s:approach}} allows us to
+\sdNr[rephrase]{leverage several per-method \Nec specifications 
 to obtain one per-step \Nec specification:}
 %We now  {use our second breakthrough observation (\S \ref{intro:this:work}):}
 Namely, if an assertion is encapsulated, and all methods within the internal module
-have the same condition to the \jm[]{invalidating} of that assertion, then 
+\sdN{require} the same condition to the \sdN{invalidation} of that assertion, then 
 % we are able to generalize} 
-this condition is \sdr[]{a necessary program-wide, single-step condition}   to the invalidation of that assertion.
+this condition is a necessary, program-wide, single-step condition   to the invalidation of that assertion.
 \sdr[replaced necessary pre-condition by necessary condition]{}
 
 \sdr[] {In this section} we present a selection of the rules whose conclusion is of the form Single Step Only If in Fig. \ref{f:only-if-single}.
  The full rule set can be found in Fig. \ref{f:app:only-if-single}.
 
 \textsc{If1-Internal} 
- lifts a per-method \Nec \jm[]{specifications} to a per-step \Nec specification.
+ lifts a \sdN{set of} per-method \Nec \jm[]{specifications} to a per-step \Nec specification.
 Any \Nec specification which is satisfied for \jm[]{all} method
 calls sent to any object in a module, is satisfied for \emph{any step}, even
 an external step, provided that the effect involved, \ie going from $A_1$ states to
@@ -481,18 +515,14 @@ rules, with a variation stating that if it is not possible  to reach
 the end state from one branch of the disjunction, then we can eliminate 
 that branch. 
 
-Two rules support existential elimination on the left hand side. \jm[]{We present one here.}
+Two rules support existential elimination on the left hand side. % \jm[]{We present one here.}
 \textsc{If1-$\exists_1$} states that if any single step of execution starting
 from a state satisfying $[y/x]A_1$ for all possible $y$, reaching some state satisfying
 $A_2$ has $A$ as a necessary precondition, it follows that any single step execution
 starting in a state where such a $y$ exists, and ending in a state satisfying $A_2$,
-must have $A$ as a necessary precondition.
+must have $A$ as a necessary precondition.  \sdN{The other rule  can be found in Fig. \ref{f:app:only-if-single}.}
 
-%\sophiaPonder[chopped: "The full set of proof rules for \emph{Single Step Only If} can be found in Fig. \ref{f:app:only-if-single}" as we say it earlier]{}
 
-%Note that given the rule for implication, there is \jm[removed: no]{a} need 
-%for conjunction introduction (\textsc{IF1-$\wedge$I}), but a rule 
-%for conjunction elimination is derivable from the rule for implication. 
 
 \begin{figure}[t]
 \footnotesize
