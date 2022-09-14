@@ -1,0 +1,294 @@
+\section{Introduction: Necessary Conditions and Robustness}
+\label{s:intro}
+
+%\subsection{Necessary conditions and Robustness}
+
+%% Today's   software has been built 
+%% over decades by combining modules and components of
+%% different provenance and 
+%% %different degrees of 
+%% trustworthiness, and
+%% is \emph{open}, interacting with other programs, devices, and people.
+
+% according to IEEE standard,
+% robust = The degree to which a system or component can function correctly in the presence 
+% of invalid inputs or stressful environmental conditions.  
+
+{Software needs} to be both {\emph{correct}} ({programs do what they
+  are supposed to}) and {\emph{robust}} ({programs \emph{only} do what they are supposed to}). 
+ {We use the term \emph{robust} as a generalisation of \emph{robust safety}~\cite{gordonJefferyRobustSafety, Bugliesi:resource-aware,ddd}  whereby a module or process or ADT is \emph{robustly safe} if its execution preserves some safety guarantees even when run together with unknown,   unverified, potentially malicious client code. 
+ The particular safety guarantees vary across the literature. 
+We are interested in \emph{program-specific} safety guarantees which describe  \emph{necessary conditions}
+ for some effect to take place.
+In this work we propose how to specify such necessary conditions, and how to prove that modules adhere to such specifications.}   
+ 
+ We motivate the need for  necessary conditions for effects through an example:
+%  {We use robustness to refer
+%  to \emph{robust safety}, a term 
+%  used in both the security~\cite{gordonJefferyRobustSafety, Bugliesi:resource-aware} and object capabilities literature~\cite{ddd} to mean that
+%programs don't do what they aren't supposed to do, even in the
+%presence of untrusted or malicious {clients}}.
+% robust = The degree to which a system or component can function correctly in the presence 
+% of invalid inputs or stressful environmental conditions.  
+{Correctness is} {traditionally} specified
+%formally 
+through \citeasnoun{Hoare69} triples: a  precondition, a code snippet, and a
+ postcondition. 
+ For example,  {part of the \funcSpec
+   of a \prg{transfer} method for a bank module is that the source account's balance decreases:}
+ \begin{quote}
+   \Scorrect\ \ $\triangleq$  
+ % SD I could not make the below work ...
+ % {\scriptsize \lstinline*{pwd=src.pwd  $\wedge$ \lstinline* src.bal=b} src.transfer(dst,pwd) {src.bal=b-100 * $\wedge$ \ldots } } }\\
+ {\footnotesize{ $\{\,$\prg{pwd=src.pwd} $\,\wedge\,$ \prg{src.bal=b}$\,\}$ \prg{src.transfer(dst,pwd)} $\{$ \prg{src.bal=b-100}$\,\wedge\,\dots \}$ }} Calling \prg{transfer} on  {an account with the correct password} will transfer the money.
+\end{quote}
+Assuming termination, the precondition is a \emph{sufficient} condition for the {code snippet to behave correctly}: 
+%assuming termination, 
+the precondition (\eg providing the right 
+password) guarantees that
+the code (\eg call the \prg{transfer} function)
+will always achieve the postcondition (the money is transferred).
+ 
+    \vspace{.05in}
+    % I think we need the vspace
+ 
+%While 
+\Scorrect  describes  {the \emph{correct use} of the  {particular function}, but is \emph{not} concerned with the {module's} \emph{robustness}.}
+{For example, can I pass an account to foreign untrusted code, in the expectation of receiving a payment,
+but without fear that a malicious client might use the account to steal my money \cite{ELang}?}
+ A first  {attempt} to specify robustness could be:
+ 
+
+\begin{quote}
+\SrobustA\ \ $\triangleq$ \ \ An account's balance does not decrease unless \prg{transfer} was called 
+with the correct password.
+\end{quote}
+
+Specification \SrobustA % gives   the guarantee 
+{guarantees} that it is not possible to  take money out of the account 
+% through some method other than \prg{transfer}
+{without calling \prg{transfer} and} without providing the password.
+  Calling \prg{transfer}   with the  correct password is 
+a \emph{necessary condition} for {(the effect of)} reducing the account's  balance.
+
+\SrobustA is  crucial, but  not   enough:
+it does not take  account of the module's \emph{emergent behaviour},
+{that is, does not cater for the potential interplay of several methods offered by the module.}
+ What if the module provided further methods which leaked the password?  
+%  {or allowed for it to be arbitrarily changed}?
+{ While no single procedure call is capable of breaking the intent of \SrobustA, a sequence of calls might.}
+{What} we really need is
+ \begin{quote}
+\SrobustB\ \ $\triangleq$ \ \ The balance of an account does not {\emph{ever}} decrease in the future unless some external 
+object  {\emph{now}} has access to the account's current password.
+\end{quote}
+With \SrobustB, I can confidently pass my account to  {any, potentially untrusted context, where my password is not known;} 
+%some untrusted client who does not have knowledge of the password; 
+ {the payment I was expecting may or may not be made,}
+%they may or may not make the payment I was expecting, 
+but I know 
+%they will not  {be able to} steal my money 
+ {that my money will not be stolen} \cite{ooToSecurity}. 
+ Note that \SrobustB  does not mention
+ the names of any functions in the module, and 
+ thus can be expressed without reference to any particular API ---
+ indeed \SrobustB can constrain \emph{any} API with an account, an account
+ balance, and a password.
+
+ 
+ %{\sd{Many} 
+%kinds of} guarantees have been proposed\sophiaPonder[dropped: ``proposed for  robustness'']{}, differing in the level 
+%of granularity,   target  language or calculi, and intended use.  
+{Earlier work addressing robustness} includes object capabilities  \cite{MillerPhD, dd, threoremsFreeSep}, 
+information control flow \cite{Zdancewic:Myers:01,noninteferenceOS}, 
+ correspondence assertions \cite{Maffeis:aiamb:thesis00},
+ sandboxing  \cite{robustSafetyPatrignani,sandbox},
+robust linear temporal logic   \cite{RLTL2022} -- to name a few. %are some of the proposals to ensure some level of robust safety. 
+{Most of these  %works 
+propose \emph{generic}  guarantees (\emph{e.g.} no dependencies from high values to low values),
+\sdN{or preservation of module invariants},
+while we work with  \emph{problem-specific}  guarantees \sdN{concerned with necessary conditions 
+for specific effects}  (\emph{e.g.} no decrease in balance without access to password).}
+{{{\sc{VerX}} \cite{VerX} and  \emph{Chainmail} \cite{FASE} also work on problem-specific guarantees.}
+Both these approaches are able to express necessary conditions
+  like \SrobustA using
+  temporal logic operators and implication,
+  and Chainmail is able to express \SrobustB,
+  however neither have a proof logic
+  \jm[removed:able]{} to prove adherence to such specifications.}
+%
+
+
+
+
+
+
+\subsection{\Nec}
+\label{intro:this:work}
+{In this paper we introduce \Nec,} the first approach that is able to  both express and prove
+(through an inference system)
+robustness specifications such as  \SrobustB.
+{Developing a specification language with a proof logic that is able to prove properties such as \SrobustB % is complex
+and must tread a fine line: the language must be rich enough to express complex specifications; temporal operators are needed along with object capability style operators 
+that describe \emph{permission} and \emph{provenance}, while also being simple enough that proof rules might be devised.}
+
+
+\vspace{.07in}
+ {
+The {first main} contribution  
+{is} three novel operators that merge
+temporal operators and implication 
+and most importantly are both expressive enough to capture the 
+examples we have found in the literature and provable through an inference system.
+}
+%
+%%For the specification language we adopted  
+%%\emph{Chainmail}'s    capability operators.
+%%{For the 
+%%  temporal operators, we observed that while their
+%%   unrestricted combination with  other logical connectives allows us to talk about any
+%%   number of points in time, the examples found in the literature talk about two or at most three such points. }
+%
+%  
+%  {This led to the  crucial insight that we could merge  temporal operators and the implication 
+% logical connective into our three}
+%   \emph{necessity} operators. 
+ One such necessity operator is \\
+$ 
+\strut \hspace{1.7in} \onlyIf {A_{curr}} {A_{fut}} {A_{nec}}
+$  
+% \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
+%                                from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$ 
+%\end{lstlisting}
+%  %      $A$          from ${A_{curr}}$ to ${A_{fut}}$ onlyIf ${A_{nec}}$          from ${A_{curr}}$ to ${A_{fut}}$ onlyThrough ${A_{nec}}$
+\\
+This form says that  
+a  {transition} from a current state satisfying assertion $A_{curr}$ to a future
+state satisfying $A_{fut}$  is possible only if  the   necessary 
+condition
+$A_{nec}$ holds in the \emph{current} state.
+Using this operator, 
+we can formulate  \SrobustB  
+as
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+   $\text{\SrobustB}$  $\triangleq$   from   a:Account $\wedge$ a.balance==bal    to   a.balance < bal
+               onlyIf  $\exists$ o.[$\external{\texttt{o}}$ $\wedge$ $\access{\texttt{o}}{\texttt{a.pwd}}$]
+\end{lstlisting}
+Namely, a transition from a  {current} state where an account's balance is \prg{bal}, to a  {future} state where 
+it has decreased, may \emph{only} occur if  {in the current state} some {\color{blue}{\prg{external}}}, unknown client object  
+has access to that account's password.
+More    in \S\ref{s:bankSpecEx}. 
+ 
+
+  
+Unlike  \emph{Chainmail}'s temporal operators, 
+ the necessity operators %  $\onlyIf {\_} {\_} {\_}$  and $\onlyThrough {\_} {\_} {\_}$
+ are  not first class, and may not appear in the assertions  {(\eg  ${A_{curr}}$)}. 
+ This simplification enabled us to develop our proof logic. 
+ Thus, we {have reached} a  sweet spot between expressiveness and 
+ provability.
+ 
+ 
+ \vspace{.07in}
+ The second main contribution is  a logic that  enables us to prove that code 
+ obeys \Nec specifications. {}
+{Our insight was  that \Nec specifications are logically equivalent to the
+intersection of an \emph{infinite} number of Hoare triples, \emph{i.e.,} 
+$\onlyIf{A_1} {A_2} {A_3}$ is 
+logically equivalent
+% with 
+{to}
+ $\forall \prg{stmts}. \{ A_1 \wedge \neg A_3\} \prg{stmts} \{ \neg A_2 \}$.
+ This leaves the challenge that there do not exist logics to reason about such infinite intersections.}
+
+{We addressed that  challenge} through three further insights: 
+ {(1) \Nec specifications of emergent behaviour can be built up from \Nec specifications of
+ single-step executions, which (2) can be built from encapsulation and \emph{finite} intersections
+ of \Nec specifications of function calls, which  
+ (3) in turn can be obtained from \emph{traditional} \funcSpecs.}
+ %
+%%The Eureka moment was the realisation that all the information we required was hiding  { in the individual methods' classical specifications:}
+%The Eureka moment \jm[four? is 2 an observation?]{arose from four crucial observations:} %{ in the individual methods' classical specifications:}
+%\jm[]{\begin{enumerate}
+%\item 
+%If an assertion is invalidated over an arbitrary number of execution steps, then there must have
+%been some single execution step that invalidated it.
+%\item
+%Proofs of necessary conditions in the open world must be based on restricted permission
+%\item
+%If all methods within a module share the same necessary precondition to invalidate an ``\emph{encapsulated}'' assertion,
+%then that precondition is generally necessary to invalidate that assertion.
+%\item
+%Necessary preconditions to functions can be encoded using functional specifications.
+%\end{enumerate}}
+%%\jm[]{These four observations are the basis of \Nec.}
+ % \vspace{.02in}
+{A strength of our} work % formalization of \Nec  
+is {that it is
+parametric} with respect to assertion
+satisfaction, encapsulation, {and functional specifications, all of which are well covered in the literature},
+{and offer several off-the-shelf solutions.}
+% In line  with other work in the literature \cite{Permenev, Grossman, Albert}, we forbid 
+% calls from internal to  { \color{blue}\texttt{external}} objects (ie unknown objects
+% whose code has not been checked) -- \sd{further details on call-backs in \S\ref{s:related}. }
+ 
+
+
+\subsection{Contributions and Paper Organization}
+
+%%In the next section, (\S\ref{s:outline}),  we outline our approach using a
+%% bank account as  a motivating example.
+
+%\jm[should this be ``a bank account''? This is the first time we mention it]{}
+%
+The contributions of this {work} are:
+\begin{enumerate}
+\item   A language to express \Nec specifications (\S\ref{s:semantics}), including three novel \Nec operators (\S\ref{s:holistic-guarantees}) that combine implication and temporal operators.  
+% \item
+%A language to
+%express \Nec specifications (\S\ref{s:semantics}).
+
+ \item
+A logic for proving a module's adherence to \susan[]{its}
+ \Nec specifications (\S\ref{s:inference}), and a proof of soundness of the logic, (\S\ref{s:soundness}),
+both mechanised in Coq. 
+ \item
+A proof in our logic % the bank account 
+  that our bank module {obeys} % the \Nec specification 
+  \SrobustB (\S\ref{s:examples}),     mechanised in Coq.
+  And a proof that
+  a richer bank module which uses ghostfields and confined classes  obeys  \SrobustB (\S\ref{app:BankAccount}),
+  also mechanised in Coq.
+\item \ {Examples taken from the literature  (\S\ref{s:expressiveness} and \S\ref{s:expressiveness:appendix}) specified in \Nec  .}
+
+\end{enumerate}
+
+
+%\jm[]{
+%Our formalization of \Nec does have two limitations. 
+%Firstly, it is specifically a logic for 
+%necessity and robustness properties. \Nec 
+%is parametric with respect assertion satisfaction, correctness,
+%encapsulation, and the type system. Much of these are
+%well-trod ground in the literature, and where needed we
+%do introduce simplistic language mechanisms to deal with them (e.g. a simple type system or notion of encapsulation).
+%Secondly, we do not allow for ``callbacks'' 
+%to external objects. This is a common restriction in the literature
+%as many either prohibit callbacks, or require
+%``effectively callback free contracts'' \cite{VerX},
+%or place significant restrictions on callbacks \cite{}
+%}
+
+
+%We  discuss these  issues % limitations 
+%further as 
+ We place \Nec into the context of 
+related work (\S\ref{s:related}) and consider our overall conclusions
+(\S\ref{s:conclusion}). 
+%
+The Coq proofs of 
+(2) and (3) above appear in the
+supplementary material, along with {a}ppendices containing expanded 
+definitions and further examples.
+In the next section, (\S\ref{s:outline}),  we outline our approach using a
+  bank   as  a motivating example.
