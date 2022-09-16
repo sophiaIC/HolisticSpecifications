@@ -113,8 +113,8 @@ Module Assert(L : LanguageDef).
     - destruct a.
       apply Nat.eqb_neq in H.
       crush.
-    - apply Z.eqb_neq in H;
-        crush.
+(*)    - apply Z.eqb_neq in H;
+        crush.*)
   Defined.
   Next Obligation.
     destruct a1, a2;

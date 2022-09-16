@@ -157,7 +157,7 @@ Ltac update_auto :=
                                               [subst; rewrite eqb_refl in H
                                               |apply neq_eqb in Hneq;
                                                rewrite Hneq in H]
-                                                     
+
   | [|- (update ?a _ _) ?a = Some _] => unfold update, t_update;
                                       subst; rewrite eqb_refl
   | [Hneq : ?a <> ?a' |- (update ?a _ _) ?a' = Some _] => unfold update, t_update;
@@ -173,7 +173,7 @@ Ltac update_auto :=
                                          [subst; rewrite eqb_refl
                                          |apply neq_eqb in Hneq;
                                           rewrite Hneq]
-                                                
+
   | [|- context[(update ?a _ _) ?a]] => unfold update, t_update;
                                       subst; rewrite eqb_refl
   | [Hneq : ?a <> ?a' |- context[(update ?a _ _) ?a']] => unfold update, t_update;
@@ -670,7 +670,8 @@ Proof.
     | [H : one_to_one (fun x => if _ then _ else if _ then _ else ?m x),
            Ha : ?m ?a1 = Some ?b',
                 Hb : ?m ?a2 = Some ?b' |- ?a1 = ?a2] =>
-      apply H with (b1:=b')
+      unfold one_to_one in H;
+      eapply H with (b:=b')
     end;
       repeat eq_auto.
 Qed.
@@ -685,7 +686,7 @@ Lemma inv_update :
 Proof.
   intros;
     unfold inv.
-  
+
   split;
     intros;
     repeat eq_explode;
@@ -705,7 +706,8 @@ Proof.
   intros A B HeqA HeqB f a b Hone2one a' Hmap.
   unfold one_to_one in *.
   eq_explode; auto.
-  apply Hone2one with (b0:=b);
+  unfold one_to_one in Hone2one.
+  apply Hone2one with (b:=b);
     repeat map_rewrite;
     repeat eq_auto.
 Qed.

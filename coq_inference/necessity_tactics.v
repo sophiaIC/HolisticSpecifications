@@ -499,7 +499,7 @@ Module NecessityTactics(L : LanguageDef).
         inversion H1;
         subst.
       eapply v_f_heap.
-      apply IHHeval with (n0:=n);
+      apply IHHeval with (n:=n);
         auto.
       apply H.
       auto.
@@ -509,12 +509,12 @@ Module NecessityTactics(L : LanguageDef).
         inversion H2;
         subst.
       eapply v_f_ghost.
-      ** apply IHHeval1 with (n0:=n);
+      ** apply IHHeval1 with (n:=n);
            auto.
       ** apply H.
       ** apply H0.
       ** apply H1.
-      ** apply IHHeval2 with (n0:=n);
+      ** apply IHHeval2 with (n:=n);
            auto.
       ** auto.
 
@@ -522,36 +522,36 @@ Module NecessityTactics(L : LanguageDef).
         inversion H;
         subst.
       apply v_if_true.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
 
     * destruct e';
         inversion H;
         subst.
       apply v_if_false.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
 
     * destruct e';
         inversion H;
         subst.
       eapply v_equals.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
 
     * destruct e';
         inversion H0;
         subst.
       eapply v_nequals.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
       auto.
 
@@ -559,9 +559,9 @@ Module NecessityTactics(L : LanguageDef).
         inversion H0;
         subst.
       eapply v_lt.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
       auto. 
 
@@ -569,9 +569,9 @@ Module NecessityTactics(L : LanguageDef).
         inversion H0;
         subst.
       eapply v_nlt.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
       auto.
 
@@ -579,36 +579,36 @@ Module NecessityTactics(L : LanguageDef).
         inversion H;
         subst.
       eapply v_plus.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
 
     * destruct e';
         inversion H;
         subst.
       eapply v_minus.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
 
     * destruct e';
         inversion H;
         subst.
       eapply v_mult.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
 
     * destruct e';
         inversion H;
         subst.
       eapply v_div.
-      apply IHHeval1 with (n0:=n);
+      apply IHHeval1 with (n:=n);
         auto.
-      apply IHHeval2 with (n0:=n);
+      apply IHHeval2 with (n:=n);
         auto.
 
   Qed.
@@ -926,7 +926,7 @@ Module NecessityTactics(L : LanguageDef).
            subst.
          contradiction n1;
            intros.
-         apply equal_f with (x1:=x0) in H2;
+         apply equal_f with (x:=x0) in H2;
            simpl in H2.
          destruct (args x0);
            auto.

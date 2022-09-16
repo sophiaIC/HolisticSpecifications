@@ -397,8 +397,8 @@ Next Obligation.
   destruct a, a0; simpl; crush; eauto.
   inversion H0; subst.
   apply Nat.eqb_neq in H; subst; auto.
-  apply Z.eqb_neq in H; subst; auto.
-  crush.
+  (*apply Z.eqb_neq in H; subst; auto.
+  crush.*)
 (*  apply Z.eqb_neq in H; subst; auto.
   crush.*)
 Defined.
