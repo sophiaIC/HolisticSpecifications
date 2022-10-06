@@ -1,0 +1,370 @@
+% !TEX TS-program = pdflatex
+% !TEX encoding = UTF-8 Unicode
+
+% This is a simple template for a LaTeX document using the "article" class.
+% See "book", "report", "letter" for other types of document.
+
+\documentclass[11pt]{article} % use larger type; default would be 10pt
+
+\usepackage[utf8]{inputenc} % set input encoding (not needed with XeLaTeX)
+\usepackage{relsize}
+\usepackage{mathpartir}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{listings}
+\usepackage{xspace}
+\usepackage{definitions}
+\usepackage{multirow,bigdelim}
+\usepackage{pbox}
+\usepackage{courier}
+\usepackage{amssymb}
+
+%%% Examples of Article customizations
+% These packages are optional, depending whether you want the features they provide.
+% See the LaTeX Companion or other references for full information.
+
+%%% PAGE DIMENSIONS
+\usepackage{geometry} % to change the page dimensions
+\geometry{a4paper} % or letterpaper (US) or a5paper or....
+% \geometry{margin=2in} % for example, change the margins to 2 inches all round
+% \geometry{landscape} % set up the page for landscape
+%   read geometry.pdf for detailed page layout information
+
+\usepackage{graphicx} % support the \includegraphics command and options
+
+% \usepackage[parfill]{parskip} % Activate to begin paragraphs with an empty line rather than an indent
+
+%%% PACKAGES
+\usepackage{booktabs} % for much better looking tables
+\usepackage{array} % for better arrays (eg matrices) in maths
+\usepackage{paralist} % very flexible & customisable lists (eg. enumerate/itemize, etc.)
+\usepackage{verbatim} % adds environment for commenting out blocks of text & for better verbatim
+\usepackage{subfig} % make it possible to include more than one captioned figure/table in a single float
+% These packages are all incorporated in the memoir class to one degree or another...
+
+%%% HEADERS & FOOTERS
+\usepackage{fancyhdr} % This should be set AFTER setting up the page geometry
+\pagestyle{fancy} % options: empty , plain , fancy
+\renewcommand{\headrulewidth}{0pt} % customise the layout...
+\lhead{}\chead{}\rhead{}
+\lfoot{}\cfoot{\thepage}\rfoot{}
+
+%%% SECTION TITLE APPEARANCE
+\usepackage{sectsty}
+\allsectionsfont{\sffamily\mdseries\upshape} % (See the fntguide.pdf for font help)
+% (This matches ConTeXt defaults)
+
+%%% ToC (table of contents) APPEARANCE
+\usepackage[nottoc,notlof,notlot]{tocbibind} % Put the bibliography in the ToC
+\usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
+\renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
+\renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
+
+%%% END Article customizations
+
+%%% The "real" document content comes below...
+
+\title{Callbacks}
+\date{} % Activate to display a given date or no date (if empty),
+         % otherwise the current date is printed 
+
+\begin{document}
+\maketitle
+
+\section{The Problem with Callbacks}
+
+Currently we prohibit callbacks from internal methods. We 
+do this by assuming the internal module has been type checked
+in isolation, thus any method call to an external object
+would raise a type error. This restriction allows us to 
+say that if $\wrapped{x}$, then the only way an external object may 
+gain access to $x$ is via a call to an internal method, that returns
+$x$ as the result. We incorporate this assumtion into \Nec with the 
+following proof rule:
+\begin{mathpar}
+\infer
+	{
+	\proves{M}{\hoare
+						{x : C \ \wedge\ \neg P}
+						{\prg{res} = x.m(\overline{z})}
+						{\prg{res} \neq y}}
+	}
+	{
+	\proves{M}{\onlyIfSingle{\wrapped{y}\ \wedge\ x : C \wedge\ \calls{\_}{x}{m}{\overline{z}}}{\neg \wrapped{y}}{P}}
+	}
+	\quad(\textsc{If1-Inside})
+\end{mathpar}
+Allowing callbacks would make this rule unsound, as method return is 
+not the only way that data might be exposed to the external world,
+$x$ could be exposed as an argument to an external method.
+I propose to fix this we would need to extend our conclusion 
+that we use in \textsc{If1-Inside} to the following:
+$x$ can only be exposed as either the result of a method return,
+or an argument to a method call within an internal method method.
+
+The above does not solve the problem, and would leave the 
+proof logic with a severe limitation (and potentially unsound, but I'm
+not 100\% sure on this).
+To understand the problem, let us first condsider if we allowed for 
+unrestricted callbacks. A method with unrestricted callbacks might then
+look like this:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+method myMethod(...) {
+	// internal code (A)
+	...
+	// callback
+	y.callback(a);
+	// internal code (B)
+	...
+	// return
+	return b;
+}
+\end{lstlisting}
+We can now say that $x$ is only exposed at the end of \prg{myMethod} 
+if either $x = a$ or $x = b$, however such a scenario is difficult to integrate into
+\Nec, as \Nec relies on attributing changes in assertion validation to a single step,
+and often identifying that step with a method call. Specifically, we would like to
+say something like
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+   MySpec  $\triangleq$   from   $\wrapped{\prg{x}}$    to   $\neg$ $\wrapped{\prg{x}}$
+               onlyThrough _ calls _.myMethod(_)
+\end{lstlisting}
+\prg{MySpec} is only valid if $x$ is exposed as part of the callback \prg{y.callback(a)},
+i.e. if $x = a$ in \prg{myMethod}. It is not valid if
+$x$ is exposed as part of the return (or any subsequent callbacks), because 
+there exists a counter example where the intial state is in nested somewhere
+within the call \prg{y.callback(a)}, i.e. after \prg{myMethod} has been
+called, and \prg{inside(x)} is still valid, and the final state is after the return,
+i.e. once \prg{inside(x)} has been invalidated. In such a case, there does not exist
+an intermediate state where \prg{myMethod} was called. This problem is not 
+restricted to proofs of \prg{inside(\_)}, and exists for the invalidation 
+of any assertion that we wish to attribute to a method call.
+
+\paragraph{Effectively Callback Free:}
+Our initial proposal for an incementally better solution was to adopt the VerX 
+approach of \emph{effectively callback free} methods where callbacks are 
+only allowed at the end of methods, right before method return. While this
+restriction might work for assertions that don't include $\access{\_}{\_}$
+since all computation that might invalidate such an assertion occurs before
+the callback, I don't believe it generally works when you consider \prg{access}
+because we must still consider the return.
+We are still left with the above problem, 
+i.e. if $x$ is exposed as the return of \prg{myMethod}, then there is an external state that exists before \prg{myMethod} has finished executing, i.e. after the call to 
+\prg{myMethod}, but before $x$ has been exposed.
+
+\section{Proposed Solution}
+There are two problems presented by callbacks that we need 
+to solve: (1) an expressiveness problem, i.e. how do we change 
+the semantics of \Loo, \SpecO, and \Nec to express the properties
+we want to express in the presence of callbacks, and (2) a provability
+how do we modify \Nec Logic to allow us to prove these properties.
+
+\subsection{Expressiveness: Extending the Semantics of \Loo, \SpecO, and \Nec for Callbacks}
+I believe a solution to this problem requires either a 
+modification to the definition of external state semantics, or 
+a modification to \SpecO.
+I think that for the purposes of \Nec, \emph{effectively callback free} does not
+simplify things for us. There might be a way 
+to redefine external state semantics where we treat the callback and 
+the return as a single step, but this seems unsound. The other solution, and 
+the one I propose is to modify the definition of $\calls{\_}{\_}{\_}{\_}$ to consider
+the methods that are currently being executed. We can do this by observing the
+stack, and recording method names when they're called. This would require modifying
+both \SpecO and the operational semantics of \Loo, along with \Nec and \Nec logic.
+
+First we need to modify the operational semantics of \Loo to keep the 
+information of method calls instead of replacing the call with a hole:
+\begin{mathpar}
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \psi)\\
+	\sigma_2 = (\chi, \phi_2 : \phi_1 : \psi)\\
+	\phi_1.(\prg{contn}) = (x := y.m(\overline{z}); s)\\
+	\meth{M}{\class{\sigma_1}{x}}{m} = m(\overline{p : T})\{body\}\\
+	\phi_2 = \{\prg{local}:= ([\prg{this}\ \mapsto\ \interpret{\sigma_1}{x}]\overline{[p_i\ \mapsto\ \interpret{\sigma_1}{z_i}]}), \prg{contn}:=body\}
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	\quad(\textsc{Call})
+	\and
+\infer
+	{
+	\sigma_1 = (\chi, \phi_1 : \phi_2 : \psi) \\
+	\phi_1.(\prg{contn}) = (\prg{return}\ x; s)\ \textit{or}\ \phi_1.(\prg{contn}) = (\prg{return}\ x)\\
+	\phi_2.(\prg{contn}) = (y := z.m(\overline{w}); s)\\
+	\sigma_2 = (\chi, \phi_2[y\ \mapsto\ \interpret{\sigma_1}{x}] : \psi)
+	}
+	{\exec{M}{\sigma_1}{\sigma_2}}
+	{}
+	\quad(\textsc{Return})
+\end{mathpar}
+
+
+Next we replace $\calls{x}{y}{m}{\overline{z}}$ with $\called{x}{y}{m}{\overline{z}}$
+with the following semantics:
+\\
+\begin{minipage}{\linewidth}
+$\satisfiesA{M}{\sigma}{\called{x}{y}{m}{z_1, \ldots, z_n}}$ \ \ \ iff \ \ \ 
+\begin{enumerate}
+\item
+$\phi.\prg{contn} = (w := y'.m(z'_1,\ldots,z'_n); s)$,\ \ for some 
+frame $\phi \in \sigma$,
+some variable $w$, and some statement $s$,
+\item
+$\sigma.\prg{local}(\prg{x}) = \phi.\prg{local}(\prg{this})$
+\ \ and \ \ 
+$\sigma.\prg{local}(\prg{y}) = \phi.\prg{local}(\prg{y'})$,
+\item
+$\sigma.\prg{local}(\prg{z}_i) = \phi.\prg{local}(\prg{z'}_i)$\ \ \ for all $1\!\leq i\!\leq n$
+\end{enumerate}
+\end{minipage}\\
+Thus, $\called{x}{y}{m}{\overline{z}}$ is satisfied by program state
+$\sigma$ if either $y.m(\overline{z})$ is about to be called by $x$,
+or it has already been called, and the program is in the middle of 
+executing $m$. Using this definition, our previous specification would
+be valid:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+   MySpec  $\triangleq$   from   $\wrapped{\prg{x}}$    to   $\neg$ $\wrapped{\prg{x}}$
+               onlyThrough _ called _.myMethod(_)
+\end{lstlisting}
+It remains to show that this is both sound, and does not lose 
+us expressiveness that we want, and then to define new rules for 
+\Nec that include $\called{x}{y}{m}{\overline{z}}$. Another option would be to 
+include both $\calls{x}{y}{m}{\overline{z}}$ and $\called{x}{y}{m}{\overline{z}}$,
+and have the later only refer to calls made in the past.
+
+
+\subsection{Provability: Extending \Nec Logic for Callbacks}
+I think we can incorporate general callbacks into \Nec logic
+by generalizing the approach we currently take. At the moment,
+our reasoning is the following:
+\begin{quotation}
+If all possible internal computation has the same 
+necessary pre-condition to invalidate an assertion,
+then it follows that that pre-condition is necessary
+in general if the invalidated assertion is encapsulated.
+\end{quotation}
+In our current version of \Nec, all internal computation 
+begins with a method call, and ends with a return from that
+method. If we add unrestricted callbacks, internal computation
+starts with either a method call or a method return, and ends with
+either a method call or a method return. Note, from now on, 
+I will use \emph{internal code fragment} to refer to such pieces
+of internal code, i.e. code that represents only internal computation
+where the preceeding state and the succeeding states are both external. 
+When we prohibited
+callbacks, our logic was simpler, as it relied only on pre- and
+post-conditions of internal functions. With callbacks, we need
+to rely on pre- and post-conditions on fragments of function bodies.
+One of the advantages of only relying on specifications of entire
+functions was that we could leverage the $\onlyIfSingle{A_{\textit{init}}}{A_{\textit{end}}}{A_{\textit{necc}}}$ form to capture necessary 
+pre-conditions to individual functions. Thus our per-method 
+necessary pre-conditions currently encodes the Hoare triple:
+\[
+\hoare{A_{\textit{init}} \wedge \neg A_{\textit{necc}}}{\prg{res} := x.m(\overline{z})}{\neg A_{\textit{end}}}
+\]
+as this single step necessary pre-condition
+\[
+\onlyIfSingle{A_{\textit{init}} \wedge \calls{\_}{x}{m}{\overline{z}} \wedge x : C}{A_{\textit{end}}}{A_{\textit{necc}}}
+\]
+Unfortunately we don't have any way to identify internal computation 
+that begins with a method return from a callback. I think there are 
+two ways to solve this, either we introduce a way to identify those
+code locations, or we generalize our approach from whole methods to 
+any internal code fragment. If we allow for unrestricted callbacks,
+internal code fragments will have two forms:
+\begin{mathpar}
+\infer
+	{}{\prg{s; return x}}
+	\and
+\infer
+	{}{\prg{s; x := y.m(z1, ...)}}
+\end{mathpar}
+Encoding necessary preconditions for the above fragments as a Hoare triple
+would then look like this:
+\begin{mathpar}
+\infer
+	{
+	\hoare{A_{\textit{init}} \wedge \neg A_{\textit{necc}}}
+			{\prg{s; return x}}
+			{\neg A_{\textit{end}}}
+	}
+	{}
+	\and
+\infer
+	{
+	\hoare{A_{\textit{init}} \wedge \neg A_{\textit{necc}}}
+			{\prg{s; x := y.m(z1, ...)}}
+			{\neg A_{\textit{end}}}
+	}
+	{}
+\end{mathpar}
+Note, the above two forms for internal code fragments have 
+an important and obvious difference that we need to account for:
+how they expose data to the external world differently. The first exposes 
+\prg{x} by returning it to some external object, the second
+exposes \prg{z1, z2, ...} by giving them as arguments to 
+some external method.
+We might decide to provide a specialized form for these necessary
+preconditions such as:
+\[
+\onlyIfS{A_{\textit{init}}}{A_{\textit{end}}}{s; \prg{return}\ x}{A_{\textit{necc}}}
+\]
+However, seems unnecessary.
+
+
+I propose we introduce the following syntactic definition:
+\[
+\begin{syntax}
+\syntaxElement{c}{Internal Code Fragment}
+		{
+		\syntaxline
+				{\prg{s; return x}}
+				{\prg{s; x := y.m(z1, z2, ...)}}
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\end{syntax}
+\]
+Then, assuming we have some way of determining all internal code fragments
+(which is not trivial), we can rewrite \textsc{If1-Internal} from
+\begin{mathpar}
+\infer
+	{
+	\left[\infer{\textit{for all}\ \ C \in dom(M)\ \ \textit{and}\ \  m \in M(C).\prg{mths}, \\\\
+				\proves{M}{\onlyIfSingle
+								{A_1\ \wedge\ x : C\ \wedge\ \calls{\_}{x}{m}{\overline{z}}}
+								{A_2}
+								{A_3}}}{}\right]\\
+	\proves{M}{A_1\ \longrightarrow\ \neg A_2}\\
+	\proves{M}{\givenA{A_1}{\encaps{A_2}}}
+	}
+	{
+	M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A_3}
+	}
+	\quad(\textsc{If1-Internal})
+\end{mathpar}
+to
+\begin{mathpar}
+\infer
+	{
+	\left[\infer{\textit{for all}\ \ c \in M, \\\\
+				\proves{M}{\hoare
+								{A_1\ \wedge\ \neg A_{\textit{necc}}}
+								{c}
+								{A_2}}}{}\right]\\
+	\proves{M}{A_1\ \longrightarrow\ \neg A_2}\\
+	\proves{M}{\givenA{A_1}{\encaps{A_2}}}
+	}
+	{
+	M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A_{necc}}
+	}
+	\quad(\textsc{If1-Internal})
+\end{mathpar}
+Where I use $c \in M$ to mean that $c$ is an internal code fragment 
+in $M$. I have not defined this.
+There is still some complex stuff that needs to be thought out.
+
+
+
+
+\end{document}
