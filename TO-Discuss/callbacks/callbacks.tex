@@ -19,6 +19,9 @@
 \usepackage{courier}
 \usepackage{amssymb}
 
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
 %%% Examples of Article customizations
 % These packages are optional, depending whether you want the features they provide.
 % See the LaTeX Companion or other references for full information.
@@ -59,6 +62,7 @@
 \usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
 \renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
 \renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
+\newcommand{\dispatch}[1]{\blacktriangleright #1 \blacktriangleleft}
 
 %%% END Article customizations
 
@@ -71,298 +75,633 @@
 \begin{document}
 \maketitle
 
-\section{The Problem with Callbacks}
+\section{Unrestricted External Method Calls in \Nec}
+We need to to define Hoare logic rules for code that potentially contains calls or returns to external
+code. Specifically, we need to define Hoare logic rules for internal code that ends in either a return
+or call to external code, but is otherwise purely internal. Thus, the conclusion of our rules need to be of the following two forms:
+$$\proves{M}{\hoare{A}{s; \prg{return } x}{A'}}$$ and
+$$\proves{M}{\hoare{A}{s; \blacktriangleright x.m(\overline{y})\blacktriangleleft}{A'}}$$
+The first is self explanatory, i.e. some statements (s) followed by a return. The second introduces new
+syntax: $\blacktriangleright x.m(\overline{y}) \blacktriangleleft$. This means that the post-condition ($A'$)
+holds directly after the method call is dispatched (i.e. in the new frame created by the method call $x.m(\overline{y})$), and not after the method call has completed.
+We are not attempting to prove anything about the state of the program after some unknown 
+external computation, we are only attempting to prove properties of the program state when entering 
+external code from internal code. In fact, it is not clear that we can know much about the 
+program state upon completion of $x.m(\overline{y})$ at this low level, for that we need much 
+higher level \Nec specifications that consider the entire internal module.
 
-Currently we prohibit callbacks from internal methods. We 
-do this by assuming the internal module has been type checked
-in isolation, thus any method call to an external object
-would raise a type error. This restriction allows us to 
-say that if $\wrapped{x}$, then the only way an external object may 
-gain access to $x$ is via a call to an internal method, that returns
-$x$ as the result. We incorporate this assumtion into \Nec with the 
-following proof rule:
+\subsection{Extension to \Nec Assertions}
+Before we introduce new rules for \Nec, we must introduce a new assertion form.
+If unrestricted external method calls are allowed, we introduce counter-examples to proofs that certain methods 
+must have been called. An example is the \prg{transfer} method below, a variant on the \prg{transfer} method 
+from the bank account example in the OOPSLA 2022 paper.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+method transfer(pwd, acc, amt)
+	if this.authenticate(pwd)
+		this.logger.log(...)
+		balance -= amt
+		acc.balance += amt
+	return null
+\end{lstlisting}
+Suppose we wish to prove:
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+Strans $\triangleq$ a : Account $\wedge$ a.balance = bal
+			to a.balance < bal
+			onlyThrough _ calls a.transfer(a.password, acc, amt)
+\end{lstlisting}
+In the OOPSLA 2022 version there was no external call \prg{this.logger.log(...)}, and as a result we could prove that if the 
+balance ever decreased then execution must have passed through a program state where \prg{transfer} was called.
+This is not true in the \prg{transfer} method above as the initial program state referenced in \prg{Strans} might
+refer to an external program state that arises from \prg{this.log.logger(...)}, i.e. midway through the call to \prg{transfer},
+and not before the call to transfer. For this reason, we need a broader specification on method calls, an we introduce
+the assertion form $\called{\_}{\prg{a}}{\prg{transfer}}{\prg{a.password}, \prg{acc}, \prg{amt}}$ with the following semantics:
+\begin{itemize}
+\item
+$\satisfies{M; (\chi, \psi)}{\called{x}{y}{m}{\overline{z}}}$ iff there exists some $\phi \in \psi$ such that 
+\begin{description}
+\item[-]
+$\phi.(\prg{contn}) = (w := y'.m(\overline{z'}); s)$ for some variables $w, y', \overline{z'}$, and some statement $s$, and
+\item[-]
+$\interpret{\sigma}{x} = \interpret{\sigma}{\prg{this}}$
+\item[-]
+$\interpret{\sigma}{y} = \interpret{\sigma}{y'}$
+\item[-]
+$\interpret{\sigma}{\overline{z}} = \interpret{\sigma}{\overline{z}'}$
+\end{description}
+\end{itemize}
+
+\subsection{Extension to \Nec Proof System}
+\label{s:extension}
+Below are some proposed proof rules to extend \Nec so it is able to 
+reason about unrestricted external method calls.
+
 \begin{mathpar}
 \infer
-	{
-	\proves{M}{\hoare
-						{x : C \ \wedge\ \neg P}
-						{\prg{res} = x.m(\overline{z})}
-						{\prg{res} \neq y}}
-	}
-	{
-	\proves{M}{\onlyIfSingle{\wrapped{y}\ \wedge\ x : C \wedge\ \calls{\_}{x}{m}{\overline{z}}}{\neg \wrapped{y}}{P}}
-	}
-	\quad(\textsc{If1-Inside})
-\end{mathpar}
-Allowing callbacks would make this rule unsound, as method return is 
-not the only way that data might be exposed to the external world,
-$x$ could be exposed as an argument to an external method.
-I propose to fix this we would need to extend our conclusion 
-that we use in \textsc{If1-Inside} to the following:
-$x$ can only be exposed as either the result of a method return,
-or an argument to a method call within an internal method method.
-
-The above does not solve the problem, and would leave the 
-proof logic with a severe limitation (and potentially unsound, but I'm
-not 100\% sure on this).
-To understand the problem, let us first condsider if we allowed for 
-unrestricted callbacks. A method with unrestricted callbacks might then
-look like this:
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-method myMethod(...) {
-	// internal code (A)
-	...
-	// callback
-	y.callback(a);
-	// internal code (B)
-	...
-	// return
-	return b;
-}
-\end{lstlisting}
-We can now say that $x$ is only exposed at the end of \prg{myMethod} 
-if either $x = a$ or $x = b$, however such a scenario is difficult to integrate into
-\Nec, as \Nec relies on attributing changes in assertion validation to a single step,
-and often identifying that step with a method call. Specifically, we would like to
-say something like
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-   MySpec  $\triangleq$   from   $\wrapped{\prg{x}}$    to   $\neg$ $\wrapped{\prg{x}}$
-               onlyThrough _ calls _.myMethod(_)
-\end{lstlisting}
-\prg{MySpec} is only valid if $x$ is exposed as part of the callback \prg{y.callback(a)},
-i.e. if $x = a$ in \prg{myMethod}. It is not valid if
-$x$ is exposed as part of the return (or any subsequent callbacks), because 
-there exists a counter example where the intial state is in nested somewhere
-within the call \prg{y.callback(a)}, i.e. after \prg{myMethod} has been
-called, and \prg{inside(x)} is still valid, and the final state is after the return,
-i.e. once \prg{inside(x)} has been invalidated. In such a case, there does not exist
-an intermediate state where \prg{myMethod} was called. This problem is not 
-restricted to proofs of \prg{inside(\_)}, and exists for the invalidation 
-of any assertion that we wish to attribute to a method call.
-
-\paragraph{Effectively Callback Free:}
-Our initial proposal for an incementally better solution was to adopt the VerX 
-approach of \emph{effectively callback free} methods where callbacks are 
-only allowed at the end of methods, right before method return. While this
-restriction might work for assertions that don't include $\access{\_}{\_}$
-since all computation that might invalidate such an assertion occurs before
-the callback, I don't believe it generally works when you consider \prg{access}
-because we must still consider the return.
-We are still left with the above problem, 
-i.e. if $x$ is exposed as the return of \prg{myMethod}, then there is an external state that exists before \prg{myMethod} has finished executing, i.e. after the call to 
-\prg{myMethod}, but before $x$ has been exposed.
-
-\section{Proposed Solution}
-There are two problems presented by callbacks that we need 
-to solve: (1) an expressiveness problem, i.e. how do we change 
-the semantics of \Loo, \SpecO, and \Nec to express the properties
-we want to express in the presence of callbacks, and (2) a provability
-how do we modify \Nec Logic to allow us to prove these properties.
-
-\subsection{Expressiveness: Extending the Semantics of \Loo, \SpecO, and \Nec for Callbacks}
-I believe a solution to this problem requires either a 
-modification to the definition of external state semantics, or 
-a modification to \SpecO.
-I think that for the purposes of \Nec, \emph{effectively callback free} does not
-simplify things for us. There might be a way 
-to redefine external state semantics where we treat the callback and 
-the return as a single step, but this seems unsound. The other solution, and 
-the one I propose is to modify the definition of $\calls{\_}{\_}{\_}{\_}$ to consider
-the methods that are currently being executed. We can do this by observing the
-stack, and recording method names when they're called. This would require modifying
-both \SpecO and the operational semantics of \Loo, along with \Nec and \Nec logic.
-
-First we need to modify the operational semantics of \Loo to keep the 
-information of method calls instead of replacing the call with a hole:
-\begin{mathpar}
+	{}
+	{\proves{M}
+		{\hoare
+			{z.f = y}
+			{x := z.f}
+			{\access{x}{y}}}}
+	\quad(\textsc{Read})
+	\and
 \infer
-	{
-	\sigma_1 = (\chi, \phi_1 : \psi)\\
-	\sigma_2 = (\chi, \phi_2 : \phi_1 : \psi)\\
-	\phi_1.(\prg{contn}) = (x := y.m(\overline{z}); s)\\
-	\meth{M}{\class{\sigma_1}{x}}{m} = m(\overline{p : T})\{body\}\\
-	\phi_2 = \{\prg{local}:= ([\prg{this}\ \mapsto\ \interpret{\sigma_1}{x}]\overline{[p_i\ \mapsto\ \interpret{\sigma_1}{z_i}]}), \prg{contn}:=body\}
+	{}
+	{\proves{M}
+		{\hoare
+			{\true}
+			{x.f := y}
+			{\access{x}{y}}}}
+	\quad(\textsc{Write})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\internal{x}}
+			{s}
+			{\internal{x}}
+		}
 	}
-	{\exec{M}{\sigma_1}{\sigma_2}}
-	\quad(\textsc{Call})
+	\quad(\textsc{Internal})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\external{x}}
+			{s}
+			{\external{x}}
+		}
+	}
+	\quad(\textsc{External})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{y \neq z \wedge \neg \access{x}{y}}
+			{\return{z}}
+			{\neg \access{x}{y}}
+		}
+	}
+	\quad(\textsc{Ret-Access$_1$})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\prg{this} \neq x \wedge \access{x}{y}}
+			{\return{z}}
+			{\access{x}{y}}
+		}
+	}
+	\quad(\textsc{Ret-Access$_2$})
+	\and
+\infer
+	{}
+	{\proves{M}
+		{\hoare
+			{e}
+			{\return{z}}
+			{e}}}
+	\quad(\textsc{Ret-Exp})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{x = this}
+			{\dispatch{y.m(\overline{z})}}
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}}}
+	\quad(\textsc{Called$_I$})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}
+			{x' := y'.f}
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}}}
+	\quad(\textsc{Called-Read})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}
+			{x'.f := y'}
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}}}
+	\quad(\textsc{Called-Write})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}
+			{x' := y'.m'(\overline{z}')}
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}}}
+	\quad(\textsc{Called-Call})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}
+			{\prg{if}(e)\ s1\ \prg{else}\ s2}
+			{\called
+				{x}
+				{y}
+				{m}
+				{\overline{z}}}}}
+	\quad(\textsc{Called-If})
+	\and
+\infer
+	{}
+	{\proves{M}
+		{\hoare
+			{y \not\in \overline{z} \wedge \neg \access{x}{y}}
+			{\dispatch{z_0.m(\overline{z})}}
+			{\neg \access{x}{y}}}}
+	\quad(\textsc{Call-Access$_1$})
+	\and
+\infer
+	{}
+	{\proves{M}
+		{\hoare
+			{y \in \overline{z}}
+			{\dispatch{x.m(\overline{z})}}
+			{\access{x}{y}}}}
+	\quad(\textsc{Call-Access$_2$})
+	\and
+\infer
+	{}
+	{\proves{M}
+		{\hoare
+			{\access{x}{y}}
+			{\dispatch{z_0.m(\overline{z})}}
+			{\access{x}{y}}}}
+	\quad(\textsc{Call-Access$_3$})
+	\and
+\infer
+	{}
+	{\proves{M}
+		{\hoare
+			{e}
+			{\dispatch{z_0.m(\overline{z})}}
+			{e}}}
+	\quad(\textsc{Call-Exp})
 	\and
 \infer
 	{
-	\sigma_1 = (\chi, \phi_1 : \phi_2 : \psi) \\
-	\phi_1.(\prg{contn}) = (\prg{return}\ x; s)\ \textit{or}\ \phi_1.(\prg{contn}) = (\prg{return}\ x)\\
-	\phi_2.(\prg{contn}) = (y := z.m(\overline{w}); s)\\
-	\sigma_2 = (\chi, \phi_2[y\ \mapsto\ \interpret{\sigma_1}{x}] : \psi)
+	\proves{M}
+		{\hoare
+			{A_1 \wedge \neg A}
+			{s}
+			{\neg A_2}}
 	}
-	{\exec{M}{\sigma_1}{\sigma_2}}
+	{
+	\proves{M}
+		{\hoare
+			{A_1 \wedge \neg A}
+			{s}
+			{A_2}}
+	}
+	\quad(\textsc{Necessary})
+\end{mathpar}
+From \textsc{Ret-Access$_1$} and \textsc{Call-Access$_1$} we can prove \textsc{Ret-Inside}, \textsc{Call-Inside$_1$}, and \textsc{Call-Inside$_2$}:
+\begin{mathpar}
+\infer
 	{}
-	\quad(\textsc{Return})
+	{\proves
+		{M}
+		{\hoare
+			{x \neq y \wedge \wrapped{x}}
+			{\return{y}}
+			{\wrapped{x}}}}
+	\quad(\textsc{Ret-Inside})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{x \not\in \overline{z} \wedge \wrapped{x}}
+			{\dispatch{y.m(\overline{z})}}
+			{\wrapped{x}}}}
+	\quad(\textsc{Call-Inside$_1$})
+	\and
+\infer
+	{}
+	{\proves
+		{M}
+		{\hoare
+			{\internal{y} \wedge \wrapped{x}}
+			{\dispatch{y.m(\overline{z})}}
+			{\wrapped{x}}}}
+	\quad(\textsc{Call-Inside$_2$})
 \end{mathpar}
 
+\paragraph{Extended \Nec rules with Unrestricted External Method Calls.}
+To help define an extension to \Nec, we introduce the following definition:
+\begin{definition}[Maximally Internal Chunks]
+For a module $M$, let $S_M$ be the the set of all maximally internal code chunks within $M$.
+\end{definition}
+We introduce the following rule to \Nec to allow for unrestricted external method calls from internal code.
+\begin{mathpar}
+\infer
+	{
+	[\forall s \in S_M, 
+		\proves
+			{M}
+			{\hoare
+				{A_1 \wedge \neg A}
+				{s}
+				{\neg A_2}}] \\
+	\proves{M}{A_1 \longrightarrow A_2}\\
+	\proves{M}{\givenA{A_1}{\encaps{A}}}
+	}
+	{\onlyIfSingle{A_1}{A_2}{A}}
+	\quad(\textsc{If1-Encaps})
+\end{mathpar}
+We now remove \textsc{If1-Classical}, \textsc{If1-Inside}, and \textsc{If1-Internal} from the \Nec defined in the OOPSLA 2022 paper as
+they are derivable from the rules defined above and are redundant.
 
-Next we replace $\calls{x}{y}{m}{\overline{z}}$ with $\called{x}{y}{m}{\overline{z}}$
-with the following semantics:
-\\
-\begin{minipage}{\linewidth}
-$\satisfiesA{M}{\sigma}{\called{x}{y}{m}{z_1, \ldots, z_n}}$ \ \ \ iff \ \ \ 
+
+
+\section{Specifying Unrestricted External Method Calls}
+
+Our proposed strategy for introducing unrestricted external method calls (and thus potential re-entrant code)
+is to specify all ``\emph{maximally internal blocks}''. Consider the following variant of the \prg{Bank Account}
+example:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module Bank
+	class Password
+	class Account
+		field balance : int
+		field password : Password
+		method pay(pwd, acc, amt)
+			if this.authenticate(pwd)
+				balance -= amt
+				acc.send(amt)
+			return null
+		method setPassword(pwd, newPwd)
+			if this.authenticate(pwd)
+				this.password = pwd
+			return null
+		method authenticate(pwd)
+			return this.password == pwd
+\end{lstlisting}
+Here an \prg{Account} object has a \prg{pay} method that includes the external method call \prg{acc.send(amt)}.
+The \emph{maximally internal blocks} of \prg{pay} in the above example are:
+\begin{lstlisting}[language = Chainmail, frame = lines]
+if this.authenticate(pwd)
+	balance -= amt
+	acc.send(amt)
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, frame = lines]
+return null
+\end{lstlisting}
+\prg{setPassword} and \prg{authenticate} contain no external method calls, and thus the method bodies are maximally internal.
+Suppose we wish to prove that \prg{Bank} satisfies the following specification:
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+Sbank $\triangleq$ a : Account $\wedge$ a.balance = bal
+			to a.balance < bal
+			onlyIf $\neg$inside(a.password)
+\end{lstlisting}
+Our proof broadly follows 5 steps:
 \begin{enumerate}
 \item
-$\phi.\prg{contn} = (w := y'.m(z'_1,\ldots,z'_n); s)$,\ \ for some 
-frame $\phi \in \sigma$,
-some variable $w$, and some statement $s$,
+\label{A}
+Proof that a decrease in balance requires either a call to \prg{pay}, or for \prg{pay} to be executed at some intermediate point 
 \item
-$\sigma.\prg{local}(\prg{x}) = \phi.\prg{local}(\prg{this})$
-\ \ and \ \ 
-$\sigma.\prg{local}(\prg{y}) = \phi.\prg{local}(\prg{y'})$,
+Proof that for \prg{pay} to be executing requires that some external object has access to \prg{a.password}, i.e. that $\neg\wrapped{\prg{a.password}}$
 \item
-$\sigma.\prg{local}(\prg{z}_i) = \phi.\prg{local}(\prg{z'}_i)$\ \ \ for all $1\!\leq i\!\leq n$
+\label{B}
+Proof that if $\neg\wrapped{\prg{a.password}}$ is true at some intermediate point, then either $\neg\wrapped{\prg{a.password}}$ was true at the start,
+or $\wrapped{\prg{a.password}}$ was true, and some external object gained access to \prg{a.password}
+\item
+\label{C}
+Proof that it is not possible for external objects to gain access to \prg{a.password} if $\wrapped{\prg{a.password}}$ is true.
+\item
+Therefore, by \ref{B} and \ref{C} we have the desired result.
 \end{enumerate}
-\end{minipage}\\
-Thus, $\called{x}{y}{m}{\overline{z}}$ is satisfied by program state
-$\sigma$ if either $y.m(\overline{z})$ is about to be called by $x$,
-or it has already been called, and the program is in the middle of 
-executing $m$. Using this definition, our previous specification would
-be valid:
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-   MySpec  $\triangleq$   from   $\wrapped{\prg{x}}$    to   $\neg$ $\wrapped{\prg{x}}$
-               onlyThrough _ called _.myMethod(_)
+Much of the details of the above proof follows that of the OOPSLA 2022 paper, however the two proofs differ in the way proofs about internal 
+computation are constructed as the new version includes a call to external code in \prg{pay}, i.e. \ref{A} and \ref{C} above.
+
+
+\subsection{Proof of Step \ref{A}}
+\label{ss:stepA}
+To prove step \ref{A} we need to prove that for all maximally internal chunks $s$ we have
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+PayDecrBal $\triangleq$
+	{a : Account $\wedge$ a.balance = bal $\wedge$ $\neg$ _ calls a.pay(a.password, _, _)
+	$s$
+	{a.balance $\geq$ bal}
 \end{lstlisting}
-It remains to show that this is both sound, and does not lose 
-us expressiveness that we want, and then to define new rules for 
-\Nec that include $\called{x}{y}{m}{\overline{z}}$. Another option would be to 
-include both $\calls{x}{y}{m}{\overline{z}}$ and $\called{x}{y}{m}{\overline{z}}$,
-and have the later only refer to calls made in the past.
+There are 5 maximally internal chunks to \prg{Bank}:
+\begin{enumerate}
+\item
+\label{chunk:pay:correctPwd1}
+The branch of \prg{pay} where the password is correct
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+	if this.authenticate(pwd) // pwd == a'.password
+		balance -= amt
+		$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+\end{lstlisting}
+\item
+\label{chunk:pay:correctPwd2}
+The remaining statements after the return of \prg{send}  in the \prg{pay} method
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+return null // the remaining statements after the call to send
+\end{lstlisting}
+\item
+\label{chunk:pay:incorrectPwd}
+The branch of \prg{pay} where the password is not correct
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+	if this.authenticate(pwd) // pwd != a'.password i.e. we skip the if statement
+		balance -= amt
+		acc.send(amt)
+	return null
+\end{lstlisting}
+\item
+\label{chunk:authenticate}
+The body of authenticate
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+$\blacktriangleright$a'.authenticate(pwd)$\blacktriangleleft$
+	return this.password == pwd
+\end{lstlisting}
+\item
+\label{chunk:setPassword}
+The body of \prg{setPassword}
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+$\blacktriangleright$a'.setPassword(pwd, newPwd)$\blacktriangleleft$
+	if this.authenticate(pwd)
+		this.pwd = newPwd
+	return null
+\end{lstlisting}
+\end{enumerate}
+We can prove \prg{PayDecrBal} for all these chunks. It is trivially satisfied by \ref{chunk:pay:correctPwd1}, \ref{chunk:pay:correctPwd2}, 
+and \ref{chunk:pay:incorrectPwd} because $\neg\called{\_}{\prg{a}}{\prg{called}}{\prg{a.password, \_, \_}}$ is not true, and thus 
+the precondition does not hold, and it is satisfied by \ref{chunk:authenticate} and \ref{chunk:setPassword} because they do not modify 
+\prg{a.balance}. To construct these proofs, we use the rules defined in \S \ref{s:extension}. We start by proving that the correct account
+and password are necessary to decrease the balance:
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+{a : Account $\wedge$ a.balance = bal $\wedge$ (a' $\neq$ a $\vee$ pwd $\neq$ a.password)}
+	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+		if this.authenticate(pwd) // pwd == a'.password
+			balance -= amt
+			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+{a.balance $\geq$ bal}
+\end{lstlisting}
+To construct this proof, we consider both branches of the proof independently. Thus
+by (\textsc{Call-Exp}) and consequence we get:
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
+\end{lstlisting}
+by consequence and composition we get:
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+		if this.authenticate(pwd) // pwd == a'.password
+{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
+\end{lstlisting}
+by consequence and composition we get:
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+		if this.authenticate(pwd) // pwd == a'.password
+			balance -= amt
+{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
+\end{lstlisting}
+by consequence and composition we get:
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+		if this.authenticate(pwd) // pwd == a'.password
+			balance -= amt
+			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+{a.balance $\geq$ bal}
+\end{lstlisting}
+Using the same approach we prove:
+\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+{a : Account $\wedge$ a.balance = bal $\wedge$ pwd $\neq$ a.password}
+	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+		if this.authenticate(pwd) // pwd == a'.password
+			balance -= amt
+			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+{a.balance $\geq$ bal}
+\end{lstlisting}
 
+\subsection{Proof of Step \ref{C}}
+The proof of step \ref{C} follows much the same structure as the proof of step \ref{A}. For all maximally internal chunks, we are interested 
+in proving the following specification holds:
+\subsection{Proof of Step \ref{A}}
+To prove step \ref{A} we need to prove that for all maximally internal chunks $s$ we have
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+PwdLeak $\triangleq$
+	{a : Account $\wedge$ inside(a.password)}
+	$s$
+	{inside(a.password)}
+\end{lstlisting}
+Again, we refer to the maximally internal code chunks referred to in \S \ref{ss:stepA}.
+Specifically, none of the code chunks grant access to \prg{a.password}.
+ 
+\section{External Method Call Examples}
+\subsection{Call to External, Untrusted Code, Effectively Call-back Free}
+\label{s:ex1}
+In the example below, the \prg{pay} method makes an external method call \prg{send} to the unknown object \prg{acc}
+after to decreasing the \prg{balance} by \prg{amt}. This is \emph{effectively callback free} as the external method 
+call occurs at the end of the method, and thus \prg{acc.send(amt)} has no effect on the behaviour of \prg{pay}.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module Bank
+	class Password
+	class Account
+		field balance : int
+		field password : Password
+		method pay(pwd, acc, amt)
+			if this.authenticate(pwd)
+				balance -= amt
+				acc.send(amt)
+			return null
+		method setPassword(pwd, newPwd)
+			if this.authenticate(pwd)
+				this.password = pwd
+			return null
+		method authenticate(pwd)
+			return this.password == pwd
+\end{lstlisting}
 
-\subsection{Provability: Extending \Nec Logic for Callbacks}
-I think we can incorporate general callbacks into \Nec logic
-by generalizing the approach we currently take. At the moment,
-our reasoning is the following:
-\begin{quotation}
-If all possible internal computation has the same 
-necessary pre-condition to invalidate an assertion,
-then it follows that that pre-condition is necessary
-in general if the invalidated assertion is encapsulated.
-\end{quotation}
-In our current version of \Nec, all internal computation 
-begins with a method call, and ends with a return from that
-method. If we add unrestricted callbacks, internal computation
-starts with either a method call or a method return, and ends with
-either a method call or a method return. Note, from now on, 
-I will use \emph{internal code fragment} to refer to such pieces
-of internal code, i.e. code that represents only internal computation
-where the preceeding state and the succeeding states are both external. 
-When we prohibited
-callbacks, our logic was simpler, as it relied only on pre- and
-post-conditions of internal functions. With callbacks, we need
-to rely on pre- and post-conditions on fragments of function bodies.
-One of the advantages of only relying on specifications of entire
-functions was that we could leverage the $\onlyIfSingle{A_{\textit{init}}}{A_{\textit{end}}}{A_{\textit{necc}}}$ form to capture necessary 
-pre-conditions to individual functions. Thus our per-method 
-necessary pre-conditions currently encodes the Hoare triple:
-\[
-\hoare{A_{\textit{init}} \wedge \neg A_{\textit{necc}}}{\prg{res} := x.m(\overline{z})}{\neg A_{\textit{end}}}
-\]
-as this single step necessary pre-condition
-\[
-\onlyIfSingle{A_{\textit{init}} \wedge \calls{\_}{x}{m}{\overline{z}} \wedge x : C}{A_{\textit{end}}}{A_{\textit{necc}}}
-\]
-Unfortunately we don't have any way to identify internal computation 
-that begins with a method return from a callback. I think there are 
-two ways to solve this, either we introduce a way to identify those
-code locations, or we generalize our approach from whole methods to 
-any internal code fragment. If we allow for unrestricted callbacks,
-internal code fragments will have two forms:
-\begin{mathpar}
-\infer
-	{}{\prg{s; return x}}
-	\and
-\infer
-	{}{\prg{s; x := y.m(z1, ...)}}
-\end{mathpar}
-Encoding necessary preconditions for the above fragments as a Hoare triple
-would then look like this:
-\begin{mathpar}
-\infer
-	{
-	\hoare{A_{\textit{init}} \wedge \neg A_{\textit{necc}}}
-			{\prg{s; return x}}
-			{\neg A_{\textit{end}}}
-	}
-	{}
-	\and
-\infer
-	{
-	\hoare{A_{\textit{init}} \wedge \neg A_{\textit{necc}}}
-			{\prg{s; x := y.m(z1, ...)}}
-			{\neg A_{\textit{end}}}
-	}
-	{}
-\end{mathpar}
-Note, the above two forms for internal code fragments have 
-an important and obvious difference that we need to account for:
-how they expose data to the external world differently. The first exposes 
-\prg{x} by returning it to some external object, the second
-exposes \prg{z1, z2, ...} by giving them as arguments to 
-some external method.
-We might decide to provide a specialized form for these necessary
-preconditions such as:
-\[
-\onlyIfS{A_{\textit{init}}}{A_{\textit{end}}}{s; \prg{return}\ x}{A_{\textit{necc}}}
-\]
-However, seems unnecessary.
+\subsection{Call to External, Untrusted Code, with a potential for Re-entrancy Attack}
+The example below is a variant of the example in \S \ref{s:ex1}, where the call \prg{acc.send(amt)}
+occurs before the \prg{balance} is decreased, and thus the account can be exploited by \prg{acc}
+using re-entrant calls to \prg{pay} to send more money than is due.
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module Bank
+	class Password
+	class Account
+		field balance : int
+		field password : Password
+		method pay(pwd, acc, amt)
+			if this.authenticate(pwd)
+				acc.send(amt)
+				balance -= amt
+			return null
+		method setPassword(pwd, newPwd)
+			if this.authenticate(pwd)
+				this.password = pwd
+			return null
+		method authenticate(pwd)
+			return this.password == pwd
+\end{lstlisting}
 
+\subsection{Call to External Code, Nested Within an Internal Call}
+The example below includes a \prg{Logger} as a field to \prg{Account}. \prg{Logger}
+is externally defined and untrusted. During payment, we pass to logger the amount being paid, 
+and the receiver.
+\begin{lstlisting}[language = Chainmail, frame = lines]
+module Logging
+  class Logger
+  	field logFile : Out
+  	method log(s : String)
+  		logFile.append(s)
+module Bank
+	import Logging
+	class Password
+	class Account
+		field balance : int
+		field password : Password
+		field logger : Logger
+		method pay(pwd, acc, amt)
+			if this.authenticate(pwd)
+				balance -= amt
+				logger.log(''${} paid to {}'', amt, acc)
+				acc.send(amt)
+				return null
+			logger.log(''Authentication Failed.'')
+			return null
+		method setPassword(pwd, newPwd)
+			if this.authenticate(pwd)
+				this.password = pwd
+		method authenticate(pwd)
+			logger.log(``Authenticating'')
+			return this.password == pwd
+\end{lstlisting}
 
-I propose we introduce the following syntactic definition:
-\[
-\begin{syntax}
-\syntaxElement{c}{Internal Code Fragment}
-		{
-		\syntaxline
-				{\prg{s; return x}}
-				{\prg{s; x := y.m(z1, z2, ...)}}
-		\endsyntaxline
-		}
-\endSyntaxElement\\
-\end{syntax}
-\]
-Then, assuming we have some way of determining all internal code fragments
-(which is not trivial), we can rewrite \textsc{If1-Internal} from
-\begin{mathpar}
-\infer
-	{
-	\left[\infer{\textit{for all}\ \ C \in dom(M)\ \ \textit{and}\ \  m \in M(C).\prg{mths}, \\\\
-				\proves{M}{\onlyIfSingle
-								{A_1\ \wedge\ x : C\ \wedge\ \calls{\_}{x}{m}{\overline{z}}}
-								{A_2}
-								{A_3}}}{}\right]\\
-	\proves{M}{A_1\ \longrightarrow\ \neg A_2}\\
-	\proves{M}{\givenA{A_1}{\encaps{A_2}}}
-	}
-	{
-	M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A_3}
-	}
-	\quad(\textsc{If1-Internal})
-\end{mathpar}
-to
-\begin{mathpar}
-\infer
-	{
-	\left[\infer{\textit{for all}\ \ c \in M, \\\\
-				\proves{M}{\hoare
-								{A_1\ \wedge\ \neg A_{\textit{necc}}}
-								{c}
-								{A_2}}}{}\right]\\
-	\proves{M}{A_1\ \longrightarrow\ \neg A_2}\\
-	\proves{M}{\givenA{A_1}{\encaps{A_2}}}
-	}
-	{
-	M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A_{necc}}
-	}
-	\quad(\textsc{If1-Internal})
-\end{mathpar}
-Where I use $c \in M$ to mean that $c$ is an internal code fragment 
-in $M$. I have not defined this.
-There is still some complex stuff that needs to be thought out.
+\subsection{Call to External, Trusted Code}
+
+\begin{lstlisting}[language = Chainmail, frame = lines]
+module Logging
+  class Logger
+  	field logFile : Out
+  	method log(s : String)
+  		logFile.append(s)
+module Bank
+	import Logging
+	class Password
+	class Account
+		field balance : int
+		field password : Password
+		field logger : Logger
+		method pay(pwd, acc, amt)
+			if this.authenticate(pwd)
+				balance -= amt
+				logger.log(''${} paid to {}'', amt, acc)
+				acc.send(amt)
+				return null
+			logger.log(''Authentication Failed.'')
+			return null
+		method setPassword(pwd, newPwd)
+			if this.authenticate(pwd)
+				this.password = pwd
+		method authenticate(pwd)
+			return this.password == pwd
+\end{lstlisting}
 
 
 
