@@ -76,6 +76,227 @@
 \maketitle
 
 \section{Unrestricted External Method Calls in \Nec}
+
+In order to extend \Nec with logic for external method calls, we aim to generalize 
+the \Nec of OOPSLA `22. Specifically, \Nec in OOPSLA `22 uses traditional Hoare triples to encode 
+per-function necessity specifications. This took the form of the following rules:
+\begin{mathpar}
+\infer
+	{\proves
+		{M}
+		{\hoare
+			{x : C \wedge \neg A}
+			{\prg{res}:=x.m(\overline{y})}
+			{\neg P}}}
+	{\proves
+		{M}
+		{\onlyIfSingle
+			{x : C \wedge \calls{\_}{x}{m}{\overline{y}}}
+			{P}
+			{A}}}
+	\quad(\textsc{If1-Classic})
+	\and
+\infer
+	{\proves
+		{M}
+		{\hoare
+			{x : C \wedge \neg A}
+			{\prg{res}:=x.m(\overline{y})}
+			{\prg{res} \neq z}}}
+	{\proves
+		{M}
+		{\onlyIfSingle
+			{x : C \wedge \calls{\_}{x}{m}{\overline{y}} \wedge \wrapped{z}}
+			{\neg \wrapped{z}}
+			{A}}}
+	\quad(\textsc{If1-Inside})
+	\and
+\infer
+	{
+	\left[\infer{\textit{for all}\ \ C \in dom(M)\ \ \textit{and}\ \  m \in M(C).\prg{mths}, \\\\
+				[\proves{M}{\onlyIfSingle
+								{A_1\ \wedge\ x : C\ \wedge\ \calls{\_}{x}{m}{\overline{z}}}
+								{A_2}
+								{A_3}}]}{}\right]\\
+	\proves{M}{A_1\ \longrightarrow\ \neg A_2}\\
+	\proves{M}{\givenA{A_1}{\encaps{A_2}}}
+	}
+	{
+	M\ \vdash\ \onlyIfSingle{A_1}{A_2}{A_3}
+	}
+	\quad(\textsc{If1-Internal})
+\end{mathpar}
+All interactions between external and internal code in OOPSLA `22 take the form:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+...            // some external code
+i.m(...)       // where i is internal
+...            // some external code
+\end{lstlisting}
+That is, every interaction between external and internal code consists of 
+{
+\newcommand{\callHL}{{\textbf{\color{red}{call}}}\xspace}
+\newcommand{\returnHL}{{\textbf{\color{blue}{return}}}\xspace}
+\begin{description}
+\item[$\rightarrow$]
+\callHL from external to internal code 
+\item[$\rightarrow$]
+internal computation
+\item[$\rightarrow$]
+\returnHL from internal to external code
+\end{description}
+When we allow for external calls, interactions between external and internal code 
+can take one of the four following forms:
+\begin{enumerate}
+\item
+	\begin{description}
+	\item[$\rightarrow$]
+	\callHL from external to internal code 
+	\item[$\rightarrow$]
+	internal computation
+	\item[$\rightarrow$]
+	\returnHL from internal to external code
+	\end{description}
+\item
+	\begin{description}
+	\item[$\rightarrow$]
+	\callHL from external to internal code 
+	\item[$\rightarrow$]
+	internal computation
+	\item[$\rightarrow$]
+	\callHL from internal to external code
+	\end{description}
+\item
+	\begin{description}
+	\item[$\rightarrow$]
+	\returnHL from external to internal code 
+	\item[$\rightarrow$]
+	internal computation
+	\item[$\rightarrow$]
+	\returnHL from internal to external code
+	\end{description}
+\item
+	\begin{description}
+	\item[$\rightarrow$]
+	\returnHL from external to internal code 
+	\item[$\rightarrow$]
+	internal computation
+	\item[$\rightarrow$]
+	\callHL from internal to external code
+	\end{description}
+\end{enumerate}}
+Therefore, to generalize the solution of OOPSLA `22, specifications 
+on internal methods are not sufficient to encode necessary pre-conditions
+because we are not interested necessarily in the effects of entire
+methods, rather we are interested in the effects of the internal computation
+that is book ended by external control. Instead, we rather specify 
+those maximal chunks of internal code (which used to be methods, but are 
+now portions of methods). Since we are not interested in specifying 
+entire methods (unless they do not contain any external method calls),
+then we are not interested in specifying the effects of external code,
+only the necessary conditions required to induce internal code to 
+achieve specific effects.
+
+Consider the following simple example:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module IntMod
+	method internalMethod (ext : ...)
+		someStmts
+		ext.unknown(...)
+		moreStmts
+		return x
+\end{lstlisting}
+This example consists of 2 of the 4 interactions detailed above:
+a \textbf{\red{call}}/\textbf{\red{call}} and a \textbf{\blue{return}}/\textbf{\blue{return}}
+We wish to specify some necessary preconditions on the internal 
+module \prg{IntMod}. In OOPSLA `22, we would start by proving 
+necessary preconditions on the entire method \prg{internalMethod}
+(assuming no external method calls). To address the external method
+call \prg{ext.unknown(...)}, we need to instead prove necessary 
+preconditions on the two maximally internal chunks: \prg{someStmts} and \prg{moreStmts}.
+To do this, we might imagine annotating our code with some assertions/assumptions:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module IntMod
+	{pre: $\neg$ A$_1$}      // (1)
+	method internalMethod (ext : ...)
+		someStmts
+		assert($\neg$ A$_2$) // (2)
+		ext.unknown(...)
+		assume($\neg$ A$_1$) // (3)
+		moreStmts
+		return x
+	{post: $\neg$ A$_2$}     // (4)
+\end{lstlisting}
+That is, if we can prove that calling \prg{internalMethod} in a state
+satisfying $\neg A_1$ (1), means that $\neg A_2$ is provable
+at (2), and that if assuming $\neg A_1$ at (3) means $\neg A_2$ is provable
+at (4), then it follows that for any individual interaction between
+external and internal code, $A_1$ is a necessary precondition for achieving $A_2$.
+I should mention here that this is true, but only with a slight modification. 
+(2) is not actually the position where $\neg A_2$ must be proven true, it is actually
+in the very first state following the dispatch of the call \prg{ext.unknown(...)}. This 
+is similar to the fact that the post condition must hold in the program state 
+directly following the method return, and not the program state directly preceding it.
+(Julian: this probably is also true for the position of (3), i.e. it should rather hold
+directly before the return from \prg{ext.unknown(...)}, but I'm not sure if it makes a
+difference.)
+
+A more practical example would be the following:
+\begin{lstlisting}[language = Chainmail, frame = lines]
+module Logging
+  class Logger
+  	field logFile : Out
+  	method log(s : String)
+  		logFile.append(s)
+module Bank
+	import Logging
+	class Password
+	class Account
+		field balance : int
+		field password : Password
+		field logger : Logger
+		method pay(pwd, to)
+			if this.authenticate(pwd)
+				balance -= amt
+				to.balance += amt
+				return null
+			return null
+		method setPassword(pwd, newPwd)
+			if this.authenticate(pwd)
+				this.password = pwd
+		method authenticate(pwd)
+			logger.log(``Authenticating'')
+			return this.password == pwd
+\end{lstlisting}
+The above example is a variant of our running banking example
+where the authenticate method includes an external call to 
+\prg{logger.log}. As part of a larger proof of some \Nec spec on \prg{Bank}
+we might want to prove that the maximally internal code chunks 
+of \prg{authenticate} do not modify the balance. There are two 
+maximally internal code chunks: (1) the empty statements preceding 
+\prg{logger.log(``Authenticating'')}, and (2) the return statement
+following the call. Following the earlier method, we annotate 
+\prg{authenticate}:
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+{PRE: a : Account $\wedge$ a.balance = bal}                // (1)
+method authenticate(pwd)
+	assert(a.balance = bal)                     // (2)
+	logger.log(``Authenticating'')
+	assume(a' : Account $\wedge$ a'.balance = bal') // (3)
+	return this.password == pwd
+{POST: a'.balance = bal'}                    // (4)
+\end{lstlisting}
+These are clearly provable as there are no heap modifications between
+(1) and (2), and (3) and (4). Note: we use different variable names (\prg{a} 
+and \prg{a'}) so there is no confusion between the two distinct 
+specifications. We are not attempting to prove that \prg{authenticate}
+as a whole does not modify the balance of an account, only that the chunks 
+do not. In fact it would not be possible to prove that \prg{authenticate}
+as a whole does not modify the balance without knowing what \prg{log} does.
+For instance, \prg{log} may call \prg{pay}.
+
+
+\section{Extending a Standard Hoare Logic with Control, Provenance, and Permision Operators for \Nec}
+
 We need to to define Hoare logic rules for code that potentially contains calls or returns to external
 code. Specifically, we need to define Hoare logic rules for internal code that ends in either a return
 or call to external code, but is otherwise purely internal. Thus, the conclusion of our rules need to be of the following two forms:
