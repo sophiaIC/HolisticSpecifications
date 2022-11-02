@@ -629,6 +629,94 @@ We introduce the following rule to \Nec to allow for unrestricted external metho
 We now remove \textsc{If1-Classical}, \textsc{If1-Inside}, and \textsc{If1-Internal} from the \Nec defined in the OOPSLA 2022 paper as
 they are derivable from the rules defined above and are redundant.
 
+\section{Sophia's Password Rewrite Example}
+Sophia suggested the following counter example:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module BadBank
+	class Password
+	class Account                            // bad
+		field password : Password
+		method hide(ext : Object)
+			p := new Password
+			ext.call(p)
+			this.password := p
+			return null
+\end{lstlisting}
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module GoodBank
+	class Password
+	class Account                           // good
+		field password : Password
+		method hide(ext : Object)
+			p := new Password
+			p' := new Password
+			ext.call(p)
+			this.pwd := p'
+			return null
+\end{lstlisting}
+Is it possible to write a necessity spec that rejects \prg{BadBank}, and accepts \prg{GoodBank}? The following spec would hopefully do that:
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+SLeak $\triangleq$ a : Account $\wedge$ $\neg$ <x access a.password>
+			next <x access a.password>
+			onlyIf false
+\end{lstlisting}
+To prove this, we need to use \textsc{If1-Encaps}, and look at all of the internal code chunks. 
+In both cases, there are 2 maximally internal code chunks:
+\begin{description} 
+\item[1] the one beginning with the call to \prg{hide}, and ending at the call to \prg{ext.call(p)},
+\item[2] the one beginning with the return from \prg{ext.call(p)}, and ending with the return from \prg{hide}
+\end{description}
+In \textsc{If1-Encaps}, we need to prove that all maximally internal code chunks adhere to the same neccessary preconditions, specifically:
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+SChunkLeak $\triangleq$ {a : Account $\wedge$ $\neg$ <x access a.password> $\wedge$ $\neg$ (false)}
+				s
+	    	  {$\neg$ <x access a.password>}
+\end{lstlisting}
+We are not able to use the Hoare logic extension in \S \ref{s:extension} to do this. The problem is
+that we don't have anyway of reasoning about the access gained across \prg{ext.call(p)}. To 
+help illustrate the problem, we would be able to prove that the following adhered to our spec:
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module GoodBank2
+	class Password
+	class Account                           // good
+		field password : Password
+		method hide(ext : Object)
+			p := new Password
+			ext.call(p)
+			p' := new Password
+			this.pwd := p'
+			return null
+\end{lstlisting}
+Julian: I think there are 2 ways to approach this:
+\begin{enumerate}
+\item
+design rules that take into account transitive accessibility to construct a restricted heap, and use those to reason about
+what access can but more importantly, cannot be gained via an external call.
+\item
+write a more conservative rule that only reasons that objects that are only accessible in the current local variable map (and not as a field)
+cannot be leaked in an external method call.
+\end{enumerate}
+The second of the two is probably easier to write:
+\begin{mathpar}
+\infer
+	{
+	\forall o\ f,\proves{M}{o.f \neq y} \\
+	\forall z \in \overline{z}, \proves{M}{z \neq y} \\
+	\proves{M}{\prg{ext} \neq y}
+	}
+	{\proves{M}
+			{\hoare
+				{\neg \access{x}{y}}
+				{\prg{ext.call($\overline{z}$)}}
+				{\neg \access{x}{y}}}}
+\end{mathpar}
+This does not however allow us to reason about more complex use cases, i.e. where we store the
+new password as a field of an inaccessible object. Even the first option is perhaps too conservative, specifically, 
+what if \prg{ext} has transitive access to the password (perhaps via the current account), 
+but that object is secure (as we want to prove our account), then we are not able to prove that 
+\prg{ext.call(p)} is still safe.
+
+
 
 
 \section{Specifying Unrestricted External Method Calls}
