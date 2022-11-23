@@ -62,7 +62,8 @@
 \usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
 \renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
 \renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
-\newcommand{\dispatch}[1]{\blacktriangleright #1 \blacktriangleleft}
+\newcommand{\onCall}[1]{\blacktriangleright #1}
+\newcommand{\onReturn}[1]{#1 \blacktriangleleft}
 
 %%% END Article customizations
 
@@ -358,13 +359,42 @@ reason about unrestricted external method calls.
 
 \begin{mathpar}
 \infer
+	{
+	\proves{M}
+		{\hoare
+			{A_1}
+			{s}
+			{A_2}} \\
+	\proves{M}
+		{\hoare
+			{A_2}
+			{s'}
+			{A_3}}
+	}
+	{\proves{M}
+		{\hoare
+			{A_1}
+			{s;s'}
+			{A_2}}}
+	\quad(\textsc{Composition})
+	\and
+\infer
 	{}
 	{\proves{M}
 		{\hoare
 			{z.f = y}
 			{x := z.f}
 			{\access{x}{y}}}}
-	\quad(\textsc{Read})
+	\quad(\textsc{Read$_1$})
+	\and
+\infer
+	{}
+	{\proves{M}
+		{\hoare
+			{(z.f \neq y \vee x \neq w) \wedge \neg \access{w}{y}}
+			{x := z.f}
+			{\neg\access{w}{y}}}}
+	\quad(\textsc{Read$_2$})
 	\and
 \infer
 	{}
@@ -373,7 +403,16 @@ reason about unrestricted external method calls.
 			{\true}
 			{x.f := y}
 			{\access{x}{y}}}}
-	\quad(\textsc{Write})
+	\quad(\textsc{Write$_1$})
+	\and
+\infer
+	{}
+	{\proves{M}
+		{\hoare
+			{(z \neq y \vee x \neq w) \wedge \neg \access{w}{z}}
+			{x.f := y}
+			{\neg\access{w}{z}}}}
+	\quad(\textsc{Write$_2$})
 	\and
 \infer
 	{}
@@ -405,7 +444,7 @@ reason about unrestricted external method calls.
 		{M}
 		{\hoare
 			{y \neq z \wedge \neg \access{x}{y}}
-			{\return{z}}
+			{\onReturn{\return{z}}}
 			{\neg \access{x}{y}}
 		}
 	}
@@ -417,7 +456,7 @@ reason about unrestricted external method calls.
 		{M}
 		{\hoare
 			{\prg{this} \neq x \wedge \access{x}{y}}
-			{\return{z}}
+			{\onReturn{\return{z}}}
 			{\access{x}{y}}
 		}
 	}
@@ -428,7 +467,7 @@ reason about unrestricted external method calls.
 	{\proves{M}
 		{\hoare
 			{e}
-			{\return{z}}
+			{\onReturn{\return{z}}}
 			{e}}}
 	\quad(\textsc{Ret-Exp})
 	\and
@@ -438,7 +477,7 @@ reason about unrestricted external method calls.
 		{M}
 		{\hoare
 			{x = this}
-			{\dispatch{y.m(\overline{z})}}
+			{\onCall{y.m(\overline{z})}}
 			{\called
 				{x}
 				{y}
@@ -519,11 +558,38 @@ reason about unrestricted external method calls.
 	\quad(\textsc{Called-If})
 	\and
 \infer
+	{
+	\proves
+		{M}
+		{
+		\hoare
+			{A_1 \wedge e}
+			{s1}
+			{A_2}
+		} \\
+	\proves
+		{M}
+		{
+		\hoare
+			{A_1 \wedge \neg e}
+			{s2}
+			{A_2}
+		}
+	}
+	{\proves
+		{M}
+		{\hoare
+			{A_1}
+			{\prg{if}(e)\ s1\ \prg{else}\ s2}
+			{A_2}}}
+	\quad(\textsc{If})
+	\and
+\infer
 	{}
 	{\proves{M}
 		{\hoare
 			{y \not\in \overline{z} \wedge \neg \access{x}{y}}
-			{\dispatch{z_0.m(\overline{z})}}
+			{\onCall{z_0.m(\overline{z})}}
 			{\neg \access{x}{y}}}}
 	\quad(\textsc{Call-Access$_1$})
 	\and
@@ -532,7 +598,7 @@ reason about unrestricted external method calls.
 	{\proves{M}
 		{\hoare
 			{y \in \overline{z}}
-			{\dispatch{x.m(\overline{z})}}
+			{\onCall{x.m(\overline{z})}}
 			{\access{x}{y}}}}
 	\quad(\textsc{Call-Access$_2$})
 	\and
@@ -541,7 +607,7 @@ reason about unrestricted external method calls.
 	{\proves{M}
 		{\hoare
 			{\access{x}{y}}
-			{\dispatch{z_0.m(\overline{z})}}
+			{\onCall{z_0.m(\overline{z})}}
 			{\access{x}{y}}}}
 	\quad(\textsc{Call-Access$_3$})
 	\and
@@ -550,26 +616,26 @@ reason about unrestricted external method calls.
 	{\proves{M}
 		{\hoare
 			{e}
-			{\dispatch{z_0.m(\overline{z})}}
+			{\onCall{z_0.m(\overline{z})}}
 			{e}}}
 	\quad(\textsc{Call-Exp})
-	\and
-\infer
-	{
-	\proves{M}
-		{\hoare
-			{A_1 \wedge \neg A}
-			{s}
-			{\neg A_2}}
-	}
-	{
-	\proves{M}
-		{\hoare
-			{A_1 \wedge \neg A}
-			{s}
-			{A_2}}
-	}
-	\quad(\textsc{Necessary})
+%	\and
+%\infer
+%	{
+%	\proves{M}
+%		{\hoare
+%			{A_1 \wedge \neg A}
+%			{s}
+%			{\neg A_2}}
+%	}
+%	{
+%	\proves{M}
+%		{\hoare
+%			{A_1 \wedge \neg A}
+%			{s}
+%			{A_2}}
+%	}
+%	\quad(\textsc{Necessary})
 \end{mathpar}
 From \textsc{Ret-Access$_1$} and \textsc{Call-Access$_1$} we can prove \textsc{Ret-Inside}, \textsc{Call-Inside$_1$}, and \textsc{Call-Inside$_2$}:
 \begin{mathpar}
@@ -589,7 +655,7 @@ From \textsc{Ret-Access$_1$} and \textsc{Call-Access$_1$} we can prove \textsc{R
 		{M}
 		{\hoare
 			{x \not\in \overline{z} \wedge \wrapped{x}}
-			{\dispatch{y.m(\overline{z})}}
+			{\onCall{y.m(\overline{z})}}
 			{\wrapped{x}}}}
 	\quad(\textsc{Call-Inside$_1$})
 	\and
@@ -599,9 +665,19 @@ From \textsc{Ret-Access$_1$} and \textsc{Call-Access$_1$} we can prove \textsc{R
 		{M}
 		{\hoare
 			{\internal{y} \wedge \wrapped{x}}
-			{\dispatch{y.m(\overline{z})}}
+			{\onCall{y.m(\overline{z})}}
 			{\wrapped{x}}}}
 	\quad(\textsc{Call-Inside$_2$})
+%	\and
+%\infer
+%	{}
+%	{\proves
+%		{M}
+%		{\hoare
+%			{\wrapped{x}}
+%			{\onReturn{y.m(\overline{z})}}
+%			{\wrapped{x}}}}
+%	\quad(\textsc{Call-Inside$_3$})
 \end{mathpar}
 
 \paragraph{Extended \Nec rules with Unrestricted External Method Calls.}
@@ -725,181 +801,198 @@ Our proposed strategy for introducing unrestricted external method calls (and th
 is to specify all ``\emph{maximally internal blocks}''. Consider the following variant of the \prg{Bank Account}
 example:
 \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module Logging
+  class Logger
+  	field logFile : Out
+  	method log(s : String)
+  		logFile.append(s)
 module Bank
 	class Password
 	class Account
+		field logger : Logger
 		field balance : int
 		field password : Password
-		method pay(pwd, acc, amt)
+		method transfer(pwd, to, amt)
 			if this.authenticate(pwd)
-				balance -= amt
-				acc.send(amt)
+				this.balance -= amt
+				to.balance += amt
 			return null
 		method setPassword(pwd, newPwd)
 			if this.authenticate(pwd)
 				this.password = pwd
 			return null
 		method authenticate(pwd)
+			logger.log(``auth ...'')
 			return this.password == pwd
 \end{lstlisting}
-Here an \prg{Account} object has a \prg{pay} method that includes the external method call \prg{acc.send(amt)}.
-The \emph{maximally internal blocks} of \prg{pay} in the above example are:
-\begin{lstlisting}[language = Chainmail, frame = lines]
-if this.authenticate(pwd)
-	balance -= amt
-	acc.send(amt)
+Here an \prg{Account} object has \prg{transfer}, \prg{setPassword}, and \prg{authenticate} methods.
+\prg{authenticate} includes an external call to a logger.
+The \emph{maximally internal blocks} of \prg{authenticate} in the above example are:
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+$\blacktriangleright$ authenticate(pwd)
+	$\blacktriangleright$ logger.log(``auth ...'')
 \end{lstlisting}
-\begin{lstlisting}[language = Chainmail, frame = lines]
-return null
+\begin{lstlisting}[language = Chainmail, frame = lines, mathescape]
+return this.password == pwd $\blacktriangleleft$
 \end{lstlisting}
-\prg{setPassword} and \prg{authenticate} contain no external method calls, and thus the method bodies are maximally internal.
+\prg{transfer} and \prg{setPassword} contain no external method calls, and thus the method bodies are maximally internal.
 Suppose we wish to prove that \prg{Bank} satisfies the following specification:
 \begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
-Sbank $\triangleq$ a : Account $\wedge$ a.balance = bal
-			to a.balance < bal
-			onlyIf $\neg$inside(a.password)
+Sbank $\triangleq$ a : Account $\wedge$ inside(a.password)
+			next $\neg$inside(a.password)
+			onlyIf false
 \end{lstlisting}
-Our proof broadly follows 5 steps:
-\begin{enumerate}
-\item
-\label{A}
-Proof that a decrease in balance requires either a call to \prg{pay}, or for \prg{pay} to be executed at some intermediate point 
-\item
-Proof that for \prg{pay} to be executing requires that some external object has access to \prg{a.password}, i.e. that $\neg\wrapped{\prg{a.password}}$
-\item
-\label{B}
-Proof that if $\neg\wrapped{\prg{a.password}}$ is true at some intermediate point, then either $\neg\wrapped{\prg{a.password}}$ was true at the start,
-or $\wrapped{\prg{a.password}}$ was true, and some external object gained access to \prg{a.password}
-\item
-\label{C}
-Proof that it is not possible for external objects to gain access to \prg{a.password} if $\wrapped{\prg{a.password}}$ is true.
-\item
-Therefore, by \ref{B} and \ref{C} we have the desired result.
-\end{enumerate}
-Much of the details of the above proof follows that of the OOPSLA 2022 paper, however the two proofs differ in the way proofs about internal 
-computation are constructed as the new version includes a call to external code in \prg{pay}, i.e. \ref{A} and \ref{C} above.
+As a first step to proving the above spec, we need to prove that no maximally internal code chunks leak the password.
+
+\subsection{Proof that \prg{authenticate} adheres to \prg{SBank}}
+Here we present a proof that the code chunks that make up \prg{authenticate}
+do not leak the password (as the only method with an external method call).\\
+\begin{math}
+	\textbf{Code Chunk A:}\\
+\small
+  \begin{array}{llr}
+  & \{\prg{a : Account} \wedge \wrapped{\prg{a.password}}\}\\
+  \onCall{\prg{a'.authenticate(pwd)}} &   \\
+  & \{\wrapped{\prg{a.password}}\} & \textsc{Call-Inside$_1$}\\
+  \onCall{\prg{logger.log(``auth ...'')}} &   \\
+  & \{\wrapped{\prg{a.password}}\} & \textsc{Call-Inside$_1$}\\
+  \end{array}
+\end{math}\\
+\begin{math}
+	\textbf{Code Chunk B:}\\
+\small
+  \begin{array}{llr}
+  & \{\wrapped{\prg{a.password}}\}\\
+  \onReturn{\return \prg{this.password == pwd}} &   \\
+  & \{\wrapped{\prg{a.password}}\} & \textsc{Ret-Inside}\\
+  \end{array}
+\end{math}\\
+For both proofs, we need to rely on the type system: to prove that the string \prg{``auth ...''} 
+is not the password in the first chunk, and to prove that the boolean returned, is not the password 
+in the second chunk.
 
 
-\subsection{Proof of Step \ref{A}}
-\label{ss:stepA}
-To prove step \ref{A} we need to prove that for all maximally internal chunks $s$ we have
-\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
-PayDecrBal $\triangleq$
-	{a : Account $\wedge$ a.balance = bal $\wedge$ $\neg$ _ calls a.pay(a.password, _, _)
-	$s$
-	{a.balance $\geq$ bal}
-\end{lstlisting}
-There are 5 maximally internal chunks to \prg{Bank}:
-\begin{enumerate}
-\item
-\label{chunk:pay:correctPwd1}
-The branch of \prg{pay} where the password is correct
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-	if this.authenticate(pwd) // pwd == a'.password
-		balance -= amt
-		$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
-\end{lstlisting}
-\item
-\label{chunk:pay:correctPwd2}
-The remaining statements after the return of \prg{send}  in the \prg{pay} method
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-return null // the remaining statements after the call to send
-\end{lstlisting}
-\item
-\label{chunk:pay:incorrectPwd}
-The branch of \prg{pay} where the password is not correct
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-	if this.authenticate(pwd) // pwd != a'.password i.e. we skip the if statement
-		balance -= amt
-		acc.send(amt)
-	return null
-\end{lstlisting}
-\item
-\label{chunk:authenticate}
-The body of authenticate
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-$\blacktriangleright$a'.authenticate(pwd)$\blacktriangleleft$
-	return this.password == pwd
-\end{lstlisting}
-\item
-\label{chunk:setPassword}
-The body of \prg{setPassword}
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-$\blacktriangleright$a'.setPassword(pwd, newPwd)$\blacktriangleleft$
-	if this.authenticate(pwd)
-		this.pwd = newPwd
-	return null
-\end{lstlisting}
-\end{enumerate}
-We can prove \prg{PayDecrBal} for all these chunks. It is trivially satisfied by \ref{chunk:pay:correctPwd1}, \ref{chunk:pay:correctPwd2}, 
-and \ref{chunk:pay:incorrectPwd} because $\neg\called{\_}{\prg{a}}{\prg{called}}{\prg{a.password, \_, \_}}$ is not true, and thus 
-the precondition does not hold, and it is satisfied by \ref{chunk:authenticate} and \ref{chunk:setPassword} because they do not modify 
-\prg{a.balance}. To construct these proofs, we use the rules defined in \S \ref{s:extension}. We start by proving that the correct account
-and password are necessary to decrease the balance:
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-{a : Account $\wedge$ a.balance = bal $\wedge$ (a' $\neq$ a $\vee$ pwd $\neq$ a.password)}
-	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-		if this.authenticate(pwd) // pwd == a'.password
-			balance -= amt
-			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
-{a.balance $\geq$ bal}
-\end{lstlisting}
-To construct this proof, we consider both branches of the proof independently. Thus
-by (\textsc{Call-Exp}) and consequence we get:
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
-	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
-\end{lstlisting}
-by consequence and composition we get:
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
-	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-		if this.authenticate(pwd) // pwd == a'.password
-{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
-\end{lstlisting}
-by consequence and composition we get:
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
-	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-		if this.authenticate(pwd) // pwd == a'.password
-			balance -= amt
-{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
-\end{lstlisting}
-by consequence and composition we get:
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
-	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-		if this.authenticate(pwd) // pwd == a'.password
-			balance -= amt
-			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
-{a.balance $\geq$ bal}
-\end{lstlisting}
-Using the same approach we prove:
-\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
-{a : Account $\wedge$ a.balance = bal $\wedge$ pwd $\neq$ a.password}
-	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
-		if this.authenticate(pwd) // pwd == a'.password
-			balance -= amt
-			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
-{a.balance $\geq$ bal}
-\end{lstlisting}
 
-\subsection{Proof of Step \ref{C}}
-The proof of step \ref{C} follows much the same structure as the proof of step \ref{A}. For all maximally internal chunks, we are interested 
-in proving the following specification holds:
-\subsection{Proof of Step \ref{A}}
-To prove step \ref{A} we need to prove that for all maximally internal chunks $s$ we have
-\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
-PwdLeak $\triangleq$
-	{a : Account $\wedge$ inside(a.password)}
-	$s$
-	{inside(a.password)}
-\end{lstlisting}
-Again, we refer to the maximally internal code chunks referred to in \S \ref{ss:stepA}.
-Specifically, none of the code chunks grant access to \prg{a.password}.
+%\subsection{Proof of Step \ref{A}}
+%\label{ss:stepA}
+%To prove step \ref{A} we need to prove that for all maximally internal chunks $s$ we have
+%\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+%PayDecrBal $\triangleq$
+%	{a : Account $\wedge$ a.balance = bal $\wedge$ $\neg$ _ calls a.pay(a.password, _, _)
+%	$s$
+%	{a.balance $\geq$ bal}
+%\end{lstlisting}
+%There are 5 maximally internal chunks to \prg{Bank}:
+%\begin{enumerate}
+%\item
+%\label{chunk:pay:correctPwd1}
+%The branch of \prg{pay} where the password is correct
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%	if this.authenticate(pwd) // pwd == a'.password
+%		balance -= amt
+%		$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+%\end{lstlisting}
+%\item
+%\label{chunk:pay:correctPwd2}
+%The remaining statements after the return of \prg{send}  in the \prg{pay} method
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%return null // the remaining statements after the call to send
+%\end{lstlisting}
+%\item
+%\label{chunk:pay:incorrectPwd}
+%The branch of \prg{pay} where the password is not correct
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%	if this.authenticate(pwd) // pwd != a'.password i.e. we skip the if statement
+%		balance -= amt
+%		acc.send(amt)
+%	return null
+%\end{lstlisting}
+%\item
+%\label{chunk:authenticate}
+%The body of authenticate
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%$\blacktriangleright$a'.authenticate(pwd)$\blacktriangleleft$
+%	return this.password == pwd
+%\end{lstlisting}
+%\item
+%\label{chunk:setPassword}
+%The body of \prg{setPassword}
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%$\blacktriangleright$a'.setPassword(pwd, newPwd)$\blacktriangleleft$
+%	if this.authenticate(pwd)
+%		this.pwd = newPwd
+%	return null
+%\end{lstlisting}
+%\end{enumerate}
+%We can prove \prg{PayDecrBal} for all these chunks. It is trivially satisfied by \ref{chunk:pay:correctPwd1}, \ref{chunk:pay:correctPwd2}, 
+%and \ref{chunk:pay:incorrectPwd} because $\neg\called{\_}{\prg{a}}{\prg{called}}{\prg{a.password, \_, \_}}$ is not true, and thus 
+%the precondition does not hold, and it is satisfied by \ref{chunk:authenticate} and \ref{chunk:setPassword} because they do not modify 
+%\prg{a.balance}. To construct these proofs, we use the rules defined in \S \ref{s:extension}. We start by proving that the correct account
+%and password are necessary to decrease the balance:
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%{a : Account $\wedge$ a.balance = bal $\wedge$ (a' $\neq$ a $\vee$ pwd $\neq$ a.password)}
+%	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%		if this.authenticate(pwd) // pwd == a'.password
+%			balance -= amt
+%			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+%{a.balance $\geq$ bal}
+%\end{lstlisting}
+%To construct this proof, we consider both branches of the proof independently. Thus
+%by (\textsc{Call-Exp}) and consequence we get:
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+%	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
+%\end{lstlisting}
+%by consequence and composition we get:
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+%	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%		if this.authenticate(pwd) // pwd == a'.password
+%{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
+%\end{lstlisting}
+%by consequence and composition we get:
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+%	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%		if this.authenticate(pwd) // pwd == a'.password
+%			balance -= amt
+%{a.balance $\geq$ bal $\wedge$ a' $\neq$ a}
+%\end{lstlisting}
+%by consequence and composition we get:
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%{a : Account $\wedge$ a.balance = bal $\wedge$ a' $\neq$ a}
+%	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%		if this.authenticate(pwd) // pwd == a'.password
+%			balance -= amt
+%			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+%{a.balance $\geq$ bal}
+%\end{lstlisting}
+%Using the same approach we prove:
+%\begin{lstlisting}[language = Chainmail, frame  = lines, mathescape = true]
+%{a : Account $\wedge$ a.balance = bal $\wedge$ pwd $\neq$ a.password}
+%	$\blacktriangleright$a'.pay(pwd, acc, amt)$\blacktriangleleft$
+%		if this.authenticate(pwd) // pwd == a'.password
+%			balance -= amt
+%			$\blacktriangleright$acc.send(amt)$\blacktriangleleft$
+%{a.balance $\geq$ bal}
+%\end{lstlisting}
+%
+%\subsection{Proof of Step \ref{C}}
+%The proof of step \ref{C} follows much the same structure as the proof of step \ref{A}. For all maximally internal chunks, we are interested 
+%in proving the following specification holds:
+%\subsection{Proof of Step \ref{A}}
+%To prove step \ref{A} we need to prove that for all maximally internal chunks $s$ we have
+%\begin{lstlisting}[language = Chainmail, frame = lines, mathescape = true]
+%PwdLeak $\triangleq$
+%	{a : Account $\wedge$ inside(a.password)}
+%	$s$
+%	{inside(a.password)}
+%\end{lstlisting}
+%Again, we refer to the maximally internal code chunks referred to in \S \ref{ss:stepA}.
+%Specifically, none of the code chunks grant access to \prg{a.password}.
  
 \section{External Method Call Examples}
 \subsection{Call to External, Untrusted Code, Effectively Call-back Free}
