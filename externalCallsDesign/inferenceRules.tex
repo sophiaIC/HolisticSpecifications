@@ -1,28 +1,83 @@
-Here we will write the inference rules we cam up with.
+We discussed a lot of variations of inference rules. But in the end, 
+Sophia thinks that we need no more than a way to argue that a sequence of "known" code and calls to   unknown code  satisfies a Hoare triple. And I now think we do not need to "go beyond" Hoare triple notation. :-)
 
-Sophia thinks that we need no more than a way to argue that a sequence of internal code and codes to external sartsfies a Hoare triple. And I now think we do not need to "go beyond" Hoare triple notation. :-)
-
-
+Note that here, the code about which we are reasoning (ie creating Hoare triples) does not need to be coming from the "safe" module. Instead, we may be reasoning about  code which is a client of the "safe" module. That is, we have three "views": the code being checked, i.e., $stmts_1;\ stmts_2$ below, the "unknown" code (here the calls in $stmts_2$), and the "safe" module, $\ModB{}$, which satisfies the specification \SpecB{}. it is possible that in $stmts_1$ we have calls to function from $\ModB{}$, and we could reason about them using their pre- and post-conditions. \footnote{The above should address the question that was raised by Peter Mueller when he read section 2.3.1. I fear it is not that crisp... HELP.}
 
 \begin{mathpar}
 \infer
 	{
-	\Mod{},\,  \SpecB{} \ \vdash\ \ \hoare{A_1}{stms_1} {A_2} \ \
-	\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \\
-	stmts_2 \   \mbox{ consists exclusively of external calls}\ \ 
+	\ \ \ \ \ \ \ \ \ \ \ \Mod{},\,  \SpecB{} \ \vdash\  \hoare{A_1}{stms_1} {A_2} \ \
+	 \ \ \ \ \ \ \ \ \ \\
+	stmts_2 \   \mbox{ consists exclusively of calls to "unknown" objects}\ \ 
  \\
-	\overline{z} \mbox{ are all the internal variables passed as arguments in }  stmts_2
+	\overline{z} \mbox{ are all the variables passed as arguments in }  stmts_2
 	\\
-	\Mod{}, \, \SpecB{} \ \vdash\   { \Agree {A_2}  {\SpecB{}}  {\outside{\overline{z}}}  {A_3}}
+	\Out{A_2}{\overline{z}}=A_3\ \ \ \ \ \ \ \ \ {\Preserve{A_3} {\SpecB{}} {\Mod{}}  = {A_4}}
 	}
 	{
 	\Mod{}, \, \SpecB{} \ \vdash\  \hoare
 		{A_1}
 		{stmts_1; \ stmts_2}
-		{A_3}
+		{A_4}
 	}
 \end{mathpar} 
-\footnote{HELP: why bold?}
 
 
-The challenge is how to define the $\Agree {A_1}   {\SpecB{}}   {A_3}   {A_4} $. The intuition is that we havoc the assertions in $A_1$ but only if allowed by $\SpecB{}$, while also making $A_3$ hold; and this "agrees" with $A_4$.
+In the above, the term $\Out{A}{\overline{z}}$ returns an assertion $A'$ which is essentially $A$, with the difference that all elements from ${\overline{z}}$ are considered as $\outside{\_}$. 
+Moreover,   ${\Preserve{A} {\SpecB{}} {\Mod{}} }$, contains the parts of $A$ that are preserved through  $\SpecB{}$.\footnote{needs better explanation.}
+
+\begin{definition}
+We define the  function \Out{\_}{\_}  below:
+
+$\begin{array}{llll}
+\Out{A}{\epsilon} & \triangleq & A
+\\
+\Out{A}{(z,\overline{z})} & \triangleq & \Out{\Out{A}{z}} {\overline{z}} 
+\\
+\Out{true}{z} & \triangleq & true \wedge \outside{z}
+\\
+\Out{false}{z} & \triangleq & true \wedge \outside{z}
+\\
+\Out{\inside{u}}{z} & \triangleq & (u\neq z \wedge  {\inside{u}} \vee u=z) \wedge  \outside{z}
+\\
+\Out{\outside{u}}{z} & \triangleq &  {\outside{u}}   \wedge  \outside{z}
+\\
+\Out{p=p'}{z} & \triangleq &  {p=p'}   \wedge  \outside{z}& \mbox{where }p, p' \mbox{ are paths}
+\\
+\Out{A \wedge A'}{z} & \triangleq &  \Out{A}{z}   \wedge \Out{A'}{z}
+\\
+\Out{A \vee A'}{z} & \triangleq &  \Out{A}{z}   \vee \Out{A'}{z}
+\\
+\Out{\neg A}{z} & \triangleq &???
+\\
+\Out{\forall u.A}{z} & \triangleq &\forall u. \Out{A}{z}
+\\
+\Out{\exists u.A}{z} & \triangleq &\exists u. \Out{A}{z}\footnote{here we also need a $\ModB{}$}
+\\
+\Out{Q(u)}{z} & \triangleq & \Out{Qbody[x/u]}{z} & \mbox{ where } Q \mbox{ is inductively defined }
+\end{array}
+$
+\end{definition}
+
+ \begin{lemma}
+ If $\Out {A} {z}$=$A'$, then $A \rightarrow A'$, and $A' \rightarrow \outside{z}$. \footnote{here we also need a $\ModB{}$}
+ \end{lemma}
+ 
+ We will now define the preservation function:
+ 
+ \begin{definition}
+We define ${\Preserve{A} {\SpecB{}} {\Mod{}}}$ by cases over $\SpecB{}$ and its relation 
+to $A$  below:
+
+$\begin{array}{llll}
+ \Preserve{A} {\onlyIf{A1}{A_2}{A_3};\SpecB{}} {\Mod{}}   & \triangleq &   \Preserve{A} {\onlyIf{A1}{A_2}{A_3}} {\Mod{}}  \ \wedge \  \\
+ & &  \Preserve{A} {\SpecB{}} {\Mod{}}
+  \\
+ \Preserve{A} {\onlyThrough{A1}{A_2}{A_3};\SpecB{}} {\Mod{}}   & \triangleq &   \Preserve{A} {\SpecB{}} {\Mod{}}
+ \\
+  ... & ... & ... 
+\end{array}
+$
+\end{definition}
+
+ 
