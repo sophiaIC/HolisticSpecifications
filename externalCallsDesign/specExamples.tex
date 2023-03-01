@@ -1,19 +1,84 @@
 Here we will write examples of the specs
 
-\subsection{No Password becomes external}
+% \subsection{Flavours and notation}
+
+\subsubsection{Flavours}
+
+There is an open question as to whether the semantics of from-to-... is "deep" or "shallow". By "deep" we mean the semantics where to "to"-part can see inside the future call stack. For example, if external method "m1" called internal  method "m2", and if "m2" called external method " m3", then, fo the semantic oif from-to, do we consider pairs of states where $\sigma$ is in "m1" and $\sigma'$ is in "m3"?  The "deep" defintion would say "yes", and the shallow definition would say "no". The choice does make a difference.
+
+Julian said that in FASE we had chosen "shallow", but in OOPSLA-22, we had chosen "deep". Sophia prefers "shallow".
+
+\subsubsection{Notation}
+
+\paragraph{Spec} Proposed new notation for $from\ A1\ to\  A2\ onlyIf A3$, is: \ \ \  $\onlyIf{A1} {A2} {A3}$. \\
+For $from\ A1\ next\  A2\ onlyIf A3$, it is: \ \ \  $\onlyIfSingle{A1} {A2} {A3}$.
+\\
+For  $from\ A1\ to\  A2\ onlyThrough A3$, is:  \ \ \ $\onlyThrough{A1} {A2} {A3}$.
+
+\paragraph{Assertions} Proposed new notation for external: $\external{p}$. Based on this, we define "outside", as soemthing that is accessible from something external:
+
+\begin{definition}
+We define the predicate $\outside{\_}$ as follows:
+
+$\begin{array}{lll}
+   \Mod*\Mod{'}, \sigma \models \outside{x} & \triangleq & \ \Mod*\Mod{'}, \sigma \models \exists y.[ \ \access{y} {x} \wedge \external {y}  \ ] \end{array}
+$
+
+\end{definition}
+
+Therefore, we will have nothing like "words" or "keywords" in the assertions, or the specifications/
+
+\subsubsection{Specification Implication}
+
+
+\begin{definition}
+A specification $\Spec{'}$ is \emph{stronger} than a specification $\Spec{}$:
+
+$\begin{array}{lll}
+ \Spec{'}\prec \Spec{} & \triangleq &  \forall  \Mod. [\ \  \Mod \models \Spec{'} \ \ \longrightarrow\ \   \Mod \models \Spec{}\ \ ] \end{array}
+$
+
+\end{definition}
+
+
+\subsection{No Password becomes external}\footnote{Note also, that we had been using "external" on Monday and Tuesday, but it should have been "outside"}
 
 $\begin{array}{lll}
  \Spec{no\_leak\_weak} & \triangleq &  \forall a.  \forall p.\\
- & &   \onlyIf{a:\prg{Account}\wedge a.\prg{pwd}=p} {\external{p}} {\external{p}}\   
+ & &   \onlyIf{a:\prg{Account}\wedge a.\prg{pwd}=p}{\outside{p}} {\outside{p}}\   
+~ \\
 \\
-
  \Spec{no\_leak\_strong} & \triangleq &  \forall p.\\
- & &   \onlyIf{p:\prg{Password}} {\external{p}} {\external{p}}\  \\
+ & &   \onlyIf{p:\prg{Password}} {\outside{p}} {\outside{p}}\  \\
+ ~ \\
  \Spec{no\_leak\_wrong} & \triangleq\ & \forall p. \\
- & &    \onlyIf{true} {p:\prg{Password} \wedge \external{p}} {\external{p}} 
+ & &    \onlyIf{true} {p:\prg{Password} \wedge \outside{p}} {\outside{p}} 
 
 \end{array}
 $
 
+\vspace{.1in}
 \noindent
-Note that  $\Spec{no\_leak\_wrong} $ is too strong, because it precludes the creation of any external \prg{Password} .
+Here the following holds:
+
+$\Spec{no\_leak\_wrong}  \ \prec\ \Spec{no\_leak\_strong}  \ \prec \ \Spec{no\_leak\_weak} $
+
+\noindent
+Note also that
+ $\Spec{no\_leak\_wrong} $ is too strong, because it precludes the creation of any external \prg{Password} .
+ 
+ \subsection{Bank currency consant}
+ 
+ We define as \prg{currcy} the currency of a bank, ie the sum of the balances of all accounts held by that bank.
+ 
+ $\begin{array}{lll}
+ \Spec{curr\_const} & \triangleq &  \forall b,n.\\
+ & &   \onlyIf{b:\prg{bank}\wedge b.\prg{currcy}=n}{b.\prg{currcy}\neq n} {false}\   
+ \\
+  \Spec{curr\_infl} & \triangleq &  \forall b,n.\\
+ & &   \onlyThrough{b:\prg{bank}\wedge b.\prg{currcy}=n}{b.\prg{currcy}> n} {\calls{\_}{b}{\prg{print}{\_}}}   
+\end{array}
+$
+ 
+ Note that with the deep semantics, the method  \prg{transfer\_2} does not satisfy the spec $ \Spec{curr\_const}$, but with the shallow semantics, it does satisfy the spec $ \Spec{curr\_const}$. The proof will require the use of the spec itself (as in modular verification). And similar arguments about satisfaction of,  and proof of  adherence to, $\Spec{curr\_infl}$.
+ 
