@@ -1,0 +1,62 @@
+Here we discuss which examples we can and which we cannot prove now
+
+\subsection{Adding external calls in the "safe module's" code}
+
+This method  can be checked with the approach from so far
+
+\begin{lstlisting}[language=chainmail, mathescape=true, frame=lines]
+class Account
+
+    fld logger: Logger // external class, untrusted
+
+     void transfer_3 (Password p, Account to, int amt) 
+     POST: (p==this.password) --> ....
+                 forall a: a=/=this,to --> ...
+     {
+          if (p==this.password){
+                  this.balance -= amt
+                  to.balance += amt
+                  logger.log(a);
+                  logger.log(this)
+           }
+ ...
+\end{lstlisting}
+
+\subsection{Mr Bean: Adding external calls in "our" code}
+
+Assume that \prg{transfer\_3} was inside a class that did not belong to $\Mod{_{BA}}$, here it is \prg{MrBean} 
+
+\begin{lstlisting}[language=chainmail, mathescape=true, frame=lines]
+class MrBean
+
+    fld logger: Logger // external class, untrusted
+
+     void transfer_4 (Password p, Account to, int amt) 
+     POST: (p==this.password) --> ....
+                 forall a: a=/=this,to --> ...
+     {
+          if (p==this.password){
+                  this.balance -= amt
+                  to.balance += amt
+                  logger.log(a);
+                  logger.log(this)
+           }
+ ...
+\end{lstlisting}
+
+How could we prove its spec? There are the following solutions
+
+\begin{enumerate}
+\item
+Include the \prg{Logger}'s code (or its spec) into the proof basis of \prg{Bank}, and make a holistic spec for both of them together. This is a non-solution, because then the logger would not be "external", and "untrusted".
+\item
+Include the \prg{Logger}'s code (or its spec) into the proof basis of \prg{MrBean}. This is also a non-solution, because then the logger would not be "external", and "untrusted".
+\item
+Include  \prg{MrBean}'s code  into the proof basis of \prg{Bank}, and make a holistic spec for both of them together. We were hoping that we would be able to "inherit" some of the holistic spec of the \prg{Bank}, but unfortunately we cannot as the meaning of $\outside{\_}$ depends on modules, and appears in both positive snd negative positions.
+\item
+Overwrite the password temporarily before giving it out. Code as in Julian's part.
+\item
+Introduce the concept of path-accessibility, which might be $Path( {o}, {o'}, {A(o''))}$, and would mean that any path from $o$ to $o'$  must go through an object $o''$ which satisfies  property $A(o'')$
+
+\end{enumerate}
+
