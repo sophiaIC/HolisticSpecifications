@@ -11,18 +11,16 @@ We believe that the current rule would be sound:
 \begin{mathpar}
 \infer
 	{
-	\ \ \ \ \ \ \ \ \ \ \ \Mod{},\,  \SpecB{} \ \vdash\  \hoare{A_1}{stms_1} {A_2} \ \
-	 \ \ \ \ \ \ \ \ \ \\
-	stmts_2 \   \mbox{ consists exclusively of calls to "unknown" objects}\ \ 
- \\
-	\overline{z} \mbox{ are all the variables passed as arguments in }  stmts_2
+	\ \ \ \ \ \ \ \ \ \ \ \Mod{},\,  \SpecB{} \ \vdash\  \hoare{A_1}{stms_1} {A_2} \\
+	 \ \ \ \ \ \ \ \ \ \ \ \ \ 	\overline{x} \mbox{ is external }   
 	\\
-	\Out{A_2}{\overline{z}}=A_3\ \ \ \ \ \ \ \ \ {\Preserve{A_3} {\SpecB{}} {\Mod{}}  = {A_4}}
+	\ \ \ \ \ \ \ \ \ \ \ \Out{A_2}{x,\overline{z}}=A_3\ \\
+	\ \ \ \ \ \ \ \ \ \ \ \ \ \ {\Preserve{A_3} {\SpecB{}} {\Mod{}}  = {A_4}}
 	}
 	{
 	\Mod{}, \, \SpecB{} \ \vdash\  \hoare
 		{A_1}
-		{stmts_1; \ stmts_2}
+		{stmts_1; \ x.m(\overline z)}
 		{A_4}
 	}
 \end{mathpar} 
@@ -53,8 +51,7 @@ $\begin{array}{llll}
 \\
 \Out{A \vee A'}{z} & \triangleq &  \Out{A}{z}   \vee \Out{A'}{z}
 \\
-\Out{\neg A}{z} & \triangleq &???
-\\
+\Out{\neg A}{z} & \triangleq & \Out{A'}{z}\ \ \ \ & \mbox{where } A' \equiv \neg A \\
 \Out{\forall u.A}{z} & \triangleq &\forall u. \Out{A}{z}
 \\
 \Out{\exists u.A}{z} & \triangleq &\exists u. \Out{A}{z}\footnote{here we also need a $\Mod{}$}
@@ -98,17 +95,20 @@ $
 \end{definition}
 
 \subsection{Rule-2}
+\label{S:ruleTwo}
 
-The current rule is not sound (because of \prg{Blackadder}), unless we change even more stuff. Sophia is hopeful, though
+On Friday we thought that the    rule below was not  sound (because of \prg{Blackadder}); \SP but now SD thinks it is sound,
+cf discussion under Secr \ref{s:blackadder_box}.
 
 \begin{mathpar}
 \infer
 	{
-	\ \ \ \ \ \ \ \ \ \ \ \Mod{},\,  \SpecB{} \ \vdash\  \hoare{A_1}{stms_1} {A_2} \ \
-	 \ \ \ \ \ \ \ \ \ 	\\
-	\ \ \ \ \ x \ \ \ \mbox{is external} \ \ \
-	\OutTwo{A_2}{x,\overline{z}}=A_3\ \ \ \ \ \ \ \ \ {\Preserve{A_3} {\SpecB{}} {\Mod{}}  = {A_4}}
-	}
+	\ \ \ \ \ \ \ \ \ \ \ \Mod{},\,  \SpecB{} \ \vdash\  \hoare{A_1}{stms_1} {A_2} \\
+	 \ \ \ \ \ \ \ \ \ \ \ \ \ 	\overline{x} \mbox{ is external }   
+	\\
+	\ \ \ \ \ \ \ \ \ \ \ \OutTwo{A_2}{x,\overline{z}}=A_3\ \\
+	\ \ \ \ \ \ \ \ \ \ \ \ \ \ {\Preserve{A_3} {\SpecB{}} {\Mod{}}  = {A_4}}
+		}
 	{
 	\Mod{}, \, \SpecB{} \ \vdash\  \hoare
 		{A_1}
@@ -118,11 +118,38 @@ The current rule is not sound (because of \prg{Blackadder}), unless we change ev
 \end{mathpar} 
 
 
-This rule is similar to that from \ref{sect:rone}, with the only difference that we use $\OutTwo{A_2}{\overline{x,z}}$, 
-rather than $\Out{A_2}{\overline{x,z}}$. $\OutTwo{A_2}{\overline{x,z}}$ is meant to restrict visibility to only the objects 
+This rule is very similar to that from \ref{sect:rone}, with the only difference that we use $\OutTwo{A_2}{x,\overline{z}}$, 
+rather than $\Out{A_2}{x,\overline{z}}$. $\OutTwo{A_2}{\overline{x,z}}$ is meant to restrict visibility to only the objects 
 that are transitively accessible from ${\overline{x,z}}$, and then also turns the external $\overline{z}$s into ousiders.
- This assumes that we went with \textbf{From\_Current}. And is breaks down with the
-\prg{Blackadder}'s \prg{Box}.
+ This assumes that we went with \textbf{From\_Current}. \SP I am not that sure how to define $\OutTwo {} {}$.
+
+ 
+\subsection{Can we combine the holistic specs of two modules?}
+
+ 
+$\Mod{1}  \models \Spec{a}$ does \emph{not} imply that  $\Mod{1}\circ\Mod{2}  \models \Spec{a}$. 
+Then, Julian tried something like $\Mod{1}  \models \Spec{a}$  and $\Mod{2}  \models \Spec{a}$, implies that
+$\Mod{1}\circ\Mod{2}  \models \Spec{a}$. This approach is promising, but we still have some problems because   $\Outside{_}$'s meaning depends on the module,  and the fact that   $\Outside{_}$ can appear in both positive and negative positions. 
+
+During our meeting, we thought that such an inference would not ever be sound, because of a counterexampe proposed
+by SD. But \SP, now SD no longer things that this counterexample would be valid. 
+
+The counterexample had the structure that for some modules and assertions, we would have
+\\
+$~ \ \ \ \ \Mod{x} \models \onlyIf{A_1}{A_2}{false}$
+\\
+$~ \ \ \ \ \Mod{y} \models \onlyIf{A_1}{A_2}{false}$
+\\
+$~ \ \ \ \ \Mod{x}\circ \Mod{y} \models \onlyIf{A_1}{A_2}{A_3}$,  \ \ \ and $A_3\neq false$.
 
 
+And the example I had given was something like "an object of class \prg{Z} will 
+perform a certain action (here $A_1 \diamond A_2$)
+only if it receives a special message from an object from module \Mod{x}, as well as a special message from module \Mod{y}".
+I thought that the specifications above were correctly representing that state of affairs. But I was wrong! 
+It should be something like
+
+$\ \ \ \ \Mod{x} \models onlyIf{A_1}{A_2}{\mbox{Z has received both the X and Y messages}}$
+
+ 
  

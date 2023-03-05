@@ -13,38 +13,51 @@ class Account
      POST: (p==this.password) --> ....
                  forall a: a=/=this,to --> ...
      {
-          if (p==this.password){
+          if (p==this.password) 
                   this.balance -= amt
                   to.balance += amt
                   logger.log(a);
                   logger.log(this)
-           }
+     }
  ...
 \end{lstlisting}
+
+\SP: Why did we say that it could be checked? How do we know that there is no access to our password? Do we add $\neq \outside{\prg{this.passwd}}$ 
+as part of the specification of the function, ie to the lhs of the spec? But it is too strong!
 
 \subsection{Mr Bean: Adding external calls in "our" code}
 
-Assume that \prg{transfer\_3} was inside a class that did not belong to $\Mod{_{BA}}$, here it is \prg{MrBean} 
+\SP Code has changed!
+\footnote{
+ The code that we were discussing was identical to that from prev. section. But this does not. make sense, since we are
+ assuming to be in a class with is external to the \prg{Bank} module, and therefore it would not be allowed to read the fields of the \prg{Account}.
+}
+Assume a function \prg{transfer\_4} which was inside a class that did not belong to $\Mod{_{BA}}$, here it is \prg{MrBean} . 
+
+\SP I suppose that we were assuming that we have something like  $\neg \Outside{\prg{a.passwd}}$? Or that ${\prg{a.passwd}}$ is not outside the module 
+$\prg{MrBean}\circ\prg{BankAccount}$? Perhaps $\Outside{\_}$ should mention what it is outside of? Perhaps the module \prg{MrBean} would have as invariant that all "its" Accounts keeps their Passwords "inside"?
+
 
 \begin{lstlisting}[language=chainmail, mathescape=true, frame=lines]
-class MrBean
+module MrBean
+
+   class MrAtkinson
 
     fld logger: Logger // external class, untrusted
 
-     void transfer_4 (Password p, Account to, int amt) 
-     POST: (p==this.password) --> ....
-                 forall a: a=/=this,to --> ...
+     void transfer_4 (Account from, Password p, Account to, int amt) 
+     POST: (p==from.password) --> ....
+                 forall a: a=/=from,to --> ...
      {
-          if (p==this.password){
-                  this.balance -= amt
-                  to.balance += amt
-                  logger.log(a);
-                  logger.log(this)
+             from.transfer(p,to,amt);
+             logger.log(this)
            }
  ...
 \end{lstlisting}
 
-How could we prove its spec? There are the following solutions
+
+
+How could we prove the spec of \prg{transfer\_4}? \footnote{\SP Sophia is not that clear what the challenges are.  I think they are $\outside{\_}$ is module-dependant.} There are the following solutions
 
 \begin{enumerate}
 \item
@@ -52,11 +65,16 @@ Include the \prg{Logger}'s code (or its spec) into the proof basis of \prg{Bank}
 \item
 Include the \prg{Logger}'s code (or its spec) into the proof basis of \prg{MrBean}. This is also a non-solution, because then the logger would not be "external", and "untrusted".
 \item
-Include  \prg{MrBean}'s code  into the proof basis of \prg{Bank}, and make a holistic spec for both of them together. We were hoping that we would be able to "inherit" some of the holistic spec of the \prg{Bank}, but unfortunately we cannot as the meaning of $\outside{\_}$ depends on modules, and appears in both positive snd negative positions.
+Include  \prg{MrBean}'s code  into the proof basis of \prg{Bank}, and make a holistic spec for both of them together. We were hoping that we would be able to "inherit" some of the holistic spec of the \prg{Bank}, \SP but  he meaning of $\Outside{\_}$ is delicate as it depends on modules, and appears in both positive snd negative positions.
 \item
-Overwrite the password temporarily before giving it out. Code as in Julian's part.
+Overwrite the password temporarily before giving it out. Code as in Sect. \ref{s:safe:extern}.
 \item
 Introduce the concept of path-accessibility, which might be $Path( {o}, {o'}, {A(o''))}$, and would mean that any path from $o$ to $o'$  must go through an object $o''$ which satisfies  property $A(o'')$
+\item
+\SP adopt $Rule_2$
 
 \end{enumerate}
+
+\noindent,
+Also, \SP Sophia now thinks that if all the calls in  the body of a function in a client module are either calls to untrusted, or to the safe module (ie no calls to the module at hand), then we should be able to verify it, without holistic spec of the module inself.
 

@@ -2,57 +2,28 @@ Here we will write examples of the specs
 
 % \subsection{Flavours and notation}
 
-\subsubsection{Flavours}
+\subsection{Flavours}
 
 There is an open question as to whether the semantics of from-to-... is "deep" or "shallow". By "deep" we mean the semantics where to "to"-part can see inside the future call stack. For example, if external method "m1" called internal  method "m2", and if "m2" called external method " m3", then, fo the semantic oif from-to, do we consider pairs of states where $\sigma$ is in "m1" and $\sigma'$ is in "m3"?  The "deep" defintion would say "yes", and the shallow definition would say "no". The choice does make a difference.
 
-Julian said that in FASE we had chosen "shallow", but in OOPSLA-22, we had chosen "deep". Sophia prefers "shallow".
-
-\subsubsection{Notation}
-
-\paragraph{Spec} Proposed new notation for $from\ A1\ to\  A2\ onlyIf A3$, is: \ \ \  $\onlyIf{A1} {A2} {A3}$. \\
-For $from\ A1\ next\  A2\ onlyIf A3$, it is: \ \ \  $\onlyIfSingle{A1} {A2} {A3}$.
-\\
-For  $from\ A1\ to\  A2\ onlyThrough A3$, is:  \ \ \ $\onlyThrough{A1} {A2} {A3}$.
-
-\paragraph{Assertions} Proposed new notation for external: $\external{p}$. Based on this, we define "outside", as soemthing that is accessible from something external:
-
-\begin{definition}
-We define the predicates $\outside{\_}$, and $\inside{\_}$ as follows:
+\subsection{Passwords protect the balance}
 
 $\begin{array}{lll}
-   \Mod, \sigma \models \outside{x} & \triangleq & \ \Mod*\Mod{'}, \sigma \models \exists y.[ \ \access{y} {x} \wedge \external {y}  \ ] 
-  ~ \\
-   \\
-      \Mod, \sigma \models \inside{x} & \triangleq & \ \neg  \Mod, \sigma \models \outside{x} 
-  \end{array}
+ \Spec{{pwd\_prot\_bal}} & \triangleq &  \forall a.  \forall b.\\
+ & &   \onlyIf{a:\prg{Account}\wedge a.\prg{balance}=b}{a.\prg{balance}<b} {\outside{a.\prg{pwd}}}   
+\end{array}
 $
 
-\end{definition}
-
-Therefore, we will have nothing like "words" or "keywords" in the assertions, or the specifications/
-
-\subsubsection{Specification Implication}
 
 
-\begin{definition}
-A specification $\SpecB{'}$ is \emph{stronger} than a specification $\SpecB{}$:
-
+\subsection{No Password get leaked}
 $\begin{array}{lll}
- \SpecB{'}\prec \SpecB{} & \triangleq &  
- \forall  \Mod . [\ \  \Mod \models \SpecB{'} \ \ \longrightarrow\ \   \Mod  \models \SpecB{}\ \ ]
-  \end{array}
-$
-
-\end{definition}
-
-\textbf{SOPHIA:} we should explore some $\prec$ relations, in the future. And relate with similar in temporal logic. But perhaps all the $\prec$ are already covered in the inference rules that Julian had created.
-
-\subsection{No Password becomes external}\footnote{Note also, that we had been using "external" on Monday and Tuesday, but it should have been "outside"}
-
-$\begin{array}{lll}
- \Spec{no\_leak\_weak} & \triangleq &  \forall a.  \forall p.\\
+ \Spec{no\_leak\_val} & \triangleq &  \forall a.  \forall p.\\
  & &   \onlyIf{a:\prg{Account}\wedge a.\prg{pwd}=p}{\outside{p}} {\outside{p}}\   
+~ \\
+\\
+ \Spec{no\_leak\_fld} & \triangleq &  \forall a.  \forall p.\\
+ & &   \onlyIf{a:\prg{Account}}{\outside{a.\prg{pwd}}} {\outside{a.\prg{pwd}}}\   
 ~ \\
 \\
  \Spec{no\_leak\_strong} & \triangleq &  \forall p.\\
@@ -68,13 +39,23 @@ $
 \noindent
 Here the following holds:
 
-$\Spec{no\_leak\_wrong}  \ \prec\ \Spec{no\_leak\_strong}  \ \prec \ \Spec{no\_leak\_weak} $
+$\Spec{no\_leak\_wrong}  \ \prec\ \Spec{no\_leak\_strong}  \ \prec \ \Spec{no\_leak\_val} $\\
+$\ \ \strut \ \ \ \ \ \ \ \hspace{1in} \Spec{no\_leak\_strong}  \ \prec \ \Spec{no\_leak\_fld} $
 
 \noindent
 Note also that
- $\Spec{no\_leak\_wrong} $ is too strong, because it precludes the creation of any external \prg{Password} .
- 
+ $\Spec{no\_leak\_wrong}$ is too strong, because it precludes the creation of any external \prg{Password}.
+ Notice the difference between $\Spec{no\_leak\_fld}$ and $\Spec{no\_leak\_val}$:
+ \begin{itemize}
+ \item
+ $\Spec{no\_leak\_fld}$ says that if a password to an account is not externally known, then 
+the field will never be externally known. This does not preclude the example in \S \ref{s:deactivate_leak_old}, as it only says that at any moment, the present value will not be externally known. This is useful in the case of protecting the account balance, as it is necessary to know the current password to withdraw money from the account, not previous passwords.
+\item
+$\Spec{no\_leak\_val}$ says that if the value pointed at by the field   is not externally known, then it will never be externally known. This is useful to say that certain fields are safe, and do not leak the values stored there. (julian: I'm not entirely sure that this spec is good enough though)
+\end{itemize}
+
  \subsection{Bank currency constant}
+ \label{bank:curr:const}
  
  We define as \prg{currcy} the currency of a bank, ie the sum of the balances of all accounts held by that bank.
  
@@ -82,32 +63,26 @@ Note also that
  \Spec{curr\_const} & \triangleq &  \forall b,n.\\
  & &   \onlyIf{b:\prg{Bank}\wedge b.\prg{currcy}=n}{b.\prg{currcy}\neq n} {false}\   
  \\
-  \Spec{curr\_infl} & \triangleq &  \forall b,n.\\
+  \Spec{curr\_infl} & \triangleq &  \forall b.\\
  & &   \onlyThrough{b:\prg{Bank}\wedge b.\prg{currcy}=n}{b.\prg{currcy}> n} {\calls{\_}{b}{\prg{print}}{\_} }   
 \end{array}
 $
  
- Note that with the deep semantics, the method  \prg{transfer\_2} does not satisfy the spec $ \Spec{curr\_const}$, but with the shallow semantics, it does satisfy the spec $ \Spec{curr\_const}$. The proof will require the use of the spec itself (as in modular verification). And similar arguments about satisfaction of,  and proof of  adherence to, $\Spec{curr\_infl}$.
- 
-\subsection{Protected Fields vs Protected Values in Fields}
+\footnote{The following was written here, but Sophia  it is not true: Note that with the deep semantics, the method  \prg{transfer\_2} does not satisfy the spec $ \Spec{curr\_const}$, but with the shallow semantics, it does satisfy the spec $ \Spec{curr\_const}$. The proof will require the use of the spec itself (as in modular verification). And similar arguments about satisfaction of,  and proof of  adherence to, $\Spec{curr\_infl}$.}
 
-There is a distinction between protected fields, and protected values within fields. 
-The specifications below demonstrate this distinction.
+
+  \subsection{DAO Bank currency consistent}
+  \label{bank:curr:consist}
+ As in Sect \ref{bank:curr:const}, we define as \prg{currcy} the currency of a bank, ie the sum of the balances of all accounts held by that bank.
+ And we require that the currency is the same as the \prg{money}:
  
  $\begin{array}{lll}
- \Spec{protect\_f} & \triangleq &  \forall a.\\
- & &   \onlyIf{a:\prg{Account}\wedge \neg \outside{\prg{a.password}}}
- 					{\outside{\prg{a.password}}} 
- 					{false}\   
- \\
- \Spec{protect\_v} & \triangleq &  \forall a, p.\\
- & &   \onlyIf{a:\prg{Account}\wedge \prg{a.password} = \prg{p} \wedge \neg \outside{\prg{p}}}
- 					{\outside{\prg{p}}} 
- 					{false}\    
+ \Spec{curr\_consistnt} & \triangleq &  \forall b,n.\\
+ & &   \onlyIf{b:\prg{Bank}}{b.\prg{currcy}\neq b.\prg{money}} {false}
 \end{array}
 $
-$\Spec{protect\_f}$ says that if a password to an account is not externally known, then 
-the field will never be externally known. This does not preclude the example in \S \ref{s:deactivate_leak_old}, as it only says that at any moment, the present value will not be externally known. This is useful in the case of protecting the account balance, as it is necessary to know the current password to withdraw money from the account, not previous passwords.
 
-$\Spec{protect\_v}$ says that if the value that the password field points to is not externally known, then it will never be externally known. This is useful to say that certain fields are safe, and do not leak the values stored there. (julian: I'm not entirely sure that this spec is good enough though)
+The above is an invariant, ie it requires that ${b.\prg{currcy}= b.\prg{money}}$ always holds (since $\diamond$ means 0 or more execution steps.
+ 
+ 
  

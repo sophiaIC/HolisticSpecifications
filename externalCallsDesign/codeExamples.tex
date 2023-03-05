@@ -1,3 +1,4 @@
+
 Here we will write examples of the codes. We denote though \prg{untrust.unkn(...)} the call to an untrusted (external) object.
 
 
@@ -88,6 +89,22 @@ class Bank
 ...
 \end{lstlisting}
 
+\subsection{Safe External Call}
+\label{s:safe:extern}
+
+Here we overwrite the password before making the external calls
+
+\begin{lstlisting}[language=chainmail, mathescape=true, frame=lines]
+class MrBean
+  method transfer(from, to, pwd)
+    from.transfer(to, pwd)
+    p = new Password()
+    from.setP(pwd, p)
+    log.logger(from)
+    from.setP(p, pwd)
+\end{lstlisting}
+
+
 \subsection{BlackAdder's Box}
 \label{s:blackadder_box}
 
@@ -128,19 +145,46 @@ module Client
       a.setPassword(null, p)
       a.setBox(b)
       u = new Unknown()
-      u.stuff(a)
+      u.stuff(a)   
 \end{lstlisting}
 
-\subsection{Safe External Call}
+On Friday, we had thought that RULE-2 from Sect.  \ref{S:ruleTwo} would be unsound if applied on line 34 (the call \prg{u.stuff(a)}).
+Namely, we can see that $\prg{BankAccount} \models \Spec{{pwd\_prot\_bal}}$.  
+Also, in line 34, the account is no longer protected, as its box contains the password. On Friday we thought that RULE-2 would 
+erroneously guarantee that the balance would not decrease.
 
-Here we overwrite the password before making the external calls
+\SP But SD now argues that Rule-2 would make no such guarantee, Namely, in line 34, we are passing \prg{a} as an argument, and \prg{a} has access to its box (which is external), and which has access to the password. 
+Therefore, in we consider only the objects that are (transitively) accessible from the frame that gets created 
+in line 34, then $\inside{a.pwd}$ would not hold. And therefore $\Spec{{pwd\_prot\_bal}}$ would not be applicable. 
+
+
+
+\subsection{DAO}
+\label{s:DAO}
+
+\SP Sophia maintains that the DAO breaks the invariant even if we consider "shallow semantics"
+Here the DAO problem paraphrased: 
 
 \begin{lstlisting}[language=chainmail, mathescape=true, frame=lines]
-class MrBean
-  method transfer(from, to, pwd)
-    from.transfer(to, pwd)
-    p = new Password()
-    from.setP(pwd, p)
-    log.logger(from)
-    from.setP(p, pwd)
+private class Bank
+    field money: int
+    
+    method pay(u: Unknown, amt: int)
+    {
+         money:- ant
+         ...
+     }
+
+class DAOAccount
+	field balance: int
+	field myBank: Bank
+	
+	method payOut(u: Unknown){
+		if balance>0 then
+			myBank.pay(u,this.balance);
+			u.notify("made the payment")
+	}
+}
 \end{lstlisting}
+
+On line 17 we are making an external call. At this point, $ \Spec{curr\_consistnt}$ from Sect. \ref{bank:curr:consist} mandates that we have to establish that ${\prg{myBank}.\prg{currcy}= \prg{myBank}.\prg{money}}$. However, ${\prg{myBank}.\prg{currcy}= \prg{myBank}.\prg{money}}$ does not hold. Note that for this argument we make no special use of NL, and it makes no difference wether we have shallow or deep semantics.
