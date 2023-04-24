@@ -1,0 +1,155 @@
+We discussed a lot of variations of inference rules. But in the end, 
+Sophia thinks that we need no more than a way to argue that a sequence of "known" code and calls to   unknown code  satisfies a Hoare triple. And I now think we do not need to "go beyond" Hoare triple notation. :-)
+
+Note that here, the code about which we are reasoning (ie creating Hoare triples) does not need to be coming from the "safe" module. Instead, we may be reasoning about  code which is a client of the "safe" module. That is, we have three "views": the code being checked, i.e., $stmts_1;\ stmts_2$ below, the "unknown" code (here the calls in $stmts_2$), and the "safe" module, $\Mod{}$, which satisfies the specification \SpecB{}. it is possible that in $stmts_1$ we have calls to function from $\Mod{}$, and we could reason about them using their pre- and post-conditions. \footnote{The above should address the question that was raised by Peter Mueller when he read section 2.3.1. I fear it is not that crisp... HELP.}
+
+\subsection{Rule-1}
+\label{sect:rone}
+
+We believe that the current rule would be sound:
+
+\begin{mathpar}
+\infer
+	{
+	\ \ \ \ \ \ \ \ \ \ \ \Mod{},\,  \SpecB{} \ \vdash\  \hoare{A_1}{stms_1} {A_2} \\
+	 \ \ \ \ \ \ \ \ \ \ \ \ \ 	\overline{x} \mbox{ is external }   
+	\\
+	\ \ \ \ \ \ \ \ \ \ \ \Out{A_2}{x,\overline{z}}=A_3\ \\
+	\ \ \ \ \ \ \ \ \ \ \ \ \ \ {\Preserve{A_3} {\SpecB{}} {\Mod{}}  = {A_4}}
+	}
+	{
+	\Mod{}, \, \SpecB{} \ \vdash\  \hoare
+		{A_1}
+		{stmts_1; \ x.m(\overline z)}
+		{A_4}
+	}
+\end{mathpar} 
+
+
+In the above, the term $\Out{A}{\overline{z}}$ returns an assertion $A'$ which is essentially $A$, with the difference that all elements from ${\overline{z}}$ are considered as $\outside{\_}$. 
+Moreover,   ${\Preserve{A} {\SpecB{}} {\Mod{}} }$, contains the parts of $A$ that are preserved through  $\SpecB{}$.\footnote{needs better explanation.}
+
+\begin{definition}
+We define the  function \Out{\_}{\_}  below:
+
+$\begin{array}{llll}
+\Out{A}{\epsilon} & \triangleq & A
+\\
+\Out{A}{(z,\overline{z})} & \triangleq & \Out{\Out{A}{z}} {\overline{z}} 
+\\
+\Out{true}{z} & \triangleq & true \wedge \outside{z}
+\\
+\Out{false}{z} & \triangleq & false \wedge \outside{z}
+\\
+\Out{\inside{u}}{z} & \triangleq & (u\neq z \wedge  {\inside{u}} \vee u=z) \wedge  \outside{z}
+\\
+\Out{\outside{u}}{z} & \triangleq &  {\outside{u}}   \wedge  \outside{z}
+\\
+\Out{p=p'}{z} & \triangleq &  {p=p'}   \wedge  \outside{z}& \mbox{where }p, p' \mbox{ are paths}
+\\
+\Out{A \wedge A'}{z} & \triangleq &  \Out{A}{z}   \wedge \Out{A'}{z}
+\\
+\Out{A \vee A'}{z} & \triangleq &  \Out{A}{z}   \vee \Out{A'}{z}
+\\
+\Out{\neg A}{z} & \triangleq & \Out{A'}{z}\ \ \ \ & \mbox{where } A' \equiv \neg A \\
+\Out{\forall u.A}{z} & \triangleq &\forall u. \Out{A}{z}
+\\
+\Out{\exists u.A}{z} & \triangleq &\exists u. \Out{A}{z}\footnote{here we also need a $\Mod{}$}
+\\
+\Out{Q(u)}{z} & \triangleq & \Out{Qbody[x/u]}{z} & \mbox{ where } Q \mbox{ is inductively defined }
+\end{array}
+$
+\end{definition}
+
+ \begin{lemma}
+ If $\Out {A} {z}$=$A'$, then $A \rightarrow A'$, and $A' \rightarrow \outside{z}$. \footnote{here we also need a $\Mod{}$}
+ \end{lemma}
+ 
+ We will now define the preservation function:
+ 
+ \begin{definition}
+We define ${\Preserve{A} {\SpecB{}} {\Mod{}}}$ by cases over $\SpecB{}$ and its relation 
+to $A$  below:
+
+ 
+\[
+\Preserve{A} {\onlyIf{A_1}{A_2}{A_3}} {\Mod{}}   \  \triangleq \   \begin{dcases*}
+\neg A_3 
+   & if  $\Mod {} \vdash  A\ \rightarrow \ A_1 \wedge \neg A_3$\,, \\[1ex]
+true 
+   & otherwise\,.
+\end{dcases*} 
+\]
+ 
+$\begin{array}{lll}
+ \Preserve{A} {\onlyIf{A_1}{A_2}{A_3};\SpecB{}} {\Mod{}}   & \triangleq &   \Preserve{A} {\onlyIf{A_1}{A_2}{A_3}} {\Mod{}}  \ \wedge \  \\
+ & &  \Preserve{A} {\SpecB{}} {\Mod{}}
+  \\
+ \Preserve{A} {\onlyThrough{A_1}{A_2}{A_3};\SpecB{}} {\Mod{}}   & \triangleq &   \Preserve{A} {\SpecB{}} {\Mod{}}
+ \\
+  \Preserve{A} {\onlyIfSingle{A_1}{A_2}{A_3};\SpecB{}} {\Mod{}}   & \triangleq &   \Preserve{A} {\SpecB{}} {\Mod{}}
+ \\
+
+\end{array}
+$
+\end{definition}
+
+\subsection{Rule-2}
+\label{S:ruleTwo}
+
+On Friday we thought that the    rule below was not  sound (because of \prg{Blackadder}); \SP but now SD thinks it is sound,
+cf discussion under Secr \ref{s:blackadder_box}.
+
+\begin{mathpar}
+\infer
+	{
+	\ \ \ \ \ \ \ \ \ \ \ \Mod{},\,  \SpecB{} \ \vdash\  \hoare{A_1}{stms_1} {A_2} \\
+	 \ \ \ \ \ \ \ \ \ \ \ \ \ 	\overline{x} \mbox{ is external }   
+	\\
+	\ \ \ \ \ \ \ \ \ \ \ \OutTwo{A_2}{x,\overline{z}}=A_3\ \\
+	\ \ \ \ \ \ \ \ \ \ \ \ \ \ {\Preserve{A_3} {\SpecB{}} {\Mod{}}  = {A_4}}
+		}
+	{
+	\Mod{}, \, \SpecB{} \ \vdash\  \hoare
+		{A_1}
+		{stmts_1; \ x.m(\overline{z})}
+		{A_4}
+	}
+\end{mathpar} 
+
+
+This rule is very similar to that from \ref{sect:rone}, with the only difference that we use $\OutTwo{A_2}{x,\overline{z}}$, 
+rather than $\Out{A_2}{x,\overline{z}}$. $\OutTwo{A_2}{\overline{x,z}}$ is meant to restrict visibility to only the objects 
+that are transitively accessible from ${\overline{x,z}}$, and then also turns the external $\overline{z}$s into ousiders.
+ This assumes that we went with \textbf{From\_Current}. \SP I am not that sure how to define $\OutTwo {} {}$.
+
+ 
+\subsection{Can we combine the holistic specs of two modules?}
+
+ 
+$\Mod{1}  \models \Spec{a}$ does \emph{not} imply that  $\Mod{1}\circ\Mod{2}  \models \Spec{a}$. 
+Then, Julian tried something like $\Mod{1}  \models \Spec{a}$  and $\Mod{2}  \models \Spec{a}$, implies that
+$\Mod{1}\circ\Mod{2}  \models \Spec{a}$. This approach is promising, but we still have some problems because   $\Outside{_}$'s meaning depends on the module,  and the fact that   $\Outside{_}$ can appear in both positive and negative positions. 
+
+During our meeting, we thought that such an inference would not ever be sound, because of a counterexampe proposed
+by SD. But \SP, now SD no longer things that this counterexample would be valid. 
+
+The counterexample had the structure that for some modules and assertions, we would have
+\\
+$~ \ \ \ \ \Mod{x} \models \onlyIf{A_1}{A_2}{false}$
+\\
+$~ \ \ \ \ \Mod{y} \models \onlyIf{A_1}{A_2}{false}$
+\\
+$~ \ \ \ \ \Mod{x}\circ \Mod{y} \models \onlyIf{A_1}{A_2}{A_3}$,  \ \ \ and $A_3\neq false$.
+
+
+And the example I had given was something like "an object of class \prg{Z} will 
+perform a certain action (here $A_1 \diamond A_2$)
+only if it receives a special message from an object from module \Mod{x}, as well as a special message from module \Mod{y}".
+I thought that the specifications above were correctly representing that state of affairs. But I was wrong! 
+It should be something like
+
+$\ \ \ \ \Mod{x} \models onlyIf{A_1}{A_2}{\mbox{Z has received both the X and Y messages}}$
+
+ 
+ 
