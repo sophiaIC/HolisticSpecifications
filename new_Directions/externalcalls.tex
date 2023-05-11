@@ -33,6 +33,8 @@
 % \geometry{margin=2in} % for example, change the margins to 2 inches all round
 % \geometry{landscape} % set up the page for landscape
 %   read geometry.pdf for detailed page layout information
+\usepackage{textcomp}
+\usepackage{stmaryrd}
 
 \usepackage{graphicx} % support the \includegraphics command and options
 
@@ -64,99 +66,202 @@
 \usepackage[titles,subfigure]{tocloft} % Alter the style of the Table of Contents
 \renewcommand{\cftsecfont}{\rmfamily\mdseries\upshape}
 \renewcommand{\cftsecpagefont}{\rmfamily\mdseries\upshape} % No bold!
-\newcommand{\onCall}[1]{\blacktriangleright #1}
-\newcommand{\onReturn}[1]{#1 \blacktriangleleft}
 
 %%% END Article customizations
 
 %%% The "real" document content comes below...
 
-\title{External Calls}
-\date{} % Activate to display a given date or no date (if empty),
+\title{New Directions: Expressing the meaning of "inside"}
+\date{11th May} 
+\author{notes by Sophia}
+% Activate to display a given date or no date (if empty),
          % otherwise the current date is printed 
  
 \begin{document}
 \maketitle
 
-\section{Questions we discussed during in the Feb/March London meeting}
+%\section{Questions we discussed during in the Feb/March London meeting}
+%
+%\begin{enumerate}
+%\item
+%How are Necessity Logic and Incorrectness Logic related?
+%
+%We discussed this, and have a crisp statement. Sophia has written it up in \ref{sect:compare}.
+%
+%\item
+%Can we find a different running example?
+%
+%??? 
+%\item
+%Do we need/want to change  the specification language? In particular, use ideas from adversarial logic?
+%
+%At least we will change the notation, cf. sect \ref{sect:notation}. Also some new concepts possibly, eg $Path(...)$.
+%\SP: Some new ideas, with which we would   need only binary operators for next-only-if and only-if (do not think only-through could be binary); cf. sect \ref{sect:notation}. 
+%
+%\item
+%How can we reason about methods which allow external calls? 
+%How to extend our Logic, so that we can make the argument form sect 2.3.1, from the OOPSLA paper
+%
+%
+%this document, and in particular
+%
+%\begin{itemize}
+%\item
+%Can we link  modules, and how much of spec can we inherit  from small to large?
+%\item 
+%???
+%\end{itemize}
+%
+%\item
+%Do we want "deep" or "shallow" meaning of "next observable" state in the semantics?
+%
+%We (provisionally) settled on "shallow". \SP: We had thought that "shallow" cannot express the DAO vulnerability, but now Sophia think it does, c.f. Sect\ref{s:DAO}.
+%
+%\item
+%Title for next paper: "Local reasoning about non-local properties" SD thinks it is a great title, but fears it is not true.
+%
+%\item
+%When we consider whether an assertion is satisfied in a state, do we a) \textbf{From\_Current} only consider the objects which are transitively accessible from the currently top frame, or b)  \textbf{From\_All} all the objects which are transitively accessible from the all the frames? Sophia prefers a), but Julian developed the \prg{Blackadder} example, which, he convinced us all on Friday, would create problems for  \textbf{From\_Current} . \SP: But now Sophia thinks it does not!.
+%\item
+%Sophia's report about the meeting with Jules, 
+%\begin{enumerate}
+%\item 
+%He asked about tool support for NL, and whether NL is modular, and how NL treats the universal quantifiers 
+%\item
+%He pointed us to Unrealizability  Logic, from POPL 2023
+%\item
+%Discussed relation with Incorrectness Logic
+%\item
+%Asked about relation with temporal logic, and suggested (very humbly) that we use more succinct an "mathematical" notation
+%\item
+%Sophia thinks that we can adopt "adversarial" notation and so facilitate the explanation of the "external steps|" semantics.
+%\end{enumerate}
+%\end{enumerate}
+%
+%
+%
+%\section{Comparison with Hoare Logic and Incorrectness Logic}
+%\input{compare}
+%
+%\section{Notation}
+%\input{notation}
+%
+%\section{Code Examples}
+%\input{codeExamples}
+%
+%\section{Specification Examples}
+%\input{specExamples}
+%
+%\section{Reflections}
+%\input{reflections}
+%
+%\section{Extensions to the Inference System of Necessity Logic}
+%\input{inferenceRules}
+%
+%\section{What we can / cannot prove}
+% \input{ponder}
 
+% \section{11th May: How to express the meaning of "inside"}
+
+At Julian's visit we discussed whether $\inside {y}$ 
+would mean that 
+A) any path that leads from an external object   to $y$ goes through the module, or 
+B)  any path that leads from an external object that is transitively accessible from the current frame  to $y$ goes through the module. Obviously $A \rightarrow B$. And in the end we agreed that we wanted $B$.
+
+So, the question is how we will modify the semantics of $\models$ to describe $B$.
+We fist need to define "relevant object", as those objects  that are transitively accessible from the current frame". 
+
+
+
+\begin{definition}
+$\sigma \models \Relevant o$ \ \ iff\ \ $o\!\in\!\sigma.\prg{heap}$ there exists a path from one of the objects on the top frame in $\sigma$ to $o$
+\end{definition}
+
+We can make the definition of $\Relevant$ more formal, but this does not matter right now.
+We now define $\models$ below, as a slight modification of   Def. 3.4 from OOPSLA. But notice the new definitions at the end.
+
+\begin{definition}[Satisfaction % of \SpecO 
+of Assertions by a module and a state] 
+\label{def:chainmail-semantics}
+We define satisfaction of an assertion $A$ by a % program 
+state $\sigma$ with 
+ module $M$ as:
+\begin{enumerate}
+\addtolength\itemsep{-3mm}
+\item
+\label{cExpr}
+$\satisfiesA{M}{\sigma}{e}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\true}$
+\item
+....
+\item
+\label{quant1}
+$\satisfiesA{M}{\sigma}{\all{x}{A}}$ \ \ \ iff \ \ \  
+$\satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
+\strut \hspace{1.3in}   for some $x$ fresh in $\sigma$, and all  $o$ such that $\sigma \models \Relevant o$.
+\item
+\label{quant2}
+$\satisfiesA{M}{\sigma}{\ex{x}{A}}$ \ \ \ iff \ \ \  
+$\satisfiesA{M}{\sigma[x \mapsto \alpha]}{A}$, \\
+\strut \hspace{1.3in}   for some $x$ fresh in $\sigma$, and some $o$ such that $\sigma \models \Relevant o$.
+\item
+\label{cAccess}
+$\satisfiesA{M}{\sigma}{\access{x}{y}}$ \ \ \ iff \ \ \  
 \begin{enumerate}
 \item
-How are Necessity Logic and Incorrectness Logic related?
-
-We discussed this, and have a crisp statement. Sophia has written it up in \ref{sect:compare}.
-
+\label{c1}
+$\interpret{\sigma}{x.f}={\interpret{\sigma}{y}}$ for some $f$, \\
+  or
 \item
-Can we find a different running example?
-
-??? 
+\label{c2}
+{$\interpret{\sigma}{x}=\interpret{\phi}{\prg{this}}$}, {$\interpret{\sigma}{y}=\interpret{\phi}{z}$}, and $z\ \in\ \phi.\prg{contn}$\ \ \ \
+for some variable $z$, and some frame $\phi$ in $\sigma.
+\prg{stack}$.
+\end{enumerate}
 \item
-Do we need/want to change  the specification language? In particular, use ideas from adversarial logic?
-
-At least we will change the notation, cf. sect \ref{sect:notation}. Also some new concepts possibly, eg $Path(...)$.
-\SP: Some new ideas, with which we would   need only binary operators for next-only-if and only-if (do not think only-through could be binary); cf. sect \ref{sect:notation}. 
-
+\label{cInternal}
+$\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \  
+$\textit{classOf}(\sigma,x) \in M$
 \item
-How can we reason about methods which allow external calls? 
-How to extend our Logic, so that we can make the argument form sect 2.3.1, from the OOPSLA paper
+\label{cProtected}
+$\satisfiesA{M}{\sigma}{\protectedFrom{y} {x}}$  \ \ \ iff \ \ \   $\satisfiesA{M}{\sigma}{y \neq x}$  and \\
+\strut \hspace{1.3in} $\forall f_1,...f_n.[\ \interpret{\sigma}{x.f_1...f_n}=\interpret{\sigma}{y} \ \rightarrow \exists k<n. 
+[\,\satisfiesA{M}{\sigma}{\internal{x.f_1...f_k}} \, ] \ ]$
+% \item
+% $\satisfiesA{M}{\sigma}{\inside {y}}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma}{\all{x}{\ \external x  \rightarrow  {}{\protectedFrom{y} {x}}\ }}$
+\end{enumerate}
+\end{definition}
 
+\noindent
+\textbf{Notes} 
+\\
+A: \ \ 3. and 4. are different to OOPSLA, 5. and 6. are same as OOPSLA, and 7. is new. The remaining defintions should be same as OOPSLA.
+\\
+B:\ \  Not sure we need ${\access{x}{y}}$ any longer. 
+ Also, not sure we will need ${\calls{x}{y}{m}{z_1, \ldots, z_n}}$. 
+\\
+C. We might need to add something like \ref{c2}  in the definition of \ref{cProtected}.
+\\
+ D. With this semantics, it holds that \ \ \ \ $\satisfiesA{M}{\sigma}{A}$ if and only if $\satisfiesA{M}{\sigma'}{A}$, \ \ \ \ where $\sigma'$ only contains the objects that are relevant in $\sigma$.
+ 
 
-this document, and in particular
-
-\begin{itemize}
-\item
-Can we link  modules, and how much of spec can we inherit  from small to large?
-\item 
-???
-\end{itemize}
-
-\item
-Do we want "deep" or "shallow" meaning of "next observable" state in the semantics?
-
-We (provisionally) settled on "shallow". \SP: We had thought that "shallow" cannot express the DAO vulnerability, but now Sophia think it does, c.f. Sect\ref{s:DAO}.
-
-\item
-Title for next paper: "Local reasoning about non-local properties" SD thinks it is a great title, but fears it is not true.
-
-\item
-When we consider whether an assertion is satisfied in a state, do we a) \textbf{From\_Current} only consider the objects which are transitively accessible from the currently top frame, or b)  \textbf{From\_All} all the objects which are transitively accessible from the all the frames? Sophia prefers a), but Julian developed the \prg{Blackadder} example, which, he convinced us all on Friday, would create problems for  \textbf{From\_Current} . \SP: But now Sophia thinks it does not!.
-\item
-Sophia's report about the meeting with Jules, 
+ We now define the following  important shoarthands
+ \begin{definition}[Shorthands]
+ ~
+ 
 \begin{enumerate}
-\item 
-He asked about tool support for NL, and whether NL is modular, and how NL treats the universal quantifiers 
 \item
-He pointed us to Unrealizability  Logic, from POPL 2023
+$\external {y}$ is short for  $\neg(\internal {y})$
 \item
-Discussed relation with Incorrectness Logic
-\item
-Asked about relation with temporal logic, and suggested (very humbly) that we use more succinct an "mathematical" notation
-\item
-Sophia thinks that we can adopt "adversarial" notation and so facilitate the explanation of the "external steps|" semantics.
+${\inside {y}}$  is short for ${\all{x}{\ \external x  \rightarrow  {}{\protectedFrom{y} {x}}\ }}$
 \end{enumerate}
-\end{enumerate}
+\end{definition}
+ 
 
 
-
-\section{Comparison with Hoare Logic and Incorrectness Logic}
-\input{compare}
-
-\section{Notation}
-\input{notation}
-
-\section{Code Examples}
-\input{codeExamples}
-
-\section{Specification Examples}
-\input{specExamples}
-
-\section{Reflections}
-\input{reflections}
-
-\section{Extensions to the Inference System of Necessity Logic}
-\input{inferenceRules}
-
-\section{What we can / cannot prove}
-\input{ponder}
+ 
+\noindent
+\textbf{Notation} 
+\\
+We could do with better symbols for $\internal {\_}$, and $\external {\_}$, and $\protectedFrom {\_} {\_}$, and $\inside {\_}$.
 
 \end{document}
