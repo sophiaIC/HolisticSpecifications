@@ -78,7 +78,7 @@ Proof.
                crush].
 Qed.
 
-Hint Rewrite eval_unique : exp_db.
+#[global] Hint Rewrite eval_unique : exp_db.
 
 Ltac eval_rewrite :=
   repeat match goal with

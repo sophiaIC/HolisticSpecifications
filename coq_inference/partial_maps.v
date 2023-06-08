@@ -204,7 +204,7 @@ Definition one_to_one {A B : Type} `{Eq A} (f : partial_map A B) :=
              f a2 = Some b ->
              a1 = a2.
 
-Program Instance optionEq {A : Type}`{Eq A} : Eq (option A) :=
+#[global] Program Instance optionEq {A : Type}`{Eq A} : Eq (option A) :=
   {
     eqb o1 o2 := match o1, o2 with
                  | Some b1, Some b2 => eqb b1 b2
@@ -313,8 +313,8 @@ Proof.
   destruct (partial_map_dec a f); auto; crush.
 Qed.
 
-Hint Rewrite not_none_implies_some : map_db.
-Hint Resolve not_none_implies_some : map_db.
+#[global] Hint Rewrite not_none_implies_some : map_db.
+#[global] Hint Resolve not_none_implies_some : map_db.
 
 Lemma update_neq_empty :
   forall {A B : Type}`{Eq A} (a : A)(b : B) m,
@@ -338,7 +338,7 @@ Inductive finite_normal_form {A B : Type} `{Eq A} : partial_map A B -> Prop :=
                          m a = None ->
                          finite_normal_form (update a b m).
 
-Hint Constructors finite_normal_form : map_db.
+#[global] Hint Constructors finite_normal_form : map_db.
 
 (*)Lemma compose_normal_form :
   forall {A B : Type}`{Eq A}`{Eq B} (m1 : partial_map A B),
@@ -446,7 +446,7 @@ Proof.
     auto.
 Qed.
 
-Hint Resolve finite_implies_normal_form finite_exists_normal_form finite_normal_form_implies_finite : map_db.
+#[global] Hint Resolve finite_implies_normal_form finite_exists_normal_form finite_normal_form_implies_finite : map_db.
 
 Lemma one_to_one_f_nequal :
   forall {A B : Type}`{Eq A} (f : partial_map A B),
@@ -571,7 +571,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve inv_empty : map_db.
+#[global] Hint Resolve inv_empty : map_db.
 
 Ltac inv_auto :=
   match goal with
@@ -633,7 +633,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve one_to_one_empty : map_db.
+#[global] Hint Resolve one_to_one_empty : map_db.
 
 Lemma one_to_one_fnf_update :
   forall {A B : Type}`{Eq A} (f : partial_map A B),
@@ -825,7 +825,7 @@ Proof.
   end.
 Qed.
 
-Hint Resolve inverse_maps_from inverse_maps_into : map_db.
+#[global] Hint Resolve inverse_maps_from inverse_maps_into : map_db.
 
 (*)Lemma inverse_compose_left :
   forall {A B C : Type}`{Eq A}`{Eq B}(m : partial_map A C)(f : partial_map A B)(f' : partial_map B A),
@@ -1072,7 +1072,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve disjoint_dom_symmetry : map_db.
+#[global] Hint Resolve disjoint_dom_symmetry : map_db.
 
 Ltac disjoint_dom_sym_auto :=
   match goal with
@@ -1112,7 +1112,7 @@ Proof.
   end.
 Qed.
 
-Hint Resolve extend_into : map_db.
+#[global] Hint Resolve extend_into : map_db.
 
 Lemma extend_into_disjoint :
   forall {A B C : Type}`{Eq A}`{Eq B}(f g : partial_map A B)(h : partial_map B C),
@@ -1184,7 +1184,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve empty_maps_into : map_db.
+#[global] Hint Resolve empty_maps_into : map_db.
 
 Lemma empty_maps_from :
   forall {A B C : Type}`{Eq A}{HeqB : Eq B} (f : partial_map A B),
@@ -1197,7 +1197,7 @@ Proof.
     crush.
 Qed.
 
-Hint Resolve empty_maps_from : map_db.
+#[global] Hint Resolve empty_maps_from : map_db.
 
 Lemma empty_onto_empty :
   forall {A B C : Type}{HeqA : Eq A}{HeqB : Eq B},
@@ -1208,7 +1208,7 @@ Proof.
     auto with map_db.
 Qed.
 
-Hint Resolve empty_onto_empty : map_db.
+#[global] Hint Resolve empty_onto_empty : map_db.
 
 (* Disjointedness *)
 
@@ -1220,7 +1220,7 @@ Proof.
   unfold disjoint_dom; intros; auto.
 Qed.
 
-Hint Resolve empty_disjoint_1 : map_db.
+#[global] Hint Resolve empty_disjoint_1 : map_db.
 
 Lemma empty_disjoint_2 :
   forall {A B C : Type}{HeqA : Eq A}(f : partial_map A B),
@@ -1229,4 +1229,4 @@ Proof.
   intros.  eapply disjoint_dom_symmetry; eauto with map_db.
 Qed.
 
-Hint Resolve empty_disjoint_2 : map_db.
+#[global] Hint Resolve empty_disjoint_2 : map_db.

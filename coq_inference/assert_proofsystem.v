@@ -59,7 +59,7 @@ Module AssertProofSystem(L : LanguageDef).
       auto.
   Qed.
 
-  Hint Resolve intrnl_reductions_start_external_self : loo_db.
+  #[global] Hint Resolve intrnl_reductions_start_external_self : loo_db.
 
   Lemma pair_reduction_start_external_self :
     forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -79,7 +79,7 @@ Module AssertProofSystem(L : LanguageDef).
       eauto with loo_db.
   Qed.
 
-  Hint Resolve pair_reduction_start_external_self pair_reduction_end_external_self : loo_db.
+  #[global] Hint Resolve pair_reduction_start_external_self pair_reduction_end_external_self : loo_db.
 
   Lemma pair_reductions_start_external_self :
     forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳⋆ σ2 ->
@@ -99,7 +99,7 @@ Module AssertProofSystem(L : LanguageDef).
       eauto with loo_db.
   Qed.
 
-  Hint Resolve pair_reductions_start_external_self pair_reductions_end_external_self : loo_db.
+  #[global] Hint Resolve pair_reductions_start_external_self pair_reductions_end_external_self : loo_db.
 
   Lemma initial_external :
     forall σ, initial σ ->
@@ -131,7 +131,7 @@ Module AssertProofSystem(L : LanguageDef).
       eauto.
   Qed.
 
-  Hint Resolve reduction_config_components_exists : loo_db.
+  #[global] Hint Resolve reduction_config_components_exists : loo_db.
 
   Lemma intrnl_reductions_config_components_exists :
     forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -145,7 +145,7 @@ Module AssertProofSystem(L : LanguageDef).
       eauto with loo_db.
   Qed.
 
-  Hint Resolve intrnl_reductions_config_components_exists : loo_db.
+  #[global] Hint Resolve intrnl_reductions_config_components_exists : loo_db.
 
   Lemma pair_reduction_config_components_exists :
     forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->
@@ -260,7 +260,7 @@ Module AssertProofSystem(L : LanguageDef).
 
   Qed.
 
-  Hint Resolve reduction_exists_self_object : loo_db.
+  #[global] Hint Resolve reduction_exists_self_object : loo_db.
 
   Lemma intrnl_reductions_exists_self_object :
     forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳… σ2 ->
@@ -281,7 +281,7 @@ Module AssertProofSystem(L : LanguageDef).
     eauto with loo_db.
   Qed.
 
-  Hint Resolve intrnl_reductions_exists_self_object : loo_db.
+  #[global] Hint Resolve intrnl_reductions_exists_self_object : loo_db.
 
   Lemma pair_reduction_exists_self_object :
     forall M1 M2 σ1 σ2, M1 ⦂ M2 ⦿ σ1 ⤳ σ2 ->

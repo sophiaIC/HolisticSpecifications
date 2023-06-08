@@ -19,7 +19,7 @@ Open Scope exp_scope.
 
 Notation "'[' c '/s' b ']' a" := (sbst a b c)(at level 80).
 
-Instance substExpVal : Subst exp nat value :=
+#[global] Instance substExpVal : Subst exp nat value :=
   {
   sbst :=
     fix sbst' e n v :=
@@ -157,7 +157,7 @@ Inductive evaluate : mdl -> config -> exp -> value -> Prop :=
 
 where "M '∙' σ '⊢' e1 '↪' e2":= (evaluate M σ e1 e2) : exp_scope.
 
-Hint Constructors evaluate : exp_db.
+#[global] Hint Constructors evaluate : exp_db.
 
 Close Scope Z_scope.
 

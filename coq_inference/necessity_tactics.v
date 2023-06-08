@@ -144,7 +144,7 @@ Module NecessityTactics(L : LanguageDef).
     auto with inference_db.
   Qed.
 
-  Hint Resolve if1_start : inference_db.
+  #[global] Hint Resolve if1_start : inference_db.
 
   Lemma if1_conseq1 :
     forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
@@ -179,7 +179,7 @@ Module NecessityTactics(L : LanguageDef).
       try solve [apply conseq_refl].
   Qed.
 
-  Hint Resolve if1_conseq1 if1_conseq2 if1_conseq3 : inference_db.
+  #[global] Hint Resolve if1_conseq1 if1_conseq2 if1_conseq3 : inference_db.
 
   Lemma if_conseq1 :
     forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
@@ -214,7 +214,7 @@ Module NecessityTactics(L : LanguageDef).
       try solve [apply conseq_refl].
   Qed.
 
-  Hint Resolve if_conseq1 if_conseq2 if_conseq3 : inference_db.
+  #[global] Hint Resolve if_conseq1 if_conseq2 if_conseq3 : inference_db.
 
   Lemma ot_conseq1 :
     forall M A1 A2 A3 A1', M ⊢ A1' ⊇ A1 ->
@@ -249,7 +249,7 @@ Module NecessityTactics(L : LanguageDef).
       try solve [apply conseq_refl].
   Qed.
 
-  Hint Resolve ot_conseq1 ot_conseq2 ot_conseq3 : inference_db.
+  #[global] Hint Resolve ot_conseq1 ot_conseq2 ot_conseq3 : inference_db.
 
   Lemma if1_start_conseq :
     forall M A1 A2 A1', M ⊢ A1 ⊇ A1' ->
@@ -260,7 +260,7 @@ Module NecessityTactics(L : LanguageDef).
       eauto with inference_db.
   Qed.
 
-  Hint Resolve if1_start if1_start_conseq : inference_db.
+  #[global] Hint Resolve if1_start if1_start_conseq : inference_db.
 
   Lemma if_start_conseq :
     forall M A1 A2 A1', M ⊢ A1 ⊇ A1' ->
@@ -271,7 +271,7 @@ Module NecessityTactics(L : LanguageDef).
       eauto with inference_db.
   Qed.
 
-  Hint Resolve if_start_conseq : necessity_db.
+  #[global] Hint Resolve if_start_conseq : necessity_db.
 
   Lemma if1_andE :
     forall M A1 A2 A A', M ⊢ A1 to1 A2 onlyIf A ∧ A' ->

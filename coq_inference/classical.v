@@ -487,7 +487,7 @@ Module ClassicalProperties(L : LanguageDef).
       crush.
   Qed.
 
-  Hint Resolve sat_and_nsat_entails_false : assert_db.
+  #[global] Hint Resolve sat_and_nsat_entails_false : assert_db.
 
   Lemma false_entails_sat_and_nsat :
     forall M A, entails M (a_exp (e_val v_false)) (A ∧ ¬ A).
@@ -506,7 +506,7 @@ Module ClassicalProperties(L : LanguageDef).
     end.
   Qed.
 
-  Hint Resolve false_entails_sat_and_nsat : assert_db.
+  #[global] Hint Resolve false_entails_sat_and_nsat : assert_db.
 
   (** Lemma 6: (1) *)
   Lemma sat_and_nsat_equiv_false :
@@ -530,7 +530,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_commutative' : assert_db.
+  #[global] Hint Resolve or_commutative' : assert_db.
 
   (** Lemma 6: (4) *)
   Lemma or_commutative :
@@ -543,7 +543,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_commutative : assert_db.
+  #[global] Hint Resolve or_commutative : assert_db.
 
   Lemma and_commutative' :
     forall M A1 A2, entails M (A1 ∧ A2) (A2 ∧ A1).
@@ -556,7 +556,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve and_commutative' : assert_db.
+  #[global] Hint Resolve and_commutative' : assert_db.
 
   (** Lemma 6: (3) *)
   Lemma and_commutative :
@@ -569,7 +569,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve and_commutative : assert_db.
+  #[global] Hint Resolve and_commutative : assert_db.
 
   Lemma or_associative_1:
     forall M A1 A2 A3, entails M ((A1 ∨ A2) ∨ A3) (A1 ∨ (A2 ∨ A3)).
@@ -584,7 +584,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_associative_1 : assert_db.
+  #[global] Hint Resolve or_associative_1 : assert_db.
 
   Lemma or_associative_2:
     forall M A1 A2 A3, entails M (A1 ∨ (A2 ∨ A3)) ((A1 ∨ A2) ∨ A3).
@@ -599,7 +599,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_associative_2 : assert_db.
+  #[global] Hint Resolve or_associative_2 : assert_db.
 
   (** Lemma 6: (5) *)
   Lemma or_associative:
@@ -612,7 +612,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_associative : assert_db.
+  #[global] Hint Resolve or_associative : assert_db.
 
   Lemma and_distributive_1:
     forall M A1 A2 A3, entails M ((A1 ∨ A2) ∧ A3) ((A1 ∧ A3) ∨ (A2 ∧ A3)).
@@ -627,7 +627,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve and_distributive_1 : assert_db.
+  #[global] Hint Resolve and_distributive_1 : assert_db.
 
   Lemma and_distributive_2:
     forall M A1 A2 A3, entails M ((A1 ∧ A3) ∨ (A2 ∧ A3)) ((A1 ∨ A2) ∧ A3).
@@ -642,7 +642,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve and_distributive_2 : assert_db.
+  #[global] Hint Resolve and_distributive_2 : assert_db.
 
   (** Lemma 6: (6) *)
   Lemma and_distributive:
@@ -655,7 +655,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve and_distributive : assert_db.
+  #[global] Hint Resolve and_distributive : assert_db.
 
   Lemma or_distributive_1:
     forall M A1 A2 A3, entails M ((A1 ∧ A2) ∨ A3) ((A1 ∨ A3) ∧ (A2 ∨ A3)).
@@ -670,7 +670,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_distributive_1 : assert_db.
+  #[global] Hint Resolve or_distributive_1 : assert_db.
 
   Lemma or_distributive_2:
     forall M A1 A2 A3, entails M ((A1 ∨ A3) ∧ (A2 ∨ A3)) ((A1 ∧ A2) ∨ A3).
@@ -686,7 +686,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_distributive_2 : assert_db.
+  #[global] Hint Resolve or_distributive_2 : assert_db.
 
   (** Lemma 6: (7) *)
   Lemma or_distributive:
@@ -699,7 +699,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve or_distributive : assert_db.
+  #[global] Hint Resolve or_distributive : assert_db.
 
   Lemma neg_distributive_and_1:
     forall M A1 A2, entails M (¬(A1 ∧ A2))  (¬A1 ∨ ¬A2).
@@ -714,7 +714,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_and_1 : assert_db.
+  #[global] Hint Resolve neg_distributive_and_1 : assert_db.
 
   Lemma neg_distributive_and_2:
     forall M A1 A2, entails M (¬A1 ∨ ¬A2) (¬(A1 ∧ A2)).
@@ -729,7 +729,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_and_2 : assert_db.
+  #[global] Hint Resolve neg_distributive_and_2 : assert_db.
 
   (** Lemma 6: (8) *)
   Lemma neg_distributive_and:
@@ -742,7 +742,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_and : assert_db.
+  #[global] Hint Resolve neg_distributive_and : assert_db.
 
   Lemma neg_distributive_or_1:
     forall M A1 A2, entails M (¬(A1 ∨ A2)) (¬A1 ∧ ¬A2).
@@ -757,7 +757,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_or_1 : assert_db.
+  #[global] Hint Resolve neg_distributive_or_1 : assert_db.
 
   Lemma neg_distributive_or_implies_1:
     forall M σ A1 A2, M ◎ σ ⊨ (¬(A1 ∨ A2)) ->
@@ -771,7 +771,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_or_implies_1 : assert_db.
+  #[global] Hint Resolve neg_distributive_or_implies_1 : assert_db.
 
   Lemma neg_distributive_and_implies:
     forall M σ A1 A2, M ◎ σ ⊨ (¬A1 ∧ ¬A2) ->
@@ -789,7 +789,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_and_implies : assert_db.
+  #[global] Hint Resolve neg_distributive_and_implies : assert_db.
 
   Lemma neg_distributive_or_2:
     forall M A1 A2, entails M (¬A1 ∧ ¬A2) (¬(A1 ∨ A2)).
@@ -805,7 +805,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_or_2 : assert_db.
+  #[global] Hint Resolve neg_distributive_or_2 : assert_db.
 
   (** Lemma 6: (9) *)
   Lemma neg_distributive_or:
@@ -818,7 +818,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve neg_distributive_or : assert_db.
+  #[global] Hint Resolve neg_distributive_or : assert_db.
 
   Lemma not_ex_x_all_not_1 : 
     forall M A, entails M (¬(∃x.[A])) (∀x.[¬A]).
@@ -838,7 +838,7 @@ Module ClassicalProperties(L : LanguageDef).
     eapply H5; eauto with assert_db.
   Qed.
 
-  Hint Resolve not_ex_x_all_not_1 : assert_db.
+  #[global] Hint Resolve not_ex_x_all_not_1 : assert_db.
 
   Lemma not_ex_x_all_not_2 : 
     forall M A, entails M (∀x.[¬A]) (¬(∃x.[A])).
@@ -866,7 +866,7 @@ Module ClassicalProperties(L : LanguageDef).
     end.
   Qed.
 
-  Hint Resolve not_ex_x_all_not_2 : assert_db.
+  #[global] Hint Resolve not_ex_x_all_not_2 : assert_db.
 
   (** Lemma 6: (10) *)
   Lemma not_ex_x_all_not : 
@@ -879,7 +879,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve not_ex_x_all_not : assert_db.
+  #[global] Hint Resolve not_ex_x_all_not : assert_db.
 
   Lemma not_ex_x_implies_all_not :
     forall M σ A, M ◎ σ ⊨ (¬(∃x.[A])) ->
@@ -897,7 +897,7 @@ Module ClassicalProperties(L : LanguageDef).
     auto with assert_db.
   Qed.
 
-  Hint Resolve not_ex_x_implies_all_not : assert_db.
+  #[global] Hint Resolve not_ex_x_implies_all_not : assert_db.
 
   Lemma not_all_x_ex_not_1 : 
     forall M A, entails M (¬(∀x.[A])) (∃x.[¬A]).
@@ -917,7 +917,7 @@ Module ClassicalProperties(L : LanguageDef).
     apply sat_not; auto.
   Qed.
 
-  Hint Resolve not_all_x_ex_not_1 : assert_db.
+  #[global] Hint Resolve not_all_x_ex_not_1 : assert_db.
 
   Lemma not_all_x_implies_ex_not :
     forall M σ A, M ◎ σ ⊨ (¬(∀x.[A])) ->
@@ -936,7 +936,7 @@ Module ClassicalProperties(L : LanguageDef).
     apply sat_not; auto.
   Qed.
 
-  Hint Resolve not_all_x_implies_ex_not : assert_db.
+  #[global] Hint Resolve not_all_x_implies_ex_not : assert_db.
 
   Lemma ex_x_implies_not_all :
     forall M σ A, M ◎ σ ⊨ (∃x.[¬ A]) ->
@@ -955,7 +955,7 @@ Module ClassicalProperties(L : LanguageDef).
       auto.
   Qed.
 
-  Hint Resolve ex_x_implies_not_all : assert_db.
+  #[global] Hint Resolve ex_x_implies_not_all : assert_db.
 
   Lemma not_all_x_ex_not_2 : 
     forall M A, entails M (∃x.[¬A]) (¬(∀x.[A])).
@@ -973,7 +973,7 @@ Module ClassicalProperties(L : LanguageDef).
     inversion H4; subst; auto.
   Qed.
 
-  Hint Resolve not_all_x_ex_not_2 : assert_db.
+  #[global] Hint Resolve not_all_x_ex_not_2 : assert_db.
 
   Lemma not_all_x_ex_not : 
     forall M A, equiv_a M (¬(∀x.[A])) (∃x.[¬A]).
@@ -985,7 +985,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto with assert_db.
   Qed.
 
-  Hint Resolve not_all_x_ex_not : assert_db.
+  #[global] Hint Resolve not_all_x_ex_not : assert_db.
 
   Lemma entails_implies :
     forall {M M' σ A1 A2}, entails M A1 A2 ->
@@ -998,7 +998,7 @@ Module ClassicalProperties(L : LanguageDef).
       eauto.
   Qed.
 
-  Hint Resolve entails_implies : assert_db.
+  #[global] Hint Resolve entails_implies : assert_db.
 
   Lemma true_satisfied :
     forall M σ, exp_satisfaction M σ (e_true).
@@ -1006,7 +1006,7 @@ Module ClassicalProperties(L : LanguageDef).
     eapply exp_sat; eauto with exp_db.
   Qed.
 
-  Hint Resolve true_satisfied : assert_db.
+  #[global] Hint Resolve true_satisfied : assert_db.
 
   Lemma false_not_satisfied :
     forall M σ, ~ M ◎ σ ⊨ (a_exp (e_false)).
@@ -1025,7 +1025,7 @@ Module ClassicalProperties(L : LanguageDef).
     end.
   Qed.
 
-  Hint Resolve true_satisfied : assert_db.
+  #[global] Hint Resolve true_satisfied : assert_db.
 
   Lemma false_not_satisfied_corollary :
     forall M σ P, M ◎ σ ⊨ (a_exp (e_false)) ->
@@ -1096,7 +1096,7 @@ Module ClassicalProperties(L : LanguageDef).
     auto with assert_db.
   Qed.
 
-  Hint Resolve and_distributive_trans_1 : assert_db.
+  #[global] Hint Resolve and_distributive_trans_1 : assert_db.
 
   Lemma and_distributive_trans_2:
     forall M A1 A2 A3 A, entails M ((A1 ∧ A3) ∨ (A2 ∧ A3)) A ->
@@ -1121,7 +1121,7 @@ Module ClassicalProperties(L : LanguageDef).
     auto with assert_db.
   Qed.
 
-  Hint Resolve and_distributive_trans_2 : assert_db.
+  #[global] Hint Resolve and_distributive_trans_2 : assert_db.
 
   Close Scope assert_scope.
   Close Scope reduce_scope.

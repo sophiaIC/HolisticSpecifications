@@ -90,7 +90,7 @@ Module AbstractOperationalSemantics(L : LanguageDef).
 
   where "M '∙' σ1 '⤳' σ2" := (reduction M σ1 σ2) : reduce_scope.
 
-  Hint Constructors reduction : reduce_db.
+  #[global] Hint Constructors reduction : reduce_db.
 
   Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳…' σ'" (at level 40).
 
@@ -109,7 +109,7 @@ Module AbstractOperationalSemantics(L : LanguageDef).
 
   where "M1 '⦂' M2 '⦿' σ '⤳…' σ'" := (internal_reductions M1 M2 σ σ') : reduce_scope.
 
-  Hint Constructors internal_reductions : reduce_db.
+  #[global] Hint Constructors internal_reductions : reduce_db.
 
   Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳' σ'" (at level 40).
 
@@ -128,7 +128,7 @@ Module AbstractOperationalSemantics(L : LanguageDef).
 
   where "M1 '⦂' M2 '⦿' σ '⤳' σ'" := (pair_reduction M1 M2 σ σ') : reduce_scope.
 
-  Hint Constructors pair_reduction : reduce_db.
+  #[global] Hint Constructors pair_reduction : reduce_db.
 
   Reserved Notation "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" (at level 40).
 
@@ -142,7 +142,7 @@ Module AbstractOperationalSemantics(L : LanguageDef).
 
   where "M1 '⦂' M2 '⦿' σ '⤳⋆' σ'" := (pair_reductions M1 M2 σ σ') : reduce_scope.
 
-  Hint Constructors pair_reductions : reduce_db.
+  #[global] Hint Constructors pair_reductions : reduce_db.
 
   Open Scope reduce_scope.
   Definition constrained_pair_reduction (M1 M2 : mdl)(σ1 σ2 : config):=

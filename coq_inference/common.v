@@ -15,9 +15,9 @@ Class Eq (A : Type) :=
                       eqb a1 a2 = false;
    eq_dec : forall (a1 a2 : A), {a1 = a2} + {a1 <> a2}}.
 
-Hint Resolve eqb_refl eqb_sym eqb_eqp eqb_neq neq_eqb eq_dec : eq_db.
+#[global] Hint Resolve eqb_refl eqb_sym eqb_eqp eqb_neq neq_eqb eq_dec : eq_db.
 
-Program Instance nat_Eq : Eq nat :=
+#[global] Program Instance nat_Eq : Eq nat :=
   {eqb n m := n =? m;
    eqb_refl := Nat.eqb_refl;
    eqb_sym := Nat.eqb_sym;
@@ -55,7 +55,7 @@ Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
     bind : forall {t u : Type@{d}}, m t -> (t -> m u) -> m u
   }.
 
-Instance optionMonad : Monad option :=
+#[global] Instance optionMonad : Monad option :=
   {
     ret T x :=
       Some x ;
@@ -106,7 +106,7 @@ Inductive finite {A B : Type}`{Eq A} : partial_map A B -> Prop :=
 | fin_update : forall a b m, finite m ->
                         finite (update a b m).
 
-Hint Constructors finite : map_db.
+#[global] Hint Constructors finite : map_db.
 
 Create HintDb closed_db.
 

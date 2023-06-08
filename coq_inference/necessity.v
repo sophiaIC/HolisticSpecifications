@@ -50,7 +50,7 @@ Module Necessity(L : LanguageDef).
                                       ⟦ g ↦ (int, e) ⟧_∈ c_g_fields CDef ->
                                       intrnl M A (e_acc_g e1 g e2).
 
-  Hint Constructors intrnl : inference_db.
+  #[global] Hint Constructors intrnl : inference_db.
 
   Inductive enc : mdl -> asrt -> asrt -> Prop :=
   | enc_intrnl : forall M A e, enc_exp M A e ->
@@ -93,7 +93,7 @@ Module Necessity(L : LanguageDef).
   | enc_fld : forall M A e f, intrnl M A e ->
                          enc_exp M A (e_acc_f e f).
 
-  Hint Constructors enc : inference_db.
+  #[global] Hint Constructors enc : inference_db.
 
   Definition no_free (A : asrt) :=
     forall (x : value) (n : nat), ([x /s n] A) = A.
@@ -233,7 +233,7 @@ Module Necessity(L : LanguageDef).
   where
   "M '⊢' A1 'to1' A2 'onlyIf' A3" := (only_if1 M A1 A2 A3).
 
-  Hint Constructors only_through only_if only_if1 : inference_db.
+  #[global] Hint Constructors only_through only_if only_if1 : inference_db.
 
 
   Scheme onlyThrough_mutind := Induction for only_through Sort Prop

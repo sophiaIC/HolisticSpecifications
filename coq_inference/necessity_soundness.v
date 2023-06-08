@@ -452,7 +452,7 @@ Module Soundness(L : LanguageDef).
       eauto.
   Qed.
 
-  Hint Resolve pair_reduction_is_pair_reductions : reduce_db.
+  #[global] Hint Resolve pair_reduction_is_pair_reductions : reduce_db.
 
 (*)  Lemma classical_to_necessary :
     forall M P Q C, M ⊢ {pre: P} C {post: Q} ->

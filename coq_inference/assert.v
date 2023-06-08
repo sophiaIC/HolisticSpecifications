@@ -28,7 +28,7 @@ Module Assert(L : LanguageDef).
   Notation "'v_' α" := (v_addr α)(at level 25) : assert_scope.
   Notation "'a_' α" := (av_bnd (v_ α))(at level 25) : assert_scope.
 
-  Program Instance eq_a_val : Eq a_val :=
+  #[global] Program Instance eq_a_val : Eq a_val :=
     {
     eqb x y := match x, y with
                | av_hole n, av_hole m => n =? m
@@ -183,7 +183,10 @@ Module Assert(L : LanguageDef).
 
   (** Viewpoint: *)
   | a_extrn : a_val -> asrt
-  | a_intrn : a_val -> asrt.
+  | a_intrn : a_val -> asrt
+
+  (** Protection *)
+  | a_prot : a_val -> a_val -> asrt.
 
   Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 30) : assert_scope.
   Notation "A1 '∧' A2" :=(a_and A1 A2)(at level 28) : assert_scope.
@@ -198,7 +201,7 @@ Module Assert(L : LanguageDef).
   Notation "'a_true'" := (a_exp (e_true)) (at level 20) : assert_scope.
   Notation "'a_false'" := (a_exp (e_false)) (at level 20) : assert_scope.
 
-  Instance a_valSubst : Subst a_val nat value :=
+  #[global] Instance a_valSubst : Subst a_val nat value :=
     {
     sbst x n v :=
       match x with
@@ -209,7 +212,7 @@ Module Assert(L : LanguageDef).
       end
     }.
 
-  Instance optionSubst{A B C : Type}`{Subst A B C} : Subst (option A) B C :=
+  #[global] Instance optionSubst{A B C : Type}`{Subst A B C} : Subst (option A) B C :=
     {
     sbst o c b := match o with
                   | Some a => Some ([b /s c] a)
@@ -217,7 +220,7 @@ Module Assert(L : LanguageDef).
                   end
     }.
 
-  Instance fSubst {A B C D}`{Subst B C D} : Subst (A -> B) C D :=
+  #[global] Instance fSubst {A B C D}`{Subst B C D} : Subst (A -> B) C D :=
     {
     sbst f c d :=
       fun x => [d /s c] (f x)
@@ -226,7 +229,7 @@ Module Assert(L : LanguageDef).
 (*)  Instance partialMapSubst {A B C D}`{Eq A}{Hsubst : Subst (option B) C D} : Subst (partial_map A B) C D :=
     @fSubst A (option B) C D Hsubst.*)
 
-  Instance asrtSubst : Subst asrt nat value :=
+  #[global] Instance asrtSubst : Subst asrt nat value :=
     {
     sbst :=
       fix sbst' A n v :=
@@ -242,10 +245,12 @@ Module Assert(L : LanguageDef).
         | ∃x.[ A ]    => ∃x.[ (sbst' A (S n) v)]
 
         | x access y  => ([ v /s n] x) access ([ v /s n ] y)
-        | x calls y ◌  m ⟨ vMap ⟩ => ([ v /s n ] x) calls ([ v /s n ] y) ◌ m ⟨ [v /s n] vMap ⟩
+                         | x calls y ◌  m ⟨ vMap ⟩ => ([ v /s n ] x) calls ([ v /s n ] y) ◌ m ⟨ [v /s n] vMap ⟩
 
         | x external => ([ v /s n ] x) external
         | x internal => ([ v /s n ] x) internal
+
+        | a_prot x y => a_prot ([v /s n] x) ([v /s n] y)
         end
     }.
 
@@ -289,12 +294,14 @@ Module Assert(L : LanguageDef).
                           (cname o) ∉ M \/ cname o = Object ->
                           external_obj M (χ, ψ) (a_ α).
 
-  Hint Constructors exp_satisfaction : assert_db.
-  Hint Constructors has_class : assert_db.
-  Hint Constructors has_access : assert_db.
-  Hint Constructors makes_call : assert_db.
-  Hint Constructors internal_obj : assert_db.
-  Hint Constructors external_obj : assert_db.
+  Inductive path : 
+
+  #[global] Hint Constructors exp_satisfaction : assert_db.
+  #[global] Hint Constructors has_class : assert_db.
+  #[global] Hint Constructors has_access : assert_db.
+  #[global] Hint Constructors makes_call : assert_db.
+  #[global] Hint Constructors internal_obj : assert_db.
+  #[global] Hint Constructors external_obj : assert_db.
 
   Reserved Notation "M1 '◎' σ '⊨' A"(at level 40).
   Reserved Notation "M1 '◎' σ '⊭' A"(at level 40).
@@ -477,7 +484,7 @@ Module Assert(L : LanguageDef).
    *)
   (** Viewpoint: *)
   | sat_extrn : forall M σ a, external_obj M σ a ->
-                         M ◎ σ ⊨ (a external)
+                              M ◎ σ ⊨ (a external)
   (**
 [[[
                (α ↦ o) ∈ χ   o.(className) ∉ M1
@@ -487,7 +494,7 @@ Module Assert(L : LanguageDef).
    *)
 
   | sat_intrn : forall M σ a, internal_obj M σ a ->
-                         M ◎ σ ⊨ (a internal)
+                              M ◎ σ ⊨ (a internal)
   (**
 [[[
                (α ↦ o) ∈ χ   o.(className) ∈ M1
@@ -495,6 +502,8 @@ Module Assert(L : LanguageDef).
                  M1 ⦂ M2 ◎ σ0 … σ ⊨ α internal
 ]]]
    *)
+
+  | sat_prot : forall M σ a, 
 
   where "M '◎' σ '⊨' A" := (sat M σ A) : assert_scope
 
@@ -659,7 +668,7 @@ Module Assert(L : LanguageDef).
 
   Combined Scheme sat_mutind from sat_mut_ind, nsat_mut_ind.
 
-  Hint Constructors sat nsat : assert_db.
+  #[global] Hint Constructors sat nsat : assert_db.
 
   Definition mdl_sat (M : mdl)(A : asrt) :=
     forall M' σ0 σ, initial σ0 ->
@@ -677,7 +686,7 @@ Module Assert(L : LanguageDef).
                               M ◎ σ ⊨ A2) ->
                      entails M A1 A2.
 
-  Hint Constructors entails : assert_db.
+  #[global] Hint Constructors entails : assert_db.
 
   Definition equiv_a (M : mdl)(A1 A2 : asrt): Prop :=
     (entails M A1 A2) /\ (entails M A2 A1).
@@ -692,13 +701,13 @@ Module Assert(L : LanguageDef).
 
   Notation "a '↑' n" := (raise a n)(at level 19) : assert_scope.
 
-  Instance raiseNat : Raiseable nat :=
+  #[global] Instance raiseNat : Raiseable nat :=
     {
     raise n m := if leb m n
                  then (S n)
                  else n
     }.
-  Instance raiseAVar : Raiseable a_val :=
+  #[global] Instance raiseAVar : Raiseable a_val :=
     {
     raise x n := match x with
                  | av_hole m => av_hole (m ↑ n)
@@ -706,7 +715,7 @@ Module Assert(L : LanguageDef).
                  end
     }.
 
-  Instance raiseExp : Raiseable exp :=
+  #[global] Instance raiseExp : Raiseable exp :=
     {
     raise :=
       fix raise' e n :=
@@ -725,7 +734,7 @@ Module Assert(L : LanguageDef).
         end
     }.
 
-  Instance raiseMap {A B : Type}`{Raiseable B} :
+  #[global] Instance raiseMap {A B : Type}`{Raiseable B} :
     Raiseable (A -> B) :=
     {
     raise f n := (fun a => (f a) ↑ n)
@@ -738,7 +747,7 @@ Module Assert(L : LanguageDef).
       (fun b => Some (b ↑ n)) ∘ m
     }.*)
 
-  Instance raiseOption {A}`{Raiseable A} :
+  #[global] Instance raiseOption {A}`{Raiseable A} :
     Raiseable (option A) :=
     {
     raise o n :=
@@ -748,7 +757,7 @@ Module Assert(L : LanguageDef).
       end
     }.
 
-  Instance raiseAsrt : Raiseable asrt :=
+  #[global] Instance raiseAsrt : Raiseable asrt :=
     {
     raise := fix raise' A n :=
       match A with
