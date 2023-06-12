@@ -1,0 +1,307 @@
+\section{Proving Adherence to \SpecLang Specifications}
+\label{s:inference}
+
+In this Section we provide a proof system for constructing 
+proofs of the \SpecLang specifications defined in \S \ref{s:holistic-guarantees}.
+%As discussed in \S \ref{s:approach},
+Such proofs consist of 
+ three parts: % proof of a \SpecLang specification:
+\begin{description} 
+\item[(Part 1)]
+Proving Assertion Encapsulation (\S \ref{s:encaps-proof})
+\item[(Part 2)]
+Proving that   method bodies adhere to specifications written in \AssertLang (\S \ref{s:classical-proof})
+\item[(Part 3)]
+Proving that modules adhere to \SpecLang specifications (\S \ref{s:module-proof})
+\end{description}
+
+Part 1 is, to a certain extent, orthogonal to the main aims of our work;
+in this paper we propose a simple approach based on the type system, while also acknowledging that 
+better solutions are possible.
+For Parts 2-3, we 
+TODO
+% came up with the key ideas outlined in  \S \ref{s:approach}, which we
+% develop in more detail in \S \ref{s:classical-proof}-\S \ref{s:emergent-proof}.}
+
+
+\subsection {Assertion Encapsulation}
+\label{s:encaps-proof}
+
+{
+%A key component of constructing 
+{\SpecLang proofs  hinge on the fact that some assertions cannot be invalidated unless some 
+} internal (and thus known)
+computation took place. 
+{We refer to this property as \emph{Assertion Encapsulation}.}
+}
+and define the property $M\ \models  \encaps{A}$, which states that 
+ assertion $A$ is encapsulated by module $M$.
+We  do not mandate how this property should be derived -- instead, we rely on a judgment 
+$M\ \vdash  \encaps{A}$ provided by some external system. \footnote{This is simpler than the oopsla-33 setting}
+Thus, \SpecLang is parametric over the derivation of the encapsulation
+     judgment; in fact, several ways to do that are possible \cite{TAME2003,ownEncaps,objInvars}. For example,
+ the appendices of
+    \cite{necessityFull} present a 
+	%Appendix~\ref{s:encap-proof} and
+    %Figure~\ref{f:asrt-encap}  we present a 
+    rudimentary system that is sufficient to support our example
+    proof.  
+
+% \subsubsection{Assertion Encapsulation Semantics}
+
+
+{As we said earlier,  an assertion $A$  is  encapsulated by a module $M$ under condition $A'$,
+if in all possible states which arise from execution of module $M$ with any other external module $M_{ext}$, and which satisfy $A'$, 
+the validity of $A$} 
+{ can only be changed via computations internal to that module} -- \emph{i.e.},  via a call to
+a method from $M$, i.e.,
+calls to objects defined in $M$ but accessible from the
+outside.
+
+
+\begin{definition}[Assertion Encapsulation]
+\label{def:encapsulation}
+An assertion $A$ is \emph{encapsulated} by module $M$ and assertion $A'$, written as\\
+\strut \hspace{1cm}   $M\ \vDash \encaps{A}$, \\
+if and only if   % \\ \strut \hspace{1cm} 
+for all external modules $M_{ext}$, and all states $\sigma$, $\sigma'$
+such that $\arising{M_{ext}}{M}{\sigma}$:
+
+\begin{tabular}{lr}
+$\;\;\;\;$- $\reduction{M_{ext}}{M}{\sigma}{\sigma'}$  & \rdelim\}{3}{4mm}[ $\;\;\;\Rightarrow\;\;\;$  $\exists x,\ m,\ \overline{z}. (\ 
+  \sigma.\prg{cont}= x.m(\overline{z})\ \wedge\  \satisfiesA{M}{\sigma}{\internal{x}}
+\ )$] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A}$ \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' }{\neg A}$ \\
+\end{tabular} 
+\end{definition}
+
+
+\noindent
+\footnote{We might not need view adaptation, but if we need, we have to also say Note that this definition   uses adaptation, 
+${\sigma' \triangleleft \sigma}$. The application of the adaptation operator is necessary
+because we  interpret the assertion $A$ in the current state, $\sigma$, while we interpret the assertion $\neg A$ in 
+the future state, $\sigma' \triangleleft \sigma$. 
+Here the original def
+
+\begin{tabular}{lr}
+$\;\;\;\;$- $\reduction{M_{ext}}{M}{\sigma}{\sigma'}$  & \rdelim\}{3}{4mm}[$\;\;\;\Rightarrow\;\;\;$  $\exists x,\ m,\ \overline{z}. (\ \satisfiesA{M}{\sigma}{\calls{\_}{x}{m}{\overline{z}} \wedge\ \internal{x}}\ )$] \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A \wedge  A'}$ \\
+$\;\;\;\;$- $\satisfiesA{M}{\sigma' \triangleleft \sigma}{\neg A}$ \\
+\end{tabular} 
+}
+
+Revisiting the examples from \S~\ref{s:outline}, % we can see
+both \ModB and \ModC encapsulate   the  {equality of the \prg{balance} of an account to some value \prg{bal}: }
+ {This equality can only be invalidated} through calling  methods on internal objects.\footnote{Here 
+ the point would be better made if we used the module with the ledger, ie that \prg{a.bal} is a ghost field}
+%
+\\
+\strut \hspace{1cm}
+$\ModB\ \vDash\ \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$
+\\
+\strut \hspace{1cm}
+$\ModC\ \vDash\encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$
+
+
+The property that a variable is protected from another one is not encapsulated, but  the property that a variable is protected \emph{is}encapsulated, regardless of the module. Note also, that  encapsulation of an assertion does not imply encapsulation of its negation; 
+ for example,  ${\inside{x}}$ is encapsulated (as per below), but $\neg  {\inside{x}}$ is not. \footnote{Susan wanted to omit this for oospla, but depends on target conference, we whould keep it.}
+
+
+
+\begin{lemma}
+For any module $M$, and variables $x$ and $y$:
+\begin{itemize}
+\item $M \models \encaps{\inside{y}}$
+\item $M \models \neg{\encaps{\inside{y}}}$
+\item $M \not\models \protectedFrom{y}{x}$
+\end{itemize}
+\end{lemma}
+
+TODO outline the proofs? 
+\noindent 
+%The key consequence of soundness is that -- SD dropped; it is   not a consequence of soundness!
+
+
+{In general},  code that does not contain 
+calls to a {given} module is guaranteed not to invalidate any assertions encapsulated by that module.
+ Assertion encapsulation has been used in proof systems to {address}   the  {frame} problem
+ \cite{objInvars,encaps}. 
+
+\subsubsection{\sdN{Deriving} Assertion Encapsulation}
+
+%As we have already stated at the beginning of this section,
+%encapsulation is a deep topic that is well studied in the literature, 
+%and is not the focus of this paper. For now, we simply assume the existence 
+%of a proof system for encapsulation as it is secondary to the central topic 
+%of this paper. We need only assert that such an algorithmic proof system 
+%must be sound (Definition \ref{lem:encap-soundness}).
+%% \susan[I commented out what was there as I thought it was repetious]
+%% {We are assuming the existence of a proof system for encapsulation and only need to assert that such an algorithmic proof system nust be sound.}
+%% The construction of the algorithmic system is not central to our work,
+%% because, as we shall see in later sections, our logic 
+%% does not rely on the specifics of an encapsulation algorithm, only its soundness.
+
+Like OOPSLA 22 Our logic does not {deal with, nor} rely on, the specifics of  how   encapsulation
+{is derived}.
+  % model, 
+{Instead, it relies} on an encapsulation judgment and expects it to be sound:
+
+\begin{definition}[Encapsulation Soundness]
+\label{lem:encap-soundness}
+A judgement of the form $\proves{M}{\encaps{A}}$  is\  \emph{sound}, \ if 
+for all modules $M$, and assertions $A$:\\
+
+$\strut \hspace{1.5cm} \proves{M}{\encaps{A}} \ \ \ \ $ implies $\ \ \ \ \satisfies{M}{\encaps{A}}$.
+\end{definition}
+
+
+
+
+\paragraph{Types for Assertion Encapsulation}
+\label{types}
+TODO: somethibg simple ere 
+%\sdNr[I have unified the two separate descriptions of the types system.]{}
+%%To allow for an easy way to judge encapsulation of
+%\sdN{Even though the derivation of assertion encapsulation  is not the focus of this paper, 
+%for illustrative purposes, we will outline %here how it can be derived with the use of 
+%now a  very simple type system which supports such derivations:}
+%We assume that 
+%%assertions, we assume a very simple type system, where 
+%field declarations, method arguments
+%and method results are annotated with class names, and that classes may  
+%be annotated as \enclosed. A  \enclosed object  
+%\sdN{is not} accessed by external objects; that is, it is always \inside. 
+%
+%The type system then checks 
+%that field assignments, method calls, and method returns adhere to these expectations,
+%and in particular, that objects of \enclosed type
+%are never returned from method bodies 
+%\sdN{-- this is a simplified version of the type system described in \cite{confined}.}
+%Because the type system is so simple, we do not include its formalization in the paper.
+%Note however, that the type system has one further implication: modules are typed 
+%in isolation, thereby implicitly prohibiting
+%method calls from internal objects to external objects. 
+%
+%Based on this type system, we define a predicate $\intrnl{e}$, in 
+%\jm[]{the appendices %of the full paper 
+%\cite{necessityFull},} %Appendix \ref{s:encap-proof},
+%which asserts that any \sdN{objects read} during the evaluation of $e$ are internal.
+%Thus, any assertion that only involves $\intrnl{\_}$ expressions is encapsulated -- more can be found in 
+%\jm[]{the appendices %of the full paper 
+%\cite{necessityFull}.} %in Appendix \ref{s:encap-proof}.
+
+\subsection{Method bodies adhere to \AssertLang specifications}
+\label{s:classical-proof}
+ 
+We now develop a Hoare logic, which can prove assertions of the from \\
+\strut \hspace{1cm} $\hproves{M}{A}{\prg{s}}{A'}$.\\
+where \prg{s} is a statement in \Loo, and $A$ and $A'$ are assertions in \AssertLang.
+
+The challenges here are 1) that \AssertLang assertions support, on top of the classical features, also ??what-shall-we-call-them? protection features, and 2) we need to reason about calls to external modules.
+
+
+We assume that there exists some
+proof system  that   allows us to prove 
+ specifications of the form  $\hproves{M}{A}{\prg{s}}{A'}$.
+{We further assume that such a proof system is sound, i.e. that 
+if xxx TODO 
+% if $\hproves{M}{\hoare{P}{\prg{res = x.m($\overline{z}$)}}{Q}}$, then 
+% for every program state $\sigma$ that satisfies $P$, the execution of the method call \prg{x.m($\overline{z}$)}
+ % esults in a program state satisfying $Q$.}
+ We then expand the proof rules as follows ....
+
+\subsubsection{Reasoning about protection}
+We expand that logic with rules about protection, as in Fig. 
+
+\begin{figure}[t]
+\footnotesize
+\begin{mathpar}
+\infer
+	{ }
+	{\hproves{M} 
+						{x\neq u \wedge \protectedFrom{y}{x}}
+						{u:=v}
+						{ \protectedFrom{y}{x}}
+	}
+	\quad(\textsc{prot-1})
+	\and
+\infer
+	{zzz	}
+	{
+	yyy
+	}
+	\quad(\textsc{prot-2})
+\end{mathpar}
+\caption{Protection Logic}
+\label{f:protection}
+\end{figure}
+
+ 
+
+ \textsc{xxxl} states that   yyy
+  
+ 
+\subsubsection{reasoning about calls to unknown code}
+
+xxx TODO add the rule we have xxxx
+
+\subsection{Proving \SpecLang Specifications}
+\label{s:module-proof}
+
+\begin{figure}[thb]
+\footnotesize
+\begin{mathpar}
+\infer
+	{
+	M \vdash \encaps{A}
+	\\\\
+	\textit{for all}\ \ C \in dom(M)\ \ \textit{and}\ \  m \in M(C).\prg{mths},   \textit{where } \prg{body} \textit{is the method body of m}\\\\
+				 \hproves{M}{A \wedge A_t} {\prg{mBody}} {A}
+								 \ \ \ \textit{where } A_t ....
+	}
+	{
+	M\ \vdash\ \TwoStates{A}{A}
+	}
+	\quad(\textsc{module-invariant})
+	\end{mathpar}
+\caption{Module invariants}
+\label{f:module:invariats}
+\end{figure}
+
+TODO discuss
+
+
+\subsection{Soundness of the \SpecLang Logic}
+
+\label{s:soundness}
+
+\begin{theorem}[Soundness]
+\label{thm:soundness}
+Assuming a sound \SpecO proof system, $\proves{M}{A}$, and
+a sound encapsulation inference system, $\proves{M}{\givenA{A}{\encaps{A'}}}$,
+ and  that on top of these systems we built
+ the \SpecLang logic according to the rules in Figures \ref{f:classical->singlestep},  \ref{f:only-if-single}, 
+ \ref{f:only-through},  and \ref{f:only-if},   then, for    all modules $M$, and all \SpecLang specifications  $S$:
+ 
+ $$\proves{M}{S}\ \ \ \ \ \ \ \mbox{implies}\ \ \ \ \ \  \ \ \ \satisfies{M}{S}$$
+\end{theorem}
+
+\begin{proof}
+by induction on the derivation of $\proves{M}{S}$.
+\end{proof}
+%\jm[]{The proof of soundness (Theorem. \ref{thm:soundness}) proves
+%that our proof system for \SpecLang adheres to the semantics of \SpecLang specifications.
+%We make two assumptions for soundness: (1) a sound proof system for assertion encapsulation, 
+%and (2) a sound proof system for \SpecO. It is notable that \SpecLang is parametric with both 
+%of these judgments.}
+
+Theorem. \ref{thm:soundness} demonstrates 
+ that the   \SpecLang logic is sound with respect to the semantics of \SpecLang specifications.
+ The \SpecLang logic parametric wrt to the algorithms for proving validity of assertions
+ $\proves{M}{A}$, and 
+ assertion encapsulation ($\proves{M}{\givenA{A}{\encaps{A'}}}$), and is sound
+ provided that these two proof systems are sound.
+
+
+ xxxxx
