@@ -34,15 +34,61 @@ Module ExternalStateSemantics.
   | mdl_id : nat -> mdl.
 
   Inductive program :=
-  | prog :  mdl-> program
+  | prog :  mdl -> program
   | call : var -> mth -> list var -> program
-  | ret : var -> program.
+  | ret : var -> program
+  | seq : program -> program -> program.
 
   #[global] Program Instance eqbFld : Eq fld :=
     {
       eqb := fun f1 f2 =>
                match f1, f2 with
                | f_id n1, f_id n2 => n1 =? n2
+               end
+    }.
+  Next Obligation.
+    intros; destruct a; apply Nat.eqb_refl.
+  Defined.
+  Next Obligation.
+    intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  Defined.
+  Next Obligation.
+    intros;
+      destruct a1;
+      destruct a2;
+      symmetry in H;
+      apply beq_nat_eq in H;
+      subst; auto.
+  Defined.
+  Next Obligation.
+    intros;
+      destruct a1;
+      destruct a2;
+      rewrite Nat.eqb_neq in H;
+      crush.
+  Defined.
+  Next Obligation.
+    intros;
+      destruct a1;
+      destruct a2;
+      rewrite Nat.eqb_neq;
+      crush.
+  Defined.
+  Next Obligation.
+    destruct a1 as [n];
+      destruct a2 as [m];
+      destruct (Nat.eq_dec n m) as [Heq|Hneq];
+      subst;
+      auto;
+      right;
+      crush.
+  Defined.
+
+  #[global] Program Instance eqbVar : Eq var :=
+    {
+      eqb := fun x1 x2 =>
+               match x1, x2 with
+               | v_id n1, v_id n2 => n1 =? n2
                end
     }.
   Next Obligation.
@@ -274,7 +320,15 @@ Module ExternalStateSemantics.
 
   Definition heap := partial_map addr object.
 
-  Definition config := (pair (pair heap (list var))).
+  Definition local := partial_map var val.
+
+  Definition frame := (local * program) % type.
+
+  Inductive stack :=
+  | head : frame -> stack
+  | cons : frame -> stack -> stack.
+
+  Definition config := (heap * stack) % type.
 
   Inductive reduction : config -> program -> Prop :
   | 
