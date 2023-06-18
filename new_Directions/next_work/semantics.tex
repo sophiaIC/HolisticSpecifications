@@ -1,27 +1,27 @@
-\section{The Meaning of Necessity}
+\section{\SpecLang specifications}
 \label{s:semantics}
 
  
-In this section we define {the}  \Nec specification language.  
-We first define an underlying programming language, \Loo (\S \ref{sub:Loo}).
-We then define an assertion language, \SpecO, which can talk about the
+In this section we define {the}  \SpecLang specification language.  
+We first define an underlying programming language, \LangOO (\S \ref{sub:Loo}).
+We then define an assertion language, \AssertLang, which can talk about the
 contents of the state, as well as about protection (\S \ref{sub:SpecO}).  Finally, we define the syntax and
-semantics of  \Nec
+semantics of  \SpecLang
 specifications (\S \ref{s:holistic-guarantees}).
 
 
-\subsection{\Loo}
+\subsection{\LangOO -- the underlying object oriented programming languages}
 \label{sub:Loo} 
 %\jm[TODO: mention the type system and the restriction on external method calls]{}
-%% We introduce a simple object-oriented language, \Loo, upon 
+%% We introduce a simple object-oriented language, \LangOO, upon 
 %% which our specification language sits.
-We repeat the def. of  \Loo from oopsla. It is a {small}, imperative, sequential, 
+We repeat the def. of  \LangOO from oopsla. It is a {small}, imperative, sequential, 
 class based, typed, object-oriented language, whose
 fields are private to the class where they are defined. 
-\Loo is straightforward
-\jm[]{and the complete definition can be found in the appendices % of the full paper 
+\LangOO is straightforward
+{and the complete definition can be found in the appendices % of the full paper 
 \cite{necessityFull}.}
- A \Loo state $\sigma$ consists of a 
+ A \LangOO state $\sigma$ consists of a 
 heap $\chi$, and a  {stack $\psi$ which is a sequence of frames}.
 A frame $\phi$ consists of
 local variable map, and a continuation, \ie a sequence of statements to be executed.
@@ -41,19 +41,19 @@ is in the context of  a module $M$ and   a state $\sigma$,
 The   top frame's continuation contains the statement to be % currently being 
 executed next.
  % chopped, as generic 
- % There are several properties  of \Loo that are important to the central topic of this paper. 
+ % There are several properties  of \LangOO that are important to the central topic of this paper. 
  
 As discussed in \S \ref{s:approach}, %we are interested in 
 {open world specifications need to be able to provide}
 guarantees which hold
 during execution of an internal, 
 known, trusted module $M$ when linked together with any
-unknown, untrusted, module $M'$. These guarantees need only hold 
+unknown, untrusted, module $M_{ext}$. These guarantees need only hold 
 when the external module is executing; we are not concerned if they are
 temporarily broken by the internal module. Therefore, we are only interested in states where the
 executing object (\prg{this}) is an external object. 
 To express our focus on external states, we define the  \emph{external states semantics}, of the form 
-$\reduction{M'}{M}{\sigma}{\sigma'}$, where $M'$ is the external
+$\reduction{M_{ext}}{M}{\sigma}{\sigma'}$, where $M_{ext}$ is the external
 module, and $M$ is the internal module, and where we
 collapse all internal steps into one single step.
 
@@ -63,17 +63,17 @@ collapse all internal steps into one single step.
 \label{def:pair-reduce}
 For  
 % If we say "internal module", it is sounds as something makes the module be internal
-  modules $M$,  $M'$, and % program
+  modules $M$,  $M_{ext}$, and % program
    states $\sigma$, $\sigma'$, 
-we say that $\ \ \ \ \ \ \ \ \reduction{M'}{M}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exist 
+we say that $\ \ \ \ \ \ \ \ \reduction{M_{ext}}{M}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exist 
 $n\in\mathbb{N}$, and states $\sigma_0$,...$\sigma_n$, such that
 \begin{itemize}
 \item
 $\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
 \item
-$M' \circ M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
+$M_{ext} \circ M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
 \item
-$\class{\sigma}{\scd{\prg{this}}}, \class{\sigma'}{\scd{\prg{this}}}\in M'$,
+$\class{\sigma}{\scd{\prg{this}}}, \class{\sigma'}{\scd{\prg{this}}}\in M_{ext}$,
 \item
 $\class{\sigma_i}{\scd{\prg{this}}} \in M$\ \ \ for all $i\in (1..n)$.
 \end{itemize} 
@@ -85,10 +85,10 @@ class of the corresponding object in the  heap of $\sigma$;
 %while  
 applied to an address, $\class{\sigma}{\alpha}$  returns
 the class of   the object referred by address $\alpha$ in the heap of $\sigma$.
- The module linking operator $\circ$, applied to two modules, $M'\circ M$, 
+ The module linking operator $\circ$, applied to two modules, $M_{ext}\circ M$, 
  combines the two modules into one module in the obvious way, provided their
 domains are disjoint.
-The details \jm[]{can be found in the appendices\cite{necessityFull}.} %Appendix \ref{app:loo}.
+The details {can be found in the appendices\cite{necessityFull}.} %Appendix \ref{app:loo}.
 \begin{figure}[htb]
 \resizebox{\textwidth}{!}{
 \input{diagrams/external_states}
@@ -96,44 +96,44 @@ The details \jm[]{can be found in the appendices\cite{necessityFull}.} %Appendix
    \caption{External States Semantics
      (Def. \ref{def:pair-reduce}),  %
      % 
-     (A) $\exec{{\color{hotpink}M'} \circ {\color{lightseagreen}M}}{\sigma_1}{\ldots}\leadsto \sigma_9$ \ \ \ and \ \ \ 
-     (B) $\reduction{{\color{hotpink}M'}}{{\color{lightseagreen}M}}{\sigma_2}{\ldots}\leadsto \sigma_9$, \ \ \ 
+     (A) $\exec{{\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}}{\sigma_1}{\ldots}\leadsto \sigma_9$ \ \ \ and \ \ \ 
+     (B) $\reduction{{\color{hotpink}M_{ext}}}{{\color{lightseagreen}M}}{\sigma_2}{\ldots}\leadsto \sigma_9$, \ \ \ 
      \\
      where $\class{{\color{lightseagreen}\sigma_1}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_3}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_4}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_7}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_8}}{\scd{\prg{this}}}\in {\color{lightseagreen}M}$,\\
      and where $\class{{\color{hotpink}\sigma_2}}{\scd{\prg{this}}},\class{{\color{hotpink}\sigma_5}}{\scd{\prg{this}}} 
-     \class{{\color{hotpink}\sigma_6}}{\scd{\prg{this}}},\class{{\color{hotpink}\sigma_9}}{\scd{\prg{this}}}\in {\color{hotpink}M'}$.
-    %  (c) $\reduction{{\color{orange}M'}}{{\color{blue}M}}{\sigma_1}{\ldots}\leadsto \sigma_8$
+     \class{{\color{hotpink}\sigma_6}}{\scd{\prg{this}}},\class{{\color{hotpink}\sigma_9}}{\scd{\prg{this}}}\in {\color{hotpink}M_{ext}}$.
+    %  (c) $\reduction{{\color{orange}M_{ext}}}{{\color{blue}M}}{\sigma_1}{\ldots}\leadsto \sigma_8$
     }
    \label{fig:VisibleStates}
  \end{figure}
  
 Fig. \ref{fig:VisibleStates} inspired by \citeasnoun{FASE} provides a simple graphical description of 
 our external states semantics: (A) is the ``normal'' execution after 
-linking two modules into one: \ $M' \circ M, ... \leadsto ...$ whereas (B) is the
- external states execution when $M'$ is external,\   $\reduction{M'}{M}{...}{...}$.
+linking two modules into one: \ $M_{ext} \circ M, ... \leadsto ...$ whereas (B) is the
+ external states execution when $M_{ext}$ is external,\   $\reduction{M_{ext}}{M}{...}{...}$.
 Note that whether a module is external or internal depends on %our
 perspective -- nothing in a module itself renders it internal or external. For example, in
  $\reduction{M_1}{M_2}{...}{...}$ the external module is $M_1$,
   while in  $\reduction{M_2}{M_1}{...}{...}$  the external module is $M_2$.
 
-We  use the notation\ \  $\reductions{M'}{M}{\sigma}{\sigma'}$ \ 
+We  use the notation\ \  $\reductions{M_{ext}}{M}{\sigma}{\sigma'}$ \ 
 to denote zero or more  steps starting at state $\sigma$ and ending at state $\sigma'$, in the context of internal module 
-$M$ and external module $M'$.
+$M$ and external module $M_{ext}$.
  %Not only are we unconcerned 
 %with internal states,  we are also unconcerned with  states which cannot ever arise from execution.
-We are \jm[]{not} concerned with internal states or states that can never arise.
-{A state $\sigma$ is \emph{arising},}  written $\arising{M'}{M}{\sigma}$, {if it  may arise by external states} execution
+We are {not} concerned with internal states or states that can never arise.
+{A state $\sigma$ is \emph{arising},}  written $\arising{M_{ext}}{M}{\sigma}$, {if it  may arise by external states} execution
 starting at some initial configuration:
 
 
 
 \begin{definition}[Arising  States]
 \label{def:arising}
-For   modules $M$ and  $M'$, a % program
+For   modules $M$ and  $M_{ext}$, a % program
  state $\sigma$ is 
-called an \emph{arising} state, formally \ \ \ $\arising{M'}{M}{\sigma}$,\ \ \ 
+called an \emph{arising} state, formally \ \ \ $\arising{M_{ext}}{M}{\sigma}$,\ \ \ 
 if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
-$\reductions{M'}{M}{\sigma_0}{\sigma}$.
+$\reductions{M_{ext}}{M}{\sigma_0}{\sigma}$.
 \end{definition}
 
 An \emph{Initial} state's heap
@@ -142,7 +142,7 @@ its  stack   consists of a single frame, whose local variable map is a
 mapping from \prg{this} to the single object, and whose continuation is  any statement.
 (See Definition %s \ref{def:initial} and 
 \ref{def:arising} and the 
-\jm[]{appendices %of the full paper 
+{appendices %of the full paper 
 \cite{necessityFull}).}
 
 
@@ -156,16 +156,16 @@ language with unforgeable addresses and private fields, we believe
  can be replaced 
  by lower level mechanisms such as capability machines \cite{vanproving,davis2019cheriabi}.
 
-\subsection{\SpecO}
+\subsection{\AssertLang -- the assertion language}
 \label{sub:SpecO}
 
-\SpecO is a  \jm[removed: a subset of the \emph{Chainmail} assertions language, \ie]{}
+\AssertLang is a  \jm[removed: a subset of the \emph{Chainmail} assertions language, \ie]{}
 a basic assertion language extended with
 object-capability assertions. 
 
 
-\subsubsection{Syntax of \SpecO}
-The syntax of \SpecO   is given in
+\subsubsection{Syntax of \AssertLang}
+The syntax of \AssertLang   is given in
 Definition \ref{f:chainmail-syntax}.
 An assertion may be an expression,   a query of the defining class of
   an object, the usual connectives and quantifiers, along 
@@ -177,7 +177,7 @@ with two non-standard assertion forms:
 
 \begin{definition}
 Assertions ($A$) in
-\SpecO are defined as follows:
+\AssertLang are defined as follows:
 
 \label{f:chainmail-syntax}
  \[
@@ -210,19 +210,19 @@ Assertions ($A$) in
 TODO compare with oopsla 
 
 
-\subsubsection{Semantics of \SpecO}
-The semantics of \SpecO   
+\subsubsection{Semantics of \AssertLang}
+The semantics of \AssertLang   
 is given in Definition \ref{def:chainmail-semantics}. 
 We   use the evaluation relation, $\eval{M}{\sigma}{e}{v}$,
 which says that the expression $e$ evaluates
 to value $v$ in the context of state $\sigma$ and module $M$.
-As expressions in \Loo may be recursively defined, their evaluation 
+As expressions in \LangOO may be recursively defined, their evaluation 
 need not   % may not necessarily 
  terminate. Nevertheless, the logic of $A$ remains classical because recursion is restricted
 to expressions, and not generally to assertions.
 \footnote{We have taken this approach from \citeasnoun{FASE}, which also contains a mechanized Coq proof that assertions are classical \cite{coqFASE}.
 %  The full
-The semantics of $\hookrightarrow$ \jm[]{is} unsurprising 
+The semantics of $\hookrightarrow$ {is} unsurprising 
 (see {the appendices %of the full paper 
 \cite{necessityFull}).} } %Fig.\ref{f:evaluation}).
 
@@ -248,9 +248,9 @@ $\sigma \models \Relevant o$ \ \ iff\ \
 $\exists n\in mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{x.\prg{f}_1.....\prg{f}_n} = o \ \wedge n\neq 0\ ]$.
 \end{definition}
 
-We now give meaning to assertions. Definitions (1)-(5) are standard. Note that Definitions (6)-(7) quantify only over objects that are accessible from the top frame. TODO ~D~`````
-````````````
-\begin{definition}[Satisfaction % of \SpecO 
+We now give meaning to assertions. Definitions (1)-(5) are standard. Note that Definitions (6)-(7) quantify only over objects that are accessible from the top frame. TODO  
+
+\begin{definition}[Satisfaction % of \AssertLang 
 of Assertions by a module and a state] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a % program 
@@ -295,7 +295,7 @@ $\satisfiesA{M}{\sigma}{\protectedFrom{y} {x}}$  \ \ \ iff \ \ \   $\satisfiesA{
 
 Both existential and universal quantification (defined in \ref{quant1} and \ref{quant2}) is done over all objects which are transitively 
 accessible from the top frame in the stack. This deviates from OOPSLA. -TODO later on say why this is important.
-We do not include quantification over primitive types such as integers as \Loo is too simple. The 
+We do not include quantification over primitive types such as integers as \LangOO is too simple. The 
 Coq mechanisation does include primitive types.
  
 TODO: say that an assertion like ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{e}}]$. QUESTION: do we need to talk about $=$ in the assertion language?
@@ -325,6 +325,8 @@ such an example in Section \ref{s:examples}.
  
  TODO add a diagram that illustrated relative and absolute inside
 
+TODO: Do we prove the implications as in TACAS -- since we have some new primitives? hmhh
+
 % DO not yet remove below !!!!
 % but I think we can skip it
 % We now define what it means for a module to satisfy an assertion:
@@ -335,33 +337,31 @@ such an example in Section \ref{s:examples}.
 % We will not define such a judgement, but will rely on its existence {later on for} Theorem \ref{thm:soundness}.
 %We define soundness of such a judgement in the usual way:
 % 
-%\begin{definition} [Satisfaction % of \SpecO 
+%\begin{definition} [Satisfaction % of \AssertLang 
 %of Assertions
 %by a module] 
 %\label{def:mdl-sat}
 %For a module $M$ and assertion $A$, we say that\ \  $\satisfies{M}{A}$ \ \ if and only if 
-%for all modules $M'$, and all $\sigma$, if $\arising{M'}{M}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$.
+%for all modules $M_{ext}$, and all $\sigma$, if $\arising{M_{ext}}{M}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$.
 %
 %\label{ax:specW-prove-soundness}
 %A judgement of the form {$\proves{M}{A}$} is \emph{sound}, if for all
 % modules $M$ and assertions $A$, \ if $\proves{M}{A}$ then $\satisfies{M}{A}$.
 %\end{definition}
 
- 
+ \subsection{\SpecLang specifications}
 
  
 
-
-\newcommand{\TwoStates}[2]{\ensuremath{{\{}\, #1 \,{\}} \, {\{}\, #2\, {\}} }} 
 
 
 \noindent
-The syntax of  \Nec specifications is given below
+The syntax of  \SpecLang specifications is given below
  
 \begin{definition}  
 
 \noindent
-{\emph{\sd{Syntax of \Nec Specifications}}}
+{\emph{\sd{Syntax of \SpecLang Specifications}}}
 
 \label{f:holistic-syntax}
 \[
@@ -369,10 +369,10 @@ The syntax of  \Nec specifications is given below
 \syntaxElement{S}{}
 		{
 		\syntaxline
-				{A}
-				
-				{\TwoStates {A} {A} }		
-				\endsyntaxline
+				{A}				
+				{\TwoStates {A} {A} }	
+				{S\, \wedge \, S}
+		\endsyntaxline
 		}
 \endSyntaxElement\\
 \end{syntax}
@@ -383,18 +383,21 @@ The syntax of  \Nec specifications is given below
 
 
 
-\noindent
-TODO -- if needed -- As an example, we consider the following three  specifications:
-
-\begin{lstlisting}[language = Chainmail, mathescape=true,xleftmargin=2em,frame=lines,framexleftmargin=1.5em]
-$\text{TODO}$   $\triangleq$  TEXT
-\end{lstlisting}
 
 
+DISCUSSION:
+
+1. The repetition of \prg{a}:\prg{Account} is annoying. Perhaps the form should be 
+\\
+$\forall \prg{a}:\prg{Account}.\TwoStates{\inside{\prg{a.password}}} {\inside{\prg{a.password}}} $
  
+2. The second part would look better if it had the form 
+\\
+$\forall \prg{a}:\prg{Account}.\TwoStates{\inside{\prg{a.password}} \wedge \prg{a.balance}\geq b} {\prg{a.balance}\geq b} $
+\\
+But then the proofs would need to take the conjunction of all the holistic specs; so more work to prove them.
 
-
-\subsubsection{Semantics of \Nec Specifications}
+\subsubsection{ Semantics of \SpecLang Specifications}
 We now  define what it means for  a module  $M$ to satisfy specification  $S$, written as $M \vDash S$. The
  Definition~\ref{def:necessity-semantics} below is straightforward, apart from  
 the use of the $\adapt  {\sigma'}{\sigma}$  (best read as ``$\sigma'$ seen
@@ -405,35 +408,82 @@ to deal with the fact that execution might  change the bindings in local variabl
 We explain this in detail in   \S \ref{sub:adapt:full}, but for now, the reader may ignore the applications of that operator and
 read $\sigma' \triangleleft \sigma$ as $\sigma'$.
 
-\begin{definition}[Semantics of \Nec Specifications]
+\begin{definition}[Semantics of \SpecLang Specifications]
 We define $\satisfies{M}{{S}}$ by cases over the four possible syntactic forms.
 For any assertions   $A_1$, $A_2$, and $A$: \\
 
 \label{def:necessity-semantics}
 
-$\bullet$ \ $\satisfies{M}{{A}}$\  \ \ iff\ \ \ for all $M'$, $\sigma$, such that $\arising{M'}{M}{\sigma}$: \ \  $\satisfiesA{M}{\sigma}{A}$.  \\
-
-$\bullet$ \ $\satisfies{M}{\TwoStates {A}{A'}}$\ \ \ iff\ \  \ for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: \\  
-
-\begin{tabular}{lr}
-$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A}\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma' \triangleleft \sigma}{A'}$   
+\begin{tabular}{llcl}
+$\bullet$ & $\satisfies{M}{{A}}$& iff & for all $M_{ext}$, $\sigma$, such that $\arising{M_{ext}}{M}{\sigma}$: \ \    \\
+ & & & - $\satisfiesA{M}{\sigma}{A}$.  
+\\
+$\bullet$ &  $\satisfies{M}{\TwoStates {A}{A'}}$ &  iff   &  for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: \\  
+ & & & -   $\satisfiesA{M}{\sigma}{A}\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma' \triangleleft \sigma}{A'}$   
+\\
+$\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}$ and $\satisfies{M}{S'}$
 \end{tabular} 
 
-
-%\begin{tabular}{lr}
-%$\;\;\;\;$- $\satisfiesA{M}{\sigma}{A}$  & \rdelim\}{3}{3mm}[$\;\;\;\Rightarrow\;\;\;$  $\satisfiesA{M}{\sigma' \triangleleft \sigma}{A'}$] \\
-%$\;\;\;\;$- $\reductions{M_{ext}}{M}{\sigma}{\sigma'}$    
-%\end{tabular} 
  
 \end{definition} 
 
 TODO say how this related to OOPSLA from-to-onlyIf, and how the other two are not expressed. But this should go to related work.
-Add examples?
 
-\newpage
+\begin{definition}[Alternative Definition for Semantics of \SpecLang Specifications]
+We define $\satisfies{M}{{S}}$ by cases over the four possible syntactic forms.
+For any assertions   $A_1$, $A_2$, and $A$: \\
+
+\label{def:necessity-semantics}
+
+\begin{tabular}{llcl}
+$\bullet$ & $\satisfies{M}{{A}}$& iff & ... as before ... \\
+$\bullet$ &  $\satisfies{M}{\TwoStates {A}{A'}}$ &  iff   &  for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$, and all the \\
+& & & {\textbf {free variables of $A$ and $A'$ do not appear in $\sigma.{\texttt{cont}}$}}: \\  
+ & & & -   $\satisfiesA{M}{\sigma}{A}\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma'}{A'}$   
+\\
+$\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & ... as before 
+\end{tabular} 
+
+TODO: explain what the requirement {\textbf {the free variables of $A$ and $A'$ do not appear in $\sigma.{\texttt{cont}}$}} buys us. 
+
+Notice that in the above, while we require that the free variables of $A$ and $A'$ do not appear in $\sigma.{\texttt{cont}}$, we do expect that they should be in the domain of the top frame, and we do not preclude that they could be aliases with variables from 
+$\sigma.{\texttt{cont}}$.
+
+Another way of defining the semantics of $\satisfies{M}{\TwoStates {A}{A'}}$  is through renaming of all the free variables in $A$ and $A'$.
+
+\begin{lemma}
+For any $M$, and assertions $A$ and $A'$:
+
+\begin{itemize}
+\item $\satisfies{M}{\TwoStates {A}{A'}}$ iff for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: 
+\\
+\strut \hspace{0.1cm} $\satisfiesA{M}{\sigma[\overline y \mapsto \overline {\sigma (x)}]}{A [\overline x \mapsto \overline {y}]}
+\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma'[\overline y \mapsto \overline {\sigma (x)}]}{A'[\overline x \mapsto \overline {y}]}$
+\end{itemize} 
+\end{lemma}
+
+NOTE-DISCUSS: All free variables are existentially quantified here. Is that good? Should we have an explicit universal quantification? If so, should we allow 
+
+\end{definition} 
+
+\subsection{Examples}
+\noindent
+TODO -- if needed -- As an example, we consider the following three  specifications:
+
+%\begin{lstlisting}[language = Chainmail, mathescape=true,xleftmargin=2em,frame=lines,framexleftmargin=1.5em]
+\begin{tabular}{lcl}
+$\SrobustB$ &  $\triangleq$   & $\FirstState{\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}}}$
+ \\
+   & & $\SecondState   {\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}}} $
+ \\
+   & & $\wedge$ \\
+   & & $\FirstState{\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}} \wedge \prg{a.balance}\geq b}$
+ \\
+    & & $\SecondState  {\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}}\wedge \prg{a.balance}\geq b} $
+\end{tabular}
+% \end{lstlisting}
+
+
 \subsubsection{Adaptation}
 \label{sub:adapt:full}
-We  now discuss  the adaptation operator.  It should be more succinct than the oopsla version.
- 
-
-
+TODO IF WE GO WITH THE FIRST ALTERNATIVE: We  now discuss  the adaptation operator.  It should be more succinct than the oopsla version.
