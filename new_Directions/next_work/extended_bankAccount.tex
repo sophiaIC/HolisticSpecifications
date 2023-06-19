@@ -1,0 +1,525 @@
+\clearpage
+\section{Proof of \ModD's Adherence to \SrobustB}
+\label{app:examples}
+
+\sd{We now describe  the poof that \ModD's adheres to \SrobustB;
+the accompanying Coq formalism includes a mechanized version.}
+
+
+%% \sophiaPonder[should these issues not have already been said in section 4]{As we stated} in Section \ref{sub:SpecO}, 
+%% we assume the existence of a proof system for judgments
+%% of the form $\proves{M}{A}$, denoting that in 
+%% any arising program state, with internal module $M$, $A$ is satisfied. 
+%% We \sd{list}   these rules in Appendix \ref{app:assert_logic}. 
+%% %\jm[]{Further, recall that as per Def. \ref{def:necessity-semantics},
+%% %$\satisfies{M}{A}$ is defined for arising program states, and thus by Theorem \ref{thm:soundness},
+%% %if $\proves{M}{A}$, it follows that for all arising program states in the context fo internal 
+%% %module $M$, $A$ is satisfied.}
+
+ 
+Even though both the implementation and the specification being proven differ from those in \S
+\ref{s:outline}, the structure of the proofs do retain broad similarities. In particular the proof in this section 
+follows the outline of our reasoning given in Sec. \ref{s:approach}.
+Namely, we prove:\\
+\begin{enumerate}
+\item
+encapsulation of the account's balance and   password;
+\item \emph{per-method} \Nec specifications on all \ModD methods,  
+\item \emph{per-step} \Nec specifications for changing the balance and password, 
+and finally 
+\item the \emph{emergent} \Nec specification \SrobustB. 
+\end{enumerate}
+\julian{Mechanised versions of the proofs found in this Appendix can be found in the associated 
+Coq artifact in \prg{bank\_account.v}  \jm[]{\cite{necessityCoq2022}}.}
+
+\noindent
+\sd{We now discuss each of these four parts of the proof.}
+
+ \subsection{Part 1: Assertion Encapsulation}
+\label{s:BA-encap-extended}
+%% \sophiaPonder[Do we need all that: We base the soundness of our encapsulation of the type system of \Loo, and use the proof rules given in Figures \ref{f:intrnl} and \ref{f:asrt-encap}.
+%%  Informally, $\intrnl{e}$ indicates that any objects inspected during the evaluation of expression $e$ are internal. $\encaps{A}$ (see Section \ref{s:inference}) indicates 
+%% that internal computation is necessary for a change in satisfaction of $A$. Rudimentary algorithms for proving $\intrnl{}$ and $\encaps{}$ are given in 
+%% Appendix \ref{s:encap-proof}, and used here.]{}
+% We provide the proof for the 
+Using \sd{the rules for proving $\intrnl{}$ and $\encaps{}$ from
+Appendix \ref{s:encap-proof}  we prove encapsulation of \prg{b.balance(a)}} as  below\\
+%\begin{figure}[h]
+\begin{proofexample}
+\proofsteps{\prg{BalanceEncaps}}
+	{\begin{proofexample}
+		\proofsteps{\prg{aEnc}}
+			{\proofstepwithrule
+			{$\proves{\ModD}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{a}}}}$}
+				{by \textsc{Enc$_e$-Obj}}
+		}
+		\endproofsteps
+	\end{proofexample}
+		}
+	{\begin{proofexample}
+		\proofsteps{\prg{bEnc}}
+			{\proofstepwithrule
+			{$\proves{\ModD}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{b}}}}$}
+				{by \textsc{Enc$_e$-Obj}}
+		}
+		\endproofsteps
+	\end{proofexample}
+		}
+	{\begin{proofexample}
+		\proofsteps{\prg{getBalEnc}}
+			{\proofstepwithrule
+			{$\proves{\ModD}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{b.balance(a)}}}}$}
+				{by \prg{aEnc}, \prg{bEnc}, and \textsc{Enc$_e$-Ghost}}
+		}
+		\endproofsteps
+	\end{proofexample}
+		}
+	{\begin{proofexample}
+		\proofsteps{\prg{balEnc}}
+			{\proofstepwithrule
+			{$\proves{\ModD}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\intrnl{\prg{bal}}}}$}
+				{by \textsc{Enc$_e$-Int}}
+		}
+		\endproofsteps
+	\end{proofexample}
+		}
+		{\proofstepwithrule
+			{
+			$\proves{\ModD}{\givenA{\prg{b, b$^\prime$:Bank $\wedge$ a:Account $\wedge$ b.balance(a)=bal}}{\encaps{\prg{b.balance(a)=bal}}}}$
+			}{by \prg{getBalEnc}, \prg{balEnc}, \textsc{Enc-Exp}}}
+\endproofsteps
+\end{proofexample}\\
+We omit the proof of $\encaps{\prg{a.password=pwd}}$, as its construction is very similar to that of $\encaps{\prg{b.balance(a)=bal}}$.
+%\caption{Proof of encapsulation of \prg{b.getBal(a)=bal}}
+%\end{figure}
+
+\subsection{Part 2: Per-Method \Nec Specifications}
+\label{s:BA-classical-extended}
+We now provide proofs for per-method specifications, working from
+method pre- and postconditions.
+\funcSpecs.
+\sophiaPonder[It said "These proof steps are quite verbose" ..." -- please do not say that, put it in a positive way]{}
+\sd{Here we  focus on proofs
+of \prg{authenticate} from the \prg{Account} class.}
+
+\jm[]{There are two \emph{per-method} \Nec specifications that we need
+to prove of \prg{authenticate}: 
+\begin{description}
+\item[\textbf{\prg{AuthBalChange}}:] any change to the balance of an account may only occur if call to \prg{transfer} on the \prg{Bank} with the correct password is made. 
+This may seem counter-intuitive as it is not possible to make two method calls (\prg{authenticate} and \prg{transfer}) at the same time, however we are able to prove this by first proving the 
+absurdity that \prg{authenticate} is able to modify any balance.
+\item[\textbf{\prg{AuthPwdLeak}}:] any call to \prg{authenticate} may only invalidate \wrapped{\prg{a.password}} (for any account \prg{a}) if \prg{false} is first satisfied -- clearly an absurdity.
+\end{description}}
+
+\paragraph{\emph{\textbf{\prg{AuthBalChange}}}}
+First we use the \funcSpec of the \prg{authenticate} method in \prg{Account} to prove that a call to \prg{authenticate} can only result in a decrease in balance in a single step if there were in fact a call to \prg{transfer} to the \prg{Bank}. 
+This may seem 
+odd at first, and impossible to prove, however we leverage the fact that we are first able to prove that \prg{false}
+is a necessary condition to decreasing the balance, or in other words, it is not possible to decrease the balance by a
+call to \prg{authenticate}. 
+We then use the proof rule \textsc{Absurd} to prove our desired necessary condition.
+This proof is presented as \prg{AuthBalChange} below.
+\\
+\noindent
+{
+	\begin{proofexample}
+		\proofsteps{AuthBalChange}
+			{\proofstepwithrule
+				{\hoareEx
+						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal}
+						{a.authenticate(pwd)}
+						{b.balance(a$^\prime$) == bal}
+						}
+					{by \funcSpecs}
+			}
+			{\proofstepwithrule
+				{\hoareEx
+						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal $\wedge$ $\neg$ false}
+						{a.authenticate(pwd)}
+						{$\neg$ b.balance(a$^\prime$) < bal}
+						}
+					{by Hoare logic}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleExAlt
+						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
+						{b.balance(a$^\prime$) < bal}
+						{false}
+						}
+					{by \textsc{If1-Classical}}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleExAlt
+						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.balance(a$^\prime$)=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{authenticate}}{\prg{pwd}}$}
+						{b.balance(a$^\prime$) < bal}
+						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a$^\prime$.password, amt, a$^\prime$, to}}$}
+						}
+					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
+			}
+		\endproofsteps
+	\end{proofexample}
+}
+
+\paragraph{\emph{\textbf{\prg{AuthPwdLeak}}}} The proof of \prg{AuthPwdLeak} is given below, and is proven by application of Hoare logic rules and \textsc{If1-Inside}.
+
+\sophiaPonder[Do we want to show the other proofs? Or at least list what else is proven?]{}
+
+%We provide the statements of the specifications for the remaining methods in the module below,
+%%(\textbf{changePassBalChange}, \textbf{Ledger::TransferBalChange}, and \textbf{Bank::TransferBalChange}), 
+%but we elide the proof steps as they do not differ much from that of \textbf{AuthBalChange}.\\
+%{
+%	\begin{proofexample}
+%		\proofsteps{changePassBalChange}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{a, a$^\prime$:Account $\wedge$ b:Bank $\wedge$ b.getBal(a$^\prime$)=bal $\wedge$ $\calls{\_}{\prg{a}}{\prg{changePass}}{\prg{pwd}}$}
+%						{b.getBal(a$^\prime$) < bal}
+%						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a$^\prime$.password, amt, a$^\prime$, to}}$}
+%						}
+%					{by similar reasoning to \textbf{AuthBalChange}}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%}
+%\begin{minipage}{\textwidth}
+%{
+%	\begin{proofexample}
+%		\proofsteps{Ledger::TransferBalChange}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l:Ledger $\wedge$ a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getBal(a) < bal}
+%						{$\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						}
+%					{by \textsc{If-Start} and \textsc{If1-If}}
+%			}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l:Ledger $\wedge$ a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getBal(a) < bal}
+%						{$\neg\wrapped{\prg{l}}$}
+%						}
+%					{by \textsc{If1-}$\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Caller-Recv}}
+%			}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l:Ledger $\wedge$ a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getBal(a) < bal}
+%						{\false}
+%						}
+%					{by \textsc{Intrnl-Wrapped} and \textsc{If1-}$\longrightarrow$}
+%			}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l:Ledger $\wedge$ a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getBal(a) < bal}
+%						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
+%						}
+%					{by \textsc{Absurd} and \textsc{If1-}$\longrightarrow$}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%}
+%\end{minipage}
+%{
+%	\begin{proofexample}
+%		\proofsteps{Ledger::TransferBalChange}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{l:Ledger $\wedge$ a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\prg{amt, from, to}}$}
+%						{b.getBal(a) < bal}
+%						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
+%						}
+%					{by similar reasoning to \textbf{\prg{AuthBalChange}}}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%}
+%{
+%	\begin{proofexample}
+%		\proofsteps{Bank::TransferBalChange}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{a:Account $\wedge$ b, b$^\prime$:Bank $\wedge$ b.getBal(a)=bal $\wedge$ $\calls{\_}{\prg{b$^\prime$}}{\prg{transfer}}{\prg{pwd, amt, from, to}}$}
+%						{b.getBal(a) < bal}
+%						{a == from $\wedge$ pwd == a.password $\wedge$ b$^\prime$ == b}
+%						}
+%					{by similar reasoning to \textbf{AuthBalChange}}
+%			}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal $\wedge$ $\calls{\_}{\prg{b$^\prime$}}{\prg{transfer}}{\prg{pwd, amt, from, to}}$}
+%						{b.getBal(a) < bal}
+%						{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
+%						}
+%					{by \textsc{If1-}$\longrightarrow$}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%}
+%Below we provide the proofs for each method in \jm[]{\ModD} that they cannot
+%be used to leak the password of an account. \\
+{
+	\begin{proofexample}
+		\proofsteps{AuthPwdLeak}
+			{\proofstepwithrule
+				{\hoareEx
+						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ a.password == pwd}
+						{\prg{res}=a$^\prime$.authenticate(\_)}
+						{res != pwd}
+						}
+					{by \funcSpec}
+			}
+			{\proofstepwithrule
+				{\hoareEx
+						{a:Account $\wedge$ a$^\prime$:Account $\wedge$ a.password == pwd $\wedge$ $\neg$ false}
+						{\prg{res}=a$^\prime$.authenticate(\_)}
+						{res != pwd}
+						}
+					{by Hoare logic}
+			}
+			{\proofstepwithrule
+				{\onlyIfSingleExAlt
+						{$\wrapped{\prg{pwd}}$ $\wedge$ a, a$^\prime$:Account $\wedge$ a.password=pwd $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{authenticate}}{\_}$}
+						{$\neg \wrapped{\_}$}
+						{false}
+						}
+					{by \textsc{If1-Inside}}
+			}
+		\endproofsteps
+	\end{proofexample}
+	}
+%	{
+%	\begin{proofexample}
+%		\proofsteps{changePassLeak}
+%			{\proofstepwithrule
+%				{\onlyIfSingleEx
+%						{$\wrapped{\prg{pwd}}$ $\wedge$ a, a$^\prime$:Account $\wedge$ a.password=pwd $\wedge$ $\calls{\_}{\prg{a}^\prime}{\prg{changePass}}{\_, \_}$}
+%						{$\neg \wrapped{\prg{pwd}}$}
+%						{false}
+%						}
+%					{by similar reasoning to \textbf{AuthPwdLeak}}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%	}
+%	{
+%	\begin{proofexample}
+%		\proofsteps{Ledger::TransferPwdLeak}
+%			{\proofstepwithrule
+%				{\onlyIfSingleExAlt
+%						{$\wrapped{\prg{pwd}}$ $\wedge$ a:Account $\wedge$ l:Ledger $\wedge$ a.password=pwd $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\_, \_, \_}$}
+%						{$\neg \wrapped{\prg{pwd}}$}
+%						{false}
+%						}
+%					{by similar reasoning to \textbf{AuthPwdLeak}}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%	}
+%	{
+%	\begin{proofexample}
+%		\proofsteps{Bank::TransferPwdLeak}
+%			{\proofstepwithrule
+%				{\onlyIfSingleExAlt
+%						{$\wrapped{\prg{pwd}}$ $\wedge$ a:Account $\wedge$ b:Bank $\wedge$ a.password=pwd $\wedge$ $\calls{\_}{\prg{l}}{\prg{transfer}}{\_, \_, \_, \_}$}
+%						{$\neg \wrapped{\prg{pwd}}$}
+%						{false}
+%						}
+%					{by similar reasoning to \textbf{AuthPwdLeak}}
+%			}
+%		\endproofsteps
+%	\end{proofexample}
+%	}
+
+\jm[]{
+\paragraph{Per-method Specifications on Methods \prg{confined} Classes}
+It is notable that proofs of per-method specifications are trivial since
+the type system prevents external access and thus external method calls objects of \prg{confined} classes.
+While this does not arise in the example detailed in \S \ref{s:examples}, we use it in this
+example to prove necessary pre-conditions on methods in \prg{Ledger}. We don't detail these 
+here, however proofs of these Lemmas can be found in \prg{bank\_account.v} in the 
+associated Coq artifact.
+}
+
+\subsection{Part 3: Per-Step \Nec Specifications}
+The next step is to construct proofs of necessary conditions for
+\emph{any} possible step in our external state semantics.
+In order to prove the final result in the next section,
+we need to prove three per-step \Nec specifications: \prg{BalanceChange}, \prg{PasswordChange}, and \prg{PasswordLeak}.
+\begin{lstlisting}[language=Chainmail, mathescape=true, frame=lines]
+BalanceChange $\triangleq$ from  a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal
+                 next b.balance(a) < bal   onlyIf $\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$
+                 
+PasswordChange $\triangleq$ from a:Account $\wedge$ a.password=p
+                  next $\neg$ a.password != p   onlyIf $\calls{\_}{\prg{a}}{\prg{changePass}}{\prg{a.password}, \_}$
+                  
+PasswordLeak $\triangleq$ from a:Account $\wedge$ a.password=p $\wedge$ inside<p>
+                  next $\neg$ inside<p>   onlyIf false
+\end{lstlisting}
+\jm[]{We provide the proofs of these in Appendix \ref{app:BankAccount}, but describe the construction of the proof of \prg{BalanceChange} here:
+by application of the rules/results
+ \prg{AuthBalChange}, \prg{changePassBalChange}, \prg{Ledger::TransferBalChange}, \prg{Bank::TransferBalChange}, \prg{BalanceEncaps}, and \textsc{If1-Internal}.}
+%\sophiaPonder[somethif missing. Where is Appendix F?]{}
+%\james{\textbf{MUST BE FIXED NOW}}
+%
+%by combining the results from \ref{s:BA-encap} and \ref{s:BA-classical} using \textsc{If1-Internal}. 
+%Again, we elide the details of the proof of \prg{PasswordChange} and \prg{PasswordLeak} as they are similar to that
+%of \prg{BalanceChange}. \\
+%\noindent
+%\begin{proofexample}
+%\proofsteps{\prg{BalanceChange}}
+%	{\proofstepwithrule
+%			{\onlyIfSingleEx
+%					{a:Account $\wedge$ b:Bank $\wedge$ b.getBal(a)=bal}
+%					{b.getBal(a) < bal}
+%					{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password, amt, a, to}}$}
+%					}
+%				{by \textbf{AuthBalChange}, \textbf{changePassBalChange}, \textbf{Ledger::TransferBalChange}, \textbf{Bank::TransferBalChange}, \textbf{BalanceEncaps}, and \textsc{If1-Internal}}
+%		}
+%\endproofsteps
+%\end{proofexample}
+%\begin{proofexample}
+%\proofsteps{\prg{PasswordChange}}
+%	{\proofstepwithrule{\onlyIfSingleEx
+%				{a:Account $\wedge$ a.password=p}
+%				{a.password $\neq$ p}
+%				{$\calls{\_}{\prg{a}}{\prg{changePass}}{\prg{p}, \_}$}
+%				}
+%			{by similar reasoning to \textbf{BalanceChange}}
+%	}
+%\endproofsteps
+%\end{proofexample}
+%\begin{proofexample}
+%\proofsteps{\prg{PasswordLeak}}
+%	{\proofstepwithrule{\onlyIfSingleEx
+%				{a:Account $\wedge$ a.password=p $\wedge$ $\wrapped{\prg{p}}$}
+%				{$\neg \wrapped{\prg{p}}$}
+%				{false}
+%				}
+%			{by similar reasoning to \prg{Balancechange}}
+%	}
+%\endproofsteps
+%\end{proofexample}
+\subsection{Part 4: Emergent \Nec Specifications}
+Finally, we combine our module-wide single-step \Nec specifications to 
+prove emergent behaviour of the entire system. Informally the
+reasoning used in the construction of the proof of \SrobustB can be stated as
+\begin{description}
+\item [(1)]
+If the balance of an account decreases, then
+by \prg{BalanceChange} there must have been a call
+to \prg{transfer} in \prg{Bank} with the correct password.
+\item [(2)]
+If there was a call where the \prg{Account}'s password 
+was used, then there must have been an intermediate program state
+when some external object had access to the password.
+\item [(3)]
+Either that password was the same password as in the {starting} 
+program state, or it was different:
+\begin{description}
+\item [(Case A)]
+If it is the same as the initial password, then since by \prg{PasswordLeak}
+it is impossible to leak the password, it follows that some external object 
+must have had access to the password initially.
+\item [(Case B)]
+If the password is different from the initial password, 
+then there must have been an  {intermediate} program state when it 
+changed. By \prg{PasswordChange} we know that this must have occurred
+by a call to \prg{changePassword} with the correct password. Thus,
+there must be a some  {intermediate} program state where the initial
+password is known. From here we proceed by the same reasoning 
+as \textbf{(Case A)}.
+\end{description}
+\end{description}
+\begin{proofexample}
+\proofsteps{\SrobustB}
+	{\proofstepwithrule{\onlyThroughExAlt
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal}
+				{b.balance(a) < bal}
+				{$\calls{\_}{\prg{b}}{\prg{transfer}}{\prg{a.password}, \_, \prg{a}, \_}$}
+				}
+			{by \textsc{Changes} and \prg{BalanceChange}}}
+	{\proofstepwithrule{\onlyThroughExAlt
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal}
+				{b.balance(a) < bal}
+				{$\exists$ o.[$\external{\prg{o}}$ $\wedge$ $\access{\prg{o}}{\prg{a.password}}$]}
+				}
+			{by $\longrightarrow$, \textsc{Caller-Ext}, and \textsc{Calls-Args}}}
+	{\proofstepwithrule{\onlyThroughExAlt
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
+				{$\neg$$\wrapped{\prg{a.password}}$}
+				}
+			{by $\longrightarrow$}}
+	{\proofstepwithrule{\onlyThroughEx
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
+				{$\neg$$\wrapped{\prg{a.password}}$ $\wedge$ (a.password=pwd $\vee$ a.password != pwd)}
+				}
+			{by $\longrightarrow$ and \textsc{Excluded Middle}}}
+	{\proofstepwithrule{\onlyThroughEx
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
+				{($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password=pwd) $\vee$\\
+				($\neg$$\wrapped{\prg{a.password}}$ $\wedge$ a.password != pwd)}
+				}
+			{by $\longrightarrow$}}
+	{\proofstepwithrule{\onlyThroughExAlt
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
+				{$\neg$$\wrapped{\prg{pwd}}$ $\vee$
+				a.password != pwd}
+				}
+			{by $\longrightarrow$}}
+	{
+	\begin{proofexample}
+	\proofsteps{Case A ($\neg\wrapped{\prg{pwd}}$)}
+			{\proofstepwithrule
+				{\onlyIfExAlt
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+					{$\neg$$\wrapped{\prg{pwd}}$}
+					{$\wrapped{\prg{pwd}}\ \vee \neg\wrapped{\prg{pwd}}$}
+					}
+				{by \textsc{If-}$\longrightarrow$ and \textsc{Excluded Middle}}}
+			{\proofstepwithrule{\onlyIfExAlt
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+					{$\neg$$\wrapped{\prg{pwd}}$}
+					{$\neg\wrapped{\prg{pwd}}$}
+					}
+				{by $\vee$E and \prg{PasswordLeak}}}
+	\endproofsteps
+	\end{proofexample}
+	}
+	{
+	\begin{proofexample}
+	\proofsteps{Case B (\prg{a.password != pwd})}
+		{\proofstepwithrule{\onlyThroughExAlt
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+					{a.password != pwd}
+					{$\calls{\_}{\prg{a}}{\prg{changePass}}{\prg{pwd}, \_}$}
+					}
+				{by \textsc{Changes} and \textsc{PasswordChange}}}
+		{\proofstepwithrule{\onlyThroughExAlt
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+					{a.password != pwd}
+					{$\neg\wrapped{\prg{pwd}}$}
+					}
+				{by $\vee$E and \prg{PasswordLeak}}}
+		{\proofstepwithrule{\onlyIfExAlt
+					{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+					{a.password != pwd}
+					{$\neg\wrapped{\prg{pwd}}$}
+					}
+				{by \textbf{Case A} and \textsc{Trans}}}
+	\endproofsteps
+	\end{proofexample}
+	}
+	{\proofstepwithrule{\onlyIfExAlt
+				{a:Account $\wedge$ b:Bank $\wedge$ b.balance(a)=bal $\wedge$ a.password=pwd}
+				{b.balance(a) < bal}
+				{$\neg\wrapped{\prg{pwd}}$}
+				}
+			{by \textbf{Case A}, \textbf{Case B}, \textsc{If-}$\vee$I$_2$, and \textsc{If-}$\longrightarrow$}}
+\endproofsteps
+\end{proofexample}

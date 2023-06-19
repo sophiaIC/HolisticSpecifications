@@ -1,0 +1,960 @@
+\section{Related Work}
+\label{s:related}
+%\susan[from the journal paper]{How long should this section be? One page? We need to compare with FASE or allude to it, if we have the right words in the introduction.}
+
+
+%% \paragraph{Behavioural Specification Languages} 
+
+%% \cite{behavSurvey2012} provide an excellent survey of
+%% contemporary specification approaches.  With a lineage back to Hoare
+%% logic \cite{Hoare69},  Design by Contract \cite{Meyer97} was the
+%% first popular attempt to bring verification techniques to
+%% object-oriented programs.  Several more recent specification languages are now making
+%% their way into use, including JML
+%% \cite{Leavens-etal07}, Spec$\sharp$ \cite{BarLeiSch05}, Dafny
+%% \cite{dafny} and Whiley \cite{whiley15}. 
+%% These approaches assume a closed system, where modules
+%% can be trusted to co{\"o}perate. 
+%% Our approach builds upon
+%% these fundamentals, particularly 
+%% two-state invariants \cite{usingHistory} and Considerate Reasoning
+%% \cite{Considerate}.
+
+Program specification and verification has a long and proud history
+\cite{Hoare69,behavSurvey2012,Leavens-etal07,dafny,whiley15,usingHistory,Considerate}.
+These verification techniques assume a closed system, where modules can be trusted
+to co{\"o}perate ---  Design by Contract \cite{MeyerDBC92} explicitly
+rejects \textit{``defensive programming''}  with an ``absolute rule''
+that calling a method in violation of its precondition is always a
+bug.
+
+%
+%In this paper we aim to
+% illustrate the kinds of techniques required
+%work
+%in an open system where modules'
+%invariants must be protected irrespective of the behaviour of the rest
+%of the system.
+
+%% \sd{\Chainmail assertions are} guarantees upheld throughout program execution. 
+%% Other systems which give such ``permanent'' guarantees are  type systems, 
+%% which ensure that well-formed programs  always produce well-formed runtime
+%% configurations, or information flow control systems \cite{infoflow}, which ensure that values 
+%% classified as high  will not be passed into contexts classified as low. 
+%% Such  guarantees %made by types or information flow control
+%%  are  practical to check, but   too coarse grained
+%% for the purpose of fine-grained,  module-specific specifications. 
+
+
+%% \Chainmail\ specifications can cross-cut the code they are
+%% specifying; \sd{therefore,} they are related to
+%% aspect-oriented specification
+%% languages such as AspectJML \cite{AspectJML} and AspectLTL
+%% \cite{AspectLTL}.
+%% %
+%% AspectJML is an aspect-oriented extension to JML;
+%%  in much the same way that AspectJ is an aspect-oriented extension to
+%% Java \cite{AspectJ}.  AspectJML offers AspectJ-style pointcuts 
+%% that allow the definition of crosscutting specifications, such as 
+%% shared pre- or post-conditions for a range of method calls. 
+%% % SD removed the below, as I do not understand it.
+%% % These crosscutting specifications can be checked dynamically along with
+%% % traditional object-oriented JML assertions. In contrast, \Chainmail\
+%% %specifications naturally cross-cut implementation and specification
+%% %modules without any special notation, although, lacking wildcards,
+%% %\Chainmail\ is not as flexible as AspectJML. 
+%% % % SD removed the below, because I do not think it is important
+%% %To our knowledge, the
+%% %semantics of AspectJML have yet to be defined formally, although
+%% %earlier work by Molderez and Janssens describes the formal core of a
+%% %similar language \cite{DbCAspectJ}.
+
+%% AspectLTL \cite{AspectLTL} is a specification language based on Linear
+%% Temporal Logic (LTL). \sd{It} %AspectLTL 
+%% adds cross-cutting aspects to more
+%% traditional LTL module specifications: these aspects can further
+%% constrain specifications in modules. In that sense, AspectLTL and
+%% \Chainmail\ %both 
+%% \sd{use} similar implicit join point models, rather than
+%% importing AspectJ style explicit pointcuts as in AspectJML.
+%% %% % SD removed the below, because I do not think it is important
+%% %  AspectLTL
+%% %has a formal definition, as does \Chainmail; unlike \Chainmail,
+%% %AspectLTL has support for automated reasoning with an efficient
+%% %synthesis algorithm.
+
+%% % \paragraph{Concurrent Reasoning} Deny-Guarantee \cite{DenyGuarantee}
+%% % distinguishes between assertions guaranteed by a thread, and actions
+%% % denied to all other threads. Deny properties correspond to our
+%% % requirements that certain properties be preserved by all code linked
+%% % to the current module. Compared with our work, deny-guarantee assumes
+%% % co{\"o}peration: composition is legal only if  threads adhere  to
+%% % their deny properties. In our work, a module has to be robust  and
+%% % ensure that these properties cannot be affected by  other code. 
+
+
+%% %Finally, 
+%% \sd{Our} work is also related to the causal obligations in Helm et
+%% al.'s behavioural contracts \cite{helm90}. Causal obligations allow
+%% programmers to specify e.g.\ that whenever one object receives a
+%% message (such as a subject in the Observer pattern having its value
+%% changed) that object must send particular messages off to other objects
+%% (e.g.\ the subject must notify its observers). \Chainmail's control
+%% %SD: not "control flow"
+%%  operator % (`$\Calls{\_} {\_} {\_} {\_} $) 
+%%  %allows  programmers to make
+%%  \sd{supports}  similar specifications, (e.g. 
+%%  ${\Calls{\_}  {\prg{setValue}} {\prg{s}} {\prg{v}}}  \rightarrow \Future{\Calls{\prg{s}}{\prg{notify}}{\prg{s.observer}}{\prg{v}}}$ --- when a subject receives a \prg{setValue} method,
+%%   it must ``forward'' those messages to the observer.
+
+
+
+%cute but wrong.
+%To misparaphrase Tolstoy, secure systems are all alike;
+%every insecure system is insecure in its own way
+%\cite{WikipediaAnnaKareninaPrinciple}.
+
+%In an open world, we cannot rely on the kindness of strangers: rather
+%we have to ensure our code is correct regardless of whether it
+%nteracts with friends or foes.
+%Attackers 
+%\textit{``only have to be lucky once''} while secure systems 
+%\textit{``have to be lucky always''} \cite{IRAThatcher}.
+% SD
+
+% \paragraph{Defensive Consistency}
+
+%Unfortunately, 
+Open systems, by definition, must interact with
+untrusted code: they cannot rely on callers' obeying method
+preconditions. 
+\cite{miller-esop2013,MillerPhD} define the necessary approach as
+\textit{defensive consistency}: \textit{``An object is defensively
+  consistent when it can defend its own invariants and provide correct
+  service to its well behaved clients, despite arbitrary or malicious
+  misbehaviour by its other clients.''}
+%%
+%% Defensively consistent
+%% modules are particularly hard to design, write, understand, and
+%% verify: but
+%% % they have the great advantage that
+%% %they make it much
+%% it is easier to make guarantees about multiple component systems
+%% \cite{Murray10dphil}.
+%%
+%%
+~\cite{Murray10dphil} made the first attempt to formalise defensive consistency and
+ correctness in a programming language context.  Murray's model was rooted in
+counterfactual causation~\cite{Lewis_73}: an object is defensively
+consistent when the addition of untrustworthy clients cannot cause
+well-behaved clients to be given incorrect service.  Murray formalised
+defensive consistency %very 
+abstractly, 
+%over models of (concurrent)
+%object-capability systems in the process algebra CSP~\cite{Hoare:CSP},
+without a specification language for describing effects.
+%such as what it means for an object to provide incorrect service. 
+
+
+
+
+
+The security community has developed a similar notion of ``robust safety'' that
+originated in type systems for process calculi, ensuring protocols
+behave correctly in the presence of ``an arbitrary hostile opponent''
+\cite{gordonJefferyRobustSafety,Bugliesi:resource-aware}.  
+%%
+%% use a type system to verify correspondence 
+%% assertions for security protocols in the language Spi. While both their domain 
+%% and approach are tangential to that of \Nec, they introduce a safety 
+%% theorem, \emph{robust safety}, that roughly states that 
+%% correspondence assertions are true, not just in a closed world, but also in
+%% the presence of ``an arbitrary hostile opponent``.
+%%
+% \cite{ddd, Bugliesi:resource-aware}.
+%
+%
+%
+%
+%% \jm[]{
+%% \cite{abate2019journey} study robust safety for compilation, that is
+%% the preservation of robust safety properties from in source code during compilation.
+%% \cite{robustSafetyPatrignani} also study robustly safe compilation, and develop 
+%% proof techniques for proving a compiler preserves robust safety.
+%% Both the work of 
+%% \cite{abate2019journey} and \cite{robustSafetyPatrignani} are orthogonal to 
+%% that of this paper, however they are related. \Nec is concerned with 
+%% establishing robust safety for uncompiled source code, 
+%% and ideally any compiler of that source code is robustly safe. This 
+%% implies that \cite{abate2019journey} and \cite{robustSafetyPatrignani} 
+%% offer a strong starting point for future work in the implementation of 
+%% \Nec as a tool.
+%% }
+More recent work has applied robust safety in the context of
+programing languages.  For example,
+\cite{ddd} present a logic
+for object capability patterns, drawing 
+%
+% The key idea here is to 
+%\sd{They} % say it simpler
+% draw
+on verification techniques for security and
+information flow. They prove a robust safety property that
+ensures interface objects ("low values") are safe to share with untrusted code,
+ \sdN{in the sense that untrusted code cannot use them to break any internal invariants of the encapsulated object}. 
+%% which must not be exposed to attacking code) from 
+%% %% OCPL supports defensive
+%% %% consistency % (Swasey et al.\ use 
+%% %% (\sd{they} use the term ``robust safety'' from the
+%% %% security community \cite{Bengtson})
+%% %
+%% via a proof system that ensures
+%% low values can never leak high values to external attackers. 
+%% %\susan{How does this imply that high values can be exposed?}
+%% %\james{typo fixed: it's LOW values that can be exposed}
+%% As low values \textit{can} be exposed,
+%%  the behaviour of the system is described by considering attacks only
+%% on low values.  %OCPL is a program logic, and Swasey
+%% \sd{They} %use that logic to
+%% prove a number of object-capability patterns, including
+%% sealer/unsealer pairs, the caretaker, and a general membrane.
+%
+Similarly, \cite{schaeferCbC} have
+% taken a similar approach to Swasey,
+% adding support for
+added  support for information-flow security % in a setting 
+using refinement to ensure correctness (in this case confidentiality) by
+construction. 
+ \sdN{Concerns like \SrobustB are not, we argue, within the scope of these works.}
+% Although designed to support
+% confidentialty, it seems likely that the information-flow guarantees
+% could also be used to ensure robustness.  
+
+
+
+
+
+\cite{dd}  have deployed
+   powerful %rather more complex
+  theoretical techniques to address similar problems to \Nec.  % Devrise et al.\ 
+  They show how step-indexing, Kripke worlds, and representing objects
+as state machines with public and private transitions can be used to
+reason about % object-oriented programs in general.
+object capabilities.
+They have demonstrated solutions to a range of exemplar problems,
+including the DOM wrapper (replicated in 
+\S\ref{ss:DOM}) and a mashup application.
+% Although the formal techniques are much more sophisticated than we
+%apply here, and consequently 
+% not true can e.g.\ reason about recursion where we
+%cannot, there are some similarities, e.g.\ with the 
+% DROPPING THE BELOW
+% as dd did not agree
+%Their distinction
+% between public and private transitions %being related 
+%is similar to our
+%distinction between internal and external objects.
+
+ 
+
+\Nec differs from Swasey, Schaefer's, and Devriese's work in a number of ways:
+They are primarily concerned with %about
+mechanisms that ensure encapsulation (aka 
+confinement) while we abstract away from any mechanism.
+They use powerful mathematical techniques
+% , such as Kripke worlds and step-indexing 
+which  the users need  to understand in order to write their specifications,
+while \Nec users only need  to understand \sdNr[as Alex pointed out]{small extensions to} first order logic.
+% While \Chainmail's $\Using{}{}$ is related to Banerjee
+% and Naumann's region sets, the assertion languages here are mostly
+% traditional (extensions of) Hoare logics --- Swasey et al.\ build on a
+%concurrent separation logic. 
+Finally, none of these systems offer the kinds of
+necessity assertions addressing control flow, provenance, and permission 
+that are at the core of \Nec's approach.
+
+
+
+%%%
+%%% james just decided thse werent[] relevant
+%%% 
+
+
+%% \cite{abate2019journey} and \cite{robustSafetyPatrignani} study robust
+%% safety for compilation, that is 
+%% the preservation of robust safety properties from source code to
+%% running system.
+%% \cite{robustSafetyPatrignani} develop 
+%% proof techniques for proving a compiler preserves robust safety.
+%% %
+%% %\jm[]{
+%% \cite{vanproving} show how capability machines support the robust
+%% safety of a full system, allowing different nested layers to establish
+%% different security properties.  This work is focused on machine level
+%% properties, while \Nec focuses on proving higher-level specifications.
+
+%% %The authors 
+%% %demonstrate how their approach enables them to reason about 
+%% %nested encapsulation, and provide as a study the context of memory-mapped I/O.
+%% %% \cite{vanproving} tackle a different problem to \Nec:
+%% %% focusing on layering security requirements,
+%% %% while we focus on specifying and verifying high level properties. 
+
+%% %% \cite{vanproving} shows how a sophisticated capability machine can be used 
+%% %% to prove robustness of a system with sophisticated layers of security requirements,
+%% %% \Nec on the other hand is intended to be agnostic of the low-level detail,
+%% %% and is rather concerned with allowing programmers to write powerful but simple 
+%% %% high-level robustness properties.
+%% %% }
+
+
+
+
+
+%% %\jm[]{\paragraph{Robust Safety}
+%% %In security literature, \cite{gordonJefferyRobustSafety} informally define \emph{Robust Safety} as 
+%% %``arbitrary'' hostile opponent. \citeauthor{gordonJefferyRobustSafety}
+%% %are concerned with checking authenticity properties of cryptographic protocols using a type
+%% %system, a different domain to that of \Chainmail. 
+%% %More recently \cite{ddd} and \cite{sandbox} incorporate this property in an 
+%% %object capabilities system, and show that using object capabilities, specific safety properties
+%% %for a component can be ensured, even in the presence of arbitrary, untrusted code.
+%% %\cite{robustSafetyPatrignani} explores robust safety for as a property of compiled code, 
+%% %specifically the authors consider how compilers can ensure safety of compiled code in the 
+%% %presence of arbitrary code through the insertion of sufficient runtime checks, 
+%% %even when linked with arbitrary, potentially hostile, low-level code.
+%% %}
+
+%% %\paragraph{Blockchain}
+%% %\susan[I think Scilla should be dropped]{}
+%% %Scilla \cite{scillaOOPSLA19} is a minimalistic typed functional
+%% %language for writing smart contracts. %that compiles to Ethereum bytecode. 
+%% %Scilla's semantic model is restricted, assuming actor based
+%% %communication and restricting recursion,  thus facilitating static
+%% %analysis of Scilla contracts and ensuring termination.
+%% %Scilla is able to demonstrate that a number of popular Ethereum
+%% %contracts avoid type errors, out-of-gas resource failures, and
+%% %preservation of virtual currency. 
+%% %Scilla's semantics are defined formally, but have not yet been represented in a
+%% %mechanised model. \susan[The Scilla website talks about using Coq]{}
+
+%% %% \kjx{NPChecker \cite{NPcheckerOOPSLA19} analyses Ethereum smart
+%% %% contracts to detect bugs related to nondeterministic
+%% %% execution. NPChecker undertakes an information flow
+%% %% analysis to detect potential read-write hazards
+%% %% particularly reentrancy and ordering dependencies.
+%% %% \textbf{We don't do concurrency. Do we need this one? I don't think so}
+%% %% }
+
+
+
+
+
+
+By enforcing encapsulation, %% all  \Nec % used to say both
+all these approaches are reminiscent of techniques such as
+ownership types \cite{ownalias,NobPotVitECOOP98},
+which also can 
+protect internal implementation objects behind 
+encapsulation boundaries.  \cite{Banerjee:2005,encaps} demonstrated that by
+ensuring confinement, ownership
+systems can enforce representation independence.
+\Nec relies on an implicit form of ownership types \cite{confined},
+where inside objects are encapsulated behind a boundary 
+consisting of all the internal objects that are accessible outside their
+defining module \cite{TAME2003}.  
+Compare 
+\Nec's definition of %$o$ being \texttt{inside} the current module $M$
+inside
+--- all references to $o$ are from objects $x$
+that are within $M$ (here internal to $M$):
+$\all{x}{\access{x}{o}\ \Rightarrow\ \internal{x}}$
+with the containment invariant 
+from \citeasnoun{simpleOwnership} ---
+all references to $o$ are from objects $x$
+whose representation is within ($\prec:$) $o$'s owner:
+($\all{x}{\access{x}{o}\ \Rightarrow\ \texttt{rep}(x) \prec:
+  \texttt{owner}(o)  }$).
+
+%
+% 
+%%  $\access{x}{o} \Rightarrow\ 
+%% (\prg{x } \texttt{\textcolor{blue}{inside}}~\texttt{\textcolor{blue}{owner}}(\prg{o})).)$
+%
+%
+
+%\paragraph{Chainmail}.
+In early work, 
+\cite{WAS-OOPSLA14-TR} % Drossopoulou and Noble
+sketched a  specification language to
+specify six correctness policies from \cite{MillerPhD}. % however,
+%{their} partial formalisation showed that % they allowed
+%\sd{showed} that several possible interpretations were possible, %.  They also 
+%\sd{and} uncovered
+%the need for another four further policies.
+%  and formalised them as well, showing how different implementations of the underlying Mint and Purse
+% systems coexist with different policies \cite{capeIFM14},
+They also
+  sketched how 
+a trust-sensitive 
+example (escrow) could be verified in an open world
+\cite{swapsies}. More recently, 
+\cite{FASE} presents the \emph{Chainmail} language for
+``holistic specifications'' in open world systems.
+Like \Nec, \emph{Chainmail} is able to express specifications of
+\emph{permission}, \emph{provenance}, and \emph{control}; \emph{Chainmail}
+also includes \emph{spatial} assertions and a richer set of temporal
+operators, but no proof system. 
+\Nec's restrictions mean 
+we can provide the proof system that \emph{Chainmail} lacks.
+
+
+
+%\paragraph{Smart Contract Verification}
+The recent {\sc{VerX}} tool is able to verify a range of
+specifications for Solidity contracts automatically \cite{VerX}.
+%Similar to \Chainmail, VerX has a specification language based on temporal logic.  
+%VerX offers temporal operators for execution in the past
+%(always, once, prev) but only within a past modality, while \Chainmail\ has two temporal operators, both existential, but with both past and future modalities.   
+%and 
+VerX includes  temporal operators, predicates that
+model the current invocation on a contract (similar to \Nec's
+``calls''), access to variables, 
+{
+but} has no analogues to \Nec's permission or provenance assertions.
+%
+%% \Nec is strictly more expressive as a
+%% specification language, including quantification over objects and sets
+%% (so can compute arbitrary reductions on collections) and %of course
+%% specifications for
+%% permission (``access''), %space (``in'') 
+%% and viewpoint (``external'') which have no analogues in {\sc{VerX}}. 
+%
+Unlike \Nec, {\sc{VerX}} includes a practical tool that has
+been used to verify a hundred properties across case studies of
+twelve Solidity contracts. Also unlike \Nec, {\sc{VerX}}'s own correctness
+has not been formalised or mechanistically proved. 
+
+Like \Nec, VerX \cite{VerX} and  \emph{Chainmail} \cite{FASE} also work on problem-specific guarantees.
+Both  approaches can express necessary conditions
+  like \SrobustA using
+  temporal logic operators and implication. For example,  \SrobustA
+ could be  written: % as:
+\\
+ $\strut ~  ~ \hspace{.25in} \strut  \prg{a:Account} \ \wedge\ \prg{a.balance==bal}  \ \wedge\ 
+\langle {\color{blue}\texttt{next}}\, \prg{a.balance<bal} \, \rangle $\\
+ $\strut ~ \hspace{2.1in} \strut \strut \strut \longrightarrow\   \exists \prg{o},\prg{a'}. \calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{a',a.password}} $
+ \\
+% all the rest unnecessary at the end of paper\sophiaPonder[expalined and used similar syntax to below, and explained. But  now it get too too long :-(]{That is, if in the next state the balance of \prg{a} decreases, then the current state is 
+%a call to the method \prg{transfer} with the correct password passed. 
+%Note that  the underscore indicates
+%an existentially quantified variable used only once, for example,  $\calls{\_}{\prg{a}}{\prg{transfer}}{\prg{\_,a.password}}$
+%is short for $\exists \prg{o}.\exists \prg{a'}. \calls{\prg{o}}{\prg{a}}{\prg{transfer}}{\prg{a',a.password}}$. 
+%Here \prg{o} indicates the current receiver, i.e, the object whose method is currently being executed and making the call.
+%}
+%
+ However, to express \SrobustB, one also needs   capability operators which talk about 
+ provenance   and
+  permission.
+   {\sc{VerX}}  does not support capability operators, and thus cannot express   \SrobustB, 
+   while  \emph{Chainmail} does support capability operators, and can express  \SrobustB.  
+
+Moreover, temporal operators in VerX   and  \emph{Chainmail}  are first class, \ie may appear in any assertions 
+and form new assertions. This makes {\sc{VerX}}   and  \emph{Chainmail} very expressive,
+and allows specifications which talk about any number of points in time.
+However, this expressivity comes at the cost of making it very difficult to develop a logic to
+prove adherence to such specifications.
+
+%\textbf{(ideally also say something about proof status)}}
+
+
+
+
+
+
+%\paragraph{Incorrectness Logic.}
+
+\citeauthor{IncorrectnessLogic} and \citeauthor{IncorrectSeparation}
+developed Incorrectness logics to reason about the presence of bugs, 
+based on a Reverse Hoare Logic \cite{reverseHoare}.
+Classical Hoare triples $\{ P \}\, C\, \{ Q \}$ express  that starting 
+at states satisfying $P$ and executing   $C$  is sufficient to reach only states
+that satisfy $ Q $ (soundness), while
+ incorrectness triples $[ P_i ]\, C_i\, [ Q _i ]$ express  that starting at  
+ states satisfying $P_i$ and executing  $C_i$ is sufficient to reach 
+ all states that satisfy $Q_i$ and possibly some more (completeness).
+%% Therefore,   $\{ P \}\, C\, \{ Q \}$ says that 
+%% $P$ and $C$ 
+%% are sufficient conditions for reaching a subset of $Q$ (soundness),
+%% while 
+%% $[ P_i ]\, C_i\, [ Q _i ]$ says that $P_i$ and $C_i$ 
+%% are sufficient conditions for reaching  a superset of $Q_i$ (completeness).
+%% Classical triples as well as incompleteness triples are about sufficient conditions:
+%%   the difference is whether they consider $Q$ in a sound or a complete way.
+%% The fact that  $[ P_i ]\, C_i\, [ Q _i ]$ gives sufficient conditions for reaching all of $Q_i$ 
+%% makes these triples well-suited for finding bugs. However, since
+%% $P_i$ and $C_i$ are not necessary for reaching $Q_i$, the triple
+%%  $[ P_i ]\, C_i\, [ Q _i ]$ can reason about the presence, but not the absence of
+%%  bugs --
+%% eliminating the $P_i/C_i$ case from the code cannot guarantee the absence of the $Q_i$-bug.
+% Neither Incorrectness Logic, nor Hoare Logic are concerned with \NecessitySpecifications.
+From our perspective, classical Hoare logics and Incorrectness logics
+are both about sufficiency, whereas here we are concerned with \Nec.
+% Combining both approaches into a ``necessity incorrectness logic''
+% must necessarily (even if incorrectly) be left for future work.
+
+
+
+
+
+%% once, via our necessity operators rather than their temporal
+%% operators. 
+
+%% However we 
+%% present a simpler semantics, that does not restrict execution to the top frame of the stack. 
+%% We model aspects of \emph{time} 
+%% using our \Nec logic and don't include assertions about \emph{space},  as they are not required for either the definition 
+%% of our logic, or expressing the \emph{Chainmail} examples (see Sec. \ref{s:examples}). 
+%% To date, \emph{Chainmail} lacks a proof system.
+
+
+
+ 
+% \sophiaPonder[HERE THE OLD VERSION:]
+%{\paragraph{Incorrectness Logic.} \cite{IncorrectnessLogic,IncorrectSeparation} defined a Hoare
+%Logic for modelling program incorrectness. O'Hearn's Incorrectness Logic
+%is based on a Reverse Hoare Logic \cite{reverseHoare}, and empowers programmers to 
+%specify preconditions under which specific errors and program states may result. 
+%Incorrectness Logic provides a sound and compositional way to reason about 
+%the presence of bugs rather than the absence of bugs. 
+%As with Hoare logic, Incorrectness Logic provides a system
+%for reasoning about sufficient conditions for post-conditions to hold.
+%However, where Hoare logic specifies the shape of the result of execution 
+%of all program states that satisfy the precondition, Incorrectness Logic
+%specifies that all states that satisfy the postcondition are reachable
+%from those that satisfy the precondition. This suits the specification
+%of program errors, as it allows for the exclusion of false negatives.
+%In comparison, \Chainmail, as with Hoare Logic, is concerned with correctness
+%(as seen in the exemplars of Section \ref{s:examples}). 
+%Extending the comparison, \Chainmail differs from both Hoare Logic and Incorrectness,
+%in the ability to specify, not just sufficient conditions, but necessary conditions for 
+%reaching certain program states. Neither Incorrectness Logic, 
+%nor Hoare Logic allows for such specifications.}
+%
+%\sophiaPonder[attention]{
+%in the above we said
+%\begin{quote}
+% ... Hoare logic specifies the shape of the result of execution 
+%of all program states that satisfy the precondition, Incorrectness Logic
+%specifies that all states that satisfy the postcondition are reachable
+%from those that satisfy the precondition
+%\end{quote}
+%it should say instead
+%\begin{quote}
+%... Hoare logic specifies the shape of the result of execution 
+%of all program states that satisfy the precondition \textbf{and the given code snippet}, Incorrectness Logic
+%specifies that all states that satisfy the postcondition are reachable
+%from those that satisfy the precondition \textbf{and execution of the given code snippet},
+%\end{quote}
+%} 
+
+
+
+% SD chopped as did not like
+%As with Swasey et al.\ this work does not provide a holistic
+%assertion language like \Chainmail.
+% SD Chopped, as it sounds as if their is not real code, which is debatable
+% and what is an extensional framework? they would say that theirs is too.
+%In contrast, \Chainmail\ is
+%meant for describing and reasoning about real code, and we provide an
+%expressive, extensional framework for evaluating defensive consistency
+%in actual open systems.
+%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%NOTES:
+%% the other thing this section needs to do, particularly with Devrise, is to lay out precisely the way our work is more limited than theirs:
+%% (Swasey, I'm more and more convinced, is just ownership-via-a-proof-system) 
+%% we don't step-index, don't have logical relations, etc: what do we lose by NOT having those things
+%% (or what do we gain by having those things...
+
+%% The "deep" comparison with Swasey and with Devirese (and also
+%% information flow control and temporal logics) needs to say why these
+%% works are not as good (expressive? easy to understand?) as ours.
+%% Currently the Related work just mentions them, but does not answer the
+%% question as to why our work is important when theirs already has been
+%% published.
+
+
+
+
+%% *Difference between Spec Languages and Chainmail*  One way to tackle
+%%  this would be to enumerate which elements of Chainmail appear at
+%%  other works, which do not, and claim that Chainmail’s novelty is the
+%%  good combination of these elements
+
+
+%% Eg: reflection about contents of stack and heap (in classical Hoare
+%% Logics), two state assertions (JML etc), invariants (Hoare and Meyer),
+%% internal/external (Liskov?, Noble et al,modules in Neumann and also
+%% O’Hearn), time (temporal logic, but they do not have the other stuff),
+%% Control (none?), Space (in Sep. logic, and in effects, buyt the
+%% meaning is different), Permissions (our earlier work, and less
+%% flexible approaches such as owenrship types and perhaps also
+%% oinformation flow control), Authority (effect systems and modifies
+%% clauses, and perhaps also Bierman&Parkison abstract predicates, but
+%% there it is tied to pre-post conditions.
+
+
+%% Also, point out difference between our invariants and Hoare
+%% triples. Subtle and needs thinking
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Neither effort addresses specification languages for security and
+%% robustness, provides Hoare logics to reason about object-capability
+%% programs.
+
+%% , model protocols that dynamically ascribe trust
+%% \cite{swapsies,lefthand} or quantify the damage an untrustworthy
+%% object can do.
+
+
+
+
+
+
+% \kjx{History-Based Specification and Verification of Scalable
+%  Concurrent and Distributed Systems --- ICFEM15}
+
+
+% \paragraph{Specifying Design Patterns}
+
+% Techniques for specifying Design Patterns go back at least to 
+% Helm's contracts \cite{Helm92}.
+
+% more importantly: work on formalisation of design patterns.
+% (again look at JC grant, even if refs are 5 years old)
+% let's be shameless here...
+
+
+
+% This search is similar to the quantification over
+% potential code snippets in our model.
+% The problem posed by the Escrow example is that it establishes a two-way
+% dependency between trusted and untrusted systems --- precisely the
+% kind of dependencies these techniques prevent.
+
+% %These approaches are all based on static analyses.
+%  The WebSand
+% \cite{flowcaps11,sabelfeld-inlining2012} and Jeeves \cite{jeeves2012}
+% projects use dynamic techniques to monitor safe execution of information flow policies.
+%  Richards et al.\ \cite{FlacJS}   extended this approach by
+% incorporating explicit dynamic ownership of objects (and thus of
+% capabilities) and policies that may examine the history of objects'
+% computations. While these dynamic techniques can restrict or terminate
+% the execution of a component that breaches its security policies, they
+% cannot guarantee in advance that such violations can never happen.
+% While information flow policies are concerned with the flow of objects (and thus also capabilities)
+% across the program code, our work is more concerned with the identification of the objects which protect
+% the services.
+
+%Compared with all these approaches, our work   focuses on
+%\textit{general} techniques for specifying (and ultimately verifying)
+%capability policies, whereas these systems are generally much more
+%\textit{specific}: focusing on one (or a small number) of actual
+%policies. % This seems to be because contemporary object capability
+%programming is primarily carried out in JavaScript, but
+% There are few
+
+ 
+% \paragraph{Relational models of trust.}
+% Artz and Gil \cite{artz-trust-survey-2007} survey various
+% types of trust in computer science generally, although trust has also
+% been studied in specific settings, 
+% %
+% ranging from peer-to-peer systems \cite{aberer-trust-p2p-2001} and
+% cloud computing \cite{habib-trust-cloud-2011} 
+% to mobile ad-hoc networks \cite{cho-trust-survey-adhocnets-2011}, 
+% the internet of things \cite{lize-trust-IoT-2014}, 
+% online dating \cite{norcie-trust-online-dating},
+% and as a component of a wider socio-technical system
+% \cite{cho-trust-sustainable-2013,walter-trust-cloud-ecis2013}. 
+% %
+% Considering trust (and risk) in systems design, Cahill et al.'s overview
+% of the \textsc{Secure} project \cite{cahill-trust-pervasive-2003}
+% gives a good introduction to both theoretical and practical issues of
+% risk and trust, including a qualitative analysis of an e-purse
+% example. This project builds on Carbone's trust model
+% \cite{carbone-formal-trust-2003} which offers a core semantic model of
+% trust based on intervals to capture both trust and uncertainty in that
+% trust. Earlier Abdul-Rahman proposed using separate relations for
+% trust and recommendation in distributed systems
+% \cite{abdul-rahman-distributed-trust-1998}, more recently Huang and
+% Nicol preset a first-order formalisation that makes the same
+% distinction \cite{huang-formal-semantics-trust-calculus-2010}.
+% Solhaug and St{\o}len \cite{solhaug-trust-uncertainty-2011} 
+% consider how risk and trust are related to uncertainties over
+% actual outcomes versus knowledge of outcomes.
+% Compared with our work, these approaches produce models of trust
+% relationships between high-level system components 
+% (typically treating risk as uncertainty in trust) 
+% but do not link those relations to the system's code. 
+
+
+
+% \paragraph{Logical models of trust.}
+% \sd{A detailed study of how web-users decide whether to trust appears in \cite{GilArtz}.}
+% \sd{Starting with \cite{Lampson92},} various different logics have been used to measure trust in different
+% kinds of systems.
+% Murray and Lowe \cite{murray10-infoflow} model object capability
+% programs in CSP, and use a model checker to ensure program executions
+% do not leak authority.
+% Carbone et al.\ \cite{carbone-formal-trust-2011}
+% use linear temporal logic to model specific trust relationships in service
+% oriented architectures.
+% Ries et al.\ \cite{habib-trust-CertainLogic-2011} evaluate trust under
+% uncertainty by evaluating Boolean expressions in terms of real values
+% for average rating, certainty, and initial expectation.
+% % Perhaps closer to our work, Aldini
+% Aldini \cite{aldini-calculus-trust-IFIPTM2014} describes a temporal logic for
+% trust that supports model checking to verify some trust properties.
+% Primiero and Taddeo \cite{primiero-modal-theory-trust-2011} have
+% developed a modal type theory that treats trust as a second-order
+% relation over base relations between
+% counterparties. Merro and Sibilio
+% \cite{merro-calculus-trust-adhoc-facs2011} developed a trust model for
+% a process calculus based on labelled transition systems.
+% Compared with our proposal, these approaches use
+% process calculi or other abstract logical models of systems, rather
+% than engaging directly with the system's code.
+
+
+
+
+
+
+
+%\paragraph{Sandboxing}
+In practical open systems, especially web browsers, defensive
+consistency / robust safety is typically supported by sandboxing: dynamically separating
+trusted and untrusted code, rather than relying on static verification
+and proof.
+Google's Caja \cite{Caja}, for example, uses proxies and wrappers to
+sandbox web pages.
+Sandboxing has been validated
+formally:  \cite{mmt-oakland10} develop a model of
+JavaScript and show it prevents trusted dependencies on untrusted code.
+%
+\cite{DPCC14} use dynamic monitoring from function contracts to
+control objects flowing around programs; 
+\cite{AuthContract} extends this to use fluid 
+environments to bind callers to contracts.
+%
+\cite{sandbox} develop $\lambda_{sandbox}$, a low-level language with 
+built in sandboxing, separating trusted and
+untrusted memory. $\lambda_{sandbox}$ features a type system,
+and \citeauthor{sandbox} show that sandboxing achieves robust safety.
+%referred to by \cite{ddd}.
+\citeauthor{sandbox} address a somewhat different
+problem domain than \Nec does, low-level systems programming where 
+there is a possibility of forging references to locations in memory. Such a domain
+would subvert \Nec, % and introduce several instances of unsoundness, 
+in particular a reference to $x$ could always be guessed
+% $\wrapped{x}$ 
+% it would not require interaction with internal code in order to 
+%gain access to 
+thus the assertion $\wrapped{x}$ would no longer be encapsulated.
+
+ 
+\paragraph{Callbacks} 
+\label{sec:callbacks}
+Necessity does not --yet-- support calls of external methods from within internal modules. 
+While this is a limitation, it is common in the related literature. 
+For example, VerX \cite{VerX} work on effectively call-back free contracts, 
+while \cite{Grossman} and  \cite{Albert}  drastically restrict  the effect of a callback on a contract. 
+In further work we are planning to incorporate callbacks by  
+splitting internal methods at the point where a call to an external method appears.
+This would be an adaptation of \citeauthor{BraemEilersMuellerSierraSummers21}'s approach,
+ who  split methods into the
+call-free subparts, and use the transitive closure of the effects of all functions from a module 
+to overapproximate the effect of an external call.
+%This should allow us to employ a strategy similar to the one we use in 
+%\S\ref{s:classical-proof} to develop per-method \Nec specifications.
+%This would add some complexity to the proof system, as \Nec would 
+%cease to be built upon the functional specifications of individual methods,
+%but rather on parts of method bodies. 
+One  useful simplification was proposed by 
+ \citeasnoun{VerX}: in
+``\emph{effectively callback free}'' methods, meaning that we could 
+include callbacks while also only requiring at most one functional specification 
+per-method.
+
+ 
+
+%% This would 
+%% have knockin effects toward what are necessary preconditions to mutating internal
+%% data.
+
+
+%% , demonstrate that it obeys two principles of
+%% object capability systems,
+%% %  (``connectivity begets connectivity'' and
+%% %``no authority amplification''), and then % uses these principles to
+%% and show how untrusted applications can be prevented from interfering with
+%% the rest of the system.
+
+
+
+
+%% \paragraph{Object Capabilities} % and Sandboxes.}
+%% {{\em Capabilities} supporting the development of concurrent and distributed system  were developed in the 60's
+%% by \cite{Dennis66}, and adapted to the
+%% programming languages setting in the 70's \cite{JamesMorris}. 
+%% {\em Object capabilities} were first introduced by~\cite{MillerPhD}.
+%%  and many recent % work attempts to manage
+%% studies manage
+%% to verify  safety or correctness of object capability programs.
+%% Google's Caja \cite{Caja} applies   sandboxes, proxies, and wrappers
+%% to limit components'
+%%  access to \textit{ambient} authority.
+% --- that is, capabilities that
+%can be obtained from the wider environment, rather than being granted
+%% %to a component explicitly.
+%% Sandboxing has been validated
+%% formally:  \cite{mmt-oakland10} develop a model of
+%% JavaScript, demonstrate that it obeys two principles of
+%% object capability systems,
+%% %  (``connectivity begets connectivity'' and
+%% %``no authority amplification''), and then % uses these principles to
+%% and show how untrusted applications can be prevented from interfering with
+%% the rest of the system.
+
+%% Recent programming languages % and web systems
+%% \cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14} including Newspeak
+%% \cite{newspeak17}, Dart \cite{dart15}, Grace \cite{grace,graceClasses}
+%% and Wyvern \cite{wyverncapabilities} have adopted the object
+%% capability model.
+
+%% \paragraph{Verification of Dynamic Languages}
+%% A few formal verification frameworks  address JavaScript's highly
+%% dynamic, prototype-based semantics. Gardner et al.\ \cite{Gardner12}
+%%  developed a formalisation of JavaScript based on separation logic
+%% % that they have used
+%% and verified   examples. Xiong and Qin et
+%% al.\ \cite{XiongPhd,Qin11}  worked on similar lines.
+%% % More substantially,
+%% Swamy et al.\ \cite{JSDijkstraMonad}  recently
+%% developed a mechanised verification technique for JavaScript based on
+%% the Dijkstra Monad in the F* programming language.  Finally, Jang et
+%% al.\ \cite{Quark} % have %  managed to provide
+%% developed a machine-checked proof of
+%% five important properties of a web browser --- again similar to our
+%% % \prg{any\_code} 
+%% invariants --- such as
+%% % \textit{``no tab may interfere with
+%% %  another tab''} and 
+%% \textit{``cookies may not be shared across
+%%   domains''} by writing the minimal kernel of the browser in Haskell.
+  
+%%   \paragraph{JavaScript analyses.}
+%% More practically, 
+%% Karim et al. apply static analysis on
+%% Mozilla's JavaScript Jetpack extension framework \cite{adsafe}, including
+%%  pointer analyses. % In a different direction,
+%% Bhargavan et al.\ \cite{DefJS}
+%% extend language-based sandboxing techniques to support defensive
+%% components that can execute successfully  in otherwise untrusted
+%% environments.   Politz et
+%% al.\ \cite{ADsafety} use a JavaScript type checker to check
+%% properties such as
+%% % \textit{``widgets cannot obtain direct references
+%%  % to DOM nodes''} and
+%%  \textit{``multiple widgets on the same page
+%%   cannot communicate.''}
+%% % --- somewhat similar in spirit to our \textbf{Pol\_4}.
+%% Lerner et al.\ extend this system to ensure browser
+%% extensions observe \textit{``private mode''} browsing conventions,
+%% such as that \textit{``no private browsing history retained''}
+%% \cite{Lerner2013b}.  Dimoulas et al.\ \cite{DPCC14} generalise the
+%% language and type checker based approach to enforce explicit policies,
+%% % although the policies  are restricted to
+%% that  describe  which components  may
+%% access, or may influence the use of, particular capabilities.
+%% Alternatively, Taly et al.\ \cite{secureJS}
+%% model  JavaScript APIs in Datalog, and then
+%% carry out a Datalog search for an ``attacker'' from the set of all
+%% valid API calls. 
+
+
+%% %\paragraph{Verification of Object Capability Programs}
+%% ~\cite{Murray10dphil} made the first attempt to formalise defensive consistency and
+%% correctness.  Murray's model was rooted in
+%% counterfactual causation~\cite{Lewis_73}: an object is defensively
+%% consistent when the addition of untrustworthy clients cannot cause
+%% well-behaved clients to be given incorrect service.  Murray formalised
+%% defensive consistency %very 
+%% abstractly, 
+%% %over models of (concurrent)
+%% %object-capability systems in the process algebra CSP~\cite{Hoare:CSP},
+%% without a specification language for describing effects.
+%% %such as what it means for an object to provide incorrect service.  
+%% Both Miller and
+%% Murray's definitions are intensional, describing what it means for an
+%% object to be defensively consistent.
+%
+%
+%Dro\-sso\-pou\-lou and Noble \cite{capeFTfJP,capeFTfJP14} have
+%analysed Miller's Mint and Purse example \cite{MillerPhD} 
+%
+% SD Chope details by
+% expressing it in Joe-E 
+% a Java subset without reflection and static
+%fields, 
+%and in Grace \cite{capeFTfJP14}, 
+%and discussed the six
+%capability policies 
+% that characterise the correct behaviour of the
+% program, 
+%as proposed in \cite{MillerPhD}.
+%We argued that these policies require a novel
+%approach to specification, and showed some first ideas on how to use
+%temporal logic.
+%  an unpublished technical report
+%% \cite{WAS-OOPSLA14-TR} % Drossopoulou and Noble
+%% sketched a  specification language and  \sd{used}  it to  
+%% specify the six policies from \cite{MillerPhD}, % however,
+%% %{their} partial formalisation showed that % they allowed
+%% %\sd{showed} that several possible interpretations were possible, %.  They also 
+%% %\sd{and} uncovered
+%% %the need for another four further policies.
+%% %  and formalised them as well, showing how different implementations of the underlying Mint and Purse
+%% % systems coexist with different policies \cite{capeIFM14},
+%% They also
+%%   sketched how 
+%% a trust-sensitive 
+%% example (escrow) could be verified in an open world
+%% \cite{swapsies}. 
+% In contrast, our work focuses on the semantics of the  \Chainmail\ specification
+% language and how it can be used to provide holistic specifications for
+% robust programs.
+%\sd{Their work 
+%does not support the concepts of control, time, or space, as in \Chainmail, but it 
+%offers a primitive for expressing trust.}
+
+
+
+ 
+
+
+%%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
+%%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
+
+

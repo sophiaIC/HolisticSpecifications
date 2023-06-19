@@ -159,8 +159,8 @@ language with unforgeable addresses and private fields, we believe
 \subsection{\AssertLang -- the assertion language}
 \label{sub:SpecO}
 
-Our assertions language, \AssertLang, extends a 
- basic assertion language extended with
+\AssertLang is a  \jm[removed: a subset of the \emph{Chainmail} assertions language, \ie]{}
+a basic assertion language extended with
 object-capability assertions. 
 
 
@@ -242,13 +242,13 @@ $x$ isn't in the variable map of the top frame of $\sigma$,
 while the substitution  $\sigma[x \mapsto \alpha]$ is applied to the top frame of $\sigma$.
  \ $C\in M$ means that class $C$ is in the domain of module $M$. 
 
-TODO motivate why we need relevant 
+TODO motivate why we need relevant, and also 
 \begin{definition}
 $\sigma \models \Relevant o$ \ \ iff\ \  
-$\exists n\in \mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{x.\prg{f}_1.....\prg{f}_n} = o  ]$.
+$\exists n\in mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{x.\prg{f}_1.....\prg{f}_n} = o \ \wedge n\neq 0\ ]$.
 \end{definition}
 
-We now give meaning to assertions. Definitions (1)-(5) are standard. Note that Definitions (6)-(7) quantify only over objects that are accessible from the top frame. TODO  explain that the sequence of field reads $\prg{f}_1$,.....$\prg{f}_n$ may be empty,
+We now give meaning to assertions. Definitions (1)-(5) are standard. Note that Definitions (6)-(7) quantify only over objects that are accessible from the top frame. TODO  
 
 \begin{definition}[Satisfaction % of \AssertLang 
 of Assertions by a module and a state] 
@@ -273,15 +273,14 @@ $\satisfiesA{M}{\sigma}{A_1\ \vee\ A_2}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma
 $\satisfiesA{M}{\sigma}{A_2}$
 \item
 \label{quant1}
-$\satisfiesA{M}{\sigma}{\all{x:C}{A}}$ \ \ \ iff \ \ \  
-$\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \Longrightarrow \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  for all  $o$ such that $\sigma \models \Relevant o$, where $x$ is free in $\sigma$  
-\footnote{ALL: Notice the difference to OOPLSA - but one can be encoded in the other}
+$\satisfiesA{M}{\sigma}{\all{x}{A}}$ \ \ \ iff \ \ \  
+$\satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
+\strut \hspace{1.3in}   for some $x$ fresh in $\sigma$, and all  $o$ such that $\sigma \models \Relevant o$.
 \item
 \label{quant2}
 $\satisfiesA{M}{\sigma}{\ex{x}{A}}$ \ \ \ iff \ \ \  
-$\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \wedge \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  for some $o$ such that $\sigma \models \Relevant o$, where $x$ is free in $\sigma$, and 
+$\satisfiesA{M}{\sigma[x \mapsto \alpha]}{A}$, \\
+\strut \hspace{1.3in}   for some $x$ fresh in $\sigma$, and some $o$ such that $\sigma \models \Relevant o$.
 \item
 \label{cInternal}
 $\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \  
@@ -289,26 +288,21 @@ $\textit{classOf}(\sigma,x) \in M$
 \item
 \label{cProtected}
 $\satisfiesA{M}{\sigma}{\protectedFrom{y} {x}}$  \ \ \ iff \ \ \   $\satisfiesA{M}{\sigma}{y \neq x}$  and \\
-\strut \hspace{1.3in} $\forall f_1,...f_n.[\ \interpret{\sigma}{x.f_1...f_n}=\interpret{\sigma}{y} \ \Longrightarrow \exists k<n. 
+\strut \hspace{1.3in} $\forall f_1,...f_n.[\ \interpret{\sigma}{x.f_1...f_n}=\interpret{\sigma}{y} \ \rightarrow \exists k<n. 
 [\,\satisfiesA{M}{\sigma}{\internal{x.f_1...f_k}} \, ] \ ]$
 \end{enumerate}
 \end{definition}
-
-Say that $\Longrightarrow$ is meta, while $\rightarrow$ is Chainmail.
-
-TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
- Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.
 
 Both existential and universal quantification (defined in \ref{quant1} and \ref{quant2}) is done over all objects which are transitively 
 accessible from the top frame in the stack. This deviates from OOPSLA. -TODO later on say why this is important.
 We do not include quantification over primitive types such as integers as \LangOO is too simple. The 
 Coq mechanisation does include primitive types.
  
-TODO: say that any assertion $A(e)$ can be understood as a shorthand for $\exists x. [ x=e \wedge A(x)]$. For example, the  assertion   ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{x}}]$. QUESTION: do we need to talk about $=$ in the assertion language?
+TODO: say that an assertion like ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{e}}]$. QUESTION: do we need to talk about $=$ in the assertion language?
 
  Note that in most cases, satisfaction of an assertion not only depends on the state $\sigma$, but 
 also depends on the module in the case of expressions (\ref{cExpr}), class membership
-(\ref{cClass}), and internal or external provenance (\ref{cInternal} ).
+(\ref{cClass}), and internal or external provenance (\ref{cInternal} and \ref{cExternal}).
 
 We also define two shorthands:
 
@@ -323,17 +317,42 @@ ${\inside {y}}$  is short for ${\all{x}{\ \external x  \rightarrow  {}{\protecte
 \end{enumerate}
 \end{definition}
 
-Note that in the above, we mean $\rightarrow$ -- this is a Chainmail assertion.
-
 ${\inside {\_}}$  is central to the expression of ambient capability. For example, the balance of an account whose
   password is \inside  will not decrease in the next step.
   Often, API implementations contain objects whose capabilities, while  crucial for the implementation, if exposed,
 would break the intended guarantees of the API. Such objects need to remain confined - see
 such an example in Section \ref{s:examples}. 
  
- TODO add a diagram that illustrated relative and absolute inside. TODO: Do we prove the implications as in TACAS, or just rely on TACAS? -- perhaps the former, since we have some new primitives? hmhh
+ TODO add a diagram that illustrated relative and absolute inside
 
-\subsection{\SpecLang specifications}
+TODO: Do we prove the implications as in TACAS -- since we have some new primitives? hmhh
+
+% DO not yet remove below !!!!
+% but I think we can skip it
+% We now define what it means for a module to satisfy an assertion:
+% $M$ satisfies  $A$ if any state arising from external steps execution of that
+%module with any other external module  satisfies $A$. 
+%We also assume the existence of a proof system that judges
+%$\proves{M}{A}$, to prove  satisfaction of assertions. 
+% We will not define such a judgement, but will rely on its existence {later on for} Theorem \ref{thm:soundness}.
+%We define soundness of such a judgement in the usual way:
+% 
+%\begin{definition} [Satisfaction % of \AssertLang 
+%of Assertions
+%by a module] 
+%\label{def:mdl-sat}
+%For a module $M$ and assertion $A$, we say that\ \  $\satisfies{M}{A}$ \ \ if and only if 
+%for all modules $M_{ext}$, and all $\sigma$, if $\arising{M_{ext}}{M}{\sigma}$, then $\satisfiesA{M}{\sigma}{A}$.
+%
+%\label{ax:specW-prove-soundness}
+%A judgement of the form {$\proves{M}{A}$} is \emph{sound}, if for all
+% modules $M$ and assertions $A$, \ if $\proves{M}{A}$ then $\satisfies{M}{A}$.
+%\end{definition}
+
+ \subsection{\SpecLang specifications}
+
+ 
+
 
 
 \noindent
@@ -348,22 +367,12 @@ The syntax of  \SpecLang specifications is given below
 \[
 \begin{syntax}
 \syntaxElement{S}{}
-		  {\syntaxline
-                                {e}
-                                {e : C}
-                                {\neg A}
-                                {A\ \wedge\ A}
-                                {A\ \vee\ A}
-                                {\all{x}{A}}
-                                {\ex{x}{A}}
-                \endsyntaxline
-                }
- 		{
+		{
 		\syntaxline
-				{\OneStateQ {\overline {x:C}} {A} }	
-				{\TwoStatesQ {\overline {x:C}} {A} {A} }	
+				{A}				
+				{\TwoStates {A} {A} }	
 				{S\, \wedge \, S}
-		 \endsyntaxline
+		\endsyntaxline
 		}
 \endSyntaxElement\\
 \end{syntax}
@@ -375,9 +384,30 @@ The syntax of  \SpecLang specifications is given below
 
 
 
+
+DISCUSSION:
+
+1. The repetition of \prg{a}:\prg{Account} is annoying. Perhaps the form should be 
+\\
+$\forall \prg{a}:\prg{Account}.\TwoStates{\inside{\prg{a.password}}} {\inside{\prg{a.password}}} $
+ 
+2. The second part would look better if it had the form 
+\\
+$\forall \prg{a}:\prg{Account}.\TwoStates{\inside{\prg{a.password}} \wedge \prg{a.balance}\geq b} {\prg{a.balance}\geq b} $
+\\
+But then the proofs would need to take the conjunction of all the holistic specs; so more work to prove them.
+
 \subsubsection{ Semantics of \SpecLang Specifications}
 We now  define what it means for  a module  $M$ to satisfy specification  $S$, written as $M \vDash S$. The
- 
+ Definition~\ref{def:necessity-semantics} below is straightforward, apart from  
+the use of the $\adapt  {\sigma'}{\sigma}$  (best read as ``$\sigma'$ seen
+from $\sigma$'')
+% although one recalcitrant author prefers ``$\sigma'$adapted to $\sigma$'') 
+% our reviewers did not appreciate the jokes
+to deal with the fact that execution might  change the bindings in local variables.
+We explain this in detail in   \S \ref{sub:adapt:full}, but for now, the reader may ignore the applications of that operator and
+read $\sigma' \triangleleft \sigma$ as $\sigma'$.
+
 \begin{definition}[Semantics of \SpecLang Specifications]
 We define $\satisfies{M}{{S}}$ by cases over the four possible syntactic forms.
 For any assertions   $A_1$, $A_2$, and $A$: \\
@@ -385,11 +415,11 @@ For any assertions   $A_1$, $A_2$, and $A$: \\
 \label{def:necessity-semantics}
 
 \begin{tabular}{llcl}
-$\bullet$ & $\satisfies{M}{\OneStateQ {\overline {x:C}} {A} 	}$& iff & for all $M_{ext}$, $\sigma$, $\overline{x}$, $\overline{o}$ such that $\overline{x}$  are free in $\sigma$, and relevant $\overline o$, and $\arising{M_{ext}}{M}{\sigma}$: \ \    \\
- & & & $\ \wedge \ $ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}\overline {x:C}}  \ \  \Longrightarrow\ \ \  \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}A} $
-%\\
-%$\bullet$ &  $\satisfies{M}{\TwoStates {A}{A'}}$ &  iff   &  for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: \\  
-% & & & -   $\overline{x}$ are free in $\sigma$  \ \wedge \   \satisfiesA{M}{\overline {x:C}}\ \wedge \ \satisfiesA{M}{{\overline {x:C}} \wedge\ \sigma}{A}\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma' \triangleleft \sigma}{A'}$   
+$\bullet$ & $\satisfies{M}{{A}}$& iff & for all $M_{ext}$, $\sigma$, such that $\arising{M_{ext}}{M}{\sigma}$: \ \    \\
+ & & & - $\satisfiesA{M}{\sigma}{A}$.  
+\\
+$\bullet$ &  $\satisfies{M}{\TwoStates {A}{A'}}$ &  iff   &  for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: \\  
+ & & & -   $\satisfiesA{M}{\sigma}{A}\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma' \triangleleft \sigma}{A'}$   
 \\
 $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}$ and $\satisfies{M}{S'}$
 \end{tabular} 
@@ -397,8 +427,29 @@ $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}$ and
  
 \end{definition} 
 
+TODO say how this related to OOPSLA from-to-onlyIf, and how the other two are not expressed. But this should go to related work.
 
-Another, equivalent, way of defining the semantics of $\satisfies{M}{\TwoStates {A}{A'}}$  is through renaming of all the free variables in $A$ and $A'$.
+\begin{definition}[Alternative Definition for Semantics of \SpecLang Specifications]
+We define $\satisfies{M}{{S}}$ by cases over the four possible syntactic forms.
+For any assertions   $A_1$, $A_2$, and $A$: \\
+
+\label{def:necessity-semantics}
+
+\begin{tabular}{llcl}
+$\bullet$ & $\satisfies{M}{{A}}$& iff & ... as before ... \\
+$\bullet$ &  $\satisfies{M}{\TwoStates {A}{A'}}$ &  iff   &  for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$, and all the \\
+& & & {\textbf {free variables of $A$ and $A'$ do not appear in $\sigma.{\texttt{cont}}$}}: \\  
+ & & & -   $\satisfiesA{M}{\sigma}{A}\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma'}{A'}$   
+\\
+$\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & ... as before 
+\end{tabular} 
+
+TODO: explain what the requirement {\textbf {the free variables of $A$ and $A'$ do not appear in $\sigma.{\texttt{cont}}$}} buys us. 
+
+Notice that in the above, while we require that the free variables of $A$ and $A'$ do not appear in $\sigma.{\texttt{cont}}$, we do expect that they should be in the domain of the top frame, and we do not preclude that they could be aliases with variables from 
+$\sigma.{\texttt{cont}}$.
+
+Another way of defining the semantics of $\satisfies{M}{\TwoStates {A}{A'}}$  is through renaming of all the free variables in $A$ and $A'$.
 
 \begin{lemma}
 For any $M$, and assertions $A$ and $A'$:
@@ -411,6 +462,7 @@ For any $M$, and assertions $A$ and $A'$:
 \end{itemize} 
 \end{lemma}
 
+NOTE-DISCUSS: All free variables are existentially quantified here. Is that good? Should we have an explicit universal quantification? If so, should we allow 
 
 \end{definition} 
 
