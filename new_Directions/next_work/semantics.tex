@@ -326,7 +326,7 @@ ${\inside {y}}$  is short for ${\all{x}{\ \external x  \rightarrow  {}{\protecte
 Note that in the above, we mean $\rightarrow$ -- this is a Chainmail assertion.
 
 ${\inside {\_}}$  is central to the expression of ambient capability. For example, the balance of an account whose
-  password is \inside  will not decrease in the next step.
+  password is  encapsulated/protected?  will not decrease in the next step.
   Often, API implementations contain objects whose capabilities, while  crucial for the implementation, if exposed,
 would break the intended guarantees of the API. Such objects need to remain confined - see
 such an example in Section \ref{s:examples}. 
@@ -349,18 +349,7 @@ The syntax of  \SpecLang specifications is given below
 \begin{syntax}
 \syntaxElement{S}{}
 		  {\syntaxline
-                                {e}
-                                {e : C}
-                                {\neg A}
-                                {A\ \wedge\ A}
-                                {A\ \vee\ A}
-                                {\all{x}{A}}
-                                {\ex{x}{A}}
-                \endsyntaxline
-                }
- 		{
-		\syntaxline
-				{\OneStateQ {\overline {x:C}} {A} }	
+                               {\OneStateQ {\overline {x:C}} {A} }	
 				{\TwoStatesQ {\overline {x:C}} {A} {A} }	
 				{S\, \wedge \, S}
 		 \endsyntaxline
@@ -378,18 +367,31 @@ The syntax of  \SpecLang specifications is given below
 \subsubsection{ Semantics of \SpecLang Specifications}
 We now  define what it means for  a module  $M$ to satisfy specification  $S$, written as $M \vDash S$. The
  
-\begin{definition}[Semantics of \SpecLang Specifications]
+\begin{definition}% [Semantics of \SpecLang Specifications]
+
 We define $\satisfies{M}{{S}}$ by cases over the four possible syntactic forms.
 For any assertions   $A_1$, $A_2$, and $A$: \\
 
 \label{def:necessity-semantics}
 
-\begin{tabular}{llcl}
-$\bullet$ & $\satisfies{M}{\OneStateQ {\overline {x:C}} {A} 	}$& iff & for all $M_{ext}$, $\sigma$, $\overline{x}$, $\overline{o}$ such that $\overline{x}$  are free in $\sigma$, and relevant $\overline o$, and $\arising{M_{ext}}{M}{\sigma}$: \ \    \\
- & & & $\ \wedge \ $ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}\overline {x:C}}  \ \  \Longrightarrow\ \ \  \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}A} $
-%\\
-%$\bullet$ &  $\satisfies{M}{\TwoStates {A}{A'}}$ &  iff   &  for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: \\  
-% & & & -   $\overline{x}$ are free in $\sigma$  \ \wedge \   \satisfiesA{M}{\overline {x:C}}\ \wedge \ \satisfiesA{M}{{\overline {x:C}} \wedge\ \sigma}{A}\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma' \triangleleft \sigma}{A'}$   
+\begin{tabular}{l l c l }
+
+$\bullet$ & $\satisfies{M}{\OneStateQ {\overline {x:C}} {A} 	}$& iff & 
+for all $M_{ext}$, $\sigma$, $\overline{x}$, $\overline{o}$ such that $\overline{x}$  are free in $\sigma$, and\ \ $\sigma \models \Relevant {\overline o}$ \\
+& & & $ \arising{M_{ext}}{M}{\sigma} \ \wedge 
+\ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{\overline {x:C}}  $\\
+& & & $ \Longrightarrow $ \\
+& & & $ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{A} $
+\\
+\\
+$\bullet$ & $\satisfies{M}{\TwoStatesQ {\overline {x:C}} {A}{A'}}$& iff & 
+for all $M_{ext}$, $\sigma$, $\overline{x}$, $\overline{o}$ such that $\overline{x}$  are free in $\sigma$, and\ \ $\sigma \models \Relevant {\overline o}$ \\
+& & & $\arising{M_{ext}}{M}{\sigma} \ \wedge 
+\ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{\overline {x:C}}  \ \ \wedge$ \\
+& & & $ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{A} \ \ \wedge \ \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \ $\\
+& & & $ \Longrightarrow $ \\
+& & & $ \satisfiesA{M}{\sigma'[\overline{x\mapsto o}]}{A'} $
+\\
 \\
 $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}$ and $\satisfies{M}{S'}$
 \end{tabular} 
@@ -398,40 +400,44 @@ $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}$ and
 \end{definition} 
 
 
-Another, equivalent, way of defining the semantics of $\satisfies{M}{\TwoStates {A}{A'}}$  is through renaming of all the free variables in $A$ and $A'$.
+Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.
+% \footnote{Not sure we need to add:
+%\\
+%Another, equivalent, way of defining the semantics of $\satisfies{M}{\TwoStates {A}{A'}}$  is through renaming of all the free variables in $A$ and $A'$.
+%
+%
+%\begin{lemma}
+%For any $M$, and assertions $A$ and $A'$:
+%
+%\begin{itemize}
+%\item $\satisfies{M}{\TwoStates {A}{A'}}$ iff for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: 
+%\\
+%\strut \hspace{0.1cm} $\satisfiesA{M}{\sigma[\overline y \mapsto \overline {\sigma (x)}]}{A [\overline x \mapsto \overline {y}]}
+%\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma'[\overline y \mapsto \overline {\sigma (x)}]}{A'[\overline x \mapsto \overline {y}]}$
+%\end{itemize} 
+%\end{lemma}
+%\end{definition} 
+%}
 
-\begin{lemma}
-For any $M$, and assertions $A$ and $A'$:
-
-\begin{itemize}
-\item $\satisfies{M}{\TwoStates {A}{A'}}$ iff for all $M_{ext}$, $\sigma$, $\sigma'$, such that $\arising{M_{ext}}{M}{\sigma}$: 
-\\
-\strut \hspace{0.1cm} $\satisfiesA{M}{\sigma[\overline y \mapsto \overline {\sigma (x)}]}{A [\overline x \mapsto \overline {y}]}
-\  \wedge \ \reductions{M_{ext}}{M}{\sigma}{\sigma'} \;\;\;\Rightarrow\;\;\; \satisfiesA{M}{\sigma'[\overline y \mapsto \overline {\sigma (x)}]}{A'[\overline x \mapsto \overline {y}]}$
-\end{itemize} 
-\end{lemma}
 
 
-\end{definition} 
+And try this first $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.password}}} {\inside{\prg{a.password}}}$
 
 \subsection{Examples}
 \noindent
-TODO -- if needed -- As an example, we consider the following three  specifications:
+As an example, consider the following three  specifications:
 
-%\begin{lstlisting}[language = Chainmail, mathescape=true,xleftmargin=2em,frame=lines,framexleftmargin=1.5em]
-\begin{tabular}{lcl}
-$\SrobustB$ &  $\triangleq$   & $\FirstState{\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}}}$
+\begin{tabular}{lcll}
+$S_1$   &     $\triangleq$   & $\OneStateQ{\prg{a}:\prg{Account} } {\inside{\prg{a.password}}} $
  \\
-   & & $\SecondState   {\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}}} $
+ $S_2$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.password}}} {\inside{\prg{a.password}}}$
  \\
-   & & $\wedge$ \\
-   & & $\FirstState{\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}} \wedge \prg{a.balance}\geq b}$
- \\
-    & & $\SecondState  {\prg{a}:\prg{Account} \wedge \inside{\prg{a.password}}\wedge \prg{a.balance}\geq b} $
+$S_3$ & $\triangleq$   &
+  $\forall \prg{a}:\prg{Account},\prg{b}:\prg{int}.$\\
+  &  &  $\FirstState{\inside{\prg{a.password}} \wedge \prg{a.balance}=\prg{b}} 
+\  \SecondState{ \prg{a.balance}\geq \prg{b} }$
 \end{tabular}
-% \end{lstlisting}
+
+Now give modules such that $M \models S_2$ but $M \not\models S_2$, and $M \models S_3$.
 
 
-\subsubsection{Adaptation}
-\label{sub:adapt:full}
-TODO IF WE GO WITH THE FIRST ALTERNATIVE: We  now discuss  the adaptation operator.  It should be more succinct than the oopsla version.
