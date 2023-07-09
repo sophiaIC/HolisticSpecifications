@@ -25,6 +25,7 @@ fields are private to the class where they are defined.
 heap $\chi$, and a  {stack $\psi$ which is a sequence of frames}.
 A frame $\phi$ consists of
 local variable map, and a continuation, \ie a sequence of statements to be executed.
+\sd{We use  $| \sigma |$ to describe the numbers of frames in the stack of  $\sigma$, i.e. the number of nested. currently active method calls.}
  A statement may assign to variables, create new objects and push them to the heap, 
 perform field reads and writes on objects,  or
  call methods on those objects. 
@@ -59,63 +60,94 @@ collapse all internal steps into one single step.
 
  
 
-\begin{definition}[External States Semantics]
+\begin{definition}[\sd{Observable} States Semantics]
 \label{def:pair-reduce}
-For  
-% If we say "internal module", it is sounds as something makes the module be internal
-  modules $M$,  $M_{ext}$, and % program
-   states $\sigma$, $\sigma'$, 
+For    modules $M$,  $M_{ext}$, and     states $\sigma$, $\sigma'$, 
 we say that $\ \ \ \ \ \ \ \ \reduction{M_{ext}}{M}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exist 
 $n\in\mathbb{N}$, and states $\sigma_0$,...$\sigma_n$, such that
-\begin{itemize}
+\begin{enumerate}
 \item
+\label{vis1}
 $\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
 \item
-$M_{ext} \circ M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [0..n)$,
+\label{vis2}
+$M_{ext} \circ M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [\sdN{1}..n)$,
 \item
-$\class{\sigma}{\scd{\prg{this}}}, \class{\sigma'}{\scd{\prg{this}}}\in M_{ext}$,
+\label{vis3}
+\sd{$| \sigma_1 | \leq | \sigma_i |$ \ \ \  for all $i\in [1..n]$,}
 \item
-$\class{\sigma_i}{\scd{\prg{this}}} \in M$\ \ \ for all $i\in (1..n)$.
-\end{itemize} 
+\label{vis4}
+$\class{\sigma}{\scd{\prg{this}}}, \class{\sigma'}{\scd{\prg{this}}}\!\in\! M_{ext}$,\ \ \ and \ \ \
+%\item
+$\class{\sigma_i}{\scd{\prg{this}}} \!\in\! M$\ \ \ for all $i\!\in\! (1..n)$.
+\end{enumerate} 
 \end{definition}
-The function $\class{\sigma}{\_}$ is overloaded:
+\sd{ Thus, we collapse into one step a sequence of $\leadsto$ steps (requirements \ref{vis1}  and \ref{vis2}), which may include function calls and returns but
+ not returns from the method currently executing in $\sigma_1$ (requirement  \ref{vis3}), and where the starting and end states belong to the external module (requirement  \ref{vis4}), while all intermediate states belong to the internal module (requirement  \ref{vis4}).}
+
+Note that the   function $\class{\sigma}{\_}$ is overloaded:
   applied to a variable, 
 $\class{\sigma}{x}$  looks up the variable $x$ in the top frame of $\sigma$, and returns the 
 class of the corresponding object in the  heap of $\sigma$;
-%while  
 applied to an address, $\class{\sigma}{\alpha}$  returns
-the class of   the object referred by address $\alpha$ in the heap of $\sigma$.
+the class of   the object referred by address $\alpha$ in the heap of $\sigma$. 
  The module linking operator $\circ$, applied to two modules, $M_{ext}\circ M$, 
  combines the two modules into one module in the obvious way, provided their
 domains are disjoint.
 The details {can be found in the appendices\cite{necessityFull}.} %Appendix \ref{app:loo}.
 \begin{figure}[htb]
-TODO: We need a new diagram, as we have external calls
-%\resizebox{\textwidth}{!}{
-%\input{diagrams/external_states}
-%}
-   \caption{External States Semantics
-     (Def. \ref{def:pair-reduce}),  %
-     % 
-     (A) $\exec{{\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}}{\sigma_1}{\ldots}\leadsto \sigma_9$ \ \ \ and \ \ \ 
-     (B) $\reduction{{\color{hotpink}M_{ext}}}{{\color{lightseagreen}M}}{\sigma_2}{\ldots}\leadsto \sigma_9$, \ \ \ 
-     \\
-     where $\class{{\color{lightseagreen}\sigma_1}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_3}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_4}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_7}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_8}}{\scd{\prg{this}}}\in {\color{lightseagreen}M}$,\\
-     and where $\class{{\color{hotpink}\sigma_2}}{\scd{\prg{this}}},\class{{\color{hotpink}\sigma_5}}{\scd{\prg{this}}} 
-     \class{{\color{hotpink}\sigma_6}}{\scd{\prg{this}}},\class{{\color{hotpink}\sigma_9}}{\scd{\prg{this}}}\in {\color{hotpink}M_{ext}}$.
-    %  (c) $\reduction{{\color{orange}M_{ext}}}{{\color{blue}M}}{\sigma_1}{\ldots}\leadsto \sigma_8$
+\begin{tabular}{|l|l|}
+\hline \\
+\resizebox{6.0cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/ObservableStates1.png}
+} 
+&
+\resizebox{6.0cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/ObservableStates2.png}
+}
+\\
+\hline
+\\
+$\exec{{\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}}{{\color{hotpink}\sigma_1}} {{\color{hotpink}\sigma_2}}
+ \leadsto {{\color{lightseagreen}\sigma_3}}  \leadsto {{\color{lightseagreen}\sigma_4}}
+\leadsto {{\color{hotpink}\sigma_5}} $
+&
+$\reduction{{\color{hotpink}M_{ext}}}{{\color{lightseagreen}M}}{{\color{hotpink}\sigma_1}} {{\color{hotpink}\sigma_2}}
+ \redsymb   {{\color{hotpink}\sigma_5}} \redsymb   {{\color{hotpink}\sigma_6}}$
+\\
+$\exec{{\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}}{{\color{hotpink}\sigma_5}} {{\color{hotpink}\sigma_6}}
+\leadsto{ {\color{lightseagreen}\sigma_7}}
+\leadsto {{\color{hotpink}\sigma_8}}$ &
+$\reduction{{\color{hotpink}M_{ext}}}{{\color{lightseagreen}M}}{{\color{hotpink}\sigma_2}} {{\color{hotpink}\sigma_8}}$
+\\
+\hline
+\end{tabular}
+   \caption{Illustrating Observable States Semantics
+     (Def. \ref{def:pair-reduce}) %
     }
    \label{fig:VisibleStates}
  \end{figure}
  
-Fig. \ref{fig:VisibleStates} inspired by \citeasnoun{FASE} provides a simple graphical description of 
-our external states semantics: (A) is the ``normal'' execution after 
-linking two modules into one: \ $M_{ext} \circ M, ... \leadsto ...$ whereas (B) is the
- external states execution when $M_{ext}$ is external,\   $\reduction{M_{ext}}{M}{...}{...}$.
-Note that whether a module is external or internal depends on %our
-perspective -- nothing in a module itself renders it internal or external. For example, in
- $\reduction{M_1}{M_2}{...}{...}$ the external module is $M_1$,
-  while in  $\reduction{M_2}{M_1}{...}{...}$  the external module is $M_2$.
+Fig. \ref{fig:VisibleStates} % inspired by \citeasnoun{FASE}
+ provides a simple graphical description of 
+our \sd{observable} states semantics: on the left hand side is the ``normal'' execution after 
+linking two modules into one: \ ${\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}, ... \leadsto ...$. We assume  that
+the receiver in states ${\color{hotpink}\sigma_1}$, ${\color{hotpink}\sigma_2}$, ${\color{hotpink}\sigma_5}$, ${\color{hotpink}\sigma_6}$, and ${\color{hotpink}\sigma_8}$ is from ${\color{hotpink}M_{ext}}$, and that 
+ the receiver in ${\color{lightseagreen}\sigma_3}$, ${\color{lightseagreen}\sigma_4}$ and ${\color{lightseagreen}\sigma_7}$ is from ${\color{lightseagreen}M}$.
+ Moreover, we assume that the transition from ${\color{hotpink}\sigma_2}$ to ${\color{lightseagreen}\sigma_3}$ corresponds to a call of an internal method, and the transition from ${\color{lightseagreen}\sigma_4}$ to ${\color{hotpink}\sigma_5}$ corresponds to  a call of an external method. We also assume that the transition from ${\color{hotpink}\sigma_6}$ to ${\color{lightseagreen}\sigma_7}$ corresponds to the termination of the latter, while the transition from ${\color{lightseagreen}\sigma_7}$ to ${\color{hotpink}\sigma_8}$ corresponds to the termination of the former.
+% $\class{{\color{lightseagreen}\sigma_1}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_3}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_4}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_7}}{\scd{\prg{this}}}$,$\class{{\color{lightseagreen}\sigma_8}}{\scd{\prg{this}}}\in {\color{lightseagreen}M}$,\\
+%     and where $\class{{\color{hotpink}\sigma_2}}{\scd{\prg{this}}},\class{{\color{hotpink}\sigma_5}}{\scd{\prg{this}}} 
+%     \class{{\color{hotpink}\sigma_6}}{\scd{\prg{this}}},\class{{\color{hotpink}\sigma_9}}{\scd{\prg{this}}}\in {\color{hotpink}M_{ext}}$.
+The right hand side illustrates the 
+observable states execution. Note that the $redsymb$ relation only holds between {\color{hotpink}external} states. Note also that
+while $\exec{{\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}} {\color{hotpink}\sigma_6} {\color{lightseagreen}\sigma_7} \leadsto {\color{hotpink}\sigma_8}$, there is no $\redsymb$ relation between ${\color{hotpink}\sigma_6}$ and ${\color{hotpink}\sigma_8}$. 
+
+ %\footnote{Note that whether a module is external or internal depends on %our
+%perspective -- nothing in a module itself renders it internal or external. For example, in
+% $\reduction{M_1}{M_2}{...}{...}$ the external module is $M_1$,
+%  while in  $\reduction{M_2}{M_1}{...}{...}$  the external module is $M_2$.
+%}
+TODO: say how observable states differs from visible states
 
 We  use the notation\ \  $\reductions{M_{ext}}{M}{\sigma}{\sigma'}$ \ 
 to denote zero or more  steps starting at state $\sigma$ and ending at state $\sigma'$, in the context of internal module 
