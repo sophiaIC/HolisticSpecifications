@@ -168,8 +168,7 @@ if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
 $\reductions{M_{ext}}{M}{\sigma_0}{\sigma}$.
 \end{definition}
 
-An \emph{Initial} state's heap
-contains a single object of class \prg{Object}, and
+An \emph{Initial} state's heap contains a single object of class \prg{Object}, and
 its  stack   consists of a single frame, whose local variable map is a
 mapping from \prg{this} to the single object, and whose continuation is  any statement.
 (See Definition %s \ref{def:initial} and 
@@ -319,13 +318,12 @@ $\satisfiesA{M}{\sigma}{A_2}$
 \label{quant1}
 $\satisfiesA{M}{\sigma}{\all{x:C}{A}}$ \ \ \ iff \ \ \  
 $\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \Longrightarrow \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  for all  $o$ such that $\sigma \models \GRelevant o$, where $x$ is free in $\sigma$  
-\footnote{ALL: Notice the difference to OOPLSA - but one can be encoded in the other}
+\strut \hspace{1.3in}  \sdN{for all  $o$ such that $\sigma \models \GRelevant o$, where $x$ is free in $\sigma$ } 
 \item
 \label{quant2}
 $\satisfiesA{M}{\sigma}{\ex{x}{A}}$ \ \ \ iff \ \ \  
 $\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \wedge \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  for some $o$ such that $\sigma \models \GRelevant o$, where $x$ is free in $\sigma$. 
+\strut \hspace{1.3in}  \sdN{for some $o$ such that $\sigma \models \GRelevant o$, where $x$ is free in $\sigma$. }
 \item
 \label{cInternal}
 $\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \   $\textit{classOf}(\sigma,x) \in M$
@@ -350,20 +348,17 @@ Say that $\Longrightarrow$ is meta, while $\rightarrow$ is Chainmail.
 \footnote{\sdN{TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
  Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.}}
 
-Both existential and universal quantification (defined in \ref{quant1} and \ref{quant2}) is done over all objects which are transitively 
-accessible any frame in the stack (as in OOPSLA). But note that $$\satisfiesA{M}{\sigma} {\inside {y}}$ only considers objects that are locally relevant.
+\sdN{Both existential and universal quantification (defined in \ref{quant1} and \ref{quant2}) is done over all objects which are transitively 
+accessible any frame in the stack (as in OOPSLA). But note that $\satisfiesA{M}{\sigma} {\inside {y}}$ only considers objects that are locally relevant.
 We do not include quantification over primitive types such as integers as \LangOO is too simple. The 
-Coq mechanisation does include primitive types.
+Coq mechanisation does include primitive types.}
  
 \footnote{\sdN{TODO: say that any assertion $A(e)$ can be understood as a shorthand for $\exists x. [ x=e \wedge A(x)]$. or  $forall x. [ x=e \rightarrow A(x)]$?? For example, the  assertion   ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{x}}]$. QUESTION: do we need to talk about $=$ in the assertion language?}}
 
  Note that in most cases, satisfaction of an assertion not only depends on the state $\sigma$, but 
-also depends on the module in the case of expressions (\ref{cExpr}), class membership
-(\ref{cClass}), and internal or external provenance (\ref{cInternal} ).
+in some cases it also depends on the module: namely execution of expressions (\ref{cExpr}) might need to look up the definition of ghost fields  in $M$, while 
+for internal or external provenance (\ref{cInternal} and \ref{cExternal}) we need to know all the classes defined in $M$.
 
-
-
-Note that in the above, we mean $\rightarrow$ -- this is a Chainmail assertion.
 
 ${\inside {\_}}$  is central to the expression of ambient capability. For example, the balance of an account whose
   password is  encapsulated/protected?  will not decrease in the next step.
@@ -371,7 +366,55 @@ ${\inside {\_}}$  is central to the expression of ambient capability. For exampl
 would break the intended guarantees of the API. Such objects need to remain confined - see
 such an example in Section \ref{s:examples}. 
  
- TODO add a diagram that illustrated relative and absolute inside. TODO: Do we prove the implications as in TACAS, or just rely on TACAS? -- perhaps the former, since we have some new primitives? hmhh
+\footnote{\sdN{. TODO: Do we prove the implications as in TACAS, or just rely on TACAS? -- perhaps the former, since we have some new primitives? hmhh}}
+
+\begin{figure}[htb]
+\begin{tabular}{|c|c|c|cl}
+\hline \\
+\resizebox{3cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/prot1.png}
+} 
+&
+\resizebox{3cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/prot2.png}
+} 
+&
+\resizebox{3cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/prot3.png}
+} 
+&
+\resizebox{3cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/prot4.png}
+} 
+\\
+\hline
+\\
+Lcl-rlvnt: $1$, $2$, $3$, $4$,  $5$,  $6$
+&
+Protected: $3$
+& 
+Lcl-rlvnt: $1$, $2$, $3$, $4$
+&
+Protected: $3$, $4$ and $6$
+\\
+&
+4 protected from 1 
+&
+&
+4 protected from 1 
+\\
+&
+4 not protected from 5 
+&
+&
+4 not protected from 5 
+\\
+\hline
+\end{tabular}
+   \caption{Illustrating relevant objects and protection. The frames are square boxes, $\phi_1$ and $\phi_2$.   The objects are rounded boxes, where  pink are the external objects (here $1$ and $5$;  green are the internal objects (here $2$, $3$,  $4$ and $6$; grey are the irrelevant  objects (here $ 7$). }
+   \label{fig:Relevant}
+ \end{figure}
+
 
 \subsection{\SpecLang specifications}
 
@@ -440,8 +483,8 @@ $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}$ and
 \end{definition} 
 
 
-TODO: illucidate in terms of the diagram for external states semantics, and point out the difference from what we have in OOPSLA.
-Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.
+ 
+\footnote{\sdN{TODO Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.}}
 % \footnote{Not sure we need to add:
 %\\
 %Another, equivalent, way of defining the semantics of $\satisfies{M}{\TwoStates {A}{A'}}$  is through renaming of all the free variables in $A$ and $A'$.
