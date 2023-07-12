@@ -30,21 +30,16 @@ local variable map, and a continuation, \ie a sequence of statements to be execu
 perform field reads and writes on objects,  or
  call methods on those objects. 
 
-%Program 
- Modules are mappings
-from class names to class definitions. 
+ 
+Modules are mappings from class names to class definitions. 
 Execution 
-%takes place
-is in the context of  a module $M$ and   a state $\sigma$,
-%It is % Execution
+takes place
+ in the context of  a module $M$ and   a state $\sigma$,
  defined via unsurprising small-step semantics of the form \ \ 
    $M, \sigma \leadsto \sigma'$.
-The   top frame's continuation contains the statement to be % currently being 
-executed next.
- % chopped, as generic 
- % There are several properties  of \LangOO that are important to the central topic of this paper. 
- 
-As discussed in \S \ref{s:approach}, %we are interested in 
+The   top frame's continuation contains the statement to be 
+executed next.  
+As discussed in \S \ref{s:approach}, 
 {open world specifications need to be able to provide}
 guarantees which hold
 during execution of an internal, 
@@ -85,6 +80,8 @@ $\class{\sigma_i}{\scd{\prg{this}}} \!\in\! M$\ \ \ for all $i\!\in\! (1..n)$.
 \sd{ Thus, we collapse into one step a sequence of $\leadsto$ steps (requirements \ref{vis1}  and \ref{vis2}), which may include function calls and returns but
  not returns from the method currently executing in $\sigma_1$ (requirement  \ref{vis3}), and where the starting and end states belong to the external module (requirement  \ref{vis4}), while all intermediate states belong to the internal module (requirement  \ref{vis4}).}
 
+\footnote{\sdN{TODO: chase all references to "external states semantics".}}
+
 Note that the   function $\class{\sigma}{\_}$ is overloaded:
   applied to a variable, 
 $\class{\sigma}{x}$  looks up the variable $x$ in the top frame of $\sigma$, and returns the 
@@ -98,11 +95,11 @@ The details {can be found in the appendices\cite{necessityFull}.} %Appendix \ref
 \begin{figure}[htb]
 \begin{tabular}{|l|l|}
 \hline \\
-\resizebox{6.0cm}{!}{
+\resizebox{6.5cm}{!}{
 \includegraphics[width=\linewidth]{diagrams/ObservableStates1.png}
 } 
 &
-\resizebox{6.0cm}{!}{
+\resizebox{6.5cm}{!}{
 \includegraphics[width=\linewidth]{diagrams/ObservableStates2.png}
 }
 \\
@@ -147,15 +144,17 @@ while $\exec{{\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}} {\color{ho
 % $\reduction{M_1}{M_2}{...}{...}$ the external module is $M_1$,
 %  while in  $\reduction{M_2}{M_1}{...}{...}$  the external module is $M_2$.
 %}
-TODO: say how observable states differs from visible states
+\footnote{\sdN{TODO: say how observable states differs from visible states, and from OOPLSA external states.}}
 
 We  use the notation\ \  $\reductions{M_{ext}}{M}{\sigma}{\sigma'}$ \ 
 to denote zero or more  steps starting at state $\sigma$ and ending at state $\sigma'$, in the context of internal module 
 $M$ and external module $M_{ext}$.
+ Note that $\redsymb^*$ is --obviously-- transitive.
+ 
  %Not only are we unconcerned 
 %with internal states,  we are also unconcerned with  states which cannot ever arise from execution.
 We are {not} concerned with internal states or states that can never arise.
-{A state $\sigma$ is \emph{arising},}  written $\arising{M_{ext}}{M}{\sigma}$, {if it  may arise by external states} execution
+{A state $\sigma$ is \emph{arising},}  written $\arising{M_{ext}}{M}{\sigma}$, {if it  may arise by observable states} execution
 starting at some initial configuration:
 
 
@@ -204,8 +203,8 @@ An assertion may be an expression,   a query of the defining class of
   an object, the usual connectives and quantifiers, along 
 with two non-standard assertion forms:
 (1) \emph{Internal/external} and (2) \emph{Protection}, inspired by the capabilities literature, and
- TODO say how these relate with capability lit;  compare with 
- OOPSLA.
+\footnote{\sdN{ TODO say how these relate with capability lit;  compare with 
+ OOPSLA.}}
 
 
 \begin{definition}
@@ -240,7 +239,7 @@ Assertions ($A$) in
 
 \end{definition}
 
-TODO compare with oopsla 
+\footnote{\sdN{TODO compare with oopsla }}
 
 
 \subsubsection{Semantics of \AssertLang}
@@ -275,12 +274,24 @@ $x$ isn't in the variable map of the top frame of $\sigma$,
 while the substitution  $\sigma[x \mapsto \alpha]$ is applied to the top frame of $\sigma$.
  \ $C\in M$ means that class $C$ is in the domain of module $M$. 
 
-TODO motivate why we need relevant 
-\begin{definition}
-$\sigma \models \Relevant o$ \ \ iff\ \  
-$\exists n\in \mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{x.\prg{f}_1.....\prg{f}_n} = o  ]$.
+
+We say that an object $o$ is locally relevant, if this object is transitively reachable from the currently executing method (i.e. from the top frame in $\sigma$), and that it is globally relevant it is transitively reachable from the currently executing method or from one of the currently suspended executions (i.e. from one of the frames in $\sigma$). \footnote{\sdN{TODO motivate why we need relevant }}
+
+\begin{definition} We define 
+\begin{itemize}
+\item
+$\sigma,\phi \models \Relevant o$ \ \ iff\ \  
+$\exists n\in \mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{\phi(x).\prg{f}_1.....\prg{f}_n} = o  ]$.
+\item
+$\sigma \models \LRelevant o$ \ \ iff\ \  
+$\sigma=(\phi\cdot\_, \_)$ and $\sigma,\phi \models \Relevant o$ for some $\phi$
+\item
+$\sigma \models \GRelevant o$ \ \ iff\ \  
+$\sigma=(\_\cdot\_\phi\cdot\_, \_)$ and $\sigma,\phi \models \Relevant o$ for some $\phi$
+\end{itemize}
 \end{definition}
 
+Obviously, $\sigma \models \GRelevant o$ implies $\sigma \models \LRelevant o$, and bot the opposite.
 We now give meaning to assertions. Definitions (1)-(5) are standard. Note that Definitions (6)-(7) quantify only over objects that are accessible from the top frame. TODO  explain that the sequence of field reads $\prg{f}_1$,.....$\prg{f}_n$ may be empty,
 
 \begin{definition}[Satisfaction % of \AssertLang 
@@ -308,53 +319,49 @@ $\satisfiesA{M}{\sigma}{A_2}$
 \label{quant1}
 $\satisfiesA{M}{\sigma}{\all{x:C}{A}}$ \ \ \ iff \ \ \  
 $\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \Longrightarrow \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  for all  $o$ such that $\sigma \models \Relevant o$, where $x$ is free in $\sigma$  
+\strut \hspace{1.3in}  for all  $o$ such that $\sigma \models \GRelevant o$, where $x$ is free in $\sigma$  
 \footnote{ALL: Notice the difference to OOPLSA - but one can be encoded in the other}
 \item
 \label{quant2}
 $\satisfiesA{M}{\sigma}{\ex{x}{A}}$ \ \ \ iff \ \ \  
 $\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \wedge \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  for some $o$ such that $\sigma \models \Relevant o$, where $x$ is free in $\sigma$, and 
+\strut \hspace{1.3in}  for some $o$ such that $\sigma \models \GRelevant o$, where $x$ is free in $\sigma$. 
 \item
 \label{cInternal}
-$\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \  
-$\textit{classOf}(\sigma,x) \in M$
+$\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \   $\textit{classOf}(\sigma,x) \in M$
+\item
+\label{cExternal}
+$\satisfiesA{M}{\sigma}{\external{x}}$ \ \ \ iff \ \ \   $\textit{classOf}(\sigma,x) \notin M$
+%\\ \strut \hspace{1.3in} And we use$\external {y}$ as short for  $\neg(\internal {y})$
 \item
 \label{cProtected}
 $\satisfiesA{M}{\sigma}{\protectedFrom{y} {x}}$  \ \ \ iff \ \ \   $\satisfiesA{M}{\sigma}{y \neq x}$  and \\
 \strut \hspace{1.3in} $\forall f_1,...f_n.[\ \interpret{\sigma}{x.f_1...f_n}=\interpret{\sigma}{y} \ \Longrightarrow \exists k<n. 
 [\,\satisfiesA{M}{\sigma}{\internal{x.f_1...f_k}} \, ] \ ]$
+\item
+$\satisfiesA{M}{\sigma} {\inside {y}}$   \ \ \ iff \ \ \  for all $z$, \\
+\strut \hspace{1.3in}  
+\sdN{$\satisfiesA{M}{\sigma} {\external {z}}\ \wedge \ \sigma \models \LRelevant z\ \Longrightarrow\ 
+ \satisfiesA{M}{\sigma}{\protectedFrom{y} {z}}$}
 \end{enumerate}
 \end{definition}
 
 Say that $\Longrightarrow$ is meta, while $\rightarrow$ is Chainmail.
-
-TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
- Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.
+\footnote{\sdN{TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
+ Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.}}
 
 Both existential and universal quantification (defined in \ref{quant1} and \ref{quant2}) is done over all objects which are transitively 
-accessible from the top frame in the stack. This deviates from OOPSLA. -TODO later on say why this is important.
+accessible any frame in the stack (as in OOPSLA). But note that $$\satisfiesA{M}{\sigma} {\inside {y}}$ only considers objects that are locally relevant.
 We do not include quantification over primitive types such as integers as \LangOO is too simple. The 
 Coq mechanisation does include primitive types.
  
-TODO: say that any assertion $A(e)$ can be understood as a shorthand for $\exists x. [ x=e \wedge A(x)]$. For example, the  assertion   ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{x}}]$. QUESTION: do we need to talk about $=$ in the assertion language?
+\footnote{\sdN{TODO: say that any assertion $A(e)$ can be understood as a shorthand for $\exists x. [ x=e \wedge A(x)]$. or  $forall x. [ x=e \rightarrow A(x)]$?? For example, the  assertion   ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{x}}]$. QUESTION: do we need to talk about $=$ in the assertion language?}}
 
  Note that in most cases, satisfaction of an assertion not only depends on the state $\sigma$, but 
 also depends on the module in the case of expressions (\ref{cExpr}), class membership
 (\ref{cClass}), and internal or external provenance (\ref{cInternal} ).
 
-We also define two shorthands:
 
-\begin{definition}[Protected and External]
-We define two shorthands
-
-\begin{enumerate}
-\item
-$\external {y}$ is short for  $\neg(\internal {y})$
-\item
-${\inside {y}}$  is short for ${\all{x}{\ \external x  \rightarrow  {}{\protectedFrom{y} {x}}\ }}$
-\end{enumerate}
-\end{definition}
 
 Note that in the above, we mean $\rightarrow$ -- this is a Chainmail assertion.
 
