@@ -316,7 +316,7 @@ The semantics of $\hookrightarrow$ {is} unsurprising
 
 
 
-\begin{definition}[Satisfaction % of \AssertLang 
+\begin{definition}[Satisfaction 
 of Assertions by a module and a state] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a % program 
@@ -353,7 +353,6 @@ $\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \   $\textit{classOf}(x,\si
 \item
 \label{cExternal}
 $\satisfiesA{M}{\sigma}{\external{z}}$ \ \ \ iff \ \ \   $\textit{classOf}(z,\sigma) \notin M$
-%\\ \strut \hspace{1.3in} And we use$\external {y}$ as short for  $\neg(\internal {y})$
 \item
 \label{cProtected}
 $\satisfiesA{M}{\sigma}{\protectedFrom{x} {z}}$  \ \ \ iff \ \ \   $\satisfiesA{M}{\sigma}{x \neq z}$  and \\
@@ -535,9 +534,6 @@ $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}\ \we
  
 \end{definition} 
 
-  \footnote{\sd{Note that in the second bullet we do not drop the requirement that $\arising{\sigma}{M_{ext}}{M}$}}% \ \wedge 
-  
- 
   
   \footnote{\sd{TODO: Make an example that demonstrates the difference if in the second bullet we had asked for locally relevant objects ${\overline o}$.}}
  
@@ -548,21 +544,98 @@ $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}\ \we
 
 And try this first $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.password}}} {\inside{\prg{a.password}}}$
 
-\subsection{Examples}
+\subsection{Specification Examples}
 \noindent
-As an example, consider the following three  specifications:
+As an example, consider the following    specifications:
 
 \begin{tabular}{lcll}
-$S_1$   &     $\triangleq$   & $\OneStateQ{\prg{a}:\prg{Account} } {\inside{\prg{a.password}}} $
+$S_1$   &     $\triangleq$   & $\OneStateQ{\prg{a}:\prg{Account} } {\inside{\prg{a}}} $
  \\
- $S_2$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.password}}} {\inside{\prg{a.password}}}$
+ $S_2$   &     $\triangleq$   & $\OneStateQ{\prg{a}:\prg{Account} } {\inside{\prg{a.password}}} $
  \\
-$S_3$ & $\triangleq$   &
-  $\forall \prg{a}:\prg{Account},\prg{b}:\prg{int}.$\\
+ $S_3$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} {\inside{\prg{a}}} $
+ \\
+ $S_4$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.password}}} {\inside{\prg{a.password}}}$
+ \\
+$S_5$ & $\triangleq$   &
+ $\forall \prg{a}:\prg{Account}.\forall \prg{b}:\prg{int}.$\\
+  &  &  $\FirstState{\inside{\prg{a}} \wedge \prg{a.balance}=\prg{b}} 
+\  \SecondState{ \prg{a.balance}= \prg{b} }$
+\\
+$S_6$ & $\triangleq$   &
+  $\forall \prg{a}:\prg{Account}.\forall \prg{b}:\prg{int}.$\\
   &  &  $\FirstState{\inside{\prg{a.password}} \wedge \prg{a.balance}=\prg{b}} 
 \  \SecondState{ \prg{a.balance}\geq \prg{b} }$
+ \end{tabular}
+
+\vspace{.2cm}
+Now consider our modules from earlier. We have that
+
+\begin{tabular}{lllllll}
+$\ModA \not\models S_1$  & & $\ModA \not\models S_2$ &&  $\ModB \not\models S_1$ &  &$\ModB \not\models S_2$ \\
+$\ModA \models S_3$ & &   $\ModA \models S_4$ & &  $\ModB  \models S_3$ & &  $\ModB  \not\models S_4$ \\
+$\ModA \models S_5$ & &  $\ModA \models S_6$ & & $\ModB  \models S_5$ & & $\ModB   \not\models S_6$ \\
 \end{tabular}
 
-Now give modules such that $M \models S_2$ but $M \not\models S_2$, and $M \models S_3$.
+\vspace{.6cm}
+Consider also  $S_{4a}$ which is a variation of $S_4$, as well as $S_7$, which ...
+
+\begin{tabular}{lcll}
+$S_{4a}$   &     $\triangleq$   &   ${\TwoStatesQ {\prg{a}:\prg{Account}.\prg{p}:\prg{Password}}  {\prg{p}=\prg{a.password} \wedge \inside{\prg{p}}}{\inside{\prg{p}}} }$
+ \\
+$S_7$ & $\triangleq$   & ${\TwoStatesQ {\prg{a}:\prg{Account}.\prg{p}:\prg{Password}}  {\prg{p}=\prg{a.password}} {\prg{p}=\prg{a.password}} }$
+ \end{tabular}
+ 
+ \noindent
+ Fort these specifications
+ 
+ \begin{tabular}{lllllll}
+$\ModA  \models S_7$  & & $\ModB \not\models S_7$ &&  $\ModC \not\models S_7$ \\
+\end{tabular}
+
+\subsection{Tautological assertions, and Specification Implication}
+
+\begin{definition}[Satisfaction of Assertions by a module] 
+\label{def:assertion-inference-semantics}
+We define satisfaction of an assertion $A$ by a  module $M$ as:
+\begin{itemize}
+\item
+$M \vDash A$   \ \ \ iff \ \ \  $\forall M_{ext}. \forall \sigma.[\ \arising{\sigma}{M_{ext}}{M} \ \Longrightarrow \ \ \satisfiesA{M}{\sigma}{e}\ \ ]$
+\end{itemize}
+\end{definition}
+
+TODO: Here we will say that assertions are classical, as proven in FASE
+
+\begin{definition}[Stronger Specifications] 
+\label{def:specification-implication-semantics}
+We define when a specification $S$ is stronger than another specification $S'$  in the context of a  module:  \begin{itemize}
+\item
+$\stronger M  S  {S'}$   \ \ \ iff \ \ \  $M\models S$ implies $M \models S'$
+\item
+$\strongerEq M  S  {S'}$   \ \ \ iff \ \ \ $\stronger M  S  {S'}$  \ and \  $\stronger M   {S'} S$    
+\end{itemize}
+\end{definition}
+
+We know about stronger specifications:
+
+\begin{lemma}
+Consider assertions $A$, $A'$, and module $M$:
+\begin{itemize}
+\item
+$\stronger M {\OneStateQ {\overline {x:C}}  {A}}  {\TwoStatesQ {\overline {x:C}} {A}{A}} $ 
+\item
+If $y$ free in $A$, then \ \  $\strongerEq  M  {\OneStateQ    {y:\prg{Object}}   {\forall \overline {x:C}[ A ] } } 
+    {\OneStateQ {\overline {x:C}}  {A}} $.
+\item
+$M,  {\OneStateQ {\overline {x:C}}  {A}} 
+  \models  {\OneStateQ    {y:\prg{Object}}   {\forall \overline {x:C}[ A ] } } $
+\item
+$M \models (  \overline {x:C} \wedge A) \rightarrow A'$ \ \   implies \ \  $\stronger M  {\OneStateQ {\overline {x:C}} {A}}    {\OneStateQ {\overline {x:C}} {A'}}$
+\item
+$\stronger M  S {S''}$ and $\stronger M {S''} {S'}$\ \  implies \ \ $\stronger M S  {S'}$.
+\end{itemize}
+
+\end{lemma}
+
 
 
