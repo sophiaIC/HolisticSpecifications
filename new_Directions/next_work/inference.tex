@@ -205,20 +205,20 @@ $
 \\
 \inferrule [HS-rename-1]
 	{ \\\\
-	\stronger M S {\OneStateQ {\overline {x:C}} {A} }
+	\strongerI M S {\OneStateQ {\overline {x:C}} {A} }
 	\\
 	\overline {y} \mbox{ free in } A
 	}
-	{\stronger M S {\OneStateQ {\overline {y:C}} {A[\overline y/\overline x]} }
+	{\strongerI M S {\OneStateQ {\overline {y:C}} {A[\overline y/\overline x]} }
 	}
 &  & 
 \inferrule [HS-rename-2]
 	{ \\\\
-	\stronger M S {\TwoStatesQ {\overline {x:C}} {A} {A'} }
+	\strongerI M S {\TwoStatesQ {\overline {x:C}} {A} {A'} }
 	\\
 	\overline {y} \mbox{ free in } A, A'
 	}
-	{\stronger M S {\TwoStatesQ {\overline {y:C}} {A[\overline y/\overline x]} {A'[\overline y/\overline x]} }
+	{\strongerI M S {\TwoStatesQ {\overline {y:C}} {A[\overline y/\overline x]} {A'[\overline y/\overline x]} }
 	}
 
 \\
@@ -256,9 +256,7 @@ We now define what it means for a module $M$ to promise a specification $S$:
 \begin{definition}
 Given module $M$ snd specification $S$:
 
-\begin{itemize}
-\item $\promises M S$ \ \ \ \  iff \ \ \ \  $\strongerI M {HS(M)} S$
-\end{itemize}
+\strut \hspace{2cm} $\promises M S$ \ \ \ \  iff \ \ \ \  $\strongerI M {HS(M)} S$
 \end{definition}
 
 Notice, that $\promises M S$ is only based on the spec of $M$, and does not guarantee that indeed $M$ satisfies $S$.
@@ -286,42 +284,46 @@ Notice, that $\promises M S$ is only based on the spec of $M$, and does not guar
 
 
 \subsection{Reasoning about protection}
-We expand that logic with rules about protection, as in Fig. \ref{f:protection}
+We expand that logic with rules about protection, as in Fig. \ref{f:protection}. Essentially, the only what that the "protection" of an onkect can decrease is if we call an eternal method, and pass it an internal object as argument. This is then covered by the rule in Fig. \ref{f:external:calls}.
 
 \begin{figure}[hbt]
-\footnotesize
-\begin{mathpar}
-\infer
+$
+\begin{array}{c}
+\inferrule[\sc{prot-1}]
 	{ }
 	{\hproves{M} 
-						{x\neq u \wedge \protectedFrom{y}{x}}
-						{\ u:=v\ }
-						{ \protectedFrom{y}{x}}
+						{\ \protectedFrom{x}{z}\ \wedge \ \internal v }
+						{\ v=v'\ }
+						{\ \protectedFrom{x}{z}\ }
 	}
-	\quad(\textsc{prot-1})
-	\and
-\infer
-	{aaaaa}
-	{
-	bbbbbb
-	}
-	\quad(\textsc{prot-2})\
-\\ \\ 
-\infer
-	{
-	 {\TwoStatesQ {\overline {x:C}} {A \wedge \protectedFrom{y'}{x}}{A' \wedge \protectedFrom{y'}{x} }} \in HS(M)
-	 \\
-	{ M \ \vdash \ A_1   \Longrightarrow  A \wedge {\overline {x:C}} \wedge \external{z_1} \wedge \external{z_2} \wedge \protectedFrom{x}{z_1} \wedge \protectedFrom{x}{z_2} }
-	}
+	\\\\
+	\inferrule[\sc{prot-2}]
+	{ }
 	{\hproves{M} 
-						{A_1}
-						{\ z_1.m(z_2)\ }
-						{A' \wedge \protectedFrom{x}{z_1} \wedge \protectedFrom{x}{z_2}}
+						{\ \protectedFrom{x}{z}\ \wedge\ \external v\ \wedge\  z\neq v }
+						{\ v=v'\ }
+						{\ \protectedFrom{x}{z}\ }
 	}
-	\quad(\textsc{prot-3})
-	\and
+	\\\\
+		\inferrule[\sc{prot-3}]
+	{ }
+	{\hproves{M} 
+						{\ \protectedFrom{x}{\{v}\ \wedge\ \external z\  }
+						{\ z=v\ }
+						{\ \protectedFrom{x}{z}\ }
+	}
+	\\\\
 
-\end{mathpar}
+	\inferrule[\sc{prot-4}]
+	{ }
+	{\hproves{M} 
+						{\ \protectedFrom{x}{z}\ }
+						{\ y.f =v\ }
+						{\ \protectedFrom{x}{z}\ }
+	}
+	\\\\
+\end{array}
+$
 \caption{Protection Logic}
 \label{f:protection}
 \end{figure}
@@ -339,38 +341,39 @@ We now show how to reason about external calls
 
 \begin{figure}[hbt]
 \begin{mathpar}
-\inferrule[\sc{ExtCall-1}]
-{ 
-	      \\\\
-		M \vdash A\ \rightarrow \  ( \  \external \{ z, z', z''\}\ \wedge\ \internal x \ \wedge\  \ y:C \ \wedge \ 
-  x\neq y \
-  \wedge\ \protectedFrom {y} {\{z,z',z''\} }\ )
-	\\\\ 
-	\promises M   {\TwoStatesQ {\overline {y:C}} {\inside y}{\inside y}} 
-		}
-	{\hproves{M} 
-						{ A }
-						{ \ z.m(z',x)\  }
-						{ \protectedFrom {y} {\{z,z',z''\} } }
-	}\\ \\
-\inferrule[\sc{ExtCall-2}]
+% the below are speacil cases of the last one
+%\inferrule[\sc{ExtCall-1}]
+%{ 
+%	      \\\\
+%		M \vdash A\ \rightarrow \  ( \  \external \{ z, z', z''\}\ \wedge\ \internal x \ \wedge\  \ y:C \ \wedge \ 
+%  x\neq y \
+%  \wedge\ \protectedFrom {y} {\{z,z',z''\} }\ )
+%	\\\\ 
+%	\promises M   {\TwoStatesQ {\overline {y:C}} {\inside y}{\inside y}} 
+%		}
+%	{\hproves{M} 
+%						{ A }
+%						{ \ z.m(z',x)\  }
+%						{ \protectedFrom {y} {\{z,z',z''\} } }
+%	}\\ \\
+%\inferrule[\sc{ExtCall-2}]
+%	{ 
+%	      \\\\
+%		M \vdash A\ \rightarrow \  ( \  \external \{ z, z', z''\}\ \wedge\ \internal x \ \wedge\  \ y:C \ \wedge \   x\neq y.f \
+%  \wedge\ \protectedFrom {y.f} {\{z,z',z''\} }\ )
+%		\\\\ 
+%	\promises M   {\TwoStatesQ {\overline {y:C}} {\inside y.f}{\inside y.f}} 
+%		}
+%	{\hproves{M} 
+%						{ A }
+%						{ \ z.m(z',x)\  }
+%						{ \protectedFrom {y.f} {\{z,z',z''\} } }
+%	}
+%\ \\
+\inferrule[\sc{ExtCall}]
 	{ 
 	      \\\\
-		M \vdash A\ \rightarrow \  ( \  \external \{ z, z', z''\}\ \wedge\ \internal x \ \wedge\  \ y:C \ \wedge \   x\neq y.f \
-  \wedge\ \protectedFrom {y.f} {\{z,z',z''\} }\ )
-		\\\\ 
-	\promises M   {\TwoStatesQ {\overline {y:C}} {\inside y.f}{\inside y.f}} 
-		}
-	{\hproves{M} 
-						{ A }
-						{ \ z.m(z',x)\  }
-						{ \protectedFrom {y.f} {\{z,z',z''\} } }
-	}
-\ \\
-\inferrule[\sc{ExtCall-3}]
-	{ 
-	      \\\\
-		M \vdash A\ \rightarrow \   \external  z \ \wedge \external  {\overline {u}}  \ \wedge\ \internal {\overline y} \ \ \ \ \ \ \ \ \overline v \mbox{ is a permutation of } \overline {u} , \overline {y} 
+		M \vdash A\ \rightarrow \ (\  \external  z \ \wedge \external  {\overline {u}}  \ \wedge\ \internal {\overline y} \ ) \ \ \ \ \ \  \ \ \ \ \ \ \ \ \overline v \mbox{ is a permutation of } \overline {u} , \overline {y} 
 		\\\\ 
 	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}} 
 	\\\\
@@ -478,56 +481,58 @@ $
 
 \begin{figure}[thb]
 %\footnotesize
-\begin{mathpar}
-\infer
+$
+\begin{array}{c}
+\inferrule [Two-State]
 	{
-	M \vdash \encaps{A}
 	\\\\
-	\textit{for all}\ \ % D \in dom(M), \ \textit{and}\ \  m \in M(D).\prg{exported\_mthods}, \\\\ 
-	\textit{methods exported from } D,\ \textit{and } \prg{mBody}(M,D,m)=\overline{y:D}\{\  s \ \}\\\\
+	M \vdash \encaps{\overline {x:C}\, \wedge \, A}
+	\\\\
+	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{ with } \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
 				% \strut \hspace{3cm}
-				 [\ \  \hproves{M}{\ A_{init}  } {\ s\ } {\ A\ } \\\\
-				 \wedge
-				 \\\\
-				% \strut \hspace{3cm}\ \ 
-				 (\  s = s_1; z.m'(\overline{y}); \_\ \wedge \ 
-				  \hproves{M}{\  A_{init}  } {\ s\ } {\ A'\ } 
-				 \ \wedge \
-				 M \ \vdash \ A' \rightarrow \external{z} \ \ 
-				  \Longrightarrow\ \ M\ \vdash \ A' \rightarrow A\ \ \ ) \ \ ] \\\\
-				 \textit{where} \\\\
-				 A_{init} \ \triangleq \ \overline{x:C}\wedge \ A\ \prg{this}:\prg{D} \wedge\overline{y:D}\ 
+				\ \  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
 	}
 	{
 	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A} {A} }
 	}
-	\quad(\textsc{two-state-inv})
-\\ \\
-\infer
+\\\\
+\inferrule [External-Safe]
 	{
-	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A''} {A'''}}
-	\\\\
-	M \ \vdash \ {\overline {x:C}} \wedge A \rightarrow A'' \\  M \ \vdash \ {\overline {x:C}} \wedge A''' \rightarrow A' 
+		 \hproves{M}{A' } {\ s\ } {\ A\ } \
+		 \\\
+				\forall s, s', z, m.[\ \ 
+				 (\  s = s'; z.m(\_); \_\ \wedge \ 
+				  \hproves{M}{\  A'  } {\ s\ } {\  \external{z}\  }  \ \ \
+				  \Longrightarrow\ \ \ \hproves{M}{A' } {\ s\ } {\ A\ } \ \ ]
 	}
 	{
-	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A} {A'} }
+	{\hproves{M}{ A'}   {\ s\ } {\ A\ } }\  \parallel \  A   
 	}
-	\quad(\textsc{cons-two-state-inv})
-\\ \\ \infer
+\\\\ 
+\inferrule [One-State]
 	{
-	M \vdash \encaps{A}
-	\\\\
-	\textit{for all}\ \ C \in dom(M), \ \textit{and}\ \ \{f_1, .. f_n\} = M(C).\prg{fields}\\\\
-				 \strut \hspace{3cm} \hproves{M}{A\ } {\ \prg{????}\ } {\ A\ }
-	\\\\
-	M\ \vdash\ \TwoStates{A}{A}
+ 	M \vdash \encaps{\overline {x:C}\, \wedge \, A}
+ 	\\\\
+ 	\forall \mbox{ public } D. [\ \hproves{M}{\forall \overline{x:C}.[A]} {y=\prg{new} D } {\ \forall \overline{x:C}.[A]\ }	\ ]
+   \\\\
+ 	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{ with } \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
+%				% \strut \hspace{3cm}
+ 			\ \  {\hproves{M}{ \forall \overline{x:C}.[A]\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ \forall \overline{x:C}.[A]\ }} \ \parallel \  {\forall \overline{x:C}.[A]} 
 	}
 	{
-	M\ \vdash\ A
+	M\ \vdash\ \OneStateQ{\overline x:C}{A}
 	}
-	\quad(\textsc{one-state-inv})
-\\ \\
-\infer
+\\\\
+\begin{array}{lcl}
+\inferrule[Weaken]
+{
+M \vdash S \\ \strongerI M S {S'}
+}
+{
+M \vdash S'
+}
+&\ \ \  &
+\inferrule[Multi]
 	{
 	M\ \vdash\ S 
 	\\
@@ -536,9 +541,10 @@ $
 	{
 	M\ \vdash\ S \wedge S'
 	}
-	\quad(\textsc{multi-invar})
-	\end{mathpar}
-\caption{Module invariants}
+\end{array}
+\end{array}
+$
+\caption{Inferring that module satisfies its specification}
 \label{f:module:invariats}
 \end{figure}
 
