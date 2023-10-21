@@ -77,6 +77,29 @@ $
  \end{itemize}
 \end{definition}
 
+** for slides.
+
+\vspace{.2cm}
+\noindent
+\\
+\strut \hspace{1cm}
+$\ModB\ \vDash\ \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$
+\\
+\strut \hspace{1cm}
+$\ModC\ \vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$
+
+
+\vspace{.2cm}
+\noindent
+Assume two further modules, $Mod_{ul}$ and $Mod_{pl}$,  which use ledgers to keep a map between accounts and their balances, which export functions that allow the update of this map. In $Mod_{ul}$ the ledger is \emph{not} protected, while in $Mod_{pl}$ the ledger \emph{is} protected. 
+\\
+\strut \hspace{1cm}
+{$Mod_{ul}\ \not\vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$}
+\\
+\strut \hspace{1cm}{$Mod_{pl}\  \vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$}
+\\
+
+\vspace{.2cm}
 Revisiting the examples from \S~\ref{s:outline}, % we can see
 both \ModB and \ModC encapsulate   the  equality of the \prg{balance} of an account to some value \prg{bal}: 
 Namely, this equality can only be invalidated through calling  methods on internal objects.
@@ -284,7 +307,7 @@ Notice, that $\promises M S$ is only based on the spec of $M$, and does not guar
 
 
 \subsection{Reasoning about protection}
-We expand that logic with rules about protection, as in Fig. \ref{f:protection}. Essentially, the only what that the "protection" of an object can decrease is if we call an eternal method, and pass it an internal object as argument. This is then covered by the rule in Fig. \ref{f:external:calls}.
+We expand that logic with rules about protection, as in Fig. \ref{f:protection}. Essentially, the only what that the "protection" of an onkect can decrease is if we call an eternal method, and pass it an internal object as argument. This is then covered by the rule in Fig. \ref{f:external:calls}.
 
 \begin{figure}[hbt]
 $
@@ -292,72 +315,36 @@ $
 \inferrule[\sc{prot-1}]
 	{ }
 	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\ \wedge \ \internal y }
-						{\ y.f=y'\ }
+						{\ \protectedFrom{x}{z}\ \wedge \ \internal v }
+						{\ v=v'\ }
 						{\ \protectedFrom{x}{z}\ }
 	}
 	\\\\
-
-%\inferrule[\sc{prot-1}]
-%	{ }
-%	{\hproves{M} 
-%						{\ \protectedFrom{x}{z}\ \wedge \ \internal v }
-%						{\ v=v'\ }
-%						{\ \protectedFrom{x}{z}\ }
-%	}
-%	\\\\
-
 	\inferrule[\sc{prot-2}]
 	{ }
 	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\  \wedge\ \internal {y'} \ \wedge\  x \neq y'}
-						{\ y.f=y'\ }
+						{\ \protectedFrom{x}{z}\ \wedge\ \external v\ \wedge\  z\neq v }
+						{\ v=v'\ }
 						{\ \protectedFrom{x}{z}\ }
 	}
 	\\\\
-
-	\inferrule[\sc{prot-3}]
+		\inferrule[\sc{prot-3}]
 	{ }
 	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\ \wedge\  \protectedFrom{x}{y'} }
-						{\ y.f=y'\ }
+						{\ \protectedFrom{x}{\{v}\ \wedge\ \external z\  }
+						{\ z=v\ }
 						{\ \protectedFrom{x}{z}\ }
 	}
 	\\\\
-
-%	\inferrule[\sc{prot-2}]
-%	{ }
-%	{\hproves{M} 
-%						{\ \protectedFrom{x}{z}\ \wedge\ \external v\ \wedge\  z\neq v }
-%						{\ v=v'\ }
-%						{\ \protectedFrom{x}{z}\ }
-%	}
-%	\\\\
-
-
-%	\inferrule[\sc{prot-4}]
-%	{ }
-%	{\hproves{M} 
-%						{\ \protectedFrom{x}{v}\ \wedge\ \external z\  }
-%						{\ z=v\ }
-%						{\ \protectedFrom{x}{z}\ }
-%	}
-%	\\\\
 
 	\inferrule[\sc{prot-4}]
 	{ }
 	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\ \wedge\ z \neq \this}
-						{\ y =y'.f\ }
+						{\ \protectedFrom{x}{z}\ }
+						{\ y.f =v\ }
 						{\ \protectedFrom{x}{z}\ }
 	}
 	\\\\
-
-%\inferrule[\textsc{prot-5}]
-%	{}
-%	{\hproves{M}
-%			{}
-%	}
 \end{array}
 $
 \caption{Protection Logic}
@@ -413,9 +400,7 @@ We now show how to reason about external calls
 		\\\\ 
 	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}} 
 	\\\\
-	M \vdash {\lift A  {\{z,\overline {u}\}}  {\overline y}} \  \rightarrow \ (\  {\overline {x:C}} \wedge A_1 \, \rightarrow\, A_2\  )
-	\\ \\ 
-	
+	M \vdash {\lift A  {\{z,\overline {u}\}}  {\overline y}} \  \rightarrow \ (\, {\overline {x:C}} \wedge A_1\, )
 		}
 	{\hproves{M} 
 						{ \ A\  }
@@ -513,6 +498,92 @@ $
 \subsection{Proving \SpecLang Specifications}
 
 \subsubsection{Deriving sub-specifications}
+
+
+Simplified
+
+
+%\footnotesize
+$
+\begin{array}{c}
+\inferrule [Two-State]
+	{
+	\\\\
+	M \vdash \encaps{\overline {x:C}\, \wedge \, A}
+	\\\\
+	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
+				% \strut \hspace{3cm}
+				\ \  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }}
+	}
+	{
+	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A} {A} }
+	}
+\\\\
+\\\\
+\inferrule [Two-State]
+	{
+	\\\\
+	M \vdash \encaps{\overline {x:C}\, \wedge \, A}
+	\\\\
+	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
+				% \strut \hspace{3cm}
+				\ \  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
+	}
+	{
+	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A} {A} }
+	}
+	\\\\
+\inferrule [Body]
+	{
+		 		 \hproves{M} {A' } {\ s\ } {\ A\ } \
+ 		\\\\ 	
+				\forall  s', z, m.[\ \ 
+				 (\  s = s'; z.m(\_); \_\ \wedge \ 
+				  \hproves{M} {A' } {\ s'\ } {\  \external{z}\  }  \ \ \
+				  \Longrightarrow\ \ \ \hproves{M}{A' } {\ s'\ } {\ A\ } \ \ ]
+	}
+	{
+	{\hproves{M}{ A'}   {\ s\ } {\ A\ } }\  \parallel \  A   
+	}
+\\\\ 
+\inferrule [Body]
+	{
+		A_{ois}=\overline{\OneStateQ{\overline {y:C}}{A''}}\ \mbox{all object invariants in } HS(M)\ \ \ \ \ \ \ \  A_{strng}=A_{ois}\wedge A' 
+		\\\\
+ 		 \hproves{M} {A_{strng} } {\ s\ } {\ A\ } \
+ 		\\\\ 	
+				\forall  s', z, m.[\ \ 
+				 (\  s = s'; z.m(\_); \_\ \wedge \ 
+				  \hproves{M} {A_{strng}\ } {\ s'\ } {\  \external{z}\  }  \ \ \
+				  \Longrightarrow\ \ \ \hproves{M}{A_{strng} } {\ s'\ } {\ A\ } \ \ ]
+	}
+	{
+	{\hproves{M}{ A'}   {\ s\ } {\ A\ } }\  \parallel \  A   
+	}
+\\\\ 
+\begin{array}{lcl}
+\inferrule[Weaken]
+{
+M \vdash S \\ \strongerI M S {S'}
+}
+{
+M \vdash S'
+}
+&\ \ \  \ \ \ \ \ \ \  &
+\inferrule[Multi]
+	{
+	M\ \vdash\ S 
+	\\
+	M\ \vdash\ S' 
+	}
+	{
+	M\ \vdash\ S \wedge S'
+	}
+\end{array}
+\\\\
+\end{array}
+$
+
 
 
 \label{s:module-proof}
