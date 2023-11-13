@@ -39,12 +39,13 @@ Module LanguageDefinition.
   | mdl_id : nat -> mdl.
 
   Inductive exp :=
+  | e_hole : nat -> exp
   | e_var : var -> exp
   | e_val : val -> exp
   | e_fld : exp -> fld -> exp
   | e_class : exp -> cls -> exp
   | e_ghost : exp -> ghost -> exp -> exp
-  | e_cond : exp -> exp -> exp -> exp.
+  | e_if : exp -> exp -> exp -> exp.
 
   Definition v_true := (v_bool true).
   Definition v_false := (v_bool false).
