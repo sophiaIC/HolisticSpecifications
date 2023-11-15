@@ -11,8 +11,7 @@ Require Export ZArith.
 
 Module Assert.
 
-  Module LDef := LanguageDefinition.
-  Export LDef.
+  Import LanguageDefinition.
 
   Inductive asrt :=
   | a_exp : exp -> asrt
@@ -20,8 +19,8 @@ Module Assert.
   | a_and : asrt -> asrt -> asrt
   | a_or : asrt -> asrt -> asrt
   | a_neg : asrt -> asrt
-  | a_all : var -> asrt -> asrt
-  | a_ex : var -> asrt -> asrt
+  | a_all : asrt -> asrt
+  | a_ex : asrt -> asrt
 
   | a_intl : exp -> asrt
   | a_extl : exp -> asrt
@@ -31,8 +30,9 @@ Module Assert.
 
   Notation "A1 '∧' A2" := (a_and A1 A2)(at level 39).
   Notation "A1 '∨' A2" := (a_or A1 A2)(at level 39).
-(*)  Notation "A1 '⟶' A2" := (a_arr A1 A2)(at level 39).*)
   Notation "'¬' A" := (a_neg A)(at level 39).
+  Definition arr (A1 A2 : asrt) := ¬ A1 ∨ A2.
+  Notation "A1 ⟶ A2" :=(arr A1 A2)(at level 40).
 
   Inductive path :=
   | p_fld : fld -> path
@@ -58,10 +58,10 @@ Module Assert.
   | path_fld : forall σ x f α, interpret_f σ x f = Some (v_addr α) ->
                           path_to σ x α
   | path_trans : forall σ χ ψ x α' o f α, path_to σ x α' ->
-                                      σ = (χ, ψ) ->
-                                      χ α' = Some o ->
-                                      o_flds o f = Some (v_addr α) ->
-                                      path_to σ x α.
+                                     σ = (χ, ψ) ->
+                                     χ α' = Some o ->
+                                     o_flds o f = Some (v_addr α) ->
+                                     path_to σ x α.
 
   (* TODO: relevant definition *)
   Definition relevant (α : addr)(ϕ : frame)(σ : config) : Prop :=
@@ -95,8 +95,8 @@ Module Assert.
 
   #[global] Instance exp_subst : Subst exp nat addr:=
     {
-    sbst :=
-      fix sbst' e n α :=
+      sbst :=
+        fix sbst' e n α :=
           match e with
           | e_hole m  => if beq_nat n m
                         then e_val (v_addr α)
@@ -111,24 +111,24 @@ Module Assert.
 
   #[global] Instance asrtSubst : Subst asrt nat addr:=
     {
-    sbst :=
-      fix sbst' A n α :=
-        match A with
-        | a_exp e     => a_exp ([ α /s n ] e)
-        | A1 ∧ A2     => (sbst' A1 n α) ∧ (sbst' A2 n α)
-        | A1 ∨ A2     => (sbst' A1 n α) ∨ (sbst' A2 n α)
-        | ¬ A         => ¬ (sbst' A n α)
-(*)        | A1 ⟶ A2   => (sbst' A1 n α) ⟶ (sbst' A2 n α)*)
+      sbst :=
+        fix sbst' A n α :=
+          match A with
+          | a_exp e     => a_exp ([ α /s n ] e)
+          | A1 ∧ A2     => (sbst' A1 n α) ∧ (sbst' A2 n α)
+          | A1 ∨ A2     => (sbst' A1 n α) ∨ (sbst' A2 n α)
+          | ¬ A         => ¬ (sbst' A n α)
+          (*)        | A1 ⟶ A2   => (sbst' A1 n α) ⟶ (sbst' A2 n α)*)
 
-        | a_all x A    => a_all x (sbst' A (S n) α)
-        | a_ex x A   => a_ex x (sbst' A (S n) α)
+          | a_all A    => a_all (sbst' A (S n) α)
+          | a_ex A   => a_ex (sbst' A (S n) α)
 
-        | a_intl e => a_intl ([α /s n] e)
-        | a_extl e => a_extl ([α /s n] e)
+          | a_intl e => a_intl ([α /s n] e)
+          | a_extl e => a_extl ([α /s n] e)
 
-        | a_prt_frm e1 e2 => a_prt_frm ([α /s n] e1) ([α /s n] e2)
-        | a_prt e => a_prt ([α /s n] e)
-        end
+          | a_prt_frm e1 e2 => a_prt_frm ([α /s n] e1) ([α /s n] e2)
+          | a_prt e => a_prt ([α /s n] e)
+          end
     }.
 
   Inductive sat : module -> config -> asrt -> Prop :=
@@ -148,13 +148,13 @@ Module Assert.
   | sat_neg : forall M σ A, nsat M σ A ->
                        sat M σ (¬ A)
 
-  | sat_all : forall M σ x A, (forall α, glob_relevant α σ ->
-                               sat M σ ([α /s 0] A)) ->
-                         sat M σ (a_all x A)
+  | sat_all : forall M σ A, (forall α, glob_relevant α σ ->
+                             sat M σ ([α /s 0] A)) ->
+                       sat M σ (a_all A)
 
-  | sat_ex : forall M σ x α A, glob_relevant α σ ->
-                          sat M σ ([α /s 0] A) ->
-                          sat M σ (a_ex x A)
+  | sat_ex : forall M σ α A, glob_relevant α σ ->
+                        sat M σ ([α /s 0] A) ->
+                        sat M σ (a_ex A)
 
   | sat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
                           C ∈ M ->
@@ -194,13 +194,13 @@ Module Assert.
   | nsat_neg : forall M σ A, sat M σ A ->
                         nsat M σ (¬ A)
 
-  | nsat_all : forall M σ x α A, glob_relevant α σ ->
-                            nsat M σ ([α /s 0] A) ->
-                            nsat M σ (a_all x A)
+  | nsat_all : forall M σ α A, glob_relevant α σ ->
+                          nsat M σ ([α /s 0] A) ->
+                          nsat M σ (a_all A)
 
-  | nsat_ex : forall M σ x A, (forall α, glob_relevant α σ ->
-                                nsat M σ ([α /s 0] A)) ->
-                         nsat M σ (a_ex x A)
+  | nsat_ex : forall M σ A, (forall α, glob_relevant α σ ->
+                             nsat M σ ([α /s 0] A)) ->
+                       nsat M σ (a_ex A)
 
   | nsat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
                            ~C ∈ M ->
@@ -228,6 +228,12 @@ Module Assert.
                                                 interpret_αp p σ α_orig = Some (v_addr α) ->
                                                 ~ is_protected_path M σ α_orig p ->
                                                 nsat M σ (a_prt_frm e e_orig).
+
+
+  Scheme sat_mut_ind := Induction for sat Sort Prop
+      with nsat_mut_ind := Induction for nsat Sort Prop.
+
+  Combined Scheme sat_mutind from sat_mut_ind, nsat_mut_ind.
 
 End Assert.
 

@@ -55,6 +55,8 @@ Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
     bind : forall {t u : Type@{d}}, m t -> (t -> m u) -> m u
   }.
 
+Notation "f1 '∘' f2" := (fun x => bind (f2 x) f1)(at level 40).
+
 #[global] Instance optionMonad : Monad option :=
   {
     ret T x :=
@@ -68,7 +70,46 @@ Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
 
   }.
 
-Notation "f1 '∘' f2" := (fun x => bind (f2 x) f1)(at level 40).
+Fixpoint concat {A : Type}(l1 l2 : list A) :=
+  match l1 with
+  | nil => l2
+  | h :: t => h :: concat t l2
+  end.
+
+#[global] Instance listMonad : Monad list :=
+  {
+    ret T x := x :: nil;
+    bind :=
+      fix bind' T U m f :=
+        match m with
+        | nil => nil
+        | x :: m' => concat (f x) (bind' T U m' f)
+        end
+  }.
+
+Class Functor (f : Type -> Type) : Type :=
+  {
+    fmap : forall {a b : Type}, (a -> b) -> f a -> f b
+  }.
+
+#[global] Instance list_functor : Functor list :=
+  {
+    fmap := map
+  }.
+
+(*)Reserved Notation "f <*> g" (at level 28, left associativity).
+
+Class Applicative (f : Type -> Type) := {
+
+    pure : forall a : Type, a -> f a;
+    ap   : forall a b : Type, f (a -> b) -> f a -> f b
+    where "f <*> g" := (ap f g)
+  }.
+
+#[global] Instance list_app : Applicative list :=
+  {
+    pure 
+  }*)
 
 
 (*Definition compose

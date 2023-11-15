@@ -16,7 +16,8 @@ Module LanguageDefinition.
   Inductive val :=
   | v_addr : addr -> val
   | v_nat : nat -> val
-  | v_bool : bool -> val.
+  | v_bool : bool -> val
+  | v_null : val.
 
   Inductive mth :=
   | mth_id : nat -> mth.
@@ -45,7 +46,8 @@ Module LanguageDefinition.
   | e_fld : exp -> fld -> exp
   | e_class : exp -> cls -> exp
   | e_ghost : exp -> ghost -> exp -> exp
-  | e_if : exp -> exp -> exp -> exp.
+  | e_if : exp -> exp -> exp -> exp
+  | e_eq : exp -> exp -> exp.
 
   Definition v_true := (v_bool true).
   Definition v_false := (v_bool false).
@@ -55,14 +57,16 @@ Module LanguageDefinition.
   Inductive stmt :=
   | s_read : var -> var -> fld -> stmt
   | s_write : var -> fld -> var -> stmt
-  | s_call : var -> var -> mth -> list (var * var) -> stmt
+  | s_call : var -> var -> mth -> list var -> stmt
   | s_ret : var -> stmt
   | s_if : exp -> stmt -> stmt -> stmt
-  | s_seq : stmt -> stmt -> stmt.
+  | s_hole : var -> stmt
+  | s_new : var -> cls -> stmt
+(*  | s_seq : stmt -> stmt -> stmt*).
 
-  Inductive contn :=
+(*)  Inductive contn :=
   | c_stmt : stmt -> contn
-  | c_hole : var -> stmt -> contn.
+  | c_hole : var -> stmt -> contn.*)
 
   #[global] Program Instance eqbFld : Eq fld :=
     {
@@ -81,8 +85,7 @@ Module LanguageDefinition.
     intros;
       destruct a1;
       destruct a2;
-      symmetry in H;
-      apply beq_nat_eq in H;
+      apply Nat.eqb_eq in H;
       subst; auto.
   Defined.
   Next Obligation.
@@ -126,8 +129,7 @@ Module LanguageDefinition.
     intros;
       destruct a1;
       destruct a2;
-      symmetry in H;
-      apply beq_nat_eq in H;
+      apply -> Nat.eqb_eq in H;
       subst; auto.
   Defined.
   Next Obligation.
@@ -171,8 +173,7 @@ Module LanguageDefinition.
     intros;
       destruct a1;
       destruct a2;
-      symmetry in H;
-      apply beq_nat_eq in H;
+      apply -> Nat.eqb_eq in H;
       subst; auto.
   Defined.
   Next Obligation.
@@ -216,8 +217,7 @@ Module LanguageDefinition.
     intros;
       destruct a1;
       destruct a2;
-      symmetry in H;
-      apply beq_nat_eq in H;
+      apply -> Nat.eqb_eq in H;
       subst; auto.
   Defined.
   Next Obligation.
@@ -261,8 +261,7 @@ Module LanguageDefinition.
     intros;
       destruct a1;
       destruct a2;
-      symmetry in H;
-      apply beq_nat_eq in H;
+      apply -> Nat.eqb_eq in H;
       subst; auto.
   Defined.
   Next Obligation.
@@ -306,8 +305,7 @@ Module LanguageDefinition.
     intros;
       destruct a1;
       destruct a2;
-      symmetry in H;
-      apply beq_nat_eq in H;
+      apply -> Nat.eqb_eq in H;
       subst; auto.
   Defined.
   Next Obligation.
@@ -334,9 +332,14 @@ Module LanguageDefinition.
       crush.
   Defined.
 
+  Inductive ty : Type :=
+  | t_cls : cls -> ty
+  | t_nat : ty
+  | t_bool : ty.
+
   Record classDef := clazz{c_name : cls;
-                            c_fields : partial_map fld cls;
-                            c_meths : partial_map mth stmt}.
+                            c_fields : partial_map fld ty;
+                            c_meths : partial_map mth ((list (var * ty)) * (list stmt))}.
 
   Definition module := partial_map cls classDef.
 
@@ -346,7 +349,7 @@ Module LanguageDefinition.
   Definition heap := partial_map addr object.
 
   Record frame := frm{local : partial_map var val;
-                       continuation : contn}.
+                       continuation : list stmt}.
 
   Inductive stack :=
     | stack_cons : frame -> list frame -> stack.
@@ -398,6 +401,33 @@ Module LanguageDefinition.
     | _ => None
     end.
 
+  Definition typeOf_v (σ : config)(v : val)(t : ty) :=
+    match v, t with
+    | v_null, _ => True
+    | v_nat _, t_nat => True
+    | v_bool _, t_bool => True
+    | v_addr α, t_cls C => match fst σ α with
+                          | Some o => if eqb (o_cls o) C
+                                     then True
+                                     else False
+                          | None => False
+                          end
+    | _, _ => False
+    end.
+
+  Definition typeOf (σ : config)(x : var)(t : ty) :=
+    match interpret_x σ x with
+    | Some v => typeOf_v σ v t
+    | _ => False
+    end.
+
+  Fixpoint typeOf_l (σ : config)(lx : list var)(lt : list ty) :=
+    match lx, lt with
+    | nil, nil => True
+    | x :: lx', t :: lt' => typeOf σ x t /\ typeOf_l σ lx' lt'
+    | _, _ => False
+    end.
+
   Fixpoint list_to_map {A B : Type}`{Eq A}(l : list (A * B)) : partial_map A B :=
     match l with
     | nil => empty
@@ -407,51 +437,66 @@ Module LanguageDefinition.
   (* TODO: write expression evaluation *)
   Definition eval (M : module)(σ : config)(e : exp)(v : val) : Prop := True.
 
+  Fixpoint zip_to_map {A B C : Type}`{Eq A}`{Eq B} (l1 : list A)(l2 : list B)(m : partial_map B C) : option (partial_map A C) :=
+    match l1, l2 with
+    | nil, nil => Some empty
+    | a::l1', b::l2' => match m b, zip_to_map l1' l2' m with
+                     | Some c, Some ac => Some (⟦a ↦ c⟧ ac)
+                     | _, _ => None
+                     end
+    | _, _ => None
+    end.
+
   Inductive reduction : module -> config -> config -> Prop :=
-  | r_read : forall M σ χ x y v f s lcl ψ c,
-      σ = (χ, frm lcl (c_stmt (s_seq (s_read x y f) s)) ;; ψ) ->
+  | r_read : forall M σ χ x y v f lcl ψ C c,
+      σ = (χ, frm lcl ((s_read x y f) :: c) ;; ψ) ->
       x <> this ->
-      classOf σ this = Some c ->
-      classOf σ y = Some c ->
+      classOf σ this = Some C ->
+      classOf σ y = Some C ->
       interpret_f σ y f = Some v ->
-      reduction M σ (χ, frm (⟦ x ↦ v ⟧  lcl) (c_stmt s) ;; ψ)
+      reduction M σ (χ, frm (⟦ x ↦ v ⟧  lcl) c ;; ψ)
 
-  | r_write : forall M σ χ x y v f s lcl l ψ c c' flds,
-      σ = (χ, frm lcl (c_stmt (s_seq (s_write x f y) s)) ;; ψ) ->
-      classOf σ this = Some c ->
-      classOf σ x = Some c ->
-      (exists v', interpret_f σ x f = Some v') ->
+  | r_write : forall M σ χ x y v f lcl l ψ c C flds CDef Tf,
+      σ = (χ, frm lcl ((s_write x f y) :: c) ;; ψ) ->
+      classOf σ this = Some C ->
+      classOf σ x = Some C ->
+      M C = Some CDef ->
+      c_fields CDef f = Some Tf ->
+      typeOf σ y Tf ->
       interpret_x σ x = Some (v_addr l) ->
-      χ l = Some (obj c' flds) ->
+      χ l = Some (obj C flds) ->
       interpret_x σ y = Some v ->
-      reduction M σ (⟦ l ↦ obj c' (⟦ f ↦ v ⟧ flds)⟧ χ, frm lcl (c_stmt s) ;; ψ)
+      reduction M σ (⟦ l ↦ obj C (⟦ f ↦ v ⟧ flds)⟧ χ, frm lcl c ;; ψ)
 
-  | r_call : forall M σ χ x y m vs s lcl ψ c cDef body l,
-      σ = (χ, frm lcl (c_stmt (s_seq (s_call x y m vs) s)) ;; ψ) ->
+  | r_call : forall M σ χ x y m ps lcl c ψ C CDef xs body lcl' l,
+      σ = (χ, frm lcl ((s_call x y m ps) :: c) ;; ψ) ->
       interpret_x σ y = Some (v_addr l) ->
-      classOf σ y = Some c ->
-      M c = Some cDef ->
-      c_meths cDef m = Some body ->
-      reduction M σ (χ, frm (⟦ this ↦ (v_addr l) ⟧ (lcl ∘ list_to_map vs)) (c_stmt body) ;; (frm lcl (c_hole x s) :: ψ))
+      classOf σ y = Some C ->
+      M C = Some CDef ->
+      c_meths CDef m = Some (xs, body) ->
+      typeOf_l σ ps (map snd xs) ->
+      zip_to_map (map fst xs) ps lcl = Some lcl' ->
+      reduction M σ (χ, frm (⟦ this ↦ (v_addr l) ⟧ lcl') body ;; (frm lcl (s_hole x :: c) :: ψ))
 
-  | r_ret1 : forall M σ χ lcl x lcl' y s v ψ,
-      σ = (χ, frm lcl (c_stmt (s_ret x)) ;; (frm lcl' (c_hole y s) :: ψ)) ->
+  | r_new : forall M σ χ lcl c ψ x C α o,
+      σ = (χ, frm lcl (s_new x C :: c) ;; ψ) ->
+      C ∈ M ->
+      o = obj C empty ->
+      reduction M σ (⟦ α ↦ o⟧ χ, frm (⟦ x ↦ v_addr α ⟧ lcl) c ;; ψ)
+
+  | r_ret : forall M σ χ lcl x lcl' c1 c2 y v ψ,
+      σ = (χ, frm lcl (s_ret x :: c1) ;; (frm lcl' (s_hole y :: c2) :: ψ)) ->
       interpret_x σ x = Some v ->
-      reduction M σ (χ, frm (⟦ y ↦ v ⟧ lcl') (c_stmt s) ;; ψ)
+      reduction M σ (χ, frm (⟦ y ↦ v ⟧ lcl') c2 ;; ψ)
 
-  | r_ret2 : forall M σ χ lcl x lcl' y s v ψ,
-      σ = (χ, frm lcl (c_stmt (s_seq (s_ret x) s)) ;; ((frm lcl' (c_hole y s)) :: ψ)) ->
-      interpret_x σ x = Some v ->
-      reduction M σ (χ, frm (⟦ y ↦ v ⟧ lcl') (c_stmt s) ;; ψ)
-
-  | r_if1 : forall M σ χ lcl e s1 s2 s ψ,
-      σ = (χ, frm lcl (c_stmt (s_seq (s_if e s1 s2) s)) ;; ψ) ->
+  | r_if1 : forall M σ χ lcl e s1 s2 c ψ,
+      σ = (χ, frm lcl ((s_if e s1 s2) :: c) ;; ψ) ->
       eval M σ e v_true ->
-      reduction M σ (χ, frm lcl (c_stmt (s_seq s1 s)) ;; ψ)
+      reduction M σ (χ, frm lcl (s1 :: c) ;; ψ)
 
-  | r_if2 : forall M σ χ lcl e s1 s2 s ψ,
-      σ = (χ, frm lcl (c_stmt (s_seq (s_if e s1 s2) s)) ;; ψ) ->
+  | r_if2 : forall M σ χ lcl e s1 s2 c ψ,
+      σ = (χ, frm lcl ((s_if e s1 s2) :: c) ;; ψ) ->
       eval M σ e v_false ->
-      reduction M σ (χ, frm lcl (c_stmt (s_seq s1 s)) ;; ψ).
+      reduction M σ (χ, frm lcl (s1 :: c) ;; ψ).
 
 End LanguageDefinition.
