@@ -29,8 +29,6 @@ Module Hoare.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_semantics M P s Q)(at level 40).
 
-  (* Proof Rules *)
-
   Definition asrt_proof (M : module)(A : asrt) : Prop := forall σ, sat M σ A.
 
   #[global] Instance exp_subst : Subst exp var exp:=
@@ -70,10 +68,7 @@ Module Hoare.
           end
     }.
 
-  Notation "e ∙ f" := (e_fld e f)(at level 38).
-  Notation "'e_' x" := (e_var x)(at level 38).
-  Notation "'a_' e" := (a_exp e)(at level 38).
-  Notation "e1 ⩵ e2" := (e_eq e1 e2)(at level 38).
+  (* Proof Rules *)
 
   Inductive hoare : module -> asrt -> stmt -> asrt -> Prop :=
   | h_class : forall M e C s, hoare M (a_ e_class e C) s (a_ e_class e C)

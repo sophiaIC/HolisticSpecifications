@@ -54,6 +54,10 @@ Module LanguageDefinition.
   Definition e_true := (e_val v_true).
   Definition e_false := (e_val v_false).
 
+  Notation "e ∙ f" := (e_fld e f)(at level 38).
+  Notation "'e_' x" := (e_var x)(at level 38).
+  Notation "e1 ⩵ e2" := (e_eq e1 e2)(at level 38).
+
   Inductive stmt :=
   | s_read : var -> var -> fld -> stmt
   | s_write : var -> fld -> var -> stmt
@@ -61,12 +65,7 @@ Module LanguageDefinition.
   | s_ret : var -> stmt
   | s_if : exp -> stmt -> stmt -> stmt
   | s_hole : var -> stmt
-  | s_new : var -> cls -> stmt
-(*  | s_seq : stmt -> stmt -> stmt*).
-
-(*)  Inductive contn :=
-  | c_stmt : stmt -> contn
-  | c_hole : var -> stmt -> contn.*)
+  | s_new : var -> cls -> stmt.
 
   #[global] Program Instance eqbFld : Eq fld :=
     {
@@ -478,10 +477,11 @@ Module LanguageDefinition.
       zip_to_map (map fst xs) ps lcl = Some lcl' ->
       reduction M σ (χ, frm (⟦ this ↦ (v_addr l) ⟧ lcl') body ;; (frm lcl (s_hole x :: c) :: ψ))
 
-  | r_new : forall M σ χ lcl c ψ x C α o,
+  | r_new : forall M σ χ lcl c ψ x C α o CDef flds,
       σ = (χ, frm lcl (s_new x C :: c) ;; ψ) ->
-      C ∈ M ->
-      o = obj C empty ->
+      M C = Some CDef ->
+      c_fields CDef = flds ->
+      o = obj C ((fun _ => Some v_null) ∘ flds) ->
       reduction M σ (⟦ α ↦ o⟧ χ, frm (⟦ x ↦ v_addr α ⟧ lcl) c ;; ψ)
 
   | r_ret : forall M σ χ lcl x lcl' c1 c2 y v ψ,

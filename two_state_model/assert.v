@@ -28,6 +28,7 @@ Module Assert.
   | a_prt : exp -> asrt
   | a_prt_frm : exp -> exp -> asrt.
 
+  Notation "'a_' e" := (a_exp e)(at level 38).
   Notation "A1 '∧' A2" := (a_and A1 A2)(at level 39).
   Notation "A1 '∨' A2" := (a_or A1 A2)(at level 39).
   Notation "'¬' A" := (a_neg A)(at level 39).
