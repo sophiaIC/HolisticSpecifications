@@ -1,5 +1,6 @@
 Require Export Arith.
 Require Import List.
+Require Import Bool.
 
 Require Import CpdtTactics.
 Require Import common.
@@ -68,18 +69,61 @@ Module Hoare.
           end
     }.
 
+  #[global] Instance exp_acc_subst : Subst exp (var * fld) var :=
+    {
+      sbst :=
+        fix sbst' e acc x :=
+          match e with
+          | e_fld e0 f0 => match e0, acc with
+                          | e_ y, (z, f) => if (eqb y z && eqb f0 f)
+                                           then e_ x
+                                           else e
+                          | _, _ => e_fld (sbst' e0 acc x) f0
+                         end
+          | e_class e0 C => e_class (sbst' e0 acc x) C
+          | e_ghost e0 g e1 => e_ghost (sbst' e0 acc x) g (sbst' e1 acc x)
+          | e_if e0 e1 e2 => e_if (sbst' e0 acc x) (sbst' e1 acc x) (sbst' e2 acc x)
+          | _ => e
+          end
+    }.
+
+  #[global] Instance asrt_acc_subst : Subst asrt (var * fld) var:=
+    {
+      sbst :=
+        fix sbst' A acc x :=
+          match A with
+          | a_exp e => a_exp ([x /s acc] e)
+
+          | A1 ∧ A2 => (sbst' A1 acc x) ∧ (sbst' A2 acc x)
+          | A1 ∨ A2 => (sbst' A1 acc x) ∨ (sbst' A2 acc x)
+          | ¬ A' => ¬ (sbst' A' acc x)
+          | a_all A' => a_all (sbst' A' acc x)
+          | a_ex A' => a_ex (sbst' A' acc x)
+
+          | a_intl e => a_intl ([x /s acc] e)
+          | a_extl e => a_extl ([x /s acc] e)
+
+          | a_prt e => a_prt ([x /s acc] e)
+          | a_prt_frm e1 e2 => a_prt_frm ([x /s acc] e1) ([x /s acc] e2)
+          end
+    }.
+
   (* Proof Rules *)
 
-  Inductive hoare : module -> asrt -> stmt -> asrt -> Prop :=
-  | h_class : forall M e C s, hoare M (a_ e_class e C) s (a_ e_class e C)
+  Reserved Notation "M ⊢ ⦃ P ⦄ s ⦃ Q ⦄" (at level 40).
 
-  | h_intl : forall M e s, hoare M (a_intl e) s (a_intl e)
+  Inductive hoare : module -> asrt -> stmt -> asrt -> Prop :=
+  | h_class : forall M e C s, M ⊢ ⦃ a_ e_class e C ⦄ s ⦃ a_ e_class e C ⦄
+
+  | h_intl : forall M e s, M ⊢ ⦃ a_intl e ⦄ s ⦃ a_intl e ⦄
 
   | h_extl : forall M e s, hoare M (a_extl e) s (a_extl e)
 
   | h_read : forall M x y f P, hoare M ([e_ y∙f /s x] P) (s_read x y f) P
 
   | h_write1 : forall M x f y P, hoare M P (s_write x f y) (a_ e_ x∙f ⩵ e_ y)
+
+  | h_write2 : forall M x f y P, hoare M ([y /s (x, f)] P) (s_write x f y) P
 
   | h_strengthen : forall M s P1 P2 Q, hoare M P1 s Q ->
                                   asrt_proof M (P2 ⟶ P1) ->
@@ -91,6 +135,15 @@ Module Hoare.
 
   | h_if : forall M e s1 s2 P Q, hoare M (P ∧ a_ e) s1 Q ->
                             hoare M (P ∧ ¬ a_ e) s2 Q ->
-                            hoare M P (s_if e s1 s2) Q.
+                            hoare M P (s_if e s1 s2) Q
+
+  where "M ⊢ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare M P s Q).
+
+  Inductive hoare_seq : module -> asrt -> list stmt -> asrt -> Prop :=
+  | h_seq1 : forall M s P Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
+                        hoare_seq M P (s :: nil) Q
+  | h_seq2 : forall M s c P Q R, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
+                            hoare_seq M Q c R ->
+                            hoare_seq M P (s :: c) R.
 
 End Hoare.
