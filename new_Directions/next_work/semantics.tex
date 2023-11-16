@@ -1,3 +1,7 @@
+% \renewcommand{\sd}[1]{#1}
+ \newcommand{\sdOct}[1]{\red{#1}} 
+\newcommand{\re}{\mathit{e}}
+
 \section{\SpecLang specifications}
 \label{s:semantics}
 
@@ -9,7 +13,7 @@ contents of the state, as well as about protection (\S \ref{sub:SpecO}).  Finall
 semantics of  \SpecLang
 specifications (\S \ref{s:holistic-guarantees}).
 
-\subsection{Relevant Objects}
+ 
 
 
 \subsection{\LangOO -- the underlying object oriented programming languages}
@@ -29,7 +33,7 @@ fields are private to the class where they are defined.
 heap $\chi$, and a  {stack $\psi$ which is a sequence of frames}.
 A frame $\phi$ consists of
 local variable map, and a continuation, \ie a sequence of statements to be executed.
-\sd{We use  $| \sigma |$ to describe the numbers of frames in the stack of  $\sigma$, i.e. the number of nested. currently active method calls.}
+{We use  $| \sigma |$ to describe the numbers of frames in the stack of  $\sigma$, i.e. the number of nested, currently active method calls.}
  A statement may assign to variables, create new objects and push them to the heap, 
 perform field reads and writes on objects,  or
  call methods on those objects. 
@@ -43,6 +47,117 @@ takes place
    $M, \sigma \leadsto \sigma'$.
 The   top frame's continuation contains the statement to be 
 executed next.  
+
+
+\paragraph{Applicability} 
+{While our work is based on 
+  a simple, imperative, typed, object oriented}
+language with unforgeable addresses and private fields, we believe
+ that % our approach
+ it is applicable to several programming paradigms, and 
+ that   unforgeability and privacy
+ can be replaced 
+ by lower level mechanisms such as capability machines \cite{vanproving,davis2019cheriabi}.
+
+  \subsection{\sd{Relevant  Objects}}
+
+
+\begin{definition} We define 
+\begin{itemize}
+\item
+$\Relevant \alpha \phi \sigma $  \ \ \ \ \ \ \ iff\ \  
+$\exists n\in \mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{\phi(x).\prg{f}_1.....\prg{f}_n} = \alpha  ]$.
+\item
+$ \LRelevant \alpha \sigma $ \ \ iff\ \  
+$\exists \phi.[\ \sigma=(\phi\cdot\_, \_)$ and $\Relevant \alpha \phi \sigma\ ]$. % for some $\phi$
+\item
+$\GRelevant \alpha \sigma$  \ \ iff\ \  
+$\exists \phi.[\ \sigma=(\_\cdot\_\phi\cdot\_, \_)$ and $\Relevant \alpha \phi \sigma\ ]$. % for some $\phi$
+\end{itemize}
+\end{definition}
+
+
+\sdN{
+\begin{lemma}
+\label{lemma:relevant}
+For all $\sigma$, $\sigma'$, for all objects $o$, and for all modules $M$:
+\begin{itemize}
+\item
+$M, \sigma  \leadsto   {\sigma'} \ \wedge \  \GRelevant o {\sigma'} \ \wedge \ o\in dom(\sigma) \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$
+\end{itemize}
+\end{lemma}
+}
+ 
+
+\subsection{??? Semantics -- $\leadstoUp$}
+
+
+
+\sd{When that statement has the form \texttt{return}, then the top frame is popped, and execution continues in the context of the calling method.
+in some cases\footnote{TODO mpotivate} we are only interested in executions which may include function calls, returns from nexted function calls, 
+but not return from the currently executing method.}
+
+
+\newcommand{\leadstoUp}{\leadsto\!\!\succ}
+\sd{
+\begin{definition}[??? Semantics]
+\label{def:up-reduce}
+For    module  $M$  and     states $\sigma$, $\sigma'$, 
+we say that $\ \ \ \ \ \ \ \ \ M {\sigma}\leadstoUp {\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exist 
+$n\in\mathbb{N}$, and states $\sigma_0$,...$\sigma_n$, such that
+\begin{enumerate}
+\item
+\label{up1}
+$\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
+\item
+\label{up2}
+$M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [{1}..n)$,
+\item
+\label{up3}
+{$| \sigma_1 | \leq | \sigma_i |$ \ \ \  for all $i\in [1..n]$,}
+\end{enumerate} 
+\end{definition}
+}
+
+\begin{figure}[htb]
+\begin{tabular}{|l|l|}
+\hline \\
+\resizebox{6.5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/up1.png}
+} 
+&
+\resizebox{6.5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/up2.png}
+}
+\\
+\hline
+\\
+$\exec{M}{{\sigma_1}} {{\sigma_2}}
+ \leadsto {{\sigma_3}}  \leadsto {{\sigma_4}}
+\leadsto {{\sigma_5}} $
+&
+${M},{{\sigma_1}} \leadstoUp {{\sigma_2}}
+ \leadstoUp  {{\sigma_3}}  \leadstoUp  \leadstoUp  {{\sigma_4}}   \leadstoUp  {{\sigma_4}}   \leadstoUp     {{\sigma_6}}$
+\\
+$\exec{{M_{ext}} \circ {M}}{{\sigma_5}} {{\sigma_6}}
+\leadsto{ {\sigma_7}}
+\leadsto {{\sigma_8}}$ &
+${M},{{\sigma_4}} \leadstoUp {{\sigma_7}}$
+\\
+& 
+${M},{{\sigma_2}} \leadstoUp {{\sigma_8}}$
+\\
+\hline
+\end{tabular}
+   \caption{Illustrating ???-$\leadstoUp$  Semantics
+     (Def. \ref{def:pair-reduce}) %
+    }
+   \label{fig:UpSemantics}
+ \end{figure}
+
+
+ \subsubsection{Observable States Semantics}
+
 As discussed in \S \ref{s:approach}, 
 {open world specifications need to be able to provide}
 guarantees which hold
@@ -57,44 +172,38 @@ $\reduction{M_{ext}}{M}{\sigma}{\sigma'}$, where $M_{ext}$ is the external
 module, and $M$ is the internal module, and where we
 collapse all internal steps into one single step.
 
-\paragraph{Applicability} 
-{While our work is based on 
-  a simple, imperative, typed, object oriented}
-language with unforgeable addresses and private fields, we believe
- that % our approach
- it is applicable to several programming paradigms, and 
- that   unforgeability and privacy
- can be replaced 
- by lower level mechanisms such as capability machines \cite{vanproving,davis2019cheriabi}.
  
- \subsubsection{Observable States Semanrics}
 
-\begin{definition}[\sd{Observable} States Semantics]
+\sd{
+\begin{definition}[{Observable} States Semantics]
 \label{def:pair-reduce}
 For    modules $M$,  $M_{ext}$, and     states $\sigma$, $\sigma'$, 
 we say that $\ \ \ \ \ \ \ \ \reduction{M_{ext}}{M}{\sigma}{\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exist 
 $n\in\mathbb{N}$, and states $\sigma_0$,...$\sigma_n$, such that
 \begin{enumerate}
-\item
-\label{vis1}
-$\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
+%\item
+% \label{vis1}
+% $\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
 \item
 \label{vis2}
-$M_{ext} \circ M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [\sd{1}..n)$,
+%$M_{ext} \circ M, \sigma_i \leadsto  \sigma_{i+1}$  \ \ \ for all $i\in [{1}..n)$,
+$M_{ext} \circ M, \sigma  \leadstoUp  \sigma'$  
 \item
-\label{vis3}
-\sd{$| \sigma_1 | \leq | \sigma_i |$ \ \ \  for all $i\in [1..n]$,}
-\item
+%\label{vis3}
+%{$| \sigma_1 | \leq | \sigma_i |$ \ \ \  for all $i\in [1..n]$,}
+% \item
 \label{vis4}
-$\class {\prg{this}}{\sigma}, \class {\prg{this}} {\sigma'}\!\in\! M_{ext}$,\ \ \ and \ \ \
+$\class {\prg{this}}{\sigma}, \class {\prg{this}} {\sigma'}\!\in\! M_{ext}$, %\ \ \ and \ \ \
 %\item
-$\class {\prg{this}} {\sigma_i}\!\in\! M$\ \ \ for all $i\!\in\! (1..n)$.
+%$\class {\prg{this}} {\sigma_i}\!\in\! M$\ \ \ for all $i\!\in\! (1..n)$.
 \end{enumerate} 
 \end{definition}
-\sd{ Thus, we collapse into one step a sequence of $\leadsto$ steps (requirements \ref{vis1}  and \ref{vis2}), which may include function calls and returns but
+}
+{ Thus, we collapse into one step a sequence of $\leadsto$ steps (requirements \ref{vis1}  and \ref{vis2}), which may include function calls and returns but
  not returns from the method currently executing in $\sigma_1$ (requirement  \ref{vis3}), and where the starting and end states belong to the external module (requirement  \ref{vis4}), while all intermediate states belong to the internal module (requirement  \ref{vis4}).}
+\footnote{TODO: update the explanations}
 
-\footnote{\sd{TODO: chase all references to "external states semantics".}}
+\footnote{{TODO: chase all references to "external states semantics".}}
 
 Note that the   function $\class{\_}{\sigma}$ is overloaded:
 when  applied to a variable, 
@@ -141,7 +250,7 @@ $\reduction{{\color{hotpink}M_{ext}}}{{\color{lightseagreen}M}}{{\color{hotpink}
  
 Fig. \ref{fig:VisibleStates} % inspired by \citeasnoun{FASE}
  provides a simple graphical description of 
-our \sd{observable} states semantics: on the left hand side is the ``normal'' execution after 
+our {observable} states semantics: on the left hand side is the ``normal'' execution after 
 linking two modules into one: \ ${\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}, ... \leadsto ...$. We assume  that
 the receiver in states ${\color{hotpink}\sigma_1}$, ${\color{hotpink}\sigma_2}$, ${\color{hotpink}\sigma_5}$, ${\color{hotpink}\sigma_6}$, and ${\color{hotpink}\sigma_8}$ is from ${\color{hotpink}M_{ext}}$, and that 
  the receiver in ${\color{lightseagreen}\sigma_3}$, ${\color{lightseagreen}\sigma_4}$ and ${\color{lightseagreen}\sigma_7}$ is from ${\color{lightseagreen}M}$.
@@ -155,7 +264,7 @@ while $\exec{{\color{hotpink}M_{ext}} \circ {\color{lightseagreen}M}} {\color{ho
 % $\reduction{M_1}{M_2}{...}{...}$ the external module is $M_1$,
 %  while in  $\reduction{M_2}{M_1}{...}{...}$  the external module is $M_2$.
 %}
-\footnote{\sd{TODO: say how observable states differs from visible states, and from OOPLSA external states.}}
+\footnote{{TODO: say how observable states differs from visible states, and from OOPLSA external states.}}
 
 We  use the notation\ \  $\reductions{M_{ext}}{M}{\sigma}{\sigma'}$ \ 
 to denote zero or more  steps starting at state $\sigma$ and ending at state $\sigma'$, in the context of internal module 
@@ -179,6 +288,8 @@ if and only if there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
 $\reductions{M_{ext}}{M}{\sigma_0}{\sigma}$.
 \end{definition}
 
+\sdN{$ \arising{\sigma}{M_{ext}}{M}$, implies that $\sigma$ is an external state, since  $M_{ext} \circ M, \sigma  \leadsto^* \sigma' $ implies that both $\sigma$ abd $\sigma'$ are external states}
+
 An \emph{Initial} state's heap contains a single object of class \prg{Object}, and
 its  stack   consists of a single frame, whose local variable map is a
 mapping from \prg{this} to the single object, and whose continuation is  any statement.
@@ -187,9 +298,9 @@ mapping from \prg{this} to the single object, and whose continuation is  any sta
 {appendices %of the full paper 
 \cite{necessityFull}).}
 
-\subsubsection{\sd{Relevant  Objects}}
+\subsubsection{{Relevant  Objects}}
 
-\footnote{\sd{TODO: this logically belongs here,  but how to motivate? -- Perhaps something will have been said in the intro?}}
+\footnote{{TODO: this logically belongs here,  but how to motivate? -- Perhaps something will have been said in the intro?}}
 
 
 We adopt notation from OOPSLA, where
@@ -208,34 +319,14 @@ while the substitution  $\sigma[x \mapsto \alpha]$ is applied to the top frame o
  \ $C\in M$ means that class $C$ is in the domain of module $M$. 
 
 
-We say that an object $o$ is locally relevant, if this object is transitively reachable from the currently executing method (i.e. from the top frame in $\sigma$), and that it is globally relevant it is transitively reachable from the currently executing method or from one of the currently suspended executions (i.e. from one of the frames in $\sigma$). \footnote{\sd{TODO motivate why we need relevant }}
+\subsubsection{\sd{Relevant  Objects and observable states}}
 
-\begin{definition} We define 
-\begin{itemize}
-\item
-$\Relevant o \phi \sigma $  \ \ \ \ \ \ \ iff\ \  
-$\exists n\in \mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{\phi(x).\prg{f}_1.....\prg{f}_n} = o  ]$.
-\item
-$ \LRelevant o \sigma $ \ \ iff\ \  
-$\sigma=(\phi\cdot\_, \_)$ and $\Relevant o \phi \sigma$. % for some $\phi$
-\item
-$\GRelevant o \sigma$  \ \ iff\ \  
-$\sigma=(\_\cdot\_\phi\cdot\_, \_)$ and $\Relevant o \phi \sigma$. % for some $\phi$
-\end{itemize}
-\end{definition}
 
-Obviously, $\LRelevant o \sigma$ implies $ \GRelevant o \sigma $, and bot the opposite.
-We now give meaning to assertions. Definitions (1)-(5) are standard. Note that Definitions (6)-(7) quantify only over objects that are accessible from the top frame. TODO  explain that the sequence of field reads $\prg{f}_1$,.....$\prg{f}_n$ may be empty,
-An illustration of the concept of relevant appears in the next subsection, in Fig. \ref{fig:Relevant}.
-
-The following lemma asserts that in the observable states semantics, the  globally relevant, already allocated objects decrease, and the
- locally relevant, already allocated objects also decrease:
+The lemma below is the counterpart to lemma \ref{lemma:relevant}:
 
 \begin{lemma}
 For all $\sigma$, $\sigma'$, for all objects $o$, and for all modules $M_{ext}$, and $M$:
 \begin{itemize}
-\item
-$M_{ext} \circ M, \sigma  \leadsto   {\sigma'} \ \wedge \  \GRelevant o {\sigma'} \ \wedge \ o\in dom(\sigma) \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$
 \item
 $\reduction {M_{ext}} {M} {\sigma} {\sigma'} \ \wedge \  \GRelevant o {\sigma'} \ \wedge \ o\in dom(\sigma) \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$.
 \item
@@ -243,7 +334,27 @@ $\reduction {M_{ext}} {M} {\sigma} {\sigma'} \ \wedge \    \LRelevant o {\sigma'
 \end{itemize}
 \end{lemma}
 
-The lemma from above holds because no object becomes relevant unless it already was relevant. Moreover, ... Note that the last bullet has no counterpart in $\leadsto$ because ... what oif we pop a frame? Lots become locally relevant. Whereas when I  push a frame ...
+\subsection{Semantics of Assertions}
+
+We now give meaning to assertions. Definitions (1)-(5) are standard. Note that Definitions (6)-(7) quantify only over objects that are accessible from the top frame. TODO  explain that the sequence of field reads $\prg{f}_1$,.....$\prg{f}_n$ may be empty,
+An illustration of the concept of relevant appears in the next subsection, in Fig. \ref{fig:Relevant}.
+
+%The following lemma asserts that in the observable states semantics, the  globally relevant, already allocated objects decrease, and the
+% locally relevant, already allocated objects also decrease:
+%
+%\begin{lemma}
+%For all $\sigma$, $\sigma'$, for all objects $o$, and for all modules $M_{ext}$, and $M$:
+%\begin{itemize}
+%\item
+%$M_{ext} \circ M, \sigma  \leadsto   {\sigma'} \ \wedge \  \GRelevant o {\sigma'} \ \wedge \ o\in dom(\sigma) \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$
+%\item
+%$\reduction {M_{ext}} {M} {\sigma} {\sigma'} \ \wedge \  \GRelevant o {\sigma'} \ \wedge \ o\in dom(\sigma) \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$.
+%\item
+%$\reduction {M_{ext}} {M} {\sigma} {\sigma'} \ \wedge \    \LRelevant o {\sigma'}\   \wedge \ o\in dom(\sigma) \ \ \Longrightarrow \ \  \LRelevant o {\sigma}$.
+%\end{itemize}
+%\end{lemma}
+%
+%The lemma from above holds because no object becomes relevant unless it already was relevant. Moreover, ... Note that the last bullet has no counterpart in $\leadsto$ because ... what oif we pop a frame? Lots become locally relevant. Whereas when I  push a frame ...
 
 
 \subsection{\AssertLang -- the assertion language}
@@ -261,7 +372,7 @@ An assertion may be an expression,   a query of the defining class of
   an object, the usual connectives and quantifiers, along 
 with two non-standard assertion forms:
 (1) \emph{Internal/external} and (2) \emph{Protection}, inspired by the capabilities literature, and
-\footnote{\sd{ TODO say how these relate with capability lit;  compare with 
+\footnote{{ TODO say how these relate with capability lit;  compare with 
  OOPSLA.}}
 
 
@@ -275,29 +386,36 @@ Assertions ($A$) in
 \syntaxElement{A}{}
 		{
 		\syntaxline
-				{e}
-				{e : C}
+				{{\re}}
+				{{\re} : C}
 				{\neg A}
 				{A\ \wedge\ A}
 				{A\ \vee\ A}
-				{\all{x}{A}}
-				{\ex{x}{A}}
+				{\all{x:C}{A}}
+				{\ex{x:C}{A}}
 		\endsyntaxline
 		}
 		{
 		\syntaxline
-				{\internal{x}}
-				{\protectedFrom{y} {x}} 
+				{\internal{{\re}}}
+				{\protectedFrom{{\re}} {{\re}}} 
+				 {\inside {{\re}}} 
 		\endsyntaxline
 		}
 \endSyntaxElement\\
 \end{syntax}
 \]
 
+\sdOct{\textbf{NOTE}  This allows for the ugliness that we can write assertions like $\alpha.bal > 700$ which obviously makes no sense without a $\sigma$. We could say that assertion that contain variables are the run-time counterpart of those which do not. Also, note that universal quantification over expressions ($\forall \alpha:C.[A]$) is not supported\footnote{This may only be a techncality, though}. On the other hand, $a.bal > 700$ does not make sense without a $\sigma$ either.
+}
+
+\sdOct{\textbf{NOTE} It also allows assertions like $a1.passwd \neq a2.passwd$, whereas in the past we would have written as
+$\exists x,y.[\ a1.passwd=x \wedge  a2.passwd=y \wedge x\neq y\ ]$.}
+
 
 \end{definition}
 
-\footnote{\sd{TODO compare with oopsla }}
+\footnote{{TODO compare with oopsla }}
 
 
 \subsubsection{Semantics of \AssertLang}
@@ -318,7 +436,7 @@ The semantics of $\hookrightarrow$ {is} unsurprising
 
 
 
-\begin{definition}[Satisfaction 
+begin{definition}[Satisfaction 
 of Assertions by a module and a state] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a % program 
@@ -327,71 +445,83 @@ state $\sigma$ with
 \begin{enumerate}
 \item
 \label{cExpr}
-$\satisfiesA{M}{\sigma}{e}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\true}$
+$\satisfiesA{M}{\sigma}{\sdOct{\re}}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{\sdOct{\re}}{\true}$
 \item
 \label{cClass}
-$\satisfiesA{M}{\sigma}{e : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{e}{\alpha}$ \textit{and} $\class{\alpha} {\sigma}= C$
+$\satisfiesA{M}{\sigma}{{\sdOct{\re}} : C}$ \ \ \ iff \ \ \  $\eval{M}{\sigma}{\sdOct{\re}}{\alpha}\   \wedge \ \class{\alpha} {\sigma}= C$
 \item
 $\satisfiesA{M}{\sigma}{\neg A}$ \ \ \ iff \ \ \  ${M},{\sigma}\nvDash{A}$
 \item
-$\satisfiesA{M}{\sigma}{A_1\ \wedge\ A_2}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma}{A_1}$ and 
-$\satisfiesA{M}{\sigma}{A_2}$
+$\satisfiesA{M}{\sigma}{A_1\ \wedge\ A_2}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma}{A_1} \   \wedge \ \satisfiesA{M}{\sigma}{A_2}$
 \item
-$\satisfiesA{M}{\sigma}{A_1\ \vee\ A_2}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma}{A_1}$ or 
-$\satisfiesA{M}{\sigma}{A_2}$
+$\satisfiesA{M}{\sigma}{A_1\ \vee\ A_2}$ \ \ \ iff \ \ \  $\satisfiesA{M}{\sigma}{A_1}\   \vee \ \satisfiesA{M}{\sigma}{A_2}$
+
 \item
 \label{quant1}
 $\satisfiesA{M}{\sigma}{\all{x:C}{A}}$ \ \ \ iff \ \ \  
-$\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \Longrightarrow \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  \sd{for all  $o$ such that $ \GRelevant o \sigma$, where $x$ is free in $\sigma$ } 
+ \sdOct{$\forall \alpha.[\ \GRelevant \alpha \sigma \wedge  \satisfiesA {M}{\sigma} {\alpha:C}  \ \Longrightarrow   \ \satisfiesA{M}{\sigma} {A[x/\alpha]}\ ]$.} 
+% $\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \Longrightarrow \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
+%\strut \hspace{1.3in}  \sd{for all  $o$ such that $ \GRelevant o \sigma$ }%, where $x$ is free in $\sigma$ } 
+
 \item
 \label{quant2}
-$\satisfiesA{M}{\sigma}{\ex{x}{A}}$ \ \ \ iff \ \ \  
-$\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \wedge \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
-\strut \hspace{1.3in}  \sd{for some $o$ such that $\GRelevant o \sigma$, where $x$ is free in $\sigma$. }
+$\satisfiesA{M}{\sigma}{\ex{x:C}{A}}$ \ \ \ iff \ \ \  
+ \sdOct{$\exists \alpha.[\ \GRelevant \alpha \sigma \wedge  \satisfiesA {M}{\sigma} {\alpha:C}  \ \wedge \ \satisfiesA{M}{\sigma} {A[x/\alpha]}\ ]$.} 
+% $\satisfiesA{M}{\sigma[x \mapsto o]}{x:C} \ \ \wedge \ \ \ \satisfiesA{M}{\sigma[x \mapsto o]}{A}$, \\
+%\strut \hspace{1.3in}  \sd{for some $o$ such that $\GRelevant o \sigma$. } %, where $x$ is free in $\sigma$. }
 \item
 \label{cInternal}
-$\satisfiesA{M}{\sigma}{\internal{x}}$ \ \ \ iff \ \ \   $\textit{classOf}(x,\sigma) \in M$
+$\satisfiesA{M}{\sigma}{\internal{\sdOct{\re}}}$ \ \ \ iff \ \ \   $\satisfiesA{M}{\sigma}{{\sdOct{\re}} : C} \ \wedge\ \ C \in M$
 \item
 \label{cExternal}
-$\satisfiesA{M}{\sigma}{\external{z}}$ \ \ \ iff \ \ \   $\textit{classOf}(z,\sigma) \notin M$
+$\satisfiesA{M}{\sigma}{\external{\sdOct{\re}}}$ \ \ \ iff \ \ \   $\satisfiesA{M}{\sigma}{{\sdOct{\re}} : C} \ \wedge \ C \notin M$
 \item
 \label{cProtected}
-$\satisfiesA{M}{\sigma}{\protectedFrom{x} {z}}$  \ \ \ iff \ \ \   
+$\satisfiesA{M}{\sigma}{\protectedFrom{\sdOct{\re}} {\sdOct{\re_{o}}}}$  \ \ \ iff \\
+  $\exists \alpha, \alpha_{o}. [\ $
 \begin{enumerate}
-\item $\satisfiesA{M}{\sigma}{x \neq z}$  and
+\item $\eval{M}{\sigma}{\sdOct{\re}}{\alpha} \ \ \ \wedge\ \ \  \eval{M}{\sigma}{\sdOct{\re_{o}}}{\alpha_{o}}$, \ \ \ \ \ \ and  
 \item
-%\strut \hspace{1.3in} 
-$\forall f_1,...f_n.[\ \interpret{\sigma}{z.f_1...f_n}=\interpret{\sigma}{x} \ \Longrightarrow \exists k<n.
-[\,\satisfiesA{M}{\sigma}{\internal{z.f_1...f_k}} \, ] \ ]$ and
-\item either
-\begin{enumerate}
-\item $\satisfiesA{M}{\sigma}{z \neq \this}$ or
-\item $\forall y.[y \in \sigma.\texttt{local}
-\Longrightarrow \satisfiesA{M}{\sigma}{(\internal{y} \wedge y \neq x) \vee \protectedFrom{x}{y}}]$
+\sdOct{$\alpha \neq \alpha_{o}$}, % \footnote{!!!! \  NOT THAT SURE HERE, but think so !}
+\ \  \ \ \  and 
+\item 
+\sdOct{$\forall n\in\mathbb{N}. \forall f_1,...f_n.$\\
+$
+%\strut \hspace{1cm} 
+[\ \ \interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha \ \wedge\ \forall k\!<\!n.\interpret{\sigma}{\alpha_{o}.f_1...f_k}\neq \alpha \ \
+% $\\ $ \strut \hspace{5.5cm} \   
+\ \  \Longrightarrow \ \ \satisfiesA{M} {\sigma} {\internal{{\alpha_{o}.f_1...f_{n-1}}}}\ \ ]$}
 \end{enumerate}
-\end{enumerate}
-\item
-$\satisfiesA{M}{\sigma} {\inside {x}}$   \ \ \ iff \ \ \  
-$\satisfiesA{M}{\sigma}{\protectedFrom{x}{\this}}$
+\strut \hspace{.4cm} $]$
+% The previous version 
+%\begin{enumerate}
+%\item $\satisfiesA{M}{\sigma}{x \neq z}$  and
 %\item
-%$\satisfiesA{M}{\sigma} {\inside {x}}$   \ \ \ iff \ \ \  for all $z$, \\
-%\strut \hspace{1.3in}  
-%\sd{$\satisfiesA{M}{\sigma} {\external {z}}\ \wedge \ \LRelevant z  \sigma\ \Longrightarrow\ 
-% \satisfiesA{M}{\sigma}{\protectedFrom{x} {z}}$}
+%$\forall f_1,...f_n.[\ \interpret{\sigma}{z.f_1...f_n}=\interpret{\sigma}{x} \ \Longrightarrow \exists k<n.
+%[\,\satisfiesA{M}{\sigma}{\internal{z.f_1...f_k}} \, ] \ ]$ and
+%\item either
+%\begin{enumerate}
+%\item $\satisfiesA{M}{\sigma}{z \neq \this}$ or
+%\item $\forall y.[y \in \sigma.\texttt{local}
+%\Longrightarrow \satisfiesA{M}{\sigma}{(\internal{y} \wedge y \neq x) \vee \protectedFrom{x}{y}}]$
+%\end{enumerate}
+%\end{enumerate}
+\item
+$\satisfiesA{M}{\sigma} {\inside {\re}}$   \ \ \ iff \ \ \  
+\sdOct{$\forall \alpha.[ \  \LRelevant {\alpha}  {\sigma}\ \Longrightarrow \ \  \satisfiesA{M}{\sigma}{\protectedFrom{\re} {\sdOct{\alpha}}}\ ] $}
 \end{enumerate}
 \end{definition}
 
 Say that $\Longrightarrow$ is meta, while $\rightarrow$ is Chainmail.
-\footnote{\sd{TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
+\footnote{{TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
  Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.}}
 
-\sd{Both existential and universal quantification (defined in \ref{quant1} and \ref{quant2}) is done over all objects which are transitively 
+{Both existential and universal quantification (defined in \ref{quant1} and \ref{quant2}) is done over all objects which are transitively 
 accessible any frame in the stack (as in OOPSLA). But note that $\satisfiesA{M}{\sigma} {\inside {y}}$ only considers objects that are locally relevant.
 We do not include quantification over primitive types such as integers as \LangOO is too simple. The 
 Coq mechanisation does include primitive types.}
  
-\footnote{\sd{TODO: say that any assertion $A(e)$ can be understood as a shorthand for $\exists x. [ x=e \wedge A(x)]$. or  $forall x. [ x=e \rightarrow A(x)]$?? For example, the  assertion   ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{x}}]$. QUESTION: do we need to talk about $=$ in the assertion language?}}
+\footnote{{TODO: say that any assertion $A(e)$ can be understood as a shorthand for $\exists x. [ x=e \wedge A(x)]$. or  $forall x. [ x=e \rightarrow A(x)]$?? For example, the  assertion   ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{x}}]$. QUESTION: do we need to talk about $=$ in the assertion language?}}
 
  Note that in most cases, satisfaction of an assertion not only depends on the state $\sigma$, but 
 in some cases it also depends on the module: namely execution of expressions (\ref{cExpr}) might need to look up the definition of ghost fields  in $M$, while 
@@ -403,8 +533,14 @@ ${\inside {\_}}$  is central to thiking about capabilities. For example, the bal
   Often, API implementations contain objects whose capabilities, while  crucial for the implementation, if exposed,
 would break the intended guarantees of the API. Such objects need to remain confined - see
 such an example in Section \ref{s:examples}. 
+
+\sdOct{\textbf{NOTE} in the def of  $\protectedFrom{\re}{\re_o}$, when enumerate the paths that go from $\re_o$ to $\re$, we exclude those that have already "visited" $\re$ earlier on. That is, we only consider the direct paths from $\re_o$ to $\re$. This is pretty much what "dominates" means- James you were right -- put it is a "relative" domination}
+
+\sdOct{\textbf{NOTE} also, that the term $\re$ may mention ghost fields, but the paths $\alpha.f_1....f_n$ may not. We see that because the latter are interpreted in $\sigma$. That is, $\satisfiesA{M}{\sigma}{\sdOct{\alpha_o.f_1...f_n}=\alpha}$ is weaker than $\interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha$. TODO: write the latter as a lemma}
+
+\sdOct{\textbf{NOTE} to reflect a bit more on (10)(b) from above}
  
-\footnote{\sd{. TODO: Do we prove the implications as in TACAS, or just rely on TACAS? -- perhaps the former, since we have some new primitives? hmhh}}
+\footnote{{. TODO: Do we prove the implications as in TACAS, or just rely on TACAS? -- perhaps the former, since we have some new primitives? hmhh}}
 
 \begin{figure}[htb]
 \begin{tabular}{|c|c|c|}
@@ -492,7 +628,7 @@ The syntax of  \SpecLang specifications is given below
 \begin{definition}  
 
 \noindent
-{\emph{\sd{Syntax of \SpecLang Specifications}}}
+{\emph{{Syntax of \SpecLang Specifications}}}
 
 \label{f:holistic-syntax}
 \[
@@ -530,13 +666,13 @@ $\bullet$ & $\satisfies{M}{\OneStateQ {\overline {x:C}} {A} 	}$& iff &
 for all $M_{ext}$, $\sigma$, $\overline{x}$, such that $\overline{x}$  are free in $\sigma$, \\
   & & & $ \arising{\sigma}{M_{ext}}{M}$ % \ \wedge 
 $ \ \Longrightarrow \  $  % \\ & & &  $ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{A} $
-\sd{$ \satisfiesA{M}{\sigma}{\forall \overline{x:C}.A}$}\footnote{\sd{This means that we require all objects to satisfy even if not locally relevant}}
+{$ \satisfiesA{M}{\sigma}{\forall \overline{x:C}.A}$}\footnote{{This means that we require all objects to satisfy even if not locally relevant}}
 \\
 \\
 $\bullet$ & $\satisfies{M}{\TwoStatesQ {\overline {x:C}} {A}{A'}}$& iff & 
 for all $M_{ext}$, $\sigma$, $\overline{x}$, $\overline{o}$ such that $\overline{x}$  are free in $\sigma$  \\
 & & &
-$\arising{\sigma}{M_{ext}}{M} \ \wedge\  \GRelevant {\overline o}  \sigma \wedge \ $\footnote{\sd{notice that we are asking for globally relevant objects}}\\
+$\arising{\sigma}{M_{ext}}{M} \ \wedge\  \GRelevant {\overline o}  \sigma \wedge \ $\footnote{{notice that we are asking for globally relevant objects}}\\
 & & & $ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{\overline {x:C}}  \ \ \wedge\ \  \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{A} \ \ \wedge$ \\ 
 & & &
 $\reductions{M_{ext}}{M}{\sigma}{\sigma'}  $ \\
@@ -551,9 +687,9 @@ $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}\ \we
 \end{definition} 
 
   
-  \footnote{\sd{TODO: Make an example that demonstrates the difference if in the second bullet we had asked for locally relevant objects ${\overline o}$.}}
+  \footnote{{TODO: Make an example that demonstrates the difference if in the second bullet we had asked for locally relevant objects ${\overline o}$.}}
  
-\footnote{\sd{TODO Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.}}
+\footnote{{TODO Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.}}
 
 
 
