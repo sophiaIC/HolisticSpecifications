@@ -67,6 +67,10 @@ Module LanguageDefinition.
   | s_hole : var -> stmt
   | s_new : var -> cls -> stmt.
 
+  Inductive stmts :=
+  | s_stmt : stmt -> stmts
+  | s_seq : stmt -> stmts -> stmts.
+
   #[global] Program Instance eqbFld : Eq fld :=
     {
       eqb := fun f1 f2 =>
@@ -338,7 +342,7 @@ Module LanguageDefinition.
 
   Record classDef := clazz{c_name : cls;
                             c_fields : partial_map fld ty;
-                            c_meths : partial_map mth ((list (var * ty)) * (list stmt))}.
+                            c_meths : partial_map mth ((list (var * ty)) * stmts)}.
 
   Definition module := partial_map cls classDef.
 
@@ -348,7 +352,7 @@ Module LanguageDefinition.
   Definition heap := partial_map addr object.
 
   Record frame := frm{local : partial_map var val;
-                       continuation : list stmt}.
+                       continuation : stmts}.
 
   Inductive stack :=
     | stack_cons : frame -> list frame -> stack.
@@ -447,16 +451,16 @@ Module LanguageDefinition.
     end.
 
   Inductive reduction : module -> config -> config -> Prop :=
-  | r_read : forall M σ χ x y v f lcl ψ C c,
-      σ = (χ, frm lcl ((s_read x y f) :: c) ;; ψ) ->
+  | r_read : forall M σ χ x y v f lcl ψ C s,
+      σ = (χ, frm lcl (s_seq (s_read x y f) s) ;; ψ) ->
       x <> this ->
       classOf σ this = Some C ->
       classOf σ y = Some C ->
       interpret_f σ y f = Some v ->
-      reduction M σ (χ, frm (⟦ x ↦ v ⟧  lcl) c ;; ψ)
+      reduction M σ (χ, frm (⟦ x ↦ v ⟧  lcl) s ;; ψ)
 
-  | r_write : forall M σ χ x y v f lcl l ψ c C flds CDef Tf,
-      σ = (χ, frm lcl ((s_write x f y) :: c) ;; ψ) ->
+  | r_write : forall M σ χ x y v f lcl l ψ s C flds CDef Tf,
+      σ = (χ, frm lcl (s_seq (s_write x f y) s) ;; ψ) ->
       classOf σ this = Some C ->
       classOf σ x = Some C ->
       M C = Some CDef ->
@@ -465,38 +469,38 @@ Module LanguageDefinition.
       interpret_x σ x = Some (v_addr l) ->
       χ l = Some (obj C flds) ->
       interpret_x σ y = Some v ->
-      reduction M σ (⟦ l ↦ obj C (⟦ f ↦ v ⟧ flds)⟧ χ, frm lcl c ;; ψ)
+      reduction M σ (⟦ l ↦ obj C (⟦ f ↦ v ⟧ flds)⟧ χ, frm lcl s ;; ψ)
 
-  | r_call : forall M σ χ x y m ps lcl c ψ C CDef xs body lcl' l,
-      σ = (χ, frm lcl ((s_call x y m ps) :: c) ;; ψ) ->
+  | r_call : forall M σ χ x y m ps lcl s ψ C CDef xs body lcl' l,
+      σ = (χ, frm lcl (s_seq (s_call x y m ps) s) ;; ψ) ->
       interpret_x σ y = Some (v_addr l) ->
       classOf σ y = Some C ->
       M C = Some CDef ->
       c_meths CDef m = Some (xs, body) ->
       typeOf_l σ ps (map snd xs) ->
       zip_to_map (map fst xs) ps lcl = Some lcl' ->
-      reduction M σ (χ, frm (⟦ this ↦ (v_addr l) ⟧ lcl') body ;; (frm lcl (s_hole x :: c) :: ψ))
+      reduction M σ (χ, frm (⟦ this ↦ (v_addr l) ⟧ lcl') body ;; (frm lcl (s_seq (s_hole x) s) :: ψ))
 
-  | r_new : forall M σ χ lcl c ψ x C α o CDef flds,
-      σ = (χ, frm lcl (s_new x C :: c) ;; ψ) ->
+  | r_new : forall M σ χ lcl s ψ x C α o CDef flds,
+      σ = (χ, frm lcl (s_seq (s_new x C) s) ;; ψ) ->
       M C = Some CDef ->
       c_fields CDef = flds ->
       o = obj C ((fun _ => Some v_null) ∘ flds) ->
-      reduction M σ (⟦ α ↦ o⟧ χ, frm (⟦ x ↦ v_addr α ⟧ lcl) c ;; ψ)
+      reduction M σ (⟦ α ↦ o⟧ χ, frm (⟦ x ↦ v_addr α ⟧ lcl) s ;; ψ)
 
-  | r_ret : forall M σ χ lcl x lcl' c1 c2 y v ψ,
-      σ = (χ, frm lcl (s_ret x :: c1) ;; (frm lcl' (s_hole y :: c2) :: ψ)) ->
+  | r_ret : forall M σ χ lcl x lcl' s1 s2 y v ψ,
+      σ = (χ, frm lcl (s_seq (s_ret x)  s1) ;; (frm lcl' (s_seq (s_hole y) s2) :: ψ)) ->
       interpret_x σ x = Some v ->
-      reduction M σ (χ, frm (⟦ y ↦ v ⟧ lcl') c2 ;; ψ)
+      reduction M σ (χ, frm (⟦ y ↦ v ⟧ lcl') s2 ;; ψ)
 
-  | r_if1 : forall M σ χ lcl e s1 s2 c ψ,
-      σ = (χ, frm lcl ((s_if e s1 s2) :: c) ;; ψ) ->
+  | r_if1 : forall M σ χ lcl e s1 s2 s ψ,
+      σ = (χ, frm lcl (s_seq (s_if e s1 s2) s) ;; ψ) ->
       eval M σ e v_true ->
-      reduction M σ (χ, frm lcl (s1 :: c) ;; ψ)
+      reduction M σ (χ, frm lcl (s_seq s1 s) ;; ψ)
 
-  | r_if2 : forall M σ χ lcl e s1 s2 c ψ,
-      σ = (χ, frm lcl ((s_if e s1 s2) :: c) ;; ψ) ->
+  | r_if2 : forall M σ χ lcl e s1 s2 s ψ,
+      σ = (χ, frm lcl (s_seq (s_if e s1 s2) s) ;; ψ) ->
       eval M σ e v_false ->
-      reduction M σ (χ, frm lcl (s1 :: c) ;; ψ).
+      reduction M σ (χ, frm lcl (s_seq s1 s) ;; ψ).
 
 End LanguageDefinition.

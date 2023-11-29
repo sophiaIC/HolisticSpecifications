@@ -24,9 +24,9 @@ Module Hoare.
                               big_step_reduction M σ1 σ2.
 
   Definition hoare_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
-    forall χ lcl c ψ χ' lcl', big_step_reduction M (χ, frm lcl (s :: nil) ;; nil) (χ', frm lcl' nil ;; nil) ->
-                         sat M (χ, frm lcl (s :: c) ;; ψ) P ->
-                         sat M (χ', frm lcl' c ;; ψ) Q.
+    forall χ lcl s' ψ χ' lcl', big_step_reduction M (χ, frm lcl (s_seq s s') ;; nil) (χ', frm lcl' s' ;; nil) ->
+                          sat M (χ, frm lcl (s_seq s s') ;; ψ) P ->
+                          sat M (χ', frm lcl' s' ;; ψ) Q.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_semantics M P s Q)(at level 40).
 
@@ -119,11 +119,11 @@ Module Hoare.
 
   | h_extl : forall M e s, hoare M (a_extl e) s (a_extl e)
 
-  | h_read : forall M x y f P, hoare M ([e_ y∙f /s x] P) (s_read x y f) P
+  | h_read : forall M x y f e, hoare M ([e_ y∙f /s x] (a_exp e)) (s_read x y f) (a_exp e)
 
   | h_write1 : forall M x f y P, hoare M P (s_write x f y) (a_ e_ x∙f ⩵ e_ y)
 
-  | h_write2 : forall M x f y P, hoare M ([y /s (x, f)] P) (s_write x f y) P
+  | h_write2 : forall M x f y e, hoare M ([y /s (x, f)] (a_exp e)) (s_write x f y) (a_exp e)
 
   | h_strengthen : forall M s P1 P2 Q, hoare M P1 s Q ->
                                   asrt_proof M (P2 ⟶ P1) ->
@@ -139,11 +139,11 @@ Module Hoare.
 
   where "M ⊢ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare M P s Q).
 
-  Inductive hoare_seq : module -> asrt -> list stmt -> asrt -> Prop :=
-  | h_seq1 : forall M s P Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
-                        hoare_seq M P (s :: nil) Q
-  | h_seq2 : forall M s c P Q R, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
-                            hoare_seq M Q c R ->
-                            hoare_seq M P (s :: c) R.
+  Inductive hoare_seq : module -> asrt -> stmts -> asrt -> Prop :=
+  | h_stmt : forall M s P Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
+                        hoare_seq M P (s_stmt s) Q
+  | h_seq : forall M s s' P Q R, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
+                            hoare_seq M Q s' R ->
+                            hoare_seq M P (s_seq s s') R.
 
 End Hoare.
