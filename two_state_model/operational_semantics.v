@@ -4,7 +4,7 @@ Require Import List.
 Require Import chainmail.CpdtTactics.
 Require Import chainmail.common.
 
-Require Import syntax.
+Require Import language_def.
 
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
@@ -12,7 +12,7 @@ Require Export ZArith.
 
 Module OperationalSemantics.
 
-  Import Syntax.
+  Import LanguageDefinition.
 
   Fixpoint list_to_map {A B : Type}`{Eq A}(l : list (A * B)) : partial_map A B :=
     match l with

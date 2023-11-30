@@ -3,8 +3,8 @@ Require Import List.
 
 Require Import CpdtTactics.
 Require Import common.
-Require Import syntax.
-Require Export external_state_semantics.
+Require Import language_def.
+Require Export operational_semantics.
 
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
@@ -12,7 +12,7 @@ Require Export ZArith.
 
 Module Assert.
 
-  Import Syntax.
+  Import LanguageDefinition.
   Import OperationalSemantics.
 
   Fixpoint interpret_αp (p : path)(σ : config)(α : addr) : option val :=

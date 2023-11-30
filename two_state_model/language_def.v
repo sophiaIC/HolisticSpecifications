@@ -3,7 +3,7 @@ Require Import List.
 Require Import common.
 Require Import CpdtTactics.
 
-Module Syntax.
+Module LanguageDefinition.
 
   Inductive addr :=
   | address : nat -> addr.
@@ -471,4 +471,4 @@ Module Syntax.
     | _, _ => False
     end.
 
-End Syntax.
+End LanguageDefinition.

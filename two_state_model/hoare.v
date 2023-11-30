@@ -13,7 +13,7 @@ Require Export ZArith.
 
 Module Hoare.
 
-  Import Syntax.
+  Import LanguageDefinition.
   Import OperationalSemantics.
   Import Assert.
 
