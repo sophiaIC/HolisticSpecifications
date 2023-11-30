@@ -3,6 +3,7 @@ Require Import List.
 
 Require Import CpdtTactics.
 Require Import common.
+Require Import syntax.
 Require Export external_state_semantics.
 
 Require Export Coq.Numbers.BinNums.
@@ -11,33 +12,8 @@ Require Export ZArith.
 
 Module Assert.
 
-  Import LanguageDefinition.
-
-  Inductive asrt :=
-  | a_exp : exp -> asrt
-
-  | a_and : asrt -> asrt -> asrt
-  | a_or : asrt -> asrt -> asrt
-  | a_neg : asrt -> asrt
-  | a_all : asrt -> asrt
-  | a_ex : asrt -> asrt
-
-  | a_intl : exp -> asrt
-  | a_extl : exp -> asrt
-
-  | a_prt : exp -> asrt
-  | a_prt_frm : exp -> exp -> asrt.
-
-  Notation "'a_' e" := (a_exp e)(at level 38).
-  Notation "A1 '∧' A2" := (a_and A1 A2)(at level 39).
-  Notation "A1 '∨' A2" := (a_or A1 A2)(at level 39).
-  Notation "'¬' A" := (a_neg A)(at level 39).
-  Definition arr (A1 A2 : asrt) := ¬ A1 ∨ A2.
-  Notation "A1 ⟶ A2" :=(arr A1 A2)(at level 40).
-
-  Inductive path :=
-  | p_fld : fld -> path
-  | p_cons : fld -> path -> path.
+  Import Syntax.
+  Import OperationalSemantics.
 
   Fixpoint interpret_αp (p : path)(σ : config)(α : addr) : option val :=
     match p with

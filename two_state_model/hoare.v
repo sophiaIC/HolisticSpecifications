@@ -4,6 +4,7 @@ Require Import Bool.
 
 Require Import CpdtTactics.
 Require Import common.
+Require Import syntax.
 Require Import assert.
 Require Export external_state_semantics.
 
@@ -12,25 +13,28 @@ Require Export ZArith.
 
 Module Hoare.
 
-  Import LanguageDefinition.
+  Import Syntax.
+  Import OperationalSemantics.
   Import Assert.
 
-  Inductive big_step_reduction : module -> config -> config -> Prop :=
+  Inductive big_step : module -> config -> config -> Prop :=
   | bsr_single : forall M σ1 σ2, reduction M σ1 σ2 ->
-                            big_step_reduction M σ1 σ2
+                            big_step M σ1 σ2
 
   | bsr_trans : forall M σ1 σ2 σ3, reduction M σ1 σ2 ->
-                              big_step_reduction M σ2 σ3 ->
-                              big_step_reduction M σ1 σ2.
+                              big_step M σ2 σ3 ->
+                              big_step M σ1 σ2.
 
   Definition hoare_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
-    forall χ lcl s' ψ χ' lcl', big_step_reduction M (χ, frm lcl (s_seq s s') ;; nil) (χ', frm lcl' s' ;; nil) ->
+    forall χ lcl s' ψ χ' lcl', big_step M (χ, frm lcl (s_seq s s') ;; nil) (χ', frm lcl' s' ;; nil) ->
                           sat M (χ, frm lcl (s_seq s s') ;; ψ) P ->
                           sat M (χ', frm lcl' s' ;; ψ) Q.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_semantics M P s Q)(at level 40).
 
-  Definition asrt_proof (M : module)(A : asrt) : Prop := forall σ, sat M σ A.
+  Definition entails (M : module)(A1 A2 : asrt) : Prop := forall σ, sat M σ (A2 ⟶ A2).
+
+  Notation "M ⊢ A1 ⊆ A2" := (entails M A1 A2)(at level 40).
 
   #[global] Instance exp_subst : Subst exp var exp:=
     {
@@ -108,6 +112,22 @@ Module Hoare.
           end
     }.
 
+  Fixpoint zip {A B : Type} (l1 : list A)(l2 : list B) : option (list (A * B)) :=
+    match l1, l2 with
+    | h1 :: t1, h2 :: t2 => match zip t1 t2 with
+                         | Some l => Some ((h1, h2) :: l)
+                         | None => None
+                         end
+    | nil, nil => Some nil
+    | _, _ => None
+    end.
+
+  Fixpoint listSubst {A B C : Type}`{Subst A B C} (a : A)(cb : list (C * B)) : A :=
+    match cb with
+    | nil => a
+    | (c, b) :: t => listSubst ([c /s b] a) t
+    end.
+
   (* Proof Rules *)
 
   Reserved Notation "M ⊢ ⦃ P ⦄ s ⦃ Q ⦄" (at level 40).
@@ -117,25 +137,45 @@ Module Hoare.
 
   | h_intl : forall M e s, M ⊢ ⦃ a_intl e ⦄ s ⦃ a_intl e ⦄
 
-  | h_extl : forall M e s, hoare M (a_extl e) s (a_extl e)
+  | h_extl : forall M e s, M ⊢ ⦃ a_extl e ⦄ s ⦃ a_extl e ⦄
 
-  | h_read : forall M x y f e, hoare M ([e_ y∙f /s x] (a_exp e)) (s_read x y f) (a_exp e)
+  | h_read1 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_ e) ⦄ s_read x y f ⦃ a_ e ⦄
 
-  | h_write1 : forall M x f y P, hoare M P (s_write x f y) (a_ e_ x∙f ⩵ e_ y)
+  | h_read2 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
 
-  | h_write2 : forall M x f y e, hoare M ([y /s (x, f)] (a_exp e)) (s_write x f y) (a_exp e)
+  | h_read3 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_intl e) ⦄ s_read x y f ⦃ a_intl e ⦄
 
-  | h_strengthen : forall M s P1 P2 Q, hoare M P1 s Q ->
-                                  asrt_proof M (P2 ⟶ P1) ->
-                                  hoare M P2 s Q
+  | h_write : forall M x f y P, M ⊢ ⦃ P ⦄ s_write x f y ⦃ a_ e_ x∙f ⩵ e_ y ⦄
 
-  | h_weaken : forall M s P Q1 Q2, hoare M P s Q1 ->
-                              asrt_proof M (Q1 ⟶ Q2) ->
-                              hoare M P s Q2
+  | h_write1 : forall M x f y e, M ⊢ ⦃ [y /s (x, f)] (a_ e) ⦄ s_write x f y ⦃ a_ e ⦄
 
-  | h_if : forall M e s1 s2 P Q, hoare M (P ∧ a_ e) s1 Q ->
-                            hoare M (P ∧ ¬ a_ e) s2 Q ->
-                            hoare M P (s_if e s1 s2) Q
+  | h_write2 : forall M x f y e, M ⊢ ⦃ [y /s (x, f)] (a_extl e) ⦄ s_write x f y ⦃ a_extl e ⦄
+
+  | h_write3 : forall M x f y e, M ⊢ ⦃ [y /s (x, f)] (a_intl e) ⦄ s_write x f y ⦃ a_intl e ⦄
+
+  | h_strengthen : forall M s P1 P2 Q, M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ ->
+                                  M ⊢ P2 ⊆ P1 ->
+                                  M ⊢ ⦃ P2 ⦄ s ⦃ Q ⦄
+
+  | h_weaken : forall M s P Q1 Q2, M ⊢ ⦃ P ⦄ s ⦃ Q1 ⦄ ->
+                              M ⊢ Q1 ⊆  Q2 ->
+                              M ⊢ ⦃ P ⦄ s ⦃ Q2 ⦄
+
+  | h_if : forall M e s1 s2 P Q, M ⊢ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
+                            M ⊢ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
+                            M ⊢ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄
+
+  | h_call : forall M P x y m ps C CDef mDef pSubst, M ⊢ P ⊆ (a_ e_class (e_ y) C) ->
+                                                M C = Some CDef ->
+                                                c_meths CDef m = Some mDef ->
+                                                zip (map (fun p => e_ (fst p)) (params mDef)) ps = Some pSubst ->
+                                                M ⊢ ⦃ P ∧ ([e_ y /s this] (listSubst (pre mDef) pSubst)) ⦄
+                                                  (s_call x y m ps)
+                                                  ⦃ [e_ x /s result] post mDef ⦄
+
+  | h_new : forall M x C, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_class (e_ x) C ⦄
+
+  | h_new_fld : forall M x C f, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_ x∙f ⩵ e_null ⦄
 
   where "M ⊢ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare M P s Q).
 
