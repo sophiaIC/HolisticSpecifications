@@ -4,9 +4,9 @@ Require Import Bool.
 
 Require Import CpdtTactics.
 Require Import common.
-Require Import syntax.
+Require Import language_def.
 Require Import assert.
-Require Export external_state_semantics.
+Require Export operational_semantics.
 
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
