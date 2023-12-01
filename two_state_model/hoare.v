@@ -130,9 +130,10 @@ Module Hoare.
 
   (* Proof Rules *)
 
-  Reserved Notation "M ⊢ ⦃ P ⦄ s ⦃ Q ⦄" (at level 40).
+  Class HoareTriple (A : Type) := triple : module -> asrt -> A -> asrt -> Prop.
+  Notation "M '⊢' '⦃' P '⦄' s '⦃' Q '⦄'" := (triple M P s Q) (at level 40, s at level 59).
 
-  Inductive hoare : module -> asrt -> stmt -> asrt -> Prop :=
+  Inductive hoare : HoareTriple stmt :=
   | h_class : forall M e C s, M ⊢ ⦃ a_ e_class e C ⦄ s ⦃ a_ e_class e C ⦄
 
   | h_intl : forall M e s, M ⊢ ⦃ a_intl e ⦄ s ⦃ a_intl e ⦄
@@ -175,15 +176,23 @@ Module Hoare.
 
   | h_new : forall M x C, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_class (e_ x) C ⦄
 
-  | h_new_fld : forall M x C f, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_ x∙f ⩵ e_null ⦄
+  | h_new_fld : forall M x C f, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_ x∙f ⩵ e_null ⦄.
 
-  where "M ⊢ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare M P s Q).
+  #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
+    {
+      triple := hoare
+    }.
 
-  Inductive hoare_seq : module -> asrt -> stmts -> asrt -> Prop :=
+  Inductive hoare_stmts : HoareTriple stmts :=
   | h_stmt : forall M s P Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
-                        hoare_seq M P (s_stmt s) Q
+                        M ⊢ ⦃ P ⦄ s_stmt s ⦃ Q ⦄
   | h_seq : forall M s s' P Q R, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
-                            hoare_seq M Q s' R ->
-                            hoare_seq M P (s_seq s s') R.
+                            M ⊢ ⦃ Q ⦄ s' ⦃ R ⦄ ->
+                            M ⊢ ⦃ P ⦄ s_seq s s' ⦃ R ⦄.
+
+  #[global] Instance hoare_triple_stmts : HoareTriple stmts :=
+    {
+      triple := hoare_stmts
+    }.
 
 End Hoare.
