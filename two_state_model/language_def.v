@@ -51,6 +51,7 @@ Module LanguageDefinition.
   Definition e_false := (e_val v_false).
   Definition e_null := (e_val v_null).
 
+  Notation "'v_' v" := (e_var v)(at level 38).
   Notation "e ∙ f" := (e_fld e f)(at level 38).
   Notation "'e_' x" := (e_var x)(at level 38).
   Notation "e1 ⩵ e2" := (e_eq e1 e2)(at level 38).

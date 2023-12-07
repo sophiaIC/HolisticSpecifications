@@ -133,18 +133,84 @@ Module Hoare.
   Class HoareTriple (A : Type) := triple : module -> asrt -> A -> asrt -> Prop.
   Notation "M '⊢' '⦃' P '⦄' s '⦃' Q '⦄'" := (triple M P s Q) (at level 40, s at level 59).
 
+  (* Is there a purpose to splitting the internal and external method arguments? *)
+
+  Fixpoint prt_free (A : asrt) :=
+    match A with
+    | a_prt_frm x y => false
+    | a_prt x => false
+    | A1 ∧ A2 => prt_free A1 && prt_free A2
+    | A1 ∨ A2 => prt_free A1 && prt_free A2
+    | a_all A => prt_free A
+    | a_ex A => prt_free A
+    | ¬ A => prt_free A
+    | _ => true
+    end.
+
+  (*Inductive prt_free : asrt -> Prop :=
+  | pf_e : forall e, prt_free e
+  | pf_intl : forall e, prt_free (a_intl e)
+  | pf_extl : forall e, prt_free (a_extl e)
+  | pf_all : forall A, prt_free A ->
+                  prt_free (a_all A)
+  | pf_ex : forall A, prt_free A ->
+                 prt_free (a_ex A)
+  | pf_and : forall A1 A2, prt_free A1 ->
+                      prt_free A2 ->
+                      prt_free (A1 ∧ A2)
+  | pf_or : forall A1 A2, prt_free A1 ->
+                     prt_free A2 ->
+                     prt_free (A1 ∨ A2)
+  | pf_neg : forall A, prt_free A ->
+                  prt_free (¬ A).*)
+
+  Inductive lift : asrt -> list var -> list var -> asrt -> Prop :=
+  | lift_eq : forall v v' zs ys, lift (a_ v_ v ⩵ v_ v') zs ys (a_ v_ v ⩵ v_ v')
+  | lift_fld : forall x f v zs ys, lift (a_ e_ x∙f ⩵ v_ v) zs ys (a_ e_ x∙f ⩵ v_ v)
+  | lift_prt : forall x zs ys, lift (a_prt (e_ x)) zs ys (a_prt (e_ x)) (* Discuss: does this make sense? Should we not require that x not be in z or y? *)
+  | lift_prt_frm1 : forall A x zs ys, (forall M z, In z zs -> M ⊢ A ⊆ a_prt_frm (e_ x) (e_ z)) -> (* <- discuss *)
+                                 ~ In x ys ->
+                                 lift A zs ys (a_prt (e_ x))
+  | lift_prt_frm2 : forall A x zs ys, (exists M z, In z zs -> ~ M ⊢ A ⊆ a_prt_frm (e_ x) (e_ z)) ->
+                                 lift A zs ys (a_prt (e_ x))
+  | lift_prt_frm3 : forall A x zs ys, In x ys ->
+                                 lift A zs ys (a_prt (e_ x))
+  | lift_and : forall A1 A2 zs ys A1' A2', lift A1 zs ys A1' ->
+                                      lift A2 zs ys A2' ->
+                                      lift (A1 ∧ A2) zs ys (A1' ∧ A2')
+  | lift_all : forall A zs ys A', lift A zs ys A' ->
+                             lift (a_all A) zs ys (a_all A')
+  | lift_ex : forall A zs ys A', lift A zs ys A' ->
+                            lift (a_ex A) zs ys (a_ex A')
+  | lift_neg : forall A zs ys A', prt_free A = true ->
+                             lift A zs ys A' ->
+                             lift (¬ A) zs ys (¬ A').
+
+  Fixpoint lower (A : asrt) : asrt :=
+    match A with
+    | a_ ((v_ v) ⩵ (v_ v')) => a_ ((v_ v) ⩵ (v_ v'))
+    | a_ (e_ x∙f ⩵ v_ v) => a_ (e_ x∙f ⩵ v_ v)
+    | a_prt (e_ x) => a_prt (e_ x) (* is this correct? paper says true *)
+    | a_prt_frm (e_ x) (e_ y) => a_prt_frm (e_ x) (e_ y)
+    | A1 ∧ A2 => lower A1 ∧ lower A2
+    | ¬ A => if prt_free A
+            then ¬ (lower A)
+            else a_true
+    | a_all A => a_all (lower A)
+    | a_ex A => a_ex (lower A)
+    | _ => a_true
+    end.
+
   Inductive hoare : HoareTriple stmt :=
   | h_class : forall M e C s, M ⊢ ⦃ a_ e_class e C ⦄ s ⦃ a_ e_class e C ⦄
-
-  | h_intl : forall M e s, M ⊢ ⦃ a_intl e ⦄ s ⦃ a_intl e ⦄
-
-  | h_extl : forall M e s, M ⊢ ⦃ a_extl e ⦄ s ⦃ a_extl e ⦄
 
   | h_read1 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_ e) ⦄ s_read x y f ⦃ a_ e ⦄
 
   | h_read2 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
 
   | h_read3 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_intl e) ⦄ s_read x y f ⦃ a_intl e ⦄
+
+  | h_read4 : forall M x z y y' f, M ⊢ ⦃ a_prt_frm (e_ x) (e_ z) ∧ a_ ((e_ z) ⩵ (e_ this)) ⦄ s_read y y' f ⦃ a_prt_frm (e_ x) (e_ z) ⦄
 
   | h_write : forall M x f y P, M ⊢ ⦃ P ⦄ s_write x f y ⦃ a_ e_ x∙f ⩵ e_ y ⦄
 
@@ -176,7 +242,18 @@ Module Hoare.
 
   | h_new : forall M x C, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_class (e_ x) C ⦄
 
-  | h_new_fld : forall M x C f, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_ x∙f ⩵ e_null ⦄.
+  | h_new_fld : forall M x C f, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_ x∙f ⩵ e_null ⦄
+
+  | h_new_prt_frm1 : forall M x C y z, M ⊢ ⦃ a_prt_frm y z ⦄ (s_new x C) ⦃ a_prt_frm y z ⦄
+
+  | h_new_prt_frm2 : forall M x C y,  M ⊢ ⦃ ¬ a_ e_ y ⩵ e_ this ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) (e_ y) ⦄
+
+  | h_new_prt1 : forall M x C y, M ⊢ ⦃ a_prt y ⦄ (s_new x C) ⦃ a_prt y ⦄
+
+  | h_new_prt2 : forall M x C, M ⊢ ⦃ a_intl (e_ this)⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄.
+
+  Print HoareTriple.
+  Print Subst.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {
