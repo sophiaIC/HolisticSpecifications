@@ -596,7 +596,7 @@ Next Obligation.
     end.
 Defined.
 
-Inductive exp : Type :=
+(*)Inductive exp : Type :=
 | e_val   : value -> exp
 | e_var   : var -> exp
 | e_hole  : nat -> exp
@@ -628,7 +628,7 @@ Notation "e1 '⩒' e2" := (e_if e1 (e_true) (e_if e2 (e_true) (e_false)))(at lev
 Notation "e1 '⩽' e2" := ((e1 ⩻ e2) ⩒ (e1 ⩵ e2))(at level 40).
 Notation "'neg' e" := (e ⩵ (e_false))(at level 40).
 Notation "e1 '⩼' e2" := (neg (e1 ⩽ e2))(at level 40).
-Notation "e1 '⩾' e2" := ((e1 ⩼ e2) ⩒ (e1 ⩵ e2))(at level 40).
+Notation "e1 '⩾' e2" := ((e1 ⩼ e2) ⩒ (e1 ⩵ e2))(at level 40).*)
 
 Inductive stmt : Type :=
 | skip  : stmt
