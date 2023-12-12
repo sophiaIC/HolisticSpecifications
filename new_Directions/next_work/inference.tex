@@ -1,25 +1,65 @@
 \section{Proving Adherence to \SpecLang Specifications}
 
-\subsection{Soundness of a Hoare Logic}
+\subsection{Semantics of  a Hoare Triples -- Soundness of Hoare Logic}
 
-We define 
+We will develop a  Hoare logic with judgments of the form  $M\ \vdash\  \{\, A \,  \}\ e\  \{\, A' \, \}$ which promise that execution of the expression $e$ in a configuration with satisfies $A$ will lead to a configuration that satisfied $A'$. We define the {\emph {meaning}} of such triples in the usual way, \ie that execution of $e$ leadst to a state which satisfies $A'$. In the definition below we require that $\sigma'.cont$ is a value in order to ensure that $e$ has been executed. \footnote{ \sd{TODO: Also, will need add more requirements  -- or use different rewrite relation --- to ensure that we did not pop the top frame}.}
 
-\sd{
-\begin{definition}[Sound Hoare triples]
+\begin{definition}[Semantics of Hoare triples]
 
-$M_{int}\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$ \\
+For modules $M$, and assertions $A$, $A'$ and $A''$ we define the semantics of Hoare-triples, 
+ $M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$ as follows:
+\begin{itemize}
+\item
+$M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$ \\
 iff\\
- for a all $M_{ext}$, for all $\sigma$ such that $\sigma \in Arising ...$ \\
-If $M_{int},\sigma \ \models \ A$, and 
-$\sigma.cont$=$e$, and $M_{int}\circ M_{ext}, \sigma \leadstoUp \sigma'$, and $\sigma'.cont$ is a value, 
-\\
-then \\
-$M_{int},\sigma' \ \models \ A'$
+ for a all $M'$, for all $\sigma$ such that $\sigma \in Arising ...$ \\
+$\strut ~ ~ ~ ~ [ \ \ M,\sigma \ \models \ A \ \wedge\  
+ \sigma.cont$=$e$ $\ \ \wedge\  \ M\circ M', \sigma \leadsto^* \sigma' \ \ \wedge\ \ \sigma'.cont$ is a value
+ \\
+$\strut ~ ~ ~ ~ \ \  \Longrightarrow$ \\
+$\strut ~ ~ ~ ~ M,\sigma' \ \models \ A'\ \ ]$
+\end{itemize}
 \end{definition}
-}
 
-\subsection{Hoare Rules}
-\label{s:inference}
+We also define soundness of a Hoare logic in the classical way:
+
+\begin{definition}[Soundess of Hoare logic]
+
+Assume a judgement $\vdash \ \subseteq Module \times Assertion \times Expression \times Assertion$ of the form
+$\_ \ \vdash\  \{\, \_ \,  \}\ \_ \  \{\, \_ \, \}$.\\
+\begin{itemize}
+\item
+The judgement $\_ \ \vdash\  \{\, \_ \,  \}\ \_ \  \{\, \_ \, \}$ is {\emph {sound}}, \\ iff \\
+for all modules $M$, expression $e$, and assertions $A$, $A'$:\\
+$\strut\hspace{3cm} \ M\ \vdash\  \{\, A \,  \}\ e\  \{\, A' \, \}$ \ \ \  implies\ \ \ 
+ $M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$.
+\end{itemize}
+ \end{definition}
+
+
+%\sd{
+%\begin{definition}[Semantics of Hoare triples and quadruples]
+%
+%For modules $M$, and assertions $A$, $A'$ and $A''$ we define the semantics of Hoare-triples, 
+% $M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$, and Hoare quadruples, $M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}\, \parallel\, A''$, as follows:
+%\begin{itemize}
+%\item
+%$M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}\, \parallel\, A''$ \\
+% iff \\
+% for a all $M_{ext}$, for all $\sigma$ such that $\sigma \in Arising ...$ \\
+%$M,\sigma \ \models \ A  \ \wedge\  
+%\sigma.cont$=$e \ \wedge\  M\circ M_{ext}, \sigma \leadsto^* \sigma'$  
+%\\
+%$\Longrightarrow$ \\
+%$M_{int},\sigma' \ \models \ A'' \ \wedge\  (\ \sigma'.cont$ is a value $\ \Longrightarrow\ $$M_{int},\sigma' \ \models \ A'\ ). $
+%\end{itemize}
+%\end{definition}
+%}
+%
+%\subsection{Hoare Rules}
+%\label{s:inference}
+%
+%Note that $M_{int}\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}\, \parallel\, A''$  does {\emph not} imply that $M_{int}\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$
 
 %In this Section we provide a proof system for constructing 
 %proofs of the \SpecLang specifications defined in \S \ref{s:holistic-guarantees}.
@@ -621,11 +661,71 @@ TODO: shall we drop one-state invariants? Do not know how to prove them here. Bu
 
 \subsection{Soundness of the \SpecLang Logic}
 
+ 
 \label{s:soundness}
+
+We will now prove soundness of the  \SpecLang Logic. For this, we will first prove soundness of our extended Hoare logic.
+\sd{We assume that $\leadsto$ is determinstic up to renaming of addresses \footnote{TODO: revisit}}
+
+\begin{lemma}
+Assuming a sound \SpecO proof system, $\proves{M}{A}$, and  and
+a sound encapsulation inference system, $\proves{M}{\encaps{A}}$. Then:
+\begin{itemize}
+\item
+The inference system  $M\ \vdash\  \{\, A \,  \}\ e\  \{\, A' \, \}$  defined in the previous section is sound.
+\end{itemize}
+\end{lemma}
+
+\begin{proof}
+Take arbitrary modules  $M$, $M'$, expression $e$,  assertions $A$, $A'$ and $A''$ and assume
+\begin{enumerate}
+\item
+ $M\ \vdash\  \{\, A \,  \}\ e\  \{\, A' \, \}$ 
+ \item
+ $M,\sigma \ \models \ A$
+ \item
+$ \sigma.cont$=$e$ 
+\item
+$M\circ M', \sigma \leadsto^* \sigma' \ \ \wedge\ \ \sigma'.cont$ is a value
+\end{enumerate}
+We want to show that
+\begin{enumerate}
+\item
+$M,\sigma' \ \models \ A' $
+\end{enumerate}
+The proof proceeds by induction over a lexicographic ordering over the tuples $(M, A, e, A', \sigma, \sigma')$ This ordering is the tuple of ($m_{cl}$, $m_{ext}$), where 
+$m_{cl}$ is the length of the maximal sequence of proof steps in "classical Hoare logic, ie excluding a step {\sc{ExtCall}} involved in proving that  ie excluding a step {\sc{ExtCall}}, and the $m_{ext}$ is the number of external calls that occurred ... \sd{TODO: this needs to be refined!}
+
+\end{proof}
+
+For the proof of the lemma above, we use the following two lemmas that give guarantees about preservation of properties when pushing new frames onto the stack, and when popping frames from the stack. We use the notation $\sigma \bullet \phi$ to indicate that the frame $\phi$ has been pushed on top of the 
+
+%\begin{definition}
+%Given variables 
+%
+%\end{defintion}
+
+\begin{lemma}
+For any module $M$, assertion $A$, variables $\overline x$, and variables $\overline x$,  % values $\overline v$, 
+and any continuation, $cont$, and any states $\sigma$ and $\sigma'$ where 
+$\sigma=(\psi,h)$, and $\sigma'=(((\overline {x \mapsto \sigma(x)}, {x \mapsto \sigma(x)}), cont)\cdot \psi, h)$,  
+we have
+
+\begin{itemize}
+\item
+$M,\sigma\ \models\  A$  \ \ implies \ \  $M,\sigma' \ \models\  \lift {A} {\overline x}  {\overline z} $
+\item
+$M,\sigma'\ \models\  A$  \ \ implies \ \  $M,\sigma  \ \models\  \llower  {A}  $\footnote{\sd{TODO should lower have more arguments?}}
+\end{itemize}
+\end{lemma}
+
+\vspace{1cm}
+
+Finally, we can now prove soundness of the overall system
 
 \begin{theorem}[Soundness]
 \label{thm:soundness}
-Assuming a sound \SpecO proof system, $\proves{M}{A}$, and
+Assume a a sound \SpecO proof system, $\proves{M}{A}$, 
 a sound encapsulation inference system, $\proves{M}{\encaps{A}}$,
  and  that on top of these systems we built
  the \SpecLang logic according to the rules in Figures \ref{f:classical->singlestep},  \ref{f:only-if-single}, 
