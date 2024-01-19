@@ -41,14 +41,14 @@ Module Assert.
                                      path_to σ x α.
 
   (* TODO: relevant definition *)
-  Definition relevant (α : addr)(ϕ : frame)(σ : config) : Prop :=
+  Definition reachable (α : addr)(ϕ : frame)(σ : config) : Prop :=
     exists x p, x ∈ (local ϕ) /\ interpret_p p σ x = Some (v_addr α).
 
-  Definition loc_relevant (α : addr)(σ : config) : Prop :=
-    exists ϕ ψ, snd σ = ϕ ;; ψ /\ relevant α ϕ σ.
+  Definition loc_reachable (α : addr)(σ : config) : Prop :=
+    exists ϕ ψ, snd σ = ϕ ;; ψ /\ reachable α ϕ σ.
 
-  Definition glob_relevant (α : addr)(σ : config) : Prop :=
-    exists ϕ ϕ' ψ, snd σ = ϕ ;; ψ /\ (ϕ' = ϕ \/ In ϕ' ψ) /\ relevant α ϕ' σ.
+  Definition glob_reachable (α : addr)(σ : config) : Prop :=
+    exists ϕ ϕ' ψ, snd σ = ϕ ;; ψ /\ (ϕ' = ϕ \/ In ϕ' ψ) /\ reachable α ϕ' σ.
 
   Inductive is_protected_path : module -> config -> addr -> path -> Prop :=
   | is_prot1 : forall M σ α_orig f1 f2 α1 o, interpret_αf σ α_orig f1 = Some (v_addr α1) ->
@@ -125,11 +125,11 @@ Module Assert.
   | sat_neg : forall M σ A, nsat M σ A ->
                        sat M σ (¬ A)
 
-  | sat_all : forall M σ A, (forall α, glob_relevant α σ ->
+  | sat_all : forall M σ A, (forall α, glob_reachable α σ ->
                              sat M σ ([α /s 0] A)) ->
                        sat M σ (a_all A)
 
-  | sat_ex : forall M σ α A, glob_relevant α σ ->
+  | sat_ex : forall M σ α A, glob_reachable α σ ->
                         sat M σ ([α /s 0] A) ->
                         sat M σ (a_ex A)
 
@@ -141,13 +141,16 @@ Module Assert.
                           ~ C ∈ M ->
                           sat M σ (a_extl e)
 
-  | sat_prt_from : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
-                                            eval M σ e_orig (v_addr α_orig) ->
-                                            (forall p, interpret_αp p σ α_orig = Some (v_addr α) ->
-                                                  is_protected_path M σ α_orig p) ->
-                                            sat M σ (a_prt_frm e e_orig)
+  | sat_prt_frm : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
+                                           eval M σ e_orig (v_addr α_orig) ->
+                                           (forall p, interpret_αp p σ α_orig = Some (v_addr α) ->
+                                                 is_protected_path M σ α_orig p) ->
+                                           sat M σ (a_prt_frm e e_orig)
 
-  | sat_prt : forall M σ e, (forall α, loc_relevant α σ ->
+  | sat_prt_frm_intl : forall M σ e e_orig, sat M σ (a_intl e) ->
+                                       sat M σ (a_prt_frm e e_orig)
+
+  | sat_prt : forall M σ e, (forall α, loc_reachable α σ ->
                              sat M σ (a_prt_frm e (e_val (v_addr α)))) ->
                        sat M σ (a_prt e)
 
@@ -171,11 +174,11 @@ Module Assert.
   | nsat_neg : forall M σ A, sat M σ A ->
                         nsat M σ (¬ A)
 
-  | nsat_all : forall M σ α A, glob_relevant α σ ->
+  | nsat_all : forall M σ α A, glob_reachable α σ ->
                           nsat M σ ([α /s 0] A) ->
                           nsat M σ (a_all A)
 
-  | nsat_ex : forall M σ A, (forall α, glob_relevant α σ ->
+  | nsat_ex : forall M σ A, (forall α, glob_reachable α σ ->
                              nsat M σ ([α /s 0] A)) ->
                        nsat M σ (a_ex A)
 

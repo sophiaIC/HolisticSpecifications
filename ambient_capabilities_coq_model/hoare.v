@@ -147,23 +147,6 @@ Module Hoare.
     | _ => true
     end.
 
-  (*Inductive prt_free : asrt -> Prop :=
-  | pf_e : forall e, prt_free e
-  | pf_intl : forall e, prt_free (a_intl e)
-  | pf_extl : forall e, prt_free (a_extl e)
-  | pf_all : forall A, prt_free A ->
-                  prt_free (a_all A)
-  | pf_ex : forall A, prt_free A ->
-                 prt_free (a_ex A)
-  | pf_and : forall A1 A2, prt_free A1 ->
-                      prt_free A2 ->
-                      prt_free (A1 ∧ A2)
-  | pf_or : forall A1 A2, prt_free A1 ->
-                     prt_free A2 ->
-                     prt_free (A1 ∨ A2)
-  | pf_neg : forall A, prt_free A ->
-                  prt_free (¬ A).*)
-
   Inductive lift : asrt -> list var -> list var -> asrt -> Prop :=
   | lift_eq : forall v v' zs ys, lift (a_ v_ v ⩵ v_ v') zs ys (a_ v_ v ⩵ v_ v')
   | lift_fld : forall x f v zs ys, lift (a_ e_ x∙f ⩵ v_ v) zs ys (a_ e_ x∙f ⩵ v_ v)
@@ -201,24 +184,25 @@ Module Hoare.
     | _ => a_true
     end.
 
-  Inductive hoare : HoareTriple stmt :=
+  Parameter hoare_base : HoareTriple stmt.
+
+  Parameter hoare_read : forall M x y f e, hoare_base M ([e_ y∙f /s x] (a_ e)) (s_read x y f) (a_ e).
+
+  Inductive hoare_extension : HoareTriple stmt :=
+  | h_base : forall M P s Q, hoare_base M P s Q ->
+                        M ⊢ ⦃ P ⦄ s ⦃ Q ⦄
+
   | h_class : forall M e C s, M ⊢ ⦃ a_ e_class e C ⦄ s ⦃ a_ e_class e C ⦄
 
-  | h_read1 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_ e) ⦄ s_read x y f ⦃ a_ e ⦄
+  | h_read_extl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
 
-  | h_read2 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
+  | h_read_intl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_intl e) ⦄ s_read x y f ⦃ a_intl e ⦄
 
-  | h_read3 : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_intl e) ⦄ s_read x y f ⦃ a_intl e ⦄
+  | h_read_prt_frm : forall M x y f z z', M ⊢ ⦃ [e_ y∙f /s x] a_prt_frm (e_ z) (e_ z')⦄
+                                       s_read x y f
+                                       ⦃ a_prt_frm (e_ z) (e_ z') ⦄
 
-  | h_read4 : forall M x z y y' f, M ⊢ ⦃ a_prt_frm (e_ x) (e_ z) ∧ a_ ((e_ z) ⩵ (e_ this)) ⦄ s_read y y' f ⦃ a_prt_frm (e_ x) (e_ z) ⦄
-
-  | h_write : forall M x f y P, M ⊢ ⦃ P ⦄ s_write x f y ⦃ a_ e_ x∙f ⩵ e_ y ⦄
-
-  | h_write1 : forall M x f y e, M ⊢ ⦃ [y /s (x, f)] (a_ e) ⦄ s_write x f y ⦃ a_ e ⦄
-
-  | h_write2 : forall M x f y e, M ⊢ ⦃ [y /s (x, f)] (a_extl e) ⦄ s_write x f y ⦃ a_extl e ⦄
-
-  | h_write3 : forall M x f y e, M ⊢ ⦃ [y /s (x, f)] (a_intl e) ⦄ s_write x f y ⦃ a_intl e ⦄
+  | h_read_prt : forall M x y f z, M ⊢ ⦃ [e_ y∙f /s x] a_prt z ⦄ s_read x y f ⦃ a_prt z ⦄
 
   | h_strengthen : forall M s P1 P2 Q, M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ ->
                                   M ⊢ P2 ⊆ P1 ->
