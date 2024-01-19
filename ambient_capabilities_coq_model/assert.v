@@ -143,8 +143,13 @@ Module Assert.
 
   | sat_prt_frm : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
                                            eval M σ e_orig (v_addr α_orig) ->
+                                           α <> α_orig ->
                                            (forall p, interpret_αp p σ α_orig = Some (v_addr α) ->
                                                  is_protected_path M σ α_orig p) ->
+                                           (forall ϕ ψ x, snd σ = ϕ ;; ψ ->
+                                                     x ∈ local ϕ ->
+                                                     x <> this ->
+                                                     sat M σ (a_prt_frm e (e_ x))) ->
                                            sat M σ (a_prt_frm e e_orig)
 
   | sat_prt_frm_intl : forall M σ e e_orig, sat M σ (a_intl e) ->
