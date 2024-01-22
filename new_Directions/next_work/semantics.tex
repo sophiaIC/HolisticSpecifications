@@ -37,6 +37,10 @@ NOTE: JAMES asked Do we need to worry about well-fomedness? Eg what if we had an
 \subsection{four}
 Say that protected-from is a heap property, whereas protected is a heap-frame property.
 
+\subsection{five}
+Say authority implies eventual permission. Ie we want to guarnatee that an untrusted object will not get permission to a capability. Lack of eventual permissions bounds authority.
+
+
 \section{\SpecLang specifications}
 \label{s:semantics}
 
@@ -381,8 +385,9 @@ As we already discussed in the introduction\footnote{make sure we do discuss the
 For this, we need the concept of "lack of permission".  
 
 We define this lack of permission as "protected".  An object $o$ is protected from another, external, object $o'$, if $o'$ can obtain   $o$ only if 
+some internal object returns the  $o$ to some external object. ???  That is, $o$ is protected from $o'$ if the last object on any path from $o'$ to $o$ is internal. \'footnote{This explanation no longer holds! it held with the old, unsound, definition: An object $o$ is protected from another, external, object $o'$, if $o'$ can obtain   $o$ only if 
 some internal object is involved in giving access to $o$. In other words, $o$ cannot become reachable to $o'$ unless a method is executed on
-some internal object. That is, $o$ is protected from $o'$ if any path from $o'$ to $o$ goes through at least one internal object.
+some internal object. That is, $o$ is protected from $o'$ if any path from $o'$ to $o$ goes through at least one internal object.}
 
 \begin{definition}[Satisfaction 
 of Assertions by module and  state -- continued; Protection] 
@@ -399,7 +404,7 @@ $\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$  \ \ \ iff \\
 \item 
 $\forall n\in\mathbb{N}. \forall f_1,...f_n.$\\
 $
-[\ \ \interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha \ \ \  \Longrightarrow \ \ \ \exists k\!<\!n. \satisfiesA{M} {\sigma} {\internal{{\interpret{\sigma}{\alpha_{o}.f_1...f_k}}}} \ \ ]$
+[\ \ \interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha \ \ \  \Longrightarrow \ \ \ \satisfiesA{M} {\sigma} {\internal{{\interpret{\sigma}{\alpha_{o}.f_1...f_{n-1}}}}}\ \ ]$
 \end{enumerate}
 \strut \hspace{.4cm} $]$
 \end{enumerate}
@@ -470,10 +475,12 @@ protected from $o_2$
  \end{figure}
  
  
-Figure \ref{fig:ProtectedFrom} illustrates the concept of relative protection. All the pink objects are external, and the green objects are internal. The left pane shows the objects that are protected from $o_5$\footnote{QUESTION: is is $5$ or $o_5$?}, the middle pane shows the objects protected from $o_7$, and the right pane shows the objects protected from $o_2$. We highlight the protected objects in yellow. Thus, all objects except $o_6$ are protected from $o_5$;\ all objects expect $o_8$ are protected from $o_7$;\ and all objects except $o_3$, $o_7$, and $o_8$ are protected from $o_2$. 
+Figure \ref{fig:ProtectedFrom} illustrates the concept of relative protection. All the pink objects are external, and the green objects are internal. The left pane shows the objects that are protected from $o_5$\footnote{QUESTION: is is $5$ or $o_5$?}, the middle pane shows the objects protected from $o_7$, and the right pane shows the objects protected from $o_2$. We highlight the protected objects in yellow. Thus, all objects except $o_6$ are protected from $o_5$;\ all objects expect $o_8$ are protected from $o_7$;\ and all objects except $o_3$, $o_6$, $o_7$, and $o_8$ are protected from $o_2$. 
 
 Note that $o_8$ is not protected from $o_2$ because there is a path from $o_2$ to $0_8$ which only traverses external objects. Note also, that even though $o_9$ is external, it is protected from $o_7$.
-We do not consider protection from the internal objects -- c.f. lemma \ref{lemma:internalProtects}.
+Note also that $o_6$ is not protected from $o_2$. Namely, even through there are some internal objects on the path from $o_2$ to $o_6$, in our current model, these objects are not sufficient to prevent eventual, unmitigated access of $o_2$ to $o_6$: it is possible for $o_2$ to make a call to $o_3$, and then this call to return $o_5$. Once $o_2$ has access to $o_5$, it can also get access to $o_6$. 
+\footnote{\textbf{PLEASE READ} This point is important, and would like us to express it more eloquently. Also, if we had a module that did not ever leak external objects, then we could have the weaker defintion of "protected-from. James said that there is a design space of "protected-from" and we should distill the constraints on it.\\
+The explanations here make sense only in the presence of the module promising not to leak the }
 
 \vspace{.1in}
 
@@ -512,11 +519,10 @@ $\satisfiesA{M}{\sigma}{\external{\prg{this}}}\ \ \Longrightarrow\ \ \forall x\i
 } 
 \\
 \hline
-protected  ...
+protected  with top frame $\phi_1$ &
+protected  with top frame $\phi_2$
 &
-protected ...
-&
-protected  ..
+protected  with top frame $\phi_3$
 \\
 \hline \hline
 
@@ -526,7 +532,21 @@ protected  ..
    \label{fig:Protected}
  \end{figure}
  
- Figure \ref{fig:Protected} illustrates the concepts  .... The locally reachable objects for the three states are as in Fig \ref{fig:LReachable} ..
+ Figure \ref{fig:Protected} illustrates the concept of protection. The heap in all three pones is the same as that from  Fig \ref{fig:LReachable}, and 
+ ans Fig \ref{fig:ProtectedFrom}. In the left pane the top frame is $\phi_1$; it has  one variable: \prg{this} points to $o_2$. In the middle pane the top frame is $\phi_2$; it has two  variables:   \prg{this} points to $o_3$ and \prg{x} points to $o_7$. In the right pane  the top frame is $\phi_3$; it has two  variables:   \prg{this} points to $o_7$ and \prg{x} points to $o_3$.  
+ 
+  The locally reachable objects from $\phi_1$ were highlighted in the middle pane of.Fig \ref{fig:LReachable}, while the locally reachable object from $phi_2$ as well as from $\phi_3$ were  highlighted in the right pane of that Figure. We highlight the protected objects in each pane with a golden hallo.
+ Note that $o_3$ is protected from $\phi_2$, but is not protected from $\phi_3$. This is so, because \prg{this} in $\phi_3$ is external, and  $o_3$ is an argument to the call. That means, that during the call, $o_7$ may obtain unmitigated access (permission?) to $o_3$. 
+ 
+ \begin{lemma}
+ For any $m$, $\sigma$, $\sigma'$, $\overline z$, and $\alpha$. If $\sigma'$ is the result of pushing $\overline z$ onto the stack frame of $\sigma$,  \footnote{to define that}, then
+ \begin{itemize}
+ \item
+ $ \satisfiesA{M}{\sigma}{\protectedFrom{\overline{z}} {{\alpha}}}$\ \ \ \ \ implies \ \ \ \ \  $ \satisfiesA {M} {\sigma'} {\inside {\alpha}}$
+ \end{itemize}
+ 
+ \end{lemma}
+ 
  
  \subsection{Discussion of the semantics of assertions}
  
