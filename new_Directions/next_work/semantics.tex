@@ -111,7 +111,7 @@ language with unforgeable addresses and private fields, we believe
 
   \subsection{{Reachable  Objects}}
   
-\sdOct{The  \SpecLang  specifications support universal quantification over  objects; such specifications 
+{The  \SpecLang  specifications support universal quantification over  objects; such specifications 
 are applicable  to all objects in the heap witch, are however, either locally reachable (i.e. there is in the heap a path from the an 
 object on the top frame to the particular object), or globally reachable (i.e. there is in the heap a path from the an 
 object on some frame to the particular object.)
@@ -145,7 +145,7 @@ The lemma below says that 1) Any locally reachable object is globally reachable,
 no globally unreachable object may become reachable.\footnote{cite "only connectivity begets connectivity"}
 
 
-\sdN{
+
 \begin{lemma}
 \label{lemma:relevant}
 For all $\sigma$, $\sigma'$, for all objects $o$, and for all modules $M$:
@@ -160,7 +160,7 @@ $\sigma'$ is $\sigma$ right after a method has been called  $\wedge \  \LRelevan
 }
 \end{enumerate}
 \end{lemma}
-}
+
  
  \begin{figure}[htb]
 \begin{tabular}{|c|c|c|}
@@ -180,13 +180,13 @@ $\sigma'$ is $\sigma$ right after a method has been called  $\wedge \  \LRelevan
 \hline
  a heap
 &
-Locally Reachable: ...
+Locally Reachable from $\phi_1$
 &
-Locally Reachable \\
+Locally Reachable from $\phi_2$
+\\
 \hline \hline
 \end{tabular}
-   \caption{Locally Reachable Objects xxxx.  
- }
+   \caption{A heap, and locally Reachable Objects from $\phi_1$ and $\phi_2$ }
    \label{fig:LReachable}
  \end{figure}
 
@@ -307,15 +307,22 @@ $\exists x,y.[\ a1.passwd=x \wedge  a2.passwd=y \wedge x\neq y\ ]$.}}
 
 \footnote{{TODO compare with oopsla }}
 
+\begin{definition}[Satisfaction 
+of Assertions by module and  state] 
+\label{def:chainmail-semantics-all}
+of Assertions by module and  state] 
+\label{def:chainmail-semantics}
+We define satisfaction of an assertion $A$ by a % program 
+state $\sigma$ with 
+ module $M$ by cases on the shape of $A$, in definitions \ref{def:chainmail-semantics}, \ref{def:chainmail-protection-from}, and 
+ \ref{def:chainmail-protection}
+\end{definition}
 
+TODO: say why we split the def into three defs. 
 
 \subsection{Semantics of \AssertLang -- first part}
-The semantics of \AssertLang   
-is given in Definition \ref{def:chainmail-semantics}. 
-Definitions (1)-(5) are standard.
- Note that Definitions (6)-(7) ...  TODO: explain!
-% An illustration of the concept of reachable appears in the next subsection, in Fig. \ref{fig:Relevant}.
 
+% An illustration of the concept of reachable appears in the next subsection, in Fig. \ref{fig:Relevant}.
 We   use the evaluation relation, $\eval{M}{\sigma}{e}{v}$,
 which says that the expression $e$ evaluates
 to value $v$ in the context of state $\sigma$ and module $M$.
@@ -323,16 +330,15 @@ As expressions in \LangOO may be recursively defined, their evaluation
 need not   % may not necessarily 
  terminate. Nevertheless, the logic of $A$ remains classical because recursion is restricted
 to expressions, and not generally to assertions.
-\footnote{We have taken this approach from \citeasnoun{FASE}, which also contains a mechanized Coq proof that assertions are classical \cite{coqFASE}.
-%  The full
+\footnote{
 The semantics of $\hookrightarrow$ {is} unsurprising 
 (see {the appendices %of the full paper 
-\cite{necessityFull}).} } %Fig.\ref{f:evaluation}).
-
+\cite{necessityFull}).}
+We have taken this approach from \citeasnoun{FASE}, which also contains a mechanized Coq proof that assertions are classical \cite{coqFASE}. } %Fig.\ref{f:evaluation}).
 
 
 \begin{definition}[Satisfaction 
-of Assertions by module and  state] 
+of Assertions -- first part] 
 \label{def:chainmail-semantics}
 We define satisfaction of an assertion $A$ by a % program 
 state $\sigma$ with 
@@ -377,21 +383,32 @@ In most cases, satisfaction of an assertion not only depends on the state $\sigm
 in some cases it also depends on the module: namely execution of expressions (\ref{cExpr}) might need to look up the definition of ghost fields  in $M$, while 
 for internal or external provenance (\ref{cInternal} and \ref{cExternal}) we need to know all the classes defined in $M$.
 
-TODO: Compare with Dafny (or others). Does univ. quantifier mean quantify over all allocated objects (Dafny), or over reachable objetcs?
+{\textbf{NOTE}  that the term $\re$ may mention ghost fields, but the paths $\alpha.f_1....f_n$ may not. We see that because the latter are interpreted in $\sigma$. That is, $\satisfiesA{M}{\sigma}{{\alpha_o.f_1...f_n}=\alpha}$ is weaker than $\interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha$. TODO: write the latter as a lemma}
+
+\footnote{TODO: Compare with Dafny (or others). Does univ. quantifier mean quantify over all allocated objects (Dafny), or over reachable objetcs?}
 
 \subsection{Semantics of Assertions - second part: Protection}\footnote{Can we think of a better name than protection?}
 
-As we already discussed in the introduction\footnote{make sure we do discuss there}, in the object capabilities world permission (ie access to\footnote{cite MarkMiller thesis, and our Permission and Authority revisited} to a capability is a necessary precondition to some effect. In our work, we express this as lack of permission to the relevant capability implies that the given effect will never take place.
-For this, we need the concept of "lack of permission".  
+As we already discussed in the introduction\footnote{make sure we do discuss there}, in the object capabilities world permission (ie access  \footnote{cite MarkMiller thesis, and our Permission and Authority revisited} to a capability is a necessary precondition to some effect. Motto "authority implies eventual permission".
+In our work, we express this as "lack of eventual permission to the relevant capability implies that the given effect will never take place".
+For this, we need the concept of "lack of  eventual permission".  
 
-We define this lack of permission as "protected".  An object $o$ is protected from another, external, object $o'$, if $o'$ can obtain   $o$ only if 
-some internal object returns the  $o$ to some external object. ???  That is, $o$ is protected from $o'$ if the last object on any path from $o'$ to $o$ is internal. \'footnote{This explanation no longer holds! it held with the old, unsound, definition: An object $o$ is protected from another, external, object $o'$, if $o'$ can obtain   $o$ only if 
-some internal object is involved in giving access to $o$. In other words, $o$ cannot become reachable to $o'$ unless a method is executed on
-some internal object. That is, $o$ is protected from $o'$ if any path from $o'$ to $o$ goes through at least one internal object.}
+\sdN{
+We define this lack of \sdN{eventual} permission as "protected".  
+An object $o$ is \emph{protected  from} another, external, object $o'$, if $o'$ can obtain direct access to   $o$ only if 
+$o$ is ``introduced'' to some external object (not necessarily $o'$, but external) by some internal object $o''$.  Here we use ``introduce'' in the Mark Miller sense, whereby $o$ is is ``introduced'' to $o'$ by $o''$, iff either $o''$ sends to $o'$ a message containing $o$, 
+or $o'$ made a call to $o''$, and $o''$ eventually returns  $o$ as the result of the call.
+} 
+
+\sdN{Even though the motivation for protection comes from considering eventual executions, we can obtain sufficient conditions just by observing the heap. In the definition below, we say that $o$ is protected from $o'$ if the last object on any path from $o'$ to $o$ is internal. 
+% that is the old definition: An object $o$ is protected from another, external, object $o'$, if $o'$ can obtain   $o$ only if 
+%some internal object is involved in giving access to $o$. In other words, $o$ cannot become reachable to $o'$ unless a method is executed on
+%some internal object. That is, $o$ is protected from $o'$ if any path from $o'$ to $o$ goes through at least one internal object.}
+}
 
 \begin{definition}[Satisfaction 
 of Assertions by module and  state -- continued; Protection] 
-\label{def:chainmail-protectionFrom}
+\label{def:chainmail-protection-from}
 We continue the definitions in \ref{def:chainmail-semantics}, and define   
 \begin{enumerate}
 \item
@@ -410,21 +427,23 @@ $
 \end{enumerate}
 \end{definition}
 
-TODO: Justify the definitions and their subtleties. 
+\sdN{TODO: discuss the alternative, weaker definition, and explkain that lemma \ref{lemma:internalProtects} would not hold}
 
-It follows directly from the Def. \ref{def:chainmail-protectionFrom} that any object is protected from any internal object --
+\vspace{.5cm}
+
+It follows directly from the Def. \ref{def:chainmail-protection-from} that any object is protected from any internal object --
 this is expressed in the lemma below. Therefore, when we consider whether an object $o$ is protected from another object $o'$,  we only consider external objects $o'$.
 
+ 
 \begin{lemma}
 \label{lemma:internalProtects}
 For all modules $M$, and states $\sigma$, and terms $\re$, $\re_0$:
 \begin{itemize}
-\item
-$ \satisfiesA{M} {\sigma} {\internal{\re_o}}$\ \ \ \ implies \ \ \ \ \  $\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$
+\item  $\satisfiesA{M} {\sigma} {\internal{\re_o}}$\ \ \ \ implies \ \ \ \ \  $\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$
 \end{itemize}
 
 \end{lemma}
-
+ 
 
 
 JAMES' comment: If is possible that "we" do not know the complete heap (eg we only know about the green stuff.) how do we know whether an object is protected. The answer is that we do not know that it is protected, but we do know that our code guarnartees poreservation of proetcedness.
@@ -440,10 +459,6 @@ such an example in Section \ref{s:examples}.
 
 \footnote{{\textbf{TODO} make the connection with domination}}
 
-{\textbf{NOTE}  that the term $\re$ may mention ghost fields, but the paths $\alpha.f_1....f_n$ may not. We see that because the latter are interpreted in $\sigma$. That is, $\satisfiesA{M}{\sigma}{{\alpha_o.f_1...f_n}=\alpha}$ is weaker than $\interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha$. TODO: write the latter as a lemma}
-
-
- 
 
 
 \begin{figure}[htb]
@@ -478,7 +493,8 @@ protected from $o_2$
 Figure \ref{fig:ProtectedFrom} illustrates the concept of relative protection. All the pink objects are external, and the green objects are internal. The left pane shows the objects that are protected from $o_5$\footnote{QUESTION: is is $5$ or $o_5$?}, the middle pane shows the objects protected from $o_7$, and the right pane shows the objects protected from $o_2$. We highlight the protected objects in yellow. Thus, all objects except $o_6$ are protected from $o_5$;\ all objects expect $o_8$ are protected from $o_7$;\ and all objects except $o_3$, $o_6$, $o_7$, and $o_8$ are protected from $o_2$. 
 
 Note that $o_8$ is not protected from $o_2$ because there is a path from $o_2$ to $0_8$ which only traverses external objects. Note also, that even though $o_9$ is external, it is protected from $o_7$.
-Note also that $o_6$ is not protected from $o_2$. Namely, even through there are some internal objects on the path from $o_2$ to $o_6$, in our current model, these objects are not sufficient to prevent eventual, unmitigated access of $o_2$ to $o_6$: it is possible for $o_2$ to make a call to $o_3$, and then this call to return $o_5$. Once $o_2$ has access to $o_5$, it can also get access to $o_6$. 
+Finally, note that $o_6$ is not protected from $o_2$. 
+Namely, even through there are some internal objects on the path from $o_2$ to $o_6$, in our current model, these objects are not sufficient to prevent eventual, unmitigated access of $o_2$ to $o_6$: it is possible for $o_2$ to make a call to $o_3$, and then this call to return $o_5$. Once $o_2$ has access to $o_5$, it can also get access to $o_6$. 
 \footnote{\textbf{PLEASE READ} This point is important, and would like us to express it more eloquently. Also, if we had a module that did not ever leak external objects, then we could have the weaker defintion of "protected-from. James said that there is a design space of "protected-from" and we should distill the constraints on it.\\
 The explanations here make sense only in the presence of the module promising not to leak the }
 
@@ -532,21 +548,32 @@ protected  with top frame $\phi_3$
    \label{fig:Protected}
  \end{figure}
  
- Figure \ref{fig:Protected} illustrates the concept of protection. The heap in all three pones is the same as that from  Fig \ref{fig:LReachable}, and 
+ Figure \ref{fig:Protected} illustrates the concept of protection. The heap in all three panes is the same as that from  Fig \ref{fig:LReachable}, and 
  ans Fig \ref{fig:ProtectedFrom}. In the left pane the top frame is $\phi_1$; it has  one variable: \prg{this} points to $o_2$. In the middle pane the top frame is $\phi_2$; it has two  variables:   \prg{this} points to $o_3$ and \prg{x} points to $o_7$. In the right pane  the top frame is $\phi_3$; it has two  variables:   \prg{this} points to $o_7$ and \prg{x} points to $o_3$.  
  
-  The locally reachable objects from $\phi_1$ were highlighted in the middle pane of.Fig \ref{fig:LReachable}, while the locally reachable object from $phi_2$ as well as from $\phi_3$ were  highlighted in the right pane of that Figure. We highlight the protected objects in each pane with a golden hallo.
+The locally reachable objects from $\phi_1$ were highlighted in the middle pane of.Fig \ref{fig:LReachable}, while the locally reachable object from $phi_2$ as well as from $\phi_3$ were  highlighted in the right pane of that Figure. 
+We highlight the protected objects in each pane with a golden hallo.
  Note that $o_3$ is protected from $\phi_2$, but is not protected from $\phi_3$. This is so, because \prg{this} in $\phi_3$ is external, and  $o_3$ is an argument to the call. That means, that during the call, $o_7$ may obtain unmitigated access (permission?) to $o_3$. 
  
+ \textbf{TODO: praise the lemma below}
+ 
+ 
+ \sdN{
  \begin{lemma}
  For any $m$, $\sigma$, $\sigma'$, $\overline z$, and $\alpha$. If $\sigma'$ is the result of pushing $\overline z$ onto the stack frame of $\sigma$,  \footnote{to define that}, then
  \begin{itemize}
  \item
- $ \satisfiesA{M}{\sigma}{\protectedFrom{\overline{z}} {{\alpha}}}$\ \ \ \ \ implies \ \ \ \ \  $ \satisfiesA {M} {\sigma'} {\inside {\alpha}}$
+  $\forall i\in 0..n.[\ \ \satisfiesA{M}{\sigma}{\protectedFrom {\alpha} {z_i} } \ \ \wedge\ \ 
+ [ \  \satisfiesA{M}{\sigma}{\external {z_o}} \ \Longrightarrow\   \satisfiesA{M}{\sigma} {z_i} {\alpha}\ ]\ \  ] $ \\
+% old version, equivalant 
+% $\forall i\in 0..n.[\ \satisfiesA{M}{\sigma}{\protectedFrom {\alpha} {z_i} }\ ] \ \ \wedge\ \ 
+% [ \  \satisfiesA{M}{\sigma}{\external {z_o}} \ \Longrightarrow\  \forall i\in 0..n.(\ \satisfiesA{M}{\sigma} {z_i} {\alpha}\ )\  \  ] $ \\
+  $ \Longrightarrow$ \\
+   $ \satisfiesA {M} {\sigma'} {\inside {\alpha}}$
  \end{itemize}
  
  \end{lemma}
- 
+}
  
  \subsection{Discussion of the semantics of assertions}
  
