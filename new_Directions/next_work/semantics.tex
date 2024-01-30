@@ -213,7 +213,7 @@ of \Loo\footnote{check whether it is Tool, or Loo, or what}; it is a small steps
 \sdN{
   \begin{definition}[Execution]
 \label{def:deep}
-The relation  $\leadstoOrig  {M} {\sigma_1}   {\sigma_2}$ is defined  in appendix ... The relation $\leadstoOrigStar  {M} {\sigma_1}   {\sigma_2}$  is the reflexive, transitive closure of $\leadstoOrig  {M} {\sigma_1}   {\sigma_2}$ .
+The relation  $\leadstoOrig  {M} {\sigma_1}   {\sigma_2}$ is defined  in appendix ... The relation $\leadstoOrigStar  {M} {\_}   {\_}$  is the reflexive, transitive closure of $\leadstoOrig  {M} {\_}   {\_}$ .
 \end{definition}
 }
 
@@ -272,7 +272,7 @@ $\leadstoOrig M {\sigma_{13}}   {\sigma_{14}} $ and $\leadstoOrig M {\sigma_{17}
 % even though all four states ($\sigma_{13}$, $\sigma_{14}$, $\sigma_{17}$, and $\sigma_{18}$), have the same number of frames on their stack.
 We want a semantics to reflect whether execution steps happen within the bounds of certain call. For this, we define \emph{bounded execution}, 
 $\leadstoBounded {M} {\sigma} {\sigma''} {\sigma'}$ 
-which are execution steps which lead from $\sigma$ to $\sigma'$ while not popping  $\sigma''$s top frame.
+which are execution steps which lead from $\sigma$ to $\sigma'$ while not popping  $\sigma''$-s top frame.
 Formally,
 }
 
@@ -298,23 +298,31 @@ $\strut  \hspace{2.7cm}\ \    \exists \phi,\psi, \phi_1, \phi2.[ \ \sigma = (\ph
  top frame. 
 Therefore, 
  $\leadstoOrigStar {M} {\sigma_8}  {\sigma_{15}}$ 
- but not  $\notLeadstoBoundedStar {M} {\sigma_8} {\sigma_8} {\sigma_{15}}$  
+ but  $\notLeadstoBoundedStar {M} {\sigma_8} {\sigma_8} {\sigma_{15}}$, and also
+  $\leadstoOrigStar {M} {\sigma_8}  {\sigma_{18}}$ 
+ but  $\notLeadstoBoundedStar {M} {\sigma_8} {\sigma_8} {\sigma_{18}}$  -- the latter reflects that $\sigma_8$ and $\sigma_{18}$ beiong to different calls. 
 }
  
 \subsubsection{{Reachable  Objects and Shallow Semantics}}
 
 
-The lemma below is the counterpart to lemma \ref{lemma:relevant}, but makes stronger assertions, because it only applies to shallow executions.\footnote{{It is more general than before!}}
+The lemma below is the counterpart to lemma \ref{lemma:relevant} --  with the difference that  \ref{lemma:relevant:after:bounded} has the  stronger  premise  , as it requires bounded executions. 
 
 \begin{lemma}
+\label{lemma:relevant:after:bounded}
 For all states $\sigma$, $\sigma'$, and $\sigma''$,for all objects $o$, and for all modules  $M$:
 \begin{itemize}
 \item
-${\leadstoRecStar {M}  {\sigma} {\sigma''} {\sigma'}} \ \ \wedge \ \  \GRelevant o {\sigma'} \ \ \wedge\ \ o\in dom(\sigma)\ \ \ \Longrightarrow \ \  \ \GRelevant o {\sigma}$.
+${\leadstoBoundedStar {M}  {\sigma} {\sigma''} {\sigma'}} \ \ \wedge \ \  \GRelevant o {\sigma'} \ \ \wedge\ \ o\in dom(\sigma)\ \ \ \Longrightarrow \ \  \ \GRelevant o {\sigma}$.
 \item
-${\leadstoRecStar {M}  {\sigma}  {\sigma''} {\sigma'}} \ \ \wedge \ \   \LRelevant o {\sigma'}\  \ \wedge\ \ o\in dom(\sigma)\ \ \ \Longrightarrow \ \ \ \LRelevant o {\sigma}$.
+${\leadstoBoundedStar {M}  {\sigma}  {\sigma} {\sigma'}} \ \ \wedge \ \   \LRelevant o {\sigma'}\  \ \wedge\ \ o\in dom(\sigma)\ \ \ \Longrightarrow \ \ \ \LRelevant o {\sigma}$.
 \end{itemize}
 \end{lemma}
+
+\sdN{Consider Fig.  \ref{fig:UpSemantics}, the lemma above promises that any objects locally reachable in $\sigma_{14}$ which already existed in $\sigma_{8}$, were locally accessible in $\sigma_{8}$. However, the lemma is only  applicable to bounded execution, and as 
+$\notLeadstoBoundedStar {M} {\sigma_8} {\sigma_8} {\sigma_{17}}$, 
+the lemma does not promise that  objects locally reachable in $\sigma_{17}$ which already existed in $\sigma_{8}$, were locally accessible in $\sigma_{8}$ -- namely it could be hat object are made globally reachable during the step from $\sigma_{15}$ to $\sigma_{16}$.}
+
 
 
 
@@ -625,7 +633,6 @@ The lemma below says that if we make a method call, and if an object $o$ is prot
  then
  \begin{itemize}
  \item
-\sdN{
   $\forall i\in 0..n.[\ \ \satisfiesA{M}{\sigma}{\protectedFrom {\alpha} {z_i} }  \ \ \wedge\ \ 
  [ \  \satisfiesA{M}{\sigma}{\external {z_o}} \ \Longrightarrow\   \satisfiesA{M}{\sigma} {z_i \neq {\alpha}}\ ] \ \  ] $
   \\
@@ -634,7 +641,6 @@ The lemma below says that if we make a method call, and if an object $o$ is prot
 % [ \  \satisfiesA{M}{\sigma}{\external {z_o}} \ \Longrightarrow\  \forall i\in 0..n.(\ \satisfiesA{M}{\sigma} {z_i} {\alpha}\ )\  \  ] $ \\
   $ \Longrightarrow$ \\
    $ \satisfiesA {M} {\sigma'} {\inside {\alpha}}$
-}
  \end{itemize}
 \end{lemma}
  
@@ -694,8 +700,7 @@ The syntax of  \SpecLang specifications is given below
 \]
 \end{definition}
 
-TODO motivate the rest
-
+\footnote{TODO motivate the rest}
 \subsubsection{Arising States and {Arising} External States}
 
 {TODO: here perhaps more motivation for external?\footnote{Here what we had: As discussed in \S \ref{s:approach}, 
@@ -712,7 +717,6 @@ $\reduction{M_{ext}}{M}{\sigma}{\sigma'}$, where $M_{ext}$ is the external
 module, and $M$ is the internal module, and where we
 collapse all internal steps into one single step.
 }}
-
 {A state $\sigma$ is \emph{arising},}  written $\arising{\sigma}{M}$, {if it  may arise}  % by observable states} 
 by execution
 starting at some initial configuration:
@@ -745,77 +749,6 @@ mapping from \prg{this} to the single object, and whose continuation is  any sta
 \cite{necessityFull}).}
 
 
-
-%{
-%\begin{definition}[??? Semantics]
-%\label{def:up-reduce}
-%For    module  $M$  and     states $\sigma$, $\sigma'$, 
-%we say that $\ \ \ \ \ \ \ \ \ M {\sigma}\leadstoUp {\sigma'}\ \ \ \ \ \ \ \ $ if and only if there exist 
-%$n\in\mathbb{N}$, and states $\sigma_0$,...$\sigma_n$, such that
-%\begin{enumerate}
-%\item
-%\label{up1}
-%$\sigma$=$\sigma_1$, and  $\sigma'$=$\sigma_n$,
-%\item
-%\label{up2}
-%$M, \sigma_i \leadsto \sigma_{i+1}$  \ \ \ for all $i\in [{1}..n)$,
-%\item
-%\label{up3}
-%{$| \sigma_1 | \leq | \sigma_i |$ \ \ \  for all $i\in [1..n]$,}
-%\end{enumerate} 
-%\end{definition}
-%}
-
-\begin{figure}[htb]
-\begin{tabular}{|c|}
-\hline \\
-\resizebox{8cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/up1.png}
-} 
-\\
-\hline
-\\
-\begin{tabular}{c|c|c}
-%TRAD
-$M, {\sigma_3} \leadsto  \sigma_4 $ & 
-%REC
-  $\leadstoRec  M  {\sigma_3} {\sigma_3}  {\sigma_4} $ & 
-  %TERM 
-  $\leadstoFin {M} {\sigma_3} {\sigma_7}$
-\\
-%TRAD
- $M, {\sigma_3} \leadsto^*  \sigma_8 $ & 
-%REC
-$\neg(\leadstoRecStar M {\sigma_3} {\sigma_3}   {\sigma_8})$ 
-&
-%REM
-\leadstoFin {M} {\sigma_4} {\sigma_7} \\
-%TRAD
-&
-%REC
- \leadstoRecStar M {\sigma_3} {\sigma_1}   {\sigma_8}
-  &
-   \\
- \hline
- \\
- $\leadsto$
- &
- $\leadsto_{\sigma}$
- &
-  $\leadstoFin {\_} {\_} {\_}$
-\\
-\hline
-\end{tabular}
-\end{tabular}
-   \caption{Illustrating  % $\leadsto$ and  $\leadsto_{\sigma}$  and Semantics; Illustration $\leadstoFin {\_} {\_} {\_}$ 
-   deep, shall, and terminating semantics
-     (Def. \ref{def:deep}, and \ref{def:shallow:term})%
-    }
-   \label{fig:UpSemantics}
- \end{figure}
-
- 
-{ The $\leadsto_{\sigma}$ relation is transitive, in the sense that $\leadstoRecStar {M}  {\sigma_1} {\sigma'} {\sigma_2}$ and $\leadstoRecStar  {M}  {\sigma_2} {\sigma'} {\sigma_3}$ implies that $\leadstoRecStar {M}  {\sigma_1} {\sigma'} {\sigma_3}$.}
  
  \subsubsection{ Semantics of \SpecLang Specifications}
 We now  define what it means for  a module  $M$ to satisfy specification  $S$, written as $M \vDash S$. The
@@ -842,7 +775,7 @@ for all $M_{ext}$, $\sigma$, $\overline{x}$, $\overline{o}$ such that $\overline
 ${\extArising{\sigma}{M_{ext}}{M}} \ \wedge\  \GRelevant {\overline o}  \sigma \wedge \ $\footnote{{notice that we are asking for globally relevant objects}}\\
 & & & $ \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{\overline {x:C}}  \ \ \wedge\ \  \satisfiesA{M}{\sigma[\overline{x\mapsto o}]}{A} \ \ \wedge$ \\ 
 & & &
-$\red{\leadstoRecStar {M_{ext}\!\circ \!M}{\sigma}{\sigma} {\sigma'} } \ \ \wedge\ \  M, \sigma' \models {\external{\prg{this}}}$ \\
+$\red{\leadstoBoundedStar {M_{ext}\!\circ \!M}{\sigma}{\sigma} {\sigma'} } \ \ \wedge\ \  M, \sigma' \models {\external{\prg{this}}}$ \\
 & & & $ \Longrightarrow $ \\
 & & & $ \satisfiesA{M}{\sigma'[\overline{x\mapsto o}]}{A'} $
 \\
@@ -857,7 +790,7 @@ $\bullet$ &  $\satisfies{M}{S\, \wedge\, S'}$ &   iff   & $\satisfies{M}{S}\ \we
   
 \footnote{{TODO: Make an example that demonstrates the difference if in the second bullet we had asked for locally relevant objects ${\overline o}$.}}
 \footnote{{TODO Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.}}
-\footnote{TODO: explain why we did not require the stronger $\leadstoFin{M_{ext}\!\circ \!M}{\sigma}{\sigma'}$ rather than $\leadstoRecStar {M_{ext}\!\circ \!M}{\sigma}{\sigma} {\sigma'}$.}
+\footnote{TODO: explain why we did not require the stronger $\leadstoFin{M_{ext}\!\circ \!M}{\sigma}{\sigma'}$ rather than $\leadstoBoundedStar {M_{ext}\!\circ \!M}{\sigma}{\sigma} {\sigma'}$.}
 % Note that the requirements that $\extArising{\sigma}{M_{ext}}{M}$ and $\leadstoFin{M_{ext}\circ M}{\sigma}{\sigma'} $ imply that
 % $M, \sigma' \models {\external{\prg{this}}}$
 
