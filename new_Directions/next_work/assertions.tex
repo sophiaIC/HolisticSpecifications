@@ -151,7 +151,7 @@ for internal or external provenance (\ref{cInternal} and \ref{cExternal}) we nee
 
 
 \subsection{Semantics of Assertions - second part:
-  Protection}\footnote{Can we think of a better name than protection? \kjx{encapsulation}}
+protecting an object from another}
 
 As we already discussed in the introduction\footnote{make sure we do discuss there}, in the object capabilities world permission (ie access  \footnote{cite MarkMiller thesis, and our Permission and Authority revisited} to a capability is a necessary precondition to some effect. Motto "authority implies eventual permission".
 In our work, we express this as "lack of eventual permission to the relevant capability implies that the given effect will never take place".
@@ -164,11 +164,8 @@ $o$ is ``introduced'' to some external object (not necessarily $o'$, but externa
 or $o_2$ made a call to $o_3$, and $o_3$ eventually returns  $o_1$ as the result of the call.
 } 
 
-\sdN{The motivation for protection comes from considering eventual executions, but this condition is less practical. Instead, we can obtain sufficient conditions just by observing the heap. In the definition below, we say that $o$ is protected from $o'$ if the last object on any path from $o'$ to $o$ is internal. 
-% that is the old definition: An object $o$ is protected from another, external, object $o'$, if $o'$ can obtain   $o$ only if 
-%some internal object is involved in giving access to $o$. In other words, $o$ cannot become reachable to $o'$ unless a method is executed on
-%some internal object. That is, $o$ is protected from $o'$ if any path from $o'$ to $o$ goes through at least one internal object.}
-}
+%\sdN{The motivation for protection comes from considering eventual executions, but this condition is less practical. Instead, we can obtain sufficient conditions just by observing the heap. In the definition below, we say that $o$ is protected from $o'$ if the last object on any path from $o'$ to $o$ is internal. 
+%}
 
 \begin{definition}[Satisfaction 
 of Assertions by module and  state continued -- Protected From] 
@@ -181,13 +178,20 @@ We continue the definitions in \ref{def:chainmail-semantics}, and define
  $\satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}$  \ \ \ iff  
  \begin{itemize}
  \item
+ $\alpha\neq \alpha_0$,
+ \\
+ and
+  \begin{itemize}
+ \item
  $\satisfiesA{M} {\sigma} {\internal{\alpha_0}}$
  \\
  or
  \item
-$\forall n\in\mathbb{N}. \forall f_1,...f_n.$\\
+$\forall n\in\mathbb{N}. \forall f_1,...f_n.$
+% \\
 $
 [\ \ \interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha \ \ \  \Longrightarrow \ \ \ \satisfiesA{M} {\sigma} {\internal{{\interpret{\sigma}{\alpha_{o}.f_1...f_{n-1}}}}}\ \ ]$
+\end{itemize}
 \end{itemize}
 \item
 $\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$  \ \ \ iff \\
@@ -195,13 +199,9 @@ $\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$  \ \ \ iff \\
   \satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}
  \ \  ]$
  \end{enumerate}
- \end{definition}\footnote{Do we need that $\alpha \neq \alpha_{o}$?}
+ \end{definition} 
 
-\vspace{.5cm}
-
- 
-
-
+% \vspace{.5cm}
 \footnote{JAMES' comment: If is possible that "we" do not know the complete heap (eg we only know about the green stuff.) how do we know whether an object is protected. The answer is that we do not know that it is protected, but we do know that our code guarnartees poreservation of protectedness.
 %Nevertheless, if the objecta are "riobust" then we can prove that some properties will be preserved. 
 }
@@ -213,6 +213,7 @@ would break the intended guarantees of the API. Such objects need to remain conf
 such an example in Section \ref{s:examples}. 
 }
 \footnote{{\textbf{TODO} make the connection with domination}}
+\footnote{SD Can we think of a better name than protection? \kjx{encapsulation}\sdN{No, encapsulation not good}}
 
 Figure \ref{fig:ProtectedFrom} illustrates the concept of an object being protected from another object. All the pink objects are external, and the green objects are internal. The left pane shows the objects that are protected from $o_5$\footnote{QUESTION: should we write $5$ or $o_5$?}, the middle pane shows the objects protected from $o_7$, and the right pane shows the objects protected from $o_2$. We highlight the protected objects in yellow. Thus, all objects except $o_6$ are protected from $o_5$;\ all objects expect $o_8$ are protected from $o_7$;\ and all objects except $o_3$, $o_6$, $o_7$, and $o_8$ are protected from $o_2$. 
 
@@ -270,10 +271,10 @@ $\satisfiesA{M}{\sigma} {\inside {\re}}$  \ \ \ iff \ \ \
 \item
 {$\forall \alpha.[ \  \LRelevant {\alpha}  {\sigma}\ \Longrightarrow \ \  \satisfiesA{M}{\sigma}{\protectedFrom{\re} {{\alpha}}}\ ] $}, \ \ \ and 
 \item
-$\satisfiesA{M}{\sigma}{\external{\prg{this}}}\ \ \Longrightarrow\ \ \forall x\in \sigma.\satisfiesA{M}{\sigma}{x\neq \re}$
+$\satisfiesA{M}{\sigma}{\external{\prg{this}}}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
 \end{enumerate}
 \end{enumerate}
-\end{definition}\footnote{define TOPFRAME}
+\end{definition} 
  
 % TODO explain
   Figure \ref{fig:Protected} illustrates the concept of protection. The heap in all three panes is the same as that from  Fig \ref{fig:LReachable}, and 
@@ -313,17 +314,34 @@ The locally reachable objects from $\phi_1$ were highlighted in the middle pane 
 We highlight the protected objects in each pane with a golden hallo.
  Note that $o_3$ is protected from $\phi_2$, but is not protected from $\phi_3$. This is so, because \prg{this} in $\phi_3$ is external, and  $o_3$ is an argument to the call. That means, that during the call, $o_7$ may obtain unmitigated access (permission?) to $o_3$. 
  
-Under some circumstances, "relative protection" ($o$ is protected from $o'$) implies absolute protection ($o$ is proetcted).
-The lemma below says that if we make a method call, and if an object $o$ is protected from  the receiver and arguments of that method call, then in the context of this method call, $o$ is proected.
+ \subsection{Assertion preservation}
+ 
+\sdN{ In this section we discuss preservations of assertions' satisfaction   by substitution (Lemma \ref{lemma:vars:to:addresses}), or by pushing new frames onto the stack (Lemma \ref{lemma:rel:abs:prot}).
+ }
+ 
+ \sdN{ The following lemma says that the validity of an assertion $A$ in the context of a state $\sigma$ is equivalent to the 
+ validity of the assertion resulting  from substituting free variables according to the top frame ($A[\sigma]$)}
+  
+ \sdN{ \begin{lemma}
+ \label{lemma:vars:to:addresses}
+  For any  module $M$, state $\sigma$, and assertion $A:$
+  \begin{itemize}
+ \item
+   $ \satisfiesA {M} {\sigma}  {A}\ \ \ \Longleftrightarrow \ \ \ \  \satisfiesA {M} {\sigma}  {A[\sigma]}$
+ \end{itemize}
+\end{lemma}
+}
+ 
+Under some circumstances, "relative protection" ($o$ is protected from $o'$) implies absolute protection ($o$ is protected).
+The lemma below says that if we make a method call, and if an object $o$ is protected from  the receiver and arguments of that method call, then in the context of this method call, $o$ is protected.
 %$\oveline z$,  \textbf{TODO: praise the lemma below}
  
  
  
  \begin{lemma}
  \label{lemma:rel:abs:prot}
- For any $m$, $\sigma$, $\sigma'$, $\overline z$, and $\alpha$. If $\sigma'$ is the result of pushing $\overline z$ onto the stack frame of $\sigma$,  %\footnote{to define that}, 
- then
- \begin{itemize}
+ For any  module $M$, state $\sigma$, variables $\overline u$ and $\overline z$, address $\alpha$, and statement $s:$.
+  \begin{itemize}
  \item
   $\forall i\in 0..n.[\ \ \satisfiesA{M}{\sigma}{\protectedFrom {\alpha} {z_i} }  \ \ \wedge\ \ 
  [ \  \satisfiesA{M}{\sigma}{\external {z_o}} \ \Longrightarrow\   \satisfiesA{M}{\sigma} {z_i \neq {\alpha}}\ ] \ \  ] $
@@ -332,7 +350,7 @@ The lemma below says that if we make a method call, and if an object $o$ is prot
 % $\forall i\in 0..n.[\ \satisfiesA{M}{\sigma}{\protectedFrom {\alpha} {z_i} }\ ] \ \ \wedge\ \ 
 % [ \  \satisfiesA{M}{\sigma}{\external {z_o}} \ \Longrightarrow\  \forall i\in 0..n.(\ \satisfiesA{M}{\sigma} {z_i} {\alpha}\ )\  \  ] $ \\
   $ \Longrightarrow$ \\
-   $ \satisfiesA {M} {\sigma'} {\inside {\alpha}}$
+  \sdN{ $ \satisfiesA {M} {\Push {u} {\interpret  {\sigma}{z}} {s} {\sigma} } {\inside {\alpha}}$ }
  \end{itemize}
 \end{lemma}
  
