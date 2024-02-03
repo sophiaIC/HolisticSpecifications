@@ -2,9 +2,9 @@
  \newcommand{\atoms}{atoms\xspace}  
  \newcommand{\pushSymbol}{\bigtriangledown} % {{\blacktriangledown}}
   \newcommand{\popSymbol}{\bigtriangleup} %{{\blacktriangle}}
-\newcommand{\Push}[4] {\ensuremath{  #4 \pushSymbol  (\overline{#1 \mapsto #2}, #3)}}
-\newcommand{\Pushes}[2] {\ensuremath{ #2  \pushSymbol (\overline{#1})}}
-\newcommand{\Pop}[1] {\ensuremath{ #1 }\popSymbol}
+% \newcommand{\Push}[4] {\ensuremath{  #4 \pushSymbol  (\overline{#1 \mapsto #2}, #3)}}
+\newcommand{\Pushes}[3] {\ensuremath{ #1,   \overline{#2} \pushSymbol  #3}}
+\newcommand{\Pop}[2] {\ensuremath{ #1 \popSymbol  #2}}
 \newcommand{\va}{\ensuremath{\upsilon}}
 \newcommand{\PushA}[4] {\ensuremath{  #1 \vdash #2, {\overline{#3}} \pushSymbol  #4  }}
 \newcommand{\PopA}[3]{  #1 \vdash #2 \popSymbol #3}
@@ -53,11 +53,17 @@ We also adopt the following, less widespread, notations
 \begin{itemize}
 \item The substitution $A[\sigma]$ replaces in $A$ all its free variables, $\overline x$, by their values,  $\overline{\interpret{\sigma}{x}}$.
 \item 
-$\Push{z}{\alpha}{s}{\sigma}$ pushes onto the stack of $\sigma$ a new frame, with the local variable mapping   
-$\overline {z \mapsto{\alpha}}$ and  continuation $s$,  and leaves the heap unmodified. It corresponds to the first step of a  method call, and is defined only if $z_0$ is \prg{this}, and   $\overline {z}$ has the same cardinality as  $\overline {\alpha}$. And
-$ \Pushes {\alpha} {\sigma}$ is the set of states, $\sigma'$ such that  $\sigma'=\Push{z}{\alpha}{s}{\sigma}$ for some $\overline z$ and some $s$.
+%$\Push{z}{\alpha}{s}{\sigma}$ pushes onto the stack of $\sigma$ a new frame, with the local variable mapping   
+%$\overline {z \mapsto{\alpha}}$ and  continuation $s$,  and leaves the heap unmodified. It corresponds to the first step of a  method call, and is defined only if $z_0$ is \prg{this}, and   $\overline {z}$ has the same cardinality as  $\overline {\alpha}$. And
+$ \Pushes  {\sigma} {\alpha} {\sigma'}$ holds if  $\sigma'$ is obtained out of $\sigma$ by pushing onto the stack of $\sigma$ a new frame, with the local variable mapping   to $\overline \alpha$ and some continuation, and leaving the heap unmodified. When it
+holds, then $\sigma'$ is the next state after a method call in $\sigma$.
+%$\overline {z \mapsto{\alpha}}$ and  continuation $s$,  and leaves the heap unmodified.
+% such that  $\sigma'=\Push{z}{\alpha}{s}{\sigma}$ for some $\overline z$ and some $s$.
 \item
-$\Pop{\sigma}$ is the  state which results out   out of popping the top frame on the stack of $\sigma$, and leaving heap unmodified. It corresponds to method return.
+We oveload the notation to allow for atoms, so that $\Pushes  {\sigma} {\va} {\sigma'}$  stands for $\Pushes  {\sigma} {\interpret \sigma \va} {\sigma'}$.
+\item
+$\Pop{\sigma}{\sigma'}$ holds when  $\sigma'$ is the  state which results out   out of popping the top frame on the stack of $\sigma$, and leaving heap unmodified. When it
+holds, then $\sigma'$ is the next state after a method return $\sigma$.
 \item
 $C\in M$ means that class $C$ is in the domain of module $M$. 
 % perhaps we do not need to expose the below
@@ -217,15 +223,15 @@ the premise  that the arguments of the call, $\overline o$, are locally reachabl
 
 \begin{lemma}
 \label{lemma:relevant}
-For all modules $M$, states $\sigma$, $\sigma'$, for all objects $o$, ${\overline o}:$\footnote{\sdN{TODO decide whether $o$ or $\alpha$}}
+For all modules $M$, states $\sigma$, $\sigma'$, for all objects $o$, atoms ${\overline \va}:$\footnote{\sdN{TODO decide whether $o$ or $\alpha$}}
 %and  variables ${\overline z}$, and statements $s:$
 \begin{enumerate}
 \item
 $ \LRelevant \alpha \sigma\ \ \Longrightarrow \ \   \GRelevant \alpha \sigma$
 \item
-$M, \sigma  \leadsto^*   {\sigma'} \ \wedge \  \GRelevant o {\sigma'} \ \wedge \ o\in dom(\sigma) \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$
+$\GRelevant o {\sigma'} M\ \ \wedge\ \  \sigma  \leadsto^*   {\sigma'} \ \wedge \ \sdN{o\in \sigma} \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$
 \item
-\sdN{$\LRelevant {\overline o} {\sigma} \ \ \wedge \sigma'\in \Pushes{o} {\sigma}\ \ \wedge \  \LRelevant o {\sigma'} \ \ \ \Longrightarrow \ \ \  \LRelevant o {\sigma}$
+\sdN{$\LRelevant {\overline o} {\sigma} \ \ \wedge\ \   \Pushes {\sigma} {\va} {\sigma'} \ \ \wedge \  \LRelevant o {\sigma'} \ \ \ \Longrightarrow \ \ \  \LRelevant o {\sigma}$
 }
 \end{enumerate}
 \end{lemma}
@@ -267,13 +273,14 @@ The lemma below is the counterpart to lemma \ref{lemma:relevant} --  with the di
 
 \begin{lemma}
 \label{lemma:relevant:after:bounded}
-For all states $\sigma$, $\sigma'$, and $\sigma''$,for all objects $o$, and for all modules  $M$:
+{For all states $\sigma$, $\sigma'$, and $\sigma''$,for all objects $o$, and for all modules  $M$:
 \begin{itemize}
 \item
-${\leadstoBoundedStar {M}  {\sigma} {\sigma''} {\sigma'}} \ \ \wedge \ \  \GRelevant o {\sigma'} \ \ \wedge\ \ o\in dom(\sigma)\ \ \ \Longrightarrow \ \  \ \GRelevant o {\sigma}$.
+${\leadstoBoundedStar {M}  {\sigma} {\sigma''} {\sigma'}} \ \ \wedge \ \  \GRelevant o {\sigma'} \ \ \wedge\ \  \sdN{o\in \sigma} \ \ \ \Longrightarrow \ \  \ \GRelevant o {\sigma}$.
 \item
-${\leadstoBoundedStar {M}  {\sigma}  {\sigma} {\sigma'}} \ \ \wedge \ \   \LRelevant o {\sigma'}\  \ \wedge\ \ o\in dom(\sigma)\ \ \ \Longrightarrow \ \ \ \LRelevant o {\sigma}$.
+${\leadstoBoundedStar {M}  {\sigma}  {\sigma} {\sigma'}} \ \ \wedge \ \   \LRelevant o {\sigma'}\  \ \wedge\ \  \sdN{o\in \sigma} \ \ \ \Longrightarrow \ \ \ \LRelevant o {\sigma}$.
 \end{itemize}
+}
 \end{lemma}
 
 \sdN{Consider Fig.  \ref{fig:UpSemantics}, the lemma above promises that any objects locally reachable in $\sigma_{14}$ which already existed in $\sigma_{8}$, were locally accessible in $\sigma_{8}$. However, the lemma is only  applicable to bounded execution, and as 
