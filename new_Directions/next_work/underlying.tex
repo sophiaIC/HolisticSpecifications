@@ -25,23 +25,22 @@ Execution takes place in the context of  a module $M$ and   a state $\sigma$, de
    $M, \sigma \leadsto \sigma'$. \ \
 The   top frame's continuation contains the statement to be  executed next.  
 
-
-
 \sdN{
 \paragraph{Notation and Naming conventions} We adopt the following, un-surprising, notation:
-% OOPSLA, where
 \begin{itemize}
 \item
 $\alpha$, $\alpha'$, $\alpha_1$, ... are addresses,   $x$, $x'$, $x_1$, ..., $y$, ... $z$, ... are variables, and $\va$, $\va'$ ... are either addresses or variables, we call these \emph{\atoms}.
 \item
-Simple expression, $e$, are defined in Def. \ref{def:assert:syntax}. They are simple expressions, which may contain variables, addresses, field look-ups, as well as ghost-field look-ups, but \emph{not} method calls.
+Assertions, $A$, and simple expression, $e$, are described in Def. \ref{def:assert:syntax}. $A$'s support  the usual connectives as well as connectives about pretection. $e$'s may contain variables, addresses, field look-ups, and ghost-field look-ups, but \emph{not} method calls; the may appear in assertions, and \emph{not} in code.
 \item
-$\alpha \in \sigma$ means that $\alpha$ is defined in the heap of $\sigma$, and $x\in \sigma$ means that $x$ is defined in the top frame of $\sigma$. Conversely, $\alpha$ is fresh, resp.$x$ is fresh in $\sigma$   in $\sigma$ means that $\alpha\notin\sigma$, resp. $x\notin\sigma$, and $x$ is fresh in assertion $A$ means that $x$ does not appear free in $A$.
+$\alpha \in \sigma$ means that $\alpha$ is defined in the heap of $\sigma$, and $x\in \sigma$ means that $x$ is defined in the top frame of $\sigma$, and $x\in A$ means that $x$ appears free $A$. Conversely, % $\alpha$ is fresh, resp.$x$ is fresh in $\sigma$   in $\sigma$ means that 
+ $\alpha\notin\sigma$, resp. $x\notin\sigma$, and $\va \notin A$ have the obvious meaning.
 \item
 $\interpret{\sigma}{\alpha}$  is $\alpha$; and $\interpret{\sigma}{x}$  is the value to which  $x$  is mapped in the top-most frame of $\sigma$'s stack; 
 and $\interpret{\sigma}{e.f}$ looks up in $\sigma$'s heap the value of $f$ for the object  $\interpret{\sigma}{e}$.
-Note that $\interpret{\sigma}{e}$ is not defined when $e$ contains a method call ot a ghost field.
-\item The substitution  $\sigma[x \mapsto \alpha]$ is applied to the top frame of $\sigma$, and $\sigma[\overline{x \mapsto \alpha}]$ applies the substitutions $\overline{x \mapsto \alpha}$ to the top frame.
+Note that $\interpret{\sigma}{e}$ is not defined when $e$ contains a method call or a ghost field.
+\item The substitution  $\sigma[x \mapsto \alpha]$ is applied to the top frame of $\sigma$, and $\sigma[\overline{x \mapsto \alpha}]$ % applies the substitutions $\overline{x \mapsto \alpha}$ to the top frame.
+has the expected meaning.
 \end{itemize}
 }
 
@@ -49,19 +48,18 @@ Note that $\interpret{\sigma}{e}$ is not defined when $e$ contains a method call
 \sdN{
 We also adopt the following, less widespread, notations
 \begin{itemize}
-\item The substitution $A[\sigma]$ replaces in $A$ all its free variables, $\overline x$, by their values,  $\overline{\interpret{\sigma}{x}}$.
+% probably not needed, or at most needed only in soundness section.
+% \item The substitution $A[\sigma]$ replaces in $A$ all its free variables, $\overline x$, by their values,  $\overline{\interpret{\sigma}{x}}$.
 \item 
 %$\Push{z}{\alpha}{s}{\sigma}$ pushes onto the stack of $\sigma$ a new frame, with the local variable mapping   
 %$\overline {z \mapsto{\alpha}}$ and  continuation $s$,  and leaves the heap unmodified. It corresponds to the first step of a  method call, and is defined only if $z_0$ is \prg{this}, and   $\overline {z}$ has the same cardinality as  $\overline {\alpha}$. And
-$ \Pushes  {\sigma} {\alpha} {\sigma'}$ holds if  $\sigma'$ is obtained out of $\sigma$ by pushing onto the stack of $\sigma$ a new frame, with the local variable mapping   to $\overline \alpha$ and some continuation, and leaving the heap unmodified. When it
-holds, then $\sigma'$ is the next state after a method call in $\sigma$.
-%$\overline {z \mapsto{\alpha}}$ and  continuation $s$,  and leaves the heap unmodified.
-% such that  $\sigma'=\Push{z}{\alpha}{s}{\sigma}$ for some $\overline z$ and some $s$.
+$ \Pushes  {\sigma} {\alpha} {\sigma'}$ holds if  $\sigma'$ is obtained by pushing onto the stack of $\sigma$ a new frame, with some continuations and some local variable map with range  $\overline \alpha$, and leaving the heap unmodified --
+  $\sigma'$ is the next state after a method call in $\sigma$.
 \item
-We oveload the notation to allow for atoms, so that $\Pushes  {\sigma} {\va} {\sigma'}$  stands for $\Pushes  {\sigma} {\interpret \sigma \va} {\sigma'}$.
+%We overload the notation to allow for atoms, so that
+ $\Pushes  {\sigma} {\va} {\sigma'}$  stands for $\Pushes  {\sigma} {\interpret \sigma \va} {\sigma'}$.
 \item
-$\Pop{\sigma}{\sigma'}$ holds when  $\sigma'$ is the  state which results out   out of popping the top frame on the stack of $\sigma$, and leaving heap unmodified. When it
-holds, then $\sigma'$ is the next state after a method return $\sigma$.
+$\Pop{\sigma}{\sigma'}$ holds when  $\sigma'$ is the  state which results out   out of popping the top frame on the stack of $\sigma$, and leaving heap unmodified -- $\sigma'$ is the next state after a method return $\sigma$.
 \item
 $C\in M$ means that class $C$ is in the domain of module $M$. 
 % perhaps we do not need to expose the below
@@ -100,16 +98,9 @@ In particular, the code to be executed by a method call is kept in a continuatio
  horizontal $\leadsto$-arrows denote   steps  within the same  call; upwards arrows denote  method calls;
  %(pushing a new frame onto the stack);  
  downwards arrows denote method returns. % (popping the top of the stack). 
- Here,   $\leadstoOrig M {\sigma_8}   {\sigma_9} $ is a step within the same call, $\leadstoOrig M {\sigma_9}   {\sigma_{10}} $ is a method call  %(say a call to $m_a$), 
+ Here,   $\leadstoOrig M {\sigma_8}   {\sigma_9} $ is a step within the same call, $\leadstoOrig M {\sigma_9}   {\sigma_{10}} $ is a method call   
 with $\leadstoOrig M {\sigma_{12}}   {\sigma_{13}} $ %is a method return  (from the call to $m_a$), 
-the corresponding return. %, while  $\leadstoOrig M {\sigma_{16}}   {\sigma_{17}} $ is another  method call  %(say a call to $m_b$),  and 
-%with $\leadstoOrig M {\sigma_{18}}   {\sigma_{19} }$ the corresponding return.
-}
-%is another  method call  (from the call to $m_b$).}
-% for example  we depict a case where we are executing a method (say $m_a$), which eventually calls another method (say $m_b$), and which in tis turn calls a further method (say $m_c$): We start at $\sigma_1$ and in one step we reach $\sigma_2$, which is a method  call  to $m_b$. 
-%This leads to state $\sigma_3$, and after another step we reach $\sigma_5$, which is a method call to $m_c$, 
-%leading to state $\sigma_5$ and $\sigma_6$. 
-%The latter is the return, leading to $\sigma_7$, which again, is a return, leading to $\sigma_8$.}
+the corresponding return. }
 
 \begin{figure}[htb]
 \begin{tabular}{|c|}
