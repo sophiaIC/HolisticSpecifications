@@ -348,8 +348,8 @@ Module LanguageDefinition.
   | a_and : asrt -> asrt -> asrt
   | a_or : asrt -> asrt -> asrt
   | a_neg : asrt -> asrt
-  | a_all : asrt -> asrt
-  | a_ex : asrt -> asrt
+  | a_all : cls -> asrt -> asrt
+  | a_ex : cls -> asrt -> asrt
 
   | a_intl : exp -> asrt
   | a_extl : exp -> asrt

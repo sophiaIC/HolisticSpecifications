@@ -62,8 +62,8 @@ Module Hoare.
           | A1 ∧ A2 => (sbst' A1 x e) ∧ (sbst' A2 x e)
           | A1 ∨ A2 => (sbst' A1 x e) ∨ (sbst' A2 x e)
           | ¬ A' => ¬ (sbst' A' x e)
-          | a_all A' => a_all (sbst' A' x e)
-          | a_ex A' => a_ex (sbst' A' x e)
+          | a_all C A' => a_all C (sbst' A' x e)
+          | a_ex C A' => a_ex C (sbst' A' x e)
 
           | a_intl e' => a_intl ([e /s x] e')
           | a_extl e' => a_extl ([e /s x] e')
@@ -101,8 +101,8 @@ Module Hoare.
           | A1 ∧ A2 => (sbst' A1 acc x) ∧ (sbst' A2 acc x)
           | A1 ∨ A2 => (sbst' A1 acc x) ∨ (sbst' A2 acc x)
           | ¬ A' => ¬ (sbst' A' acc x)
-          | a_all A' => a_all (sbst' A' acc x)
-          | a_ex A' => a_ex (sbst' A' acc x)
+          | a_all C A' => a_all C (sbst' A' acc x)
+          | a_ex C A' => a_ex C (sbst' A' acc x)
 
           | a_intl e => a_intl ([x /s acc] e)
           | a_extl e => a_extl ([x /s acc] e)
@@ -141,8 +141,8 @@ Module Hoare.
     | a_prt x => false
     | A1 ∧ A2 => prt_free A1 && prt_free A2
     | A1 ∨ A2 => prt_free A1 && prt_free A2
-    | a_all A => prt_free A
-    | a_ex A => prt_free A
+    | a_all C A => prt_free A
+    | a_ex C A => prt_free A
     | ¬ A => prt_free A
     | _ => true
     end.
@@ -161,10 +161,10 @@ Module Hoare.
   | lift_and : forall A1 A2 zs ys A1' A2', lift A1 zs ys A1' ->
                                       lift A2 zs ys A2' ->
                                       lift (A1 ∧ A2) zs ys (A1' ∧ A2')
-  | lift_all : forall A zs ys A', lift A zs ys A' ->
-                             lift (a_all A) zs ys (a_all A')
-  | lift_ex : forall A zs ys A', lift A zs ys A' ->
-                            lift (a_ex A) zs ys (a_ex A')
+  | lift_all : forall A zs ys C A', lift A zs ys A' ->
+                               lift (a_all C A) zs ys (a_all C A')
+  | lift_ex : forall A zs ys C A', lift A zs ys A' ->
+                              lift (a_ex C A) zs ys (a_ex C A')
   | lift_neg : forall A zs ys A', prt_free A = true ->
                              lift A zs ys A' ->
                              lift (¬ A) zs ys (¬ A').
@@ -179,8 +179,8 @@ Module Hoare.
     | ¬ A => if prt_free A
             then ¬ (lower A)
             else a_true
-    | a_all A => a_all (lower A)
-    | a_ex A => a_ex (lower A)
+    | a_all C A => a_all C (lower A)
+    | a_ex C A => a_ex C (lower A)
     | _ => a_true
     end.
 
@@ -192,9 +192,20 @@ Module Hoare.
   | h_base : forall M P s Q, hoare_base M P s Q ->
                         M ⊢ ⦃ P ⦄ s ⦃ Q ⦄
 
-  | h_class : forall M e C s, M ⊢ ⦃ a_ e_class e C ⦄ s ⦃ a_ e_class e C ⦄
 
-  | h_read_extl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
+  (*
+
+because our HL only considers internal code, and field access is module protected,
+we know that any field access we do will not expose anything to external code.
+(the above is also true of field writes)
+
+Because of this, we can preserve the usual assignment rule from HL.
+
+   *)
+
+  | h_read : forall M x y f P, M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x y f ⦃ P ⦄
+
+(*  | h_read_extl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
 
   | h_read_intl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_intl e) ⦄ s_read x y f ⦃ a_intl e ⦄
 
@@ -202,7 +213,7 @@ Module Hoare.
                                        s_read x y f
                                        ⦃ a_prt_frm (e_ z) (e_ z') ⦄
 
-  | h_read_prt : forall M x y f z, M ⊢ ⦃ [e_ y∙f /s x] a_prt z ⦄ s_read x y f ⦃ a_prt z ⦄
+  | h_read_prt : forall M x y f z, M ⊢ ⦃ [e_ y∙f /s x] a_prt z ⦄ s_read x y f ⦃ a_prt z ⦄*)
 
   | h_strengthen : forall M s P1 P2 Q, M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ ->
                                   M ⊢ P2 ⊆ P1 ->
@@ -224,24 +235,20 @@ Module Hoare.
                                                   (s_call x y m ps)
                                                   ⦃ [e_ x /s result] post mDef ⦄
 
-  | h_new : forall M x C, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_class (e_ x) C ⦄
-
-  | h_new_fld : forall M x C f, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_ e_ x∙f ⩵ e_null ⦄
-
   | h_new_prt_frm1 : forall M x C y z, M ⊢ ⦃ a_prt_frm y z ⦄ (s_new x C) ⦃ a_prt_frm y z ⦄
 
-  | h_new_prt_frm2 : forall M x C y,  M ⊢ ⦃ ¬ a_ e_ y ⩵ e_ this ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) (e_ y) ⦄
+  | h_new_prt_frm2 : forall M x C y,  M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) (e_ y) ⦄
 
   | h_new_prt1 : forall M x C y, M ⊢ ⦃ a_prt y ⦄ (s_new x C) ⦃ a_prt y ⦄
 
-  | h_new_prt2 : forall M x C, M ⊢ ⦃ a_intl (e_ this)⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄.
+  | h_new_prt2 : forall M x C, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄.
 
   Print HoareTriple.
   Print Subst.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {
-      triple := hoare
+      triple := hoare_extension
     }.
 
   Inductive hoare_stmts : HoareTriple stmts :=
