@@ -30,6 +30,7 @@ Module Assert.
     | _ => None
     end.
 
+(*
   Inductive path_to : config -> var -> addr -> Prop :=
   | path_fld : forall σ x f α, interpret_f σ x f = Some (v_addr α) ->
                           path_to σ x α
@@ -38,6 +39,7 @@ Module Assert.
                                      χ α' = Some o ->
                                      o_flds o f = Some (v_addr α) ->
                                      path_to σ x α.
+*)
 
   (* TODO: relevant definition *)
   Definition reachable (α : addr)(ϕ : frame)(σ : config) : Prop :=
@@ -238,7 +240,13 @@ The above relies on the fact that "this" is always in the local variable map
                                                 eval M σ e_orig (v_addr α_orig) ->
                                                 interpret_αp p σ α_orig = Some (v_addr α) ->
                                                 ~ is_protected_path M σ α_orig p ->
-                                                nsat M σ (a_prt_frm e e_orig).
+                                                nsat M σ (a_prt_frm e e_orig)
+
+
+  (*
+TODO:
+M ⊢ {P1 /\ P2} s {Q1 /\ Q2}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   *).
 
 
   Scheme sat_mut_ind := Induction for sat Sort Prop

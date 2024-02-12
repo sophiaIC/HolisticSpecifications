@@ -372,7 +372,11 @@ Module LanguageDefinition.
 
   (***
       Core Language Definitions
-  ***)
+   ***)
+
+  (**
+     TODO: list of pres and posts in methDef
+   **)
 
   Record methDef := meth{
                         pre : asrt;
