@@ -385,7 +385,18 @@ Module LanguageDefinition.
                             c_fields : partial_map fld ty;
                             c_meths : partial_map mth methDef}.
 
-  Definition module := partial_map cls classDef.
+  Inductive l_spec :=
+  | S_inv : list (var * cls) -> asrt -> asrt -> l_spec
+  | S_and : l_spec -> l_spec -> l_spec.
+
+  Definition module := (l_spec * (partial_map cls classDef)) %type.
+
+  Inductive defined_spec : module -> l_spec -> Prop :=
+  | spec_base : forall S Cdefs, defined_spec (S, Cdefs) S
+  | spec_and1 : forall S S1 S2 Cdefs, defined_spec (S1, Cdefs) S ->
+                                 defined_spec (S_and S1 S2, Cdefs) S
+  | spec_and2 : forall S S1 S2 Cdefs, defined_spec (S2, Cdefs) S ->
+                                 defined_spec (S_and S1 S2, Cdefs) S.
 
   Record object := obj{o_cls : cls;
                         o_flds : partial_map fld val}.

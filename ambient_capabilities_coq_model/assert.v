@@ -52,7 +52,7 @@ Module Assert.
   Inductive is_protected_path : module -> config -> addr -> path -> Prop :=
   | is_prot1 : forall M σ α_orig f1 f2 α1 o, interpret_αf σ α_orig f1 = Some (v_addr α1) ->
                                         fst σ α1 = Some o ->
-                                        (o_cls o) ∈ M ->
+                                        (o_cls o) ∈ snd M ->
                                         is_protected_path M σ α_orig (p_cons f1 (p_fld f2))
 
   | is_protn : forall M σ α_orig f p α, interpret_αf σ α_orig f = Some (v_addr α) ->
@@ -135,11 +135,11 @@ Module Assert.
                           sat M σ (a_ex C A)
 
   | sat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                          C ∈ M ->
+                          C ∈ snd M ->
                           sat M σ (a_intl e)
 
   | sat_extl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                          ~ C ∈ M ->
+                          ~ C ∈ snd M ->
                           sat M σ (a_extl e)
 
   (*
@@ -214,11 +214,11 @@ The above relies on the fact that "this" is always in the local variable map
                          nsat M σ (a_ex C A)
 
   | nsat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                           ~C ∈ M ->
+                           ~C ∈ snd M ->
                            nsat M σ (a_intl e)
 
   | nsat_extl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                           C ∈ M ->
+                           C ∈ snd M ->
                            nsat M σ (a_extl e)
 
   | nsat_prt_from1 : forall M σ e e_orig, (forall v α, eval M σ e v ->
