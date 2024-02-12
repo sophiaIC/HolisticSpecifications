@@ -9,7 +9,6 @@ Require Export operational_semantics.
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
 
-
 Module Assert.
 
   Import LanguageDefinition.
@@ -31,6 +30,7 @@ Module Assert.
     | _ => None
     end.
 
+(*
   Inductive path_to : config -> var -> addr -> Prop :=
   | path_fld : forall σ x f α, interpret_f σ x f = Some (v_addr α) ->
                           path_to σ x α
@@ -39,6 +39,7 @@ Module Assert.
                                      χ α' = Some o ->
                                      o_flds o f = Some (v_addr α) ->
                                      path_to σ x α.
+*)
 
   (* TODO: relevant definition *)
   Definition reachable (α : addr)(ϕ : frame)(σ : config) : Prop :=
@@ -53,7 +54,7 @@ Module Assert.
   Inductive is_protected_path : module -> config -> addr -> path -> Prop :=
   | is_prot1 : forall M σ α_orig f1 f2 α1 o, interpret_αf σ α_orig f1 = Some (v_addr α1) ->
                                         fst σ α1 = Some o ->
-                                        (o_cls o) ∈ M ->
+                                        (o_cls o) ∈ snd M ->
                                         is_protected_path M σ α_orig (p_cons f1 (p_fld f2))
 
   | is_protn : forall M σ α_orig f p α, interpret_αf σ α_orig f = Some (v_addr α) ->
@@ -97,8 +98,8 @@ Module Assert.
           | ¬ A         => ¬ (sbst' A n α)
           (*)        | A1 ⟶ A2   => (sbst' A1 n α) ⟶ (sbst' A2 n α)*)
 
-          | a_all A    => a_all (sbst' A (S n) α)
-          | a_ex A   => a_ex (sbst' A (S n) α)
+          | a_all C A  => a_all C (sbst' A (S n) α)
+          | a_ex C A   => a_ex C (sbst' A (S n) α)
 
           | a_intl e => a_intl ([α /s n] e)
           | a_extl e => a_extl ([α /s n] e)
@@ -125,35 +126,60 @@ Module Assert.
   | sat_neg : forall M σ A, nsat M σ A ->
                        sat M σ (¬ A)
 
-  | sat_all : forall M σ A, (forall α, glob_reachable α σ ->
-                             sat M σ ([α /s 0] A)) ->
-                       sat M σ (a_all A)
+  | sat_all : forall M σ C A, (forall α, glob_reachable α σ ->
+                               eval M σ (e_class (e_val (v_addr α)) C) v_true ->
+                               sat M σ ([α /s 0] A)) ->
+                         sat M σ (a_all C A)
 
-  | sat_ex : forall M σ α A, glob_reachable α σ ->
-                        sat M σ ([α /s 0] A) ->
-                        sat M σ (a_ex A)
+  | sat_ex : forall M σ α C A, glob_reachable α σ ->
+                          sat M σ ([α /s 0] A) ->
+                          sat M σ (a_exp (e_class (e_val (v_addr α)) C)) ->
+                          sat M σ (a_ex C A)
 
   | sat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                          C ∈ M ->
+                          C ∈ snd M ->
                           sat M σ (a_intl e)
 
   | sat_extl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                          ~ C ∈ M ->
+                          ~ C ∈ snd M ->
                           sat M σ (a_extl e)
 
+  (*
+
+TODO: discuss local variable protection
+
+we need to consider protection from local variables.
+I think the solution here is to require that either
+the "this" object is internal, or the origin or the
+protected object is protected from the all objects
+in the local variable map:
+
+1) if the current object ("this") is internal, then the local variable map is not a concern.
+2) if the origin is protected from the local variable map, then internal computation is required
+   to expose protection.
+3) if the destination is protected from the local variable map, then internal computation is required
+   to expose the protection.
+
+The above relies on the fact that "this" is always in the local variable map
+
+   *)
   | sat_prt_frm : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
                                            eval M σ e_orig (v_addr α_orig) ->
                                            α <> α_orig ->
                                            (forall p, interpret_αp p σ α_orig = Some (v_addr α) ->
                                                  is_protected_path M σ α_orig p) ->
-                                           (forall ϕ ψ x, snd σ = ϕ ;; ψ ->
-                                                     x ∈ local ϕ ->
-                                                     x <> this ->
-                                                     sat M σ (a_prt_frm e (e_ x))) ->
+                                           sat M σ (a_intl (e_ this)) \/
+                                             (forall ϕ ψ x, snd σ = ϕ ;; ψ ->
+                                                       x ∈ local ϕ ->
+                                                       sat M σ (a_prt_frm e (e_ x)) \/
+                                                         sat M σ (a_prt_frm e_orig (e_ x))) ->
                                            sat M σ (a_prt_frm e e_orig)
 
-  | sat_prt_frm_intl : forall M σ e e_orig, sat M σ (a_intl e) ->
-                                       sat M σ (a_prt_frm e e_orig)
+  | sat_prt_frm_intl : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
+                                                eval M σ e_orig (v_addr α_orig) ->
+                                                α <> α_orig ->
+                                                sat M σ (a_intl e) ->
+                                                sat M σ (a_prt_frm e e_orig)
 
   | sat_prt : forall M σ e, (forall α, loc_reachable α σ ->
                              sat M σ (a_prt_frm e (e_val (v_addr α)))) ->
@@ -179,20 +205,22 @@ Module Assert.
   | nsat_neg : forall M σ A, sat M σ A ->
                         nsat M σ (¬ A)
 
-  | nsat_all : forall M σ α A, glob_reachable α σ ->
-                          nsat M σ ([α /s 0] A) ->
-                          nsat M σ (a_all A)
+  | nsat_all : forall M σ α C A, glob_reachable α σ ->
+                            sat M σ (a_exp (e_class (e_val (v_addr α)) C)) ->
+                            nsat M σ ([α /s 0] A) ->
+                            nsat M σ (a_all C A)
 
-  | nsat_ex : forall M σ A, (forall α, glob_reachable α σ ->
-                             nsat M σ ([α /s 0] A)) ->
-                       nsat M σ (a_ex A)
+  | nsat_ex : forall M σ C A, (forall α, glob_reachable α σ ->
+                               eval M σ (e_class (e_val (v_addr α)) C) v_true ->
+                               nsat M σ ([α /s 0] A)) ->
+                         nsat M σ (a_ex C A)
 
   | nsat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                           ~C ∈ M ->
+                           ~C ∈ snd M ->
                            nsat M σ (a_intl e)
 
   | nsat_extl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                           C ∈ M ->
+                           C ∈ snd M ->
                            nsat M σ (a_extl e)
 
   | nsat_prt_from1 : forall M σ e e_orig, (forall v α, eval M σ e v ->
@@ -212,7 +240,13 @@ Module Assert.
                                                 eval M σ e_orig (v_addr α_orig) ->
                                                 interpret_αp p σ α_orig = Some (v_addr α) ->
                                                 ~ is_protected_path M σ α_orig p ->
-                                                nsat M σ (a_prt_frm e e_orig).
+                                                nsat M σ (a_prt_frm e e_orig)
+
+
+  (*
+TODO:
+M ⊢ {P1 /\ P2} s {Q1 /\ Q2}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   *).
 
 
   Scheme sat_mut_ind := Induction for sat Sort Prop
@@ -221,4 +255,3 @@ Module Assert.
   Combined Scheme sat_mutind from sat_mut_ind, nsat_mut_ind.
 
 End Assert.
-

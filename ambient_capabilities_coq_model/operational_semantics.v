@@ -46,7 +46,7 @@ Module OperationalSemantics.
       σ = (χ, frm lcl (s_seq (s_write x f y) s) ;; ψ) ->
       classOf σ this = Some C ->
       classOf σ x = Some C ->
-      M C = Some CDef ->
+      snd M C = Some CDef ->
       c_fields CDef f = Some Tf ->
       typeOf σ y Tf ->
       interpret_x σ x = Some (v_addr l) ->
@@ -58,7 +58,7 @@ Module OperationalSemantics.
       σ = (χ, frm lcl (s_seq (s_call x y m ps) s) ;; ψ) ->
       interpret_x σ y = Some (v_addr l) ->
       classOf σ y = Some C ->
-      M C = Some CDef ->
+      snd M C = Some CDef ->
       c_meths CDef m = Some mDef ->
       typeOf_l σ ps (map snd (params mDef)) ->
       zip_to_map (map fst (params mDef)) ps lcl = Some lcl' ->
@@ -66,7 +66,7 @@ Module OperationalSemantics.
 
   | r_new : forall M σ χ lcl s ψ x C α o CDef flds,
       σ = (χ, frm lcl (s_seq (s_new x C) s) ;; ψ) ->
-      M C = Some CDef ->
+      snd M C = Some CDef ->
       c_fields CDef = flds ->
       o = obj C ((fun _ => Some v_null) ∘ flds) ->
       reduction M σ (⟦ α ↦ o⟧ χ, frm (⟦ x ↦ v_addr α ⟧ lcl) s ;; ψ)
