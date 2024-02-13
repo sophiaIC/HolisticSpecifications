@@ -5,6 +5,7 @@ Require Import Bool.
 Require Import CpdtTactics.
 Require Import common.
 Require Import language_def.
+Require Import subst.
 Require Import assert.
 Require Export operational_semantics.
 Require Import assert_theory.
@@ -17,7 +18,11 @@ Module Hoare.
   Import LanguageDefinition.
   Import OperationalSemantics.
   Import Assert.
+  Import SubstDefn.
   Import AssertTheory.
+
+  Declare Scope hoare_scope.
+  Open Scope assert_scope.
 
   (** * Hoare Semantics *)
   Inductive big_step : module -> config -> config -> Prop :=
@@ -29,87 +34,12 @@ Module Hoare.
                               big_step M σ1 σ2.
 
   Definition hoare_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
-    forall χ lcl s' ψ χ' lcl', big_step M (χ, frm lcl (s_seq s s') ;; ψ) (χ', frm lcl' s' ;; ψ) ->
-                          sat M (χ, frm lcl (s_seq s s') ;; ψ) P ->
-                          sat M (χ', frm lcl' s' ;; ψ) Q.
+    forall χ lcl s' ψ χ' lcl',
+      big_step M (χ, frm lcl (s_seq s s') ;; ψ) (χ', frm lcl' s' ;; ψ) ->
+      sat M (χ, frm lcl (s_seq s s') ;; ψ) P ->
+      sat M (χ', frm lcl' s' ;; ψ) Q.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_semantics M P s Q)(at level 40).
-
-  #[global] Instance exp_subst : Subst exp var exp:=
-    {
-      sbst :=
-        fix sbst' e x e' :=
-          match e with
-          | e_var y => if eqb x y
-                        then e'
-                        else e_var y
-          | e_fld e0 f => e_fld (sbst' e0 x e') f
-          | e_class e0 C => e_class (sbst' e0 x e') C
-          | e_ghost e0 g e1 => e_ghost (sbst' e0 x e') g (sbst' e1 x e')
-          | e_if e0 e1 e2 => e_if (sbst' e0 x e') (sbst' e1 x e') (sbst' e2 x e')
-          | _ => e
-          end
-    }.
-
-  #[global] Instance asrt_subst : Subst asrt var exp:=
-    {
-      sbst :=
-        fix sbst' A x e :=
-          match A with
-          | a_exp e' => a_exp ([e /s x] e')
-
-          | A1 ∧ A2 => (sbst' A1 x e) ∧ (sbst' A2 x e)
-          | A1 ∨ A2 => (sbst' A1 x e) ∨ (sbst' A2 x e)
-          | ¬ A' => ¬ (sbst' A' x e)
-          | a_all C A' => a_all C (sbst' A' x e)
-          | a_ex C A' => a_ex C (sbst' A' x e)
-
-          | a_intl e' => a_intl ([e /s x] e')
-          | a_extl e' => a_extl ([e /s x] e')
-
-          | a_prt e' => a_prt ([e /s x] e')
-          | a_prt_frm e1 e2 => a_prt_frm ([e /s x] e1) ([e /s x] e2)
-          end
-    }.
-
-  #[global] Instance exp_acc_subst : Subst exp (var * fld) var :=
-    {
-      sbst :=
-        fix sbst' e acc x :=
-          match e with
-          | e_fld e0 f0 => match e0, acc with
-                          | e_ y, (z, f) => if (eqb y z && eqb f0 f)
-                                           then e_ x
-                                           else e
-                          | _, _ => e_fld (sbst' e0 acc x) f0
-                         end
-          | e_class e0 C => e_class (sbst' e0 acc x) C
-          | e_ghost e0 g e1 => e_ghost (sbst' e0 acc x) g (sbst' e1 acc x)
-          | e_if e0 e1 e2 => e_if (sbst' e0 acc x) (sbst' e1 acc x) (sbst' e2 acc x)
-          | _ => e
-          end
-    }.
-
-  #[global] Instance asrt_acc_subst : Subst asrt (var * fld) var:=
-    {
-      sbst :=
-        fix sbst' A acc x :=
-          match A with
-          | a_exp e => a_exp ([x /s acc] e)
-
-          | A1 ∧ A2 => (sbst' A1 acc x) ∧ (sbst' A2 acc x)
-          | A1 ∨ A2 => (sbst' A1 acc x) ∨ (sbst' A2 acc x)
-          | ¬ A' => ¬ (sbst' A' acc x)
-          | a_all C A' => a_all C (sbst' A' acc x)
-          | a_ex C A' => a_ex C (sbst' A' acc x)
-
-          | a_intl e => a_intl ([x /s acc] e)
-          | a_extl e => a_extl ([x /s acc] e)
-
-          | a_prt e => a_prt ([x /s acc] e)
-          | a_prt_frm e1 e2 => a_prt_frm ([x /s acc] e1) ([x /s acc] e2)
-          end
-    }.
 
   Fixpoint zip {A B : Type} (l1 : list A)(l2 : list B) : option (list (A * B)) :=
     match l1, l2 with
@@ -130,7 +60,8 @@ Module Hoare.
   (* Proof Rules *)
 
   Class HoareTriple (A : Type) := triple : module -> asrt -> A -> asrt -> Prop.
-  Notation "M '⊢' '⦃' P '⦄' s '⦃' Q '⦄'" := (triple M P s Q) (at level 40, s at level 59).
+  Notation "M '⊢' '⦃' P '⦄' s '⦃' Q '⦄'" :=
+    (triple M P s Q) (at level 40, s at level 59).
 
   (* Is there a purpose to splitting the internal and external method arguments? *)
 
@@ -151,6 +82,7 @@ Module Hoare.
   | lift_prt : forall x ys A, (forall M y, In y ys ->
                                   M ⊢ A ⊆ (a_prt_frm (e_ x) (e_ y))) ->
                           lift ys A (a_prt (e_ x)).
+
 (*)(*  | lift_eq : forall v v' z ys, lift (a_ v_ v ⩵ v_ v') z ys (a_ v_ v ⩵ v_ v') *)
   | lift_fld : forall x f v z ys, lift (a_ e_ x∙f ⩵ v_ v) z ys (a_ e_ x∙f ⩵ v_ v)
   | lift_prt : forall x z ys, lift (a_prt (e_ x)) z ys (a_prt (e_ x)) (* Discuss: does this make sense? Should we not require that x not be in z or y? *)
@@ -191,18 +123,21 @@ Module Hoare.
 
   Parameter hoare_base : HoareTriple stmt.
 
-  Parameter hoare_read : forall M x y f e, hoare_base M ([e_ y∙f /s x] (a_ e)) (s_read x y f) (a_ e).
+  (* Parameter hoare_read : forall M x y f e,
+      hoare_base M ([e_ y∙f /s x] (a_ e)) (s_read x y f) (a_ e). *)
 
-  Parameter hoare_base_soundness : forall M P s Q, hoare_base M P s Q -> M ⊨ ⦃ P ⦄ s ⦃ Q ⦄.
+  Parameter hoare_base_soundness : forall M P s Q,
+      hoare_base M P s Q -> M ⊨ ⦃ P ⦄ s ⦃ Q ⦄.
 
   Inductive hoare_extension : HoareTriple stmt :=
 
-(** M ⊢_base ⦃ P ⦄ s ⦃ Q ⦄ *)
-(** -----------------------------*)
-(** M ⊢ ⦃ P ⦄ s ⦃ Q ⦄  *)
+  (** M ⊢_base ⦃ P ⦄ s ⦃ Q ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ P ⦄ s ⦃ Q ⦄  *)
 
-  | h_base : forall M P s Q, hoare_base M P s Q ->
-                        M ⊢ ⦃ P ⦄ s ⦃ Q ⦄
+  | h_base : forall M P s Q,
+      hoare_base M P s Q ->
+      M ⊢ ⦃ P ⦄ s ⦃ Q ⦄
 
 
   (*
@@ -215,13 +150,7 @@ Because of this, we can preserve the usual assignment rule from HL.
 
    *)
 
-(** *)
-(** ----------------- *)
-(** M ⊢ ⦃ [y.f / x] P ⦄  ⦃ P ⦄  *)
-
-  | h_read : forall M x y f P, M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x y f ⦃ P ⦄
-
-(*  | h_read_extl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
+  (*  | h_read_extl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_extl e) ⦄ s_read x y f ⦃ a_extl e ⦄
 
   | h_read_intl : forall M x y f e, M ⊢ ⦃ [e_ y∙f /s x] (a_intl e) ⦄ s_read x y f ⦃ a_intl e ⦄
 
@@ -231,97 +160,122 @@ Because of this, we can preserve the usual assignment rule from HL.
 
   | h_read_prt : forall M x y f z, M ⊢ ⦃ [e_ y∙f /s x] a_prt z ⦄ s_read x y f ⦃ a_prt z ⦄*)
 
-(** M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ *)
-(** M ⊢ P2 ⊆ P1 *)
-(** -----------------------------*)
-(** M ⊢ ⦃ P2 ⦄ s ⦃ Q ⦄  *)
+  (** M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ *)
+  (** M ⊢ P2 ⊆ P1 *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ P2 ⦄ s ⦃ Q ⦄  *)
 
-  | h_strengthen : forall M s P1 P2 Q, M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ ->
-                                  M ⊢ P2 ⊆ P1 ->
-                                  M ⊢ ⦃ P2 ⦄ s ⦃ Q ⦄
+  | h_strengthen : forall M s P1 P2 Q,
+      M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ ->
+      M ⊢ P2 ⊆ P1 ->
+      M ⊢ ⦃ P2 ⦄ s ⦃ Q ⦄
 
-(** M ⊢ ⦃ P ⦄ s ⦃ Q1 ⦄ *)
-(** M ⊢ Q1 ⊆ Q2 *)
-(** -----------------------------*)
-(** M ⊢ ⦃ P ⦄ s ⦃ Q2 ⦄  *)
+  (** M ⊢ ⦃ P ⦄ s ⦃ Q1 ⦄ *)
+  (** M ⊢ Q1 ⊆ Q2 *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ P ⦄ s ⦃ Q2 ⦄  *)
 
-  | h_weaken : forall M s P Q1 Q2, M ⊢ ⦃ P ⦄ s ⦃ Q1 ⦄ ->
-                              M ⊢ Q1 ⊆  Q2 ->
-                              M ⊢ ⦃ P ⦄ s ⦃ Q2 ⦄
+  | h_weaken : forall M s P Q1 Q2,
+      M ⊢ ⦃ P ⦄ s ⦃ Q1 ⦄ ->
+      M ⊢ Q1 ⊆  Q2 ->
+      M ⊢ ⦃ P ⦄ s ⦃ Q2 ⦄
 
-(** M ⊢ ⦃ P ∧ e ⦄ s1 ⦃ Q ⦄ *)
-(** M ⊢ ⦃ P ∧ ¬ e ⦄ s2 ⦃ Q ⦄ *)
-(** -----------------------------*)
-(** M ⊢ ⦃ P ⦄ if e then s1 else s2 ⦃ Q ⦄  *)
+  (** M ⊢ ⦃ P1 ⦄ s ⦃ Q1 ⦄ *)
+  (** M ⊢ ⦃ P2 ⦄ s ⦃ Q2 ⦄ *)
+  (** ----------------- *)
+  (** M ⊢ ⦃ P1 ∧ P2 ⦄ s ⦃ Q1 ∧ Q2 ⦄  *)
 
-  | h_if : forall M e s1 s2 P Q, M ⊢ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
-                            M ⊢ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
-                            M ⊢ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄
+  | h_and : forall M P1 P2 s Q1 Q2,
+      M ⊢ ⦃ P1 ⦄ s ⦃ Q1 ⦄ ->
+      M ⊢ ⦃ P2 ⦄ s ⦃ Q2 ⦄ ->
+      M ⊢ ⦃ P1 ∧ P2 ⦄ s ⦃ Q1 ∧ Q2 ⦄
+  (** *)
+  (** ----------------- *)
+  (** M ⊢ ⦃ [y.f / x] P ⦄  ⦃ P ⦄  *)
 
-(** -----------------------------*)
-(** M ⊢ ⦃ w prt-frm x ⦄ y := z.f ⦃ w prt-frm x ⦄  *)
+  | h_read : forall M x y f P,
+      M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x y f ⦃ P ⦄
 
-  | h_write_prt_frm : forall M w x y z f, M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ⦄ s_write y f z ⦃ a_prt_frm (e_ w) (e_ x) ⦄
+  (** M ⊢ ⦃ P ∧ e ⦄ s1 ⦃ Q ⦄ *)
+  (** M ⊢ ⦃ P ∧ ¬ e ⦄ s2 ⦃ Q ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ P ⦄ if e then s1 else s2 ⦃ Q ⦄  *)
 
+  | h_if : forall M e s1 s2 P Q,
+      M ⊢ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
+      M ⊢ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
+      M ⊢ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄
 
-(** -----------------------------*)
-(** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ w prt-frm x ⦄ y := z.f ⦃ w prt-frm x ⦄  *)
 
-  | h_write_prt : forall M x y f z, M ⊢ ⦃ a_prt (e_ x) ⦄ (s_write y f z) ⦃ a_prt (e_ x) ⦄
-
-
-(** -----------------------------*)
-(** M ⊢ ⦃ e1 prt-frm e2 ⦄ x := new C ⦃ e1 prt-frm e2 ⦄ *)
-
-  | h_new_prt_frm1 : forall M x C e1 e2, M ⊢ ⦃ a_prt_frm e1 e2 ⦄ (s_new x C) ⦃ a_prt_frm e1 e2 ⦄
-
-
-(** -----------------------------*)
-(** M ⊢ ⦃ true ⦄ x := new C ⦃ e1 prt-frm e2 ⦄ *)
-
-  | h_new_prt_frm2 : forall M x C e,  M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) e ⦄
-
-
-(** -----------------------------*)
-(** M ⊢ ⦃ prt e ⦄ x := new C ⦃ prt e ⦄ *)
-
-  | h_new_prt1 : forall M x C e, M ⊢ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄
+  | h_write_prt_frm : forall M w x y z f,
+      M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ⦄ s_write y f z ⦃ a_prt_frm (e_ w) (e_ x) ⦄
 
 
-(** -----------------------------*)
-(** M ⊢ ⦃ true ⦄ x := new C ⦃ prt x ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
 
-  | h_new_prt2 : forall M x C, M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄
+  | h_write_prt : forall M x y f z,
+      M ⊢ ⦃ a_prt (e_ x) ⦄ (s_write y f z) ⦃ a_prt (e_ x) ⦄
 
-(** M ⊢ P ⟶ y : C *)
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ e1 prt-frm e2 ⦄ x := new C ⦃ e1 prt-frm e2 ⦄ *)
+
+  | h_new_prt_frm1 : forall M x C e1 e2,
+      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ (s_new x C) ⦃ a_prt_frm e1 e2 ⦄
+
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ true ⦄ x := new C ⦃ e1 prt-frm e2 ⦄ *)
+
+  | h_new_prt_frm2 : forall M x C e,
+      M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) e ⦄
+
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ prt e ⦄ x := new C ⦃ prt e ⦄ *)
+
+  | h_new_prt1 : forall M x C e,
+      M ⊢ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄
+
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ true ⦄ x := new C ⦃ prt x ⦄ *)
+
+  | h_new_prt2 : forall M x C,
+      M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄
+
+  (** M ⊢ P ⟶ y : C *)
   (** C ∈ M *)
   (** C.m.pre = P *)
   (** C.m.post = Q *)
-(** -----------------------------*)
-(** M ⊢ ⦃ [y / this][args / ys] P ⦄ x := y.m(args) ⦃ [y / this][args / ys] Q ⦄*)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ [y / this][args / ys] P ⦄ x := y.m(args) ⦃ [y / this][args / ys] Q ⦄ *)
 
-  | h_int_call : forall M P x y m ps C CDef mDef pSubst, M ⊢ P ⊆ (a_ e_class (e_ y) C) ->
-                                                    snd M C = Some CDef ->
-                                                    c_meths CDef m = Some mDef ->
-                                                    zip (map (fun p => e_ (fst p)) (params mDef)) ps = Some pSubst ->
-                                                    M ⊢ ⦃ P ∧ ([e_ y /s this] (listSubst (pre mDef) pSubst)) ⦄
-                                                      (s_call x y m ps)
-                                                      ⦃ [e_ x /s result] post mDef ⦄
+  | h_int_call : forall M P x y m ps C CDef mDef pre post pSubst,
+      M ⊢ P ⊆ (a_ e_class (e_ y) C) ->
+      snd M C = Some CDef ->
+      c_meths CDef m = Some mDef ->
+      zip (map (fun p => e_ (fst p)) (params mDef)) ps = Some pSubst ->
+      In (pre, post) (spec mDef) ->
+      M ⊢ ⦃ P ∧ ([e_ y /s this] (listSubst pre pSubst)) ⦄
+        (s_call x y m ps)
+        ⦃ [e_ x /s result] [e_ y /s this] (listSubst post pSubst) ⦄
 
-(** M ⊢ P ⟶ extl y *)
+  (** M ⊢ P ⟶ extl y *)
   (** lift (y,ys) p = A1 *)
   (** lower A2 = Q *)
-(** -----------------------------*)
-(** M ⊢ ⦃ P ⦄ x := y.m(args) ⦃ Q ⦄*)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ P ⦄ x := y.m(args) ⦃ Q ⦄*)
 
-  | h_ext_call : forall M P x y m zs Q xCs A1 A2, M ⊢ P ⊆ (a_extl (e_ y)) ->
-                                             lift (y::zs) P A1 ->
-                                             lower A2 = Q ->
-                                             defined_spec M (S_inv xCs A1 A2) ->
-                                               M ⊢ ⦃ P ⦄ (s_call x y m zs) ⦃ Q ⦄.
-
-  Print HoareTriple.
-  Print Subst.
+  | h_ext_call : forall M P x y m zs Q xCs A1 A2,
+      M ⊢ P ⊆ (a_extl (e_ y)) ->
+      lift (y::zs) P A1 ->
+      lower A2 = Q ->
+      defined_spec M (S_inv xCs A1 A2) ->
+      M ⊢ ⦃ P ⦄ (s_call x y m zs) ⦃ Q ⦄.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {
@@ -346,57 +300,87 @@ Because of this, we can preserve the usual assignment rule from HL.
         intros M P s Q Hhoare; induction Hhoare
     end.
 
+  Lemma h_read_sound :
+    forall M P x y f,
+      M ⊨ ⦃ [e_ y ∙ f /s x] P ⦄ s_read x y f ⦃ P ⦄.
+    Proof.
+      intros.
+      unfold hoare_semantics.
+      intros.
+
+      inversion H; subst.
+
+      * 
+    Admitted.
+
+    Lemma h_if_sound :
+       forall M e s1 s2 P Q,
+         M ⊨ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
+         M ⊨ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
+         M ⊨ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄.
+    Proof.
+    Admitted.
+
   Theorem hoare_extension_sound :
     forall M P s Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
                M ⊨ ⦃ P ⦄ s ⦃ Q ⦄.
   Proof.
     induction_hoare.
 
-    (* hoare base *)
-    apply hoare_base_soundness; auto.
+    * (* hoare base *)
+      apply hoare_base_soundness; auto.
 
-    (* read *)
-    admit.
+    * (* strengthening *)
+      unfold hoare_semantics in *; intros.
+      specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
+      apply IHHhoare.
+      apply entails_strengthening with (A1:=P2); auto.
 
-    (* strengthening *)
-    unfold hoare_semantics in *; intros.
-    specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
-    apply IHHhoare.
-    apply entails_strengthening with (A1:=P2); auto.
+    * (* weakening *)
+      unfold hoare_semantics in *; intros.
+      specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
+      apply entails_strengthening with (A1:=Q1); auto.
 
-    (* weakening *)
-    unfold hoare_semantics in *; intros.
-    specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
-    apply entails_strengthening with (A1:=Q1); auto.
+    * (* conjunction *)
+      unfold hoare_semantics in *; intros.
+      specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
+      specialize (IHHhoare0 χ lcl s' ψ χ' lcl' H1).
+      inversion H2; subst; eauto with assert_db.
 
-    (* if *)
-    admit.
+    * (* read *)
+      apply h_read_sound.
 
-    (* prt_frm write *)
-    admit.
+    * (* if *)
+      apply h_if_sound; auto.
 
-    (* prt write *)
-    admit.
+    * (* prt_frm write *)
+      admit.
 
-    (* existing prt_frm new *)
-    admit.
+    * (* prt write *)
+      admit.
 
-    (* new prt_frm *)
-    admit.
+    * (* existing prt_frm new *)
+      admit.
 
-    (* existing prt *)
-    admit.
+    * (* new prt_frm *)
+      admit.
 
-    (* new prt *)
-    admit.
+    * (* existing prt *)
+      admit.
 
-    (* internal call *)
-    admit.
+    * (* new prt *)
+      admit.
 
-    (* external call *)
-    admit.
+    * (* internal call *)
+      admit.
+
+    * (* external call *)
+      admit.
 
   Admitted.
 
+
+  Close Scope assert_scope.
+  Close Scope hoare_scope.
 
 End Hoare.

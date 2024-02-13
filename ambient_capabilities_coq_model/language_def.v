@@ -51,7 +51,7 @@ Module LanguageDefinition.
   Definition e_false := (e_val v_false).
   Definition e_null := (e_val v_null).
 
-  Notation "'v_' v" := (e_var v)(at level 38).
+  Notation "'v_' v" := (e_val v)(at level 38).
   Notation "e ∙ f" := (e_fld e f)(at level 38).
   Notation "'e_' x" := (e_var x)(at level 38).
   Notation "e1 ⩵ e2" := (e_eq e1 e2)(at level 38).
@@ -74,6 +74,51 @@ Module LanguageDefinition.
       eqb := fun f1 f2 =>
                match f1, f2 with
                | f_id n1, f_id n2 => n1 =? n2
+               end
+    }.
+  Next Obligation.
+    intros; destruct a; apply Nat.eqb_refl.
+  Defined.
+  Next Obligation.
+    intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+  Defined.
+  Next Obligation.
+    intros;
+      destruct a1;
+      destruct a2;
+      apply Nat.eqb_eq in H;
+      subst; auto.
+  Defined.
+  Next Obligation.
+    intros;
+      destruct a1;
+      destruct a2;
+      rewrite Nat.eqb_neq in H;
+      crush.
+  Defined.
+  Next Obligation.
+    intros;
+      destruct a1;
+      destruct a2;
+      rewrite Nat.eqb_neq;
+      crush.
+  Defined.
+  Next Obligation.
+    destruct a1 as [n];
+      destruct a2 as [m];
+      destruct (Nat.eq_dec n m) as [Heq|Hneq];
+      subst;
+      auto;
+      right;
+      crush.
+  Defined.
+
+
+  #[global] Program Instance eqbGhost : Eq ghost :=
+    {
+      eqb := fun g1 g2 =>
+               match g1, g2 with
+               | g_id n1, g_id n2 => n1 =? n2
                end
     }.
   Next Obligation.
@@ -374,20 +419,19 @@ Module LanguageDefinition.
       Core Language Definitions
    ***)
 
-  (**
-     TODO: list of pres and posts in methDef
-   **)
-
   Record methDef := meth{
-                        pre : asrt;
-                        post : asrt;
+                        spec : list (asrt * asrt);
                         params : list (var * ty);
                         body : stmts
                       }.
 
-  Record classDef := clazz{c_name : cls;
-                            c_fields : partial_map fld ty;
-                            c_meths : partial_map mth methDef}.
+  Record classDef :=
+    clazz{
+        c_name : cls;
+        c_fields : partial_map fld ty;
+        c_ghosts : partial_map ghost (var * exp);
+        c_meths : partial_map mth methDef
+      }.
 
   Inductive l_spec :=
   | S_inv : list (var * cls) -> asrt -> asrt -> l_spec
@@ -417,6 +461,11 @@ Module LanguageDefinition.
 
   Definition config := (heap * stack) % type.
 
+  Definition top (σ : config) :=
+    match σ with
+    | (χ, stack_cons ϕ ψ) => ϕ
+    end.
+
   Definition interpret_x (σ : config)(x : var) : option val :=
     match σ with
     | (χ, frm lcl c ;; ψ) => lcl x
@@ -435,6 +484,15 @@ Module LanguageDefinition.
     match interpret_x σ x with
     | Some (v_addr α) => interpret_αf σ α f
     | _ => None
+    end.
+
+  Definition ghostLookup (M : module)(σ : config)(α : addr)(g : ghost) : option (var * exp) :=
+    match fst σ α with
+    | Some o => match snd M (o_cls o) with
+               | Some CDef => c_ghosts CDef g
+               | None => None
+               end
+    | None => None
     end.
 
   (*

@@ -5,6 +5,7 @@ Require Import chainmail.CpdtTactics.
 Require Import chainmail.common.
 
 Require Import language_def.
+Require Import subst.
 
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
@@ -13,6 +14,7 @@ Require Export ZArith.
 Module OperationalSemantics.
 
   Import LanguageDefinition.
+  Import SubstDefn.
 
   Fixpoint list_to_map {A B : Type}`{Eq A}(l : list (A * B)) : partial_map A B :=
     match l with
@@ -20,8 +22,43 @@ Module OperationalSemantics.
     | (a, b) :: t => ⟦ a ↦ b ⟧ (list_to_map t)
     end.
 
-  (* TODO: write expression evaluation *)
-  Definition eval (M : module)(σ : config)(e : exp)(v : val) : Prop := True.
+
+  Inductive eval : module -> config -> exp -> val -> Prop :=
+  | eval_val : forall M σ v, eval M σ (v_ v) v
+
+  | eval_var : forall M σ x v, local (top σ) x = Some v ->
+                          eval M σ (e_ x) v
+
+  | eval_fld : forall M σ e f α v, eval M σ e (v_addr α) ->
+                              interpret_αf σ α f = Some v ->
+                              eval M σ (e_fld e f) v
+  | eval_ghost : forall M σ e0 g e1 α e x body v1 v,
+      eval M σ e0 (v_addr α) ->
+      ghostLookup M σ α g = Some (x, body) ->
+      eval M σ e1 v1 -> (* eager or lazy eval? does it matter? *)
+      eval M σ ([v_ v1 /s x] body) v ->
+      eval M σ (e_ghost e0 g e) v
+
+  | eval_class : forall M σ e C α,
+      eval M σ e (v_addr α) ->
+      typeOf_v σ (v_addr α) (t_cls C) ->
+      eval M σ (e_class e C) v_true
+
+  | eval_eq : forall M σ e1 e2 v,
+      eval M σ e1 v ->
+      eval M σ e2 v ->
+      eval M σ (e_eq e1 e2) v_true
+
+  | eval_if_true : forall M σ e e1 e2 v1,
+      eval M σ e v_true ->
+      eval M σ e1 v1 ->
+      eval M σ (e_if e e1 e2) v1
+
+  | eval_if_false : forall M σ e e1 e2 v2,
+      eval M σ e v_false ->
+      eval M σ e2 v2 ->
+      eval M σ (e_if e e1 e2) v2.
+
 
   Fixpoint zip_to_map {A B C : Type}`{Eq A}`{Eq B} (l1 : list A)(l2 : list B)(m : partial_map B C) : option (partial_map A C) :=
     match l1, l2 with
