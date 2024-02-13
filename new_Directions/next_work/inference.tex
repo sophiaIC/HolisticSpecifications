@@ -1,3 +1,4 @@
+
 \section{Proving Adherence to \SpecLang Specifications}
 
 \subsection{Semantics of  a Hoare Triples -- Soundness of Hoare Logic}
@@ -323,43 +324,127 @@ $
 %	}
 \end{array}
 $
-\caption{Protection Logic}
+\caption{Protection Logic \sdN{-- the rules will probably change; Julian is working on this}}
 \label{f:protection}
 \end{figure}
 
-TO-DISCUSS 1)Should f it be $\in HS(M)$ or something more general. ie can it be implied from .. ? Premise of  \textsc{prot-3} may be too strong!
-2) What about the universally quantified $\overline x$? 3)  Note that $y'$ and $y$ talk of a different variable.
  
 
 Explanations: \textsc{xxxl} states that   yyy
-  
+
+\subsection{Hoare Logic -- substructural rules}
+
+We assume that $M \vdash_{ul} \{ A \} s \{ A' \}$ is a judjement that comes with the underlying programming language.  On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
+
+
+\sdN{
+\begin{figure}[hbt]
+$
+\begin{array}{c}
+\begin{array}{lcl}
+\inferrule[\sc{extend}]
+	{ M \vdash_{ul} \{ \ A\ \} s \{\ A'\ \} }
+	{\hproves{M}  {A} s {A'} }
+	& &
+\inferrule[\sc{combine}]
+	{  \hproves{M}  {A_1} s {A_1'}  \ \ \  \hproves{M}  {A_2} s {A_2'} }
+	{ \hproves{M}  {A_1 \wedge A_2 } s {A_1' \wedge A_2'} }
+%\end{array}
+\\
+\\
+\inferrule[\sc{sequ}]
+	{  \hproves{M}  {A} {s_1} {A''}  \ \ \  \hproves{M}  {A''} {s_2} {A'} }
+	{ \hproves{M}  {A } {s_1; s_2}  {A'} }
+& &
+\inferrule[\sc{consequ}]
+	{ M \vdash A \rightarrow A'' \ \ \  {\hproves{M}  {A''} s {A'''} } \ \ \ M \vdash A''' \rightarrow A'  }
+	{\hproves{M}  {A} s {A'} }
+ \end{array}
+  \end{array}
+ $
+\caption{From Underlying to Extended Hoare Ligic}
+\label{f:substructural}
+\end{figure}
+}
  
 \subsection{Reasoning about calls}
 
-We now show how to reason about external calls
+We now show how to reason about method calls, internal as well as external
 
 \begin{figure}[hbt]
-\begin{mathpar}
+$\begin{array}{c}
 \sdN{
-\inferruleSD{\hspace{5.5cm} [\sc{ExtCall}]}
+\inferruleSD{\hspace{4.7cm} [\sc{IntCall}]}
 	{ 
-		 M \vdash A\ \rightarrow \  { {\external{z}}  }
+	   	M, C, m  :  (\, P, \ Q\, )\ \ \  \ \ \ \ \ fv(P)=\overline x
+          		}
+	{   \hproves{M} 
+						{ \ {\internal{y}}  \wedge  y:C  \ \wedge \ P[(y, \overline y)/\overline x] \  }
+						{ \ y.m(\overline y)\  }
+						{ \  Q[(y, \overline y)/\overline x]  \ }	
+}
+}
+\\
+\\
+\sdN{{
+\inferruleSD{\hspace{4.7cm} [\sc{ExtCall1}]}
+	{ 
+		 M \vdash A\ \rightarrow \  {  \external{z}  } 
 		 \ \ \ \ \ \ \ \  \ \ 
    	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
            \\
-		\PushALong M  A  {(z,\overline y)} (\  { {\overline {x:C}}\ {\wedge\ A_1}} \  )	\  \ \ \ \ \ \ \ \  \ \   \ \ \ \ \ \ \ \  \ \ 
-		\PopA  {A_2} {A'} 
+		 M  \vdash A\   \rightarrow \  (\  { {\overline {x:C}}\ {\wedge\ A_1}} \  )		}
+	{   \hproves{M} 
+						{ \ A\  }
+						{ \ z.m(\overline y)\  }
+						{ \  A_2  \ }	
+}
+}}
+\\
+\\
+\sdN{{
+\inferruleSD{\hspace{4.7cm} [\sc{ExtCall2}]}
+	{ 
+		 M \vdash A\ \rightarrow \  {  \external{z}   } 
+		 \ \ \ \ \ \ \ \  \ \ 
+   	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+           \\
+		\PushALong M  A  {(z,\overline y)} (\  { {\overline {x:C}}\ {\wedge\ A_1}} \  )	\ \ \ \ \ \ \ \ \ \ \ \    
+		\PopA  {(z,\overline y)}  {A_2} {A_2'}   
 		}
 	{   \hproves{M} 
 						{ \ A\  }
 						{ \ z.m(\overline y)\  }
-						{ \  A'  \ \wedge\ { \preserve  A  {(z,\overline y)} M }  \ }	
+						{ \  A_2'  \ }	
 }
+}}
+\\
+\\
+\begin{array}{lcl}
+\sdN{
+\inferruleSD{  [\sc{Call1}]}
+	{ 
+	{ ~ \strut ~ }
+	}
+	{   \hproves{M}  { \ x=x'\  } 	{ \ y.m(\overline y)\  } { \  x=x'\ }	 }
 }
-\end{mathpar}
-\caption{External Calls Logic}
+& &
+\sdN{
+\inferruleSD{ [\sc{Call2}]}
+	{ 
+		{ ~ \strut ~ }
+	}
+	{   \hproves{M}  { \ x\neq x'\  } { \ y.m(\overline y)\  } { \  x\neq x'\ }	}
+}
+\end{array}
+\end{array}
+$
+\caption{Internal and External Calls Logic}
+\label{f:calls}
 \label{f:external:calls}
 \end{figure}
+
+\sdN{in Fig. \ref{f:external:calls} we use 	$ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-condition pair  $(\, P, \ Q\, ) $.}
 
 \sdN{
 \begin{figure}[hbt]
@@ -442,7 +527,6 @@ $
 \caption{The judgement  $\PushA M  {A }  {y}  {A'}$}
 \end{figure}
 }
-\jm{I don't know that I agree with \ref{fig:si} PU-5. I think you need to check that x isn't being passed an argument, which is covered by PU-6}
 
 
 \sdN{
@@ -455,45 +539,45 @@ $
 	\\	
 	}
 	{
-	  \PopAA M  {e}     {e}  
+	  \PopAA {\overline y}   {e}     {e}  
 	}
 &  & 
 \inferrule [PO-2]
 	{ 
-	  \PopAA M  A    {A'}
+	  \PopAA  {\overline y}  A    {A'}
 	}
 	 {
-	  \PopAA {M}  {\neg A }  {\neg A' }  
+	  \PopAA {\overline y}    {\neg A }  {\neg A' }  
 	}
 	&  & 
 \inferrule [PO-3]
 	{ 
-	{ \PopAA M  {A_1}    {A_1'} }\ \ \ \  { \PopAA M  {A_2}    {A_2'} }
+	{ \PopAA {\overline y}  {A_1}    {A_1'} }\ \ \ \  { \PopAA {\overline y}  {A_2}    {A_2'} }
 	}
-	{  \PopAA  M {(A_1 \wedge A_2)}     {(A_1' \wedge A_2')}
+	{  \PopAA  {\overline y} {(A_1 \wedge A_2)}     {(A_1' \wedge A_2')}
 	}
 \\
 \\
+\sdN{
 \inferrule [PO-4]
 	{  
 	\\	
 	}
 	{
-	  \PopAA M  {\inside x}    {true} 
+	  \PopAA {\overline y}  {\inside x}    {(\protectedFrom x {\overline {y}})}
 	}
+}
 &  & 
 \inferrule [PO-5]
 	{  
 	\\
 	}
 	{
-	  \PopAA  M  {(\protectedFrom x {\overline {u}})}    {(\protectedFrom x {\overline {u}})}  
+	  \PopAA  {\overline y} {(\protectedFrom x {\overline {u}})}    {(\protectedFrom x {\overline {u}})}  
 	}
  &  & 
  \\ \\
 \end{array}
-\\
-\\
 %wrong fornt
 % \inferrule[PO-7]
 %	{  
@@ -505,49 +589,10 @@ $
 \end{array}
 $
 \label{fig:si}
-\caption{The judgeement  $\PopAA M  {A }     {A'}$}
+\caption{The judgement  $\PopAA {\overline y}   {A }     {A'}$}
 \end{figure}
 }
 
-
-
-
-
-%% preserve -- revisit
-%{\small{
-%$\begin{array}{lcll}
-%\\
-%\\
-%\preserve {v=v'} {\overline  y} M  & = &  v=v' 
-%\\
-%\preserve {x.f=v} {\overline  y} M & = & x.f=v  & \mbox{if} \ \ \promises M   {\TwoStatesQ {\overline {x':C},x:D} {x.f = v \wedge A_1}{x.f=v}} 
-%\\ 
-%& & & \mbox{and} \ \ M \vdash {\lift A  {\overline   y}} \  \rightarrow \ (\, {\overline {x:D}} \wedge A_1\, )
-%\\
-%   & = &   \prg{true} & \mbox{otherwise}
-%   \\
-%\preserve  { \inside x}  {\overline   y}  M & = &   \inside x 
-%\\
-%\preserve  { \protectedFrom x {\overline {u}} }  {\overline z} {\overline y} M  & = &   { \protectedFrom x {\overline {u}} }  & \mbox{if} \ \ \promises M   {\TwoStatesQ {\overline {x':C},x:D} {x.f = v \wedge A_1}{x.f=v}} 
-%\\ 
-%& & & \mbox{and} \ \ M \vdash {\lift A  {\overline  y}} \  \rightarrow \ (\, {\overline {x:D}} \wedge A_1\, )
-%\\
-%   & = &   \prg{true} & \mbox{otherwise}
-%
-%\\
-%\preserve  {A_1 \wedge A_2} {\overline  y}  M & = & \preserve { A_1}  {\overline y}  M \ \ \wedge \\
-%& &  \preserve { A_2}  {\overline   y}  M
-%\\
-%\preserve  {\neg A}{\overline  y}  M   & = & \neg (\preserve {A} {\overline   y}  M)& \mbox{if  $A$ is protection-free}
-%\\
-%  & = &  \prg{true} & \mbox{otherwise}
-%\\
-%\preserve {\forall \overline{x:C}.[ A ]} {\overline   y}  M   & = & \forall \overline{x:C}.[ \preserve A  {\overline  y}  M ] & 
-%\\
-%\preserve {\exists \overline{x:C}.[ A ]} {\overline  y}  M   & = & \exists \overline{x:C}.[ \preserve A {\overline   y}  M  ] & 
-%\end{array}
-%$
-%}}
 
 \subsection{Proving \SpecLang Specifications}
 
