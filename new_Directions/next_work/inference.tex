@@ -617,18 +617,19 @@ vvv
 \newcommand{\PopS}[2] {\ensuremath{   {#2}   \popSymbol  \overline{#1} }} % for states
 \newcommand{\PopSLong}[2] {\ensuremath{ #2   \popSymbol #1}}
 
+\newcommand{\sigmas}{\widetilde \sigma}
+
 \subsection{Alternative Presentation for external call}
 
-In the below, the push- and pop- relations on assertions have now become functions,   \sdN{namely\\
- $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $, \  and\  $\popSymbol : Vars \times Assert \rightarrow Assert $. }
+In the below, the push- and pop- relations on assertions have now become just one  function,   \sdN{namely\\
+ $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $.}
+ 
+The second Hoare logic rule for the  external call is now written as below  -- this is quite  elegant, but
+perhaps deceptively simple. \sdN{An I am surprised that we only need ONE operator $\pushSymbol$}
 
-
-We get the below, which is elegant, but
-perhaps deceptively simple.
-
+\sdN{
 $
 \\
-\sdN{{
 \inferruleSD{\hspace{4.7cm} [\sc{ExtCall2Alternative}]}
 	{ 
    	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
@@ -636,24 +637,21 @@ $
 	{   \hproves{M} 
 						{ \ {  \external{y_0}  }\ \wedge \ \PushAS  {y} {( \overline {x:C}  \ \wedge\ A_1)} \   }
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \ \PopAS  {y} { A_2}  \ }	
-}
-}}
-\\
+						{ \ \PushAS  {y} { A_2}  \ }	
+}\\
 \\
 $
+}
 
 \noindent 
-We now define the two  operators  \\
- $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $, \  and\  $\popSymbol : Vars \times Assert \rightarrow Assert $  \\
+We   define the  operator   \\
+ $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $  \\
  as below
-
 
 
 $
 \begin{array}{c}
 \begin{array}{lclcl}
-\\ \\
 \PushAS y  e\  =\  e & & \PushAS y   {(A_1  \wedge  A_2)}\   =\   \PushAS y  { A_1}  \wedge   \PushAS y  {A_2}  & & 
  \PushAS y { (A_1 \vee  A_2)}\  = \  \PushAS y {A_1}  \wedge  \PushAS y {A_2}  \\
 ... & & ... &  & ... 
@@ -663,30 +661,32 @@ $
 & &   \PushAS y {(\protectedFrom x {\overline {y'}})} \ = \ \protectedFrom x {(\overline {y'}\setminus \overline {y})} 
   \\
   \\
-\PopAS y  e\  =\  e & & \PopAS y   {(A_1  \wedge  A_2)}\   =\   \PopAS y  { A_1}  \wedge   \PopAS y  {A_2}  & & 
- \PopAS y { (A_1 \vee  A_2)}\  = \   \PopAS y {A_1}  \wedge   \PopAS y {A_2}  \\
-... & & ... &  & ... 
- \\
-& &  \sdN{ \PopAS y {\inside x}  \ = \ \protectedFrom x {\overline {y} \ \wedge\ x\neq y_o} }
+%\PopAS y  e\  =\  e & & \PopAS y   {(A_1  \wedge  A_2)}\   =\   \PopAS y  { A_1}  \wedge   \PopAS y  {A_2}  & & 
+% \PopAS y { (A_1 \vee  A_2)}\  = \   \PopAS y {A_1}  \wedge   \PopAS y {A_2}  \\
+%... & & ... &  & ... 
+% \\
+%& &  \sdN{ \PopAS y {\inside x}  \ = \ \protectedFrom x {\overline {y} \ \wedge\ x\neq y_o} }
+%%  \\
+%& &   \PopAS y {(\protectedFrom x {\overline {y'}})} \ = \ \protectedFrom x {(\overline {y'}\setminus \overline {y})} 
 %  \\
-& &   \PopAS y {(\protectedFrom x {\overline {y'}})} \ = \ \protectedFrom x {(\overline {y'}\setminus \overline {y})} 
-  \\
-  \\
-  \\
+%  \\
+%  \\
 \end{array}
 \end{array}
 $
 
-\vspace{.2cm}
-\blue{ I am perplexed that it seems that $ \PushAS {y} {A}=\PopAS {y} {A}$. More thinking needed}
+ 
 
-\vspace{.2cm}
-
-We write $\PushS {y} {\sigma}$ for the set of states that is the result of pushing the values of $\overline y$,
-and for 
- And then the corresponding lemma says something related but sightly different than Lemma \ref{lemma:lifts} and \ref{lemma:lowers} from earlier:
+\vspace{.1cm}
 
 
+\noindent
+\textbf{Notation}  We write $\PushS {y} {\sigma}$ for the set of states that is the result of pushing a new frame with the values of $\overline y$ onto the stack of $\sigma$.
+We lift operators that apply to one state to apply to sets of states: If  $\sigmas$ is a set of states,  then $\sigmas[ \overline{x \mapsto v}]$ is the set of states from $\sigmas$ to which we applied the substitution. And the   notation 
+$M,   \sigmas \models A$ holds if  $M, \  \sigma \models A$ for all $\sigma \in \sigmas$.
+  \vspace{.1cm}
+  
+The following lemma is the counterpart to, but sightly different than, Lemma \ref{lemma:lifts} and \ref{lemma:lowers} from earlier:
 
 \sdN{
 \begin{lemma} 
@@ -695,36 +695,22 @@ For any states  $\sigma$, $\sigma'$, assertion $A$,  and variables $\overline x$
 $fv(A)\subseteq \overline x$:
 \begin{itemize}
  \item
-$M, \sigma \models \PushAS {y} {A}\ \ \wedge \ \ \sigma'\in\PushS {y} {\sigma} \ \ \   \Longrightarrow  \ \ \ \ M, \sigma'[\overline{x \mapsto {\interpret {\sigma} {x}}} ] \models {   A} $
+$M, \sigma \models \PushAS {y} {A}\ \ \ \ \ \ \   \Longrightarrow  \ \ \ \ M,  (\PushS {y} {\sigma})[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models A$
 \item
-$M, \sigma   \models A \ \ \ \wedge \ \ \sigma'\in\PopSLong {(\overline y, \overline {y'})} {\sigma} \ \ \ \Longrightarrow  \ \ \ \ M, \sigma'[\overline{x \mapsto {\interpret {\sigma} {x}}} ]  \models \PopAS  {y} {A}$
+$M, {\PushSLong {(\overline y, \overline z)} \sigma }   \models\  A \  \ \ \ \Longrightarrow  \ \ \ \ M,  \sigma[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models  \PushAS  {y} {A}$
 \end{itemize}
 \end{lemma}
 }
 
-\vspace{.2cm}
-\textbf{Question} Shall we use the notation $\sigma s[ \overline{x \mapsto v}]$ where $ \sigma s$ is a set of states, to indicate the set of states from $\sigma s$ to which we applied the substitution?
-And shall we use the notation 
-$M, \overline \sigma s \models A$ when $\sigma-s$ is a set of states, and  $M, \overline \sigma \models A$ for all $\sigma \in \sigma s$?
- If we did adopt  such a notation,  then we could  simplify the first part of the  lemma from above as below:
+\vspace{.1cm}
+\noindent 
+\blue{\textbf{Comment} The $ \pushSymbol$ operator reminds me of the magic wand. Namely, $-\!-\!*$ is spatial and heap based:  the assertion $A -\!-\!* A'$ says: if you combine with a heap that satisfies $A$, then the complete heap will satisfy $A'$. While $\PushASLong {\_} {\_}$ is temporal and  stack based: the assertion  $\PushAS {y} A$ says that if you push a frame with range the values of $\overline y$, then $A$ will hold. \textbf{End Comment} 
+}
 
-\begin{itemize}
- \item
-$M, \sigma \models \PushAS {y} {A}\ \ \ \ \ \ \   \Longrightarrow  \ \ \ \ M,  (\PushS {y} {\sigma})[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models A$
-\end{itemize}
  
-
-\noindent
-And we could also simplify the second part as
-\begin{itemize}
- \item
-$M, \sigma[\overline {x \mapsto v}]  \models \PopAS  {y} {A}\ \  \ \ \ \Longrightarrow  \ \ \ \ M,  (\PopSLong  {(\overline y, \overline {y'})} {\sigma})[\overline {x \mapsto v}]  \models A$
-\end{itemize}
-
-
-\vspace{.2cm}
+\vspace{.1cm}
 {\red{
-I am copying the old lemmas here for easy comparison
+I am copying Lemma \ref{lemma:lifts} and \ref{lemma:lowers} here for easy comparison
 
   \begin{lemma}
 Take any  module $M$, states $\sigma$, $\sigma'$, assertions $A$, $A'$,    variables $\overline x$ and $\overline z$, where
