@@ -121,7 +121,25 @@ Module Hoare.
 
   (** * Hoare Logic *)
 
+(*  Class BaseHoareTriple (A : Type) :=
+    prt_free_triple
+      (M : module)
+      (P : asrt)(s : stmt)(Q : asrt): (Prop * (prt_free P = true /\ prt_free Q = true)).
+
+ *)
+
+  Notation "M '⊢' '⦃' P '⦄' s '⦃' Q '⦄'" :=
+    (triple M P s Q) (at level 40, s at level 59).
+
   Parameter hoare_base : HoareTriple stmt.
+
+  Parameter hoare_base_prt_free :
+    forall M P s Q, hoare_base M P s Q ->
+               prt_free P = true /\ prt_free Q = true.
+
+(*  Definition base_hoare_triple (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
+    fst(hoare_base M P s Q).
+*)
 
   (* Parameter hoare_read : forall M x y f e,
       hoare_base M ([e_ y∙f /s x] (a_ e)) (s_read x y f) (a_ e). *)
@@ -289,6 +307,8 @@ Because of this, we can preserve the usual assignment rule from HL.
                             M ⊢ ⦃ Q ⦄ s' ⦃ R ⦄ ->
                             M ⊢ ⦃ P ⦄ s_seq s s' ⦃ R ⦄.
 
+  #[export] Hint Constructors hoare_extension : hoare_db.
+
   #[global] Instance hoare_triple_stmts : HoareTriple stmts :=
     {
       triple := hoare_stmts
@@ -300,76 +320,119 @@ Because of this, we can preserve the usual assignment rule from HL.
         intros M P s Q Hhoare; induction Hhoare
     end.
 
-  Lemma h_read_sound :
+  Lemma strengthening_sound :
+    forall M s P1 P2 Q,
+      M ⊨ ⦃ P1 ⦄ s ⦃ Q ⦄ ->
+      M ⊢ P2 ⊆ P1 ->
+      M ⊨ ⦃ P2 ⦄ s ⦃ Q ⦄.
+  Proof.
+    unfold hoare_semantics in *; intros.
+    specialize (H χ lcl s' ψ χ' lcl' H1).
+    apply H.
+    apply entails_strengthening with (A1:=P2); auto.
+  Qed.
+
+  Lemma weakening_sound :
+    forall M s P Q1 Q2,
+      M ⊨ ⦃ P ⦄ s ⦃ Q1 ⦄ ->
+      M ⊢ Q1 ⊆ Q2 ->
+      M ⊨ ⦃ P ⦄ s ⦃ Q2 ⦄.
+  Proof.
+    unfold hoare_semantics in *; intros.
+    specialize (H χ lcl s' ψ χ' lcl' H1).
+    apply entails_strengthening with (A1:=Q1); auto.
+  Qed.
+
+  Lemma h_and_sound :
+    forall M P1 P2 s Q1 Q2,
+      M ⊨ ⦃ P1 ⦄ s ⦃ Q1 ⦄ ->
+      M ⊨ ⦃ P2 ⦄ s ⦃ Q2 ⦄ ->
+      M ⊨ ⦃ P1 ∧ P2 ⦄ s ⦃ Q1 ∧ Q2 ⦄.
+  Proof.
+    unfold hoare_semantics in *; intros.
+    specialize (H χ lcl s' ψ χ' lcl' H1).
+    specialize (H0 χ lcl s' ψ χ' lcl' H1).
+    inversion H2; subst; eauto with assert_db.
+  Qed.
+
+  Lemma read_sound :
     forall M P x y f,
       M ⊨ ⦃ [e_ y ∙ f /s x] P ⦄ s_read x y f ⦃ P ⦄.
-    Proof.
-      intros.
-      unfold hoare_semantics.
-      intros.
+  Proof.
+    intros.
+    unfold hoare_semantics.
+    intros.
 
-      inversion H; subst.
+    inversion H; subst.
 
-      * 
-    Admitted.
+    * 
+  Admitted.
 
-    Lemma h_if_sound :
-       forall M e s1 s2 P Q,
-         M ⊨ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
-         M ⊨ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
-         M ⊨ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄.
-    Proof.
-    Admitted.
+  Lemma if_sound :
+    forall M e s1 s2 P Q,
+      M ⊨ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
+      M ⊨ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
+      M ⊨ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄.
+  Proof.
+  Admitted.
+
+  Lemma write_prt_frm_sound :
+    forall M w x y z f,
+      M ⊨ ⦃ a_prt_frm (e_ w) (e_ x) ⦄
+        s_write y f z
+        ⦃ a_prt_frm (e_ w) (e_ x) ⦄.
+  Proof.
+  Admitted.
+
+  Lemma write_prt_sound :
+    forall M x y f z,
+      M ⊨ ⦃ a_prt (e_ x) ⦄
+        (s_write y f z)
+        ⦃ a_prt (e_ x) ⦄.
+  Proof.
+  Admitted.
+
+  Lemma new_prt_frm1_sound :
+    forall M x C e1 e2,
+      M ⊨ ⦃ a_prt_frm e1 e2 ⦄
+        (s_new x C)
+        ⦃ a_prt_frm e1 e2 ⦄.
+  Proof.
+  Admitted.
+
+  Lemma new_prt_frm2_sound :
+    forall M x C e,
+      M ⊨ ⦃ a_true ⦄
+        (s_new x C)
+        ⦃ a_prt_frm (e_ x) e ⦄.
+  Proof.
+  Admitted.
+
+
+  Lemma new_prt1_sound :
+    forall M x C e,
+      M ⊨ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄.
+  Proof.
+  Admitted.
+
+  Lemma new_prt2_sound :
+    forall M x C,
+      M ⊨ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄.
+  Proof.
+  Admitted.
+
+  #[export]
+    Hint Resolve
+    strengthening_sound weakening_sound h_and_sound read_sound if_sound write_prt_frm_sound write_prt_sound new_prt1_sound new_prt2_sound new_prt_frm1_sound new_prt_frm2_sound : hoare_db.
 
   Theorem hoare_extension_sound :
     forall M P s Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
                M ⊨ ⦃ P ⦄ s ⦃ Q ⦄.
   Proof.
-    induction_hoare.
+    induction_hoare; eauto with hoare_db.
 
     * (* hoare base *)
       apply hoare_base_soundness; auto.
-
-    * (* strengthening *)
-      unfold hoare_semantics in *; intros.
-      specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
-      apply IHHhoare.
-      apply entails_strengthening with (A1:=P2); auto.
-
-    * (* weakening *)
-      unfold hoare_semantics in *; intros.
-      specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
-      apply entails_strengthening with (A1:=Q1); auto.
-
-    * (* conjunction *)
-      unfold hoare_semantics in *; intros.
-      specialize (IHHhoare χ lcl s' ψ χ' lcl' H1).
-      specialize (IHHhoare0 χ lcl s' ψ χ' lcl' H1).
-      inversion H2; subst; eauto with assert_db.
-
-    * (* read *)
-      apply h_read_sound.
-
-    * (* if *)
-      apply h_if_sound; auto.
-
-    * (* prt_frm write *)
-      admit.
-
-    * (* prt write *)
-      admit.
-
-    * (* existing prt_frm new *)
-      admit.
-
-    * (* new prt_frm *)
-      admit.
-
-    * (* existing prt *)
-      admit.
-
-    * (* new prt *)
-      admit.
 
     * (* internal call *)
       admit.
