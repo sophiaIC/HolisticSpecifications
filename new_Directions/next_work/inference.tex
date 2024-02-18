@@ -328,24 +328,6 @@ $
 \label{f:protection}
 \end{figure}
 
- %\newcommand{\PushAS}[2] {\ensuremath{ \overline{#1} \pushSymbol  #2}} % for assertionbs
-%\newcommand{\PushASLong}[2] {\ensuremath{  #1  \pushSymbol #2}}
-%\newcommand{\PushS}[2] {\ensuremath{ \overline{#1} \pushSymbol  #2}} % for states
-%\newcommand{\PushSLong}[2] {\ensuremath{  #1  \pushSymbol #2}}
-%\newcommand{\PopAS}[2] {\ensuremath{  \overline{#1}   \popSymbol #2}} % for assertionbs
-%\newcommand{\PopASLong}[2] {\ensuremath{ #1   \popSymbol #2}}
-%\newcommand{\PopS}[2] {\ensuremath{  \overline{#1}   \popSymbol #2}} % for states
-%\newcommand{\PopSLong}[2] {\ensuremath{ #1   \popSymbol #2}}
-
-% Same as above but reversed the order
-\newcommand{\PushAS}[2] {\ensuremath{ {#2} \pushSymbol   \overline{#1} }} % for assertionbs
-\newcommand{\PushASLong}[2] {\ensuremath{  #2  \pushSymbol #1}}
-\newcommand{\PushS}[2] {\ensuremath{ \ {#2} \pushSymbol   \overline{#1} }} % for states
-\newcommand{\PushSLong}[2] {\ensuremath{  #2  \pushSymbol #1}}
-\newcommand{\PopAS}[2] {\ensuremath{   {#2}   \popSymbol \overline{#1} }} % for assertionbs
-\newcommand{\PopASLong}[2] {\ensuremath{ #2   \popSymbol #1}}
-\newcommand{\PopS}[2] {\ensuremath{   {#2}   \popSymbol  \overline{#1} }} % for states
-\newcommand{\PopSLong}[2] {\ensuremath{ #2   \popSymbol #1}}
 
 Explanations: \textsc{xxxl} states that   yyy
 
@@ -353,76 +335,81 @@ Explanations: \textsc{xxxl} states that   yyy
 
 We assume that $M \vdash_{ul} \{ A \} s \{ A' \}$ is a judjement that comes with the underlying programming language.  On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
 
-\sdN{
+ 
 \begin{figure}[hbt]
 $
 \begin{array}{c}
 \begin{array}{lcl}
 \inferrule[\sc{extend}]
-	{ M \vdash_{ul} \{ \ A\ \} s \{\ A'\ \} }
-	{\hproves{M}  {A} s {A'} }
+	{ M \vdash_{ul} \{ \ A\ \} {\ s\ }\{\ A'\ \} }
+	{\hproves{M}  {A} {\ s\ }{A'} }
 	& &
 \inferrule[\sc{combine}]
-	{  \hproves{M}  {A_1} s {A_1'}  \ \ \  \hproves{M}  {A_2} s {A_2'} }
-	{ \hproves{M}  {A_1 \wedge A_2 } s {A_1' \wedge A_2'} }
+	{  \hproves{M}  {A_1} {\ s\ } {A_1'}  \ \ \  \hproves{M}  {A_2} {\ s\ } {A_2'} }
+	{ \hproves{M}  {A_1 \wedge A_2 }{\ s\ } {A_1' \wedge A_2'} }
 %\end{array}
 \\
 \\
 \inferrule[\sc{sequ}]
-	{  \hproves{M}  {A} {s_1} {A''}  \ \ \  \hproves{M}  {A''} {s_2} {A'} }
-	{ \hproves{M}  {A } {s_1; s_2}  {A'} }
+	{  \hproves{M}  {A} {\ s_1\ } {A''}  \ \ \  \hproves{M}  {A''} {\ s_2\ } {A'} }
+	{ \hproves{M}  {A } {\ s_1; \ s_2\ }  {A'} }
 & &
 \inferrule[\sc{consequ}]
-	{ M \vdash A \rightarrow A'' \ \ \  {\hproves{M}  {A''} s {A'''} } \ \ \ M \vdash A''' \rightarrow A'  }
-	{\hproves{M}  {A} s {A'} }
+	{ M \vdash A \rightarrow A'' \ \ \  {\hproves{M}  {A''} {\ s\ } {A'''} } \ \ \ M \vdash A''' \rightarrow A'  }
+	{\hproves{M}  {A} {\ s\ } {A'} }
+\\ \\
+\sdN{
+\inferrule[\sc{types}]
+	{   }
+	{\hproves{M}  {x:C} {\ s\ }  {x:C} }
+}
  \end{array}
   \end{array}
  $
-\caption{From Underlying to Extended Hoare Ligic}
+\caption{From Underlying to Extended Hoare Logic}
 \label{f:substructural}
 \end{figure}
 }
  
 \subsection{Reasoning about calls}
 
-In  Fig. \ref{f:external:calls}  we show how to reason about method calls, internal as well as external. 
+In  Fig. \ref{f:external:calls}  we show how to reason about method calls, internal as well as external.  Rules  {\sc{Call1}} and {\sc{Call2}} apply to internal as well as external calls, while rule \sc{IntCall}} applies to internal calls, and rules {\sc{ExtCall1}} and rule {\sc{ExtCall2}} apply to external calls.
 
-\sdN{For rules {\sc{Call1}} and {\sc{Call2}} we distinguish between variables pointing to the same values $x=x'$, and variables been textually the same $u\equiv x$. It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$ -- note that $u\equiv z$ is a textual assertion, that is, it is state-independent;  therefore it is not part of the Hoare triple's precondition.
+\sdN{The rules {\sc{Call1}} and {\sc{Call2}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\equiv x$ expresses that $u$ and $x$ are textually the same.  It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. As $u\equiv z$ is a textual assertion, and thus  state-independent , it is a premise of the rules and not part of the Hoare triple's precondition.
 }
 
 Rule {\sc{IntCall}} is standard.  We use  the notation
 $ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-condition pair  $(\, P, \ Q\, ) $. 
 
  
- We have two rules for external calls,  {\sc{ExtCall1}} and {\sc{ExtCall2}}. In both, we are using the the  assertion push-function $\pushSymbol$ with  signature
- $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,
- defined in Figure \ref{f:Push}. The assertion $\PushAS y A$ is \emph{hypothetical}: it guarantees
-that if we were to push onto the current state a frame which contained values for $\overline y$, then $A$ would hold. This is expressed in lemma \ref{lemma:push:ass:state}, part (1). Conversely,  this means that if a state satisfies  $A$ after a top frame containing the  values of $\overline y, \overline z$ has been pushed, then 
-after popping that frame, the assertion  $\PushAS y A$ will hold. This is expressed in lemma \ref{lemma:push:ass:state}, part (1).
+\sdN{In the rules for external calls,  {\sc{ExtCall1}} and {\sc{ExtCall2}}, we use the  assertion push-function $\pushSymbol$ with  signature\\
+ $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,\\
+ defined in Figure \ref{f:Push}. The assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
+onto that state a frame which contained the values  of $\overline y$, assertion $A$ would hold. This is expressed in lemma \ref{lemma:push:ass:state}, part \ref{lemma:push:ass:state:one}. Conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y, \overline z$ has been pushed, then 
+after popping that frame, the state  satisfies assertion  $\PushAS y A$ . This is expressed in lemma \ref{lemma:push:ass:state},  part \ref{lemma:push:ass:state:two}. }
+
+\sdN{The rules {\sc{ExtCall1}} and {\sc{ExtCall2}} require  that the module  promises $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
 
 
-\red{Both rule {\sc{ExtCall1}} and rule {\sc{ExtCall2}} require that the module  promises that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. Both rules require in their precondtion that right before the external call starts, that $\overline {x:C}$ and  $A_1$ will hold at the start of the external call ($\PushAS y A$). And both rules appeal to the module's promice, and guarantee that right after the external call returns, either $A_2$ or $\PushAS y {A_2}$ will hold.}
+\red{The precondition and postcondition of   rule {\sc{ExtCall2}} are strictly stronger than  those in  {\sc{ExtCall1}}: In addition to $\overline {x:C} \wedge \PushAS y {A_1}$, the precondition also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.
+}
 
-\red{Rule {\sc{ExtCall1}} says that if the state right before the external call guarantees that $\overline {x:C}$ and  $A_1$ will hold at the start of the external call ($\PushAS y A$), and that $A1$ also holds before the call, and if the module makes the promise that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$, then right after the external call, $A_2$ will hold. 
-..} 
-
-\red{On the other hand, the precondition of {\sc{ExtCall2}} is slightly weaker: It does not ask that ..}
 
 \begin{figure}[hbt]
 $\begin{array}{c}
-\begin{array}{lcl}
+\begin{array}{ll}
 \inferruleSD{ [{\sc{Call1}]}}
 	{ 
 	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
 	}
-	{   \hproves{M}  { \ x=x'\ \wedge \ } 	{ \ u:= y.m(\overline y)\  } { \  x=x'\ }	 }
+	{   \hproves{M}  { \ x=x'\   } 	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
 
- & &
+ &  
 \inferruleSD{ [\sc{Call2}]}
 	{ 
 		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
 	}
-	{   \hproves{M}  { \  x'\neq x' \  } { \ u:=y.m(\overline y)\  } { \  x\neq x'\ }	}
+	{   \hproves{M}  { \  x'\neq x' \  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	}
 \end{array}
 \\
 \\
@@ -431,9 +418,22 @@ $\begin{array}{c}
 	   	M, C, m  :  (\, A_1, \ A_2\, )\ \ \  \ \ \ \ \ fv(A_1)=\overline x
           		}
 	{   \hproves{M} 
-						{ \ {\internal{y}}  \wedge  y:C  \ \wedge \ A_1[(y, \overline y)/\overline x] \  }
-						{ \ u:= y.m(\overline y)\  }
-						{ \  A_2[(y, \overline y)/\overline x, u/result ]  \ }	
+						{ \ {\internal{y_0}}  \wedge  y:C  \ \wedge \ A_1[\overline y/\prg{this},\overline x] \  }
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \  A_2[ u/result,\overline y/\prg{this},\overline x]  \ }	
+}
+\\
+\\
+\sdN{
+\inferruleSD{\hspace{4.7cm} [\sc{ExtCall1}]}
+	{ 
+   	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+        }
+	{   \hproves{M} 
+						{ \    { \external{y_0} }\ \wedge \ \overline {x:C}  \ \wedge \  \PushAS  {y}{  A_1} \  }
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \ \PushAS  {y} { A_2}  \ }	
+}
 }
 \\
 \\
@@ -445,21 +445,11 @@ $\begin{array}{c}
 	{   \hproves{M} 
 						{ \  {\external{y_0}  } \ \wedge\ \overline {x:C}\ \wedge\  \PushAS  {y} { A_1} \ \wedge\  A_1 \  }
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \  A_2  \ }	
+						{ \  \ \PushAS  {y} { A_2}  \wedge A_2  \ }	
 }}
 \\
 \\
-\sdN{
-\inferruleSD{\hspace{4.7cm} [\sc{ExtCall2}]}
-	{ 
-   	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
-        }
-	{   \hproves{M} 
-						{ \    { \external{y_0} }\ \wedge \ \overline {x:C}  \ \wedge \  \PushAS  {y}{  A_1} \  }
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \ \PushAS  {y} { A_2}  \ }	
-}
-}
+
 \end{array}
 $
 \caption{Internal and External Calls Logic}
@@ -482,24 +472,25 @@ $
 \begin{array}{c}
 \begin{array}{lclcl}
 \PushAS y  e\  =\  e & & \PushAS y   {(A_1  \wedge  A_2)}\   =\   \PushAS y  { A_1}  \wedge   \PushAS y  {A_2}  & & 
- \PushAS y { (A_1 \vee  A_2)}\  = \  \PushAS y {A_1}  \wedge  \PushAS y {A_2}  \\
-... & & ... &  & ... 
- \\
-& &  \sdN{\PushAS y {\inside x}  \ = \ \protectedFrom x {\overline {y} \ \wedge\ x\neq \overline y} }
-%  \\
-& &   \PushAS y {(\protectedFrom x {\overline {y'}})} \ = \ \protectedFrom x {(\overline {y'}\setminus \overline {y})} 
+ \PushAS y { (A_1 \vee  A_2)}\  = \  \PushAS y {A_1}  \vee  \PushAS y {A_2} 
+  \\ \\
+\PushAS y  {(\neg A)}\  =\  \neg( {\PushAS y A} ) & &
+ \PushAS y  {(\forall x:C.A)}\  =\  \forall x:C.({\PushAS y A} )&  &  
+  \PushAS y  {(\exists x:C.A)}\  =\  \exists x:C.({\PushAS y A} )
+ \\ \\
+\PushAS y  {x:C}\  =\  x:C 
+& &
+\PushAS y  {(\internal x)}\  =\   {\internal x}
+& &
+\PushAS y  {(\external x)}\  =\   {\external x}
+\end{array}
+\\
+\\
+\begin{array}{cclcl}
+& & \sdN{\PushAS y {(\inside x)}  \ = \ \protectedFrom x {\overline {y} \ \wedge\ x\neq \overline y} }
+&\ \  &   \PushAS y {(\protectedFrom x {\overline {u}})} \ = \ \red{\protectedFrom x  {\overline {u}} } % {(\overline {y'}\setminus \overline {y})} 
   \\
   \\
-%\PopAS y  e\  =\  e & & \PopAS y   {(A_1  \wedge  A_2)}\   =\   \PopAS y  { A_1}  \wedge   \PopAS y  {A_2}  & & 
-% \PopAS y { (A_1 \vee  A_2)}\  = \   \PopAS y {A_1}  \wedge   \PopAS y {A_2}  \\
-%... & & ... &  & ... 
-% \\
-%& &  \sdN{ \PopAS y {\inside x}  \ = \ \protectedFrom x {\overline {y} \ \wedge\ x\neq y_o} }
-%%  \\
-%& &   \PopAS y {(\protectedFrom x {\overline {y'}})} \ = \ \protectedFrom x {(\overline {y'}\setminus \overline {y})} 
-%  \\
-%  \\
-%  \\
 \end{array}
 \end{array}
 $
@@ -523,12 +514,13 @@ The following lemma is the counterpart to, but sightly different than, Lemma \re
 \begin{lemma} 
 \label{lemma:push:ass:state}
 For any states  $\sigma$, $\sigma'$, assertion $A$,  and variables $\overline x$, $\overline y$, $\overline z$ disjoint with one another,  and such that 
-% $\overline x \notin \sigma$ and 
 $fv(A)\subseteq \overline x$:
 \begin{enumerate}
  \item
+ \label{lemma:push:ass:state:one}
 $M, \sigma \models \PushAS {y} {A}\ \ \ \ \ \ \   \Longrightarrow  \ \ \ \ M,  (\PushS {y} {\sigma})[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models A$
 \item
+\label{lemma:push:ass:state:two}
 $M, {\PushSLong {(\overline y, \overline z)} \sigma }   \models\  A \  \ \ \ \Longrightarrow  \ \ \ \ M,  \sigma[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models  \PushAS  {y} {A}$
 \end{enumerate}
 \end{lemma}
@@ -536,8 +528,10 @@ $M, {\PushSLong {(\overline y, \overline z)} \sigma }   \models\  A \  \ \ \ \Lo
 
 \vspace{.1cm}
 \noindent 
-\blue{\textbf{Comment} The $ \pushSymbol$ operator reminds me of the magic wand. Namely, $-\!-\!*$ is spatial and heap based:  the assertion $A -\!-\!* A'$ says: if you combine with a heap that satisfies $A$, then the complete heap will satisfy $A'$. While $\PushASLong {\_} {\_}$ is temporal and  stack based: the assertion  $\PushAS {y} A$ says that if you push a frame with range the values of $\overline y$, then $A$ will hold. \textbf{End Comment} 
-}
+\blue{\textbf{Comment} The $ \pushSymbol$ operator reminds me of the magic wand. Namely, $-\!-\!*$ is spatial and heap based:  the assertion $A -\!-\!* A'$ says: if you combine with a heap that satisfies $A$, then the complete heap will satisfy $A'$. While $\PushASLong {\_} {\_}$ is temporal and  stack based: the assertion  $\PushAS {y} A$ says that if you push a frame with range the values of $\overline y$, then $A$ will hold. 
+
+{\red{I am surprised that $ \pushSymbol$  only affects  ${\inside x}$, and leaves all else unmodified,}} \textbf{End Comment} }
+
 
  
 
@@ -559,7 +553,6 @@ $
 	M \vdash \encaps{\overline {x:C}\, \wedge \, A}
 	\\\\
 	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-				% \strut \hspace{3cm}
 				\ \  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
 	}
 	{
@@ -580,20 +573,6 @@ $
 	{
 	{\hproves{M}{ A'}   {\ s\ } {\ A\ } }\  \parallel \  A   
 	}
-%\\\\ 
-%\inferrule [One-State]
-%	{
-% 	M \vdash \encaps{\overline {x:C}\, \wedge \, A}
-% 	\\\\
-% 	\forall \mbox{ public } D. [\ \hproves{M}{\forall \overline{x:C}.[A]} {\ y=\prg{new}\ D\ } {\ \forall \overline{x:C}.[A]\ }	\ ]
-%   \\\\
-% 	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{ with } \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-%%				% \strut \hspace{3cm}
-% 			\ \  {\hproves{M}{ \forall \overline{x:C}.[A]\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ \forall \overline{x:C}.[A]\ }} \ \parallel \  {\forall \overline{x:C}.[A]} 
-%	}
-%	{
-%	M\ \vdash\ \OneStateQ{\overline {x:C}}{A}
-%	}
 \\\\
 \begin{array}{lcl}
 \inferrule[Weaken]
@@ -667,26 +646,6 @@ TODO: shall we drop one-state invariants? Do not know how to prove them here. Bu
 %
 %\end{proof}
 
-For the proof of soundness we will use the following two lemmas that give guarantees about preservation of properties when pushing new frames onto the stack, and when popping frames from the stack. We use the notation $\sigma \bullet \phi$ to indicate that the frame $\phi$ has been pushed on top of the ...\footnoteSD{{these lemmas could also appear earlier ... or later}}
-
- 
-\begin{lemma}
-For any module $M$, assertion $A$, variables $\overline x$, and variables $\overline x$,  % values $\overline v$, 
-and any continuation, $cont$, and any states $\sigma$ and $\sigma'$ where 
-$\sigma=(\psi,h)$, and $\sigma'=(((\overline {z \mapsto \sigma(x)}), cont)\cdot \psi, h)$,  
-we have
-
-\begin{itemize}
-\item
-$M,\sigma\ \models\  A$  \ \ implies \ \  $M,\sigma' \ \models\  \lift {A} {\overline x}   $
-\item
-$M,\sigma'\ \models\  A$  \ \ implies \ \  $M,\sigma  \ \models\  \llower  {A}  {\overline   x} $ 
-\end{itemize}
-\end{lemma}
-\begin{proof}
-in the next section
-% by induction on the derivation of $\proves{M}{S}$.
-\end{proof}
 
 
  
