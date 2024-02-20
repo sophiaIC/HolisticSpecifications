@@ -1,3 +1,5 @@
+\newcommand{\extract}[1]{\ensuremath{{\mathcal E}xtr(#1)}}
+
 
 \section{Proving Adherence to \SpecLang Specifications}
 
@@ -369,13 +371,122 @@ $
 \caption{From Underlying to Extended Hoare Logic}
 \label{f:substructural}
 \end{figure}
-}
+ 
  
 \subsection{Reasoning about calls}
 
-In  Fig. \ref{f:external:calls}  we show how to reason about method calls, internal as well as external.  Rules  {\sc{Call1}} and {\sc{Call2}} apply to internal as well as external calls, while rule \sc{IntCall}} applies to internal calls, and rules {\sc{ExtCall1}} and rule {\sc{ExtCall2}} apply to external calls.
+\sdN{When we reason about external calls, we need to  ensure that all proof obligations imposed by the module's spec are met.
+For this, we define in Def. \ref{def:extract}, the function $\extract{\_}$, which turns the holistic specification of a module into an assertion. 
+This assertion has to be satisfied before any external call.}
+
+\label{s:module-proof}
+
+
+\begin{definition}
+text text text 
+\label{def:extract}
+%\begin{figure}
+$
+\begin{array}{clcl}
+& \extract{ \OneStateQ{\overline {x:C}}{A} }  & \triangleq & \forall \overline{x}.[ \, \overline {x:C} \rightarrow A \, ]
+\\
+& \extract{ \TwoStatesQ{\overline {x:C}}{A}{A} }  & \triangleq & \overline {x:C} \wedge A  
+\\
+& \extract{ S_1 \wedge S_2 } & \triangleq & \extract{ S_1} \, \wedge S_2 \,  \extract{ S_2 }
+\\
+&  \extract{ M }  & \triangleq &  \extract{ HS(M) }
+\end{array}
+$
+%\caption{Extracting proof obligations out of  module specifications -- we require implicitly that all variables are different}
+%\label{f:extract}
+%\end{figure}
+\end{definition}
+
+In  Fig. \ref{f:external:calls}  we show how to reason about method calls, internal as well as external.  Rules  {\sc{Call1}} and {\sc{Call2}} apply to internal as well as external calls, while rule {\sc{IntCall}}  applies to internal calls, and rules {\sc{ExtCall1}} and rule {\sc{ExtCall2}} apply to external calls.
 
 \sdN{The rules {\sc{Call1}} and {\sc{Call2}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\equiv x$ expresses that $u$ and $x$ are textually the same.  It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. As $u\equiv z$ is a textual assertion, and thus  state-independent , it is a premise of the rules and not part of the Hoare triple's precondition.
+}
+
+
+\small{
+\begin{figure}[hbt]
+$\begin{array}{c}
+%\begin{array}{ll}
+\inferruleSD{ [{\sc{IntCall1}]}}
+	{ 
+	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
+	}
+	{   \hproves{M}  { {\internal{y_0}}\  \wedge\ \ x=x'\   }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
+
+\\ \\ 
+\inferruleSD{ [\sc{IntCall2}]}
+	{ 
+		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
+	}
+	{   \hproves{M}  {  \internal{y_0}\ \wedge  x\neq x' }  { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
+\\
+\\
+\inferruleSD{\hspace{4.7cm} [\sc{IntCall\_WithSpec}]}
+	{ 
+	   	M, C, m  :  (\, A_1, \ A_2\, )\ \ \  \ \ \ \ \ fv(A_1)=\overline x
+          		}
+	{   \hproves{M} 
+						{ \ {\internal{y_0}}  \wedge  y:C  \ \wedge \ A_1[\overline y/\prg{this},\overline x] \  }
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \  A_2[ u/result,\overline y/\prg{this},\overline x]  \ }	
+}
+\\
+\\
+\\
+\inferruleSD{ [{\sc{ExtCall1}]}}
+	{ 
+	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
+	}
+	{   \hproves{M}  {  \external{y_0}  \wedge \  \PushAS {y}{\extract{M}}\  \wedge\ \ x=x'\     } 	
+	{ \ u:=y_0.m(y_1,.. y_n)\  } { \   \PushAS {y}{\extract{M}} \  \wedge\ x=x'\ }   
+	}	
+	\\ \\ 
+\inferruleSD{ [\sc{ExtCall2}]}
+	{ 
+		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
+	}
+	{   \hproves{M}  {  \external{y_0}  \wedge \  \PushAS {y}{\extract{M}}\  \wedge\ \ x\neq x'\     } 	
+	{ \ u:=y_0.m(y_1,.. y_n)\  } { \   \PushAS {y}{\extract{M}} \  \wedge\ x\neq x'\ }   
+	}
+%\end{array}
+\\
+\\
+{
+\inferruleSD{\hspace{4.7cm} [\sc{ExtCall\_WithSpec\_Weak}]}
+	{ 
+   	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+        }
+	{   \hproves{M} 
+						{ \    { \external{y_0} }\, \wedge \, \overline {x:C}  \, \wedge \,  \PushAS  {y}{  A_1} \,   \wedge \,  \PushAS {y}{\extract{M}}\   }
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \ \PushAS  {y} { A_2} \,  \wedge\,    \PushAS {y}{\extract{M}}   \ }	
+}
+}
+\\
+\\
+{ 
+\inferruleSD{\hspace{4.7cm}[\sc{ExtCall\_WithSpec\_Strong}]}
+	{        	
+	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+   	}
+	{   \hproves{M} 
+						{ \  {\external{y_0}  } \, \wedge\, \overline {x:C}\ ,\wedge\,  \PushAS  {y} { A_1} \, \wedge\,  A_1\ , \wedge\,  \PushAS {y}{\extract{M}}\   \  }
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \  \ \PushAS  {y} { A_2}\,  \wedge\, A_2 \,  \wedge\,   \PushAS {y}{\extract{M}}\   }	
+}}
+\\
+\\
+\end{array}
+$
+\caption{Internal and External Calls Logic}
+\label{f:calls}
+\label{f:external:calls}
+\end{figure}
 }
 
 Rule {\sc{IntCall}} is standard.  We use  the notation
@@ -394,68 +505,71 @@ after popping that frame, the state  satisfies assertion  $\PushAS y A$ . This i
 \red{The precondition and postcondition of   rule {\sc{ExtCall2}} are strictly stronger than  those in  {\sc{ExtCall1}}: In addition to $\overline {x:C} \wedge \PushAS y {A_1}$, the precondition also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.
 }
 
-
-\begin{figure}[hbt]
-$\begin{array}{c}
-\begin{array}{ll}
-\inferruleSD{ [{\sc{Call1}]}}
-	{ 
-	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
-	}
-	{   \hproves{M}  { \ x=x'\   } 	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
-
- &  
-\inferruleSD{ [\sc{Call2}]}
-	{ 
-		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
-	}
-	{   \hproves{M}  { \  x'\neq x' \  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	}
-\end{array}
-\\
-\\
-\inferruleSD{\hspace{4.7cm} [\sc{IntCall}]}
-	{ 
-	   	M, C, m  :  (\, A_1, \ A_2\, )\ \ \  \ \ \ \ \ fv(A_1)=\overline x
-          		}
-	{   \hproves{M} 
-						{ \ {\internal{y_0}}  \wedge  y:C  \ \wedge \ A_1[\overline y/\prg{this},\overline x] \  }
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \  A_2[ u/result,\overline y/\prg{this},\overline x]  \ }	
-}
-\\
-\\
-\sdN{
-\inferruleSD{\hspace{4.7cm} [\sc{ExtCall1}]}
-	{ 
-   	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
-        }
-	{   \hproves{M} 
-						{ \    { \external{y_0} }\ \wedge \ \overline {x:C}  \ \wedge \  \PushAS  {y}{  A_1} \  }
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \ \PushAS  {y} { A_2}  \ }	
-}
-}
-\\
-\\
-\red{ 
-\inferruleSD{\hspace{4.7cm} [\sc{ExtCall2}]}
-	{ 
-         	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
-   	}
-	{   \hproves{M} 
-						{ \  {\external{y_0}  } \ \wedge\ \overline {x:C}\ \wedge\  \PushAS  {y} { A_1} \ \wedge\  A_1 \  }
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \  \ \PushAS  {y} { A_2}  \wedge A_2  \ }	
-}}
-\\
-\\
-
-\end{array}
-$
-\caption{Internal and External Calls Logic}
-\label{f:calls}
-\label{f:external:calls}
-\end{figure}
+%\begin{figure}[hbt]
+%$\begin{array}{c}
+%\begin{array}{ll}
+%\inferruleSD{ [{\sc{Call1}]}}
+%	{ 
+%	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
+%	}
+%	{   \hproves{M}  { \ x=x'\   } 	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
+%
+% &  
+%\inferruleSD{ [\sc{Call2}]}
+%	{ 
+%		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
+%	}
+%	{   \hproves{M}  { \  x'\neq x' \  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	}
+%\end{array}
+%\\
+%\\
+%\inferruleSD{\hspace{4.7cm} [\sc{IntCall}]}
+%	{ 
+%	   	M, C, m  :  (\, A_1, \ A_2\, )\ \ \  \ \ \ \ \ fv(A_1)=\overline x
+%          		}
+%	{   \hproves{M} 
+%						{ \ {\internal{y_0}}  \wedge  y:C  \ \wedge \ A_1[\overline y/\prg{this},\overline x] \  }
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \  A_2[ u/result,\overline y/\prg{this},\overline x]  \ }	
+%}
+%\\
+%\\
+%{
+%\inferruleSD{\hspace{4.7cm} [\sc{ExtCall1}]}
+%	{ 
+%   	\sdN{OSS(M)=A_{os}}
+%	\\
+%	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+%        }
+%	{   \hproves{M} 
+%						{ \    { \external{y_0} }\ \wedge \ \overline {x:C}  \ \wedge \  \PushAS  {y}{  A_1} \  \wedge\ \red{A_{os}}\ }
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \ \PushAS  {y} { A_2}   \wedge\ \red{A_{os}}\  \ }	
+%}
+%}
+%\\
+%\\
+%{ 
+%\inferruleSD{\hspace{4.7cm} [\sc{ExtCall2}]}
+%	{ 
+%         	\sdN{OSS(M)=A_{os}}
+%	\\
+%	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+%   	}
+%	{   \hproves{M} 
+%						{ \  {\external{y_0}  } \ \wedge\ \overline {x:C}\ \wedge\  \PushAS  {y} { A_1} \ \wedge\  A_1\  \wedge\ \red{A_{os}}\  \  }
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \  \ \PushAS  {y} { A_2}  \wedge A_2 \  \wedge\ \red{A_{os}}\  \  \ }	
+%}}
+%\\
+%\\
+%
+%\end{array}
+%$
+%\caption{Internal and External Calls Logic}
+%\label{f:calls}
+%\label{f:external:calls}
+%\end{figure}
 
 
 
@@ -538,85 +652,86 @@ $M, {\PushSLong {(\overline y, \overline z)} \sigma }   \models\  A \  \ \ \ \Lo
 
 \subsection{Proving \SpecLang Specifications}
 
-\subsubsection{Deriving sub-specifications}
 
+%\end{figure}
+%\begin{figure}[thb]
+%%\footnotesize
+%$
+%\begin{array}{c}
+%\inferrule [Two-State]
+%	{
+%	\\\\
+%	M \vdash \encaps{\overline {x:C}\, \wedge \, A_1  } \ \ \ \ \ \ \ \ \ \ \ M \vdash \encaps{\overline {x:C}\, \wedge \, A_2}
+%	\\\\
+%	\sdN{OSS(M)=A_{os}}
+%	\\\\\
+%	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
+%					  \strut \hspace{3.5cm} {\hproves{M}{ \overline{x:C}\ \wedge \ A_1\ \wedge \ \sdN{A_{os}} \wedge \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A_2\ }} \ \parallel \  A_2 \wedge A_{os}
+%}
+%	{
+%	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A_1} {A_2} }
+%	}
+%\\\\
+%\\\\
+%\inferrule [One-State]
+%	{
+%		 M \vdash \encaps{\overline {x:C}\, \wedge \, A } 
+%			%        A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
+%		% \mbox{\ conjunction of all one state invariants in } HS(M)   
+%		\\ \\ 
+%		\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
+%					  \strut \hspace{4.5cm}  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
+%}
+%	{  
+%	         M\ \vdash \ \OneStateQ{\overline {y:C}}{A} 
+%	}
+%\\\\
+%\inferrule [Intrm]
+%	{
+%		\\ \\
+%		A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
+%		\mbox{\ conjunction of all one state invariants in } HS(M)    
+%		\\\\
+% 		 \hproves{M} { \ A_1\ \wedge\ A_{os}\ } {\ s\ } {\ A_2\ \wedge\ A_{os}\  } \
+% 		\\\\ 	
+%				\forall  s', z, m.[\ \  \
+%				   s \equiv s'; z.m(\_); \_\ \wedge \ 
+%				  \hproves{M} {\ A_1 \wedge \ A_{os}\ } {\ s'\ } {\  \external{z}\  } \\ \\
+%				  \strut \hspace{6.5cm}
+%				  \Longrightarrow\ \ \ \hproves{M}{\ A_1 \wedge A_{os} \ }{\ s'\ } {\ A_2 \wedge A_{os}  \ } \ \ ]
+%	}
+%	{  
+%	         { \hproves{M}{\ A_1\ }   {\ s\ } {\ A_2\ } }  \parallel \  A_2   
+%	}
+%\\\\
+%\begin{array}{lcl}
+%\inferrule[Weaken]
+%{
+%M \vdash S \\ \strongerI M S {S'}
+%}
+%{
+%M \vdash S'
+%}
+%&\ \ \  &
+%\inferrule[Multi]
+%	{
+%	M\ \vdash\ S 
+%	\\
+%	M\ \vdash\ S' 
+%	}
+%	{
+%	M\ \vdash\ S \wedge S'
+%	}
+%\end{array}
+%
+%\end{array}
+%$
+%\caption{Inferring that module satisfies its specification}
+%\label{f:module:invariats}
+%\end{figure}
 
-\label{s:module-proof}
-
-\begin{figure}[thb]
-%\footnotesize
-$
-\begin{array}{c}
-\inferrule [Two-State]
-	{
-	\\\\
-	M \vdash \encaps{\overline {x:C}\, \wedge \, A_1  } \ \ \ \ \ \ \ \ \ \ \ M \vdash \encaps{\overline {x:C}\, \wedge \, A_2}
-	\\\\
-	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-					  \strut \hspace{4.5cm} {\hproves{M}{ \overline{x:C}\ \wedge \ A_1\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A_2\ }} \ \parallel \  A_2 
-}
-	{
-	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A_1} {A_2} }
-	}
-\\\\
-\\\\
-\inferrule [One-State]
-	{
-		 M \vdash \encaps{\overline {x:C}\, \wedge \, A } 
-			%        A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-		% \mbox{\ conjunction of all one state invariants in } HS(M)   
-		\\ \\ 
-		\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-					  \strut \hspace{4.5cm}  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
-}
-	{  
-	         M\ \vdash \ \OneStateQ{\overline {y:C}}{A} 
-	}
-\\\\
-\inferrule [Intrm]
-	{
-		\\ \\
-		A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-		\mbox{\ conjunction of all one state invariants in } HS(M)    
-		\\\\
- 		 \hproves{M} { \ A_1\ \wedge\ A_{os}\ } {\ s\ } {\ A_2\ \wedge\ A_{os}\  } \
- 		\\\\ 	
-				\forall  s', z, m.[\ \  \
-				   s \equiv s'; z.m(\_); \_\ \wedge \ 
-				  \hproves{M} {\ A_1 \wedge \ A_{os}\ } {\ s'\ } {\  \external{z}\  } \\ \\
-				  \strut \hspace{6.5cm}
-				  \Longrightarrow\ \ \ \hproves{M}{\ A_1 \wedge A_{os} \ }{\ s'\ } {\ A_2 \wedge A_{os}  \ } \ \ ]
-	}
-	{  
-	         { \hproves{M}{\ A_1\ }   {\ s\ } {\ A_2\ } }  \parallel \  A_2   
-	}
-\\\\
-\begin{array}{lcl}
-\inferrule[Weaken]
-{
-M \vdash S \\ \strongerI M S {S'}
-}
-{
-M \vdash S'
-}
-&\ \ \  &
-\inferrule[Multi]
-	{
-	M\ \vdash\ S 
-	\\
-	M\ \vdash\ S' 
-	}
-	{
-	M\ \vdash\ S \wedge S'
-	}
-\end{array}
-
-\end{array}
-$
-\caption{Inferring that module satisfies its specification}
-\label{f:module:invariats}
-\end{figure}
-
+\subsubsection{Thoughts and Questions}
+ 
 TODO: Does the consequence rule require that the assertions are encapsulated? And if an assertion is encapsulated, is its consequence also encapsulated?
 
 The rules also require that the variables in the quatifiers do not appear in the bodies, and are disjoint from the parameters.
