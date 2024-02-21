@@ -492,18 +492,19 @@ $
 Rule {\sc{IntCall}} is standard.  We use  the notation
 $ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-condition pair  $(\, P, \ Q\, ) $. 
 
- 
-\sdN{In the rules for external calls,  {\sc{ExtCall1}} and {\sc{ExtCall2}}, we use the  assertion push-function $\pushSymbol$ with  signature\\
+ {In the rules for external calls,  {\sc{ExtCall1}} and {\sc{ExtCall2}}, we use the  assertion push-function $\pushSymbol$ with  signature\\
  $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,\\
  defined in Figure \ref{f:Push}. The assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
 onto that state a frame which contained the values  of $\overline y$, assertion $A$ would hold. This is expressed in lemma \ref{lemma:push:ass:state}, part \ref{lemma:push:ass:state:one}. Conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y, \overline z$ has been pushed, then 
 after popping that frame, the state  satisfies assertion  $\PushAS y A$ . This is expressed in lemma \ref{lemma:push:ass:state},  part \ref{lemma:push:ass:state:two}. }
 
-\sdN{The rules {\sc{ExtCall1}} and {\sc{ExtCall2}} require  that the module  promises $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
+
+\sdN{\textbf{Comment: the explanations below are out of sync with the modifications}}
+{The rules {\sc{ExtCall1}} and {\sc{ExtCall2}} require  that the module  promises $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
 
 
-\red{The precondition and postcondition of   rule {\sc{ExtCall2}} are strictly stronger than  those in  {\sc{ExtCall1}}: In addition to $\overline {x:C} \wedge \PushAS y {A_1}$, the precondition also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.
-}
+{The precondition and postcondition of   rule {\sc{ExtCall2}} are strictly stronger than  those in  {\sc{ExtCall1}}: In addition to $\overline {x:C} \wedge \PushAS y {A_1}$, the precondition also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.
+} \sdN{\textbf{End Comment about the  explanations above}}
 
 %\begin{figure}[hbt]
 %$\begin{array}{c}
@@ -689,86 +690,46 @@ Can we express what Fig \ref{f:calls} does, but more streamlined? -- SD has no i
 In the rule for $\vdash M$,   I wonder whether we should be using ${\extract{M}}$ rather than $\PushAS {y} {\extract{M}}$. -- SD thinks this is only a matter of more thinking
 \item
 In  Fig \ref{f:calls} I wonder whether there are also stronger versions, where we require ${\extract{M}}$ rather than $\PushAS {y} {\extract{M}}$, pretty much as in the difference between {\sc{ExtCall\_WithSpec\_Weak}}  and the other rule, {\sc{ExtCall\_WithSpec\_Strong}}. But this would blow up the rules even more! 
+\item
+ Does the consequence rule require that the assertions are encapsulated? And if an assertion is encapsulated, is its consequence also encapsulated? TODO
+\item
+All rules require that the variables in the quantifiers do not appear in the meathod bodies, and are disjoint from the parameters.
+TODO explain. 
+\item  Wened to add some dynamic type checking to the language, ie the method call crashes if actual params do not fir the formal types. OR we type them all as \prg{Object}.
 \end{enumerate}
 }
 
-%\end{figure}
-%\begin{figure}[thb]
-%%\footnotesize
-%$
-%\begin{array}{c}
-%\inferrule [Two-State]
-%	{
-%	\\\\
-%	M \vdash \encaps{\overline {x:C}\, \wedge \, A_1  } \ \ \ \ \ \ \ \ \ \ \ M \vdash \encaps{\overline {x:C}\, \wedge \, A_2}
-%	\\\\
-%	\sdN{OSS(M)=A_{os}}
-%	\\\\\
-%	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-%					  \strut \hspace{3.5cm} {\hproves{M}{ \overline{x:C}\ \wedge \ A_1\ \wedge \ \sdN{A_{os}} \wedge \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A_2\ }} \ \parallel \  A_2 \wedge A_{os}
-%}
-%	{
-%	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A_1} {A_2} }
-%	}
-%\\\\
-%\\\\
-%\inferrule [One-State]
-%	{
-%		 M \vdash \encaps{\overline {x:C}\, \wedge \, A } 
-%			%        A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-%		% \mbox{\ conjunction of all one state invariants in } HS(M)   
-%		\\ \\ 
-%		\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-%					  \strut \hspace{4.5cm}  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
-%}
-%	{  
-%	         M\ \vdash \ \OneStateQ{\overline {y:C}}{A} 
-%	}
-%\\\\
-%\inferrule [Intrm]
-%	{
-%		\\ \\
-%		A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-%		\mbox{\ conjunction of all one state invariants in } HS(M)    
-%		\\\\
-% 		 \hproves{M} { \ A_1\ \wedge\ A_{os}\ } {\ s\ } {\ A_2\ \wedge\ A_{os}\  } \
-% 		\\\\ 	
-%				\forall  s', z, m.[\ \  \
-%				   s \equiv s'; z.m(\_); \_\ \wedge \ 
-%				  \hproves{M} {\ A_1 \wedge \ A_{os}\ } {\ s'\ } {\  \external{z}\  } \\ \\
-%				  \strut \hspace{6.5cm}
-%				  \Longrightarrow\ \ \ \hproves{M}{\ A_1 \wedge A_{os} \ }{\ s'\ } {\ A_2 \wedge A_{os}  \ } \ \ ]
-%	}
-%	{  
-%	         { \hproves{M}{\ A_1\ }   {\ s\ } {\ A_2\ } }  \parallel \  A_2   
-%	}
-%\\\\
-%\begin{array}{lcl}
-%\inferrule[Weaken]
-%{
-%M \vdash S \\ \strongerI M S {S'}
-%}
-%{
-%M \vdash S'
-%}
-%&\ \ \  &
-%\inferrule[Multi]
-%	{
-%	M\ \vdash\ S 
-%	\\
-%	M\ \vdash\ S' 
-%	}
-%	{
-%	M\ \vdash\ S \wedge S'
-%	}
-%\end{array}
-%
-%\end{array}
-%$
-%\caption{Inferring that module satisfies its specification}
-%\label{f:module:invariats}
-%\end{figure}
+\subsection{Examples}
 
+This example illustrates what we need to check when:
+
+Take a moddule $M$ with classes $D$ and $E$, and holistic specification:\\
+$\strut \ \ \  HS(M)= \OneStateQ{d:D}{d.f\geq 300} \wedge  \TwoStatesQ{e:E,i:int}{e.f\geq i} {e.f\geq i} $,\\
+Then, when we extract the ???would be nice to have a name! ??? we obtain\\
+$\strut \ \ \   \extract{M}  = \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge \  [ e:Int \wedge i:int \wedge e.f \geq i]$
+
+Assume that $D$ has a public method  with formal parameter $y:E$, and body $s$. Then, we have to prove\\
+$\strut \ \ \  \hprovesTwoLines {M} {this:D \wedge y:E \wedge  \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge\  \  [ e:E \wedge i:int \wedge e.f \geq i]\ } {s}
+{\forall d.[d:D \rightarrow d.f\geq 300]\ \wedge\  \  [ e:E \wedge i:int \wedge e.f \geq i]\ }$
+
+\vspace{.1cm}
+
+In the table below, we show various bodies for $s$ and discuss whether they satisfy the requirment; We assume that z1, and z2 are   external. And we assume that $E$ has a filed $nxt$ also of class $E$.
+
+\begin{tabular}{lclcl}
+$s$ is & & satisfies? &  & comment\\
+\hline  
+ this.f = 200  &\ \  & NO\\
+  this.f = 200; this.f = this.f+100  & & YES\\
+  this.f = 200;\   \textbf{z1.m()};  \ this.f = this.f+100  & & NO\\
+  y.f = y.f+1   & & YES   \\
+  y.f = y.f-1   & & NO & \ \  &  difficult? we are "binding" e "late"\\
+ y.nxt.i = y.nxt.i -1   & & NO\\
+ e1=new E; e1.f=7 & & YES\\
+ e1=new E; e1.f=7; \   \textbf{z1.m()};  \ e1.f=3 &  & YES & & surprising?\\
+  e1=new E; e1.f=7; \  \textbf{z1.m()};  \ e1.f=3  \textbf{z2.m()};  e1.f=2 &  & YES & & surprising?\\
+ \hline
+\end{tabular}
 
 
 %\end{figure}
@@ -848,14 +809,85 @@ In  Fig \ref{f:calls} I wonder whether there are also stronger versions, where w
 %\label{f:module:invariats}
 %\end{figure}
 
-\subsubsection{Thoughts and Questions}
- 
-TODO: Does the consequence rule require that the assertions are encapsulated? And if an assertion is encapsulated, is its consequence also encapsulated?
 
-The rules also require that the variables in the quatifiers do not appear in the bodies, and are disjoint from the parameters.
-TODO explain. Also, we only look at the methods exported from the module.  Also, we ned to add some dynamic type checking to the language, ie the method call crashes if actual params do not fir the formal types. OR we type them all as \prg{Object}.
 
-TODO: shall we drop one-state invariants? Do not know how to prove them here. But they are in the spirit of capabilities literature.
+%\end{figure}
+%\begin{figure}[thb]
+%%\footnotesize
+%$
+%\begin{array}{c}
+%\inferrule [Two-State]
+%	{
+%	\\\\
+%	M \vdash \encaps{\overline {x:C}\, \wedge \, A_1  } \ \ \ \ \ \ \ \ \ \ \ M \vdash \encaps{\overline {x:C}\, \wedge \, A_2}
+%	\\\\
+%	\sdN{OSS(M)=A_{os}}
+%	\\\\\
+%	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
+%					  \strut \hspace{3.5cm} {\hproves{M}{ \overline{x:C}\ \wedge \ A_1\ \wedge \ \sdN{A_{os}} \wedge \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A_2\ }} \ \parallel \  A_2 \wedge A_{os}
+%}
+%	{
+%	M\ \vdash\ {\TwoStatesQ {\overline {x:C}} {A_1} {A_2} }
+%	}
+%\\\\
+%\\\\
+%\inferrule [One-State]
+%	{
+%		 M \vdash \encaps{\overline {x:C}\, \wedge \, A } 
+%			%        A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
+%		% \mbox{\ conjunction of all one state invariants in } HS(M)   
+%		\\ \\ 
+%		\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
+%					  \strut \hspace{4.5cm}  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
+%}
+%	{  
+%	         M\ \vdash \ \OneStateQ{\overline {y:C}}{A} 
+%	}
+%\\\\
+%\inferrule [Intrm]
+%	{
+%		\\ \\
+%		A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
+%		\mbox{\ conjunction of all one state invariants in } HS(M)    
+%		\\\\
+% 		 \hproves{M} { \ A_1\ \wedge\ A_{os}\ } {\ s\ } {\ A_2\ \wedge\ A_{os}\  } \
+% 		\\\\ 	
+%				\forall  s', z, m.[\ \  \
+%				   s \equiv s'; z.m(\_); \_\ \wedge \ 
+%				  \hproves{M} {\ A_1 \wedge \ A_{os}\ } {\ s'\ } {\  \external{z}\  } \\ \\
+%				  \strut \hspace{6.5cm}
+%				  \Longrightarrow\ \ \ \hproves{M}{\ A_1 \wedge A_{os} \ }{\ s'\ } {\ A_2 \wedge A_{os}  \ } \ \ ]
+%	}
+%	{  
+%	         { \hproves{M}{\ A_1\ }   {\ s\ } {\ A_2\ } }  \parallel \  A_2   
+%	}
+%\\\\
+%\begin{array}{lcl}
+%\inferrule[Weaken]
+%{
+%M \vdash S \\ \strongerI M S {S'}
+%}
+%{
+%M \vdash S'
+%}
+%&\ \ \  &
+%\inferrule[Multi]
+%	{
+%	M\ \vdash\ S 
+%	\\
+%	M\ \vdash\ S' 
+%	}
+%	{
+%	M\ \vdash\ S \wedge S'
+%	}
+%\end{array}
+%
+%\end{array}
+%$
+%\caption{Inferring that module satisfies its specification}
+%\label{f:module:invariats}
+%\end{figure}
+
 
 %\subsection{Soundness of the \SpecLang Logic}
 %
