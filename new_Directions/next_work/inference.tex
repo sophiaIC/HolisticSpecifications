@@ -709,20 +709,20 @@ Such an approach might solve the "late binding" issues mentioned below.
 
 \subsection{Examples}
 
-\subsubsection{Method Specs}
+\subsubsection{Method Specs for the $pay$ method, as in OOPSLA}
 
 \newcommand{\SP}{~\strut \ \ \ \ \ \ \ \ \ }
 Consider a public method in class $Account$, defined as \\
 $\strut \ \ \  void\  pay(a: Account, p:Password, j: int)\{ \ if\ ( this.passwrd== p)\ .....\  \}$
 \\
-This method will have the same specifications as in OOPSLA\\ 
+This method will have the same specifications as in OOPSLA. And note that $a'$ does not appear in the signature or the body of $pay$.  \\ 
 $\SP---\ PP1:$\\
 $\SP PRE:\ \ \ a': Account \ \wedge \  p' : Password \ \wedge \ a'.password=p' $
 \\
 $\SP POST: \ \ a'.password=p' $
 \\
 $\SP ---\ PP2:$\\
-$\SP PRE:\ \ \ a':Account \ \wedge\ k: Int \ \wedge  a'\neq a, this\ \wedge\  a'balance = k \ \ $\\
+$\SP PRE:\ \ \ a':Account \ \wedge\ k: Int \ \wedge  a'\neq a, this\ \wedge\  a'.balance = k \ \ $\\
 $\SP POST:\ \   a'.balance = k \ \ $
 \\
 $\SP ---\ PP3:$ \\
@@ -730,11 +730,46 @@ $\SP PRE: \ \ p=this.password \ \wedge\ i,k:Int \ \wedge \ this.balance=i \ \wed
 \\
 $\SP POST:\ \  this.balance=i-j \ \wedge\  a.balance = i+j \ \ $\\
 $\SP ---\ PP4:$\\
-$\SP PRE:\ \ \  p\neq this.password\  \wedge \  a':Account \ \wedge\ k: Int\   \wedge\  a'balance = k $\\
-\\
+$\SP PRE:\ \ \ ( p\neq this.password\, \vee\, a=this)\  \wedge \  a':Account \ \wedge\ k: Int\   \wedge\  a'.balance = k $\\
 $\SP POST: \ \ a'.balance=k$
 
-Note that $a'$ does not appear in the signature or the body of $pay$.
+It would be nice if we were able to avoid having to write $PP1$ and $PP2$ explicitly, esp. as when we add stuff like the bank, etc, these specs will grow even more. Adopting \prg{modifies}-clauses or SL would be an approach to that.
+
+
+\subsubsection{Method Specs for a public method whose body makes an external call}
+ The method \prg{buy} contains an external call, and is meant to demonstrate the new power of our system. Assume that \prg{buy}
+ is part of a further class \prg{Shop}.   Assume also that \prg{Item} is a class in my module, and that it has a field \prg{price}.
+ % From the type system, we could deduce that $\OneStateQ{a:Account,anItem:Item}{\protectedFrom {a.password}{anItem}
+ 
+\begin{lstlisting}
+class Shop
+
+    fld myAccount : Account
+    
+    void buy(buyer: Object, anItem: Item)
+        int price = anItem.price
+        int oldBalance = this.myAccount.balance
+        buyer.Payment(myAccount,price)
+            if (this.myAccount.balance = oldBalance+price)
+                { buyer.payMe( this.myAccount, price) }
+            else
+                { buyer.WriteMessage("you have not paid me") }
+\end{lstlisting}
+
+The specifications below guarantee that protection of an account's password from $buyer$ is preserved, and if a password is protected from $buyer$, then its balance cannot decrease ($PP10$). Moreover, protection from $buyer$ of an account different than the shop's account is preserved, and if an account is protected from buyer, then it balance will remain the same.
+\noindent
+$\SP ---\ PP10:$\\
+$\SP PRE:\ \ \ a': Account \ \wedge \ \protectedFrom {a'.password}{buyer} \ \wedge \  k:int \ \wedge \ a'.balance=k$\\
+$\SP POST: \ \ a'.balance \geq k \ \wedge\  \protectedFrom {a'.password}{buyer} $
+\\
+$\SP ---\ PP11:$\\
+$\SP PRE:\ \ \ a': Account \ \wedge \ (\protectedFrom {a'}{buyer} \wedge a'\neq this.myAccount) \ \wedge \  k:int \ \wedge \ a'.balance=k$\\
+$\SP POST: \ \ a'.balance = k \ \wedge\  \protectedFrom {a'}{buyer} $
+
+\vspace{.2cm}
+QUESTION: Are there more to the spec? 
+
+TODO explain what are the additional guarantees that we are making vs, eg the guarantees made by $S_4$. Not sure there are any, actually when we apply the $\PushAS {\_} {\_}$ operator to the module's spec, ...
 
 \subsubsection{What to check}
 This example illustrates what we need to check when:
