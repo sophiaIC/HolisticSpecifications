@@ -658,19 +658,21 @@ We now define the judgment $\vdash M$, which says that module $M$ has been prove
 $
 \\ \\
 \begin{array}{l}
-\inferrule [ModuleWellFormed]
+\inferruleSD {  ~ \strut \hspace{3cm} {\sc{Module\_Well\_Formed}}}
 {
-      \\ \\ 
-      \forall  D\in M,  m   \textit{ with } \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \},
-      \\\\
+\begin{array}{l} 
+\forall  D\in M,  m   \textit{ with } \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}      \\
        %\textit{internal methods }
-        ~ \strut \hspace{0.3cm} m \textit{ private, with  spec } A_{pre},  A_{post}:\ \  \
- 					%  \\\\  \strut \hspace{3.5cm}
-					   {\hproves{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{y:D}\, \wedge\, A_{pre}\  } {\ s\ } {\ A_{post} \ } }
- 	\\\\
- 	 ~  \strut \hspace{0.3cm} m \textit{ public}:\ \ \
-	   					%\\\\  \strut \hspace{3.5cm} 
-					  { \hproves {M} {\ \prg{this}:\prg{D} \wedge\ \overline{y:D}   \ \wedge \ \PushAS {y} {\extract{M} } } {\ s\ } {\ \PushAS {y} {\extract{M}} } } 
+        ~ \strut \hspace{0.5cm} m \textit{ private}  \\ 
+            ~ \strut \hspace{0.9cm} \textit{ for all its  specs } A_{pre},  A_{post}:\\ 
+             ~\strut \hspace{2cm}
+ 					   {\hproves{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{y:D}\, \wedge\, A_{pre}\  } {\ s\ } {\ A_{post} \ } }\\
+      ~ \strut \hspace{0.5cm} m \textit{ public}  \\ 
+           ~ \strut \hspace{2cm}  { \hproves {M} {\ \prg{this}:\prg{D} \wedge\ \overline{y:D}   \ \wedge \ \PushAS {y} {\extract{M} } } {\ s\ } {\ \PushAS {y}{\extract{M}} } } \\
+        ~ \strut \hspace{0.9cm} \textit{ and for all its  specs } A_{pre},  A_{post}:\\ 
+             ~\strut \hspace{2cm}   
+              ~ \strut \hspace{2cm}  { \hproves {M} {\ \prg{this}:\prg{D} \wedge\ \overline{y:D}  \ \wedge \ \PushAS {y} {\extract{M} } \ \wedge \ A_{pre}\ } {\ s\ } {\ A_{post} }  }
+\end{array}
 }					  					  
 {   
 	\ \vdash\ M \ 
@@ -689,13 +691,15 @@ Can we express what Fig \ref{f:calls} does, but more streamlined? -- SD has no i
 \item
 In the rule for $\vdash M$,   I wonder whether we should be using ${\extract{M}}$ rather than $\PushAS {y} {\extract{M}}$. -- SD thinks this is only a matter of more thinking
 \item
+Do we want to forbid private methods to make external calls -- see Sect \ref{s:privateMs}? If we do that, then we need to extend the oper semantics and the inference rules in trivial, and boring ways...
+\item
 In  Fig \ref{f:calls} I wonder whether there are also stronger versions, where we require ${\extract{M}}$ rather than $\PushAS {y} {\extract{M}}$, pretty much as in the difference between {\sc{ExtCall\_WithSpec\_Weak}}  and the other rule, {\sc{ExtCall\_WithSpec\_Strong}}. But this would blow up the rules even more! 
 \item
  Does the consequence rule require that the assertions are encapsulated? And if an assertion is encapsulated, is its consequence also encapsulated? TODO - EASY
 \item
 All rules require that the variables in the quantifiers do not appear in the meathod bodies, and are disjoint from the parameters.
 TODO explain -EASY. 
-\item  We need to add some dynamic type checking to the language, ie the method call crashes if actual params do not fir the formal types. OR we type them all as \prg{Object}. TODO - EASY
+\item  We need to add some dynamic type checking to the language, ie the public method call crashes if the actual params do not fit the formal types. Thisi is only for convenience; we cloud type them all as \prg{Object}, and crash by hand. TODO - EASY
 \item
 Do we need "modifies" or "does not modify" clauses too? Or can we assume that the underlying HL does this implicitly? For example, does\\
 $\strut \ \ \  \hproves{M}  {a:Account \wedge p:Password \wedge a.passwd=p} {stmts}  {a.passwd=p}$\\ (with $a$ and $p$  free in $stmts$),  implicitly promise that no account's password has been modified? Shall we require the underlying logic to support such judgments -- say that if it has modifies clauses, or SL, it could do that?\\
@@ -705,6 +709,34 @@ Such an approach might solve the "late binding" issues mentioned below.
 
 \subsection{Examples}
 
+\subsubsection{Method Specs}
+
+\newcommand{\SP}{~\strut \ \ \ \ \ \ \ \ \ }
+Consider a public method in class $Account$, defined as \\
+$\strut \ \ \  void\  pay(a: Account, p:Password, j: int)\{ \ if\ ( this.passwrd== p)\ .....\  \}$
+\\
+This method will have the same specifications as in OOPSLA\\ 
+$\SP---\ PP1:$\\
+$\SP PRE:\ \ \ a': Account \ \wedge \  p' : Password \ \wedge \ a'.password=p' $
+\\
+$\SP POST: \ \ a'.password=p' $
+\\
+$\SP ---\ PP2:$\\
+$\SP PRE:\ \ \ a':Account \ \wedge\ k: Int \ \wedge  a'\neq a, this\ \wedge\  a'balance = k \ \ $\\
+$\SP POST:\ \   a'.balance = k \ \ $
+\\
+$\SP ---\ PP3:$ \\
+$\SP PRE: \ \ p=this.password \ \wedge\ i,k:Int \ \wedge \ this.balance=i \ \wedge \ a.balance=k\ \wedge a\neq this$
+\\
+$\SP POST:\ \  this.balance=i-j \ \wedge\  a.balance = i+j \ \ $\\
+$\SP ---\ PP4:$\\
+$\SP PRE:\ \ \  p\neq this.password\  \wedge \  a':Account \ \wedge\ k: Int\   \wedge\  a'balance = k $\\
+\\
+$\SP POST: \ \ a'.balance=k$
+
+Note that $a'$ does not appear in the signature or the body of $pay$.
+
+\subsubsection{What to check}
 This example illustrates what we need to check when:
 
 Take a moddule $M$ with classes $D$ and $E$, and holistic specification:\\
@@ -712,7 +744,7 @@ $\strut \ \ \  HS(M)= \OneStateQ{d:D}{d.f\geq 300} \wedge  \TwoStatesQ{e:E,i:int
 Then, when we extract the ???would be nice to have a name! ??? we obtain\\
 $\strut \ \ \   \extract{M}  = \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge \  [ e:Int \wedge i:int \wedge e.f \geq i]$
 
-\subsubsection{Public Methods}
+\paragraph{Public Methods}
 Assume that $D$ has a public method  with formal parameter $y:E$, and body $s$. Then, we have to prove\\
 $\strut \ \ \  \hprovesTwoLines {M} {this:D \wedge y:E \wedge  \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge\  \  [ e:E \wedge i:int \wedge e.f \geq i]\ } {s}
 {\forall d.[d:D \rightarrow d.f\geq 300]\ \wedge\  \  [ e:E \wedge i:int \wedge e.f \geq i]\ }$
@@ -728,7 +760,7 @@ $s$ is & & satisfies? &  & comment\\
   this.f = 200; this.f = this.f+100  & & YES\\
   this.f = 200;\   \textbf{z1.m()};  \ this.f = this.f+100  & & NO\\
   y.f = y.f+1   & & YES   \\
-  y.f = y.f-1   & & NO & \ \  &  difficult? we are "binding" e "late"\\
+  y.f = y.f-1   & & NO & \ \  &  \\
  y.nxt.i = y.nxt.i -1   & & NO\\
  e1=new E; e1.f=7 & & YES\\
  e1=new E; e1.f=7; \   \textbf{z1.m()};  \ e1.f=3 &  & YES & & surprising?\\
@@ -736,9 +768,9 @@ $s$ is & & satisfies? &  & comment\\
  \hline
 \end{tabular}
 
-\subsubsection{Private Methods}
-
-I now thin we have a design choice with private methods, namely: Either A) we do not allow private methods to make external calls, or B) We rethink type checking of
+\paragraph{Private Methods}
+\label{s:privateMs}
+We have a design choice with private methods, namely: Either A) we do not allow private methods to make external calls, or B) We rethink type checking of
 private methods. 
 
 Namely, continue our example from earlier, and assume a public and a private method $m\_public$, and $m\_private$ in class $E$, and bodies\\
