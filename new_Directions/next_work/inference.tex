@@ -1,4 +1,4 @@
-\newcommand{\extract}[1]{\ensuremath{{\mathcal E}xtr(#1)}}
+\newcommand{\extract}[1]{\ensuremath{{\mathcal I}\!nvs(#1)}}
 
 
 \section{Proving Adherence to \SpecLang Specifications}
@@ -335,7 +335,7 @@ Explanations: \textsc{xxxl} states that   yyy
 
 \subsection{Hoare Logic -- substructural rules}
 
-We assume that $M \vdash_{ul} \{ A \} s \{ A' \}$ is a judjement that comes with the underlying programming language.  On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
+We assume that $M \vdash_{ul} \{ A \} s \{ A' \}$ is a judgement that comes with the underlying programming language.  On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
 
  
 \begin{figure}[hbt]
@@ -376,8 +376,9 @@ $
 \subsection{Reasoning about calls}
 
 \sdN{When we reason about external calls, we need to  ensure that all proof obligations imposed by the module's spec are met.
-For this, we define in Def. \ref{def:extract}, the function $\extract{\_}$, which turns the holistic specification of a module into an assertion. 
-This assertion has to be satisfied before any external call.}
+For this, we define in Def. \ref{def:extract}, the function $\extract{\_}$, which turns the holistic specification of a module into a 
+global invariant. Notice that the two state invariant is turned into one assertion, with free variables.
+This global invariant is assumed before any public method, and  has to be satisfied before any external call, and at the end of any public method.}
 
 \label{s:module-proof}
 
@@ -402,9 +403,19 @@ $
 %\end{figure}
 \end{definition}
 
-In  Fig. \ref{f:external:calls}  we show how to reason about method calls, internal as well as external.  Rules  {\sc{Call1}} and {\sc{Call2}} apply to internal as well as external calls, while rule {\sc{IntCall}}  applies to internal calls, and rules {\sc{ExtCall1}} and rule {\sc{ExtCall2}} apply to external calls.
+\sdN{We now consider the logic for calls.
+In  Fig. \ref{f:internal:alias:calls}  we   reason about calls to internal methods, and also about the preservation of 
+alienist/non-aliasing.}
 
-\sdN{The rules {\sc{Call1}} and {\sc{Call2}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\equiv x$ expresses that $u$ and $x$ are textually the same.  It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. As $u\equiv z$ is a textual assertion, and thus  state-independent , it is a premise of the rules and not part of the Hoare triple's precondition.
+Rule {\sc{IntCall}} is standard.  We use  the notation
+$ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-condition pair  $(\, P, \ Q\, ) $. 
+
+
+
+\sdN{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\equiv x$ expresses that $u$ and $x$ are textually the same --
+ it is possible to have $x=x'$ while $u\not\equiv x'$.  
+% It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. 
+ As $u\equiv z$ is a textual assertion, and thus  state-independent , it is a premise of the rules and not part of the Hoare triple's precondition.
 }
 
 
@@ -412,20 +423,6 @@ In  Fig. \ref{f:external:calls}  we show how to reason about method calls, inter
 \begin{figure}[hbt]
 $\begin{array}{c}
 %\begin{array}{ll}
-\inferruleSD{ [{\sc{IntCall1}]}}
-	{ 
-	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
-	}
-	{   \hproves{M}  { {\internal{y_0}}\  \wedge\ \ x=x'\   }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
-
-\\ \\ 
-\inferruleSD{ [\sc{IntCall2}]}
-	{ 
-		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
-	}
-	{   \hproves{M}  {  \internal{y_0}\ \wedge  x\neq x' }  { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
-\\
-\\
 \inferruleSD{\hspace{4.7cm} [\sc{IntCall\_WithSpec}]}
 	{ 
 	   	M, C, m  :  (\, A_1, \ A_2\, )\ \ \  \ \ \ \ \ fv(A_1)=\overline x
@@ -437,26 +434,69 @@ $\begin{array}{c}
 }
 \\
 \\
-\\
-\inferruleSD{ [{\sc{ExtCall1}]}}
+\inferruleSD{\hspace{4.7cm}  [{\sc{CallAndAlias}}}
 	{ 
 	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
 	}
-	{   \hproves{M}  {  \external{y_0}  \wedge \  \PushAS {y}{\extract{M}}\  \wedge\ \ x=x'\     } 	
-	{ \ u:=y_0.m(y_1,.. y_n)\  } { \   \PushAS {y}{\extract{M}} \  \wedge\ x=x'\ }   
-	}	
-	\\ \\ 
-\inferruleSD{ [\sc{ExtCall2}]}
-	{ 
+	{   \hproves{M}  { \ x=x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
+
+\\ \\ 
+\inferruleSD{\hspace{4.7cm} [{\sc{CallNonAlias}}]}	
+{ 
 		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
 	}
-	{   \hproves{M}  {  \external{y_0}  \wedge \  \PushAS {y}{\extract{M}}\  \wedge\ \ x\neq x'\     } 	
-	{ \ u:=y_0.m(y_1,.. y_n)\  } { \   \PushAS {y}{\extract{M}} \  \wedge\ x\neq x'\ }   
-	}
-%\end{array}
+	{   \hproves{M}   { \ x\neq x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
 \\
 \\
-{
+\end{array}
+$
+\caption{Logic for Internal Calls, and  for Aliasing around Calls }
+\label{f:internal:alias:calls}
+\end{figure}
+}
+
+
+\sdN{We now move to the discussion of  external calls. For all external calls we require that the module's invariants hold before the external call.
+This is enforced through the requirement ${\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}}$ in rules
+{\sc{CallAndAlias}} and {\sc{CallNonAlias}} in  Fig. \ref{f:internal:alias:calls}, and the precondition part  
+ $\PushAS {y}{\extract{M}}$ in all rules in Fig.  \ref{f:external:calls}. }
+
+
+\sdN{Looking more closely, we notice  that we do not require that invariants hold (ie ${\extract{M}}$), but require that they will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{\extract{M}}$). We use the  assertion push-function $\pushSymbol$ with  signature\\
+ $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,\\
+ defined in Figure \ref{f:Push}. The assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
+onto that state a frame which contained the values  of $\overline y$, assertion $A$ would hold. This is expressed in lemma \ref{lemma:push:ass:state}, part \ref{lemma:push:ass:state:one}. Conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y, \overline z$ has been pushed, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ . This is expressed in lemma \ref{lemma:push:ass:state},  part \ref{lemma:push:ass:state:two}. }
+
+ 
+ \sdN{In rule {\sc{ExtCall}} we   ensure that the module's invariants are preserved by the external call. } \sdN{Notice that while  {\sc{CallAndAlias}}, {\sc{CallNonAlias}}, {\sc{ExtCall\_WithSpec\_Weak}} and {\sc{ExtCall\_WithSpec\_Weak}}    include 
+ $\PushAS y {A_1}$ in their precondition,  they do not include it in the postcondition. A variation where was  $\PushAS y {A_1}$ in the postcondition is admissible, as it would be the outcome of the combination of these rules with  {\sc{ExtCall}} through the application of {\sc{Consequ}}.}
+ 
+\sdN{The precondition of {\sc{ExtCall\_WithSpec\_Weak}} is stronger than that of {\sc{ExtCall}}. It makes use of one of the  module's  promises: Here $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. 
+% Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. 
+ Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
+
+
+\sdN{The precondition of {\sc{ExtCall\_WithSpec\_Strong}} is stronger than that of {\sc{ExtCall\_WithSpec\_Weak}}: it also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.}
+ 
+
+
+
+
+
+\small{
+\begin{figure}[hbt]
+$\begin{array}{c}
+\inferruleSD{\hspace{4.7cm} [\sc{ExtCal}]}
+	{ 
+   	 
+        }
+	{   \hproves{M} 
+						{ \    { \external{y_0} }\,     \wedge \,  \PushAS {y}{\extract{M}}\   }
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \    \PushAS {y}{\extract{M}}   \ }	
+}
+\\
+\\
 \inferruleSD{\hspace{4.7cm} [\sc{ExtCall\_WithSpec\_Weak}]}
 	{ 
    	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
@@ -464,12 +504,10 @@ $\begin{array}{c}
 	{   \hproves{M} 
 						{ \    { \external{y_0} }\, \wedge \, \overline {x:C}  \, \wedge \,  \PushAS  {y}{  A_1} \,   \wedge \,  \PushAS {y}{\extract{M}}\   }
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \ \PushAS  {y} { A_2} \,  \wedge\,    \PushAS {y}{\extract{M}}   \ }	
-}
+						{ \ \PushAS  {y} { A_2}     \ }	
 }
 \\
 \\
-{ 
 \inferruleSD{\hspace{4.7cm}[\sc{ExtCall\_WithSpec\_Strong}]}
 	{        	
 	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
@@ -477,34 +515,16 @@ $\begin{array}{c}
 	{   \hproves{M} 
 						{ \  {\external{y_0}  } \, \wedge\, \overline {x:C}\, \wedge\,  \PushAS  {y} { A_1} \, \wedge\,  A_1\, \wedge\,  \PushAS {y}{\extract{M}}\   \  }
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \  \ \PushAS  {y} { A_2}\,  \wedge\, A_2 \,  \wedge\,   \PushAS {y}{\extract{M}}\   }	
-}}
-\\
+						{ \  \ \PushAS  {y} { A_2}\,  \wedge\, A_2 \  }	
+}\
 \\
 \end{array}
 $
-\caption{Internal and External Calls Logic}
-\label{f:calls}
+\caption{Logic for External Calls}
 \label{f:external:calls}
 \end{figure}
 }
 
-Rule {\sc{IntCall}} is standard.  We use  the notation
-$ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-condition pair  $(\, P, \ Q\, ) $. 
-
- {In the rules for external calls,  {\sc{ExtCall1}} and {\sc{ExtCall2}}, we use the  assertion push-function $\pushSymbol$ with  signature\\
- $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,\\
- defined in Figure \ref{f:Push}. The assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
-onto that state a frame which contained the values  of $\overline y$, assertion $A$ would hold. This is expressed in lemma \ref{lemma:push:ass:state}, part \ref{lemma:push:ass:state:one}. Conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y, \overline z$ has been pushed, then 
-after popping that frame, the state  satisfies assertion  $\PushAS y A$ . This is expressed in lemma \ref{lemma:push:ass:state},  part \ref{lemma:push:ass:state:two}. }
-
-
-\sdN{\textbf{Comment: the explanations below are out of sync with the modifications}}
-{The rules {\sc{ExtCall1}} and {\sc{ExtCall2}} require  that the module  promises $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
-
-
-{The precondition and postcondition of   rule {\sc{ExtCall2}} are strictly stronger than  those in  {\sc{ExtCall1}}: In addition to $\overline {x:C} \wedge \PushAS y {A_1}$, the precondition also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.
-} \sdN{\textbf{End Comment about the  explanations above}}
 
 %\begin{figure}[hbt]
 %$\begin{array}{c}
