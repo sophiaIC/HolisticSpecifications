@@ -316,107 +316,106 @@ We highlight the protected objects in each pane with a golden hallo.
  
  
    
- \subsection{Assertion preservation}
+ \subsection{Viewpoints and Protection}
  
-\sdN{We now discuss preservation of assertions.
- Lemma \ref{lemma:vars:to:addresses} says that: (1)Validity of an assertion $A$ in the context of a state $\sigma$ is equivalent to the validity of the assertion resulting  from substituting free variables according to the top frame ($A[\sigma]$)}.
-(2) A bounded execution step (thus not returning from current call)
-in an external state preserves absolute protection.
-(3) An objects which is protected from  the receiver and arguments of a method call, is protected   after the corresponding frame has been pushed onto the stack.
+ 
+\sdN{The examples in Fig. \ref{fig:Protected} demonstrate that validity of assertions which refer to protection may be affected by the pushing and popping of frames on the stack. For example, $o_3$ was not protected with top frame $\phi_1$,   became protected when we pushed the frame $\phi_2$,  and again, is no longer protected when we push $\phi_3$ on the stack. 
+The operator $\pushSymbolL$ applies to assertions and sequences of variables: the assertion $\PushAS y A$   guarantees that $A$ will hold after the values if $y$ have been pushed onto a new frame:
+ $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
+onto that state a frame which contains the values  of $\overline y$, assertion $A$ will hold. }
 
-\sdN{
-  \begin{lemma}
- \label{lemma:vars:to:addresses}
-  For any  module $M$, states $\sigma$, $\sigma'$, assertion $A$,  variable $x$, \atoms $\va$, $\overline \va:$
-    \begin{enumerate}
- \item
- $ \satisfiesA {M} {\sigma}  {A}\ \ \ \Longleftrightarrow \ \ \ \  \satisfiesA {M} {\sigma}  {A[\interpret{\sigma} {x}/x]}$
- \item
-${
-\satisfiesA{M}{\sigma}{\external {\prg{this}} } \ \ \ \wedge \ \ \ \  \leadstoBounded {M}  {\sigma} {\sigma} {\sigma'}}\ \ \ \ \ \ \ \ \   \Longrightarrow$
-\begin{itemize}
-%\item
-%$ \satisfiesA{M}{\sigma}{\protectedFrom {\alpha} {\va} } \ \ \ \   \Longrightarrow \ \ \ \ \satisfiesA{M}{\sigma'}{\protectedFrom {\alpha} {\va} } $
-\item
-$ \satisfiesA {M} {\sigma} {\inside {\alpha}}   \ \ \ \   \Longrightarrow \ \ \ \satisfiesA {M} {\sigma'} {\inside {\alpha}} $
-\end{itemize}
-\item
-If ${\Pushes {\sigma}  {\va}  {\sigma'} }$, then 
-\begin{itemize}
-\item
- $ \satisfiesA {M} {\sigma'} {\inside {\va}}$  
+
+
+% Lemma \ref{lemma:vars:to:addresses} says that: (1)Validity of an assertion $A$ in the context of a state $\sigma$ implies  validity of the assertion resulting  from substituting free variables according to the top frame ($A[\sigma]$)}.
+%%(2) A bounded execution step (thus not returning from current call)
+%in an external state preserves absolute protection.
+%(3) An objects which is protected from  the receiver and arguments of a method call, is protected   after the corresponding frame has been pushed onto the stack.
+
+The  push-operator is  defined in Fig. \ref{f:Push}. The only interesting case is the first equation, i.e.  $\PushAS y {(\inside x)}$: For 
+$x$ to be protected from the viewpoint of the callee, it should be protected from all the call's arguments, ie from  $\overline y$. That is,
+$\protectedFrom x {\overline {y} \ \wedge\ x\neq \overline y}$. 
+In all other cases, the operator  $\pushSymbol$  leaves simple assertions unmodified (i.e. the second to sixth equation), or is applied to the sub-assertions (i.e. the seventh to eleventh equation).
+
+
+
+\newcommand{\sigmas}{\widetilde \sigma}
+
+ 
+\begin{figure}[hbt]
+$
+\begin{array}{c}
+\begin{array}{ccc}
+  \PushAS y {(\inside x)}\ \triangleq\ \protectedFrom x {\overline {y} }
+&\ \  \ \ \ \ \ \ &   \PushAS y {(\protectedFrom x {\overline {u}})}\ \triangleq\ \protectedFrom x  {\overline {u}}  % {(\overline {y'}\setminus \overline {y})} 
+\end{array}
   \\
-  $ \Longleftrightarrow$ 
-  \item
-   $\forall i\in 0..n.[\ \ \satisfiesA{M}{\sigma}{\protectedFrom {\va} {\va_i} }  \ \ \wedge\ \ 
- [ \  \satisfiesA{M}{\sigma}{\external {\va_o}} \ \Longrightarrow\   \satisfiesA{M}{\sigma} {\va_i \neq {\va}}\ ] \ \  ] $
-\end{itemize}
- \end{enumerate}
-\end{lemma}
-}
+  \\
+    \begin{array}{lclclcl}
+ \PushAS y  {x:C}\ \triangleq\  x:C 
+& &
+\PushAS y  {(\internal x)}\ \triangleq\ {\internal x}
+& &
+\PushAS y  {(\external x)}\ \triangleq\ {\external x}
+& &
+ \PushAS y  e\ \triangleq\ e
+  \end{array}
+  \\
+  \\
+\begin{array}{lclcl}
+ \PushAS y   {(A_1  \wedge  A_2)}\ \triangleq\ \PushAS y  { A_1}  \wedge   \PushAS y  {A_2}  & & 
+ \PushAS y { (A_1 \vee  A_2)}\ \triangleq\  \PushAS y {A_1}  \vee  \PushAS y {A_2} 
+ & &
+ \PushAS y  {(\neg A)}\ \triangleq\ \neg( {\PushAS y A} )  
+  \\  \\  % \PushAS y  {(\neg A)}\ \triangleq\ \neg( {\PushAS y A} ) & &
+ \PushAS y  {(\forall x:C.A)}\ \triangleq\ \forall x:C.({\PushAS y A} )&  &  
+  \PushAS y  {(\exists x:C.A)}\ \triangleq\ \exists x:C.({\PushAS y A} )
+%\PushAS y  {x:C}\ \triangleq\  x:C 
+%& &
+%\PushAS y  {(\internal x)}\ \triangleq\ {\internal x}
+%& &
+%\PushAS y  {(\external x)}\ \triangleq\ {\external x}
+\end{array}
+\end{array}
+$
+\caption{The push operator for assertions } 
+\label{f:Push}
+\end{figure}
  
- 
-\sdN{\paragraph{We will prove this later}
-We use the notation $\PushA M {A} {z} {A'}$ for what we used to call "lift": namely, $A'$ is what the assertion $A$ guarantees after the values of $\overline z$ have been pushed into a name frame. Perhaps a better name would have been "pushing an assertion", or we could say something like "from the callee's viewpoint". 
-Similarly, we   use  $\PopA  {\overline y} {A}   {A'}$ for what we used to call "lower". Perhaps "popping" or "from the caller's viewpoint" would be a better name.
-}
 
-In Lemma \ref{lemma:lifts} the state $\sigma'$ represents the first state after a method call from  $\sigma$, while in \ref{lemma:lowers} the state $\sigma'$ represents the last state before return from a method call originating  $\sigma$, 
+\vspace{.1cm}
 
-  \begin{lemma}
- \label{lemma:lifts}
-Take any  module $M$, states $\sigma$, $\sigma'$, assertions $A$, $A'$,    variables $\overline x$ and $\overline z$, where
-\sdN{$fv(A') \subseteq \overline x$, and $ \overline x \notin \sigma'$}.
- If
+The guarantees given by $\pushSymbolL$ are described in Lemma \ref{lemma:push:ass:state}. (1) If  the current state satisfies  $\PushAS y A$, then the assertion $A$ will hold after pushing a frame with the values of $\overline y$ (here $\PushS {y} {\sigma}$), and after extending the top frame so that all free variables of $A$ point to what they pointed at in the top frame of $\sigma$ (here $[\overline{x \mapsto {\interpret {\sigma} {x}} } ]$). (2) States the opposite: If $A$ holds in a state which is the result of pushing a frame with the values for $\overline y, \overline z$ (here ,
+Conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y$  and some other variables has been pushed (here \PushSLong {(\overline y, \overline z)} \sigma), then $\PushAS {y} {A}$ will hold  after popping that frame, and mapping the free variables of $A$ to their values  in the state  before.
+
 \sdN{
-\begin{itemize}
+\begin{lemma} 
+\label{lemma:push:ass:state}
+For any states  $\sigma$, $\sigma'$, assertion $A$,  and variables $\overline x$, $\overline y$, $\overline z$ disjoint with one another,  and such that 
+$fv(A)\subseteq \overline x$:
+\begin{enumerate}
+ \item
+ \label{lemma:push:ass:state:one}
+$M, \sigma \models \PushAS {y} {A}\ \ \ \ \ \ \   \Longrightarrow  \ \ \ \ M,  (\PushS {y} {\sigma})[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models A$
 \item
-  $ \satisfiesA {M} {\sigma}  {A$
-  \item
-  $\PushA M A {z} (\overline {x : C}} \wedge A')$  
-  \item
-  $\Pushes {\sigma} {\interpret {\sigma} {z}} {\sigma'}$ 
- \end{itemize} }
- 
- then
-\sdN{\begin{itemize}
-\item
-$ { \satisfiesA {M} {\sigma'[\overline {x \mapsto {\interpret \sigma x}}]}  {\overline {x : C} \wedge A'}}$
-\end{itemize}
-}
+\label{lemma:push:ass:state:two}
+$M, {\PushSLong {(\overline y, \overline z)} \sigma }   \models\  A \  \ \ \ \Longrightarrow  \ \ \ \ M,  \sigma[\overline{x \mapsto {\interpret {\PushSLong {(\overline y, \overline z)} \sigma} {x}} } ] \models  \PushAS  {y} {A}$
+\end{enumerate}
 \end{lemma}
-
-
-{\textbf{NOTE FOR US:} The requirement  that  $fv(A') \subseteq \overline x$  is essentially about well-formedness,  but the requirment that $ \overline x \notin \sigma'$ is annoying, we we should somehow get rid of it eventually -- esp as we want to pass in something a argument (ie as a $z$) and also have it appear in $A'$. We should assume renaming of variables..}
-
- 
-  \begin{lemma}
- \label{lemma:lowers}
-Take any  module $M$, states $\sigma$, $\sigma'$, assertions $A$, $A'$,  
-  and variables $\overline x$ and $\overline z$, where
-\sdN{$fv(A') \subseteq \overline x$, and $ \overline x \notin \sigma'$}. If 
-\sdN{\begin{itemize}
-\item
-$ { \satisfiesA {M} {\sigma'[\overline {x \mapsto {\interpret {\sigma} x}}]}  {\overline {x : C} \wedge A'}}$
-\item
-$\PopA  {\overline y}  {A'} A$  % \ \ \ and \ \ \  $fv(A') \subseteq \overline x$ 
-\item
-$\Pops {y}   {\sigma'} {\sigma}$. 
-  \end{itemize}
 }
 
- then
-\sdN{\begin{itemize}
-\item
-$ { \satisfiesA {M} {\sigma}  {\overline {x : C} \wedge A}}$
-\end{itemize}
-}
-\end{lemma}
- 
+
+\noindent
+\textbf{Notation}  In the above lemma we overloaded the notation: We write $\PushS {y} {\sigma}$ for the set of states that result from pushing a new frame with the values of $\overline y$ onto the stack of $\sigma$.
+We lift operators and judgements that apply to one state to apply to sets of states: If  $\sigmas$ is a set of states,  then $\sigmas[ \overline{x \mapsto v}]$ is the set of states from $\sigmas$ to which we applied the substitution. And the   notation 
+$M,   \sigmas \models A$ holds if  $M, \  \sigma \models A$ for all $\sigma \in \sigmas$.
+  \vspace{.1cm}
+  
+
+\vspace{.1cm}
+\noindent 
+\blue{\textbf{Comment} The $ \pushSymbol$ operator reminds me of the magic wand. Namely, $-\!-\!*$ is spatial and heap based:  the assertion $A -\!-\!* A'$ says: if you combine with a heap that satisfies $A$, then the complete heap will satisfy $A'$. While $\PushASLong {\_} {\_}$ is temporal and  stack based: the assertion  $\PushAS {y} A$ says that if you push a frame with range the values of $\overline y$, then $A$ will hold. \textbf{End Comment} }
+
+%{\red{I am surprised that $ \pushSymbol$  only affects  ${\inside x}$, and leaves all else unmodified,}}
 
 
  
-
-
-
-

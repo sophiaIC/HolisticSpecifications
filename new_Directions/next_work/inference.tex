@@ -164,10 +164,6 @@ TODO: something simple ere
 
 
 
-\subsection{Weaker/Stronger Specifications}
-
-We assume   the existence of a function $HS$ which allows us to look up the holistic specification of a module. 
-In Figure \ref{fig:si} we   define a judgment $\stronger M S  {S'}$ which expresses that the specification $S$ is stronger than the specification $S'$ under module $M$.  
 
 \begin{figure}[hbt]
 $
@@ -205,16 +201,51 @@ $
 	{ \\ 
 	M \vdash ({\overline {x:C}} \wedge A_1) \rightarrow A_1' \ \hspace{.5cm} M \vdash ({\overline {x:C}} \wedge A_2') \rightarrow A_2 }
 	{\strongerI M   {\TwoStatesQ {\overline {x:C}} {A_1'}{A_2'} }   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2} }
-	}		
+	}
+\\
+\\	
+% the below is weaker than the rule tht follows it
+% \inferrule [HS-6]
+%	{  }
+%	{
+%		{\strongerI M   { \TwoStatesQ {\overline {x:C}} {A_1}{A_2}\wedge  {\TwoStatesQ {\overline {x:C}} {A_1'}{A_2'}  } }   {\TwoStatesQ {\overline {x:C}} {A_1\wedge A_1'}{A_2\wedge A_2'} }  }
+%	}
+%\\
+%\\	
+\inferrule [HS-6]
+	{   \forall i, j: x'_i \neq_{txt} x''_j }
+	{
+		{\strongerI M   { \TwoStatesQ {\overline {x:C},\overline{x':C'}} {A_1}{A_2}\wedge  {\TwoStatesQ {\overline {x:C,x'':C''}} {A_1'}{A_2'}  } }   {\TwoStatesQ {\overline {x:C,x':C',x'':C''}} {A_1\wedge A_1'}{A_2\wedge A_2'} }  }
+	}
+\\ \\
+\inferrule [HS-7]
+	{   M \vdash A_1 \rightarrow A_1' }
+	{
+		{\strongerI M   { \TwoStatesQ {\overline {x:C}} {A_1}{A_2 \wedge A_2'} }   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2} \wedge \TwoStatesQ {\overline {x:C}} {A_1'}{A_2'} } }
+	}	
+	\\
+	\\
+\inferrule [HS-8]
+	{   {\strongerI M {S_1} {S_2}} \ \ \ \   {\strongerI M {S_2} {S_1}} }
+	{
+		M \vdash S_1 \equiv S_2 
+	}			
 \end{array}
 $
 \label{fig:si}
 \caption{Specification Implication}
 \end{figure}
 
+\subsection{Weaker/Stronger Specifications}
+
+We assume   the existence of a function $HS$ which allows us to look up the holistic specification of a module. 
+In Figure \ref{fig:si} we   define a judgment $\stronger M S  {S'}$ which expresses that the specification $S$ is stronger than the specification $S'$ under module $M$.  
+
+
 \begin{lemma}
 For all modules $M$, and specifications $S$ and $S'$, we have that\\
-\strut \hspace{2cm} $\strongerI M  S  {S'}    \ \ \ \ \Longrightarrow\ \ \ \ \stronger M S {S'}'$
+\strut \hspace{2cm}-\ \ \  $\strongerI M  S  {S'}    \ \ \ \ \Longrightarrow\ \ \ \ \stronger M S {S'}'$\\
+\strut \hspace{2cm}-\ \ \  $M \vdash S \equiv S'    \ \ \ \ \Longrightarrow\ \ \ \ M \models S \equiv {S'}'$
 \end{lemma}
 
 We now define what it means for a module $M$ to promise a specification $S$:
@@ -372,6 +403,9 @@ $
 \label{f:substructural}
 \end{figure}
  
+
+ 
+ 
  
 \subsection{Reasoning about calls}
 
@@ -403,6 +437,17 @@ $
 %\end{figure}
 \end{definition}
 
+ \begin{example}
+ \label{example:extract}
+  Take a module $M$ with classes $D$ and $E$, and holistic specification:\\
+$\strut \ \ \  \ \ \ \ \ \ HS(M)= \OneStateQ{d:D}{d.f\geq 300} \wedge  \TwoStatesQ{e:E,i:int}{e.f\geq i} {e.f\geq i} $. 
+\\
+This module's global invariant is:\\
+$\strut \ \ \  \ \ \ \ \ \ \extract{M}  = \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge \  [ e:Int \wedge i:int \wedge e.f \geq i]$
+\\
+Note that $d$ is universally quantified, while $e$ and $i$ are free in that assertion.
+ \end{example}
+
 \sdN{We now consider the logic for calls.
 In  Fig. \ref{f:internal:alias:calls}  we   reason about calls to internal methods, and also about the preservation of 
 alienist/non-aliasing.}
@@ -412,10 +457,10 @@ $ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ f
 
 
 
-\sdN{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\equiv x$ expresses that $u$ and $x$ are textually the same --
- it is possible to have $x=x'$ while $u\not\equiv x'$.  
+\sdN{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u=_{txt} x$ expresses that $u$ and $x$ are textually the same --
+the latter is stronger, i.e.   $x=_{txt}  u$ implies $x=u$. 
 % It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. 
- As $u\equiv z$ is a textual assertion, and thus  state-independent , it is a premise of the rules and not part of the Hoare triple's precondition.
+ As $...\equiv ...$ is a textual assertion, and thus  state-independent,  it is a side-condition of the rules and is  not part of the Hoare triple's precondition.
 }
 
 
@@ -436,14 +481,14 @@ $\begin{array}{c}
 \\
 \inferruleSD{\hspace{4.7cm}  [{\sc{CallAndAlias}}}
 	{ 
-	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
+	{   x \neq_{txt} u \neq_{txt} x'  }
 	}
 	{   \hproves{M}  { \ x=x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
 
 \\ \\ 
 \inferruleSD{\hspace{4.7cm} [{\sc{CallNonAlias}}]}	
 { 
-		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
+		{ \ x \neq_{txt} u \neq_{txt} x'\   }
 	}
 	{   \hproves{M}   { \ x\neq x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
 \\
@@ -462,11 +507,11 @@ This is enforced through the requirement ${\external{y_0}}  \rightarrow \  \Push
  $\PushAS {y}{\extract{M}}$ in all rules in Fig.  \ref{f:external:calls}. }
 
 
-\sdN{Looking more closely, we notice  that we do not require that invariants hold (ie ${\extract{M}}$), but require that they will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{\extract{M}}$). We use the  assertion push-function $\pushSymbol$ with  signature\\
- $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,\\
- defined in Figure \ref{f:Push}. The assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
-onto that state a frame which contained the values  of $\overline y$, assertion $A$ would hold. This is expressed in lemma \ref{lemma:push:ass:state}, part \ref{lemma:push:ass:state:one}. Conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y, \overline z$ has been pushed, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ . This is expressed in lemma \ref{lemma:push:ass:state},  part \ref{lemma:push:ass:state:two}. }
-
+\sdN{Looking more closely, we notice  that we do not require that invariants hold (ie ${\extract{M}}$), but require that they will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{\extract{M}}$). We use the  assertion push-function $\pushSymbol$   defined earlier in Figure \ref{f:Push}.}
+%We use the  assertion push-function $\pushSymbol$ with  signature\\
+% $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,\\
+Remember that the assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
+onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ (cf. llemma \ref{lemma:push:ass:state}).
  
  \sdN{In rule {\sc{ExtCall}} we   ensure that the module's invariants are preserved by the external call. } \sdN{Notice that while  {\sc{CallAndAlias}}, {\sc{CallNonAlias}}, {\sc{ExtCall\_WithSpec\_Weak}} and {\sc{ExtCall\_WithSpec\_Weak}}    include 
  $\PushAS y {A_1}$ in their precondition,  they do not include it in the postcondition. A variation where was  $\PushAS y {A_1}$ in the postcondition is admissible, as it would be the outcome of the combination of these rules with  {\sc{ExtCall}} through the application of {\sc{Consequ}}.}
@@ -526,149 +571,6 @@ $
 }
 
 
-%\begin{figure}[hbt]
-%$\begin{array}{c}
-%\begin{array}{ll}
-%\inferruleSD{ [{\sc{Call1}]}}
-%	{ 
-%	{  u\not\equiv x \ \ \ \ \ \   u\not\equiv x'\  }
-%	}
-%	{   \hproves{M}  { \ x=x'\   } 	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
-%
-% &  
-%\inferruleSD{ [\sc{Call2}]}
-%	{ 
-%		{ \ u\not\equiv x\ \ \ \ \  \ u\not\equiv x'\   }
-%	}
-%	{   \hproves{M}  { \  x'\neq x' \  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	}
-%\end{array}
-%\\
-%\\
-%\inferruleSD{\hspace{4.7cm} [\sc{IntCall}]}
-%	{ 
-%	   	M, C, m  :  (\, A_1, \ A_2\, )\ \ \  \ \ \ \ \ fv(A_1)=\overline x
-%          		}
-%	{   \hproves{M} 
-%						{ \ {\internal{y_0}}  \wedge  y:C  \ \wedge \ A_1[\overline y/\prg{this},\overline x] \  }
-%						{ \ u:=y_0.m(y_1,.. y_n)\    }
-%						{ \  A_2[ u/result,\overline y/\prg{this},\overline x]  \ }	
-%}
-%\\
-%\\
-%{
-%\inferruleSD{\hspace{4.7cm} [\sc{ExtCall1}]}
-%	{ 
-%   	\sdN{OSS(M)=A_{os}}
-%	\\
-%	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
-%        }
-%	{   \hproves{M} 
-%						{ \    { \external{y_0} }\ \wedge \ \overline {x:C}  \ \wedge \  \PushAS  {y}{  A_1} \  \wedge\ \red{A_{os}}\ }
-%						{ \ u:=y_0.m(y_1,.. y_n)\    }
-%						{ \ \PushAS  {y} { A_2}   \wedge\ \red{A_{os}}\  \ }	
-%}
-%}
-%\\
-%\\
-%{ 
-%\inferruleSD{\hspace{4.7cm} [\sc{ExtCall2}]}
-%	{ 
-%         	\sdN{OSS(M)=A_{os}}
-%	\\
-%	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
-%   	}
-%	{   \hproves{M} 
-%						{ \  {\external{y_0}  } \ \wedge\ \overline {x:C}\ \wedge\  \PushAS  {y} { A_1} \ \wedge\  A_1\  \wedge\ \red{A_{os}}\  \  }
-%						{ \ u:=y_0.m(y_1,.. y_n)\    }
-%						{ \  \ \PushAS  {y} { A_2}  \wedge A_2 \  \wedge\ \red{A_{os}}\  \  \ }	
-%}}
-%\\
-%\\
-%
-%\end{array}
-%$
-%\caption{Internal and External Calls Logic}
-%\label{f:calls}
-%\label{f:external:calls}
-%\end{figure}
-
-
-
-
-
-
-
-
-\newcommand{\sigmas}{\widetilde \sigma}
-
- 
-\begin{figure}[hbt]
-$
-\begin{array}{c}
-\begin{array}{lclcl}
-\PushAS y  e\ \triangleq\ e & & \PushAS y   {(A_1  \wedge  A_2)}\ \triangleq\ \PushAS y  { A_1}  \wedge   \PushAS y  {A_2}  & & 
- \PushAS y { (A_1 \vee  A_2)}\ \triangleq\  \PushAS y {A_1}  \vee  \PushAS y {A_2} 
-  \\ \\
-\PushAS y  {(\neg A)}\ \triangleq\ \neg( {\PushAS y A} ) & &
- \PushAS y  {(\forall x:C.A)}\ \triangleq\ \forall x:C.({\PushAS y A} )&  &  
-  \PushAS y  {(\exists x:C.A)}\ \triangleq\ \exists x:C.({\PushAS y A} )
- \\ \\
-\PushAS y  {x:C}\ \triangleq\  x:C 
-& &
-\PushAS y  {(\internal x)}\ \triangleq\ {\internal x}
-& &
-\PushAS y  {(\external x)}\ \triangleq\ {\external x}
-\end{array}
-\\
-\\
-\begin{array}{cclcl}
-& & \sdN{\PushAS y {(\inside x)}\ \triangleq\ \protectedFrom x {\overline {y} \ \wedge\ x\neq \overline y} }
-&\ \  &   \PushAS y {(\protectedFrom x {\overline {u}})}\ \triangleq\ \red{\protectedFrom x  {\overline {u}} } % {(\overline {y'}\setminus \overline {y})} 
-  \\
-  \\
-\end{array}
-\end{array}
-$
-\caption{The push operator for assertions } 
-\label{f:Push}
-\end{figure}
- 
-
-\vspace{.1cm}
-
-
-\noindent
-\textbf{Notation}  We write $\PushS {y} {\sigma}$ for the set of states that is the result of pushing a new frame with the values of $\overline y$ onto the stack of $\sigma$.
-We lift operators that apply to one state to apply to sets of states: If  $\sigmas$ is a set of states,  then $\sigmas[ \overline{x \mapsto v}]$ is the set of states from $\sigmas$ to which we applied the substitution. And the   notation 
-$M,   \sigmas \models A$ holds if  $M, \  \sigma \models A$ for all $\sigma \in \sigmas$.
-  \vspace{.1cm}
-  
-The following lemma is the counterpart to, but sightly different than, Lemma \ref{lemma:lifts} and \ref{lemma:lowers} from earlier:
-
-\sdN{
-\begin{lemma} 
-\label{lemma:push:ass:state}
-For any states  $\sigma$, $\sigma'$, assertion $A$,  and variables $\overline x$, $\overline y$, $\overline z$ disjoint with one another,  and such that 
-$fv(A)\subseteq \overline x$:
-\begin{enumerate}
- \item
- \label{lemma:push:ass:state:one}
-$M, \sigma \models \PushAS {y} {A}\ \ \ \ \ \ \   \Longrightarrow  \ \ \ \ M,  (\PushS {y} {\sigma})[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models A$
-\item
-\label{lemma:push:ass:state:two}
-$M, {\PushSLong {(\overline y, \overline z)} \sigma }   \models\  A \  \ \ \ \Longrightarrow  \ \ \ \ M,  \sigma[\overline{x \mapsto {\interpret {\sigma} {x}} } ] \models  \PushAS  {y} {A}$
-\end{enumerate}
-\end{lemma}
-}
-
-\vspace{.1cm}
-\noindent 
-\blue{\textbf{Comment} The $ \pushSymbol$ operator reminds me of the magic wand. Namely, $-\!-\!*$ is spatial and heap based:  the assertion $A -\!-\!* A'$ says: if you combine with a heap that satisfies $A$, then the complete heap will satisfy $A'$. While $\PushASLong {\_} {\_}$ is temporal and  stack based: the assertion  $\PushAS {y} A$ says that if you push a frame with range the values of $\overline y$, then $A$ will hold. 
-
-{\red{I am surprised that $ \pushSymbol$  only affects  ${\inside x}$, and leaves all else unmodified,}} \textbf{End Comment} }
-
-
- 
 
 
 \subsection{Proving \SpecLang Specifications}
@@ -728,6 +630,51 @@ Such an approach might solve the "late binding" issues mentioned below.
  
 
 \subsection{Examples}
+
+\begin{example}[Specification for Payments Module]
+Consider the following spec:
+
+$\begin{array}{lcl}
+S_1& \ = \ &  \TwoStatesQ {a: Account}{ \inside {a} } {  \inside {a}  }\\
+& & \wedge \\
+& &  \TwoStatesQ {a: Account}{ \inside {a.password} } {  \inside {a.password}  }\\
+& & \wedge\\
+& & \forall {a: Account, p: Password}\FirstState{ (\inside {a}\vee\inside {a.password}) \wedge a.password=p \wedge a.balance=r  } \\
+& & \strut \hspace{3.5cm} 
+                     \SecondState {  a.password=p \wedge a.balance=r   }
+\\
+\end{array}
+$
+
+$\begin{array}{lcl}
+S_2& \ = \ &  \TwoStatesQ {a: Account}{ \inside {a} } {  \inside {a}  }\\
+& & \wedge \\
+& &  \TwoStatesQ {a: Account}{ \inside {a.password} } {  \inside {a.password}  }\\
+& & \wedge\\
+& & \forall {a: Account, p: Password}\FirstState{ (\inside {a}\vee\inside {a.password}) \wedge a.password=p \wedge a.balance=r  }\\
+& & \strut \hspace{3.5cm} 
+                     \SecondState{ (\inside {a}\vee\inside {a.password}) \wedge a.password=p \wedge a.balance=r  }
+\\
+\end{array}
+$
+
+$\begin{array}{lcl}
+S_3& \ = \ &  \TwoStatesQ {a: Account}{ \inside {a} } {  \inside {a}  }\\
+& & \wedge \\
+& &  \TwoStatesQ {a: Account}{ \inside {a.password} } {  \inside {a.password}  }\\
+& & \wedge\\
+& & \forall {a: Account, p: Password}\FirstState{ \inside {a}  \wedge a.password=p \wedge a.balance=r  } \\
+& & \strut \hspace{3.45cm} 
+                     \SecondState {  \inside {a}  \wedge a.password=p \wedge a.balance=r   }
+                     \\
+                     & & \wedge\\
+& & \forall {a: Account, p: Password}\FirstState{   \inside {a.password} \wedge a.password=p \wedge a.balance=r  } \\
+& & \strut \hspace{3.45cm} 
+                     \SecondState { \inside {a.password}  \wedge a.password=p \wedge a.balance=r  }
+\end{array}
+$
+
+\end{example}
 
 \subsubsection{Method Specs for the $pay$ method, as in OOPSLA}
 
