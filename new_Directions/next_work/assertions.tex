@@ -1,11 +1,11 @@
 \section{\AssertLang -- the assertion language}
 \label{sub:SpecO}
 
-Our assertions language, \AssertLang, support ``standard assertions''  as well ``object-capability'' assertions. 
-The ``standard assertions''  include implication, quantification etc. In particular, ghost fields may be used to represent user-defined predicates. 
-The ``object capability assertions'' express restrictions of an object's eventual authority on some other object.
-We define the meaning of ``standard assertions'' in section \ref{sect:semantics:assert:standard}, 
-an the meaning of the  ``object-capability'' assertions in  sections \ref{sect:semantics:assert:prtFrom}
+Our assertions language, \AssertLang, supports ``standard'' assertions' as well ``object-capability'' assertions. 
+The ``standard'' assertions  include the values of fields, implication, quantification etc, as well as ghost fields; the latter can represent user-defined predicates. 
+The ``object capability'' assertions express restrictions of an object's eventual authority on some other object.
+We define the meaning of ``standard'' assertions'' in section \ref{sect:semantics:assert:standard}, 
+and the meaning of the  ``object-capability'' assertions in  sections \ref{sect:semantics:assert:prtFrom}
 and  \ref{sect:semantics:assert:prt}.
 
 
@@ -14,7 +14,7 @@ The syntax of \AssertLang  is given in Definition \ref{f:chainmail-syntax}.
 An assertion may be an expression,   a query of the defining class of
   an object, the usual connectives and quantifiers, along 
 with two non-standard assertion forms:
-(1) \emph{Internal/external} and (2) \emph{Protection}, inspired by the capabilities literature, and
+(1) \emph{Internal/external} and (2) \emph{Protection}, inspired by the capabilities literature.
 \footnoteSD{TODO say how these relate with capability lit;  compare with 
  OOPSLA.}
 
@@ -66,7 +66,7 @@ In the above, we expect that $f$ stands  for a field or a ghost-field.
 
 \noindent
 \textbf{NOTES}  Addresses may appear in assertions; this allows  assertions like $\alpha.bal > 700$, but note that universal quantification over addresses  (eg $\forall \alpha:C.[A]$) is not supported; however, we obtain the same effect through quantification over variables (eg  $\forall x:C.[A]$).  
-Morewover, the specification does not distinguish between fields and ghostfields. For instance, $a.balance$ may, in some modules (eg when each account object has a field representing it balance), be a field lookup, while in others (e.g. when the balance is defined though an entry in a lookup table),  it may involve executing a ghost function. 
+Moreover, the specification does not distinguish between fields and ghostfields. For instance, $a.balance$ may, in some modules (eg when each account object has a field representing it balance), be a field lookup, while in others (e.g. when the balance is defined though an entry in a lookup table),  it may involve executing a ghost function. 
 As we discuss below,  our universal quantification goes only over reachable objects i.e. does not consider objects that ould ger collected if we had a garbage collector, while other systems, eg Dafny quantify over allocated addresses.\footnoteSD{example where this distinction would matter/}
 % \footnoteSD{{\textbf{NOTE for us} It also allows assertions like $a1.passwd \neq a2.passwd$, whereas in the past we would have written as $\exists x,y.[\ a1.passwd=x \wedge  a2.passwd=y \wedge x\neq y\ ]$.}} \footnoteSD{{TODO compare with oopsla }}
 
@@ -151,16 +151,18 @@ for internal or external provenance (\ref{cInternal} and \ref{cExternal}) we nee
 
 
 \subsection{Semantics of Assertions - second part:
-protecting an object from another}
+protecting objects} %an object from another}
 
-As we already discussed in the introduction\footnoteSD{make sure we do discuss there}, in the object capabilities world permission (ie access  \footnoteSD{cite MarkMiller thesis, and our Permission and Authority revisited} to a capability is a necessary precondition to some effect. Motto "authority implies eventual permission".
+\label{sect:protect}
+
+As we already discussed in the introduction\footnoteSD{make sure we do discuss there}, in the object capabilities world \emph{permission}, i.e.,  access  \footnoteSD{cite MarkMiller thesis, and our Permission and Authority revisited} to a capability is a necessary precondition to some effect. Motto "authority implies eventual permission".
 In our work, we express this as "lack of eventual permission to the relevant capability implies that the given effect will never take place".
 For this, we need the concept of "lack of  eventual permission".  
 
 \sdN{
-We define this lack of \sdN{eventual} permission as "protected".  
+We define such lack of \sdN{eventual} permission as "protected".  
 An object $o$ is \emph{protected  from} another, external, object $o'$, if $o'$ can obtain direct access to   $o$ only if 
-$o$ is ``introduced'' to some external object (not necessarily $o'$, but external) by some internal object $o''$.  Here we use ``introduce'' in the Mark Miller sense, whereby $o_1$ is is ``introduced'' to $o_2$ by $o_3$, iff either $o_3$ sends to $o_2$ a message containing $o_1$, 
+$o$ is ``introduced'' to some external object $o'''$ by some internal object $o''$ -- where $o'$ and $o'''$ may be different.  We  use the term ``introduce'' in the Mark Miller sense, whereby $o_1$ is is ``introduced'' to $o_2$ by $o_3$, iff either $o_3$ sends to $o_2$ a message containing $o_1$, 
 or $o_2$ made a call to $o_3$, and $o_3$ eventually returns  $o_1$ as the result of the call.
 } 
 
@@ -168,10 +170,10 @@ or $o_2$ made a call to $o_3$, and $o_3$ eventually returns  $o_1$ as the result
 %}
 
 \begin{definition}[Satisfaction 
-of Assertions  continued -- Relative Protection] 
+of Assertions  -- Protected From] 
 \label{def:chainmail-protection-from}
 \label{sect:semantics:assert:prtFrom}
-We continue the definitions in \ref{def:chainmail-semantics}, and define   
+-- continuing definitions in \ref{def:chainmail-semantics}:
 \begin{enumerate}
 \item
 \label{cProtected}
@@ -259,10 +261,10 @@ An object is protected, if it is protected from all locally reachable objects. T
 "an object is protected from the top frame". \footnoteSD{TODO: motivate; many external objects, no matter which one has unprotected access to an object }
  
 \begin{definition}[Satisfaction 
-of Assertions continued  -- Protection] 
+of Assertions -- Protected] 
 \label{def:chainmail-protection}
 \label{sect:semantics:assert:prt}
-We continue the definitions in \ref{def:chainmail-semantics} and \ref{def:chainmail-protection-from}:
+-- continuing definitions from \ref{def:chainmail-semantics} and \ref{def:chainmail-protection-from}:
 \begin{enumerate}
 \item
 $\satisfiesA{M}{\sigma} {\inside {\re}}$  \ \ \ iff \ \ \ 
@@ -278,7 +280,7 @@ $\satisfiesA{M}{\sigma}{\external{\prg{this}}}\ \ \Longrightarrow\ \ \forall x\!
 % TODO explain
   Figure \ref{fig:Protected} illustrates %the concept of 
   protection. The heap in all three panes is the same as in  Fig \ref{fig:LReachable} and 
- Fig \ref{fig:ProtectedFrom}. The left pane's  top frame is $\phi_1$; it has  one variable, \prg{this}, pointing to $o_2$.  The middle pane's  top frame is $\phi_2$; it has two  variables,   \prg{this} and \prg{x} pointing to $o_3$ and  $o_7$ resp. The right pane's  ttop frame is $\phi_3$; it has two  variables,  \prg{this} and \prg{x}, pointing to $o_7$ and$o_3$, resp.  
+ Fig \ref{fig:ProtectedFrom}. The left pane's  top frame is $\phi_1$; it has  one variable, \prg{this}, pointing to $o_1$.  The middle pane's  top frame is $\phi_2$; it has two  variables,   \prg{this} and \prg{x} pointing to $o_3$ and  $o_7$ resp. The right pane's  top frame is $\phi_3$; it has two  variables,  \prg{this} and \prg{x}, pointing to $o_7$ and$o_3$, resp.  
 
 \begin{figure}[htb]
 \begin{tabular}{|c|c|c|}
