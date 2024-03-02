@@ -11,6 +11,7 @@ The complete definition of \LangOO  {can be found in the appendices  \cite{neces
 A \LangOO state, $\sigma$,  consists of a  heap $\chi$, and a   stack $\psi$. A stack is is a sequence of frames, $\phi$.
 A frame consists of local variable map, and a continuation, \ie a sequence of statements to be executed.
 
+
  
 \paragraph{Notation} We adopt the following, un-surprising, notation:
 \begin{itemize}
@@ -30,23 +31,25 @@ and $\interpret{\sigma}{e.f}$ looks up in $\sigma$'s heap the value of $f$ for t
 Note that $\interpret{\sigma}{e}$ is not defined when $e$ contains a method call or a ghost field.
 \item The substitution  $\sigma[x \mapsto \alpha]$ is applied to the top frame of $\sigma$, and $\sigma[\overline{x \mapsto \alpha}]$ % applies the substitutions $\overline{x \mapsto \alpha}$ to the top frame.
 has the expected meaning.
+\item
+$\sigma.\prg{cont}$ is the continuation of the top frame.
+\item
+$text_1 \txteq text_2$ expresses that $text_1$ and $text_2$ are textually equal.
 \end{itemize}
 
   
-\newcommand{\Mext}{M_{extl}}
-\newcommand{\Mint}{M\_{intl}}
-\newcommand{\Mtwo}{\overline{M}}
+
   
 \subsection{\LangOO Execution, and internal/external modules }
 \label{sect:execution}
 
 %Central to our work is the distriction between the 
- \LangOO execution it is a small steps operational semantics of the shape $\leadstoOrig  {\Mtwo} {\sigma}   {\sigma'}$.
- It takes place \red{in the context of one or more modules, $\Mtwo$}.
- A module,  $M$, is a mappings from class names to class definitions. 
+ \LangOO execution is described by a small steps operational semantics of the shape $\leadstoOrig  {\Mtwo} {\sigma}   {\sigma'}$, where 
+ $\Mtwo$ stands for one or more modules.
+ A module,  $M$, maps class names to class definitions. 
    
-The semantics enforces dynamically a simple form of package-wide privacy: 
-Fields may be read or written only if the class of the object whose field is being read or written, and the class of the object which is reading of writing belong to the same module.
+\red{The semantics enforces dynamically a simple form of module-wide privacy: 
+Fields may be read or written only if the class of the object whose field is being read or written, and the class of the object which is reading of writing belong to the same module.}
 Private methods may be called only if the class of the receiver (the object whose method is being called), and the class of the caller (the object which is calling) belong to the same module.
 Public methods may always be called.
 
@@ -146,7 +149,7 @@ we believe that it is applicable to several programming paradigms, and  that   u
 
 \section{From \LangOO to \AssertLang}
 
-\sdN{In order to give semantics of our assertions language, \AssertLang, we need to build three auxiliary concepts on  top of  \LangOO: bounded execution, locally  reachable objects, and pushing of frames.}
+\sdN{To develop the semantics of our assertions language, \AssertLang, we   build three auxiliary concepts on  top of  \LangOO: bounded execution, pushing fames, and locally  reachable objects.}
 
 
 \subsection{Bounded Execution}
@@ -156,9 +159,9 @@ we believe that it is applicable to several programming paradigms, and  that   u
 In particular it is possible to start with a state $\sigma$ and perform more returns than calls --
 % after a number of execution steps to reach a state $\sigma'$ with fewer frames on its stack -- 
 cf . $\leadstoOrigStar  {\Mtwo} {\sigma_{8}}   {\sigma_{15}}$ from earlier.
-However,  from $\sigma_8$'s viewpoint the future only incudes states which are being visited as a result of  $\sigma_8$'s top continuation; that is, it includes the states $\sigma_9$, $\sigma_{10}$, $\sigma_{11}$, $\sigma_{12}$, $\sigma_{13}$, and $\sigma_{13}$, but \emph{not} $\sigma_{15}$, or $\sigma_{18}$, etc.
+\red{However,  from $\sigma_8$'s viewpoint the future only incudes states which are being visited as a result of  $\sigma_8$'s top continuation}; that is, it includes the states $\sigma_9$, $\sigma_{10}$, $\sigma_{11}$, $\sigma_{12}$, $\sigma_{13}$, and $\sigma_{13}$, but \emph{not} $\sigma_{15}$, or $\sigma_{18}$, etc.
 % since $\sigma$'s top frame will have been popped before we reach $\sigma'$. 
-We therefore define another version of execution which is from the viewpoint of an original state, $\sigma_o$, and which  is ``bounded'' so as not to ever pop the top grame of   $\sigma_o$}
+We therefore define  execution from the viewpoint of an original state, $\sigma_o$, which  is ``bounded'' so as not to ever pop the top  $\sigma_o$' top frame:}
 
 
 {
@@ -178,7 +181,7 @@ $\strut  \hspace{3.1cm}\ \    \exists \phi,\psi, \phi_1, \phi2.[ \ \sigma_o = (\
 \end{definition}
 }
  
- \sdN{Continuing our discussion of Fig. \ref{fig:UpSemantics}, notice that $\leadstoOrig {\Mtwo} {\sigma_{14}}  {\sigma_{15}}$ 
+ \sdN{In Fig. \ref{fig:UpSemanticsBounded} we continue with the same example as in  Fig. \ref{fig:UpSemantics}. Notice that $\leadstoOrig {\Mtwo} {\sigma_{14}}  {\sigma_{15}}$ 
  but    $\notLeadstoBounded  {\Mtwo}  {\sigma_{14}} {\sigma_8} {\sigma_{15}}$:  this step would pop  $\sigma_8$'s
  top frame. 
 Therefore, 
@@ -233,25 +236,18 @@ $\notLeadstoBounded  {\Mtwo} {\sigma_{14}} {\sigma_8}  {\sigma_{15}} $ & &
 \end{tabular}
    \caption{Illustrating   $\leadstoBounded  {\Mtwo} {\sigma_o} {\sigma}  {\sigma'}$
     }
-   \label{fig:UpSemantics}
+   \label{fig:UpSemanticsBounded}
  \end{figure}
-\subsection{Pushing Frames}
+ 
+\subsection{Method Calls and Returns}
 
 
-\red{Since one of the aims of the current work is to reason abourt external calls, the point at which a method is called or returned from is of particular importance. 
-We introduce the
-% We also adopt the following, less widespread, notations
-% \begin{itemize}
-% probably not needed, or at most needed only in soundness section.
-% \item The substitution $A[\sigma]$ replaces in $A$ all its free variables, $\overline x$, by their values,  $\overline{\interpret{\sigma}{x}}$.
-% \item 
-%$C\in M$ means that class $C$ is in the domain of module $M$. 
-% \item
-the symbol $\pushSymbol$ to describes the result of pushing a new frame on the stack: $ \PushS  {\alpha} {\sigma} $ is  the set of states obtained by pushing onto the stack of $\sigma$ a new frame with some continuation  and a local variable map with domain same as the number of elements $\overline \alpha$ and range  $\overline \alpha$, while leaving the heap unmodified. If $\sigma$'s continuation was a method call with receiver and arguments $\overline \alpha$, then  $ \PushS   {\alpha} {\sigma}$ describes all possible direct successor states of $\sigma$. The elements of $ \PushS  {\alpha} {\sigma} $ only differ in the identifiers in the local variable map of the top frame. 
+\sdN{External calls are a central consideration of our work, therefore  the point at which a method is called or returned from is of particular importance. 
+The operator $\pushSymbol$ describes both call and return:
+% pushing a new frame on the stack: 
+ $ \PushS  {\alpha} {\sigma} $ is  the set of states obtained by pushing onto the stack of $\sigma$ a new frame with some continuation  and a local variable map with domain same as the number of elements $\overline \alpha$ and range  $\overline \alpha$, while leaving the heap unmodified.
+The elements of $ \PushS  {\alpha} {\sigma} $ only differ in the identifiers in the local variable map, as well as the continuation  of the top frame. 
 }
-%\item
-
-%\end{itemize}
 
 \begin{definition}
 \label{def:push:frame}
@@ -263,6 +259,27 @@ $ \PushS  {\alpha} {\sigma} \ =\ \{ \ \sigma' \ \mid\ \sigma=(\psi, \chi)\  \wed
 \sdN{$ \PushS  {\va}  {\sigma}$ is short for  $ \PushS  {\interpret {\sigma} {\va}} {\sigma} $.}
 \end{itemize}
 \end{definition}
+
+\red{Lemma \ref{lemma:push} below says that  $\pushSymbol$ characterizes  calls and returns.  (\ref{pushOne}):\ $ \PushS   {\alpha} {\sigma}$ describes    direct successor states of  a $\sigma$ with a continuation which calls a method with receiver and arguments $\overline \alpha$. 
+ (\ref{pushTwo}):\ $ \PushS   {\alpha} {\sigma'}$  describes direct predecessor states of  a $\sigma'$ with ground continuation.}
+  
+\begin{lemma}% [$\pushSymbol$  for calls and returns]
+\label{lemma:push}
+For all states $\sigma$, $\sigma'$, modules $\Mtwo$, and addresses $\overline \alpha$. If \ $\leadstoOrig {\Mtwo} {\sigma}   {\sigma'} $, \ then 
+\begin{enumerate}
+\item
+\label{pushOne}
+$\sigma'\in   \PushS  {\alpha} {\sigma}  \ \ \Longleftrightarrow \ \ 
+\exists x, m, \overline{y}.[\ \ \sigma.\prg{cont} \txteq x:=y_0.m(y_1,...y_n); \_\ \ \wedge \ \
+{\overline { \interpret  \sigma y}} = \overline \alpha \ ] $
+\item
+\label{pushTwo}
+$\sigma\in   \PushS  {\alpha} {\sigma'}  \ \ \Longleftrightarrow \ \ \exists x, \alpha'.[\ \  \sigma'.\prg{cont}\txteq x:=\alpha';\_ \ \ \wedge \ \  \sigma.\prg{cont}\txteq\alpha'\  ] $
+\end{enumerate}
+
+\end{lemma}
+
+ 
 
  \sdN{Consider Fig. \ref{fig:UpSemantics} again: $\sigma_8\in   \PushS  {\alpha} {\sigma_7}$ for some $\overline \alpha$, and 
  $\sigma_{14}\in\PushS  {\alpha'} {\sigma_{15}}$ for some $\overline \alpha'$. Namely, $\sigma_8$ is the fist state right after calling a method with receiver and
@@ -336,28 +353,30 @@ In the right pane the top frame is $\phi_2$, which maps \prg{this} to $o_3$, and
 
 Lemma  \ref{lemma:relevant} % describes properties of global reachability. 
 says that  (\ref{oneGR}) Locally reachable objects are globally reachable, and 
-(\ref{twoGR}) Any object which will be globally reachable at some future state  and which exists object in the current state, is globally reachable the current state: that is, 
-a globally unreachable object may not become reachable in the future.
+(\ref{twoGR}) 
+% Any object which will be globally reachable at some future state  and which exists object in the current state, is globally reachable the current state: that is, 
+Globally unreachable object may not become reachable in the future.
 \footnoteSD{cite "only connectivity begets connectivity"}
+(\ref{oneLR}) An object that is locally reachable after a call was also locally reachable before the call.
 %\sdN{(3) the objects locally reachable after a method call were also locally reachable before the call.}
 %; the requirement in the premise  that the arguments of the call, $\overline o$, are locally reachable is not a restriction, because, by construction, the arguments to a method call are locally reachable.}
 %Lemma \ref{lemma:relevant:after:bounded} describes properties of local reachability. It is 
 %is the counterpart to lemma \ref{lemma:relevant} --  with the difference that   part  \ref{threeLR} hasthe  stronger  premise that they  requires bounded executions. In more detail (\ref{oneLR}) a locally reachable of object after a method call 
 %was locally reachable before the call. (\ref{twoLR}) Bounded execution cannot turn an unreachable object to globally reachable. (\ref{tthreeLR}) Bounded execution cannot 
-
+(\ref{threeLR}) A pre-existing, locally reachable  object after a any number of bounded execution steps was locally reachable at the first step.
 
 
 \begin{lemma}
 \label{lemma:relevant}
-For all module sets $\Mtwo$, states $\sigma$, $\sigma'$, $\sigma''$ for all objects $o$, $\overline o$, atoms ${\overline \va}:$\footnoteSD{\sdN{TODO decide whether $o$ or $\alpha$}}
+For all module sets $\Mtwo$, states $\sigma$, $\sigma'$,   objects $o$, and $\overline o$:\footnoteSD{\sdN{TODO decide whether $o$ or $\alpha$}}
 %and  variables ${\overline z}$, and statements $s:$
 \begin{enumerate}
 \item
 \label{oneGR}
-$ \LRelevant \alpha \sigma\ \ \Longrightarrow \ \   \GRelevant \alpha \sigma$
-\item
-\label{twoGR}
-$\GRelevant o {\sigma'}  \ \wedge\ \ \leadstoBoundedStar  {\Mtwo}   \sigma  {\sigma}  {\sigma'} \ \wedge \ \sdN{o\in \sigma} \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$
+$ \LRelevant o \sigma\ \ \Longrightarrow \ \   \GRelevant o \sigma$
+%\item
+%\label{twoGR}
+%$\GRelevant o {\sigma'}  \ \wedge\ \ \leadstoBoundedStar  {\Mtwo}   \sigma  {\sigma}  {\sigma'} \ \wedge \ \sdN{o\in \sigma} \ \ \Longrightarrow \ \  \GRelevant o {\sigma}$
 %\end{enumerate}
 %\end{lemma}
  %% \subsubsection{{Reachable  Objects and Bounded Execution}}
@@ -366,8 +385,8 @@ $\GRelevant o {\sigma'}  \ \wedge\ \ \leadstoBoundedStar  {\Mtwo}   \sigma  {\si
 %{For all states $\sigma$, $\sigma'$, and $\sigma''$,for all objects $o$, and for all modules  $M$:
 %\begin{enumerate}
 \item
-\label{threeGR}
-${\leadstoBoundedStar {\Mtwo}  {\sigma} {\sigma''} {\sigma'}} \ \ \wedge \ \  \GRelevant o {\sigma'} \ \ \wedge\ \  \sdN{o\in \sigma} \ \ \ \Longrightarrow \ \  \ \GRelevant o {\sigma}$.
+\label{twoGR}
+${\leadstoOrigStar {\Mtwo}  {\sigma}  {\sigma'}} \ \ \wedge \ \  \GRelevant o {\sigma'} \ \ \wedge\ \  \sdN{o\in \sigma} \ \ \ \Longrightarrow \ \  \ \GRelevant o {\sigma}$.
 \item
 \label{oneLR}
 \sdN{$\sigma'\in \PushS {o} {\sigma}  \ \ \wedge \ \  \LRelevant {\overline o} {\sigma} \ \ \wedge\ \   \LRelevant o {\sigma'} \ \ \ \Longrightarrow \ \ \  \LRelevant o {\sigma}$
