@@ -3,68 +3,73 @@
 
 \section{Proving Adherence to \SpecLang Specifications}
 
-\subsection{Semantics of  a Hoare Triples -- Soundness of Hoare Logic}
 
 We will develop a  Hoare logic with judgments of the form  $M\ \vdash\  \{\, A \,  \}\ e\  \{\, A' \, \}$ which promise that execution of the expression $e$ in a configuration with satisfies $A$ will lead to a configuration that satisfied $A'$. 
 
 
-\begin{axiom}
-We assume a judgment of the form $M \vdash A$, which had the property that\\
-\strut \hspace{5cm} $M \vdash A $ \ \ \ \ implies \ \ \ \ $M \vDash A$
-\end{axiom}
+
 
 
 \subsection {Assertion Encapsulation}
 \label{s:encaps-proof}
 
 {
-{\SpecLang proofs  hinge on the fact that some assertions cannot be invalidated unless some 
-} internal (and thus known)
-computation took place. 
+{\SpecLang proofs  hinge on the expectation that some, specific assertions cannot be invalidated unless some 
+} internal (and thus known) computation took place. 
 {We refer to this property as \emph{Assertion Encapsulation},}
 }
-formally $M\ \vDash  \encaps{A}$, which states that 
- assertion $A$ is encapsulated by module $M$.
+formally $M\ \vDash  \encaps{A}$.
+%  which states that  assertion $A$ is encapsulated by module $M$.
 
 
 \subsubsection{Semantics of Assertion Encapsulation}
 
-{An assertion $A$  is  encapsulated by a module $M$ under condition $A'$,
-if in all possible states which arise from execution of module $M$ with any other external module $M_{ext}$, and which satisfy $A'$, 
-the validity of $A$} 
-{ can only be changed via computations internal to that module} -- \emph{i.e.},  via a call to
-a method from $M$, i.e.,
-calls to objects defined in $M$ but accessible from the
-outside.
+{An assertion $A$  is  encapsulated by a module $M$%  under condition $A'$,
+if in all possible states which arise from execution of module $M$ with any other  module $\Mtwo$,%  and which satisfy $A'$, 
+the validity of $A$}  {can only be changed via computations internal to that module}.
+% -- \emph{i.e.},  via a call to a method from $M$, i.e., calls to objects defined in $M$ but accessible from theoutside.
 
 
-\begin{definition}[Assertion Encapsulation]
+\begin{definition}[An assertion $A$ is \emph{encapsulated} by module $M$ ] $~$ \\
 \label{def:encapsulation}
-An assertion $A$ is \emph{encapsulated} by module $M$ and assertion $A'$, written as
-\begin{itemize}
- \item     $M\ \vDash \encaps{A}$
- \end{itemize}
-if, for all external modules $M_{ext}$, and all states $\sigma$, $\sigma'$
-such that $\arising{M_{ext}}{M}{\sigma}$, {and variables $\overline{x}$ and objects $\overline{o}$}:
+%\begin{enumerate}
+% \item     $M\ \vDash \encaps{A}$
+%\\
+%if, 
+%\\
+%for all  modules $\Mtwo$,  states $\sigma$, $\sigma'$
+%such that $\arising{M\madd\Mtwo}{\sigma}$, { variables $\overline{x}$ and addresses $\overline{\alpha}$}:
+%\begin{itemize}
+% \item
+%  $\satisfiesA{M}{\sigma}{A}$,  \ \ \ \   $\overline{x}=Free(A)$, \  \  \ \  $\satisfiesA{M}{\sigma}{\external{\prg{this}}}$, \ \ \ \ \ $\leadstoOrig  {M\madd\Mtwo}  {\sigma}{\sigma'}$, \ \ \ 
+%  ${M},{\sigma'}\not\vDash{A[\overline {{\interpret \sigma x}x}]}$
+% \\
+%\mbox{iff} 
+%\\
+% \item   $\exists y,\,m,\, \overline{y} .[\ \sigma.\prg{cont}= y.m(\overline{y});\_ \ \wedge\  \satisfiesA{M}{\sigma}{\internal{y}} \ ]
+%$
+% \end{itemize}
+% \end{enumerate}
 
-\begin{itemize}
- \item
-  $\satisfiesA{M}{\sigma}{A}$,  \ \ \ \   $\overline{x}=Free(A)$, \  \  \ \ $\overline{o}=\sigma(\overline{x})$,\ \ \ \ $\reduction{M_{ext}}{M}{\sigma}{\sigma'}$, \ \ \ ${M},{\sigma'[\overline{y}\mapsto{\overline{o}}]}\not\vDash{A}$
- \end{itemize}
-
-implies
-
- \begin{itemize}
- \item   $\exists y,\,m,\, \overline{y} .[\ \sigma.\prg{cont}= y.m(\overline{y})\ \wedge\  \satisfiesA{M}{\sigma}{\internal{y}} \ ]
-$
- \end{itemize}
-\end{definition}
-
-Revisiting the examples from \S~\ref{s:outline}, % we can see
-both \ModB and \ModC encapsulate   the  equality of the \prg{balance} of an account to some value \prg{bal}: 
-Namely, this equality can only be invalidated through calling  methods on internal objects.
+\red{$ % \begin{equation}
+    M\ \vDash \encaps{A}\ \   \mbox{iff}  \ \   
+    \begin{cases}
+     \forall \Mtwo, \sigma, \sigma', \overline{x} \mbox{ with } \overline{x}=Free(A):\\
+   \ \ \ \  [\ \ \  \arising{M\madd\Mtwo}{\sigma}\ \wedge \  \satisfiesA{M}{\sigma}{(A \ \wedge\ \external {\prg{this})}}\  \wedge\  \leadstoOrig  {M\madd\Mtwo}  {\sigma}{\sigma'}\\
+    \ \ \ \ \ \   \ \ \ \Longrightarrow\\
+    \ \ \ \ \ \  \  {M},{\sigma'}\models{A[{\overline {{\interpret \sigma x}/x}}]} \ \  ]
+    \end{cases}
+ $% \end{equation}
+  \end{definition}
+}
  
-{On the other hand, assume two further modules, $Mod_{ul}$ and $Mod_{pl}$: both these modules use ledgers to keep a map between accounts and their balances, which export functions that allow the update of this map. In $Mod_{ul}$ the ledger is \emph{not} protected, while in $Mod_{pl}$ the ledger \emph{is} protected. Then, in the former, the and the balance of an account is \emph{not} encapsulated, and in the latter it  \emph{is} encapsulated. } 
+\footnote{\textbf{Aside} In the definition above we used the unbounded execution,  $\leadstoOrig  {M\madd\Mtwo}  {\sigma}{\sigma'}$;  however, the extension of the definition would have been the same if we had used bounded execution, $\leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}$ instead. TODO: write a lemma and also write a lemma for multiple steps}
+ 
+Revisiting the examples from \S~\ref{s:outline}, % we can see
+both \ModB and \ModC encapsulate   the    \prg{balance} of an account. %to some value \prg{bal}: 
+Namely, $a:\prg{Account}\wedge a.\prg{balance}=b$ can only be invalidated through internal  methods.  %on internal objects.
+ %
+{Now, assume two further modules, $\ModParam{ul}$ and $\ModParam{pl}$, which both  use ledgers to mapping accounts and their balances, and which export functions that allow the update of this map. In $Mod_{ul}$ the ledger is \emph{not} protected, while in $Mod_{pl}$ the ledger \emph{is} protected. Then, in the former, the and the balance of an account is \emph{not} encapsulated, and in the latter it  \emph{is} encapsulated. } 
 %
 \\
 \strut \hspace{1cm}
@@ -73,16 +78,18 @@ $\ModB\ \vDash\ \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}
 \strut \hspace{1cm}
 $\ModC\ \vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$
 \\
-\strut \hspace{1cm} {$Mod_{ul}\ \not\vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$}
+\strut \hspace{1cm} {$\ModParam{ul}\ \not\vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$}
 \\
-\strut \hspace{1cm} {$Mod_{pl}\  \vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$}
+\strut \hspace{1cm} {$\ModParam{pl}\  \vDash \encaps{ \prg{a}:\prg{Account}\ \wedge \prg{a.balance}=\prg{bal}}$}
 
 \noindent
 {Note that in the above, the term \prg{a.balance} is a ghost field.}
 
 
 
-The property that a variable is protected from another one is not encapsulated, but  the property that a variable is protected \emph{is} encapsulated, regardless of the module. Note also, that  encapsulation of an assertion does not imply encapsulation of its negation; 
+In any module, relative protection % (a variable is protected from another one) 
+is not encapsulated, but  absolute protection is.
+ Note  that  encapsulation of an assertion does not imply encapsulation of its negation; 
  for example,  ${\inside{x}}$ is encapsulated (as per below), but $\neg  {\inside{x}}$ is not.
 
 
@@ -91,22 +98,22 @@ For any module $M$, and variables $x$ and $y$:
 \begin{enumerate} 
 \item $M \vDash \encaps{\inside{x}}$
 \item $M \not\vDash {\encaps{\neg\inside{x}}}$
-\item $M \not\vDash {\encaps{\protectedFrom{x}{z}}}$
+\item $M \not\vDash {\encaps{\protectedFrom{x}{y}}}$
 \item $M \vDash A \rightarrow A' \ \ \wedge\ \  M \vDash  \encaps{A}$ \ \ implies \ \ $M \vDash  \encaps{A'}$.
 \end{enumerate}
 \end{lemma}
 
-\begin{proof} Sketches:
-
-(1) because if $y$ is protected, and since the fields are all private ... the only way .. 
-\\
-(2) Take a state where $\neg\inside{x}$ and that there is only external object that has access to $x$, and that this object becomes no longer accessible -- eg through field override. That means that we now have  $\inside{x}$.
-\\
-(3) it is always possible that another external object $z'$ has unprotected access to $x$; if $z'$ has access to $z$, then it can give it access to $x$ without invoking am internal method. (3) as a counterexample, 
-\\
-(4) Use that $M \vDash A \rightarrow A'$ implies $M \vDash \neg A'  \rightarrow \neg  A$. BUT CAREFUL, TODO! with the potential of non-termination on assertions!!
-\end{proof}
-%The key consequence of soundness is that -- SD dropped; it is   not a consequence of soundness!
+%\begin{proof} Sketches:
+%
+%(1) because if $y$ is protected, and since the fields are all private ... the only way .. 
+%\\
+%(2) Take a state where $\neg\inside{x}$ and that there is only external object that has access to $x$, and that this object becomes no longer accessible -- eg through field override. That means that we now have  $\inside{x}$.
+%\\
+%(3) it is always possible that another external object $z'$ has unprotected access to $x$; if $z'$ has access to $z$, then it can give it access to $x$ without invoking am internal method. (3) as a counterexample, 
+%\\
+%(4) Use that $M \vDash A \rightarrow A'$ implies $M \vDash \neg A'  \rightarrow \neg  A$. BUT CAREFUL, TODO! with the potential of non-termination on assertions!!
+%\end{proof}
+%%The key consequence of soundness is that -- SD dropped; it is   not a consequence of soundness!
 
 \subsubsection{Deriving  Assertion Encapsulation}
 
@@ -154,87 +161,18 @@ $\strut \hspace{1.5cm} \proves{M}{\encaps{A}} \ \ \ \ $ implies $\ \ \ \ \satisf
 
 
 
+%
+%\subsubsection{Types for Assertion Encapsulation}
+%\label{types}
+%TODO: something simple ere 
 
-\subsubsection{Types for Assertion Encapsulation}
-\label{types}
-TODO: something simple ere 
-
-\subsection{Assertion Inference}
-
-
+% \subsection{Assertion Inference}
 
 
 
-\begin{figure}[hbt]
-$
-\begin{array}{c}
-\begin{array}{lclclcl}
-\inferrule [HS-1]
-	{ \\
-	}
-	{\strongerI M {S_1 \wedge S_2}  {S_1}
-	}
-&  & 
-\inferrule [HS-2]
-	{ \\
-	}
-	{\strongerI M {S_1 \wedge S_2}  {S_2}
-	}
-	&  & 
-\inferrule [HS-3]
-	{ \\
-	}
-	{\strongerI M {S_1 \wedge S_2}  {S_2 \wedge S_1}
-	}
-&  & 
-\inferrule [HS-4]
-	{ 
-	{\strongerI M {S_1}  {S_3}}
-	}
-	{\strongerI M {S_1 \wedge S_2}  {S_3 \wedge S_2}
-	}
-\\
-\end{array}
-\\
-\\	
-\inferrule [HS-5]
-	{ \\ 
-	M \vdash ({\overline {x:C}} \wedge A_1) \rightarrow A_1' \ \hspace{.5cm} M \vdash ({\overline {x:C}} \wedge A_2') \rightarrow A_2 }
-	{\strongerI M   {\TwoStatesQ {\overline {x:C}} {A_1'}{A_2'} }   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2} }
-	}
-\\
-\\	
-% the below is weaker than the rule tht follows it
-% \inferrule [HS-6]
-%	{  }
-%	{
-%		{\strongerI M   { \TwoStatesQ {\overline {x:C}} {A_1}{A_2}\wedge  {\TwoStatesQ {\overline {x:C}} {A_1'}{A_2'}  } }   {\TwoStatesQ {\overline {x:C}} {A_1\wedge A_1'}{A_2\wedge A_2'} }  }
-%	}
-%\\
-%\\	
-\inferrule [HS-6]
-	{   \forall i, j: x'_i \txtneq  x''_j }
-	{
-		{\strongerI M   { \TwoStatesQ {\overline {x:C},\overline{x':C'}} {A_1}{A_2}\wedge  {\TwoStatesQ {\overline {x:C,x'':C''}} {A_1'}{A_2'}  } }   {\TwoStatesQ {\overline {x:C,x':C',x'':C''}} {A_1\wedge A_1'}{A_2\wedge A_2'} }  }
-	}
-\\ \\
-\inferrule [HS-7]
-	{   M \vdash A_1 \rightarrow A_1' }
-	{
-		{\strongerI M   { \TwoStatesQ {\overline {x:C}} {A_1}{A_2 \wedge A_2'} }   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2} \wedge \TwoStatesQ {\overline {x:C}} {A_1'}{A_2'} } }
-	}	
-	\\
-	\\
-\inferrule [HS-8]
-	{   {\strongerI M {S_1} {S_2}} \ \ \ \   {\strongerI M {S_2} {S_1}} }
-	{
-		M \vdash S_1 \equiv S_2 
-	}			
-\end{array}
-$
-\label{fig:si}
-\caption{Specification Implication}
-\end{figure}
+
+
+
 
 \subsection{Weaker/Stronger Specifications}
 
@@ -248,6 +186,7 @@ For all modules $M$, and specifications $S$ and $S'$, we have that\\
 \strut \hspace{2cm}-\ \ \  $M \vdash S \equiv S'    \ \ \ \ \Longrightarrow\ \ \ \ M \models S \equiv {S'}'$
 \end{lemma}
 
+In   Fig.  \ref{fig:si} in the appendix we define the judgment  $\strongerI M  S  {S'} $.
 We now define what it means for a module $M$ to promise a specification $S$:
 
 \begin{definition}
@@ -257,6 +196,7 @@ Given module $M$ snd specification $S$:
 \end{definition}
 
 Notice, that $\promises M S$ is only based on the spec of $M$, and does not guarantee that indeed $M$ satisfies $S$.
+
 
 %\subsection{Proving method bodies while using  \AssertLang specifications}
 %\label{s:classical-proof}
@@ -605,7 +545,7 @@ $
 %	}
 %\\\\
 
-\red{QUESTIONS: }
+\footnoteSD{\red{QUESTIONS: }
 
 \begin{enumerate}
 \item 
@@ -627,7 +567,7 @@ Do we need "modifies" or "does not modify" clauses too? Or can we assume that th
 $\strut \ \ \  \hproves{M}  {a:Account \wedge p:Password \wedge a.passwd=p} {stmts}  {a.passwd=p}$\\ (with $a$ and $p$  free in $stmts$),  implicitly promise that no account's password has been modified? Shall we require the underlying logic to support such judgments -- say that if it has modifies clauses, or SL, it could do that?\\
 Such an approach might solve the "late binding" issues mentioned below.
 \end{enumerate}
- 
+ }
 
 \subsection{Examples}
 
