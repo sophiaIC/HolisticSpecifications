@@ -16,14 +16,10 @@ A frame consists of local variable map, and a continuation, \ie a sequence of st
 \begin{itemize}
 \item
 $\alpha$, $\alpha'$, $\alpha_1$, ... are addresses,   $x$, $x'$, $x_1$, ..., $y$, ... $z$, ... are variables, and $\va$, $\va'$ ... are either addresses or variables, we call these \emph{\atoms}.
-%\item
-%Assertions, $A$, and simple expression, $e$, are described in Def. \ref{def:assert:syntax}. They support  the usual connectives as well as connectives about protection. An assertion may  expressions, $e$. These may contain variables, addresses, field look-ups, and ghost-field look-ups, but \emph{not} method calls; the latter may appear in assertions, and \emph{not} in code, while the former may \emph{not}.
 \item
 $\alpha \in \sigma$ means that $\alpha$ is defined in the heap of $\sigma$, and $x\in \sigma$ means that $x$ is defined in the top frame of $\sigma$.
-%, and $x\in A$ means that $x$ appears free $A$. 
 
-Conversely, % $\alpha$ is fresh, resp.$x$ is fresh in $\sigma$   in $\sigma$ means that 
- $\alpha\notin\sigma$, and. $x\notin\sigma$ %, and $\va \notin A$ h
+Conversely,   $\alpha\notin\sigma$, and. $x\notin\sigma$ %, and $\va \notin A$ h
  have the obvious meaning.
 \item
 $\interpret{\sigma}{\alpha}$  is $\alpha$; and $\interpret{\sigma}{x}$  is the value to which  $x$  is mapped in the top-most frame of $\sigma$'s stack; 
@@ -85,27 +81,27 @@ while $\leadstoOrigStar  {\Mtwo} {\sigma_{10}}   {\sigma_{15}}$,   involves no c
 } 
  \\
 \hline
-\begin{tabular}{lclclclcl}
-$\leadstoOrig  {\Mtwo} {\sigma_8}    {\sigma_9} $  & & 
-$\leadstoOrig  {\Mtwo} {\sigma_9}    {\sigma_{10}} $ &  &
-$\leadstoOrig  {\Mtwo} {\sigma_{12}}   {\sigma_{13}} $ & & 
-$\leadstoOrig  {\Mtwo} {\sigma_{13}}    {\sigma_{14}} $  &  &
-$\leadstoOrig {\Mtwo}{\sigma_{14}}   {\sigma_{15}} $
-\\
-\hline
-$\leadstoOrigStar  {\Mtwo} {\sigma_8}   {\sigma_{12}}$ & & \ & & \ & & $\leadstoOrigStar  {\Mtwo} {\sigma_{10}}   {\sigma_{15}}$
-\\
-\hline
-\end{tabular}
-\\
-\hline
+%\begin{tabular}{lclclclcl}
+%$\leadstoOrig  {\Mtwo} {\sigma_8}    {\sigma_9} $  & & 
+%$\leadstoOrig  {\Mtwo} {\sigma_9}    {\sigma_{10}} $ &  &
+%$\leadstoOrig  {\Mtwo} {\sigma_{12}}   {\sigma_{13}} $ & & 
+%$\leadstoOrig  {\Mtwo} {\sigma_{13}}    {\sigma_{14}} $  &  &
+%$\leadstoOrig {\Mtwo}{\sigma_{14}}   {\sigma_{15}} $
+%\\
+%\hline
+%$\leadstoOrigStar  {\Mtwo} {\sigma_8}   {\sigma_{12}}$ & & \ & & \ & & $\leadstoOrigStar  {\Mtwo} {\sigma_{10}}   {\sigma_{15}}$
+%\\
+%\hline
+%\end{tabular}
+%\\
+%\hline
 \end{tabular}
    \caption{Illustrating   $\leadstoOrig  {\Mtwo} {\sigma}    {\sigma'}$ 
     }
    \label{fig:UpSemantics}
  \end{figure}
  
-\susan{I don't think the two lines at the bottom of the figure are needed here and in the next figure} 
+%\susan{I don't think the two lines at the bottom of the figure are needed here and in the next figure. \sdN{agree, but highlight.}} 
  
 %{Note that $\leadstoOrig {\Mtwo}{\sigma_{8}}   {\sigma_{9}} $ and $\leadstoOrig {\Mtwo}{\sigma_{13}}   {\sigma_{14}} $ are steps within the same call, but 
 %$\leadstoOrig {\Mtwo}{\sigma_{14}}   {\sigma_{15}} $ and $\leadstoOrig {\Mtwo}{\sigma_{17}}   {\sigma_{18}} $ are not. %steps within the same call,
@@ -124,19 +120,27 @@ we believe that it is applicable to several programming paradigms, and  that   u
 
 \section{From \LangOO to \AssertLang}
 
-{To develop the semantics of our assertions language, \AssertLang, we   build three auxiliary concepts on  top of  \LangOO: bounded execution, \susan{RATHER THAN pushing frames, and locally  reachable objects. I matched the section headings} method calls and returns, and reachable objects.}
+{To develop the semantics of our assertions language, \AssertLang, we   build three auxiliary concepts on  top of  \LangOO: bounded execution, method calls and returns, and reachable objects.}
 
 
 \subsection{Bounded Execution}
 \label{sect:bounded}
 
-{The semantics from the earlier section allows arbitrary method calls and returns. % pushing and poping frames from the stack in arbitrary fashion. 
+{The semantics from the earlier section allows arbitrary numbers of method calls and returns. 
 In particular it is possible to start with a state $\sigma$ and perform more returns than calls --
-% after a number of execution steps to reach a state $\sigma'$ with fewer frames on its stack -- 
-cf . $\leadstoOrigStar  {\Mtwo} {\sigma_{8}}   {\sigma_{15}}$ from earlier.
- {However,  from $\sigma_8$'s viewpoint the future only incudes states which are being visited as a result of  $\sigma_8$'s top continuation}; that is, it includes the states $\sigma_9$, $\sigma_{10}$, $\sigma_{11}$, $\sigma_{12}$, $\sigma_{13}$, and $\sigma_{13}$, but \emph{not} $\sigma_{15}$, or $\sigma_{18}$, etc.
+\eg $\leadstoOrigStar  {\Mtwo} {\sigma_{8}}   {\sigma_{15}}$. 
+\sdN{In the sense of $\leadsto^*$,  the state $\sigma_{15}$  is one of the    ``future'' states for $\sigma_8$.}
+
+\sdN{This  is  is a perfectly natural semantics, 
+but for the purposes of our work, we need a notion of  ``future state'' which  includes method calls and returns, but does not
+include returns from the currently executing method -- \cf Def. {def:necessity-semantics}(2).}
+Thus,
+the future states of $\sigma_8$'s   only include 
+ % states which are being visited as a result of  executing $\sigma_8$'s top continuation}; that is, it includes the states 
+ $\sigma_9$, $\sigma_{10}$, $\sigma_{11}$, $\sigma_{12}$, $\sigma_{13}$, and $\sigma_{14}$, but \emph{not} $\sigma_{15}$ \sdN{-- the latter results from returning from $\sigma_{8}$'s top continuation.}
 % since $\sigma$'s top frame will have been popped before we reach $\sigma'$. 
-We therefore define  execution from the viewpoint of an original state, $\sigma_o$, which  is ``bounded'' so as not to ever pop the top  $\sigma_o$' top frame:}
+
+To obtain this  notion of future, we define  execution from the viewpoint of an original state, $\sigma_o$, which  is ``bounded'' so as not to ever pop   $\sigma_o$' top frame :
 
 
  
@@ -146,45 +150,69 @@ We define the relation  $\leadstoBounded {\Mtwo} {\sigma_1} {\sigma_o} {\sigma_2
 
 \begin{itemize}
 \item
- $\leadstoBounded {\Mtwo} {\sigma} {\sigma_o}  {\sigma'}$ \ \ \ iff \ \ \  $\leadstoOrig {\Mtwo} {\sigma} {\sigma'}$\\
+ $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma_o}  {\sigma'}$ \ \ \ iff \ \ \  $\leadstoOrig {\Mtwo} {\sigma} {\sigma'}$\\
 $\strut  \hspace{3.6cm} \wedge $\\
 $\strut  \hspace{3.1cm}\ \    \exists \phi,\psi, \psi_1, \psi_2.[ \ \sigma_o = (\phi\cdot\psi,\_) \ \wedge \ \sigma = (\psi_1\cdot \psi, \_)
 \ \wedge\ \sigma' = (\psi_2\cdot \psi, \_)\ ] $ 
 \item
- $\leadstoBoundedStar {\Mtwo}  {\_}  {\sigma_o} {\_}$\ \  is the reflexive, transitive closure of $\leadstoBounded {\Mtwo}  {\_}  {\sigma_o} {\_}$.
+ $\leadstoBoundedStarThree  {\Mtwo}  {\_}  {\sigma_o} {\_}$\ \ \ \ \ \  is the reflexive, transitive closure of $\leadstoBoundedThree {\Mtwo}  {\_}  {\sigma_o} {\_}$.
+ \item
+\sdN{  $\leadstoBounded  {\Mtwo} {\sigma}   {\sigma'}$\ \  \ \ \ \ \ \  \ \ \ iff \ \ \  $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma}  {\sigma'}$}
+  \item
+\sdN{  $\leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma'}  $\ \ \ \ \ \ \ \ \  iff \ \ \   $\leadstoBoundedStarThree {\Mtwo}  {\sigma}  {\sigma} {\sigma'}$}\ \  
 \end{itemize}
 \end{definition}
  
- 
- 
- Fig. \ref{fig:UpSemanticsBounded}  continues with the example from  Fig. \ref{fig:UpSemantics}. Notice that $\leadstoOrig {\Mtwo} {\sigma_{14}}  {\sigma_{15}}$ 
- but    $\notLeadstoBounded  {\Mtwo}  {\sigma_{14}} {\sigma_8} {\sigma_{15}}$:  this step would pop  $\sigma_8$'s
- top frame. 
-Therefore,   $\leadstoOrigStar {\Mtwo} {\sigma_8}  {\sigma_{15}}$ 
- but  $\notLeadstoBoundedStar {\Mtwo} {\sigma_8} {\sigma_8} {\sigma_{15}}$. Also,
-  $\leadstoOrigStar {\Mtwo} {\sigma_8}  {\sigma_{18}}$ 
- but  $\notLeadstoBoundedStar {\Mtwo} {\sigma_8} {\sigma_8} {\sigma_{18}}$  -- even though $\sigma_8$ and $\sigma_{18}$ have the same depth of stack, they belong to different calls.
- 
 
-\begin{figure}[htb]
-\begin{tabular}{|c|}
- \hline %  \\ -- this added one vertical space
-\resizebox{7cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/bounded.png}
+We continue with  Fig. \ref{fig:UpSemantics}. Here $\leadstoOrig {\Mtwo} {\sigma_{14}}  {\sigma_{15}}$ 
+ but    $\notLeadstoBoundedThree {\Mtwo}  {\sigma_{14}} {\sigma_{14}} {\sigma_{15}}$
+and  $\notLeadstoBounded  {\Mtwo}  {\sigma_{14}}   {\sigma_{15}}$
+--  this step would pop  $\sigma_{14}$'s
+ top frame. 
+% Therefore,   $\leadstoOrigStar {\Mtwo} {\sigma_8}  {\sigma_{15}}$ 
+%  but  $\notLeadstoBoundedStarThree {\Mtwo} {\sigma_8} {\sigma_8} {\sigma_{15}}$, and  $\notLeadstoBoundedStarThree {\Mtwo}  {\sigma_8} {\sigma_{15}}$.
+ Also, $\leadstoOrigStar {\Mtwo} {\sigma_8}  {\sigma_{18}}$ 
+ but  $\notLeadstoBoundedStar {\Mtwo} {\sigma_8}   {\sigma_{18}}$  -- even though $\sigma_8$ and $\sigma_{18}$ have the same depth of stack, they belong to different calls.
+ 
+ %\begin{figure}[htb]
+%\begin{tabular}{|c|}
+% \hline %  \\ -- this added one vertical space
+%\resizebox{7cm}{!}{
+%\includegraphics[width=\linewidth]{diagrams/bounded.png}
+%} 
+% \\
+%\hline
+%\begin{tabular}{lclclclclcl}
+% $\leadstoBoundedThree  {\Mtwo} {\sigma_{12}} {\sigma_8}  {\sigma_{13}} $  & &   $\leadstoBoundedThree {\Mtwo} {\sigma_{13}}  {\sigma_{8}}  {\sigma_{14}} $ &  & \leadstoBoundedStar   {\Mtwo}   {\sigma_8}  {\sigma_{14}}  & &
+%$\notLeadstoBoundedThree  {\Mtwo} {\sigma_{14}} {\sigma_8}  {\sigma_{15}} $ & &  
+%\\
+%\end{tabular}
+%\\
+%\hline
+%\end{tabular}
+%   \caption{Illustrating   $\leadstoBoundedThree  {\Mtwo} {\sigma}  {\sigma_o} {\sigma'}$, and $\leadstoBounded {\Mtwo} {\sigma}   {\sigma'}$}
+%   \label{fig:UpSemanticsBounded}
+% \end{figure}
+
+ \vspace{.2cm}
+\sdN{The bounded semantics impose a restriction on the set of future states, but only from the viewpoint of
+a certain origin state:  
+ $\leadstoOrigStar {\Mtwo} {\sigma}  {\sigma'} \ \wedge\
+ \notLeadstoBoundedStar {\Mtwo} {\sigma}  {\sigma'}$ expresses that $\sigma'$ is not part of the "bounded" future of $\sigma$. 
+Nevertheless, there exists a   further state $\sigma_o$, such that both $\sigma$ and $\sigma'$ are  
+part   of $\sigma_o$'s bounded future. Moreover, from $\sigma_o$'s viewpoint, $\sigma'$ is a transitive bounded successor of $\sigma$.}
+
+\sdN{\begin{lemma}
+For all $\sigma_{init}$, $\sigma$, $\sigma'$, $\overline M$, if $\sigma_{init}$ is initial\footnote{An \emph{Initial} state's heap contains a single object of class \prg{Object}, and
+its  stack   consists of a single frame, whose local variable map is a
+mapping from \prg{this} to the single object, and whose continuation is  any statement.
+(See Definition %s \ref{def:initial} and 
+\ref{def:arising} and the 
+{appendices %of the full paper 
+\cite{necessityFull}).}}, and $\leadstoOrigStar {\Mtwo} {\sigma_{init}}  {\sigma}$, and  $\leadstoOrigStar {\Mtwo} {\sigma}  {\sigma'}$, then there exists a $\sigma_o$, such that $\leadstoBoundedStar {\Mtwo} {\sigma_{init}}  {\sigma_o}$, and $\leadstoBoundedStar {\Mtwo} {\sigma_o}  {\sigma}$, and $\leadstoBoundedStar {\Mtwo} {\sigma_o}  {\sigma'}$, and $\leadstoBoundedStar {\Mtwo} {\sigma_o}  {\sigma'}$. More specifically, $\leadstoBoundedStarThree {\Mtwo} {\sigma} {\sigma_o} {\sigma'}$
+\end{lemma}
 } 
- \\
-\hline
-\begin{tabular}{lclclclcl}
- $\leadstoBounded  {\Mtwo} {\sigma_{12}} {\sigma_8}  {\sigma_{13}} $  & &   $\leadstoBounded  {\Mtwo} {\sigma_{13}}  {\sigma_{8}}  {\sigma_{14}} $ &  &
-$\notLeadstoBounded  {\Mtwo} {\sigma_{14}} {\sigma_8}  {\sigma_{15}} $ & &  
-\\
-\end{tabular}
-\\
-\hline
-\end{tabular}
-   \caption{Illustrating   $\leadstoBounded  {\Mtwo} {\sigma_o} {\sigma}  {\sigma'}$}
-   \label{fig:UpSemanticsBounded}
- \end{figure}
+
  
 \subsection{Method Calls and Returns}
 
@@ -326,13 +354,13 @@ ${\leadstoOrigStar {\Mtwo}  {\sigma}  {\sigma'}} \ \ \wedge \ \  \GRelevant o {\
 }
 \item
 \label{threeLR}
-${\leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma} {\sigma'}} \ \ \wedge \ \   \LRelevant o {\sigma'}\  \ \wedge\ \  {o\in \sigma} \ \ \ \Longrightarrow \ \ \ \LRelevant o {\sigma}$.
+${\leadstoBoundedStar {\Mtwo}  {\sigma}    {\sigma'}} \ \ \wedge \ \   \LRelevant o {\sigma'}\  \ \wedge\ \  {o\in \sigma} \ \ \ \Longrightarrow \ \ \ \LRelevant o {\sigma}$.
 \end{enumerate}
 \end{lemma}
 
-{Consider Fig.  \ref{fig:UpSemantics}, and Fig.  \ref{fig:UpSemanticsBounded}.
-Lemma \ref{lemma:relevant}.\ref{threeLR}  promises that any objects locally reachable in $\sigma_{14}$ which already existed in $\sigma_{8}$, were locally reachble in $\sigma_{8}$. However, the lemma is only  applicable to bounded execution, and as 
-$\notLeadstoBoundedStar {\Mtwo} {\sigma_8} {\sigma_8} {\sigma_{17}}$, 
+{Consider Fig.  \ref{fig:UpSemantics}. %, and Fig.  \ref{fig:UpSemanticsBounded}.
+Lemma \ref{lemma:relevant}.\ref{threeLR}  promises that any objects locally reachable in $\sigma_{14}$ which already existed in $\sigma_{8}$, were locally reachable in $\sigma_{8}$. However, the lemma is only  applicable to bounded execution, and as 
+$\notLeadstoBoundedStar {\Mtwo} {\sigma_8}  {\sigma_{17}}$, 
 the lemma does not promise that  objects locally reachable in $\sigma_{17}$ which already existed in $\sigma_{8}$, were locally accessible in $\sigma_{8}$ -- namely it could be that objects are made globally reachable upon method return, during the step from $\sigma_{14}$ to $\sigma_{15}$.}
 
 
