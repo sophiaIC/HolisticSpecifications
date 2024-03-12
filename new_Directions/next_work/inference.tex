@@ -1,5 +1,22 @@
 \newcommand{\extract}[1]{\ensuremath{{\mathcal I}\!nvs(#1)}}
 
+\begin{lstlisting}
+class Shop
+
+  fld myAccount : Account
+  fld inventory : Inventory
+    
+  void buy(buyer: Object, anItem: Item)
+    int price = anItem.price
+    int oldBalance = this.myAccount.balance
+    buyer.payMe(myAccount,price)
+    if (this.myAccount.balance == oldBalance+price)
+       this.send(buyer,anItem)
+    else
+       buyer.tell("you have not paid me")  
+             
+\end{lstlisting}
+
 
 \section{Proving Adherence to \SpecLang Specifications}
 
@@ -574,7 +591,7 @@ Such an approach might solve the "late binding" issues mentioned below.
 \subsection{Examples}
 
 \begin{example}[Specification for Payments Module]
-Consider the following spec:
+Consider the following three specs. They are equivalent, \ie $S_1 \equiv S_2 \equiv S_3$
 
 $\begin{array}{lcl}
 S_1& \ = \ &  \TwoStatesQ {a: Account}{ \inside {a} } {  \inside {a}  }\\
@@ -624,6 +641,25 @@ $
 Consider a public method in class $Account$, defined as \\
 $\strut \ \ \  void\  pay(a: Account, p:Password, j: int)\{ \ if\ ( this.passwrd== p)\ .....\  \}$
 \\
+This method could have the following "classical" spec
+\\ 
+$\SP---\ PP1:$\\
+$\SP PRE:\ \ \ p',p'' : Password \ \wedge \ this.password=p'  $
+\\
+$\SP POST: \ \  this.password=p'  $
+\\
+$\SP---\ PP2:$\\
+$\SP PRE:\ \ \ this \neq a\  \wedge \ this.password=p   \ \wedge \ this.balance=b \ \wedge\ a.balance=b'$
+\\
+$\SP POST: \ \   this.balance=b-j \ \wedge\ a.balance=b'+j$
+\\
+
+
+
+
+
+
+
 This method will have the same specifications as in OOPSLA. And note that $a'$ does not appear in the signature or the body of $pay$.  \\ 
 $\SP---\ PP1:$\\
 $\SP PRE:\ \ \ a': Account \ \wedge \  p' : Password \ \wedge \ a'.password=p' $
@@ -654,15 +690,18 @@ It would be nice if we were able to avoid having to write $PP1$ and $PP2$ explic
 class Shop
 
     fld myAccount : Account
+    fld inventory : Inventory
     
     void buy(buyer: Object, anItem: Item)
         int price = anItem.price
         int oldBalance = this.myAccount.balance
         buyer.Payment(myAccount,price)
-            if (this.myAccount.balance = oldBalance+price)
-                { buyer.payMe( this.myAccount, price) }
-            else
-                { buyer.WriteMessage("you have not paid me") }
+        if (this.myAccount.balance == oldBalance+price)
+            this.inventory.remove(anItem)
+            buyer.send(anItem)
+       else
+             buyer.tell("you have not paid me")  
+             
 \end{lstlisting}
 
 The specifications below guarantee that protection of an account's password from $buyer$ is preserved, and if a password is protected from $buyer$, then its balance cannot decrease ($PP10$). Moreover, protection from $buyer$ of an account different than the shop's account is preserved, and if an account is protected from buyer, then it balance will remain the same.
