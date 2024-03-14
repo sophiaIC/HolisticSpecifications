@@ -15,10 +15,11 @@ A frame consists of a local variable map, and a continuation, \ie a sequence of 
 \paragraph{Notation} We adopt the following, unsurprising, notation:
 \begin{itemize}
 \item
-$\alpha$, $\alpha'$, $\alpha_1$, ... are addresses,   $x$, $x'$, $x_1$, ..., $y$, ... $z$, ... are variables, and $\va$, $\va'$ ... are either addresses or variables, we call these \emph{\atoms}.
+\red{An object is uniquely identified by the address that points to it. We shall be talking of objects $o$, $o'$ when talking less formally, and of addresses, $\alpha$, $\alpha'$, $\alpha_1$, ...  when more formal.}
+\item
+$x$, $x'$,  ..., $y$, ... $z$, ... are variables;  $\va$, $\va'$ ... are either addresses or variables, we call these \emph{\atoms}.
 \item
 $\alpha \in \sigma$ means that $\alpha$ is defined in the heap of $\sigma$, and $x\in \sigma$ means that $x$ is defined in the top frame of $\sigma$.
-
 Conversely,  $\alpha\notin\sigma$ and $x\notin\sigma$ %, and $\va \notin A$ h
  have the obvious meanings.
 \item
@@ -127,37 +128,40 @@ we believe that it is applicable to several programming paradigms, and  that   u
 \label{sect:bounded}
 
 {The semantics from the earlier section allows arbitrary numbers of method calls and returns. 
-In particular it is possible to start with a state $\sigma$ and perform more returns than calls --
-\eg $\leadstoOrigStar  {\Mtwo} {\sigma_{8}}   {\sigma_{15}}$. 
-\sdN{In the sense of $\leadsto^*$,  the state $\sigma_{15}$  is one of the    ``future'' states for $\sigma_8$.}
+In particular, it is possible to start with a state $\sigma$ and perform more returns than calls --
+\eg $\leadstoOrigStar  {\Mtwo} {\sigma_{8}}   {\sigma_{15}}$  in  Fig. \ref{fig:UpSemantics}.
+{In the sense of $\leadsto^*$,  the state $\sigma_{15}$  is one of the future'states for $\sigma_8$.}
 
-\sdN{This  is  is a perfectly natural semantics, 
-but for the purposes of our work, we need a notion of  ``future state'' which  includes method calls and returns, but does not
-include returns from the currently executing method -- \cf Def. \ref{def:necessity-semantics}(2).}
-Thus,
-the future states of $\sigma_8$  only include 
+% This  is  is a perfectly natural semantics,  but
+\red{For} the purposes of our work, we \red{also} need an \red{additional} notion, of    \emph{bounded} future state, which  can be reached through \red{any steps, including method calls and returns, but excluding returns from the currently executing method} -- \cf Def. \ref{def:necessity-semantics}(2). 
+Thus, the \red{bounded} future states of $\sigma_8$  only include 
  % states which are being visited as a result of  executing $\sigma_8$'s top continuation}; that is, it includes the states 
- $\sigma_9$, $\sigma_{10}$, $\sigma_{11}$, $\sigma_{12}$, $\sigma_{13}$, and $\sigma_{14}$, but \emph{not} $\sigma_{15}$ \sdN{-- the latter results from returning from $\sigma_{8}$'s top continuation.}
+ $\sigma_9$, $\sigma_{10}$, $\sigma_{11}$, $\sigma_{12}$, $\sigma_{13}$, and $\sigma_{14}$, but \emph{not} $\sigma_{15}$  -- the latter results from returning from $\sigma_{8}$'s top continuation.  
+ \sdN{Similarly, $\sigma_{18}$ is not a bounded future state of $\sigma_8$, even though they have the same stack depth -- between $\sigma_{8}$ 
+ and  $\sigma_{18}$ we returned from the top call in $\sigma_{8}$.}
 % since $\sigma$'s top frame will have been popped before we reach $\sigma'$. 
 
-To obtain this  notion of future, we define  execution from the viewpoint of an original state, $\sigma_o$, which  is ``bounded'' so as not to ever pop   $\sigma_o$'s top frame :
+\newcommand{\bd}{_{bd}}
 
-
+To obtain this  notion of \red{bounded} future, we define  execution % from the viewpoint of an original state, 
+\sdN{bounded by state $\sigma\bd$, which %  is ``bounded'' so as not to ever 
+allows any steps, except for popping   $\sigma\bd$'s top frame:}
+ 
  
 \begin{definition}[Bounded Execution]
 \label{def:shallow:term}
-We define relations \  {\red{ $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma_o} {\sigma'}}$}\ and\  $\leadstoBounded  {\Mtwo} {\sigma} {\sigma'}$ as:
+We define relations \    $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma\bd} {\sigma'}$ \ and\  $\leadstoBounded  {\Mtwo} {\sigma} {\sigma'}$ as:
 
 \begin{itemize}
 \item
- $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma_o}  {\sigma'}$ \ \  iff \ \ \  $\leadstoOrig {\Mtwo} {\sigma} {\sigma'} % $\\
+ $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma\bd}  {\sigma'}$ \    iff \ \   $\leadstoOrig {\Mtwo} {\sigma} {\sigma'} % $\\
 % $\strut  \hspace{3.6cm}\ 
 \ \  \wedge $\\
-$\strut  \hspace{2.9cm}\ \  \ \ \   \exists \phi,\psi, \psi_1, \psi_2.[ \ \sigma_o = (\phi\cdot\psi,\_) \ \wedge \ \sigma = (\psi_1\cdot \psi, \_)
-\ \wedge\ \sigma' = (\psi_2\cdot \psi, \_)\ ] $ 
+$\strut  \hspace{2.9cm}\ \      \exists \phi,\!\psi,\!\psi_1,\!\psi_2.[ \  \sigma\bd\! =\! (\phi\cdot\psi,\_) \ \wedge \ \sigma\! =\! (\psi_1\cdot \psi, \_)
+\ \wedge\ \sigma'\! =\! (\psi_2\cdot \psi, \_)\ \wedge\ \red{\psi_1,\psi_2\!\neq\! \epsilon}] $ 
 \item
- $\leadstoBoundedStarThree  {\Mtwo}  {\sigma}  {\sigma_o} {\sigma'}$\ \  iff \ \ $\sigma=\sigma'\ \ \vee$\\
-$\strut  \hspace{3cm}\ \ \exists n\!\in\!\mathbb{N},\sigma_0,..,\sigma_n.[\ \forall i\!\! \in\!\! [0..n).\leadstoBoundedThree {\Mtwo}  {\sigma_i}  {\sigma_o} {\sigma_{i+1}} \ \wedge\ \sigma=\sigma_0\ \wedge\ \sigma'=\sigma_n\ ]$
+ $\leadstoBoundedStarThree  {\Mtwo}  {\sigma}  {\sigma\bd} {\sigma'}$\ \  iff \ \ $\sigma=\sigma'\ \ \vee$\\
+$\strut  \hspace{3cm}\ \ \exists n\!\in\!\mathbb{N},\sigma_0,..,\sigma_n.[\ \forall i\!\! \in\!\! [0..n).\leadstoBoundedThree {\Mtwo}  {\sigma_i}  {\sigma\bd} {\sigma_{i+1}} \ \wedge\ \sigma=\sigma_0\ \wedge\ \sigma'=\sigma_n\ ]$
  \item
 \sdN{  $\leadstoBounded  {\Mtwo} {\sigma}   {\sigma'}$\ \  \ \ \ \ \ \   \ \ \ \ iff \ \ \ $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma}  {\sigma'}$}
   \item
@@ -197,26 +201,26 @@ and  $\notLeadstoBounded  {\Mtwo}  {\sigma_{14}}   {\sigma_{15}}$
 % \end{figure}
 
 %  \vspace{.1cm}
- \susan{you have removed an explanatory sentence that I found useful. It was the one that I wanted to put the word 'earlier' in}
+% \susan{you have removed an explanatory sentence that I found useful. It was the one that I wanted to put the word 'earlier' in}
 
-\sdN{Bounded semantics impose restrictions on the set of future states, but only from the viewpoint of
-\red{some}
+Bounded semantics impose restrictions on the set of future states, but only from the viewpoint of
+\red{the}
 %a given 
-origin state (\cf Lemma \ref{lemma:orig:to:bounded}):  
-\red{Executions starting at  initial states are bounded  -  \cf %part 
-(\ref{otbOne}).}
-\red{While $ \notLeadstoBoundedStar {\Mtwo} {\sigma}  {\sigma'}$ expresses that $\sigma'$ is not part of the "bounded" future of $\sigma$, if, in addition, $\leadstoOrigStar {\Mtwo} {\sigma_{init}}  {\sigma}  \ \wedge\ \leadstoOrigStar {\Mtwo} {\sigma}  {\sigma'}$, then 
- $\sigma$ and $\sigma'$ are  in $\sigma_{init}$'s bounded future, and  from $\sigma_{init}$'s viewpoint, $\sigma'$ is a transitive bounded successor of $\sigma$ - \cf  % part (\ref{otbTwo}).
-Finally,  %part 
-(\ref{otbThree})  generalizes %  Lemma \ref{lemma:orig:to:bounded},  part
- (\ref{otbTwo}).}}
-% there exists a further, earlier, state $\sigma_o$, such that both $\sigma$ and $\sigma'$ are  
+bounding state. Lemma \ref{lemma:orig:to:bounded}) states that:  
+(\ref{otbOne})\  Executions starting at an initial state  are bounded.
+ (\ref{otbTwo})\  While $ \notLeadstoBoundedStar {\Mtwo} {\sigma}  {\sigma'}$ expresses that $\sigma'$ is not part of the "bounded" future of $\sigma$, if, in addition, $\leadstoOrigStar {\Mtwo} {\sigma_{init}}  {\sigma}  \ \wedge\ \leadstoOrigStar {\Mtwo} {\sigma}  {\sigma'}$, then 
+ $\sigma$ and $\sigma'$ are  in $\sigma_{init}$'s bounded future, and  from $\sigma_{init}$'s viewpoint, $\sigma'$ is a transitive bounded successor of $\sigma$ - \cf  % part 
+(\ref{otbThree})\  generalizes %  Lemma \ref{lemma:orig:to:bounded},  part
+ (\ref{otbTwo}): \red{For any execution starting at some initial state $\sigma_{init}$ and leading from $\sigma_m$ to $\sigma_n$ 
+ we can find $\sigma_k$, a predecessor of $\sigma_m$, which is a bound of the execution from $\sigma_m$ to $\sigma_n$; moreover $k$ 
+ is so that all its predecessors  are also bounds of that execution, while its successors are not.}
+ % there exists a further, earlier, state $\sigma_o$, such that both $\sigma$ and $\sigma'$ are  
 %part   of $\sigma_o$'s bounded future. Moreover, from $\sigma_o$'s viewpoint, $\sigma'$ is a transitive bounded successor of $\sigma$.}
 
-\sdN{\begin{lemma}
+ \begin{lemma}
 \label{lemma:orig:to:bounded}
 For all $\overline M$, all $n,m\in \mathbb{N}$ with $m\leq n$, $\sigma_0$, ... $\sigma_n$,  $\sigma_{init}$, $\sigma$, $\sigma'$, where
-$\sigma_{init}$ is initial:\footnote{An \emph{Initial} state's heap contains a single object of class \prg{Object}, and
+$\sigma_{init}$ is an initial state:\footnote{An \emph{Initial} state's heap contains a single object of class \prg{Object}, and
 its  stack   consists of a single frame, whose local variable map is a
 mapping from \prg{this} to the single object, and whose continuation is  any statement.
 (See Definition %s \ref{def:initial} and 
@@ -237,11 +241,13 @@ $\leadstoOrigStar {\Mtwo} {\sigma_{init}}  {\sigma}\ \wedge\ \leadstoOrigStar {\
 \label{otbThree}
  $\forall i\!\in\! [0..m).\ \leadstoOrig  {\Mtwo} {\sigma_{i}}  {\sigma_{i+1}}\ \wedge\ \sigma_{init}=\sigma_0$ \\
  % \ \wedge \  \sigma=\sigma_m \ \wedge\ \sigma' =\sigma_n  $ \\
-\strut \hspace{0.5cm} $\ \ \Longrightarrow \ \  \exists k\leq n.[\ \ \ \forall i\leq k.[\  \leadstoBoundedStar  {\Mtwo}   {\sigma_{init}} {\sigma_i}\ \wedge \ \leadstoBoundedStarThree  {\Mtwo}  {\sigma_m}  {\sigma_{i}} {\sigma_n} ]\ \ \  \wedge$\\
-\strut \hspace{3cm} $ \forall i> k. [\  \notLeadstoBoundedStarThree  {\Mtwo}  {\sigma_m}  {\sigma_{i}} {\sigma_n}\ ] \ \ \ ]$.
+\strut \hspace{0.5cm} $\ \ \Longrightarrow \ \  \exists k\leq m.[\ \ \ \forall i\leq k.[\  % \leadstoBoundedStar  {\Mtwo}   {\sigma_{init}} {\sigma_i}\ \wedge \ 
+\leadstoBoundedStarThree  {\Mtwo}  {\sigma_m}  {\sigma_{i}} {\sigma_n} ]\ \ \  \wedge 
+% $\\ \strut \hspace{3cm} $
+ \forall i> k. [\  \notLeadstoBoundedStarThree  {\Mtwo}  {\sigma_m}  {\sigma_{i}} {\sigma_n}\ ] \ \ \ ]$.
 \end{enumerate} 
 \end{lemma}
-}
+ 
 
  
 \subsection{Method Calls and Returns}
@@ -259,14 +265,18 @@ The elements of $ \PushS  {\alpha} {\sigma} $ only differ in the identifiers in 
 Given a state $\sigma$, addresses $\overline \alpha$, and variables or addresses $\overline \va$, we define
 \begin{itemize}
 \item
-$ \PushS  {\alpha} {\sigma} \ =\ \{ \ \sigma' \ \mid\ \sigma=(\psi, \chi)\  \wedge\  (\phi\cdot \psi, \chi) \ \wedge\ rng(\phi)=\overline \alpha \ \ \mbox{ for some } \phi, \psi, \chi \ \}$
+$ \PushS  {\alpha} {\sigma} \ =\ \{ \ \sigma' \ \mid\ \sigma=(\psi, \chi)\  \wedge\  \sigma'=(\phi\cdot \psi', \chi) \ \wedge\ \red{\psi\sim\psi'} \ \wedge\ rng(\phi)=\overline \alpha \ \ \mbox{ for some } \phi, \psi, \psi', \chi \ \}$
 \item
 {$ \PushS  {\va}  {\sigma}$ is short for  $ \PushS  {\interpret {\sigma} {\va}} {\sigma} $.}
 \end{itemize}
+\red{where $\psi\sim\psi'$ iff $\psi=\phi_1\cdot\psi_0 \ \wedge \psi=\phi_2\cdot\psi_0\ \wedge \phi_1.\prg{local\_map}=\phi_2.\prg{local\_map}$ for some $\phi_1,\phi2,\psi_0$.}
+
 \end{definition}
 
- {Lemma \ref{lemma:push} below says that  $\pushSymbol$ characterizes  calls and returns.  (\ref{pushOne}):\ $ \PushS   {\alpha} {\sigma}$ describes    direct successor states of  a $\sigma$ with a continuation which calls a method with receiver and arguments $\overline \alpha$. 
- (\ref{pushTwo}):\ $ \PushS   {\alpha} {\sigma'}$  describes direct predecessor states of  a $\sigma'$ with ground continuation.}
+ {Lemma \ref{lemma:push} % below 
+ says that  $\pushSymbol$ characterizes  calls and returns.   
+   (\ref{pushOne}):\  If $\leadstoOrig {\Mtwo} {\sigma}   {\sigma'} $ and $\sigma'\!\in\!\PushS   {\alpha} {\sigma}$ then $\sigma'$ is a  \emph{callee} state of $\sigma$ --  {a direct \emph{successor} state of    $\sigma$ \emph{after} calling a method}. % with receiver and arguments $\overline \alpha$). 
+ (\ref{pushTwo}):\  If $\leadstoOrig {\Mtwo} {\sigma}   {\sigma'} $ and $\sigma\! \in\! \PushS   {\alpha} {\sigma'}$  then $\sigma$ is a  \emph{caller} state  of $\sigma'$ -- {a direct \emph{predecessor} of $\sigma'$} \emph{before} returning from a method.}
   
 \begin{lemma}% [$\pushSymbol$  for calls and returns]
 \label{lemma:push}
