@@ -331,7 +331,23 @@ The locally reachable objects from $\phi_1$ were highlighted in the middle pane 
 We highlight the protected objects in each pane with a golden halo.
  Note that $o_3$ is protected from $\phi_2$, but is not protected from $\phi_3$. This is so, because \prg{this} in $\phi_3$ is external, and  $o_3$ is an argument to the call. That means, that during the call, $o_7$ may obtain unmitigated access (permission?) to $o_3$. 
  
- 
+ \subsection{Addresses in Assertions}
+
+\begin{lemma}
+\label{lemma:addr:expr}
+For all $M$, $\sigma$, $\alpha$, $x$, $\re$:
+
+\begin{enumerate}
+\item
+$ \satisfiesA{M}{\sigma[x\mapsto \alpha]}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{A[\alpha/x]} $ 
+\item
+$\eval{M}{\sigma}{{\re}}{\alpha}  \ \ \ \Longrightarrow\ \ \  [ \ \satisfiesA{M}{\sigma}{A} \  \Longleftrightarrow\   \  \satisfiesA{M}{\sigma}{A[\alpha/\re]} \  \  ]$
+\end{enumerate}
+
+\end{lemma}
+
+A corollary of the lemma above is $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
+
    
  \subsection{Viewpoints and Protection}
  
@@ -394,35 +410,51 @@ $
 
 \vspace{.1cm}
 
-The guarantees given by $\pushSymbolAA$ are described in Lemma \ref{lemma:push:ass:state}. (1) If  %the current state 
-$\sigma$ satisfies  $\PushAS y A$, then   $A$ will hold after pushing a frame with the values of $\overline y$ (here $\PushS {y} {\sigma}$)
-(2) is the opposite: If $A$ holds in a state in which we pushed a frame with the values for $\overline y, \overline z$ 
-% (here , conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y$  and some other variables has been pushed 
-(here \PushSLong {(\overline y, \overline z)} \sigma), then $\PushAS {y} {A}$ will hold  after popping that frame.
+ Lemma \ref{lemma:push:ass:state} states the guarantees given by $\pushSymbolAA$: \  (1) If \ %the current state 
+$\sigma$ satisfies  $\PushAS y A$, then   \sdN{ the callee state (after pushing a frame with the values of $\overline y$) 
+will satisfy $A$}. %after pushing a frame with the values of $\overline y$ (here $\PushS {y} {\sigma}$)
+(2) is the opposite: \sdN{If the callee state (in which we pushed a frame with the values for $\overline y, \overline z$) satisfies $A$, then the
+caller state will satisfy 
+% (here , conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y$  and some other variables has been pushed % (here \PushSLong {(\overline y, \overline z)} \sigma), 
+$\PushAS {y} {A}$. } % will hold \sdN{in the caller state}. % after popping that frame.
 %, and mapping the free variables of $A$ to their values  in the state  before.
 
 \begin{lemma} 
 \label{lemma:push:ass:state}
-For any states  $\sigma$, $\sigma'$, assertion $A$, addresses $\overline \alpha$,   variables $\overline x$, $\overline y$, $\overline z$ disjoint with one another,  and such that 
-$fv(A)\subseteq \overline x$:
+For any state  $\sigma$, $\sigma'$, assertion $A$, and variables   $\overline y, \overline z$, disjoint with one another:
+\\
+If  $fv(A)=\emptyset$, then
 \begin{enumerate}
  \item
  \label{lemma:push:ass:state:one}
-$M, \sigma[\overline{x \mapsto \alpha} ] \models \PushAS {y} {A}\ \ \ \ \ \ \   \Longrightarrow  \ \ \ \ M,  \PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}   \models A$
+$M, \sigma \models \PushAS {y} {A}\ \ \ \ \ \ \  \ \ \    \Longrightarrow  \ \ \ \ M,  \PushS {y} {\sigma}   \models A$
+\item
+\label{lemma:push:ass:state:two}
+$M, { \PushSLong {(\overline y, \overline z)} {\sigma} } \models\  A \  \ \ \ \Longrightarrow  \ \ \ \ M,  \sigma \models  \PushAS  {y} {A}$
+\end{enumerate}
+\end{lemma}
+ \footnoteSD{OLD form:
+ \\
+ \begin{enumerate}
+ \item
+ \label{lemma:push:ass:state:one}
+$M, \sigma[\overline{x \mapsto \alpha} ] \models \PushAS {y} {A}\ \ \ \     \Longrightarrow  \ \ \ \ M,  \PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}   \models A$
 \item
 \label{lemma:push:ass:state:two}
 $M, {(\PushSLong {(\overline y, \overline z)} {(\sigma[\overline{x \mapsto \alpha} ] )})}  \models\  A \  \ \ \ \Longrightarrow  \ \ \ \ M,  \sigma[\overline{x \mapsto \alpha} ] \models  \PushAS  {y} {A}$
 \end{enumerate}
-\end{lemma}
- 
+}
 
 
 \noindent
-\textbf{NOTES} \notesep In both (1) and (2), we  use the renaming $\sigma[\overline{x \mapsto \alpha} ]$ to ensure that the free variables of $A$ are mapped to the same values in the caller's and the callee's frame.
+\textbf{NOTES} \notesep 
+\sdN{We require   $fv(A)=\emptyset$ in order to be accommodate for the difference between variable maps in $\sigma$ and  $\PushS {y} {\sigma}$.
+We could, instead,  require that $fv(A)=\overline x$, \ $\overline x \notin \sigma$, \ $\overline x \notin  \PushAS {y} {A}$, and   assert that (1)\ $M, \sigma[\overline{x \mapsto \alpha} ] \models \PushAS {y} {A}\  \Longrightarrow   \ M,  \PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}   \models A$, and similarly for (2).}
+%In both (1) and (2), we  use the renaming $\sigma[\overline{x \mapsto \alpha} ]$ to ensure that the free variables of $A$ are mapped to the same values in the caller's and the callee's frame.
  \notesep 
-To simplify notation,  we lifted the $\models$ judgement to % be applicable to 
-sets of states: If  $\sigmas$ is a set of states,  then
-$M,   \sigmas \models A$ stands for  $\forall\sigma\! \in\! \sigmas.[\ M, \  \sigma \models A \ ]$. For example, $\sigma[\overline{x \mapsto \alpha} ]$ is one state, while 
+To simplify notation,  we lifted % the $\models$ 
+judgements to sets of states: If  $\sigmas$ is a set of states,  then
+$M,   \sigmas \models A$ stands for  $\forall\sigma\! \in\! \sigmas.[\, M,\sigma \models A \, ]$. Here, $\sigma[\overline{x \mapsto \alpha} ]$ is one state, while 
  $\PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}$ is a set of states. 
    
 
@@ -432,22 +464,6 @@ $M,   \sigmas \models A$ stands for  $\forall\sigma\! \in\! \sigmas.[\ M, \  \si
 }
 %{\red{I am surprised that $ \pushSymbol$  only affects  ${\inside x}$, and leaves all else unmodified,}}
 
-\subsection{Addresses in Assertions}
-
-\begin{lemma}
-\label{lemma:addr:expr}
-For all $M$, $\sigma$, $\alpha$, $x$, $\re$:
-
-\begin{enumerate}
-\item
-\sdN{$ \satisfiesA{M}{\sigma[x\mapsto \alpha]}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{A[\alpha/x]} $}
-\item
-$\eval{M}{\sigma}{{\re}}{\alpha}  \ \ \ \Longrightarrow\ \ \  [ \ \satisfiesA{M}{\sigma}{A} \  \Longleftrightarrow\   \  \satisfiesA{M}{\sigma}{A[\alpha/\re]} \  \  ]$
-\end{enumerate}
-
-\end{lemma}
-
-A corollary of the lemma above is $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
  
 
  
