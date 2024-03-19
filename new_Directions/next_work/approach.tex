@@ -13,7 +13,7 @@ In this Section we introduce our problem and outline our approach.
 %about adherence to \Nec specifications  (\S\ref{s:all:outline:proof}).
  
 
- \subsection{Capabilities, and Emergent Behaviour} % of modules}
+ \subsection{Capabilities and Emergent Behaviour} % of modules}
 \label{s:bank}
 Our example will demonstrate the need to consider the \emph{emergent behaviour} of modules. 
 We will see three versions of a banking module, $\ModA$, $\ModB$, and $\ModC$.
@@ -21,11 +21,14 @@ All three modules allow withdrawal of  money only when supplied with the passwor
 Moreover, in $\ModA$ the password is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the password may be modified but only if supplied with the old password. 
 Therefore, $\ModA$ and $\ModC$ are robust modules, while  $\ModB$ is not.
 
-\noindent
+% \noindent
+
+\vspace{.1cm}
+
 \sdN{This example demonstrates the two concepts which are key in OCAP-based code:
 \begin{description}
 \item[Capabilities] What are the capabilities (here the password), what effects do the capabilities enable (here reduction of the money in an account), 
-and who may eventually have access to the capability.
+and who is guaranteed not to obtain access to the capability.
 \item[Emergent Behaviour] What effects may become possible through the interplay of several methods from a module (here in $\ModC$, an external object which has no access to the password may modify the password, and then withdraw the money).
 \end{description}}
 
@@ -51,17 +54,6 @@ An \prg{Account} is created with its \prg{balance} set to \prg{0}, and its passw
  After that, the password can be set to a new value,  \eg \prg{p=new Password;} \prg{acc.init(p);}. 
 It is impossible to modify the  non-\prg{null} password of an account, and thus once a password has been set, the account cannot be ``tampered'' with, unless the password has been supplied.
  
-
-%
-% (Note that we assume private fields are accessible ``class-wide''.)
-%
-% (methods may read and write fields of any instance of a class)
-%
-%and that passwords are unforgeable and not enumerable (again as
-%in Java, albeit without reflection).
-%
-% 
-
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 module $\ModA$        
@@ -158,23 +150,27 @@ Even though the method \prg{transfer} in  \ModB is ``safe'' when considered in i
 \subsection{1st Challenge: Specifications for  Capabilities, and Emergent Behaviour}
 \label{s:approach:necopers}
 
-We need  a specification language that allows us to write a specification that rules out \ModB while permitting \ModA and
-\ModC.  
+\sdN{We want to be able to write specifications that reflect the spirit of OCAP programs: namely capabilities and the effects they enable, and emergent behaviour.
+In particular, lack of access to capabilities guarantees that certain effects will not happen. 
+We propose a specification language for modules, which has two main novel ingredients:}
 
-For this we introduce two new ingredients into classic one-state assertions, and revisit and update the well-known concept of two state invariants. TODO-cite-s.\
+\sdN{
+\begin{description}
+\item[Protection] to describe lack of access to capabilities: An object $o$ is \emph{protected} from $o'$ if $o$ cannot obtain direct access to $o'$ unless an internal object affords access to $o$. And t $o$ is \emph{protected}, formally ${\inside{\prg{o}}}$, if $o$ protected from all external objects transitively accessible from the currently executing method call. More in Def. 3.5, 4.5 and 4.6.
+\item[Bounded, external, two-state invariants] to describe emergent behaviour: t $\TwoStatesQ {\overline{x:C}}  {A}{A'}$ expresses that if any reachable state $\sigma$ 
+state satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{bounded future} states will satisfy $A'$ -- more in Def. 5.3. The concept of \emph{bounded} future includes states that are reachable from further method calls and returns, but excludes returning from the call active in $\sigma$ -- more in Def 3.1. 
+We consider executions of the internal module linked with any number of unknown, external modules -- cf Sect. 2.2.
+ For $\sigma$ and its bounded future states  we only consider states whose receiver is \emph{external}. 
+\end{description}
+}
 
-The new ingredients are 1) the distinction between internal and external objects, and the concept of protection. TODO-explain both.
-The two-state invatiants, ... explain.
-Note that OOPLSA-22 instead uses    necessity operators, while mentioned in  \S \ref{intro:this:work}. 
 
- 
-
-
- % \subsection{Bank Account -- the right specification}
+With these concepts we can write specifications which  rule  out \ModB while permitting \ModA and
+\ModC, namely:
+  % \subsection{Bank Account -- the right specification}
 \label{s:bankSpecEx}
 
-We now {return to our quest for} a specification that rules out \ModB while permitting \ModA and
-\ModC. 
+ 
 %The catch is that the vulnerability present in \ModB is the result
 %of  \emph{emergent} behaviour from the interactions of the \prg{set}
 %and \prg{transfer} methods --- even though \ModC also has a
@@ -188,14 +184,18 @@ We now {return to our quest for} a specification that rules out \ModB while perm
 %transferred when the account's password is known.
 
 
-In \Nec  syntax, and {recalling \S \ref{intro:this:work}, and \ref{s:approach:necopers},}
+% In \Nec  syntax, and {recalling \S \ref{intro:this:work}, and \ref{s:approach:necopers},}
  
  \begin{tabular}{lcll}
-$S_1$   &     $\triangleq$   & $\OneStateQ{\prg{a}:\prg{Account} } {\inside{\prg{a.password}}} $
+ $S_1$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} {\inside{\prg{a}}}$
  \\
  $S_2$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.password}}} {\inside{\prg{a.password}}}$
  \\
-$S_3$ & $\triangleq$   &
+ $S_3$ & $\triangleq$   &
+ $ \TwoStatesQ{\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.balance}=\prg{b}} 
+ { \prg{a.balance}=\prg{b} }$
+\\
+$S_4$ & $\triangleq$   &
   $\forall \prg{a}:\prg{Account},\prg{b}:\prg{int}.$\\
   &  &  $\FirstState{\inside{\prg{a.password}} \wedge \prg{a.balance}=\prg{b}} 
 \  \SecondState{ \prg{a.balance}\geq \prg{b} }$
@@ -203,45 +203,51 @@ $S_3$ & $\triangleq$   &
 
 
 
- $S_1$ is not satisfied by any of the modules.
- $S_2$ is satisfied by ...  and ... 
- $S_3$ ....
+
+\noindent
+ $S_1$ guarantees that the module does not leak accounts, 
+ $S_2$ guarantees that the module does not leak passwords,
+ $S_3$ guarantees that the balance is not modified unless there is unprotected access to the account, while 
+ $S_4$ guarantees that the balance does not decrease unless there is unprotected access to the password.
+ 
+ All four modules satisfy $S_1$ and $S_3$. $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, but $\ModB$ does not satisfy $S_2$ nor $S_4$.
  
  
-%{\SrobustA does not fit the bill: all three modules   satisfy  it.
-% % \SrobustA;  this demonstrates that \SrobustA is not strong enough. 
-% But  \SrobustB does fit the bill: \ModA and \ModC satisfy \SrobustB, while \ModB does not.}
-% 
-%A critical point of \SrobustB % this \Nec specification 
-%is that it is
-%expressed in terms of observable effects (the account's balance is
-%reduced: \prg{a.balance < bal}) and the shape of the heap 
-%(external access to the password:
-%$\external{\prg{o}}\ \wedge\ \access{\prg{o}}{\prg{a.pwd}}$) 
-%rather than in terms of individual methods such as
-%\prg{set} and \prg{transfer}.
-%This gives our specifications the
-%vital advantage that they can be used to constrain
-%\jm[typo]{\textit{implementations}} of a bank account with a balance and a
-%password, irrespective of the API it
-%offers, the services it exports, or the dependencies on other parts of
-%the system.
-%
-% This example also demonstrates that 
-%adherence to   \Nec specifications is not monotonic:
-%adding a method to a module does not necessarily preserve adherence to
-%a specification, 
-%and while separate methods may adhere to a  specification, their combination does
-%not necessarily do so. 
-%{For example, \ModA satisfies \SrobustB, while \ModB does not.}
-%This is why we say that \Nec   specifications capture a module's \emph{emergent behaviour}. 
+ \noindent
+\textbf{NOTES} \notesep  Our specifications are expressed terms of observable effects (\eg the password stays protected, the account's balance may increase), rather than in terms of individual methods such as \prg{set} and \prg{transfer}.
+This gives our specifications the
+vital advantage that they can be used to constrain
+ any {\textit{implementations}} of a bank account with a balance and a
+password, irrespective of the API it offers, services it exports, or  dependencies on other parts of the system.\footnoteSD{does this come from OOPSLA? if so we need to rephrase}
+\notesep
+ This example also demonstrates that 
+adherence to   specifications is not monotonic:
+adding a method to a module does not necessarily preserve adherence to
+a specification, 
+and while separate methods may adhere to a  specification, their combination does
+not necessarily do so. 
+{For example, \ModA satisfies $S_2$, while \ModB does not.}
+In this sense, and, similar to OOPSLA'22, our  specifications capture a module's \emph{emergent behaviour}. 
  
 
 %\jm[TODO: in the proof later we need to mention that there is a difference between the overall proof (no mention of the methods), and the intermediate ones (that do mention the methods)]{}
-\subsection{Reasoning about external calls}
+\subsection{2nd Challenge: Reasoning about external calls}
 \label{sec:how}
 
-bla bla nbla .....
+\sdN{We now consider how we can reason about external method calls. 
+The challenge, when calling a method on an external object, is that we have no specification for that method. 
+However, as argued in the intro\footnoteSD{we need to indeed argue that in the intro}, we can use the module's emergent behaviour  specification   in order to restrict the possible side-effects of the external call.
+}
+
+\sdN{
+Consider the following class \prg{Shop}. It exports a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{Object} and thus may be an external object. 
+The critical point is line 7, where we call a method on \prg{buyer}, and pass them the shop's account.
+Is it possible that the buyer will use this opportunity  to drain the shop's account?
+}
+
+\sdN{
+If the \prg{Account} comes from a module that satisfies $S_4$, and if at the point of the call to \prg{buy} -- \ie at line 4 -- the password was protected from the \prg{buyer}, then we know, that after the external call -- \ie after line 7 --  the shop's account's balance will not have decreased.
+}
 
 %{One might think that \SrobustB was not useful: normally, there will exist somewhere in the heap
 %at least one external object  
@@ -259,82 +265,21 @@ bla bla nbla .....
 %We illustrate this through the following  code snippet:
  
 
-\begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-module $\ModParam{1}$
-    class Account 
-        ... as in $\ModB$ ...
-        
-    class Password
-    
-    class Payments
-       field acc1, acc2: Account
-       field pwd1, pwd2: Password
-       
-       method intialize( )
-           acc1 := new Account
-           acc1.set(pwd1);
-           acc2.set(pwd2)
-           acc1.balance := 200;
-           acc2.balance := 300;
-          
-       method safe(untrusted:Object)
-             acc1.transfer(acc2,pwd2);
-             untrusted.payme(acc2);     // can only increase the balance of acc2
-
+\begin{lstlisting}
+class Shop
+  field myAccount : Account
+  field inventory : Inventory    
+  public method buy(buyer: Object, anItem: Item) -> void
+    int price = anItem.price
+    int oldBalance = this.myAccount.balance
+    buyer.payMe(myAccount,price)
+    if (this.myAccount.balance == oldBalance+price)
+       this.send(buyer,anItem)
+    else
+       buyer.tell("you have not paid me")               
 \end{lstlisting}
  
  
- Here we make an external call --    
- 
- ?? Make a version where the classes Account and Password are encapsulated?
-
-%{The method \prg{cautious} has as  argument an external object \prg{untrusted}, of unknown provenance.
-%{It} creates a new \prg{Account} and initializes its password. 
-%In the scope of  this method,  external objects with access to the password are reachable:
-%thus,  during execution of  line 7, or   line {9} the balance may decrease.
-%}
-%
-%{Assume that class \prg{Account} is from a module which satisfies \SrobustB. 
-%Assume also that the code in line 7 does not leak the password to \prg{untrusted}. Then no external object
-%reachable from the scope of execution of \prg{make\_payment} at line 8 has access to the password.
-%Therefore, 
-%even though we are calling   an untrusted object, \SrobustB guarantees that \prg{untrusted}
-% will not be able to take any money out of  \prg{a}.
-% }
-% 
-%\jm[]{
-%A  proof sketch of the  safety provided by \SrobustB appears in Appendix \ref{app:safety}.
-%}
-%\sdN{Note that in this example, we have (at least) three modules: the internal module 
-%which defies class \prg{Account} adhering to  \SrobustB, the  
-%external module $\ModParam{1}$, and the external module which contains the class definition for \prg{untrusted}.
-%Our methodology allows the external module, $\ModParam{1}$ to reason about its own code, and thus 
-%pass \prg{a} to code from the second external module, without fear of losing money.}
-%\sdN{In further work we want to make such arguments more generally applicable, and 
-%extend Hoare logics to encompass such proof steps.}
-%%\susan[I think this paragraph doesn't add, if anything it has a hostage to fortune. I would just remove it.
-%% The purpose of the current paper is being able to express specifications like \SrobustB, and
-%%and being able to prove adherence. In further work we want to develop logics to leverage such specifications, putting
-%%informal arguments as the  one of this section onto formal foundations.
- 
- and then a variant
- 
- \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-module $\ModParam{2}$
-    class Account 
-        ... as in $\ModB$ ...
-        
-    class Password
-    
-    class Payments
-          
-       method cautious(acc:Account, untrusted:Object)
-       // PRE $\protectedFrom {\prg{a.p[assword}} {\prg{untrusted}}$
-       untrusted.payme(acc2);   // can only increase the balance of acc2
-        ...
-\end{lstlisting}
-
-TODO: There should be some code before \prg{acc1.transfer(acc2,..}
  
 \subsection{Internal and external modules, objects, and calls}
 \label{s:concepts}
