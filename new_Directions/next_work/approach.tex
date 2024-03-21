@@ -8,10 +8,10 @@ In this Section we introduce our problem and outline our approach.
  
   \subsubsection{Object Capabilities and Emergent Behaviour} % of modules}
 \label{s:bank}
-Our example  demonstrates the need to consider object capabilities as \emph{guards}, and the importance 
-of the \emph{emergent behaviour} of modules. 
+Our example  demonstrates the need to consider object capabilities as \emph{guards}, and the role
+of \sdN{modules'} \emph{emergent behaviour} . 
 %
-in Sect.  \ref{s:approach:necopers} we have three versions of a banking module, $\ModA$, $\ModB$, and $\ModC$.
+in Sect.  \ref{s:approach:necopers} we show three versions of a banking module, $\ModA$, $\ModB$, and $\ModC$.
 All three modules allow withdrawal of  money only when supplied with the password of the account.
 Moreover, in $\ModA$ the password is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the password may be modified but only if supplied with the old password. 
 
@@ -24,8 +24,9 @@ Crucially however,  in $\ModB$ the password \emph{does not guard} the money.
 }
 
 \sdN{Guarding is the crucial expectation that comes with object capabilities.\footnote{SAY THIS BETTER?} 
-Hoare logics can specify enabling (through per-method PRE/POST-condition pairs), but cannot specidy guarding.
-The specification of capabilities as guards requires per-module guarantees, as proposed, \eg,  in OOPSLA-22, and in the current work.
+Hoare logics can specify enabling or effects (through per-method PRE/POST-condition pairs), but cannot specify guarding of effects.
+The specification of capabilities as guards 
+requires per-module guarantees, as proposed, \eg,  in OOPSLA-22, and in the current work.
 \footnote{BOLD! Birkedahl and Dreyer might scream!}
 %
 % \vspace{.1cm}
@@ -47,8 +48,8 @@ In this paper we address the following challenges
 \end{description}
 
 
-\noindent We give a high level overview of our solution to these challenges in Sections \ref{s:approach:necopers}, \ref{sec:how}, and \ref{sec:howThird}.
-But before doing that we make the example more concrete and discuss internal/external modules.
+\noindent in Sections \ref{s:approach:necopers}, \ref{sec:how}, and \ref{sec:howThird} we give a high level overview of our solution to these challenges.
+But before doing that, we make the example more concrete and discuss internal/external modules.
 
  \subsubsection{More Concretely}
 % In the remainder of this paragraph we   explain
@@ -67,8 +68,10 @@ $\ModA$ consists of an empty class  \prg{Password} whose instances model  unique
 %\susan{transfer is such a funny method that people may spend time thinking about it. Either pass the amount or put a footnote about why it is 100.}
 %It was so as ensure the signature would fit the line, but we no longer need that, as we split into two figures. THANK you
 An \prg{Account} is created with its \prg{balance} set to \prg{0}, and its password set to \prg{null}, \eg by executing \prg{acc = new Account}.
- After that, the password can be set to a new value,  \eg \prg{p=new Password;} \prg{acc.init(p);}. 
-It is impossible to modify the  non-\prg{null} password of an account, and thus once a password has been set, the account cannot be ``tampered'' with, unless the password has been supplied.
+ After that, the password can be set to a new value,  \eg\,  \prg{p=new Password;} \prg{acc.set(p)}. 
+It is impossible to modify the  non-\prg{null} password of an account, and thus once a password has been set, the account's \sdN{can be reduced only 
+by parties with access to the accoun't password.}
+%cannot be ``tampered'' with, unless the password has been supplied.
  
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
@@ -82,7 +85,7 @@ module $\ModA$
       if this.pwd==pwd'
         this.balance-=amt
         dest.balance+=amt
-     public method init(pwd':Password) -> void
+     public method set(pwd':Password) -> void
       if this.pwd==null
         this.pwd=pwd'
 \end{lstlisting}
@@ -107,7 +110,7 @@ module $\ModA$
  
 %  \vspace{.1cm}
  
-Now consider  module \ModB: it allows any client to reset an account's password at any time, and \ModC: it requires the existing password in order to change it.
+Now consider  module \ModB, which allows any client to reset an account's password at any time.  \ModC, on the other hand  requires the existing password in order to change it.
   
   
 
@@ -122,10 +125,9 @@ module $\ModB$
     field pwd: Password 
     method transfer(..) ...
       ... as earlier ...
-    public method init(...) ...
-       ... as earlier ...
-    public method set(pwd': Password)
+     public method set(pwd': Password)
       this.pwd=pwd'
+      $\ \ \ $
 \end{lstlisting}
 \end{minipage}
 &\ \ \  \ \   &%
@@ -139,7 +141,6 @@ module $\ModC$
     field pwd: Password 
     public method transfer(..) 
       ... as earlier ...
-  
     public method set(pwd',pwd'': Password)
       if (this.pwd==pwd') 
         this.pwd=pwd''
@@ -149,10 +150,10 @@ module $\ModC$
 
 \noindent
 Although the \prg{transfer} method is the same in
-all three modules, alternatives, % and each one satisfies \Sclassic,
+all three modules,   % and each one satisfies \Sclassic,
 code  {such as}
 \\ 
-$\ \strut \hspace{.2in} $ \prg{p=new Password;  acc.set(42); acc.transfer(rogue\_account,42)} 
+$\ \strut \hspace{.2in} $ \prg{p=new Password;  acc.set(p); acc.transfer(rogue\_account,p,1000)} 
 \\ 
 is enough to drain  \prg{acc} in \ModB without knowing the password.\footnote{CAREFUL: we had 
 $\ \strut \hspace{.01in} $ \prg{an\_account.set(42); an\_account.transfer(rogue\_account,42)} but this was type incorrect!}
@@ -229,15 +230,16 @@ We also distinguish between
 
 \susan{it sounds like capabilities and emergent behaviour are different things, perhaps Specifications for Capabilities including Emergent behaviour - or something similar. \sdN{Any better now?}}
 
-\sdN{We want to be able to write specifications that \sdN{whioch capabilities guard which effects while taking emergent behaviour into consideration.}
-In particular, lack of access to \sdN{a capability} should} guarantee  that \sdN{the effect guarded by that capability will not happen.}
+Our specifications should describe \sdN{which effects are guarded by which capabilities}. And \sdN{these hards should be valid
+ in the context of taking emergent behaviour.}   
+In particular, lack of access to \sdN{a capability  should} guarantee  that \sdN{the effect guarded by that capability will not happen.}
 For this, we propose a specification language for modules, which has two main novel ingredients.
 
  
 \begin{description}
-\item[Protection] to describe a lack of access to capabilities: An object $o$ is \emph{protected} from $o'$ if $o$ cannot obtain direct access to $o'$ unless an internal object affords access to $o$. And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. 3.5, 4.5 and 4.6.
+\item[Protection] to describe a lack of access to capabilities: An object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  if $o$ cannot obtain direct access to $o'$ unless an internal object affords access to $o$. And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. 3.5, 4.5 and 4.6.
 \item[Bounded, external, two-state invariants] to describe emergent behaviour:  $\TwoStatesQ {\overline{x:C}}  {A}{A'}$ expresses that if a reachable state $\sigma$ 
-state satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{bounded future} states will satisfy $A'$ -- more in Def. 5.3. The concept of \emph{bounded} future includes states that are reachable from further method calls and returns, but excludes returning from the call active in $\sigma$ -- more in Def 3.1. 
+  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{bounded future} states will satisfy $A'$ -- more in Def. 5.3. The concept of \emph{bounded} future include  further method calls and returns, but excludes returning from the call active in $\sigma$ -- more in Def 3.1. 
 We consider executions of the internal module linked with any number of unknown, external modules -- cf Sect. 2.2.
  For $\sigma$ and its bounded future states  we only consider states whose receiver is \emph{external}. 
 \end{description}
@@ -278,24 +280,17 @@ $S_4$ & $\triangleq$   &
  
  \noindent
 \textbf{NOTES} \notesep  Our specifications are expressed terms of observable effects (\eg the password stays protected, the account's balance may increase), rather than in terms of individual methods (\eg\, \prg{set} or \prg{transfer}).
-\sdN{This % gives our specifications the
-% brings the vital advantage that our specifications can % be used to constrain
+\sdN{This % gives our specifications the the vital advantage that our specifications can % be used to constrain
 implies that they can charatcterize  any 
 module with bank accounts which have a % {\textit{implementation}} of a bank account with a 
  balance and a password -- even as ghost fields --}, irrespective of the API offered, services  exported, or  dependencies on other parts of the system.\footnoteSD{does this come from OOPSLA? if so we need to rephrase}
-%\footnote{\red{to discuss} 
-%I think the below no longer holds. 
-%It held for OOPSLA.
-% SOphia now thiks it holds -- hence added}
 \notesep
-% Our example also demonstrates that 
-\sdN{Adherence to   specifications is not monotonic:
+{Adherence to   specifications is not monotonic:
 Adding a method to a module does not necessarily preserve adherence to
-a specification, 
-and while separate methods may adhere to a  specification, their combination does
+a specification, and while separate methods may adhere to a  specification, their combination does
 not necessarily do so. 
-% {For example, \ModA satisfies $S_2$, while \ModB does not.}
-In this sense, and, similar to OOPSLA'22, our  specifications capture a module's \emph{emergent behaviour}. 
+\sdN{For example, \ModB's  \prg{tansfer} and \prg{set} satisfy $S_4$, but their interplay does not.}
+%In this sense, and, similar to OOPSLA'22, our  specifications capture a module's \emph{emergent behaviour}. 
 }
 
  \subsection{Second Challenge: Reasoning about external calls}
@@ -379,8 +374,9 @@ It is safe to apply $S_4$,  because from the point of view of the callee at line
  \label{sec:howThird}
  
 \sdN{In order to prove that a module adheres to its specification, we need to prove that all  private methods satisfy their  PRE/POST post-conditions, and that all public methods satisfy the module's two-state invariants combined with their PRE/POST conditions -- if any.
-This means that we need Hoare logic rules to reason about, among other things, protection.
-We therefore assume a sound Hoare logic for our underlying language, and extend it with rules about protection, external calls, and the module's adherence to its 
+This means that we need Hoare logic rules to reason about, among other things, protection.}
+
+\sdN{For our work, we assume an undelying sound Hoare logic for  language, and extend it with rules about protection, external calls, and the module's adherence to its 
 specification - more in Fig. 7-11.
 We prove that the extended Hoare logic is sound.
 }
