@@ -4,91 +4,52 @@
 \label{s:outline}
  
 In this Section we introduce our problem and outline our approach. 
- We build on, and expand the  example as in OOSPLA-22 and FASE. .. but note that we solve one more challenge than they, and that out approach is different.
-%the \Nec specs (\S \ref{s:bankSpecEx}),
-%   outline how we model the open world (\S\ref{s:concepts}), 
-%give the main ideas of our proof system (\S\ref{s:approach})
-%and   outline 
-%how we use it to reason 
-%about adherence to \Nec specifications  (\S\ref{s:all:outline:proof}).
+ We build on, and expand the  example as in OOSPLA-22 and FASE. .. but note that we propose a different approach, and we solve one more challenge than they,
  
-\subsection{Internal and external modules, objects, and states}
- \label{s:concepts}
-
-We are concerned with guarantees made in an \emph{open} setting; that is, a given module
-$M$ must be programmed so that 
-execution of $M$ together with \emph{any} number of external modules $\overline M$
-will uphold these guarantees. % In the tradition of
-%visible states semantics, we are  only interested in 
-These guarantees must be upheld while 
- $\overline M$, the  \emph{\externalM} modules, are executing; in contrast, the internal module may 
-temporarily break them,
-so long they %are it 
-hold when \sdN{upon entry to external modules}\footnote{Not quite true. How improve?} 
- 
-    
-We therefore distinguish between  \emph{\internalO}
-objects --- instances of classes defined in $M$ ---
-and \emph{\externalO} objects defined in any other module.
-We also distinguish between
-  \emph{\internalC} and   \emph{\externalC} states - those whose receiver is internal or external respectively. 
- 
-  % % from \externalC objects
-%  to \externalC objects. 
-%{Looking at the code snippet from \S \ref{sec:how}, the call to \prg{set} on line 6 is an 
-% internal call, while the call to \prg{make\_payment} is an external call -- from the external 
-% object  \prg{this}  to the external object \prg{untrusted}.}
- 
-% % We are less
-%% interested in calls made from \internalO objects to \internalO objects, because we only need 
-%% establish the guarantees when the \externalM module is executing. And we 
-%%
-%%
-%Because we only require guarantees while 
-%the  \externalM module  is executing,
-%we develop an \emph{external states} semantics, where
-% any internal calls are executed in one, large, step.
-%With external steps semantics,  the executing object (\prg{this}) is always   external. 
-%  In line  with other work in the literature \cite{Permenev, Grossman, Albert}, we currently forbid 
-%  calls from internal to  external objects
-%  -- further details on call-backs in \S\ref{s:related}. 
-%
-%{For the purposes of the current work we are only interested in one internal, and one external module.
-%But the interested reader might ask: what if there is more than one external module?
-%The answer is that from the internal module's viewpoint, all external modules are considered as one;
-%for this we provide a module linking operator with  the expected semantics -- more details in Def. \ref{def:pair-reduce} and \S \ref{app:loo}. 
-%But from the external module's viewpoint, there may be more than one external module: for example, in \S \ref{sec:how}, 
-%module $\ModParam{1}$ is external to the module   implementing class \prg{Account}, and the module 
-%implementing the class of \prg{untrusted} is external to
-%$\ModParam{1}$.
-%}
-
- \subsection{Capabilities and Emergent Behaviour} % of modules}
+  \subsubsection{Object Capabilities and Emergent Behaviour} % of modules}
 \label{s:bank}
-Our example will demonstrate the need to consider the \emph{emergent behaviour} of modules. 
-We will see three versions of a banking module, $\ModA$, $\ModB$, and $\ModC$.
+Our example  demonstrates the need to consider object capabilities as \emph{guards}, and the importance 
+of the \emph{emergent behaviour} of modules. 
+%
+in Sect.  \ref{s:approach:necopers} we have three versions of a banking module, $\ModA$, $\ModB$, and $\ModC$.
 All three modules allow withdrawal of  money only when supplied with the password of the account.
-\sdN{Thus, the password if the capability protects the money.}\footnote{We use protects in a different sense later...}
 Moreover, in $\ModA$ the password is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the password may be modified but only if supplied with the old password. 
-\sdN{Therefore, in $\ModA$ and $\ModC$  the password capability indeed affords the intended protection}, \footnote{what word to use here?}  while in $\ModB$ it does not.
-% \noindent
 
-\vspace{.1cm}
 
-\sdN{This example demonstrates the two concepts which are key in OCAP-based code:
+\sdN{Thus, in all three modules, the password is the object capability which \emph{enables} the withdrawal of the money. 
+Moreover, in $\ModA$ and $\ModC$, the password also \emph{guards} the money.
+Crucially however,  in $\ModB$ the password \emph{does not guard} the money. 
+ Namely, using $\ModB$, it is possible to start in a state where the account's password is unknown, modify the password, and then withdraw the money. 
+ This is not possible  in $\ModA$ and $\ModC$.
+}
+
+\sdN{Guarding is the crucial expectation that comes with object capabilities.\footnote{SAY THIS BETTER?} 
+Hoare logics can describe the enabling (through per-method PRE/POST condition pairs), but cannot describe guarding.
+The description of capabilities as guards requires per-module assertions, as proposed in in OOPSLA-22, and in the current work.
+\footnote{BOLD! Birkedahl and Dreyer might scream!}
+
+% \vspace{.1cm}
+
+ This example demonstrates  two key concepts:
 \begin{description}
-\item[Capabilities] What are the capabilities (here the password), what effects do the capabilities enable (here reduction of the money in an account), 
-and who is guaranteed not to obtain access to the capability.
-\item[Emergent Behaviour] What effects may become possible through the interplay of several methods from a module (here in ${\ModB}$  an external object which has no access to the password may modify the password, and then withdraw the money).
+\item[Capabilities] What are the capabilities (here the password), what effects do the capabilities \sdN{guard} (here the money), 
+and who is expected or guaranteed not to obtain access to the capability.
+\item[Emergent Behaviour] What effects may become possible through the interplay of several methods from a module  (here in ${\ModB}$  
+\sdN{changing the password and then withdrawing})
 \end{description}}
 
+In this paper we address the following challenges
+\begin{description}
+\item[1st Challenge -- Specification] How to specify that object capabilities are guards over effects while taking the emergent behaviour into account?
+\item[2nd Challenge -- Verification of Open Calls] How to verify that calls to external, unknown code, will not cause effects it is   ``not entitled'' to?
+\item[3rd Challenge -- Verification of Modules] How to verify that modules adhere to their specification?
+\end{description}
 
+We give a high level overview to each of these in Sections \ref{s:approach:necopers}, \ref{sec:how}, and \ref{sec:howThird}, but before doing that we make the example more concrete, and discuss external modules.
 
-%\fbox{\parbox{5.5in}{{\textbf{1st Challenge} We are looking for a specification language that expresses eventual access to capabilties, as well as the the emergent behaviour of modules.}}}% [14cm]{text in the box}}
-
-\vspace{.1cm}
-
-In the remainder of this subsection we   explain the example in some more detail:
+ \subsubsection{More Concretely}
+% In the remainder of this paragraph we   explain
+We revisit the example in some more detail:
 We assume a  small, object oriented language with modules, with module-private fields
 (readable/writeable only from other methods declared in the same module),  
 and unforgeable and un-enumerable addresses.
@@ -100,7 +61,8 @@ Classes have a default constructor, which implicitly initializes all fields \sdN
 
 \sdN{%We give three versions of a module which implements bank accounts. All three versions support the creation of accounts, and transfer of funds provided the correct password has been supplied. They only differ in the ability to modify the password. All three versions consists of an 
 $\ModA$ consists of an empty class  \prg{Password} whose instances model  unique passwords}, and an \prg{Account} class with fields  password and  balance, an \prg{init} method to initialize the password, and  a \prg{transfer} method. 
-\susan{transfer is such a funny method that people may spend time thinking about it. Either pass the amount or put a footnote about why it is 100.}
+%\susan{transfer is such a funny method that people may spend time thinking about it. Either pass the amount or put a footnote about why it is 100.}
+%It was so as ensure the signature would fit the line, but we no longer need that, as we split into two figures. THANK you
 An \prg{Account} is created with its \prg{balance} set to \prg{0}, and its password set to \prg{null}, \eg by executing \prg{acc = new Account}.
  After that, the password can be set to a new value,  \eg \prg{p=new Password;} \prg{acc.init(p);}. 
 It is impossible to modify the  non-\prg{null} password of an account, and thus once a password has been set, the account cannot be ``tampered'' with, unless the password has been supplied.
@@ -113,10 +75,10 @@ module $\ModA$
   class Account
     field balance:int 
     field pwd: Password
-    public method transfer(dest:Account, pwd':Password) -> void
+    public method transfer(dest:Account, pwd':Password, amt:int) -> void
       if this.pwd==pwd'
-        this.balance-=100
-        dest.balance+=100
+        this.balance-=amt
+        dest.balance+=amt
      public method init(pwd':Password) -> void
       if this.pwd==null
         this.pwd=pwd'
@@ -196,7 +158,68 @@ $\ \strut \hspace{.01in} $ \prg{an\_account.set(42); an\_account.transfer(rogue\
 \emph{Emergent behaviour} is key here: 
 Even though the method \prg{transfer} in  \ModB is ``safe'' when considered in isolation, it is not safe when considered in conjunction with other methods from the same module. 
 % We are therefore looking for a way to specify modules' emergent behaviour,  
-\susan{Do you want to say something about not possible to capture emergent behaviour using Hoare logic pre/post conditions that hold for individual methods? }
+\susan{Do you want to say something about not possible to capture emergent behaviour using Hoare logic pre/post conditions that hold for individual methods? 
+\sdN{Good idea! I did it earlier on; Does it work?}}
+   
+\subsubsection{Internal and external modules, objects, and states}
+ \label{s:concepts}
+
+We are concerned with guarantees made in an \emph{open} setting; that is, a given module
+$M$ must be programmed so that 
+execution of $M$ together with \emph{any} number of external modules $\overline M$
+will uphold these guarantees. % In the tradition of
+%visible states semantics, we are  only interested in 
+These guarantees must be upheld while 
+ $\overline M$, the  \emph{\externalM} modules, are executing; in contrast, the internal module may 
+temporarily break them,
+so long they %are it 
+hold when \sdN{upon entry to external modules}\footnote{Not quite true. How improve?} 
+ 
+    
+We therefore distinguish between  \emph{\internalO}
+objects --- instances of classes defined in $M$ ---
+and \emph{\externalO} objects defined in any other module.
+We also distinguish between
+  \emph{\internalC} and   \emph{\externalC} states - those whose receiver is internal or external respectively. 
+ 
+  % % from \externalC objects
+%  to \externalC objects. 
+%{Looking at the code snippet from \S \ref{sec:how}, the call to \prg{set} on line 6 is an 
+% internal call, while the call to \prg{make\_payment} is an external call -- from the external 
+% object  \prg{this}  to the external object \prg{untrusted}.}
+ 
+% % We are less
+%% interested in calls made from \internalO objects to \internalO objects, because we only need 
+%% establish the guarantees when the \externalM module is executing. And we 
+%%
+%%
+%Because we only require guarantees while 
+%the  \externalM module  is executing,
+%we develop an \emph{external states} semantics, where
+% any internal calls are executed in one, large, step.
+%With external steps semantics,  the executing object (\prg{this}) is always   external. 
+%  In line  with other work in the literature \cite{Permenev, Grossman, Albert}, we currently forbid 
+%  calls from internal to  external objects
+%  -- further details on call-backs in \S\ref{s:related}. 
+%
+%{For the purposes of the current work we are only interested in one internal, and one external module.
+%But the interested reader might ask: what if there is more than one external module?
+%The answer is that from the internal module's viewpoint, all external modules are considered as one;
+%for this we provide a module linking operator with  the expected semantics -- more details in Def. \ref{def:pair-reduce} and \S \ref{app:loo}. 
+%But from the external module's viewpoint, there may be more than one external module: for example, in \S \ref{sec:how}, 
+%module $\ModParam{1}$ is external to the module   implementing class \prg{Account}, and the module 
+%implementing the class of \prg{untrusted} is external to
+%$\ModParam{1}$.
+%}
+
+
+
+
+%\fbox{\parbox{5.5in}{{\textbf{1st Challenge} We are looking for a specification language that expresses eventual access to capabilties, as well as the the emergent behaviour of modules.}}}% [14cm]{text in the box}}
+
+%\vspace{.1cm}
+
+
 
 \subsection{First Challenge: Specifications for  Capabilities, and Emergent Behaviour}
 \label{s:approach:necopers}
@@ -207,18 +230,18 @@ Even though the method \prg{transfer} in  \ModB is ``safe'' when considered in i
 In particular, lack of access to capabilities guarantees that certain effects will not happen. 
 We propose a specification language for modules, which has two main novel ingredients:}
 
-\sdN{
+ 
 \begin{description}
 \item[Protection] to describe a lack of access to capabilities: An object $o$ is \emph{protected} from $o'$ if $o$ cannot obtain direct access to $o'$ unless an internal object affords access to $o$. And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. 3.5, 4.5 and 4.6.
-\item[Bounded, external, two-state invariants] to describe emergent behaviour:  $\TwoStatesQ {\overline{x:C}}  {A}{A'}$ expresses that if any reachable state $\sigma$ 
+\item[Bounded, external, two-state invariants] to describe emergent behaviour:  $\TwoStatesQ {\overline{x:C}}  {A}{A'}$ expresses that if a reachable state $\sigma$ 
 state satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{bounded future} states will satisfy $A'$ -- more in Def. 5.3. The concept of \emph{bounded} future includes states that are reachable from further method calls and returns, but excludes returning from the call active in $\sigma$ -- more in Def 3.1. 
 We consider executions of the internal module linked with any number of unknown, external modules -- cf Sect. 2.2.
  For $\sigma$ and its bounded future states  we only consider states whose receiver is \emph{external}. 
 \end{description}
-}
+ 
 
 
-With these concepts we can write specifications which  rule  out \ModB while permitting \ModA and
+With these concepts we can now write specifications which  rule  out \ModB while permitting \ModA and
 \ModC, namely:
   % \subsection{Bank Account -- the right specification}
 \label{s:bankSpecEx}
@@ -275,17 +298,17 @@ In this sense, and, similar to OOPSLA'22, our  specifications capture a module's
  \subsection{Second Challenge: Reasoning about external calls}
 \label{sec:how}
 
-\sdN{We now consider how we can reason about external method calls. 
+{We now consider how we can reason about external method calls. 
 The challenge, when calling a method on an external object, is that we have no specification for that method. 
 However, as argued in the intro\footnoteSD{we need to indeed argue that in the intro}, we can use the module's emergent behaviour  specification   in order to restrict the possible side-effects of the external call.
 }
 
-\susan{Is Shop in an external or an internal module?}
-\sdN{
-Consider the following class \prg{Shop}. It exports a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{Object} and thus may be an external object. 
+ 
+ 
+Consider that \sdN{our internal module included the following class} \prg{Shop}. It exports a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{Object} and thus may be an external object. 
 The critical point is line 7, where we call a method on \prg{buyer}, and pass them the shop's account.
 Is it possible that the buyer will use this opportunity  to drain the shop's account?
-}
+ 
 
 
 
@@ -323,17 +346,20 @@ class Shop
 \end{lstlisting}
  
 \noindent
- \sdN{
+ 
 If the \prg{Account} comes from a module that satisfies $S_4$, and if at the point of the call to \prg{buy} -- \ie at line 4 -- the password was protected from the \prg{buyer}, then it is guaranteed that after the external call -- \ie after line 7 --  the shop's account's balance will not have decreased.
-}
+\sdN{The corresponding Hoare logic rule, which applying  $S_4$, would verifiy line 7, appears in Fig. 10.}
+
+ 
 
 \vspace{.1cm}
 
   \noindent
-\sdN{\textbf{NOTES}
-\susan{You've never said how a holistic spec is used.}
- \notesep We   applied $S_4$ at the point of call in line 7, even % though the
- the pre-state in $S_4$ is  in terms a \emph{stronger} property than the one we have.
+ \textbf{NOTES}
+\susan{You've never said how a holistic spec is used.\sdN{Does the para above not use the holistic spec?}}
+ \notesep We   applied $S_4$ at the point of call in line 7, even   though  
+ the pre-state in $S_4$ requires % r  is  in terms 
+ a \emph{stronger} property than the one we have.
  Namely,   $S_4$ requires   the password to be protected, while we only know 
   that the password is protected from   \prg{buyer}.
 It is safe to apply $S_4$,  because from the point of view of the callee at line 7 the password is indeed protected -- \cf Fig, 5,   Lemma 4.7, and the 
@@ -344,9 +370,10 @@ It is safe to apply $S_4$,  because from the point of view of the callee at line
  \notesep Requiring that the account's balance was protected at the time of the call of \prg{buy} would also be far too strong; the module cannot impose restrictions on the callers' external state  upon the call to \prg{buy}.
  \notesep 
  We could specify the method \prg{buy} through the PRE/POST pair: $PRE: \protectedFrom {\prg{a.password}} {\prg{buyer}} \wedge {\prg{a.balance}}=\prg{b} -- POST: \prg{a.balance}\geq \prg{b}$. However this PRE/POST pair, is a direct conclusion of $S_4$; thus is \prg{Shop} were part of our internal module, the PRE/POST pair would be superfluous.
-}
+ 
  
  \subsection{Third Challenge: Proving that a module adheres to its specification}
+ \label{sec:howThird}
  
 \sdN{In order to prove that a module adheres to its specification, we need to prove that all  private methods satisfy their  PRE/POST post-conditions, and that all public methods satisfy the module's two-state invariants combined with their PRE/POST conditions -- if any.
 This means that we need Hoare logic rules to reason about, among other things, protection.
