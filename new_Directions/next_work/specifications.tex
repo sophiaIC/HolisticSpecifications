@@ -1,17 +1,16 @@
 \section{ \SpecLang Specifications}
 \label{sect:spec}
 
-We will now discuss the syntax and semantics of \SpecLang specifications, and illustrate through examples
+We will now discuss the syntax and semantics of \SpecLang specifications, and illustrate through examples.
 
-\subsection{SpecLang syntax and semantics}
+\subsection{\SpecLang syntax and semantics}
 
-The syntax of  \SpecLang %specifications 
+The syntax of  our specifications language, \SpecLang, %specifications 
 is given below:
- 
-\begin{definition}  
 
+ 
+\begin{definition} [\SpecLang Specifications]   We define the \emph{syntax} of \SpecLang:
 \noindent
-{\emph{{Syntax of \SpecLang Specifications}}}
 
 \label{f:holistic-syntax}
 \[
@@ -20,14 +19,18 @@ is given below:
 		  {\syntaxline
                                  {\OneStateQ {\overline {x:C}} {A} }	
 				{\TwoStatesQ {\overline {x:C}} {A} {A} }	
-				{ A[\!\![ \,C\!::\!m(\overline{x:C})\,]\!\!] A }
+				{ \sdN{\mprepost{A}{C}{m}{x}{C}{A} }} %{A[\!\![ \,C\!::\!m(\overline{x:C})\,]\!\!] A }}
 				{S\, \wedge \, S}
 		 \endsyntaxline
 		}
 \endSyntaxElement\\
 \end{syntax}
 \]
-where for any specification ${\TwoStatesQ {\overline {x:C}} {A} {A} }$ we require that    {$fv(A), fv(A')\subseteq \overline x$}.
+We also  define \emph{well-formed} specifications,  $\vdash S$ by cases: \ \  \
+ $\vdash {\OneStateQ {\overline {x:C}} {A}}$  if  $fv(A)\subseteq\{  \overline x \}$ ;\ \ also\  \ \ 
+ $\vdash {\TwoStatesQ {\overline {x:C}} {A} {A'}}$  if    $fv(A), fv(A')\subseteq \{ \overline x \}$ ; \ \ also\ \  \
+ $\vdash {\mprepost{A}{C}{m}{x}{C}{A} }$   if    $fv(A)\subseteq \{\prg{this}, \overline x\}$  and $fv(A')\subseteq \{\prg{res}, \prg{this}, \overline x\}$; \ \ also \ \ \
+ $\vdash S\, \wedge \, S'$  if  $\vdash S$   and   $\vdash S'$.  
 \end{definition}
 
 
@@ -47,7 +50,10 @@ $\reduction{M_{ext}}{M}{\sigma}{\sigma'}$, where $M_{ext}$ is the external
 module, and $M$ is the internal module, and where we
 collapse all internal steps into one single step.
 }
-{{The specifications $S$ describe expected properties between two different states. The first state must be a state that may \emph{arise} from the execution of the module, defined below. We require that execution started at an \emph{intitial} state. %A state $\sigma$ is \emph{arising},}  written $\arising{\sigma}{M}$, {if it  may arise}  % by observable states} 
+{{Our specifications  describe  properties of states which \emph{arise} from the execution of our module combined with other, external modules, and
+%The first state must be a state that may \emph{arise} from the execution of the module, defined below. 
+%We require that execution 
+starting at an \emph{intitial} state. %A state $\sigma$ is \emph{arising},}  written $\arising{\sigma}{M}$, {if it  may arise}  % by observable states} 
 %by execution
 % starting at some initial configuration:
 
@@ -60,7 +66,7 @@ For modules $\overline M$ we define arising  states as follows:
 \item
  a state $\sigma$ is 
 { an \emph{arising} state, formally \ \ \  $\arising{\sigma}{\Mtwo}$,\ \ \ if  there exists some $\sigma_0$ such that $\initial{\sigma_0}$ and
-$\Mtwo, {\sigma_0} \leadsto^* {\sigma}$.}
+$\Mtwo, {\sigma_0} \leadstoN^* {\sigma}$.}
 %\item
 %{A a state $\sigma$ is 
 %called an \emph{arising} state, formally\ \ \ \  $\extArising{\sigma}{M_{ext}}{M}$,\ \ \ \
@@ -72,15 +78,14 @@ We now move to the semantics of \SpecLang Specifications, and   define what it m
  
 \begin{definition}% [Semantics of \SpecLang Specifications]
 
-We define $\satisfies{M}{{S}}$ by cases over the three 
-possible syntactic forms.
+We define $\satisfies{M}{{S}}$ by cases over the four possible syntactic forms.
 
 \label{def:necessity-semantics}
 
 \begin{enumerate}
 \item
 $
-\satisfies{M}{ \OneStateQ {\overline {x:C}} {A} } \  \ \ \ \ \ \ \ \ \ \ \ \  \mbox{iff}  \     
+\satisfies{M}{ \OneStateQ {\overline {x:C}} {A} } \  \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{iff}  \     
     \begin{cases}
      \mbox{for all }   \Mtwo  \mbox{ and }  \sigma:\\
    \ \ \ \  [\ \ \   \arising{\sigma}{M\madd\Mtwo}  \ \  \wedge\ \ M, \sigma  \models {\external{\prg{this}}} \\
@@ -89,9 +94,9 @@ $
     \end{cases} 
  $
  \item
- $\satisfies{M}{\TwoStatesQ {\overline {x:C}} {A}{A'}}   \ \, \ \ \  \mbox{iff}  \   \
+ $\satisfies{M}{\TwoStatesQ {\overline {x:C}} {A}{A'}}   \ \, \ \ \ \ \mbox{iff}  \   \
     \begin{cases}
-     \mbox{for all }   \Mtwo  \mbox{ and }  \sigma  \mbox{ and }  \overline{\alpha}    \\
+     \mbox{for all }   \Mtwo,  \sigma, , \sigma', \mbox{ and }  \overline{\alpha}    \\
  \ \ \ \  [ \ \ { \arising{\sigma}{M\madd \Mtwo }\   \  \wedge\ \ \GRelevant {\overline \alpha}  \sigma}\ \ \ \wedge  \\
   \ \ \ \  \ \ \  \satisfiesA {M}   {\sigma}  {(\overline {\alpha :C} \ \wedge\  {A[\overline{\alpha/x}]}\ \wedge \  {\external{\prg{this}}}) } \ \ \ \wedge   \\
  \ \ \ \   \ \ \ {\leadstoBoundedStar {M\madd \Mtwo}{\sigma}  {\sigma'} } \ \ \wedge\ \  M, \sigma' \models {\external{\prg{this}}}  \\
@@ -100,22 +105,22 @@ $
      \end{cases} 
  $
  \item
-\sdN{
- $\satisfies{M}{ A[\!\![ \,C\!::\!m(\overline{x:C})\,]\!\!] A' }   \ \,  \mbox{iff}  \   \ 
+\red{ $\satisfies{M}{\mprepost{A}{C}{m}{x}{C}{A'} }   \ \,  \mbox{iff}  \   \ 
     \begin{cases}
-     \mbox{for all }   \Mtwo  \mbox{ and }  \sigma  \mbox{ and variables} y,\overline{y}    \\
-   \ \ \ \  [ \ \ { \arising{\sigma}{M\madd \Mtwo} }\    \ \ \wedge \ \  \satisfiesA {M}   {\sigma}  {(y: C \ \wedge \ \overline {y :C} \ \wedge  \  {A}) } \ \ \ \wedge  \\
- \ \ \ \   \ \ \  \sigma.\prg{cont}=y.m(\overline y) \ \ \wedge\ \ \   {\leadstoBoundedStar {M\madd \Mtwo}{\sigma}  {\sigma'} }    \\
+     \mbox{for all }   \Mtwo,  \sigma, \sigma'  \mbox{ and variables}\, z, y,\overline{y}    \\
+   \ \ \ \  [ \ \ { \arising{\sigma}{M\madd \Mtwo} }\    \ \ \wedge \ \  \sigma.\prg{cont}\txteq z=y.m(\overline y)
+ \ \ \ \wedge  \\
+ \ \ \ \   \ \ \    \satisfiesA {M}   {\sigma}  {(y: C \, \wedge \, \overline {y :C} \, \wedge  \, {A[ y/\prg{this},  \overline{y/x} ] }\,) }  \ \ \wedge\\  
+ \ \ \   \ \ \  \ {\leadstoBoundedStarFin {M\madd \Mtwo}{\sigma}  {\sigma'} }     \\
  \ \ \ \   \ \ \ \ \  \ \Longrightarrow   \\
- \ \ \ \   \ \ \  {\satisfiesA{M}{\sigma'}{ A'[ {\interpret{\sigma}{y}}/y,  \overline{{\interpret{\sigma}{y}}/y}] }}\ \ \  ]  
+ \ \ \ \   \ \ \  {\satisfiesA{M}{\sigma'}{ A'[ {z/\prg{res},  y/\prg{this},  \overline{y/x}] } } }
     \end{cases} 
     $
-}
+ }
  \item
- $\satisfies{M}{S\, \wedge\, S'}$  \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \  iff  \  \ \  \   $\satisfies{M}{S}\ \wedge \ \satisfies{M}{S'}$
+ $\satisfies{M}{S\, \wedge\, S'}$ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \  iff  \  \ \  \   $\satisfies{M}{S}\ \wedge \ \satisfies{M}{S'}$
 \end{enumerate}
 
-\red{TODO: In (3) above it has to  be a terminating execution}
 
 %\begin{tabular}{l l c l }
 %
