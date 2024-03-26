@@ -1,13 +1,11 @@
 \section{ \SpecLang Specifications}
 \label{sect:spec}
 
-We will now discuss the syntax and semantics of \SpecLang specifications, and illustrate through examples.
+We  now discuss   syntax and semantics of \SpecLang specifications, and illustrate through examples.
 
-\subsection{\SpecLang syntax and semantics}
+\subsection{\SpecLang syntax }
 
-The syntax of  our specifications language, \SpecLang, %specifications 
-is given below:
-
+Our specifications language, \SpecLang,  supports the one state invariants, two state invariants,  method specifications, and the conjunction of such specifications:
  
 \begin{definition} [\SpecLang Specifications]   We define the \emph{syntax} of \SpecLang:
 \noindent
@@ -26,14 +24,85 @@ is given below:
 \endSyntaxElement\\
 \end{syntax}
 \]
-We also  define \emph{well-formed} specifications,  $\vdash S$ by cases: \ \  \
- $\vdash {\OneStateQ {\overline {x:C}} {A}}$  if  $fv(A)\subseteq\{  \overline x \}$ ;\ \ also\  \ \ 
- $\vdash {\TwoStatesQ {\overline {x:C}} {A} {A'}}$  if    $fv(A), fv(A')\subseteq \{ \overline x \}$ ; \ \ also\ \  \
- $\vdash {\mprepost{A}{C}{m}{x}{C}{A} }$   if    $fv(A)\subseteq \{\prg{this}, \overline x\}$  and $fv(A')\subseteq \{\prg{res}, \prg{this}, \overline x\}$; \ \ also \ \ \
+\sdN{Specifications'    \emph{well-formedness},  $\vdash S$,  is   defined by cases on $S$: \ \  \
+ $\vdash {\OneStateQ {\overline {x:C}} {A}}$  if  $fv(A)\subseteq\{  \overline x \}$;\ \ \   \ \ 
+ $\vdash {\TwoStatesQ {\overline {x:C}} {A} {A'}}$  if    $fv(A), fv(A')\subseteq \{ \overline x \}$; \ \ \ \  \
+ $\vdash {\mprepost{A}{C}{m}{x}{C}{A} }$   if      $fv(A')\subseteq  fv(A)\cup \{\prg{res}, \prg{this}, \overline x\}$; \ \   \ \ \
  $\vdash S\, \wedge \, S'$  if  $\vdash S$   and   $\vdash S'$.  
+}
 \end{definition}
 
+We now consider some examples.
 
+ \sdN{\begin{example}[One-state Invariants]
+ \label{example:oneState}
+  $S_{10}$  guarantees   that  the balance is never negative:
+  \\
+   \begin{tabular}{lcll}
+$\strut \ \ \ \ \ \ \ \ S_{10}$ & $\triangleq$   & ${\OneStateQ {\prg{a}:\prg{Account}} {\prg{a.balance} \geq 0}}$
+ \end{tabular}
+  
+ \end{example}
+}
+
+\sdN{
+ \begin{example}[Two-state Invariants]
+ \label{example:twostate}
+  % 
+ $S_5$  guarantees   that   non-null passwords do not change:
+ \\
+ \begin{tabular}{lcll}
+%$S_{2a}$   &     $\triangleq$   &   ${\TwoStatesQ {\prg{a}:\prg{Account}.\prg{p}:\prg{Password}}  {\prg{p}=\prg{a.password} \wedge \inside{\prg{p}}}{\inside{\prg{p}}} }$
+% \\
+$\strut \ \ \ \ \ \ \ \ S_5$ & $\triangleq$   & ${\TwoStatesQ {\prg{a}:\prg{Account}.\prg{p}:\prg{Password}}  {\prg{null}\neq \prg{p}=\prg{a.password}} {\prg{p}=\prg{a.password}} }$
+ \end{tabular}
+ \end{example} 
+ }
+ 
+\sdN{ \begin{example}[Method Specifications]
+ \label{example:mprepostl}
+Here we have two specifications for \prg{transfer}:\ $S_6$   guarantees that
+accounts different than from the receiver and argument are not affected, and that if the password supplied is not that of the receiver, then no account's balance if affected.
+$S_7$ guarantees that if the password supplied is that of the receiver, the correct amount is transferred from the receiver to the destination.
+ $S_8$ guarantees that \prg{set} preserves the protectedness of a password.
+% The specifications from below describe properties ot the methods \prg{set}  and \prg{transfer}:
+\\
+{\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_6} 
+		{ a:\prg{Account}\wedge 
+		(\prg{dst}\neq a\neq\prg{this} \vee \prg{pwd'}\neq\prg{a.passwd} \wedge a.\prg{balance}=b}
+	               {\prg{Account}} {\prg{transfer}} {\prg{dst}:\prg{Account},\prg{pwd'}:\prg{Password},\prg{amt}:\prg{int}}
+		{ a.\prg{balance}=b}
+}
+\\
+{\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_7} 
+		{ % b,b':\prg{int} \wedge  
+		\prg{this}\neq \prg{dst}\wedge \prg{this}.\prg{balance}=b \wedge  \prg{dst}.\prg{balance}=b' }
+		  {\prg{Account}} {\prg{transfer}} {\prg{dst}:\prg{Account},\prg{pwd'}:\prg{Password},\prg{amt}:\prg{int}}
+		{\prg{this}.\prg{balance}=b-\prg{amt} \wedge \prg{dst}.\prg{balance}=b'+\prg{amt}}
+}
+\\
+{\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_8} 
+		{ %a:\prg{Account}\wedge
+		 \inside{a.\prg{password}}}
+		{\prg{Account}} {\prg{set}} {\prg{pwd'}:\prg{Password}}
+		{ \inside{a.\prg{password}}}
+}
+%\\
+%{\sprepost
+%		{\strut \ \ \ \ \ \ \ \ \ S_{9}}
+%		 {% a:\prg{Account}\wedge 
+%		 a.\prg{password}\neq \prg{pwd'} \wedge a.\prg{balance}=b}
+%				       {\prg{Account}} {\prg{transfer}} {\prg{dst}:\prg{Account},\prg{pwd'}:\prg{Password},\prg{amt}:\prg{int}}
+%		{ a.\prg{balance}\geq b}
+%}
+%resp that the balance of any account ...TODO ... explain ...
+\end{example}
+}
+
+\subsection{\SpecLang  Semantics}
 %\subsubsection*{Arising States} % and {Arising} External States}
 \footnoteSD{TODO motivate;
 Here what we had: As discussed in \S \ref{s:approach}, 
@@ -113,7 +182,7 @@ $
  \ \ \ \   \ \ \    \satisfiesA {M}   {\sigma}  {(y: C \, \wedge \, \overline {y :C} \, \wedge  \, {A[ y/\prg{this},  \overline{y/x} ] }\,) }  \ \ \wedge\\  
  \ \ \   \ \ \  \ {\leadstoBoundedStarFin {M\madd \Mtwo}{\sigma}  {\sigma'} }     \\
  \ \ \ \   \ \ \ \ \  \ \Longrightarrow   \\
- \ \ \ \   \ \ \  {\satisfiesA{M}{\sigma'}{ A'[ {z/\prg{res},  y/\prg{this},  \overline{y/x}] } } }
+ \ \ \ \   \ \ \  {\satisfiesA{M}{\sigma'}{ A'[ {z/\prg{res},  y/\prg{this},  \overline{y/x}] } } } \  \ ]
     \end{cases} 
     $
  }
@@ -194,25 +263,9 @@ $\notLeadstoBoundedStar {...} {\sigma_8}  {\sigma_{20}} $  \ \   & & thus, $A_0$
 %\noindent
  \begin{example}
  \label{example:twostatesarisfy}
- \sdN{We now revisit the specifications given in Sect. \ref{s:bankSpecEx}, and also consider % $S_{2a}$, a variation of $S_2$ which guarantees that a non-null password does not change, and 
- $S_5$ which guarantees   that   non-null passwords do not change:
-}
-
-\begin{tabular}{lcll}
-%$S_{2a}$   &     $\triangleq$   &   ${\TwoStatesQ {\prg{a}:\prg{Account}.\prg{p}:\prg{Password}}  {\prg{p}=\prg{a.password} \wedge \inside{\prg{p}}}{\inside{\prg{p}}} }$
-% \\
-$S_5$ & $\triangleq$   & ${\TwoStatesQ {\prg{a}:\prg{Account}.\prg{p}:\prg{Password}}  {\prg{null}\neq \prg{p}=\prg{a.password}} {\prg{p}=\prg{a.password}} }$
- \end{tabular}
+ \sdN{We now revisit the specifications given in Sect. \ref{s:bankSpecEx}, and the one from Example \ref{example:twostate}, and  the three  modules from Sect. \ref{s:bank}:}
 
 
-\noindent
-\sdN{
-With the three  modules from Sect. \ref{s:bank}, we obtain:
-}
-
-%\begin{tabular}{lcll}
-%$S_o$   &     $\triangleq$   & $\OneStateQ{\prg{a}:\prg{Account} } {\inside{\prg{a}}} $
-% \end{tabular}
 \begin{tabular}{lllllllll}
 $\ModA  \models S_1$  &   $\ModA  \models S_2$ &  $\ModA \models S_3$ &   $\ModA \models S_4$    & $\ModA \models S_5$\\
  $\ModB \models S_1$  &   $\ModB \not\models S_2$   &  $\ModB  \models S_3$   &  $\ModB  \not\models S_4$   & $\ModB \not\models S_5$ \\
@@ -223,46 +276,15 @@ $\ModA  \models S_1$  &   $\ModA  \models S_2$ &  $\ModA \models S_3$ &   $\ModA
 
  \sdN{
  \begin{example}
- \label{example:mprepostl}
- Now consider the method \prg{set} %from module  $\ModA$, 
-and the specifications $S_6$ and $S_7$ from below
-\\
-{\sprepost
-		{\strut \ \ \ \ \ \ \ \ \ S_6} 
-		{a:\prg{Account}\wedge \prg{dst}\neq a\neq\prg{this} \wedge a.\prg{balance}=b}
-	               {\prg{Account}} {\prg{transfer}} {\prg{dst}:\prg{Accoount},\prg{pwd'}:\prg{Password},\prg{amt}:\prg{int}}
-		{ a.\prg{balance}=b}
-}
-\\
-{\sprepost
-		{\strut \ \ \ \ \ \ \ \ \ S_7} 
-		{a:\prg{Account}\wedge a\neq \prg{this}\wedge a.\prg{balance}=b}
-		{\prg{Account}} {\prg{set}} {\prg{pwd'}:\prg{Password}}
-		{a.\prg{balance}=b}
-}
-\\
-{\sprepost
-		{\strut \ \ \ \ \ \ \ \ \ S_8} 
-		{a:\prg{Account}\wedge \inside{a.\prg{password}}}
-		{\prg{Account}} {\prg{set}} {\prg{pwd'}:\prg{Password}}
-		{ \inside{a.\prg{password}}}
-}
-\\
-{\sprepost
-		{\strut \ \ \ \ \ \ \ \ \ S_{9}}
-		 {a:\prg{Account}\wedge a.\prg{password}\neq \prg{pwd'} \wedge a.\prg{balance}=b}
-				       {\prg{Account}} {\prg{transfer}} {\prg{dst}:\prg{Accoount},\prg{pwd'}:\prg{Password},\prg{amt}:\prg{int}}
-		{ a.\prg{balance}\geq b}
-}
-
-	
+ \label{example:mprepostlsatissy}
+ Now consider  the method specifications   from Example \ref{example:mprepostl}.
 Here, $\ModA \models S_6$ and $\ModB \models S_6$ and  $\ModC \models S_6$.
 Also,  $\ModA \models S_7$ and $\ModB \models S_7$ and  $\ModC \models S_7$.
-Moreover,   $\ModA  \models S_8$, while $\ModB  \not\models S_8$.
+However,   $\ModA  \models S_8$, while $\ModB  \not\models S_8$.
 
-Moreover,  for any method specification  $S \triangleq {\mprepost{A}{C}{m}{x}{C}{A'} }$ and any module   which does not have a class$ C$  with a method $m$ with formal parameters $\overline {x:C}$, we have that $M \models S$.
+Moreover,  for any method specification  $S \triangleq {\mprepost{A}{C}{m}{x}{C}{A'} }$ and any module   which does not have a class $C$  with a method $m$ with formal parameters types ${\overline C}$, we have that $M \models S$.
 Namely, if a method were to be called with that signature on a $C$  from $M$, then execution would be stuck, and the requirements from Def. \ref{def:necessity-semantics}(3) would be trivially satisfied.
-Thus,   $\ModC \models S_7$. %, even though $\ModC$ does not have a method \prg{set} with the signature given in $S_6$;
+Thus,   $\ModC \models S_8$. %, even though $\ModC$ does not have a method \prg{set} with the signature given in $S_6$;
 
 \end{example}
 }
@@ -298,20 +320,21 @@ $\strongerEq M  S  {S'}$   \ \ \ iff \ \ \ $\stronger M  S  {S'}$  \ and \  $\st
 \end{itemize}
 \end{definition}
 
-\sdN{Interestingly, entailment allows us to use two-state invariants to deduce methods' pre- and post- conditions.}
-
-\sdN{
- \begin{example}
- \label{example:entail}
- Remember $S_1$, ... $S_4$ as defined in Sect. \ref{s:bankSpecEx}, and consider the specifications $S_6$ and $S_7$ from Example \ref{example:mprepostl}.
- Then, for any module $M$ %which has a public method \prg{set}, 
- we have that
- 
- \begin{tabular}{clclclcl}
-  & $\stronger M {S_3} {S_6}$ & & $\stronger M {S_3} {S_7}$ & & $ \stronger M {S_2} {S_8}$  & & $ \stronger M {S_4} {S_9}$ 
- \end{tabular}
- \end{example}
-}
+%REMOVED -- wrong!
+% \sdN{Interestingly, entailment allows us to use two-state invariants to deduce methods' pre- and post- conditions.}
+%
+%\sdN{
+% \begin{example}
+% \label{example:entail}
+% Remember $S_1$, ... $S_4$ as defined in Sect. \ref{s:bankSpecEx}, and consider the specifications $S_6$ and $S_7$ from Example \ref{example:mprepostl}.
+% Then, for any module $M$ %which has a public method \prg{set}, 
+% we have that
+% 
+% \begin{tabular}{clclclcl}
+%  & $\stronger M {S_3} {S_6}$ & & $\stronger M {S_3} {S_7}$ & & $ \stronger M {S_2} {S_8}$  & & $ \stronger M {S_4} {S_9}$ 
+% \end{tabular}
+% \end{example}
+%}
 % 
 %Some properties of $M \models \_  \subseteq \_ $ are given below:
 %
