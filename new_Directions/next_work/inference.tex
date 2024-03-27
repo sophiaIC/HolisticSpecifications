@@ -1,15 +1,11 @@
 \newcommand{\extract}[1]{\ensuremath{{\mathcal I}\!nvs(#1)}}
-
+\newcommand{\specs}[1]{\ensuremath{Specs(#1)}}%{\ensuremath{{\mathcal S}\!pecs(#1)}}
 
 
 \section{Proving Adherence to \SpecLang Specifications}
 
 
-We will develop a  Hoare logic with judgments of the form  $M\ \models\  \{\, A \,  \}\ s\  \{\, A' \, \}$. These promise, as usual, that execution of statement $s$ in a state satisfying $A$ will lead to a state satisfying $A'$. 
-
-
-
-
+We will develop a  Hoare logic with judgments of the form  $M\ \vdash\  \{\, A \,  \}\ s\  \{\, A' \, \}$. These promise, as usual, that execution of statement $s$ in a state satisfying $A$ will lead to a state satisfying $A'$. We will also develop inference system to deduce that a module is well-formed $\vdash M$, \ie that a module satisfies its specification.
 
 \subsection {Assertion Encapsulation}
 \label{s:encaps-proof}
@@ -152,114 +148,39 @@ $\strut \hspace{1.5cm} \proves{M}{\encaps{A}} \ \ \ \ $ implies $\ \ \ \ \satisf
 
 \subsection{Weaker/Stronger Specifications}
 
-We assume   the existence of a function $HS$ which allows us to look up the holistic specification of a module. 
-In Figure \ref{fig:si} we   define a judgment $\stronger M S  {S'}$ which expresses that the specification $S$ is stronger than the specification $S'$ under module $M$.  
+In   Fig.  \ref{fig:si} in the appendix we define the judgment  $\strongerI M  S  {S'} $, which expresses that the specification $S$ is stronger than the specification $S'$ under module $M$.  
 
 
 \begin{lemma}
-For all modules $M$, and specifications $S$ and $S'$, we have that\\
-\strut \hspace{2cm}-\ \ \  $\strongerI M  S  {S'}    \ \ \ \ \Longrightarrow\ \ \ \ \stronger M S {S'}'$\\
-\strut \hspace{2cm}-\ \ \  $M \models S \equiv S'    \ \ \ \ \Longrightarrow\ \ \ \ M \models S \equiv {S'}'$
+For all modules $M$, and specifications $S$ and $S'$, we have that
+\begin{itemize}
+\item
+ $\strongerI M  S  {S'}    \ \ \ \ \Longrightarrow\ \ \ \ \stronger M S {S'}'$ 
+\item
+ $\vdash M S \equiv {S'}    \ \ \ \ \Longrightarrow\ \ \ \ \strongerEq M S {S'}$
+\end{itemize}
 \end{lemma}
 
-In   Fig.  \ref{fig:si} in the appendix we define the judgment  $\strongerI M  S  {S'} $.
+
+We assume a specification look-up function $\specs {\_}$ which returns the specification of a module $M$.
 We now define what it means for a module $M$ to promise a specification $S$:
 
 \begin{definition}
-Given module $M$ snd specification $S$:
-
-\strut \hspace{2cm} $\promises M S$ \ \ \ \  iff \ \ \ \  $\strongerI M {HS(M)} S$
+Given module $M$ and specification  $S$: %, $S'$:
+\begin{itemize}
+\item
+$\promises M S$ \ \ \ \  iff \ \ \ \  ${\strongerI M {\specs M} {S}}$
+\end{itemize}
 \end{definition}
 
-Notice, that $\promises M S$ is only based on the spec of $M$, and does not guarantee that indeed $M$ satisfies $S$.
+\noindent
+Note that $\promises M S$ is based on the {\emph{specification} of $M$, and does \emph{not} guarantee that  $M$ satisfies $S$.
 
- \subsection{Reasoning about protection}
-We expand that logic with rules about protection, as in Fig. \ref{f:protection}. Essentially, the only what that the "protection" of an object can decrease is if we call an eternal method, and pass it an internal object as argument. This is then covered by the rule in Fig. \ref{f:external:calls}.
+\subsection{Extending an underlying Hoare Logic}
 
-\begin{figure}[hbt]
-$
-\begin{array}{c}
-\inferrule[\sc{prot-1}]
-	{ }
-	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\ \wedge \ \internal y }
-						{\ y.f=y'\ }
-						{\ \protectedFrom{x}{z}\ }
-	}
-	\\\\
-
-%\inferrule[\sc{prot-1}]
-%	{ }
-%	{\hproves{M} 
-%						{\ \protectedFrom{x}{z}\ \wedge \ \internal v }
-%						{\ v=v'\ }
-%						{\ \protectedFrom{x}{z}\ }
-%	}
-%	\\\\
-
-	\inferrule[\sc{prot-2}]
-	{ }
-	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\  \wedge\ \internal {y'} \ \wedge\  x \neq y'}
-						{\ y.f=y'\ }
-						{\ \protectedFrom{x}{z}\ }
-	}
-	\\\\
-
-	\inferrule[\sc{prot-3}]
-	{ }
-	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\ \wedge\  \protectedFrom{x}{y'} }
-						{\ y.f=y'\ }
-						{\ \protectedFrom{x}{z}\ }
-	}
-	\\\\
-
-%	\inferrule[\sc{prot-2}]
-%	{ }
-%	{\hproves{M} 
-%						{\ \protectedFrom{x}{z}\ \wedge\ \external v\ \wedge\  z\neq v }
-%						{\ v=v'\ }
-%						{\ \protectedFrom{x}{z}\ }
-%	}
-%	\\\\
-
-
-%	\inferrule[\sc{prot-4}]
-%	{ }
-%	{\hproves{M} 
-%						{\ \protectedFrom{x}{v}\ \wedge\ \external z\  }
-%						{\ z=v\ }
-%						{\ \protectedFrom{x}{z}\ }
-%	}
-%	\\\\
-
-	\inferrule[\sc{prot-4}]
-	{ }
-	{\hproves{M} 
-						{\ \protectedFrom{x}{z}\ \wedge\ z \neq \this}
-						{\ y =y'.f\ }
-						{\ \protectedFrom{x}{z}\ }
-	}
-	\\\\
-
-%\inferrule[\textsc{prot-5}]
-%	{}
-%	{\hproves{M}
-%			{}
-%	}
-\end{array}
-$
-\caption{Protection Logic \sdN{-- the rules will probably change; Julian is working on this}}
-\label{f:protection}
-\end{figure}
-
-
-Explanations: \textsc{xxxl} states that   yyy
-
-\subsection{Hoare Logic -- substructural rules}
-
-We assume that $M \models_{ul} \{ A \} s \{ A' \}$ is a judgement that comes with the underlying programming language.  On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
+We assume that $M \vdash_{ul} \{ A \} s \{ A' \}$ is a judgement that comes with the underlying programming language.  
+On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. 
+The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
 
  
 \begin{figure}[hbt]
@@ -267,7 +188,7 @@ $
 \begin{array}{c}
 \begin{array}{lcl}
 \inferrule[\sc{extend}]
-	{ M \models_{ul} \{ \ A\ \} {\ s\ }\{\ A'\ \} }
+	{ M \vdash_{ul} \{ \ A\ \} {\ s\ }\{\ A'\ \} }
 	{\hproves{M}  {A} {\ s\ }{A'} }
 	& &
 \inferrule[\sc{combine}]
@@ -295,23 +216,133 @@ $
 \caption{From Underlying to Extended Hoare Logic}
 \label{f:substructural}
 \end{figure}
- 
+
+ \subsection{Reasoning about protection}
+\sdN{
+In Fig. \ref{f:protection} we give rules about the preservation of protection.
+In \textsc{Prot-1}, if $y$ is internal, then no new external object becomes locally reachable, and therefore $ \inside{x}$ is preserved;
+similarly, if the rhs of the assignment ($y'.f$) is not an alias of $x$, then no new unprotected route to $x$ is introduced, and therefore  $ \inside{x}$ is preserved.
+In \textsc{Prot-2}, the assignment $y=y'.f$ does not create a new route from $z$ to $x$, and therefore  $\protectedFrom{x}{z}$ is preserved.
+In \textsc{Prot-3}, if $x$ is protected from $y'$, then the assignment $y.f=y'$ does not create a new unprotected route   to $x$, and therefore  $\inside {x}$ is preserved.
+Similarly, in \textsc{Prot-4}, if $x$ is protected from $y'$, then the assignment $y.f=y'$ does not create a new unprotected route  to $x$, and therefore   $\protectedFrom{x}{z}$ is preserved.
+}
+
+Moreover, "protection" of an object can decrease is if we call an eternal method, and pass it an internal object as argument. This is then covered by the rule in Fig. \ref{f:external:calls}.
+
+{
+\begin{figure}[hbt]
+$
+\begin{array}{c}
+	{\inferruleSD{\hspace{5.3cm} [\sc{prot-1}]}
+	{ }
+	{\hproves{M} 
+						{\  \inside{x}  \wedge\ (\, \internal {y} \vee y'.f \neq x\, ) \ }
+						{\ y =y'.f\ }
+						{\  \inside{x}\ }
+	}
+	}
+	\\
+{\inferruleSD{\hspace{5.3cm} [\sc{prot-2}]}
+	{ }
+	{\hproves{M} 
+						{\ \protectedFrom{x}{z} \ }
+						{\ y =y'.f\ }
+						{\ \protectedFrom{x}{z}\ }
+	}
+}
+\\
+{\inferruleSD{\hspace{5.3cm} [\sc{prot-3}]}
+	{ }
+	{\hproves{M} 
+						{\  \inside{x}\ \wedge \   \protectedFrom{x}{y'} \ }
+						{\ y.f=y'\ }
+						{\  \inside{x}\ }
+	}
+}	
+\\
+{\inferruleSD{\hspace{5.3cm} [\sc{prot-4}]}
+	{ }
+	{\hproves{M} 
+						{\ \protectedFrom{x}{z} \ \wedge \   \protectedFrom{x}{y'} }
+						{\ y.f=y'\ }
+						{\ \protectedFrom{x}{z} \ }
+	}
+}	 
+%
+%	\inferrule[\sc{prot-2}]
+%	{ }
+%	{\hproves{M} 
+%						{\ \protectedFrom{x}{z}\ \wedge\ \external v\ \wedge\  z\neq v }
+%						{\ v=v'\ }
+%						{\ \protectedFrom{x}{z}\ }
+%	}
+%	\\\\
+%
+%
+%	\inferrule[\sc{prot-4}]
+%	{ }
+%	{\hproves{M} 
+%						{\ \protectedFrom{x}{v}\ \wedge\ \external z\  }
+%						{\ z=v\ }
+%						{\ \protectedFrom{x}{z}\ }
+%	}
+%	\\\\
+%
+%%\inferrule[\textsc{prot-5}]
+%%	{}
+%%	{\hproves{M}
+%%			{}
+%%	}
+\end{array}
+$
+\caption{Protection Logic}
+\label{f:protection}
+\end{figure}
+}
+
+  
+\subsection{Reasoning about calls}
+\subsubsection{Internal Calls}
+We now consider the logic for internal calls.
+Rule {\sc{IntCall}} is standard, using the callee's specification, ${\mprepost{A_1}{C}{m}{y}{C}{A_2}}$ -- since the module contains a specification for a method defined in $C$, we know that this is an internal call.
+
+% We use  the notation
+% $ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-condition pair  $(\, P, \ Q\, ) $. 
 
  
- 
- 
-\subsection{Reasoning about calls}
+\begin{figure}[hbt]
+$\begin{array}{c}
+%\begin{array}{ll}
+\inferruleSD{\hspace{4.7cm} [\sc{IntCall}]}
+	{
+	   	\promises M {\mprepost{A_1}{C}{m}{y}{C}{A_2} } %  \ \  \ \ \ \ \ fv(A_1)=\overline x
+          		}
+	{  \hproves {M} 
+						{ \  y_0:C  \ \wedge\ \overline {y:C}\ \wedge \ A_1 \ } 
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \  A_2[ u/result]  \ }	 
+}
+\end{array}$
+\caption{Logic for Internal Calls}
+\label{f:internal:alias:calls}
+\end{figure}
+
+%[\overline y/\prg{this},\overline x] \  }
+% { \  A_2[ u/result,\overline y/\prg{this},\overline x]  \ }	
+\subsubsection{External Calls}
 
 \sdN{When we reason about external calls, we need to  ensure that all proof obligations imposed by the module's spec are met.
-For this, we define in Def. \ref{def:extract}, the function $\extract{\_}$, which turns the holistic specification of a module into a 
-global invariant. Notice that the two state invariant is turned into one assertion, with free variables.
+For this, in Def. \ref{def:extract}, we define the function $\extract{\_}$,  which turns the holistic specification of a module into a 
+global invariant. 
+Notice that  two-state invariants are turned into one assertion, with free variables.
 This global invariant is assumed before any public method, and  has to be satisfied before any external call, and at the end of any public method.}
 
 \label{s:module-proof}
 
 
 \begin{definition}
-text text text 
+The function $\extract{\_}$ turns a specification into an assertion.
+
 \label{def:extract}
 %\begin{figure}
 $
@@ -320,9 +351,11 @@ $
 \\
 & \extract{ \TwoStatesQ{\overline {x:C}}{A}{A} }  & \triangleq & \overline {x:C} \wedge A  
 \\
+& \extract { {\mprepost{A_1}{C}{m}{x}{C}{A_2} } } & \triangleq & true
+\\
 & \extract{ S_1 \wedge S_2 } & \triangleq & \extract{ S_1} \, \wedge S_2 \,  \extract{ S_2 }
 \\
-&  \extract{ M }  & \triangleq &  \extract{ HS(M) }
+&  \extract{ M }  & \triangleq &  \extract{ \specs M }
 \end{array}
 $
 %\caption{Extracting proof obligations out of  module specifications -- we require implicitly that all variables are different}
@@ -330,68 +363,25 @@ $
 %\end{figure}
 \end{definition}
 
+\noindent 
+\textbf{Note}  \ \  $\extract{S}$ is undefined if  $S$ has the form $S_1\wedge \TwoStatesQ{\overline {x:C}}{A_1}{A_2}   \wedge S_2$
+and $ A_1  \txtneq  A_2$.
+% \notesep
+% $ \extract{S}$ may introduce free variables. 
+
  \begin{example}
  \label{example:extract}
-  Take a module $M$ with classes $D$ and $E$, and holistic specification:\\
-$\strut \ \ \  \ \ \ \ \ \ HS(M)= \OneStateQ{d:D}{d.f\geq 300} \wedge  \TwoStatesQ{e:E,i:int}{e.f\geq i} {e.f\geq i} $. 
+  Consider specification $S$ %with one one-state invariant and one two-state invariant
+   as below: \\
+  %a module $M$ with classes $D$ and $E$, and holistic specification:\\
+$\strut \ \ \  \ \ \ \ \ \ S \ \triangleq\ \ \OneStateQ{d:D}{d.f\geq 300} \wedge  \TwoStatesQ{e:E,i:int}{e.f\geq i} {e.f\geq i} $. 
 \\
-This module's global invariant is:\\
-$\strut \ \ \  \ \ \ \ \ \ \extract{M}  = \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge \  [ e:Int \wedge i:int \wedge e.f \geq i]$
+Then,\\ % global invariant is:\\
+$\strut \ \ \  \ \ \ \ \ \ \extract{S}  = \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge \  [ e:Int \wedge i:int \wedge e.f \geq i]$
 \\
 Note that $d$ is universally quantified, while $e$ and $i$ are free in that assertion.
  \end{example}
 
-\sdN{We now consider the logic for calls.
-In  Fig. \ref{f:internal:alias:calls}  we   reason about calls to internal methods, and also about the preservation of 
-alienist/non-aliasing.}
-
-Rule {\sc{IntCall}} is standard.  We use  the notation
-$ M, C, m  :  (\, P, \ Q\, )  $ to indicate that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-condition pair  $(\, P, \ Q\, ) $. 
-
-
-
-\sdN{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\txteq x$ expresses that $u$ and $x$ are textually the same --
-the latter is stronger, i.e.   $x\txteq u$ implies $x=u$. 
-% It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. 
- As $...\equiv ...$ is a textual assertion, and thus  state-independent,  it is a side-condition of the rules and is  not part of the Hoare triple's precondition.
-}
-
-
-\small{
-\begin{figure}[hbt]
-$\begin{array}{c}
-%\begin{array}{ll}
-\inferruleSD{\hspace{4.7cm} [\sc{IntCall\_WithSpec}]}
-	{ 
-	   	M, C, m  :  (\, A_1, \ A_2\, )\ \ \  \ \ \ \ \ fv(A_1)=\overline x
-          		}
-	{   \hproves{M} 
-						{ \ {\internal{y_0}}  \wedge  y:C  \ \wedge \ A_1[\overline y/\prg{this},\overline x] \  }
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \  A_2[ u/result,\overline y/\prg{this},\overline x]  \ }	
-}
-\\
-\\
-\inferruleSD{\hspace{4.7cm}  [{\sc{CallAndAlias}}}
-	{ 
-	{   x \txtneq u\txtneq x'  }
-	}
-	{   \hproves{M}  { \ x=x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
-
-\\ \\ 
-\inferruleSD{\hspace{4.7cm} [{\sc{CallNonAlias}}]}	
-{ 
-		{ \ x \txtneq u \txtneq x'\   }
-	}
-	{   \hproves{M}   { \ x\neq x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
-\\
-\\
-\end{array}
-$
-\caption{Logic for Internal Calls, and  for Aliasing around Calls }
-\label{f:internal:alias:calls}
-\end{figure}
-}
 
 
 \sdN{We now move to the discussion of  external calls. For all external calls we require that the module's invariants hold before the external call.
@@ -401,8 +391,6 @@ This is enforced through the requirement ${\external{y_0}}  \rightarrow \  \Push
 
 
 \sdN{Looking more closely, we notice  that we do not require that invariants hold (ie ${\extract{M}}$), but require that they will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{\extract{M}}$). We use the  assertion push-function $\pushSymbol$   defined earlier in Figure \ref{f:Push}.}
-%We use the  assertion push-function $\pushSymbol$ with  signature\\
-% $ \strut \ \ \ \ \ \   \pushSymbol : Vars \times Assert \rightarrow Assert $,\\
 Remember that the assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
 onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ (cf. llemma \ref{lemma:push:ass:state}).
  
@@ -421,7 +409,7 @@ onto that state a frame which contained the values  of $\overline y$, assertion 
 
 
 
-\small{
+%\small{
 \begin{figure}[hbt]
 $\begin{array}{c}
 \inferruleSD{\hspace{4.7cm} [\sc{ExtCal}]}
@@ -461,8 +449,40 @@ $
 \caption{Logic for External Calls}
 \label{f:external:calls}
 \end{figure}
+% }
+
+\subsubsection{Aliasing and Calls}
+
+\sdN{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\txteq x$ expresses that $u$ and $x$ are textually the same --
+the latter is stronger, i.e.   $x\txteq u$ implies $x=u$. 
+% It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. 
+ As $...\equiv ...$ is a textual assertion, and thus  state-independent,  it is a side-condition of the rules and is  not part of the Hoare triple's precondition.
 }
 
+
+\small{
+\begin{figure}[hbt]
+$\begin{array}{c}
+\inferruleSD{\hspace{4.7cm}  [{\sc{CallAndAlias}}}
+	{ 
+	{   x \txtneq u\txtneq x'  }
+	}
+	{   \hproves{M}  { \ x=x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
+
+\\ \\ 
+\inferruleSD{\hspace{4.7cm} [{\sc{CallNonAlias}}]}	
+{ 
+		{ \ x \txtneq u \txtneq x'\   }
+	}
+	{   \hproves{M}   { \ x\neq x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
+\\
+\\
+\end{array}
+$
+\caption{Logic for Aliasing around Calls }
+\label{f:internal:alias:calls}
+\end{figure}
+}
 
 
 
