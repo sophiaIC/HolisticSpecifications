@@ -264,6 +264,100 @@ from above.
 Moreover, we have that  $\forall i\in [6..9].\leadstoBoundedStarThree {\Mtwo}  {\sigma_{10}} {\sigma_{i}}  {\sigma_{14}}$ -- part (\ref{otbThree}) 
 from above. 
 }
+
+  \subsection{{Reachable  Objects}}
+
+ {A central concept to our work is object \emph{protection}, which we will define in   Sect. \ref{sect:protect}: It requires that no external object  
+reachable from the top frame  can have unmitigated access to that object.}
+%
+%{The  \SpecLang  specifications support universal quantification over  objects; such specifications 
+%are applicable  to all objects in the heap witch, are however, either locally reachable (i.e. there is in the heap a path from the an 
+%object on the top frame to the particular object), or globally reachable (i.e. there is in the heap a path from the an 
+%object on some frame to the particular object.)
+%%In this section  we will formally define these concepts.}\footnoteSD{TODO we need a better motivation for these concepts.}
+%
+An object $\alpha$ is  locally reachable, $ \LRelevant \alpha \sigma $, if it is reachable from the top frame on the stack of $\sigma$,
+and it is globally reachable, $\GRelevant \alpha \sigma$, if it is reachable from any  frame on the stack of $\sigma$.
+ 
+\begin{definition} We define 
+\begin{itemize}
+\item
+$ \LRelevant \alpha \sigma $ \ \ iff\ \  
+$\exists \phi.[\ \sigma=(\phi\cdot\_, \_)$ and $\Relevant \alpha \phi \sigma\ ]$. % for some $\phi$
+\item
+$\GRelevant \alpha \sigma$  \ \ iff\ \  
+$\exists \phi.[\ \sigma=(\_\cdot\phi\cdot\_, \_)$ and $\Relevant \alpha \phi \sigma\ ]$. % for some $\phi$
+\end{itemize}
+where\\
+$\strut\ \ \ \  \ \ \ \ \ \ \Relevant \alpha \phi \sigma $  \ \ \ \ \ \ \ iff\ \  
+$\exists n\in \mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{\phi(x).\prg{f}_1.....\prg{f}_n} = \alpha \ \ ]$.
+
+\end{definition}
+
+ \begin{figure}[htb]
+\begin{tabular}{|c|c|c|}
+\hline \\
+\resizebox{3.5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/heap.png}
+} 
+&
+\resizebox{5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/locReachA.png}
+} 
+&
+\resizebox{5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams//locReachb.png}
+} 
+\\
+\hline
+ a heap
+&
+Locally Reachable from $\phi_1$
+&
+Locally Reachable from $\phi_2$
+\\
+\hline \hline
+\end{tabular}
+   \caption{A heap, and Locally Reachable Objects. % from $\phi_1$ and $\phi_2$. 
+   The distinction of objects into  green or pink is explained in later chapters}
+   \label{fig:LReachable}
+ \end{figure}
+
+We illustrate these concepts in Fig. \ref{fig:LReachable}: In the middle pane the top frame is $\phi_1$ which maps \prg{this} to $o_1$; all objects are locally reachable. 
+In the right pane the top frame is $\phi_2$, which maps \prg{this} to $o_3$, and $x$ to $o_7$; now $o_1$ and $o_2$ are no longer locally reachable.
+
+Lemma  \ref{lemma:relevant} % describes properties of global reachability. 
+says that  (\ref{oneGR}) Locally reachable objects are globally reachable. 
+(\ref{twoGR}) 
+% Any object which will be globally reachable at some future state  and which exists object in the current state, is globally reachable the current state: that is, 
+Globally unreachable objects may not become reachable in the future.
+\footnoteSD{cite "only connectivity begets connectivity"}
+(\ref{threeLR}) A pre-existing object, locally reachable after any number of bounded execution steps, was locally reachable at the first step.
+
+
+\begin{lemma}
+\label{lemma:relevant}
+For all module sets $\Mtwo$, states $\sigma$, $\sigma'$,   address $\alpha$, and $\overline \alpha$:
+%\footnoteSD{{TODO decide whether $o$ or $\alpha$}}
+%and  variables ${\overline z}$, and statements $s:$
+\begin{enumerate}
+\item
+\label{oneGR}
+$ \LRelevant \alpha \sigma\ \ \Longrightarrow \ \   \GRelevant \alpha \sigma$
+\item
+\label{twoGR}
+${\leadstoOrigStar {\Mtwo}  {\sigma}  {\sigma'}} \ \ \wedge \ \  \GRelevant \alpha {\sigma'} \ \ \wedge\ \  {\alpha\in \sigma} \ \ \ \Longrightarrow \ \  \ \GRelevant \alpha {\sigma}$.
+\item
+\label{threeLR}
+${\leadstoBoundedStar {\Mtwo}  {\sigma}    {\sigma'}} \ \ \wedge \ \   \LRelevant \alpha {\sigma'}\  \ \wedge\ \  {\alpha\in \sigma} \ \ \ \Longrightarrow \ \ \ \LRelevant \alpha {\sigma}$.
+\end{enumerate}
+\end{lemma}
+
+{Consider Fig.  \ref{fig:UpSemantics}. %, and Fig.  \ref{fig:UpSemanticsBounded}.
+Lemma \ref{lemma:relevant}.\ref{threeLR}  promises that any objects locally reachable in $\sigma_{14}$ which already existed in $\sigma_{8}$, were locally reachable in $\sigma_{8}$. However, the lemma is only  applicable to bounded execution, and as 
+$\notLeadstoBoundedStar {\Mtwo} {\sigma_8}  {\sigma_{17}}$, 
+the lemma does not promise that  objects locally reachable in $\sigma_{17}$ which already existed in $\sigma_{8}$, were locally accessible in $\sigma_{8}$ -- namely it could be that objects are made globally reachable upon method return, during the step from $\sigma_{14}$ to $\sigma_{15}$.}
+
  \subsection{\red{EVEN NEWER:} Method Calls and Returns}
 
  
@@ -279,21 +373,29 @@ Calls , and in particular external calls, are a central consideration of our wor
 Given a state $\sigma$, addresses $\overline \alpha$, and variables or addresses $\overline \va$, we define
 \begin{itemize}
 \item
-$ \PushS  {\alpha} {\sigma} \ =\ \{ \ \sigma' \ \mid\ \exists \phi,\psi,\chi,\phi_n,\phi',\ s.t\ \  \ \sigma=(\phi\!\cdot\!\psi, \chi)\  \wedge\  \sigma'=(\phi_n\!\cdot\!\phi'\!\cdot\!\psi, \chi) \ \wedge\   rng(\phi_n)=\overline \alpha \ \   \ \}$
+$ \PushS  {\alpha} {\sigma} \ =\ \{ \ \sigma' \ \mid\ \exists \phi,\psi,\chi,\phi_n,\phi',\ s.t\ $\\
+$\strut \hspace{2.3cm}  \sigma=(\phi\!\cdot\!\psi, \chi)\  \wedge\  \sigma'=(\phi_n\!\cdot\!\phi'\!\!\cdot\!\psi, \chi) \ \wedge\   rng(\phi)=rng(\phi') \ \wedge\ rng(\phi_n)=\overline \alpha \ \   \ \}$
 \item
 {$ \PushS  {\va}  {\sigma}$ is short for  $ \PushS  {\interpret {\sigma} {\va}} {\sigma} $.}
 \end{itemize}
  \end{definition}
-}
+}\footnote{\red{DO we also need that $\overline \alpha$ were locally reachable in $\sigma$?}}
 
 \sdN{
-Thus, if $\sigma_a$ is the result of pushing a frame onto $\sigma_b$, then $\sigma_a\in   \PushS  {\alpha} {\sigma_b}$. 
+%Thus, if $\sigma_a$ is the result of pushing a frame onto $\sigma_b$, then $\sigma_a\in   \PushS  {\alpha} {\sigma_b}$. 
 %\sdN{Similarly, if $\sigma_b$ is the result of popping a frame from $\sigma_a$, then $\sigma_a\in   \PushS  {\alpha} {\sigma_b}$.}
  % below Therefore, as 
- Lemma \ref{lemma:push} says that % $\pushSymbol$ characterizes  calls and returns.}
+ Lemma \ref{lemma:push} says that % $\pushSymbol$ characterizes  calls and returns. 
 \  (\ref{pushOne}):\  If $\leadstoOrig {\Mtwo} {\sigma}   {\sigma'} $ and $\sigma'\!\in\!\PushS   {\alpha} {\sigma}$ then $\sigma'$ is a  \emph{callee} state of $\sigma$ --  {a direct successor state of    $\sigma$  after calling a method}. % with receiver and arguments $\overline \alpha$). 
  (\ref{pushTwo}):\  If $\leadstoOrig {\Mtwo} {\sigma}   {\sigma'} $ and $\sigma\! \in\! \PushS   {\alpha} {\sigma'}$  then $\sigma'$ is a  \emph{caller} state  of $\sigma$ -- {a direct successor  of $\sigma$}  after returning from a method.
- }
+  Also, (\ref{oneLR}):\ A locally reachable object  \sdN{right after entering a call} was also locally reachable before \sdN{entering} the call.
+%\kjx{pretty sure we need one other case: (3a) a locally reachable
+%  obbject after a call could have been newly created by that call
+%  --
+%  \red{SD: Thank you for the comment. 
+%  (3) is supposed to talk about immediately after entering the call. It was missing an assumption -- in blue. 
+%  Please check the text and the maths.}}
+}
   
 \begin{lemma}% [$\pushSymbol$  for calls and returns]
 \label{lemma:push}
@@ -306,6 +408,13 @@ $\sigma'\in   \PushS  {\alpha} {\sigma}  \ \ \Longleftrightarrow \ \
 \item
 \label{pushTwo}
 $\sigma\in   \PushS  {\alpha} {\sigma'}  \ \ \Longleftrightarrow \ \ \exists x, \alpha'.[\ \  \sigma.\prg{cont}\txteq\alpha' \ \ \wedge \ \ \sigma'.\prg{cont}\txteq x:=\alpha';\_ \ \ ] $
+\item
+\label{oneLR}
+{$\sdN{\leadstoOrig  {\Mtwo}  {\sigma}  {\sigma'}} \ \ \wedge\ \  \sigma'\in \PushS {\alpha} {\sigma}  \ \ \wedge \ \  \LRelevant {\overline \alpha} {\sigma} \ \ \wedge\ \   \LRelevant \alpha {\sigma'} \ \ \ \Longrightarrow$
+\\
+$\strut \hspace{2cm} \LRelevant \alpha {\sigma}$
+}
+
 \end{enumerate}
 
 \end{lemma}
@@ -428,111 +537,5 @@ $\sigma\in   \PushS  {\alpha} {\sigma'}  \ \ \Longleftrightarrow \ \ \exists x, 
 %   why do it this way? \red{SD: what way? Another suggestion?} and we expand on an example here?  \red{SD: I do not understand. Are you asking for an illustrative example?} or is this
 %   a standard approach somewhere? \red{SD: I do not know of this concept at other places}}
    
-  \subsection{{Reachable  Objects}}
-
- {A central concept to our work is object \emph{protection}, which we will define in   Sect. \ref{sect:protect}: It requires that no external object  
-reachable from the top frame  can have unmitigated access to that object.}
-%
-%{The  \SpecLang  specifications support universal quantification over  objects; such specifications 
-%are applicable  to all objects in the heap witch, are however, either locally reachable (i.e. there is in the heap a path from the an 
-%object on the top frame to the particular object), or globally reachable (i.e. there is in the heap a path from the an 
-%object on some frame to the particular object.)
-%%In this section  we will formally define these concepts.}\footnoteSD{TODO we need a better motivation for these concepts.}
-%
-An object $\alpha$ is  locally reachable, $ \LRelevant \alpha \sigma $, if it is reachable from the top frame on the stack of $\sigma$,
-and it is globally reachable, $\GRelevant \alpha \sigma$, if it is reachable from any  frame on the stack of $\sigma$.
- 
-\begin{definition} We define 
-\begin{itemize}
-\item
-$ \LRelevant \alpha \sigma $ \ \ iff\ \  
-$\exists \phi.[\ \sigma=(\phi\cdot\_, \_)$ and $\Relevant \alpha \phi \sigma\ ]$. % for some $\phi$
-\item
-$\GRelevant \alpha \sigma$  \ \ iff\ \  
-$\exists \phi.[\ \sigma=(\_\cdot\phi\cdot\_, \_)$ and $\Relevant \alpha \phi \sigma\ ]$. % for some $\phi$
-\end{itemize}
-where\\
-$\strut\ \ \ \  \ \ \ \ \ \ \Relevant \alpha \phi \sigma $  \ \ \ \ \ \ \ iff\ \  
-$\exists n\in \mathbb{N}.\exists \prg{f}_1,... \prg{f}_n.\exists \prg{x}.[ \ \interpret{\sigma}{\phi(x).\prg{f}_1.....\prg{f}_n} = \alpha \ \ ]$.
-
-\end{definition}
-
- \begin{figure}[htb]
-\begin{tabular}{|c|c|c|}
-\hline \\
-\resizebox{3.5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/heap.png}
-} 
-&
-\resizebox{5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/locReachA.png}
-} 
-&
-\resizebox{5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams//locReachb.png}
-} 
-\\
-\hline
- a heap
-&
-Locally Reachable from $\phi_1$
-&
-Locally Reachable from $\phi_2$
-\\
-\hline \hline
-\end{tabular}
-   \caption{A heap, and Locally Reachable Objects. % from $\phi_1$ and $\phi_2$. 
-   The distinction of objects into  green or pink is explained in later chapters}
-   \label{fig:LReachable}
- \end{figure}
-
-We illustrate these concepts in Fig. \ref{fig:LReachable}: In the middle pane the top frame is $\phi_1$ which maps \prg{this} to $o_1$; all objects are locally reachable. 
-In the right pane the top frame is $\phi_2$, which maps \prg{this} to $o_3$, and $x$ to $o_7$; now $o_1$ and $o_2$ are no longer locally reachable.
-
-Lemma  \ref{lemma:relevant} % describes properties of global reachability. 
-says that  (\ref{oneGR}) Locally reachable objects are globally reachable. 
-(\ref{twoGR}) 
-% Any object which will be globally reachable at some future state  and which exists object in the current state, is globally reachable the current state: that is, 
-Globally unreachable objects may not become reachable in the future.
-\footnoteSD{cite "only connectivity begets connectivity"}
-(\ref{oneLR}) A locally reachable object  \sdN{right after entering a call} was also locally reachable before \sdN{entering} the call.
-(\ref{threeLR}) A pre-existing object, locally reachable after any number of bounded execution steps, was locally reachable at the first step.
-
-\kjx{pretty sure we need one other case: (3a) a locally reachable
-  obbject after a call could have been newly created by that call
-  --
-  \red{SD: Thank you for the comment. 
-  (3) is supposed to talk about immediately after entering the call. It was missing an assumption -- in blue. 
-  Please check the text and the maths.}}
-
-
-\begin{lemma}
-\label{lemma:relevant}
-For all module sets $\Mtwo$, states $\sigma$, $\sigma'$,   address $\alpha$, and $\overline \alpha$:
-%\footnoteSD{{TODO decide whether $o$ or $\alpha$}}
-%and  variables ${\overline z}$, and statements $s:$
-\begin{enumerate}
-\item
-\label{oneGR}
-$ \LRelevant \alpha \sigma\ \ \Longrightarrow \ \   \GRelevant \alpha \sigma$
-\item
-\label{twoGR}
-${\leadstoOrigStar {\Mtwo}  {\sigma}  {\sigma'}} \ \ \wedge \ \  \GRelevant \alpha {\sigma'} \ \ \wedge\ \  {\alpha\in \sigma} \ \ \ \Longrightarrow \ \  \ \GRelevant \alpha {\sigma}$.
-\item
-\label{oneLR}
-{$\sdN{\leadstoOrig  {\Mtwo}  {\sigma}  {\sigma'}} \ \ \wedge\ \  \sigma'\in \PushS {\alpha} {\sigma}  \ \ \wedge \ \  \LRelevant {\overline \alpha} {\sigma} \ \ \wedge\ \   \LRelevant \alpha {\sigma'} \ \ \ \Longrightarrow$
-\\
-$\strut \hspace{2cm} \LRelevant \alpha {\sigma}$
-}
-\item
-\label{threeLR}
-${\leadstoBoundedStar {\Mtwo}  {\sigma}    {\sigma'}} \ \ \wedge \ \   \LRelevant \alpha {\sigma'}\  \ \wedge\ \  {\alpha\in \sigma} \ \ \ \Longrightarrow \ \ \ \LRelevant \alpha {\sigma}$.
-\end{enumerate}
-\end{lemma}
-
-{Consider Fig.  \ref{fig:UpSemantics}. %, and Fig.  \ref{fig:UpSemanticsBounded}.
-Lemma \ref{lemma:relevant}.\ref{threeLR}  promises that any objects locally reachable in $\sigma_{14}$ which already existed in $\sigma_{8}$, were locally reachable in $\sigma_{8}$. However, the lemma is only  applicable to bounded execution, and as 
-$\notLeadstoBoundedStar {\Mtwo} {\sigma_8}  {\sigma_{17}}$, 
-the lemma does not promise that  objects locally reachable in $\sigma_{17}$ which already existed in $\sigma_{8}$, were locally accessible in $\sigma_{8}$ -- namely it could be that objects are made globally reachable upon method return, during the step from $\sigma_{14}$ to $\sigma_{15}$.}
 
 
