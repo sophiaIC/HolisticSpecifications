@@ -2,30 +2,28 @@
 \section{\AssertLang -- the assertion language}
 \label{sub:SpecO}
 
-\kjx{can we please get rid of quote marks here?\red{How do we indicate that object-capability assertions is not a standard term? Or do we not need to indicate that?}}
 
-Our assertion language, \AssertLang, supports ``standard'' assertions as well ``object-capability'' assertions. 
-The ``standard'' assertions  include the values of fields, implication, quantification etc, as well as ghost fields; the latter can represent user-defined predicates. 
-The ``object capability'' assertions express restrictions of an object's eventual authority on some other object.
-We define the meaning of ``standard'' assertions'' in section \ref{sect:semantics:assert:standard}, 
-and the meaning of the  ``object-capability'' assertions in  sections \ref{sect:semantics:assert:prtFrom}
+Our assertion language, \AssertLang, supports standard assertions as well \emph{object-capability} assertions. 
+The  standard assertions  include the values of fields, implication, quantification etc, as well as ghost fields; the latter can represent user-defined predicates. 
+The  object capability assertions express restrictions of an object's eventual authority on some other object.
+We define the meaning of  standard'' assertions in section \ref{sect:semantics:assert:standard}, 
+and the meaning of the   object-capability assertions in  sections \ref{sect:semantics:assert:prtFrom}
 and  \ref{sect:semantics:assert:prt}.
 
-\susan{I think standard shouldn't look special and object-capability assertions should be emph the first time and then plain after that.}
 
 \subsection{Syntax of \AssertLang}
 The syntax of \AssertLang  is given in Definition \ref{f:chainmail-syntax}.
-An assertion may be an extended expression,   a query of the defining class of
-  an object, the usual connectives and quantifiers, along 
-with two non-standard assertion forms:
-(1) \emph{Internal/external} and (2) \emph{Protection}, inspired by the capabilities literature.
+Standard assertions may be  extended expressions,   queries on an object's class, or the usual connectives and quantifiers. 
+\sdN{Extended expressions, $\re$, may include addresses -- the reason is discussed later.}
+\sdN{Capability assertions may be about objects being
+\emph{Internal/external} or about   \emph{Protection} -- inspired by the OCAP literature.}
 \footnoteSD{TODO say how these relate with capability lit;  compare with 
  OOPSLA.}
-\susan{why extended expression rather than just expression?}
+%\susan{why extended expression rather than just expression?}
 
 \begin{definition}
 \label{def:assert:syntax}
-Extended expressions, $\re$, and assertions, $A$, in
+Expressions, $\re$, and assertions, $A$, in
 \AssertLang are defined as follows:
 
 \label{f:chainmail-syntax}
@@ -73,7 +71,7 @@ In the above, we expect that $f$ stands  for a field or a ghost field, but not a
 \textbf{NOTES}  \notesep Extended expressions, $\re$, and therefore also assertions, $A$, may contain addresses; \eg   $\alpha.bal > 700$. 
 {While addresses make little sense in user-written assertions, they are useful when giving semantics to universal quantifiers 
 \cf Def. \ref{def:chainmail-semantics}.(\ref{quant1}), {when the local map changes \eg upon call and return, and in general,} for two-state invariants, \cf Def. \ref{def:necessity-semantics}.(2).}
-\notesep The syntax does  not distinguish between fields and ghost fields. For instance, $a.balance$ may, in some modules (\eg when each account object has a field representing its balance), be a field lookup, while in others (e.g. when the balance is defined though an entry in a lookup table) may involve executing a ghost function. 
+\notesep The syntax does  not distinguish between fields and ghost fields. For instance, $\prg{a}.\prg{\balance}$ may, in some modules (\eg when each account object has a field representing its balance), be a field lookup, while in others (e.g. when the balance is defined though an entry in a lookup table) may involve executing a ghost function. 
 \notesep While the syntax does not explicitly include the forms $A\rightarrow A'$, $A \vee A'$, ${\ex{x:C}{A}}$, or $\external {\re}$, these can be encoded with the given connectives -  $\external {\re}$ is short for $\neg \internal {\re}$. We use these forms freely in the subsequent text without further definition.
 \kjx{These NOTES seem to make heavy work of mostly trivial points
 \red{SD: Do you mean that there are easier ways to say what the notes say? Or thatr what they say is obvious? Would you rather we skipped them?}}
@@ -162,12 +160,11 @@ $\satisfiesA{M}{\sigma}{\internal{{\re}}}$ \ \ \ iff \ \ \   $\satisfiesA{M}{\si
 \end{enumerate}
 \end{definition}
 
-\noindent
-\susan{I would delete the note since -> isn't actually in the syntax and it is obvious from context}
-\textbf{NOTE:}   $\rightarrow$ is part of \AssertLang syntax, while  $\Longrightarrow$ is used in the meta-language
-\footnoteSD{{TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
- Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.}}
-\footnoteSD{{TODO: say that any assertion $A(e)$ can be understood as a shorthand for $\exists x. [ x=e \wedge A(x)]$. or  $forall x. [ x=e \rightarrow A(x)]$?? For example, the  assertion   ${\internal{e}}$ is a shorthand for $\exists x. [ x=e \wedge {\internal{x}}]$. QUESTION: do we need to talk about $=$ in the assertion language?}}
+ 
+%\susan{I would delete the note since -> isn't actually in the syntax and it is obvious from context}
+%\textbf{NOTE:}   $\rightarrow$ is part of \AssertLang syntax, while  $\Longrightarrow$ is used in the meta-language
+%\footnoteSD{{TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
+% Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.}}
 
 
 
@@ -177,15 +174,17 @@ protecting objects}
 \label{sect:protect}
 
 As  already discussed in the introduction\footnoteSD{make sure we do discuss there}, in the object capabilities world, \emph{permission}, i.e.,  access  \footnoteSD{cite MarkMiller thesis, and our Permission and Authority revisited} to a capability is a necessary precondition to some effect. Motto "authority implies eventual permission".
-We go further than that, and say: "lack of eventual permission to the relevant capability implies that the given effect will never take place".
-\susan{lack of eventual permission implies no effect ever?}
+We go further than that, and say: "lack of eventual permission to the relevant capability implies that the given effect will \sdN{not} take place".
+\susan{lack of eventual permission implies no effect ever?\red{SD: not "no effect", as other effects may take place, and also no "not ever" -- better now?.}}
 For this, we need the concept of "lack of  eventual permission".  We use "eventual permission" to express that the object might obtain access after one of more execution steps. Thus whether an object has "eventual permission" will depend on the object graph, and on the continuations, and on the method bodies of all objects involved.  
 
-Precise characterization of eventual permission is undecidable, but we approximate it through the concept of \emph{protection}:
-\susan{it is easier to read with subscripts rather than primes - 3 and 4 primes look similar and need to be counted}
-An object $o$ is \emph{protected  from} another object $o'$, if $o'$ can obtain direct access to   $o$ only if 
-$o$ is ``introduced'' to some external object $o'''$ by some internal object $o''$ -- where $o'$ and $o'''$, and also $o$ and $o''$ may be different.  We  use the term ``introduce'' in the Mark Miller sense, whereby $o_1$ is is ``introduced'' to $o_2$ by $o_3$, iff either $o_3$ sends to $o_2$ a message containing $o_1$, 
-or $o_2$ made a call to $o_3$, and $o_3$ eventually returns  $o_1$ as the result of the call.
+A precise characterization of eventual permission is undecidable, but we approximate it through the concept of \emph{protection}:
+\susan{it is easier to read with subscripts rather than primes - 3 and 4 primes look similar and need to be counted.
+\red{true - is it better now?}}
+\sdN{An object $o$ is \emph{protected  from} another object $o'$, if $o'$ can obtain direct access to   $o$ only if 
+$o$ is \emph{introduced} to some external object $o_e$ by some internal object $o_i$ -- where $o'$ and $o_e$, and also $o$ and $o_i$ may be different.  
+We  use the term `introduce in the Mark Miller sense, whereby $o$ is is ``introduced'' to $o'$ by $o''$, iff either $o''$ sends to $o'$ a message containing $o$, 
+or $o'$ made a call to $o''$, and $o''$ eventually returns  $o$ as the result of that call.}
  
 
 
@@ -279,7 +278,7 @@ Namely, even through there are some internal objects on the path from $o_2$ to $
 \vspace{.1in}
 
 We now introduce the concept of (absolute) protection.
-An object is protected, if it is protected from all locally reachable objects. This can also be understood as 
+An object is protected, if it is protected from all locally reachable \sdN{external} objects. This can also be understood as 
 ``protected from the top frame''. \footnoteSD{TODO: motivate; many external objects, no matter which one has unprotected access to an object }
  
 \begin{definition}[Satisfaction 
@@ -292,7 +291,7 @@ of Assertions -- Protected]
 $\satisfiesA{M}{\sigma} {\inside {\re}}$  \ \ \ iff \ \ \ 
 \begin{enumerate}
 \item
-{$\forall \alpha.[ \  \LRelevant {\alpha}  {\sigma}\ \Longrightarrow \ \  \satisfiesA{M}{\sigma}{\protectedFrom{\re} {{\alpha}}}\ ] $}, \ \ \ and 
+{$\forall \alpha.[ \  \LRelevant {\alpha}  {\sigma}\ \wedge\ \red{ \satisfiesA{M}{\sigma}{\external \alpha}} \ \ \Longrightarrow \ \  \satisfiesA{M}{\sigma}{\protectedFrom{\re} {{\alpha}}}\ ] $}, \ \ \ and 
 \item
 $\satisfiesA{M}{\sigma}{\external{\prg{this}}}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
 \end{enumerate}
