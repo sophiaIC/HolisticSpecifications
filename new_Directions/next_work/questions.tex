@@ -2,6 +2,12 @@
 \newcommand{\password}{\prg{pwd}}
 \newcommand{\myAccount}{\prg{accnt}}
 
+\section{Notation}
+We use   the notation ${\inside{x}}$ to say that $x$ is protected. 
+We use $\protectedFrom x y$ to say that $x$ is protected from $y$.
+We use $\protectedFrom x \{ y1_1,... y_n\}$ to say that $x$ is protected from $y1_1,... y_n\}$.
+
+
 \section{Lemma 5.7 does hold}
 
 Contrary to what I had said, %If we use the definition of $ \PushAS {y} {A}$ as currently given, then 
@@ -210,6 +216,7 @@ $
 
 Our requirement that formal parameters are nor overwritten is 
 
+ 
 \begin{lemma}
 \label{lemma:arguments}
 For any addresses $\overline \alpha$, states $\sigma_1$, ... $\sigma_{n+1}$, and any modules $\Mtwo$ we have
@@ -221,12 +228,13 @@ $\strut \ \ \ \ \ \ \ \ \ \ \ \ \  \Longrightarrow\ \  \exists \overline {\alpha
 \end{itemize}
 \end{lemma}
 
+
 In the lemma above, $\sigma_1$ is a state making a call with arguments $\overline \alpha$, \ \ $\sigma_2$ is the corresponding called state, \ \ $\sigma_3$ ... $\sigma_{n}$ are further states where we do not return from the call in $\sigma_2$, and $\sigma_{n+1}$ is the state right after the call.
 
 
-\subsubsection{Alternative definitions}
+\section{Alternative definitions}
 
-Using the definition of $\depth {\_}$ we can give a (perhaps simpler?) definition of bounded execution:
+Using the concept of $\depth {\_}$ we can give a (perhaps simpler?) definition of bounded execution:
 
 \begin{definition}[Bounded Execution -- Alternative]
 \label{def:shallow:term}
@@ -245,7 +253,7 @@ We define relations \    $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma\bd} {\si
 Compare this with the original definition
 
 \begin{definition}[Bounded Execution -- Original]
-\label{def:shallow:term}
+\label{def:shallow:termA}
 We define relations \    $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma\bd} {\sigma'}$ \ and\  $\leadstoBounded  {\Mtwo} {\sigma} {\sigma'}$ as:
 
 \begin{itemize}
@@ -259,6 +267,10 @@ $\strut  \hspace{2.9cm}\ \      \exists \phi,\!\psi,\!\psi_1,\!\psi_2.[ \  \sigm
 ....
  \end{itemize}
 \end{definition}
+
+Note that Definitions \ref{def:shallow:term} and \ref{def:shallow:termA} are not equivalent.
+In fact, Def. \ref{def:shallow:term} implies \ref{def:shallow:termA} but not the other way round.
+But SD believes that the difference does not matter for our purposes. 
 %\begin{lemma}
 %\label{lemma:arguments:alt}[Alternative expression of Lemma \ref{lemma:arguments}]
 %For any addresses $\overline \alpha$, states $\sigma_1$, ... $\sigma_{n+1}$, and any modules $\Mtwo$ we have
@@ -293,24 +305,26 @@ module $M_{as}$
 \end{lstlisting}
 %
   
-We use the notation ${\inside{x}}$ to say that $x$ is protected. Assume that we want $M_{as}$   to satisfy
 
  \begin{tabular}{lcll}
  $S_{as}$   & $\triangleq$   &  $\TwoStatesQ {\prg{s}:\prg{Shop}}  {\inside{\prg{s.acc.pwd}}}  {\inside{\prg{s.acc.pwd}}}$
+ \\
+ & & $\wedge$ \\
+ & & $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.pwd}}}  {\inside{\prg{a.pwd}}}$
  \end{tabular}
+ 
+ The method \prg{swap} is public, that is may me called by external objects. The effects of such calls is the subject of our discussion.
   
 \subsection{Changing footprint}  
 
-Note that the ``footprint'' of $S_{as}$ in the pre-state may be different than that on the post-state. For example, if we have a shop a in the original configuration below,  and execute \prg{s.swap(4)}. then we obtain the configuration to the right. In the original configuration the footprint of \prg{5.acc.pwd} consists of $\{ 1. 2, 3\}$, but in the second configuration it consists of $\{ 1. 4, 5\}$
-  
 \begin{figure}[htb]
 \begin{tabular}{|c|c|}
 \hline \\
-\resizebox{4.5cm}{!}{
+\resizebox{3.5cm}{!}{
 \includegraphics[width=\linewidth]{diagrams/scenarioOne.png}
 } 
 &
-\resizebox{4.5cm}{!}{
+\resizebox{3.5cm}{!}{
 \includegraphics[width=\linewidth]{diagrams/scenarioTwo.png}
 } 
 \\
@@ -325,33 +339,42 @@ original configuration
    \label{fig:ScenarioA}
  \end{figure}
  
+Note that the ``footprint'' of $S_{as}$ in the pre-state may be different than that on the post-state. For example, if we have a shop a in the original configuration below,  and execute \prg{s.swap(4)}. then we obtain the configuration to the right. In the original configuration the footprint of \prg{5.acc.pwd} consists of $\{ 1. 2, 3\}$, but in the second configuration it consists of $\{ 1. 4, 5\}$
+  
+
+ 
 \subsection{Proving method \prg{swap}}
 
-We can give to  \prg{Swap}  the following pre- and post- condition pair
+We can give to  \prg{swap}  the following pre- and post- condition pair
 
-	$\strut \ \ \ (S_1) \ \ \ \ %\promises
+\begin{tabular}{lcll}
+ $S_{1}$   & $ \triangleq$ &
+ % (S_1) \ \ \ \ %\promises
 					% {M_{as}}
-					 {\mprepostLong 
+					 ${\mprepostLong 
 					 {\inside {this.acc.pwd} \wedge \inside{a.pwd}}
 					 {Shop}
 					 {swap}
 					 {a:Account}
 					{\inside {this.acc.pwd}}
 					}$
+\end{tabular}
 	
 Indeed, the method \prg{swap} satisfies $(S_1)$.
-Interestingly, it also satisfies the stronger contract:
+Interestingly, it also satisfies the stronger contract, $S_2$, as below
 
-$\strut \ \ \ (S_2) \ \ \ \ %\promises
+\begin{tabular}{lcll}
+ $S_{2}$   & $ \triangleq$  &
+  				%\promises
 					% {M_{as}}
-					 {\mprepostLong 
+					$ {\mprepostLong 
 					 {\inside{a.pwd}}
 					 {Shop}
 					 {swap}
 					 {a:Account}
 					{\inside {this.acc.pwd}}
 					}$
-
+\end{tabular}
 
 
 \subsection{A Worry}
@@ -425,26 +448,37 @@ $..,\sigma_5 \models {\inside {\prg{x.acc.pwd}}}$
 \subsection{Worry is unfounded?}
 
 The scenario from above is \emph{not} a worry, after all! 
-Namely, according to our defintion of well-formed module, the method \prg{swap} need to also satisfy the following, specs:
+Namely, according to our definition of well-formed module, the method \prg{swap} needs to also satisfy the following, specs:
 
-$\strut \ \ \ (S_3)\ \ \ \ %\promises
+\begin{tabular}{lcll}
+ $S_{3}$   & $ \triangleq$ &%\promises
 					% {M_{as}}
-					 {\mprepostLong 
-					 {\inside{this.acc.pwd} \ \wedge\ \inside {a.pwd} }
+					 ${\mprepostLong 
+					 {s:Shop \wedge \inside{s.acc.pwd} }  
 					 {Shop}
 					 {swap}
 					 {a:Account}
-					{\inside {this.acc.pwd}}
+					{\inside {s.acc.pwd}}
 					}$
+\\
+ $S_{4}$   & $ \triangleq$ &%\promises
+					% {M_{as}}
+					 ${\mprepostLong 
+					 {a:Account \wedge \inside {a.pwd} }
+					 {Shop}
+					 {swap}
+					 {a:Account}
+					{ \inside {a.pwd} }
+					}$					
+\end{tabular}					
 					
-					
- And the current method \prg{swap} does not satisfy $(S_3)$!
+ And if we take $s$ to be $this$, then the current method \prg{swap} does not satisfy $S_3$!
  
  \subsection{A \prg{swap} that satisfies $(S_3)$ -- more or less!}
  
-The only way I can see that \prg{swap}  satisfies $(S_3)$, is if it has been passed already the password of the account. Namely
+The only way I can see that \prg{swap}  satisfies $S_3$, is if it has been passed already the password of the shop's account. Namely
  
- \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+ \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines,firstline=10]
 module $M_{as}$        
   class Password
   
@@ -455,52 +489,64 @@ module $M_{as}$
        field acc: Account
        
        method swap(a:Account,p:Password)
-          if (a.pwd == p)
+          if (this.acc.pwd == p)
           	{ this.acc = a }    
 \end{lstlisting}
 
-And the spec now is:
+The new method \prg{swap} satisfies $S_3$ and well as $S_4$
 
-$\strut \ \ \ (S_4) \ \ \ \ %\promises
-					% {M_{as}}
-					 {\mprepostLong 
-					 {\inside{a.pwd}}
-					 {Shop}
-					 {swap}
-					 {a:Account, p"Password}
-					{\inside {this.acc.pwd}}
-					}$
- 
- But perhaps it is
- 
- $\strut \ \ \ (S_5) \ \ \ \ %\promises
-					% {M_{as}}
-					 {\mprepostLong 
-					 {\inside{a.pwd} \wedge \inside{this.acc.pwd}}
-					 {Shop}
-					 {swap}
-					 {a:Account, p"Password}
-					 {\inside{a.pwd} \wedge \inside{this.acc.pwd}}
-					}$
+\subsubsection{SD's surprises}
 
-\subsection{Open Questions}
+I had originally expected that the following method would have satisfied $S_3$
 
-I have two open questions, but will circulate the document so that we can start the discussion
+ \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines,,firstline=10]]
+module $M_{as}$        
+  class Password
+  
+  class Account
+    ... as in $\ModA$
+    
+   class Shop
+       field acc: Account
+       
+       method swap(a:Account,ps:Password,pa:Password)
+          if (this.acc.pwd == ps && a.pwd == pa )
+          	{ this.acc = a }    
+\end{lstlisting}
 
-\begin{enumerate}
-\item
-I am not sure that  $(S_4)$ or $(S_5)$ are what 
- is what the rule for well-formed modules prescribes or should prescribe!
- \item
+At some stage, I also thought that only by checking the passwords of the account as well as the shop's account, one would be able to satisfy $S_3$:
+
+ \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines,firstline=10]]
+module $M_{as}$        
+  class Password
+  
+  class Account
+    ... as in $\ModA$
+    
+   class Shop
+       field acc: Account
+       
+       method swap(a:Account,ps:Password,pa:Password)
+          if (this.acc.pwd == ps && a.pwd == pa )
+          	{ this.acc = a }    
+\end{lstlisting}
+
+
+
+\subsection{Question}
+
+
  Does this mean that the only way to guarantee a spec of the form 
- 
- $\strut \ \ \ (S_6) \ \ \ \ {\mprepostLong 
+ \\
+\begin{tabular}{lcll}
+ $S_{3}$   & $ \triangleq$ &
+					 $ {\mprepostLong 
 					 {\inside{x.f}}
 					 {...}
 					 {m}
 					 {...}
 					  {\inside{x.f}}
 					}$
-					
-is to pass to \prg{m} the value of \prg{x.f} as an argument?
-\end{enumerate}
+\end{tabular}\\					
+is to pass to \prg{m} the value of \prg{x.f} as an argument? That means that \prg{m} will only have an effect if called from an environment where $ {\inside{x.f}}$ does not hold.
+If yes, is that sensible? What does it mean for capabilities-based programming?
