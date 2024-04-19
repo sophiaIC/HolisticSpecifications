@@ -3,12 +3,19 @@
 
 \section{Soundness of our proof system}
 
+In this section we will prove that the proof system presented in section \ref{sect:proofSystem} is sound. We give the usual meaning to the Hoare triples (Sect \ref{sect:HLmeans}), we give several properties of terminating executions (Sect \ref{sect:termExecs}), and finally, we define a well-founded ordering which allows if to prove soundness (Sect \ref{sect:prove:sound}).
+
+We start by requiring  that the supporting proof system for assertions, and for encapsulation are sound.
 \begin{axiom}
-We assume a judgment of the form $M \vdash A$, which had the property that\\
-\strut \hspace{5cm} $M \vdash A $ \ \ \ \ implies \ \ \ \ $M \vDash A$
+We assume a judgment of the form $M \vdash A$,  a judgment of the form $M \vdash \encaps{A}$, which have the property that
+\begin{center}
+$M \vdash A $ \ \ \ \ implies \ \ \ \ $M \vDash A$.\\
+ $M \vdash \encaps{A} $ \ \ \ \ implies \ \ \ \ $M \vDash \encaps{A}$.
+ \end{center}
 \end{axiom}
 
-\subsection{Definitions}
+\subsection{Meaning of Hoare triples}
+\label{sect:HLmeans}
 
 We  define the {\emph {meaning}} of  our Hoare triples, $M\ \vdash\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$,  in the usual way, \ie that execution of $stmt$ in a state that satisfies $A$ leads to a state which satisfies $A'$. 
 
@@ -32,11 +39,14 @@ $\strut ~ ~ ~ ~ [ \ \ M,\sigma \ \models \ A \ \wedge\
   
  
 \subsection{Auxilairy properties of terminating execution} 
- In order to prove the soundness of our proof rules (\ie that $M \models  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ implies that $M \vdash  \{\, A \,  \}\ stmt\  \{\, A' \, \}$, we will need some auxiliary properties of the operational semantics.
+\label{sect:termExecs}
+% In order to prove the soundness of our proof rules (\ie that $M \models  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ implies that $M \vdash  \{\, A \,  \}\ stmt\  \{\, A' \, \}$,
+We also need some auxiliary properties of the operational semantics.
  
- The following lemma guarantees that any state reachable from a state with a terminating execution has itself a terminating execution, and that this execution is enclosed in the original one:
+Lemma \ref{lemma:encl:tem} guarantees that any state reachable from a state with a terminating execution has itself a terminating execution, and that this execution is enclosed in the original one:
  
  \begin{auxLemma}[Enclosed Terminating Executions]\footnote{TODO find better name for the aux lemma}
+ \label{lemma:encl:tem}
  For any modules $\Mtwo$,   and states $\sigma$, $\sigma'$, $\sigma_1$:
 \begin{itemize}
 \item
@@ -50,7 +60,7 @@ $  \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'} \  \wedge \  \leadstoBoun
 
 \end{auxLemma} 
  
- The following lemma makes the usual guarantee about terminating execution of statement sequences.
+Llemma \ref{lemma:subexp} makes the usual guarantee about terminating execution of statement sequences.
   
 \begin{auxLemma}[Execution of sequences]
 \label{lemma:subexp}
@@ -66,7 +76,10 @@ $   \exists \sigma''.[\ \ \leadstoBoundedStarFin {\Mtwo} {\sigma[\texttt{cont}\m
 \end{auxLemma}
  
 
- The following lemma says that a terminating execution,  $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$ of an external call   consists of a sequence of  external states interleaved with terminating executions in internal states:
+Lemma \ref{lemma:external_breakdown} says that a terminating execution,  $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$ starting in an external state  consists of a sequence of  external states interleaved with terminating executions in internal states. 
+Its meaning %of Auxialiry lemma \ref{lemma:external_breakdown} 
+is illustrated through an example in Fig. \ref{fig:summaries}.
+
  
 \begin{auxLemma}
 \label{lemma:external_breakdown}[Summarised External Terminating Execution]
@@ -85,26 +98,6 @@ $\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \forall i\in[1..p].\forall j\in [m_
 $\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models \internal {\texttt{this}}   \ \wedge \ \ 
  \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma_{n_{i}}}  {\sigma_{m_{i+1}-1}} \ ] $ \\
 $\strut \ \ \ \ \ \ \ \ \ \ ]$
-\end{auxLemma}
-
-The meaning of Auxialiry lemma \ref{lemma:external_breakdown} is illustrated through an example in Fig. \ref{fig:summaries}.
-
-The following auxiliary lemma describes how an encapsulated assertion $A$ is preserved during an execution, provided that all finalizing internal executions preserved it. 
-It will be used in the proof of soundness of the rule {\sc{ExtCall\_WithSpec\_Weak}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
-
-\begin{auxLemma}
-\label{lemma:external_exec_preserves}[Preservation of Encapsulated Assertions]
-For any module $M$, modules $\Mtwo$, numbers $p$ and $q$, states$\sigma_1$, .... $\sigma_p$,  numbers $m_1,...m_p, n_1, ... n_p \in \mathbb{N}$, and assertions $A$:
-\\
-If \\
-$\strut \ \ \ \  M, \sigma_1 \models  A   \  \ \wedge \ \ M \models \encaps A \ \ \ \  \ \ \wedge$\\
-$\strut \ \ \ \  \forall i\in [1..q).[\   \leadstoOrig {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{i+1}}\  ] \  \ \ \wedge$\\
-$\strut \ \ \ \  m_1=1 \ \wedge\ n_p=q+1 \  \wedge\ \forall i\in[1..p).[  \  m_i < n_i < m_{i+1}  ] \ \wedge \ m_p<n_p\ \ \wedge  $\\
-$\strut \ \ \ \  \forall i\in[1..p].\forall j\in [m_i..n_i)[\   M,\sigma_j \models \external {\texttt{this}} \ ] \  \ \ \wedge$\\
-$\strut \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models A   \ \Rightarrow \ \ 
-M, {\sigma_{m_{i+1}-1}} \models A  \ ] $ \\
-then\\
-$\strut \ \ \ \  \ M, \sigma_q \models  A$
 \end{auxLemma}
 
 
@@ -136,77 +129,144 @@ the summarised execution:
    \label{fig:summaries}
  \end{figure}
 
-We now define a well-founded ordering on states, which we will use in the proof of soundness of our Hoare logic. 
+The lemma \ref{lemma:external_exec_preserves} describes how an encapsulated assertion $A$ is preserved during an execution, provided that all finalizing internal executions preserved it. 
+It will be used in the proof of soundness of the rule {\sc{ExtCall\_WithSpec\_Weak}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
+
+\begin{auxLemma}
+\label{lemma:external_exec_preserves}[Preservation of Encapsulated Assertions]
+For any module $M$, modules $\Mtwo$, numbers $p$ and $q$, states$\sigma_1$, .... $\sigma_p$,  numbers $m_1,...m_p, n_1, ... n_p \in \mathbb{N}$, and assertions $A$:
+\\
+If \\
+$\strut \ \ \ \  M, \sigma_1 \models  A   \  \ \wedge \ \ M \models \encaps A \ \ \ \  \ \ \wedge$\\
+$\strut \ \ \ \  \forall i\in [1..q).[\   \leadstoOrig {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{i+1}}\  ] \  \ \ \wedge$\\
+$\strut \ \ \ \  m_1=1 \ \wedge\ n_p=q+1 \  \wedge\ \forall i\in[1..p).[  \  m_i < n_i < m_{i+1}  ] \ \wedge \ m_p<n_p\ \ \wedge  $\\
+$\strut \ \ \ \  \forall i\in[1..p].\forall j\in [m_i..n_i)[\   M,\sigma_j \models \external {\texttt{this}} \ ] \  \ \ \wedge$\\
+$\strut \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models A   \ \Rightarrow \ \ 
+M, {\sigma_{m_{i+1}-1}} \models A  \ ] $ \\
+then\\
+$\strut \ \ \ \  \ M, \sigma_q \models  A$
+\end{auxLemma}
+
+
+
+\subsection{Proving Soundness of the Hoare Logic}
+\label{sect:prove:sound}
+
+We will prove soundness by well-founded induction. \footnote{This kind of induction is described in \texttt{https://en.wikipedia.org/wiki/Well-founded\_relation.}}
+We start by designing a well--founded ordering. 
 
 \begin{definition}
-For module $M$ and states $\sigma$, $\sigma'$, we define
+For a module $M$, modules $\Mtwo$, assertions $A_1$, $A_2$, $A_3$, $A_4$, states $\sigma_1$, $\sigma_2$, and   $P$ a set of proof trees for triples of the form 
+$M \vdash \{ A \} stmt  \{ A' \} $., we define
 \begin{itemize}
-\item $\sigma' \ll_M  \sigma$ \ \ \ iff \ \ \ $\leadstoBoundedStar {M} {\sigma} {\sigma} {\sigma'}$ and $\sigma\neq \sigma'$\\
-$\strut \hspace{2cm} \ \ $ or $\\
-$\strut \hspace{2cm} \ \ $\sigma.\texttt{cont}=e_1; e_2 \ \ \ \wedge \ \ \ \ \sigma'=\sigma.[\texttt{cont}\mapsto e_1]$
+\item
+$(A_1,\sigma_1,A_2) \ll_{M,\Mtwo,P}  (A_2,\sigma_2,A_4)$ iff
+\\
+$\exists \sigma_4.[\ \leadstoBoundedStarFin {M\cdot \Mtwo} {\sigma_2}    {\sigma_4}\ ]$, and 
+\begin{enumerate}
+\item
+$P$ has a proof for $M \vdash \{ A_2 \} \ \sigma_2.\texttt{cont}\  \{ A_4 \} $, and one of the direct predecessors of that proof in $P$ is $M \vdash \{ A_1 \}\ \sigma_1.\texttt{cont}  \{ A_3 \} $ \\
+or
+\item
+ $\leadstoBoundedStar {M\cdot \Mtwo} {\sigma_2}    {\sigma_1}$, and $M \vdash \{ A_1 \}\ \sigma_1.\texttt{cont}\  \{ A_3 \} $ is proven in $P$
+\end{enumerate}
 \end{itemize}
 \end{definition}
 
-\begin{lemma}
-If our language has the acyclic property, then $\ll_M$ is a well-founded ordering.
-\end{lemma}
+We need to show that $\_ \ll_{\_} \_$ is well-founded. 
+To do this, we   "normalize" the set of proofs $P$, so that  
+the proof trees or subtrees of any given triple within P are all identical.
+% any proof tree (or subtree) of the triple  $M \vdash \{ A \}\ strms\  \{ A' \} $
+% appearing in $P$, is identical to any other proof  tree (or subtree) of that triple in $P$.
+% We take two modules $M$ and $M'$ arbitrary. We define the following property of states:
 
-TODO: revisit the lemma above. Need to show that there are no infinite descending chains.
+\begin{auxLemma}
+\label{lemma:normal}
+For a module $M$, modules $\Mtwo$,   and  a $P$ normalized  set of proof trees, the relation $\_ \ll_{M,\Mtwo,P}  \_$
+is well-founded.
+Moreover, for any set of proof trees, $P$, there exists a normalized set of proof trees $P'$ which proves the same set of triples.
+\end{auxLemma}
 
-\subsection{Proving Soundness of the Hoare Logic}
+We now prove soundness of the inference system $M \vdash \{ A \}\ strms\  \{ A' \} $:
 
-We take two modules $M$ and $M'$ arbitrary. We define the following property of states:
+\begin{theorem}
+Take modules $M$ and $\Mtwo$, such that $\vdash M$. Then, for any assertions $A$ and $A'$, and statement  $stmt$, we have
 
-$Q(\sigma)\ \ \ \triangleq\  \ \ \forall A, A'. $\\
-$\strut \hspace{2cm} [ \  \ Arising(\sigma,M*M') \ \  \wedge\ \ 
-% $\\$\strut \hspace{2cm}  \ \ \  \ 
-M \vdash \{A \} \sigma.\texttt{cont} \{A' \} \ \ \wedge\ \  M, \sigma \models  A \ \ 
-\wedge\ \  \leadstoFin  {M*M'}{\sigma}  {\sigma'}$\\
-$\strut \hspace{2cm}   \ \  \Longrightarrow$\\
-$\strut \hspace{2cm} \ \   \ \ M, \sigma' \models  A'  \  \ ]$
+\begin{center}
+$M\ \vdash\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ \ \ \ \ implies \ \ \ \ $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$
+\end{center}
 
-\noindent
-We assume that: \\
-$\strut \ \ \ (*) \ \ M \models HS(M)$
-where $HS$ also includes Hoare triples for methods.\\
-We will prove that \\
-$\strut \ \ \ (**) \ \ \forall \sigma.[  \ \ Q(\sigma)\ \ ]$
-\\
-The proof is by induction on $\sigma$ using the ordering $\ll_{M*M'}$. 
+\end{theorem}
+
+
+%$Q(\sigma)\ \ \ \triangleq\  \ \ \forall A, A'. $\\
+%$\strut \hspace{2cm} [ \  \ Arising(\sigma,M*M') \ \  \wedge\ \ 
+%% $\\$\strut \hspace{2cm}  \ \ \  \ 
+%M \vdash \{A \} \sigma.\texttt{cont} \{A' \} \ \ \wedge\ \  M, \sigma \models  A \ \ 
+%\wedge\ \  \leadstoFin  {M*M'}{\sigma}  {\sigma'}$\\
+%$\strut \hspace{2cm}   \ \  \Longrightarrow$\\
+%$\strut \hspace{2cm} \ \   \ \ M, \sigma' \models  A'  \  \ ]$
+%
+%\noindent
+%We assume that: \\
+%$\strut \ \ \ (*) \ \ M \models HS(M)$
+%where $HS$ also includes Hoare triples for methods.\\
+%We will prove that \\
+%$\strut \ \ \ (**) \ \ \forall \sigma.[  \ \ Q(\sigma)\ \ ]$
+%\\
+%The proof is by induction on $\sigma$ using the ordering $\ll_{M*M'}$. 
 
 \noindent
 \vspace{.2cm}
   {\textbf{Proof Sketch}} 
-We start by case analysis on $\sigma.\texttt{cont}$ 
+
+Take a set of proof trees $P$ so that $P$ proves that $\vdash M$, and also $M\ \vdash\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$, which is normalized  (this exists by lemma \ref{lemma:normal})..
+Then, the relation $\_ \ll_{M,\Mtwo,P}  \_$ is well-founded  (lemma \ref{lemma:normal}).
+
+Assume that  $\ \ (*) \ \ M\ \vdash\  \{\, A \,  \}\ stmt\  \{\, A' \, \}\ \ $ is proven in $P$. We want to show that $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$. 
+
+We proceed by case analysis on the last step in $P$'s proof that $M\ \vdash\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$.
+
 
 \begin{description} 
-\item[$e\ \equiv\ x=y $] 
 
-By standard Hoare logic arguments (or even parametric) ...
-\item[$e\ \equiv\ x=y.f $] 
+\item[${\sc{extend}}$] 
 
-By standard Hoare logic arguments (or even parametric) ...
+By soundness of the underlying Hoare logic
 
- \item[$e\ \equiv\ y.m(\overline y)$]  
-and $y$ is internal. 
+\item[${\sc{combine}}$] 
 
-We construct the new frame for the call, $\sigma''$. We obtain that $\sigma'' \ll_{M*M'} \sigma$. We also have that  $ \leadstoFin  {M*M'}{\sigma''}  {\sigma'}$, and $\sigma''$ "returns to $\sigma'$.
-We apply the IH to $\sigma''$ and knowledge from Hoare loci rules, and are done.  
+Therefore, $A \txteq A_1 \wedge A_2$,  and $A' \txteq A_1' \wedge A_2'$, and the direct predecessors of the proof of $(*)$ in $P$ are $M\ \vdash\  \{\, A_1 \,  \}\ stmt\  \{\, A_1' \, \}$ and $M\ \vdash\  \{\, A_2 \,  \}\ stmt\  \{\, A_2' \, \}$. 
 
-\item[$e\ \equiv\ y.m(\overline y)$]  and $y$ is external. 
-\\
-We apply the rule for external calls, and obtain that the argument hinges on a requirement that there is an invariant property $A''$, which is lifted to the first external call, and will we need to demonstrate is preserved by al enclosed call internal or external, and this $A''$ must be valid at the last external frame, and is then lowered to the current frame.
-\\
-We apply lemma \ref{lemma:external_breakdown}. In terms of the example in Fig. \ref{fig:summaries} we are now working with the summarised execution, \ie the execution of the methods in $\sigma_8$ and 
-$\sigma_{22}$ is summarised into one large step.
-Regardless of example, obtain that the first external calls ($\sigma_2$, ... $\sigma_{j_2}$) all preserve $A''$ because it is encapsulated. 
-Therefore $A''$ also holds at $\sigma_{j_2}+1$. 
-Since we have (*), we know that $A''$ has been proven as an invariant of all external methods, and therefore, by applying the (H), we obtain that $A''$ holds at $\sigma_{j_2} + 3$  (In terms of our example in Fig. \ref{fig:summaries}  $A''$ would hold in $\sigma_{24}).$ 
-We continue in the same vain, until we reach $\sigma_{n-1}$ (that is $\sigma_{28}$ in our example), and then we apply the Hoare rule and what we know about lowering.
- \item[$e\ \equiv e_1; e_2$ ]
- By lemma \ref{lemma:subexp} we can break execution to two parts. For the second part we can apply the IH. But for the first part is looks as if we are repeating the work from earlier cases. OR... should we extend the def of $\\ll_M$ so that $\sigma[\texttt{cont}\mapsto e_1] \ll_M \sigma$.
+Therefore, $(A_1,stmt,A_1') \ll_{M,\Mtwo,P} (A,stmt,A')$ and also $(A_2,stmt,A_2') \ll_{M,\Mtwo,P} (A,stmt,A')$. 
+
+By  induction hypothesis we obtain   $M\ \models\  \{\, A_1 \,  \}\ stmt\  \{\, A_1' \, \}$ and $M\ \models\  \{\, A_2 \,  \}\ stmt\  \{\, A_2' \, \}$. 
+
+This gives that $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$.
+
+%
+% \item[$e\ \equiv\ y.m(\overline y)$]  
+%and $y$ is internal. 
+%
+%We construct the new frame for the call, $\sigma''$. We obtain that $\sigma'' \ll_{M*M'} \sigma$. We also have that  $ \leadstoFin  {M*M'}{\sigma''}  {\sigma'}$, and $\sigma''$ "returns to $\sigma'$.
+%We apply the IH to $\sigma''$ and knowledge from Hoare loci rules, and are done.  
+%
+%\item[$e\ \equiv\ y.m(\overline y)$]  and $y$ is external. 
+%\\
+%We apply the rule for external calls, and obtain that the argument hinges on a requirement that there is an invariant property $A''$, which is lifted to the first external call, and will we need to demonstrate is preserved by al enclosed call internal or external, and this $A''$ must be valid at the last external frame, and is then lowered to the current frame.
+%\\
+%We apply lemma \ref{lemma:external_breakdown}. In terms of the example in Fig. \ref{fig:summaries} we are now working with the summarised execution, \ie the execution of the methods in $\sigma_8$ and 
+%$\sigma_{22}$ is summarised into one large step.
+%Regardless of example, obtain that the first external calls ($\sigma_2$, ... $\sigma_{j_2}$) all preserve $A''$ because it is encapsulated. 
+%Therefore $A''$ also holds at $\sigma_{j_2}+1$. 
+%Since we have (*), we know that $A''$ has been proven as an invariant of all external methods, and therefore, by applying the (H), we obtain that $A''$ holds at $\sigma_{j_2} + 3$  (In terms of our example in Fig. \ref{fig:summaries}  $A''$ would hold in $\sigma_{24}).$ 
+%We continue in the same vain, until we reach $\sigma_{n-1}$ (that is $\sigma_{28}$ in our example), and then we apply the Hoare rule and what we know about lowering.
+% \item[$e\ \equiv e_1; e_2$ ]
+% By lemma \ref{lemma:subexp} we can break execution to two parts. For the second part we can apply the IH. But for the first part is looks as if we are repeating the work from earlier cases. OR... should we extend the def of $\\ll_M$ so that $\sigma[\texttt{cont}\mapsto e_1] \ll_M \sigma$.
 \end{description}
-
+\noindent
+\vspace{.1cm}
+  {\textbf{End Proof Sketch}} 
 
 \vspace{1cm}
 
