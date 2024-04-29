@@ -328,23 +328,22 @@ These tuples only apply to statements that do not contain method calls.
  
 \subsubsection{Extending an underlying Hoare Logic}
 
-We assume that $M \vdash_{ul} \{ A \} s \{ A' \}$ is some underlying Hoare logic
- judgement.  
-% On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. 
-In rule {{\sc{extend}} in Fig. \ref{f:underly}, we describe that any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
-can be proven in our underlying hoare logic, can also be proven in our logic.
 
-% The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
-
-
-\begin{figure}[hbt]
+\begin{figure}[tht]
 $
 \begin{array}{c}
 % \begin{array}{lcl}
 \inferrule[\sc{extend}]
-	{ M \vdash_{ul} \{ \ A\ \} {\ s\ }\{\ A'\ \} \ \ \ \hspace{4cm} \ \ \ $s$ \ \mbox{contains no method call} }
+	{ M \vdash_{ul} \{ \ A\ \} {\ s\ }\{\ A'\ \} \ \ \  $s$ \ \mbox{contains no method call} }
 	{\hproves{M}  {A} {\ s\ }{A'} }
-  \\ \\
+%	& &
+\\
+\\
+\inferrule[\sc{types-1}]
+	{  $s$ \ \mbox{contains no method call} }
+	{\hproves{M}  {x:C} {\ s\ }{x:C} }
+% \end{array}
+\\
 	{\inferruleSD{\hspace{5.3cm} [\sc{prot-1}]}
 	{ }
 	{\hproves{M} 
@@ -382,11 +381,19 @@ $
 }	 
 \end{array}
  $
-\caption{From Underlying to Extended Hoare Logic, and reasoning about protection}
+\caption{Our Hoare triples}
 \label{f:underly}
 \label{f:protection}
 \end{figure}
 
+We assume  an underlying Hoare logic with judgements of the form $M \vdash_{ul} \{ A \} s \{ A' \}$.
+% On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. 
+With rule {{\sc{extend}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
+can be proven in the underlying Hoare logic, to also be proven in our logic.
+
+% The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
+
+Moreover, rule {\sc{types-1}} promises that types of local variables do not change. The restriction to statements that do not contain method calls will be discussed with rule {\sc{types-2}} in the next section.
 
  
 
@@ -403,28 +410,43 @@ Similarly, in \textsc{Prot-4}, if $x$ is protected from $y'$, then the assignmen
 
 Moreover, "protection" of an object can decrease is if we call an eternal method, and pass it an internal object as argument. This is then covered by the rule in Fig. \ref{f:external:calls}.
 
+\begin{lemma}
+\label{l:no:meth:calls}
+If ${\hproves{M}  {A} {\ s\ }{A'} }$, then $s$ contains no method calls.
+\end{lemma}
+
 \subsection{Second Phase: Quadruples}
 
 \subsubsection{Introducing Invariants, and substructural rules}
+Fig. \ref{f:substructural} introduces quadruple rules of the from ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$ which do not deal with method calls.
 
-In Fig. \ref{f:substructural}We now discuss some basic rules for ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$.
-Rule {\sc{inv}} expresses that a triple 
+Rule {\sc{inv}} embeds  triples  ${\hproves{M}  {A} {\ s\ }{A'} }$  into quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$; this is sound, because $s$ is guaranteed not to contain method calls (by lemma \ref{l:non:meth:calss})\footnote{The restriction to statements which do not contain method calls in rule {\sc{types-1}} was imposed so as to make this lemma valid}, and therefore its execution is guaranteed not to reach any external states.
 
-\begin{figure}[hbt]
+ 
+The remaining rules in Fig. \ref{f:substructural} apply to \emph{any} statements -- even those containing method calls.
+ Rule {\sc{types-2}} generalizes {\sc{types-1}} to any statement, provided that  there already exists a triple for that statement.
+Rule {\sc{combine}} combines two quadruples for the same statement into one.
+Rules  {\sc{sequ}} and  {\sc{consequ}} are the usual rules for statement sequences, and for consequence, adapted to quadruples.
+
+
+\begin{figure}[htb]
 $
 \begin{array}{c}
-\begin{array}{lcl}
+% \begin{array}{lcl}
 \inferrule[\sc{inv}]
 	{\hproves{M}  {A} {\ s\ }{A'} }
 	{\hprovesN{M}  {A} {\ s\ }{A'} {A''} }
-	& &
-{
-\inferrule[\sc{types}]
-	{   }
-	{\hprovesN{M}  {x:C} {\ s\ }  {x:C} {A}}
-}
- \end{array}
- \\
+\\
+\\
+% THIS RULE IS NOT SOUND -- we need to adapt it
+%{
+\inferrule[\sc{types-2}]
+	{ \hprovesN{M}  {A} {\ s\ }  {A'} {A''}  }
+	{\hprovesN{M}  {x:C \wedge A} {\ s\ }  {x:C\wedge A'} {A''}}
+%}
+% \end{array}
+% \\
+% \\
  \\
  \\
 \inferrule[\sc{combine}]
@@ -456,23 +478,24 @@ $
 \end{figure}
 
   
-\subsubsection{Reasoning about calls}
-%\subsubsection
-{Internal Calls} are described in Fig. \ref{f:internal:alias:calls}.
+\subsubsection{Reasoning about internal calls}
+is described in Fig. \ref{f:internal:calls}.
 % We now consider the logic for internal calls.
 % Rule {\sc{IntCall}} uses the 
 %We use the callee's specification, ${\mprepostN{A_1}{C}{m}{y}{C}{A_2}{A_3}}$ (
-The notation $ \promises  M {\mprepostN{A_1}{C}{m}{y}{C}{A_2} {A_3}}  $  indicates that the declaration of method $m$ for class $C$ in module $M$ includes the per-post-inv conditions $(\, A_1, A_2, \ A_3\, ) $). 
+We look of the method's specification -- $ \promises  M {\mprepostN{A_1}{C}{m}{y}{C}{A_2} {A_3}}  $  indicates that the declaration of method $m$ for class $C$ in module $M$ includes the pre-post-inv conditions $(\, A_1, A_2, \ A_3\, ) $). 
 In addition to requiring that $A_1$ holds before the call, and ensuring that $A_2$ holds after the call,
 \sdN{we also require that  $A_3$ %$\overline {x: C} \wedge A $ 
- holds before the call, that $A_3$ is part of the module's invariants, and ensure that it holds in any future scoped external state.}
- %-- since the module contains a specification for a method defined in $C$, we know that this is an internal call.
+ holds before the call and that $A_3$ is part of the module's invariants, and ensure that it holds in any future scoped external state.}
+ Namely,  the method's spec requires that $A_3$ should hold during any scoped external states;
+ therefore. ..... THINK ....   %-- since the module contains a specification for a method defined in $C$, we know that this is an internal call.
 %
 % We use  
 
 
+
  
-\begin{figure}[hbt]
+\begin{figure}[thb]
 $\begin{array}{c}
 %\begin{array}{ll}
 \inferruleSD{\hspace{4.7cm} [\sc{IntCall}]}
@@ -510,39 +533,42 @@ $\begin{array}{c}
  }
 \end{array}$
 \caption{Logic for Internal Calls}
-\label{f:internal:alias:calls}
+\label{f:internal:calls}
 \end{figure}
 
 \footnoteSD{\red{TO DISCUSS: What is the underlying Hoare logic also has rules for internal calls? SD thinks that this is Ok, because we require the logic to be sound. This could mean that the underluying Hoare logic does not support arguments about protection.} 
 }
 
-{Looking more closely, we notice  that {\sc{IntCall}} does not require the precondition ($A_1$) to hold, but instead requires 
-that it will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}A$).
+{Looking more closely, we notice  that {\sc{IntCall}} does not require the method's precondition ($A_1$) to hold before the call, but instead requires that it will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{A_1}$).
+Similarly, after the call it does not guarantee the method's post condition ($A_2$), but instead guarantess that it held before popping the calllee's frame (ie $  \PushAS {y}{A_1}$).
 % We use the  assertion push-function $\pushSymbol$   defined earlier in Figure \ref{f:Push}.}
 Remember that the assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
-onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ (cf. llemma \ref{lemma:push:ass:state}).
+onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ (cf.  lemma \ref{lemma:push:ass:state}).
 
 % \subsubsection{External Calls}
 
 
 
-{We now move to the discussion of  external calls. For all external calls we require that the module's invariants hold before the external call.
-This is enforced through the requirement ${\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}}$ in rules
-{\sc{CallAndAlias}} and {\sc{CallNonAlias}} in  Fig. \ref{f:internal:alias:calls}, and the precondition part  
- $\PushAS {y}{\extract{M}}$ in all rules in Fig.  \ref{f:external:calls}. }
+\subsubsection{Reasoning about external calls} 
+TODO: look at explanations
 
-
-
- 
- {In rule {\sc{ExtCall}} we   ensure that the module's invariants are preserved by the external call. } {Notice that while  {\sc{CallAndAlias}}, {\sc{CallNonAlias}}, {\sc{ExtCall\_WithSpec\_Weak}} and {\sc{ExtCall\_WithSpec\_Weak}}    include 
- $\PushAS y {A_1}$ in their precondition,  they do not include it in the postcondition. A variation where was  $\PushAS y {A_1}$ in the postcondition is admissible, as it would be the outcome of the combination of these rules with  {\sc{ExtCall}} through the application of {\sc{Consequ}}.}
- 
-{The precondition of {\sc{ExtCall\_WithSpec\_Weak}} is stronger than that of {\sc{ExtCall}}. It makes use of one of the  module's  promises: Here $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. 
-% Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. 
- Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
-
-
-{The precondition of {\sc{ExtCall\_WithSpec\_Strong}} is stronger than that of {\sc{ExtCall\_WithSpec\_Weak}}: it also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.}
+%now move to the discussion of  external calls. For all external calls we require that the module's invariants hold before the external call.
+%This is enforced through the requirement ${\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}}$ in rules
+%{\sc{CallAndAlias}} and {\sc{CallNonAlias}} in  Fig. \ref{f:internal:alias:calls}, and the precondition part  
+% $\PushAS {y}{\extract{M}}$ in all rules in Fig.  \ref{f:external:calls}. }
+%
+%
+%
+% 
+% {In rule {\sc{ExtCall}} we   ensure that the module's invariants are preserved by the external call. } {Notice that while  {\sc{CallAndAlias}}, {\sc{CallNonAlias}}, {\sc{ExtCall\_WithSpec\_Weak}} and {\sc{ExtCall\_WithSpec\_Weak}}    include 
+% $\PushAS y {A_1}$ in their precondition,  they do not include it in the postcondition. A variation where was  $\PushAS y {A_1}$ in the postcondition is admissible, as it would be the outcome of the combination of these rules with  {\sc{ExtCall}} through the application of {\sc{Consequ}}.}
+% 
+%{The precondition of {\sc{ExtCall\_WithSpec\_Weak}} is stronger than that of {\sc{ExtCall}}. It makes use of one of the  module's  promises: Here $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. 
+%% Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. 
+% Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
+%
+%
+%{The precondition of {\sc{ExtCall\_WithSpec\_Strong}} is stronger than that of {\sc{ExtCall\_WithSpec\_Weak}}: it also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.}
  
 
 
@@ -562,29 +588,30 @@ $\begin{array}{c}
 						{ \   \sdN{\PushAS {y}{A}}  \ }
 						{ \overline{x:C} \wedge A }	
 }
+%TODO: revist the below
 \\
-\\
-\inferruleSD{\hspace{4.7cm} [\sc{ExtCall\_WithSpec\_Weak}]}
-	{ 
-   	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
-        }
-	{   \hproves{M} 
-						{ \    { \external{y_0} }\, \wedge \, \overline {\red{z}:C}  \, \wedge \,  \PushAS  {y}{  (A_1[\red{\overline{z/x}}])} \,   \wedge \,  \PushAS {y}{\extract{M}}\  }
-						{ \ u:=y_0.m(y_1,.. y_n)\   }
-						{ \ \PushAS  {y}  { (A_2[\red{\overline{z/x}}])}    \ }	
-}
-\\
-\\
-\inferruleSD{\hspace{4.7cm}[\sc{ExtCall\_WithSpec\_Strong}]}
-	{        	
-	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
-   	}
-	{   \hproves{M} 
-						{ \  {\external{y_0}  } \, \wedge\, \overline {x:C}\, \wedge\,  \PushAS  {y} { A_1} \, \wedge\,  A_1\, \wedge\,  \PushAS {y}{\extract{M}}\   \  }
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \  \ \PushAS  {y} { A_2}\,  \wedge\, A_2 \  }	
-}\
-\\
+%\\
+%\inferruleSD{\hspace{4.7cm} [\sc{ExtCall\_WithSpec\_Weak}]}
+%	{ 
+%   	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+%        }
+%	{   \hproves{M} 
+%						{ \    { \external{y_0} }\, \wedge \, \overline {\red{z}:C}  \, \wedge \,  \PushAS  {y}{  (A_1[\red{\overline{z/x}}])} \,   \wedge \,  \PushAS {y}{\extract{M}}\  }
+%						{ \ u:=y_0.m(y_1,.. y_n)\   }
+%						{ \ \PushAS  {y}  { (A_2[\red{\overline{z/x}}])}    \ }	
+%}
+%\\
+%\\
+%\inferruleSD{\hspace{4.7cm}[\sc{ExtCall\_WithSpec\_Strong}]}
+%	{        	
+%	\promises M   {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}
+%   	}
+%	{   \hproves{M} 
+%						{ \  {\external{y_0}  } \, \wedge\, \overline {x:C}\, \wedge\,  \PushAS  {y} { A_1} \, \wedge\,  A_1\, \wedge\,  \PushAS {y}{\extract{M}}\   \  }
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \  \ \PushAS  {y} { A_2}\,  \wedge\, A_2 \  }	
+%}\
+%\\
 \end{array}
 $
 \caption{Logic for External Calls}
@@ -592,76 +619,110 @@ $
 \end{figure}
 % }
 
-% \subsubsection{Aliasing and Calls}
+  \subsubsection{Aliasing and Calls}
+TODO: revisit that section
 
-{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\txteq x$ expresses that $u$ and $x$ are textually the same --
-the latter is stronger, i.e.   $x\txteq u$ implies $x=u$. 
-% It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. 
- As $...\equiv ...$ is a textual assertion, and thus  state-independent,  it is a side-condition of the rules and is  not part of the Hoare triple's precondition.
-}
-
-
-\small{
-\begin{figure}[hbt]
-$\begin{array}{c}
-\inferruleSD{\hspace{4.7cm}  [{\sc{CallAndAlias}}}
-	{ 
-	{   x \txtneq u\txtneq x'  }
-	}
-	{   \hproves{M}  { \ x=x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
-
-\\ \\ 
-\inferruleSD{\hspace{4.7cm} [{\sc{CallNonAlias}}]}	
-{ 
-		{ \ x \txtneq u \txtneq x'\   }
-	}
-	{   \hproves{M}   { \ x\neq x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
-\\
-\\
-\end{array}
-$
-\caption{Logic for Aliasing around Calls }
-\label{f:internal:alias:calls}
-\end{figure}
-}
+%{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\txteq x$ expresses that $u$ and $x$ are textually the same --
+%the latter is stronger, i.e.   $x\txteq u$ implies $x=u$. 
+%% It is possible that variables are aliases, without being textually the same, i.e. it is possible to have $x=x'$ while $u\not\equiv x'$. 
+% As $...\equiv ...$ is a textual assertion, and thus  state-independent,  it is a side-condition of the rules and is  not part of the Hoare triple's precondition.
+%}
+%
+%
+%\small{
+%\begin{figure}[hbt]
+%$\begin{array}{c}
+%\inferruleSD{\hspace{4.7cm}  [{\sc{CallAndAlias}}}
+%	{ 
+%	{   x \txtneq u\txtneq x'  }
+%	}
+%	{   \hproves{M}  { \ x=x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  }	{ \ u:=y_0.m(y_1,.. y_n)\  } { \  x=x'\ }	 }
+%
+%\\ \\ 
+%\inferruleSD{\hspace{4.7cm} [{\sc{CallNonAlias}}]}	
+%{ 
+%		{ \ x \txtneq u \txtneq x'\   }
+%	}
+%	{   \hproves{M}   { \ x\neq x'\   \wedge \ ({\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}})\  } { \ u:=y_0.m(y_1,.. y_n))\  } { \  x\neq x'\ }	 }
+%\\
+%\\
+%\end{array}
+%$
+%\caption{Logic for Aliasing around Calls }
+%\label{f:internal:alias:calls}
+%\end{figure}
+%}
 
 
 
 \subsection{Proving \SpecLang Specifications}
 \label{sect:wf}
 
-We now define the judgment $\models M$, which says that module $M$ has been proven to satisfy its specification.
+We now define the judgment $\vdash M$, which says that module $M$ has been proven to satisfy its specification.
 
 $
-\\ \\
 \begin{array}{l}
-\inferruleSD {  ~ \strut \hspace{3cm} {\sc{Module\_Well\_Formed}}}
+\inferruleSD 
+{~ \strut \hspace{6.5cm} {\sc{public\_method}}}
+{  
+ \prg{mBody}(m,D,M)=\prg{public} \ \overline{x:C}\{\  stmt \ \}      
+    \\
+  {\hprovesN{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{x:C}\, \wedge\, A_1\  } {\ stmt\ } {\ A_2 \ }   {true} } 
+}
 {
-\begin{array}{l} 
-\forall  D\in M,  m   \textit{ with } \prg{mBody}(m,D,M)=\overline{y:D}\{\  stmt \ \}      \\
-       %\textit{internal methods }
-        ~ \strut \hspace{0.5cm} m \textit{ private}  \\ 
-            ~ \strut \hspace{0.9cm} \textit{ for all its  specs } A_{pre},  A_{post}:\\ 
-             ~\strut \hspace{2cm}
- 					   {\hproves{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{y:D}\, \wedge\, A_{pre}\  } {\ stmt\ } {\ A_{post} \ } }\\
-      ~ \strut \hspace{0.5cm} m \textit{ public}  \\ 
-         %  ~ \strut \hspace{2cm}  { \hproves {M} {\ \prg{this}:\prg{D} \wedge\ \overline{y:D}   \ \wedge \ \PushAS {y} {\extract{M} } } {\ s\ } {\ \PushAS {y}{\extract{M}} } } \\
-          ~ \strut \hspace{2cm}  { \hproves {M} {\ \prg{this}:\prg{D} \wedge\ \overline{y:D}   \ \wedge \  \red{\extract{M}}}  {\ stmt\ } {\ \ \extract{M} } }\\
-    ~ \strut \hspace{0.9cm} \textit{ and for all its  specs } A_{pre},  A_{post}:\\ 
-             ~\strut \hspace{2cm}   
-%             ~ \strut \hspace{2cm}  { \hproves {M} {\ \prg{this}:\prg{D} \wedge\ \overline{y:D}  \ \wedge \ \PushAS {y} {\extract{M} } \ \wedge \ A_{pre}\ } {\ s\ } {\ A_{post} }  }
-              ~ \strut \hspace{2cm}  { \hproves {M} {\ \prg{this}:\prg{D} \wedge\ \overline{y:D}  \ \wedge \ \ \red{\extract{M} } \ \wedge \ A_{pre}\ } {\ stmt\ } {\ A_{post} }  }
+M \vdash {\mprepost {A_1}{D}{m}{x}{C}{A_2} }
+}
+\\ \\
+\inferruleSD 
+{~ \strut \hspace{6.5cm} {\sc{private\_method}}}
+{  
+  \prg{mBody}(m,D,M)=\prg{public} \ \overline{x:C}\{\  stmt \ \}      
+    \\
+  {\hprovesN{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{x:C}\, \wedge\, A_1\ \, \wedge\, A_3 \ } {\ stmt\ } {\ A_2 \ }   {A_3} } 
+}
+{
+M \vdash {\mprepostN {A_1}{D}{m}{x}{C}{A_2} {A_3} }
+}
+\\
+\\
+\inferruleSD 
+{~ \strut \hspace{6.5cm} {\sc{invariants}}}
+{  
+for all  D\in M,  m   \textit{ with } \prg{mBody}(m,D,M)=\prg{public} \ (\overline{y:D})\{\  stmt \ \}      
+    \\
+    \begin{array}{l}
+  ~ \strut \hspace{1.5cm} A_{inv} \triangleq \overline{x:C}\, \wedge\, A
+  \\
+  ~ \strut \hspace{1.5cm}  {\hprovesN{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{y:D}\, \wedge\,  A_{inv} } {\ stmt\ } {\ A_{inv}\ } {\ A_{inv} \ }  }
 \end{array}
-}					  					  
-{   
-	\ \vdash\ M \ 
+}
+{
+M \vdash \TwoStatesN{ \overline{x:C}} {A}
+}
+\\
+\\
+\\
+\begin{array}{lcl}
+\inferruleSD 
+{~ \strut   {\sc{Comb\_Spec}}}
+{  
+M \vdash S_1 \hspace{1cm}  M \vdash S_2
+}
+{
+M \vdash S_1 \wedge S_2
+}
+& &
+\inferruleSD 
+{~ \strut  {\sc{WellFrm\_Mod}}}
+{  M \vdash \SpecOf {M}
+}
+{
+\vdash M  
 }
 \end{array}
+\end{array}
 $
-
-%	}
-%\\\\
-
+ 
 \footnoteSD{\red{QUESTIONS: }
 
 \begin{enumerate}
@@ -686,383 +747,7 @@ Such an approach might solve the "late binding" issues mentioned below.
 \end{enumerate}
  }
 
-%\subsection{Examples}
-%
-%\begin{example}[Specification for Payments Module]
-%Consider the following three specs. They are equivalent, \ie $S_1 \equiv S_2 \equiv S_3$
-%
-%$\begin{array}{lcl}
-%S_1& \ = \ &  \TwoStatesQ {a: Account}{ \inside {a} } {  \inside {a}  }\\
-%& & \wedge \\
-%& &  \TwoStatesQ {a: Account}{ \inside {a.password} } {  \inside {a.password}  }\\
-%& & \wedge\\
-%& & \forall {a: Account, p: Password}\FirstState{ (\inside {a}\vee\inside {a.password}) \wedge a.password=p \wedge a.balance=r  } \\
-%& & \strut \hspace{3.5cm} 
-%                     \SecondState {  a.password=p \wedge a.balance=r   }
-%\\
-%\end{array}
-%$
-%
-%$\begin{array}{lcl}
-%S_2& \ = \ &  \TwoStatesQ {a: Account}{ \inside {a} } {  \inside {a}  }\\
-%& & \wedge \\
-%& &  \TwoStatesQ {a: Account}{ \inside {a.password} } {  \inside {a.password}  }\\
-%& & \wedge\\
-%& & \forall {a: Account, p: Password}\FirstState{ (\inside {a}\vee\inside {a.password}) \wedge a.password=p \wedge a.balance=r  }\\
-%& & \strut \hspace{3.5cm} 
-%                     \SecondState{ (\inside {a}\vee\inside {a.password}) \wedge a.password=p \wedge a.balance=r  }
-%\\
-%\end{array}
-%$
-%
-%$\begin{array}{lcl}
-%S_3& \ = \ &  \TwoStatesQ {a: Account}{ \inside {a} } {  \inside {a}  }\\
-%& & \wedge \\
-%& &  \TwoStatesQ {a: Account}{ \inside {a.password} } {  \inside {a.password}  }\\
-%& & \wedge\\
-%& & \forall {a: Account, p: Password}\FirstState{ \inside {a}  \wedge a.password=p \wedge a.balance=r  } \\
-%& & \strut \hspace{3.45cm} 
-%                     \SecondState {  \inside {a}  \wedge a.password=p \wedge a.balance=r   }
-%                     \\
-%                     & & \wedge\\
-%& & \forall {a: Account, p: Password}\FirstState{   \inside {a.password} \wedge a.password=p \wedge a.balance=r  } \\
-%& & \strut \hspace{3.45cm} 
-%                     \SecondState { \inside {a.password}  \wedge a.password=p \wedge a.balance=r  }
-%\end{array}
-%$
-%
-%\end{example}
 
-%\subsubsection{Method Specs for the $pay$ method, as in OOPSLA}
-%
-%\newcommand{\SP}{~\strut \ \ \ \ \ \ \ \ \ }
-%Consider a public method in class $Account$, defined as \\
-%$\strut \ \ \  void\  pay(a: Account, p:Password, j: int)\{ \ if\ ( this.passwrd== p)\ .....\  \}$
-%\\
-%This method could have the following "classical" spec
-%\\ 
-%$\SP---\ PP1:$\\
-%$\SP PRE:\ \ \ p',p'' : Password \ \wedge \ this.password=p'  $
-%\\
-%$\SP POST: \ \  this.password=p'  $
-%\\
-%$\SP---\ PP2:$\\
-%$\SP PRE:\ \ \ this \neq a\  \wedge \ this.password=p   \ \wedge \ this.balance=b \ \wedge\ a.balance=b'$
-%\\
-%$\SP POST: \ \   this.balance=b-j \ \wedge\ a.balance=b'+j$
-%\\
-%
-%
-%
-%
-%
-%
-%
-%This method will have the same specifications as in OOPSLA. And note that $a'$ does not appear in the signature or the body of $pay$.  \\ 
-%$\SP---\ PP1:$\\
-%$\SP PRE:\ \ \ a': Account \ \wedge \  p' : Password \ \wedge \ a'.password=p' $
-%\\
-%$\SP POST: \ \ a'.password=p' $
-%\\
-%$\SP ---\ PP2:$\\
-%$\SP PRE:\ \ \ a':Account \ \wedge\ k: Int \ \wedge  a'\neq a, this\ \wedge\  a'.balance = k \ \ $\\
-%$\SP POST:\ \   a'.balance = k \ \ $
-%\\
-%$\SP ---\ PP3:$ \\
-%$\SP PRE: \ \ p=this.password \ \wedge\ i,k:Int \ \wedge \ this.balance=i \ \wedge \ a.balance=k\ \wedge a\neq this$
-%\\
-%$\SP POST:\ \  this.balance=i-j \ \wedge\  a.balance = i+j \ \ $\\
-%$\SP ---\ PP4:$\\
-%$\SP PRE:\ \ \ ( p\neq this.password\, \vee\, a=this)\  \wedge \  a':Account \ \wedge\ k: Int\   \wedge\  a'.balance = k $\\
-%$\SP POST: \ \ a'.balance=k$
-%
-%It would be nice if we were able to avoid having to write $PP1$ and $PP2$ explicitly, esp. as when we add stuff like the bank, etc, these specs will grow even more. Adopting \prg{modifies}-clauses or SL would be an approach to that.
-%
-%
-%\subsubsection{Method Specs for a public method whose body makes an external call}
-% The method \prg{buy} contains an external call, and is meant to demonstrate the new power of our system. Assume that \prg{buy}
-% is part of a further class \prg{Shop}.   Assume also that \prg{Item} is a class in my module, and that it has a field \prg{price}.
-% % From the type system, we could deduce that $\OneStateQ{a:Account,anItem:Item}{\protectedFrom {a.password}{anItem}
-% 
-%\begin{lstlisting}
-%class Shop
-%
-%    fld myAccount : Account
-%    fld inventory : Inventory
-%    
-%    void buy(buyer: Object, anItem: Item)
-%        int price = anItem.price
-%        int oldBalance = this.myAccount.balance
-%        buyer.Payment(myAccount,price)
-%        if (this.myAccount.balance == oldBalance+price)
-%            this.inventory.remove(anItem)
-%            buyer.send(anItem)
-%       else
-%             buyer.tell("you have not paid me")  
-%             
-%\end{lstlisting}
-%
-%The specifications below guarantee that protection of an account's password from $buyer$ is preserved, and if a password is protected from $buyer$, then its balance cannot decrease ($PP10$). Moreover, protection from $buyer$ of an account different than the shop's account is preserved, and if an account is protected from buyer, then it balance will remain the same.
-%\noindent
-%$\SP ---\ PP10:$\\
-%$\SP PRE:\ \ \ a': Account \ \wedge \ \protectedFrom {a'.password}{buyer} \ \wedge \  k:int \ \wedge \ a'.balance=k$\\
-%$\SP POST: \ \ a'.balance \geq k \ \wedge\  \protectedFrom {a'.password}{buyer} $
-%\\
-%$\SP ---\ PP11:$\\
-%$\SP PRE:\ \ \ a': Account \ \wedge \ (\protectedFrom {a'}{buyer} \wedge a'\neq this.myAccount) \ \wedge \  k:int \ \wedge \ a'.balance=k$\\
-%$\SP POST: \ \ a'.balance = k \ \wedge\  \protectedFrom {a'}{buyer} $
-%
-%\vspace{.2cm}
-%QUESTION: Are there more to the spec? 
-%
-%TODO explain what are the additional guarantees that we are making vs, eg the guarantees made by $S_4$. Not sure there are any, actually when we apply the $\PushAS {\_} {\_}$ operator to the module's spec, ...
-%
-%\subsubsection{What to check}
-%This example illustrates what we need to check when:
-%
-%Take a moddule $M$ with classes $D$ and $E$, and holistic specification:\\
-%$\strut \ \ \  HS(M)= \OneStateQ{d:D}{d.f\geq 300} \wedge  \TwoStatesQ{e:E,i:int}{e.f\geq i} {e.f\geq i} $,\\
-%Then, when we extract the ???would be nice to have a name! ??? we obtain\\
-%$\strut \ \ \   \extract{M}  = \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge \  [ e:Int \wedge i:int \wedge e.f \geq i]$
-%
-%\paragraph{Public Methods}
-%Assume that $D$ has a public method  with formal parameter $y:E$, and body $s$. Then, we have to prove\\
-%$\strut \ \ \  \hprovesTwoLines {M} {this:D \wedge y:E \wedge  \forall d.[d:D \rightarrow d.f\geq 300]\ \wedge\  \  [ e:E \wedge i:int \wedge e.f \geq i]\ } {s}
-%{\forall d.[d:D \rightarrow d.f\geq 300]\ \wedge\  \  [ e:E \wedge i:int \wedge e.f \geq i]\ }$
-%
-%\vspace{.1cm}
-%
-%In the table below, we show various bodies for $s$ and discuss whether they satisfy the requirment; We assume that z1, and z2 are   external. And we assume that $E$ has a filed $nxt$ also of class $E$.
-%
-%\begin{tabular}{lclcl}
-%$s$ is & & satisfies? &  & comment\\
-%\hline  
-% this.f = 200  &\ \  & NO\\
-%  this.f = 200; this.f = this.f+100  & & YES\\
-%  this.f = 200;\   \textbf{z1.m()};  \ this.f = this.f+100  & & NO\\
-%  y.f = y.f+1   & & YES   \\
-%  y.f = y.f-1   & & NO & \ \  &  \\
-% y.nxt.i = y.nxt.i -1   & & NO\\
-% e1=new E; e1.f=7 & & YES\\
-% e1=new E; e1.f=7; \   \textbf{z1.m()};  \ e1.f=3 &  & YES & & surprising?\\
-%  e1=new E; e1.f=7; \  \textbf{z1.m()};  \ e1.f=3  \textbf{z2.m()};  e1.f=2 &  & YES & & surprising?\\
-% \hline
-%\end{tabular}
-%
-%\paragraph{Private Methods}
-%\label{s:privateMs}
-%We have a design choice with private methods, namely: Either A) we do not allow private methods to make external calls, or B) We rethink type checking of
-%private methods. 
-%
-%Namely, continue our example from earlier, and assume a public and a private method $m\_public$, and $m\_private$ in class $E$, and bodies\\
-%\begin{tabular}{clclcl}
-%VERSION\_1\\
-%& m\_public & & this.f=this.f+1; m\_private; this.f:=this.f-1 \\
-%& m\_private & &\textbf{z1.m()};\\
-%VERSION\_2\\
-%& m\_public & & this.f=this.f-1; m\_private; this.f:=this.f+1 \\
-%& m\_private & &\textbf{z1.m()};\\
-%VERSION\_3\\
-%& m\_public & & this.f=this.f+101; m\_private; this.f:=this.f+1 \\
-%& m\_private & &this.f=this.f-1; \textbf{z1.m()};
-%\end{tabular}
-%
-%If we go with A) we forbid VERSION\_1 as well as VERSION\_2. If we go with B) we allow  VERSION\_1 and forbid VERSION\_2.
-%\end{figure}
-%\begin{figure}[thb]
-%%\footnotesize
-%$
-%\begin{array}{c}
-%\inferrule [Two-State]
-%	{
-%	\\\\
-%	M \models \encaps{\overline {x:C}\, \wedge \, A_1  } \ \ \ \ \ \ \ \ \ \ \ M \models \encaps{\overline {x:C}\, \wedge \, A_2}
-%	\\\\
-%	{OSS(M)=A_{os}}
-%	\\\\\
-%	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-%					  \strut \hspace{3.5cm} {\hproves{M}{ \overline{x:C}\ \wedge \ A_1\ \wedge \ {A_{os}} \wedge \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A_2\ }} \ \parallel \  A_2 \wedge A_{os}
-%}
-%	{
-%	M\ \models\ {\TwoStatesQ {\overline {x:C}} {A_1} {A_2} }
-%	}
-%\\\\
-%\\\\
-%\inferrule [One-State]
-%	{
-%		 M \models \encaps{\overline {x:C}\, \wedge \, A } 
-%			%        A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-%		% \mbox{\ conjunction of all one state invariants in } HS(M)   
-%		\\ \\ 
-%		\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-%					  \strut \hspace{4.5cm}  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
-%}
-%	{  
-%	         M\ \models \ \OneStateQ{\overline {y:C}}{A} 
-%	}
-%\\\\
-%\inferrule [Intrm]
-%	{
-%		\\ \\
-%		A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-%		\mbox{\ conjunction of all one state invariants in } HS(M)    
-%		\\\\
-% 		 \hproves{M} { \ A_1\ \wedge\ A_{os}\ } {\ s\ } {\ A_2\ \wedge\ A_{os}\  } \
-% 		\\\\ 	
-%				\forall  s', z, m.[\ \  \
-%				   s \equiv s'; z.m(\_); \_\ \wedge \ 
-%				  \hproves{M} {\ A_1 \wedge \ A_{os}\ } {\ s'\ } {\  \external{z}\  } \\ \\
-%				  \strut \hspace{6.5cm}
-%				  \Longrightarrow\ \ \ \hproves{M}{\ A_1 \wedge A_{os} \ }{\ s'\ } {\ A_2 \wedge A_{os}  \ } \ \ ]
-%	}
-%	{  
-%	         { \hproves{M}{\ A_1\ }   {\ s\ } {\ A_2\ } }  \parallel \  A_2   
-%	}
-%\\\\
-%\begin{array}{lcl}
-%\inferrule[Weaken]
-%{
-%M \models S \\ \strongerI M S {S'}
-%}
-%{
-%M \models S'
-%}
-%&\ \ \  &
-%\inferrule[Multi]
-%	{
-%	M\ \models\ S 
-%	\\
-%	M\ \models\ S' 
-%	}
-%	{
-%	M\ \models\ S \wedge S'
-%	}
-%\end{array}
-%
-%\end{array}
-%$
-%\caption{Inferring that module satisfies its specification}
-%\label{f:module:invariats}
-%\end{figure}
-
-
-
-%\end{figure}
-%\begin{figure}[thb]
-%%\footnotesize
-%$
-%\begin{array}{c}
-%\inferrule [Two-State]
-%	{
-%	\\\\
-%	M \models \encaps{\overline {x:C}\, \wedge \, A_1  } \ \ \ \ \ \ \ \ \ \ \ M \models \encaps{\overline {x:C}\, \wedge \, A_2}
-%	\\\\
-%	{OSS(M)=A_{os}}
-%	\\\\\
-%	\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-%					  \strut \hspace{3.5cm} {\hproves{M}{ \overline{x:C}\ \wedge \ A_1\ \wedge \ {A_{os}} \wedge \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A_2\ }} \ \parallel \  A_2 \wedge A_{os}
-%}
-%	{
-%	M\ \models\ {\TwoStatesQ {\overline {x:C}} {A_1} {A_2} }
-%	}
-%\\\\
-%\\\\
-%\inferrule [One-State]
-%	{
-%		 M \models \encaps{\overline {x:C}\, \wedge \, A } 
-%			%        A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-%		% \mbox{\ conjunction of all one state invariants in } HS(M)   
-%		\\ \\ 
-%		\textit{for all}\ \  \textit{public methods  from } D,\ \textit{with}\ \prg{mBody}(m,D,M)=\overline{y:D}\{\  s \ \}\\\\
-%					  \strut \hspace{4.5cm}  {\hproves{M}{ \overline{x:C}\ \wedge \ A\ \wedge \ \prg{this}:\prg{D} \wedge\ \overline{y:D}  } {\ s\ } {\ A\ }} \ \parallel \  A 
-%}
-%	{  
-%	         M\ \models \ \OneStateQ{\overline {y:C}}{A} 
-%	}
-%\\\\
-%\inferrule [Intrm]
-%	{
-%		\\ \\
-%		A_{os} %=\overline{\OneStateQ{\overline {y:C}}{A''}}\ 
-%		\mbox{\ conjunction of all one state invariants in } HS(M)    
-%		\\\\
-% 		 \hproves{M} { \ A_1\ \wedge\ A_{os}\ } {\ s\ } {\ A_2\ \wedge\ A_{os}\  } \
-% 		\\\\ 	
-%				\forall  s', z, m.[\ \  \
-%				   s \equiv s'; z.m(\_); \_\ \wedge \ 
-%				  \hproves{M} {\ A_1 \wedge \ A_{os}\ } {\ s'\ } {\  \external{z}\  } \\ \\
-%				  \strut \hspace{6.5cm}
-%				  \Longrightarrow\ \ \ \hproves{M}{\ A_1 \wedge A_{os} \ }{\ s'\ } {\ A_2 \wedge A_{os}  \ } \ \ ]
-%	}
-%	{  
-%	         { \hproves{M}{\ A_1\ }   {\ s\ } {\ A_2\ } }  \parallel \  A_2   
-%	}
-%\\\\
-%\begin{array}{lcl}
-%\inferrule[Weaken]
-%{
-%M \models S \\ \strongerI M S {S'}
-%}
-%{
-%M \models S'
-%}
-%&\ \ \  &
-%\inferrule[Multi]
-%	{
-%	M\ \models\ S 
-%	\\
-%	M\ \models\ S' 
-%	}
-%	{
-%	M\ \models\ S \wedge S'
-%	}
-%\end{array}
-%
-%\end{array}
-%$
-%\caption{Inferring that module satisfies its specification}
-%\label{f:module:invariats}
-%\end{figure}
-
-
-%\subsection{Soundness of the \SpecLang Logic}
-%
-% 
-%\label{s:soundness}
-%
-%We will now prove soundness of the  \SpecLang Logic. For this, we will first prove soundness of our extended Hoare logic.
-%
-%
-%\begin{lemma}
-%Assuming a sound \SpecO proof system, $\proves{M}{A}$, and  and
-%a sound encapsulation inference system, $\proves{M}{\encaps{A}}$. Then:
-%\begin{itemize}
-%\item
-%The inference system  $M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$  defined in the previous section is sound.
-%\end{itemize}
-%\end{lemma}
-%
-%\begin{proof}
-%Take arbitrary modules  $M$, $M'$, expression $e$,  assertions $A$, $A'$ and $A''$ and assume
-%\begin{enumerate}
-%\item
-% $M\ \models\  \{\, A \,  \}\ e\  \{\, A' \, \}$ 
-% \item
-% $M,\sigma \ \models \ A$
-% \item
-%$ \sigma.cont$=$e$ 
-%\item
-%$M\circ M', \sigma \leadsto^* \sigma' \ \ \wedge\ \ \sigma'.cont$ is a value
-%\end{enumerate}
-%We want to show that
-%\begin{enumerate}
-%\item
-%$M,\sigma' \ \models \ A' $
-%\end{enumerate}
-%The proof proceeds by induction over a lexicographic ordering over the tuples $(M, A, e, A', \sigma, \sigma')$ This ordering is the tuple of ($m_{cl}$, $m_{ext}$), where 
-%$m_{cl}$ is the length of the maximal sequence of proof steps in "classical Hoare logic, ie excluding a step {\sc{ExtCall}} involved in proving that  ie excluding a step {\sc{ExtCall}}, and the $m_{ext}$ is the number of external calls that occurred ... {TODO: this needs to be refined!}
-%
-%\end{proof}
 
 
 
