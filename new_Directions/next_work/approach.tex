@@ -2,13 +2,10 @@
 
 \section{The problem and our approach}
 \label{s:outline}
- 
+  
 In this Section we introduce our problem  through an example and outline our approach.
-%Out approach differs from that in  \cite{OOPSLA22,FASE}, and 
- % and FASE,  but {note that our approach is different, and more importantly, it can reason about external calls -- something that OOSPLA-22 and FASE did not do.}%and we solve one more challenge than they,
 
-
-  \subsubsection{Object Capabilities and Emergent Behaviour} % of modules}
+   \subsubsection{Object Capabilities and Emergent Behaviour} % of modules}
 \label{s:bank}
 % In Sect.  \ref{s:approach:necopers} 
 We demonstrate  object capabilities as \emph{guards}, and the role
@@ -245,14 +242,19 @@ For this, we propose two %a specification language for modules, which has two ma
 \begin{description}
 \item[Protection] to describe a lack of access to capabilities: An object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  if $o$ cannot obtain direct access to $o'$ unless an internal object affords that access. %to $o$. 
 And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. 3.5, 4.5 and 4.6.
+ 
+
 \item[Scoped,  two-state invariants] to describe emergent behaviour:  $\TwoStatesQ {\overline{x:C}}  {A}{A'}$ expresses that if a reachable state $\sigma$ 
-  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will satisfy $A'$. The scoped future contains future states, including further method calls and returns, but {does not return} from the call active in $\sigma$ -- more in Def 5.3 and 3.1. 
-%  \susan{Excludes sounds like you could jump over that frame and continue, perhaps 'stops before' or if you like included/excludes then maybe (e.g. stops before) after excludes }
+  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will satisfy $A'$. The scoped future contains future states, including further method calls and returns, but {does not return} from the call active in $\sigma$ -- more in Def 5.3. 
+In other words, the current call \emph{scopes} where $A'$ must hold -- more in Def 3.1. 
 We consider executions of the internal module linked with any number of unknown, external modules -- \cf Sect. 2.2.
  For $\sigma$ and its scoped future   we only consider states whose receiver is \emph{external}. 
 \end{description}
 
-\footnoteSD{\kjx{not clear why these are ``two-state'' invariants - rather than
+ 
+
+\forget{
+\kjx{not clear why these are ``two-state'' invariants - rather than
   $1+N$ states? \red{SD: ``two-state'' does bot mean that the states are immediately consecutive. Can you propose a better name}}
 \kjx{seems $\protectedFrom {o} {o'}$ means $\exists i intl : \textrm{dominatesAllPathsFrom}(o)\textrm{To}(o')$ or something;
 ditto  ${\inside{\prg{\it{o}}}}$ means 
@@ -261,8 +263,9 @@ Not that I'm biased or anything.
  \red{SD: cI do not think so. We are asking for the penultimate element in the path. For example, if there is a path 1->2->3->4, and 2 is internal, and 3 is external, than your definition would say  that 4 is protected from 1, but with the def as given here it is not.
  \blue{SD:If we reversed the arrows, then indeed we could say that $\protectedFrom {o} {o'}$ iff the \textbf{set} of internal objects dominates all \textbf{reversed} paths from $o$ to $o'$. 
  Woulds that be more easily understandable than the current definition?
-}}}
-}
+}}}}
+ 
+ 
 With these concepts we can now write specifications which  rule  out \ModB while permitting \ModA and
 \ModC, namely:
 \label{s:bankSpecEx}
@@ -323,8 +326,8 @@ can give us the guarantee that some, guarded,   effects will not take  place.
 
  
  
-Assume that {our internal module included the following class} \prg{Shop}. It exports a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object. 
-The critical point is line 7, where we call a method on \prg{buyer}, and pass them the shop's account.
+Assume that {our internal module included the following class} \prg{Shop}. It exports a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object  \susan{with a method \prg{pay.me}}.
+The critical point is line 7, where we call the method \susan{\prg{pay.me}}on \prg{buyer}, and pass them the shop's account.
 Is it possible that the buyer will use this opportunity  to drain the shop's account?
   
 
@@ -378,7 +381,7 @@ It is safe to apply $S_4$,  because from the point of view of the callee at line
 This means that we need Hoare logic rules to reason about, among other things, protection.}
 
 {For our work, we assume an underlying sound Hoare logic for {our} language, and extend it with rules about protection, external calls, and the module's adherence to its 
-specification - more in Fig. 7-11.
+specification - more in Figs. 7-11.
 We prove that the extended Hoare logic is sound.
 }
 
@@ -387,7 +390,7 @@ We have therefore taken a similar path to .... TODO ...
 }
 
  {The proof that the extended Hoare logic is sound is interesting, because we are arguing about the soundness of two interrelated systems: 
- the per-statement  Hoare logic, as well as the module's logic.
+ the per-statement  Hoare logic, as well as the \susan{entire} module's logic.
 Moreover, we need to cater for the possibility that external calls eventually call public methods of the module, which in their turn make external calls etc.
 For this we define a new measure of execution ...}
 
@@ -430,5 +433,3 @@ A logic which proves adherence to our specification language
 \item
 Proofs, and a worked out example
 \end{enumerate}
-
- 
