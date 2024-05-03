@@ -13,7 +13,7 @@ We demonstrate  object capabilities as \emph{guards}, and the role of
  expanding it to also support calls from an internal to an external module.
 
 We show three versions of a banking module, $\ModA$, $\ModB$, and $\ModC$. 
-All three modules \susan{using the same method} allow the withdrawal of money only when supplied with the password of the account.
+All three modules \susan{use the same method to} allow the withdrawal of money, only when supplied with the password of the account.
 Moreover, in $\ModA$ the password is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the password may be modified, but only if supplied with the old password. 
 
 
@@ -35,7 +35,7 @@ requires per-module guarantees, as proposed, \eg,  in \cite{OOPSLA22}, and in al
 Crucial for such specifications are  two key concepts:
 \begin{description}
 \item[Capabilities] What are the capabilities (here the password), what effects do the capabilities {guard} (here the money), 
-and who is guaranteed not to obtain access to the capability.
+and who is guaranteed not to obtain access to the capabilities.
 \item[Emergent Behaviour] What effects may become possible through the interplay of several methods from a module  (here in ${\ModB}$  
 {changing the password and then withdrawing}).
 \end{description} 
@@ -45,7 +45,7 @@ In this paper we address the following challenges
 \begin{description}
 \item[1st Challenge -- Specification of Object Capabilities as Guards] How to specify that object capabilities are guards over effects while taking emergent behaviour into account?
 \item[2nd Challenge -- Reasoning about external calls] How to verify that calls to external, unknown code, will not cause effects they are  ``not entitled'' to?
-\item[3rd Challenge -- Verification of module's adherence to Specification] How to verify that modules adhere to their specification?
+\item[3rd Challenge -- Verification of a module's adherence to its Specification] How to verify that modules adhere to their specifications?
 \end{description}
 
 
@@ -242,13 +242,13 @@ For this, we propose two %a specification language for modules, which has two ma
 \begin{description}
 \item[Protection] to describe a lack of access to capabilities: An object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  if $o$ cannot obtain direct access to $o'$ unless an internal object affords that access. %to $o$. 
 And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. 3.5, 4.5 and 4.6.
- 
 
-\item[Scoped,  two-state invariants] to describe emergent behaviour:  $\TwoStatesQ {\overline{x:C}}  {A}{A'}$ expresses that if a reachable state $\sigma$ 
-  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will satisfy $A'$. The scoped future contains future states, including further method calls and returns, but {does not return} from the call active in $\sigma$ -- more in Def 5.3. 
-In other words, the current call \emph{scopes} where $A'$ must hold -- more in Def 3.1. 
+\item[\se{Scoped invariants}] to describe emergent behaviour:  \se{$\OneStateQ {\overline{x:C}}  {A}$} expresses that if a reachable state $\sigma$ 
+  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will \se{also} satisfy \se{$A$}. The scoped future contains future states, including further method calls and returns, but {does not return} from the call active in $\sigma$ -- more in Def 5.3. 
+In other words, the current call \emph{scopes} where \se{$A$} must hold -- more in Def 3.1. 
 We consider executions of the internal module linked with any number of unknown, external modules -- \cf Sect. 2.2.
  For $\sigma$ and its scoped future   we only consider states whose receiver is \emph{external}. 
+
 \end{description}
 
  
@@ -269,25 +269,21 @@ Not that I'm biased or anything.
 With these concepts we can now write specifications which  rule  out \ModB while permitting \ModA and
 \ModC, namely:
 \label{s:bankSpecEx}
-
-  
+\se{
  \begin{tabular}{lcll}
- $S_1$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} {\inside{\prg{a}}}$
+
+  $S_1$   & $\triangleq$   &  $\OneStateQ {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} $
  \\
- $S_2$   & $\triangleq$   &  $\TwoStatesQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.pwd}}} {\inside{\prg{a.pwd}}}$
+ $S_2$   & $\triangleq$   &  $\OneStateQ {\prg{a}:\prg{Account}}  {\inside{\prg{a.pwd}}} $
  \\
  $S_3$ & $\triangleq$   &
- $ \TwoStatesQ{\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.\balance}=\prg{b}} 
- { \prg{a.\balance}=\prg{b} }$
+ $ \OneStateQ{\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.\balance}=\prg{b}}  $
 \\
 $S_4$ & $\triangleq$   &
-  $\forall \prg{a}:\prg{Account},\prg{b}:\prg{int}.$\\
-  &  &  $\FirstState{\inside{\prg{a.pwd}} \wedge \prg{a.\balance}=\prg{b}} 
-\  \SecondState{ \prg{a.\balance}\geq \prg{b} }$
+ $ \OneStateQ{\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a.pwd}} \wedge \prg{a.\balance} \geq \prg{b}}  $
+ 
  \end{tabular}
-
-
-
+}
 
 \noindent
  $S_1$ guarantees that the module does not leak accounts, 
