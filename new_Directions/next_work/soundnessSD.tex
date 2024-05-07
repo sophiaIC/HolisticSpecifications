@@ -21,7 +21,7 @@ $M \vdash A $ \ \ \ \ implies \ \ \ \ $M \vDash A$.\\
 \label{sect:HLmeans}
 
 We  define the {\emph {meaning}} of  our Hoare triples, $\triple {A} {stmt} {A'}$,  in the usual way, \ie that execution of $stmt$ in a state that satisfies $A$ leads to a state which satisfies $A'$.  
-In addition to that, Hoare quadruples, $\quadruple {A} {stmt} {A'} {A''}$, promise that any external future states scoped by $\sigma$ will sarisfy $A''$.
+In addition to that, Hoare quadruples, $\quadruple {A} {stmt} {A'} {A''}$, promise that any external future states scoped by $\sigma$ will satisfy $A''$.
 
  
 \begin{definition}[Semantics of Hoare tuples]
@@ -157,7 +157,7 @@ $   \exists \sigma''.[\ \ \ \ \   \leadstoBoundedStarFin {\Mtwo} {\sigma[\texttt
 \ \wedge\ 
 \leadstoBoundedStarFin {\Mtwo} {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'} \  \wedge$
 \\
-$\strut \hspace{1.3cm}  [ \ \ \leadstoBoundedStar {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}   {\sigma''}\ \vee \ \leadstoBoundedStar {\Mtwo}  {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma''}\ ]\ \ \ \ \ \ \ \  \ ] $
+$\strut \hspace{1.2cm}  [ \ \ \leadstoBoundedStar {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}   {\sigma''}\ \vee \ \leadstoBoundedStar {\Mtwo}  {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'''}\ ]\ \ \ \ \ \ \ \  \ ] $
 \end{itemize}
 \end{auxLemma}
  
@@ -167,6 +167,63 @@ Its meaning %of Auxialiry lemma \ref{lemma:external_breakdown}
 is illustrated through an example in Fig. \ref{fig:summaries}.
 
  
+\begin{auxLemma}
+\label{lemma:external_breakdown:term}[Summarised External Terminating Execution]
+For any module $M$, modules $\Mtwo$, states $\sigma$ and $\sigma'$:
+\\
+If \\
+$\strut \ \ \ \ \ \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma}  {\sigma'} \ \ \wedge  \ \ M,\sigma \models \external {\texttt{this}}$
+\\
+then
+\\
+$\strut \ \ \ \ \ \exists p,q\in \mathbb{N},  \sigma_1, ... \sigma_q \in States, m_1,...m_p, n_1, ... n_p \in \mathbb{N}.$\\  
+$\strut \ \ \ \ \ \ \ \ \ \ [  $ \\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \sigma_1=\sigma \ \ \wedge\ \  \sigma_p=\sigma'\ \  \wedge\ \ \forall i\in [1..q).[\   \leadstoOrig {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{i+1}}\  ] \  \ \ \wedge$\\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ m_1=1 \ \wedge\ n_p=q+1 \  \wedge\ \forall i\in[1..p).[  \  m_i < n_i < m_{i+1}  ] \ \wedge \ m_p<n_p\ \ \wedge  $\\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \forall i\in[1..p].\forall j\in [m_i..n_i)[\   M,\sigma_j \models \external {\texttt{this}} \ ] \  \ \ \wedge$\\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models \internal {\texttt{this}}   \ \wedge \ \ 
+ \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma_{n_{i}}}  {\sigma_{m_{i+1}-1}} \ ] $ \\
+$\strut \ \ \ \ \ \ \ \ \ \ ]$
+\end{auxLemma}
+
+Here the same lemma, but with better notation:
+
+\begin{definition}
+For any module $M$  where $M$ is the internal module, external modules $\Mtwo$, and states $\sigma$ and $\sigma'$, we define:
+
+$\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma}  {\sigma'}  {\sigma''}$  \ \ if \ \ 
+$\begin{cases}
+\exists n, \sigma_1, ... \sigma_n  \mbox{s.t}\\
+\strut \ \ \ \  \sigma' = \sigma_1 \ \wedge\ \ \sigma'' = \sigma_n \ \wedge \\
+\strut \ \ \ \ \forall i\in [1..n).\ [ \ M, \sigma_i \models \external{\prg{this}} \ \wedge\  \leadstoBoundedThree {\Mtwo\cdot M} {\sigma_i}  {\sigma}   
+{\sigma_{i+1}}  \ ] \\
+\strut \ \ \ \  M, \sigma' \models  \external{\prg{this}}
+% \\ \strut \ \ \ \  M, \sigma' \models \internal {\prg{this}} 
+\end{cases}
+$
+\end{definition}
+
+\begin{auxLemma}
+\label{lemma:external_breakdown:term}[Summarised External Terminating Execution]
+For any module $M$, modules $\Mtwo$, states $\sigma$ and $\sigma'$:
+\\
+If \\
+$\strut \ \ \ \ \ \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma}  {\sigma'} \ \ \wedge  \ \ M,\sigma \models \external {\texttt{this}}$
+\\
+then
+\\
+$\strut \ \ \ \ \ \exists n\! \in\! \mathbb{N},  \sigma_1, ... \sigma_{4n+1} \in States. $\\ % , m_1,...m_p, n_1, ... n_p \in \mathbb{N}.$\\  
+$\strut \ \ \ \ \ \ \ \ \ \ [  $  \\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \  \sigma'=\sigma_1 \ \wedge\  \sigma''=\sigma_{4n+1} \ \ \wedge $\\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \  \forall i\in [0..n)[\ \ \  \leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma}   {\sigma_{4i+1}} {\sigma_{4i+2)}}\  \wedge$\\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ \ \ \   \leadstoBoundedThree {\Mtwo\cdot M}  {\sigma_{4i+2}}  {\sigma}  {\sigma_{4i+3}} \  \wedge$ \\
+\ 
+$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ \ \ \ M,\sigma_{4i+3} \models \internal {\texttt{this}} \ \wedge   \leadstoBoundedStarFin {M\cdot \Mtwo} {\sigma_{4i+3}}  {\sigma_{4i+4}} \ \wedge  $\\
+$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ \ \ \   \leadstoBoundedThree {\Mtwo\cdot M}  {\sigma_{4i+4}}  {\sigma}  {\sigma_{4i+5}}  \ \ \ ] $ \\
+$\strut \ \ \ \ \ \ \ \ \ \ ]$
+\end{auxLemma}
+
+
 \begin{auxLemma}
 \label{lemma:external_breakdown}[Summarised External Terminating Execution]
 For any module $M$, modules $\Mtwo$, states $\sigma$ and $\sigma'$:
@@ -185,7 +242,6 @@ $\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n
  \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma_{n_{i}}}  {\sigma_{m_{i+1}-1}} \ ] $ \\
 $\strut \ \ \ \ \ \ \ \ \ \ ]$
 \end{auxLemma}
-
 
 
 \begin{figure}[htb]
@@ -383,10 +439,37 @@ Let us now take an arbitrary $\sigma''$ such that   $\leadstoBoundedStar  {\Mtwo
 lemma  \ref{lemma:subexp}, either $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma_1}  {\sigma''}$ or
 $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma_2}  {\sigma''}$. In the first case, $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma_1}  {\sigma''}$. Then, because $(A_1,\sigma_1,A_2, A'') \ll_{M,\Mtwo,P} (A_1,\sigma,A_3, A'')$, we can apply the inductive hypothesis, and obtain $(\gamma)$, ie that \ \ $ M, \sigma'' \models A''$. The second case is analogous.
 
-\item[${\sc{consequ}}$] Similar to the proof of  ${\sc{combine}}$. 
+\item[{\sc{consequ}}] Similar to the proof of  {\sc{combine}}. 
 
 
-\item[ {\sc{IntCall}}]
+\item[ {\sc{Call\_A}}]
+
+Therefore, there exist $u$, $y_o$, $C$, $\overline y$,  $A_1$ and $A_2$ such that \\
+%\begin{tabbing}
+(6)\ $\sigma.\prg{cont}\txteq u=y_0.m(\overline y)$,   \hspace{2cm}
+ (7)\ $A \txteq y_0:C  \ \wedge\ \overline {y:C}\ \wedge \  A_1$, 
+\\ 
+ (8)\ $\promises  M {\mprepostN {A_1}{C}{m}{y}{C}{A_2} {A''}}$,    \hspace{1cm}
+ (9)\ $A' \txteq  A_2[ u/result]$. 
+% \end{tabbing}
+
+By (1), (8), and definition of $\vdash M$ in Section \ref{sect:wf}, we obtain that   $\prg{mBody}(m,C,M)=\overline{y:C}\{\  s \ \}$ and that\\
+(10) \  $M \vdash  \quadruple { \ \prg{this}:\prg{C}\, \wedge\, \overline{y:C}\, \wedge\, A_1\  } {\ s\ } {\ A_2\ } {A''}$ is proven in $P$.
+ 
+ By the operational semantics, we obtain that there exist states $\sigma_1$, and $\sigma_2$, such that \\
+ (11)\ $\sigma_1=\sigma.PUSHFRAME(\prg{this}, {\overline y} \mapsto \overline{\interpret {\sigma} y},\prg{cont} \mapsto s) $, TODO   \hspace{1cm}
+   (12)\ $\leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma_1}$ \\
+ (13)\ $\leadstoBoundedStarFin {\Mtwo\cdot M}  {\sigma_1}  {\sigma_2}$,   \hspace{3cm}
+ (14)\ $\sigma'=\sigma_2[...]$ TODO.
+ 
+ From (3), (11) and lemma \ref{lemma:push}.\ref{pushOne}  we obtain that \ \ \  $ (15) \ \ M, \sigma_1 \models \overline{y:C}\, \wedge\, A_1$.\footnote{\red{Here some renaming needed,  but easy to do0.}}
+ 
+ From (10), (11) and (12) we obtain that $( \prg{this}:\prg{C}\, \wedge\, \overline{y:C}\, \wedge\, A_1,\sigma_1,A_2) \ll_{M,\Mtwo,P} (A,\sigma,A')$. By induction hypothesis, (15) and (13) we obtain that (16) $M,\sigma_2 \models A_2$.
+ 
+ By (14) and lemma  \ref{lemma:push}.\ref{pushTwo}  we obtain that 
+\ \ $M,\sigma' \models \PushAS  {y} {A_2[ u/result]}$. \. With (9) this gives $M,\sigma' \models A'$.
+
+\item[ {\sc{Call\_B}}]
 
 Therefore, there exist $u$, $y_o$, $C$, $\overline y$,  $A_1$ and $A_2$ such that \\
 %\begin{tabbing}
