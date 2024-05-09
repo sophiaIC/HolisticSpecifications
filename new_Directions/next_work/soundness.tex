@@ -1,9 +1,8 @@
-
-
-
 \section{Soundness of our proof system}
 
-In this section we will prove that the proof system presented in section \ref{sect:proofSystem} is sound. We give the usual meaning to the Hoare triples (Sect \ref{sect:HLmeans}), we give several properties of terminating executions (Sect \ref{sect:termExecs}), and finally, we define a well-founded ordering which allows if to prove soundness (Sect \ref{sect:prove:sound}).
+In this section we will prove that the proof system presented in section \ref{sect:proofSystem} is sound. We give the usual meaning to the Hoare triples (Sect \ref{sect:HLmeans}), we prove soundness of of Hoare triples (Sect \ref{sect:prove:triples:sound}), we show how execution starting from some external state can be summarised into purely external execution and terminating execution of public methods (Sect \ref{sect:termExecs}), and use these decompositions and a well-founded ordering to prove soundness of our quadruples  (Sect \ref{sect:prove:sound:quadruples}), and then prove soundness of the overall system  (Sect \ref{sect:prove:triples:overall}). 
+
+
 
 We start by requiring  that the supporting proof system for assertions, and for encapsulation are sound.
 \begin{axiom}
@@ -15,28 +14,121 @@ $M \vdash A $ \ \ \ \ implies \ \ \ \ $M \vDash A$.\\
  \end{center}
 \end{axiom}
 
-\subsection{Meaning of Hoare triples}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Semantics of Hoare triples and quadruples}
 \label{sect:HLmeans}
 
-We  define the {\emph {meaning}} of  our Hoare triples, $M\ \vdash\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$,  in the usual way, \ie that execution of $stmt$ in a state that satisfies $A$ leads to a state which satisfies $A'$. 
+We  define the {\emph {meaning}} of  our Hoare triples, $\triple {A} {stmt} {A'}$,  in the usual way, \ie that execution of $stmt$ in a state that satisfies $A$ leads to a state which satisfies $A'$.  
+In addition to that, Hoare quadruples, $\quadruple {A} {stmt} {A'} {A''}$, promise that any external future states scoped by $\sigma$ will satisfy $A''$.
 
  
-\begin{definition}[Semantics of Hoare triples]
-
+\begin{definition}[Semantics of Hoare tuples]
+\label{def:hoare:sem}
  
 For modules $M$, and assertions $A$, $A'$   we define:
 %  the semantics of Hoare-triples,   $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ as follows:
 \begin{itemize}
 \item
+\label{def:hoare:sem:three}
 $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ \\
-iff\\
+if\
  for   all $\Mtwo$, for all $\sigma$, $\sigma'$ such that {$\arising \sigma {\Mtwo\cdot M}$}\\
 $\strut ~ ~ ~ ~ [ \ \ M,\sigma \ \models \ A \ \wedge\  
  \sigma.cont = stmt  \ \wedge\     \leadstoBoundedStarFin {\Mtwo\cdot M}  {\sigma}  {\sigma'}    \ \ \Longrightarrow\ \ M,\sigma' \ \models \ A'\ \ ]$
+ 
+ \item
+ \label{def:hoare:sem:four}
+ $M\ \models\ \quadruple {A} {stmt} {A'} {A''}$ \\
+if\\
+$M\ \models\  \triple  {A} {stmt} {A'} $, and\\
+  for   all $\Mtwo$, for all $\sigma$, $\sigma''$ such that {$\arising \sigma {\Mtwo\cdot M}$}\\
+$\strut ~ ~ ~ ~ [ \ \ M,\sigma \ \models \ A \ \wedge\  
+ \sigma.cont = stmt  \ \wedge\     \leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma''}  % \ \wedge \   M,\sigma \ \models \ \ 
+ \ \ \Longrightarrow\ \ M,\sigma'' \ \models \ \extThis  \rightarrow A''\ \ ]$
+
 \end{itemize}
 \end{definition}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Soundness of the Hoare Triples Logic}
+\label{sect:prove:triples:sound}
+We first prove soundness of the inference system for triples $M \vdash  \triple A {stmt} {A'} $:
+
+\sdN{
+\begin{auxLemma}
+\label{l:no:call}
+For any module $M$, assertions $A$, $A'$ and $A''$, and statement $stmt$ which does not contain any method call:
+ \\
+$\strut \hspace{2cm} M\ \models\ \triple {A} {stmt}   {A'} \ \ \Longrightarrow\ \  M\ \models\ \quadruple {A} {stmt}   {A'} {A''}$
+\end{auxLemma}
+}
+
+
+\begin{theorem}
+\label{l:triples:sound}
+For module  $M$ % and $\Mtwo$, 
+such that  $\vdash M$, and for any assertions $A$,  $A'$, $A''$ and statement  $stmt$:
+\sdN{
+\begin{center}
+$M\ \vdash\  \triple A {stmt} {A'}$ \ \ \ \ $\Longrightarrow$ \ \ \ \ $M\ \models\   \quadruple A {stmt} {A'} {A''}$
+\end{center}
+}
+\end{theorem}
  
-\subsection{Auxiliary properties of terminating execution} 
+
+\noindent
+\vspace{.2cm}
+%  {\textbf{Proof Sketch}} 
+%\noindent
+%Take any $M$, $\Mtwo$, $A$, $A'$, $A''$, and $stmt$.
+%Assume that \\
+%$\strut \ \ \hspace{2.3cm} \ \ (1) \ \ M\ \vdash\  \triple A {stmt} {A'}$ 
+%\\
+%We want to show  that\\
+% $\strut \ \ \hspace{2.3cm} \ \ (\alpha) \  \ M\ \models\   \quadruple A {stmt} {A'} {A''}$
+% \\ 
+The proof goes by case analysis over the rule applied to obtain $M \vdash \{ A \}\ stmt \  \{ A' \} $:
+
+\begin{description} 
+
+\item[${\sc{extend}}$] 
+
+By soundness of the underlying Hoare logic, we obtain that  $M\ \models\ \triple {A} {stmt}   {A'}$. Moreover, 
+by the assumption of {\sc{extend}}, $stmt$ does not contain any method call. Rest follows by lemma \ref{l:no:call}.
+
+\item[${\sc{types-1}}$] 
+
+Follows from type system, the assumption of {\sc{types-1}} and lemma \ref{l:no:call}.
+
+\item[${\sc{prot-1}}$]  
+Therefore, $A \txteq ....$ and $A' \txteq ....$  and $stmt \txteq y=y'.f$ .... TODO: write rest of proof ...
+Rest follows by lemma \ref{l:no:call}.
+\item[${\sc{prot-2}}$] ... Rest follows by lemma \ref{l:no:call}.
+
+\item[${\sc{prot-3}}$] ... Rest follows by lemma \ref{l:no:call}.
+
+\item[${\sc{prot-4}}$] ... Rest follows by lemma \ref{l:no:call}.
+
+\end{description}
+\noindent
+\vspace{.1cm}
+  {\textbf{End Proof Sketch}} 
+
+ 
+\subsection{Summarized  execution} 
+
+\label{sect:termExecs}
+
+\sdN{
+\begin{definition}
+The shorthand $M, \sigma \models \extThis$  expresses that $M, \sigma \models \external{\prg{this}}$, and
+$M, \sigma \models \pubMeth$ expresses that the currently executing method is public.\footnote{Need to expand the state accordingly}
+\end{definition}
+}
+
+
 \label{sect:termExecs}
 % In order to prove the soundness of our proof rules (\ie that $M \models  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ implies that $M \vdash  \{\, A \,  \}\ stmt\  \{\, A' \, \}$,
 We also need some auxiliary properties of the operational semantics.
@@ -62,42 +154,100 @@ Lemma \ref{lemma:subexp} makes the usual guarantee about terminating execution o
   
 \begin{auxLemma}[Execution of sequences]
 \label{lemma:subexp}
-For any modules $\Mtwo$, statements $s_1$, $s_2$, and states $\sigma$, $\sigma'$:
+For any modules $\Mtwo$, statements $s_1$, $s_2$, and states $\sigma$, $\sigma'$, $\sigma'''$:
 \begin{itemize}
 \item
-$  \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'} \   \wedge\  \sigma.\texttt{cont} = s_1; s_2$\\
+$ \sigma.\texttt{cont} = s_1; s_2 \ \ \wedge\ \  \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}\ \ 
+\wedge \ \
+\leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma''}\
+$\\
 $  \Longrightarrow$\\
-$   \exists \sigma''.[\ \ \leadstoBoundedStarFin {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}  {\sigma''}  
+$   \exists \sigma''.[\ \ \ \ \   \leadstoBoundedStarFin {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}  {\sigma''}  
 \ \wedge\ 
-\leadstoBoundedStarFin {\Mtwo} {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'} \ \ ]$
+\leadstoBoundedStarFin {\Mtwo} {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'} \  \wedge$
+\\
+$\strut \hspace{1.2cm}  [ \ \ \leadstoBoundedStar {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}   {\sigma''}\ \vee \ \leadstoBoundedStar {\Mtwo}  {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'''}\ ]\ \ \ \ \ \ \ \  \ ] $
 \end{itemize}
 \end{auxLemma}
  
 
 Lemma \ref{lemma:external_breakdown} says that a terminating execution,  $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$ starting in an external state  consists of a sequence of  external states interleaved with terminating executions in internal states. 
-Its meaning %of Auxialiry lemma \ref{lemma:external_breakdown} 
+It %of Auxialiry lemma \ref{lemma:external_breakdown} 
 is illustrated through an example in Fig. \ref{fig:summaries}.
+We fist define some further notations for execution:
+
+\begin{definition}
+For any module $M$  where $M$ is the internal module, external modules $\Mtwo$, and states $\sigma\bd$,  $\sigma$ and $\sigma'$, we define:
+
+\begin{itemize}
+\item
+ ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}}$ \ \ \ \ \ $\triangleq$ \ \ 
+$\begin{cases}
+\exists n, \sigma_1, ... \sigma_n,\,  \mbox{s.t}\\
+\strut \ \ \ \  \sigma = \sigma_1 \ \ \wedge\ \ \ \sigma' = \sigma_n \ \ \wedge \\
+\strut \ \ \ \ \forall i\in [1..n).\ [ \ M, \sigma_i \models \extThis \ \wedge\  \leadstoBoundedThree {\Mtwo\cdot M} {\sigma_i}  {\sigma\bd}   
+{\sigma_{i+1}}  \ ] \ \ \wedge \\
+\strut \ \ \ \  M, \sigma'  \models  \extThis
+% \\ \strut \ \ \ \  M, \sigma' \models \internal {\prg{this}} 
+\end{cases}
+$
+% \sigma\bd not needed
+%\item
+%$\leadstoBoundedThreePub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}$  \ \ if \ \ 
+%$\begin{cases}
+%\exists  \sigma_1, \sigma_2,\,  \mbox{s.t}\\
+%\strut \ \ \ \  M, \sigma  \models \extThis \ \wedge \  \leadstoBoundedThree {\Mtwo\cdot M} {\sigma}  {\sigma\bd}   
+%{\sigma_{1}} \\ 
+%\strut \ \ \ \ \ M, \sigma_1 \models \pubMeth \ \wedge\  \leadstoBoundedStarFin {\Mtwo\cdot M} {\sigma_1}  {\sigma_2}    \ \ \wedge \\
+%\strut \ \ \ \   \leadstoBoundedThree {\Mtwo\cdot M} {\sigma_2}   {\sigma\bd}  {\sigma'} 
+%\end{cases}
+%$
+\item
+$\leadstoBoundedPub {\Mtwo\cdot M}    {\sigma}  {\sigma'}$ \  \ \ \ \  \ \ \ \ \ \ \ \ $\triangleq$ \ \ 
+$\begin{cases}
+\exists  \sigma_1, \sigma_2,\,  \mbox{s.t}\\
+\strut \ \ \ \  M, \sigma  \models \extThis \ \wedge \  \leadstoBoundedThree  {\Mtwo\cdot M} {\sigma} {\sigma}  {\sigma_{1}} \\ 
+\strut \ \ \ \ \ M, \sigma_1 \models \pubMeth \ \wedge\  \leadstoBoundedStarFin {\Mtwo\cdot M} {\sigma_1}  {\sigma_2}    \ \ \wedge \\
+\strut \ \ \ \   \leadstoBounded  {\Mtwo\cdot M} {\sigma_2}      {\sigma'} 
+\end{cases}
+$
+\item
+$\leadstoBoundedThreeExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}$   \ \  $\triangleq$ \ \ 
+$\begin{cases}
+\strut \ \ \ \  \leadstoBoundedThreeStarExt  {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}\\
+\strut \ \ \ \   \ \mbox{or} \\
+\strut \ \ \ \  \exists \sigma_1, \sigma_2.[\  \\
+\strut \ \ \ \  \ \ \ \   \ \ \ \   \leadstoBoundedThreeStarExt  {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma_1} \ \wedge \ 
+\leadstoBoundedPub {\Mtwo\cdot M}  {\sigma_1}  {\sigma_2}\ \wedge \\ 
+\strut \ \ \ \  \ \ \ \   \ \ \ \  \leadstoBoundedThreeExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma_1}  {\sigma_2}\  \ ]
+\end{cases}
+$
+\item
+$\leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} $    \ \ \  \ \ \ \   \ \ \ \ $\triangleq$  \ \ 
+$\strut \ \ \ \  \leadstoBoundedThreeExtPub {\Mtwo\cdot M} {\sigma}  {\sigma}  {\sigma'} 
+$
+\end{itemize}
+\end{definition}
 
  
-\begin{auxLemma}
-\label{lemma:external_breakdown}[Summarised External Terminating Execution]
+ \begin{auxLemma}
+\label{lemma:external_breakdown:term}[Summarised Executions]
 For any module $M$, modules $\Mtwo$, states $\sigma$ and $\sigma'$:
 \\
-If \\
-$\strut \ \ \ \ \ \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma}  {\sigma'} \ \ \wedge  \ \ M,\sigma \models \external {\texttt{this}}$
-\\
-then
-\\
-$\strut \ \ \ \ \ \exists p,q\in \mathbb{N},  \sigma_1, ... \sigma_q \in States, m_1,...m_p, n_1, ... n_p \in \mathbb{N}.$\\  
-$\strut \ \ \ \ \ \ \ \ \ \ [  $ \\
-$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \sigma_1=\sigma \ \ \wedge\ \  \sigma_p=\sigma'\ \  \wedge\ \ \forall i\in [1..q).[\   \leadstoOrig {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{i+1}}\  ] \  \ \ \wedge$\\
-$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ m_1=1 \ \wedge\ n_p=q+1 \  \wedge\ \forall i\in[1..p).[  \  m_i < n_i < m_{i+1}  ] \ \wedge \ m_p<n_p\ \ \wedge  $\\
-$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \forall i\in[1..p].\forall j\in [m_i..n_i)[\   M,\sigma_j \models \external {\texttt{this}} \ ] \  \ \ \wedge$\\
-$\strut \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models \internal {\texttt{this}}   \ \wedge \ \ 
- \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma_{n_{i}}}  {\sigma_{m_{i+1}-1}} \ ] $ \\
-$\strut \ \ \ \ \ \ \ \ \ \ ]$
+\begin{itemize}
+\item
+$M,\sigma \models \extThis\ \wedge \ \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma}  {\sigma'}  \ \ \  \ 
+\Longrightarrow \ \ \  \ \leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'}$
+\item
+$M,\sigma \models \extThis\ \wedge \ \leadstoBoundedStar  {M\cdot \Mtwo}  {\sigma}  {\sigma'}  \ \ \  \ 
+\Longrightarrow \ \ \  \  \leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'}\ \ \vee$\\
+$\strut \ \ \ \ \ \ \ \    \exists \sigma_1,\sigma_2.[\ 
+\leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma_1} 
+\wedge\ \leadstoBounded  {\Mtwo\cdot M}    {\sigma_1}  {\sigma_2} 
+\wedge \ M, \sigma_2 \models \pubMeth \wedge \leadstoBounded  {\Mtwo\cdot M}    {\sigma_2}  {\sigma'} \ ]
+$
+\end{itemize}
 \end{auxLemma}
-
 
 
 \begin{figure}[htb]
@@ -130,42 +280,148 @@ the summarised execution:
 The lemma \ref{lemma:external_exec_preserves} describes how an encapsulated assertion $A$ is preserved during an execution, provided that all finalizing internal executions preserved it. 
 It will be used in the proof of soundness of the rule {\sc{ExtCall\_WithSpec\_Weak}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
 
+
+%\begin{auxLemma}
+%\label{lemma:external_exec_preserves}[Preservation of Encapsulated Assertions]
+%For any module $M$, modules $\Mtwo$, variables $\overline x$, and addresses $\overline \alpha$,
+% states $\sigma\bd$, $\sigma$, and $\sigma'$, and assertions $A$, $A'$:
+%
+%Assume that $M \models \encaps A \   \wedge  \ A'\txteq A[\overline{\alpha/x}]\  \wedge \ fv(A)=\emptyset \  \wedge \ 
+%M, \sigma \models  A' $. Then
+%
+%\begin{itemize}
+%\item
+%$   \leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} 
+%\ \ \Longrightarrow \ \ \ M, \sigma' \models A'$
+%\item
+%$ \leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} \ \mbox{as a return from a method}
+%\ \ \Longrightarrow \ \ \ M, \sigma' \models A'$
+%\item
+%\end{itemize}
+%\end{auxLemma}
+
+In order to prove Lemma \ref{lemma:external_exec_preserves_more} we will need to also define the a version
+of $\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}$ which keeps track of all the public methods entered:
+
+\begin{definition}
+For moduiles ...
+
+\begin{itemize}
+\item
+$\leadstoBoundedPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} \, \prg{with}\,  {\sigma_1} $ \  \ \ \ \  \ \ \ \ \ \ \ \ $\triangleq$ \ \ 
+$\begin{cases}
+\exists  \sigma_1, \sigma_2,\,  \mbox{s.t}\\
+\strut \ \ \ \  M, \sigma  \models \extThis \ \wedge \  \leadstoBoundedThree  {\Mtwo\cdot M} {\sigma} {\sigma}  {\sigma_{1}} \\ 
+\strut \ \ \ \ \ M, \sigma_1 \models \pubMeth \ \wedge\  \leadstoBoundedStarFin {\Mtwo\cdot M} {\sigma_1}  {\sigma_2}    \ \ \wedge \\
+\strut \ \ \ \   \leadstoBounded  {\Mtwo\cdot M} {\sigma_2}      {\sigma'} 
+\end{cases}
+$
+\item
+$\leadstoBoundedThreeExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}\,  \prg{with}\,  \overline \sigma $   \ \  $\triangleq$ \ \ 
+$\begin{cases}
+\strut \ \ \ \  \leadstoBoundedThreeStarExt  {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}\ \wedge \ \overline \sigma = \epsilon\\
+\strut \ \ \ \   \ \mbox{or} \\
+\strut \ \ \ \  \exists \sigma_a, \sigma_b.[\  \\
+\strut \ \ \ \  \ \ \ \   \ \ \ \   \leadstoBoundedThreeStarExt  {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma_a} \ \wedge \\ 
+\strut \ \ \ \  \ \ \ \   \ \ \ \   \overline \sigma = \sigma_1 ... \sigma_n \ \wedge \\
+\strut \ \ \ \  \ \ \ \   \ \ \ \   \leadstoBoundedPub {\Mtwo\cdot M}  {\sigma_a}  {\sigma_b}\,  \prg{with}\,  \sigma_1 \wedge \\ 
+\strut \ \ \ \  \ \ \ \   \ \ \ \  \leadstoBoundedThreeExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma_b}  {\sigma'}\,  \prg{with}\,  {\sigma_2...\sigma_{n}} \ ]
+\end{cases}
+$
+\end{itemize}
+\end{definition}
+
+
+
+
 \begin{auxLemma}
-\label{lemma:external_exec_preserves}[Preservation of Encapsulated Assertions]
-For any module $M$, modules $\Mtwo$, numbers $p$ and $q$, states$\sigma_1$, .... $\sigma_p$,  numbers $m_1,...m_p, n_1, ... n_p \in \mathbb{N}$, and assertions $A$:
+\label{lemma:external_exec_preserves_more}[Preservation of Encapsulated Assertions]
+For any module $M$, modules $\Mtwo$, variables $\overline x$, and addresses $\overline \alpha$,
+ states $\sigma\bd$, $\sigma$, and $\sigma'$, and assertions $A$, $A'$, 
+assume that
+
+\noindent
+ $M \models \encaps A \   \wedge  \ A'\txteq A[\overline{\alpha/x}]\  \wedge \ fv(A)=\emptyset \  \wedge \ 
+M, \sigma \models  A' $. Then
+
+\begin{enumerate}
+
+\item
+$   \leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} 
+\ \ \Longrightarrow \ \ \ M, \sigma' \models A'$
+
+\item
+$M, \sigma  \models \extThis \ \wedge \  \leadstoBoundedThree  {\Mtwo\cdot M} {\sigma} {\sigma}  {\sigma_{1}} \ \wedge
+ \ M, \sigma_1 \models \pubMeth \ \wedge\  \leadstoBoundedStarFin {\Mtwo\cdot M} {\sigma_1}  {\sigma_2}    \ \ \wedge$\\
+$ M, \sigma_2 \models A' \ \wedge \ 
+  \   \leadstoBounded  {\Mtwo\cdot M} {\sigma_2}      {\sigma'}$\\
+ $\Longrightarrow $
 \\
-If \\
-$\strut \ \ \ \  M, \sigma_1 \models  A   \  \ \wedge \ \ M \models \encaps A \ \ \ \  \ \ \wedge$\\
-$\strut \ \ \ \  \forall i\in [1..q).[\   \leadstoOrig {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{i+1}}\  ] \  \ \ \wedge$\\
-$\strut \ \ \ \  m_1=1 \ \wedge\ n_p=q+1 \  \wedge\ \forall i\in[1..p).[  \  m_i < n_i < m_{i+1}  ] \ \wedge \ m_p<n_p\ \ \wedge  $\\
-$\strut \ \ \ \  \forall i\in[1..p].\forall j\in [m_i..n_i)[\   M,\sigma_j \models \external {\texttt{this}} \ ] \  \ \ \wedge$\\
-$\strut \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models A   \ \Rightarrow \ \ 
-M, {\sigma_{m_{i+1}-1}} \models A  \ ] $ \\
-then\\
-$\strut \ \ \ \  \ M, \sigma_q \models  A$
+$M, \sigma' \models A' $
+
+\item
+$ \leadstoBoundedThreeExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}\,  \prg{with}\,  \sigma_1...\sigma_{n}\ \ \wedge $\\
+ $\strut \ \ \ \  \  \forall i\in [1..n]. \forall \sigma_{f}.[ \ \  M, \sigma_i \models A'  \ \wedge \  \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{f}} \ 
+\Longrightarrow \  M, \sigma_f \models A' \ ]$\\
+$\Longrightarrow $
+\\
+$M, \sigma' \models A' $
+\end{enumerate}
 \end{auxLemma}
+%$\strut \ \ \ \  \forall i\in [1..q).[\   \leadstoOrig {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{i+1}}\  ] \  \ \ \wedge$\\
+%$\strut \ \ \ \  m_1=1 \ \wedge\ n_p=q+1 \  \wedge\ \forall i\in[1..p).[  \  m_i < n_i < m_{i+1}  ] \ \wedge \ m_p<n_p\ \ \wedge  $\\
+%$\strut \ \ \ \  \forall i\in[1..p].\forall j\in [m_i..n_i)[\   M,\sigma_j \models \external {\texttt{this}} \ ] \  \ \ \wedge$\\
+%$\strut \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models A   \ \Rightarrow \ \ 
+%M, {\sigma_{m_{i+1}-1}} \models A  \ ] $ \\
+%then\\
+%$\strut \ \ \ \  \ M, \sigma_q \models  A$
+%\end{auxLemma}
+
+
+% KEEP In case we need
+%\begin{auxLemma}
+%\label{lemma:external_exec_preserves}[Preservation of Encapsulated Assertions]
+%For any module $M$, modules $\Mtwo$, numbers $p$ and $q$, states$\sigma_1$, .... $\sigma_p$,  numbers $m_1,...m_p, n_1, ... n_p \in \mathbb{N}$, and assertions $A$:
+%\\
+%If \\
+%$\strut \ \ \ \  M, \sigma_1 \models  A   \  \ \wedge \ \ M \models \encaps A \ \ \ \  \ \ \wedge$\\
+%$\strut \ \ \ \  \forall i\in [1..q).[\   \leadstoOrig {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{i+1}}\  ] \  \ \ \wedge$\\
+%$\strut \ \ \ \  m_1=1 \ \wedge\ n_p=q+1 \  \wedge\ \forall i\in[1..p).[  \  m_i < n_i < m_{i+1}  ] \ \wedge \ m_p<n_p\ \ \wedge  $\\
+%$\strut \ \ \ \  \forall i\in[1..p].\forall j\in [m_i..n_i)[\   M,\sigma_j \models \external {\texttt{this}} \ ] \  \ \ \wedge$\\
+%$\strut \ \ \ \ \forall i\in[1..p). [ \ M,\sigma_{n_i} \models A   \ \Rightarrow \ \ 
+%M, {\sigma_{m_{i+1}-1}} \models A  \ ] $ \\
+%then\\
+%$\strut \ \ \ \  \ M, \sigma_q \models  A$
+%\end{auxLemma}
 
 
 
 \subsection{A well-founded ordering}
-\label{sect:prove:sound}
+\label{sect:prove:wellfounded}
 
-We will prove soundness by well-founded induction.% \footnote{This kind of induction is described in \texttt{https://en.wikipedia.org/wiki/Well-founded\_relation.}}
+We will prove soundness by well-founded induction.
+% \footnote{This kind of induction is described in \texttt{https://en.wikipedia.org/wiki/Well-founded\_relation.}}
 We start by designing a well--founded ordering. 
 
+
+
+\sdN{
 \begin{definition}
-For a module $M$, modules $\Mtwo$, assertions $A_1$, $A_2$, $A_3$, $A_4$, states $\sigma_1$, $\sigma_2$, and   $P$ a set of proof trees for triples of the form 
-$M \vdash \{ A \} stmt  \{ A' \} $,  we define a measure, $\measure {A, \sigma,A'} {M,\Mtwo,P} $, and based on it, a well founded ordering $(A_1,\sigma_1,A_2) \ll_{M,\Mtwo,P}  (A_2,\sigma_2,A_4)$
+For a module $M$, modules $\Mtwo$, assertions $A_1$, $A_2$, $A_3$, $A_4$, $A_5$,  $A_6$, states $\sigma_1$, $\sigma_2$, and   $P$ a set of proof trees for triples of the form 
+$M \vdash \quadruple {A} {stm} {A'} {A''}$,  we define a measure
+, $\measure {A, \sigma,A',A''} {M,\Mtwo,P} $, and based on it, a well founded ordering $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo,P}  (A_4,\sigma_2,A_5,A_6)$
 as follows:
 \begin{itemize}
 \item
- $\measure {A, \sigma,A'} {M,\Mtwo,P} $ = $(m, n)$, \\
- where $m$ is the minimal number so that $\exists \sigma'.[\ \leadstoBoundedStarFin {M\cdot \Mtwo} {\sigma}    {\sigma'}\ ]$ in $m$ execution steps, \\
- and where $n$ is minimal depth of all proofs of $M \vdash \{ A \} \sigma.\prg{cont}  \{ A' \} $ in $P$,
+ $\measure {A, \sigma,A',A''} {M,\Mtwo,P} $ = $(m, n)$, \ \ \  if\\
+$m$ is the minimal number so that $\exists \sigma'.[\ \leadstoBoundedStarFin {M\cdot \Mtwo} {\sigma}    {\sigma'}\ ]$ in $m$ execution steps, \\
+ and $n$ is minimal depth of all proofs of $M \vdash \quadruple {A} {\sigma.\prg{cont}} {A'} {A''} $ in $P$,
+ \item
+ $(m,n) \ll (m',n')$\ \ if \ \ `$(m<m'\vee  (m=m'  \wedge n < n')$.
 \item
-$(A_1,\sigma_1,A_2) \ll_{M,\Mtwo,P}  (A_3,\sigma_2,A_4)$ iff
+$(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo,P}  (A_4,\sigma_2,A_5, A_6)$ iff
 \\
-$\measure {A_1, \sigma_1,A_2} {M,\Mtwo,P} $ = $(m_1, n_1)$, \ \   \ $\measure {A_3, \sigma_2,A_4} {M,\Mtwo,P} $ = $(m_2, n_2)$, \ \ \  $(m_1<m_2 \vee  (m_1=m_2  \wedge  n_1 < n_2))$.
+$\measure {A_1, \sigma_1,A_2, A_3} {M,\Mtwo,P}  \ll \measure {A_4, \sigma_2,A_5. A_6} {M,\Mtwo,P} $
 %old def
 %\begin{enumerate}
 %\item
@@ -176,19 +432,8 @@ $\measure {A_1, \sigma_1,A_2} {M,\Mtwo,P} $ = $(m_1, n_1)$, \ \   \ $\measure {A
 %\end{enumerate}
 \end{itemize}
 \end{definition}
+}
 
-%We no longer need "normalized"
-% We need to show that $\_ \ll_{\_} \_$ is well-founded. 
-%To do this, we   "normalize" the set of proofs $P$, so that  
-%the proof trees or subtrees of any given triple within P are all identical.
-%% any proof tree (or subtree) of the triple  $M \vdash \{ A \}\ strms\  \{ A' \} $
-%% appearing in $P$, is identical to any other proof  tree (or subtree) of that triple in $P$.
-%% We take two modules $M$ and $M'$ arbitrary. We define the following property of states:
-%
-%\begin{auxLemma}
-%\label{lemma:normal:one}
-%For any set of proof trees, $P$, there exists a normalized set of proof trees $P'$ which proves the same set of triples.
-%\end{auxLemma}
 
 \begin{auxLemma}
 \label{lemma:normal:two}
@@ -197,129 +442,139 @@ $P$, the relation $\_ \ll_{M,\Mtwo,P}  \_$
 is well-founded.
 \end{auxLemma}
 
-\subsection{Proving Soundness of the Hoare Logic}
-\label{sect:prove:sound}
-We now prove soundness of the inference system $M \vdash \{ A \}\ strms\  \{ A' \} $:
+  
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{ Soundness of  Hoare Quadruples Logic}
+\label{sect:prove:sound:quadruples}
+We now prove soundness of the inference system $M \vdash  \quadruple A {stmt} {A'} {A''}$:
+
 
 \begin{theorem}
 For module  $M$ % and $\Mtwo$, 
 such that  $\vdash M$, and for any assertions $A$ and $A'$, and statement  $stmt$, we have
 
 \begin{center}
-$M\ \vdash\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ \ \ \ \ implies \ \ \ \ $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$
+$M\ \vdash\  \quadruple {A} {stmt} {A'} {A''}$ \ \ \ \ implies \ \ \ \ $M\ \models\  \quadruple {A} {stmt} {A'} {A''}$
 \end{center}
 
 \end{theorem}
-
-
-%$Q(\sigma)\ \ \ \triangleq\  \ \ \forall A, A'. $\\
-%$\strut \hspace{2cm} [ \  \ Arising(\sigma,M*M') \ \  \wedge\ \ 
-%% $\\$\strut \hspace{2cm}  \ \ \  \ 
-%M \vdash \{A \} \sigma.\texttt{cont} \{A' \} \ \ \wedge\ \  M, \sigma \models  A \ \ 
-%\wedge\ \  \leadstoFin  {M*M'}{\sigma}  {\sigma'}$\\
-%$\strut \hspace{2cm}   \ \  \Longrightarrow$\\
-%$\strut \hspace{2cm} \ \   \ \ M, \sigma' \models  A'  \  \ ]$
-%
-%\noindent
-%We assume that: \\
-%$\strut \ \ \ (*) \ \ M \models HS(M)$
-%where $HS$ also includes Hoare triples for methods.\\
-%We will prove that \\
-%$\strut \ \ \ (**) \ \ \forall \sigma.[  \ \ Q(\sigma)\ \ ]$
-%\\
-%The proof is by induction on $\sigma$ using the ordering $\ll_{M*M'}$. 
-%{\hspace*{#1}}
 
 \noindent
 \vspace{.2cm}
   {\textbf{Proof Sketch}} 
 
-Take any $M$, $\Mtwo$, $A_{one}$, $A_{two}$, $A_{inv}$ and $stmt$. Assume that $\vdash M$  and 
+Take any $M$, $\Mtwo$, $A_{one}$, $A_{two}$, $A_{inv}$ and $stmt$.\\ Assume that $\vdash M$  and 
 $M\ \vdash\  \quadruple {A_{one}}  {stmt}{A_{two}} {A_{inv}}$.
 % By lemma  \ref{lemma:normal:one}) there exists a set of normalized 
 Therefore, there exists a set of
-proof trees $P$ which proves that $\vdash M$ and that $M\ \vdash\  \quadruple {A_{one}}  {stmt}{A_{two}} {A_{inv}}$.
-By lemma \ref{lemma:normal:two} the relation $\_ \ll_{M,\Mtwo,P}  \_$ is well-founded.
+proof trees $P$ which prove  the two judgments from above.
+% hat\\ $\vdash M$, \ \  and also prove that \\
+% $M\ \vdash\  \quadruple {A_{one}}  {stmt}{A_{two}} {A_{inv}}$.
  
  We have that \\
- $\strut \ \ \hspace{2.3cm} \ \ (1) \ \ \vdash M $\ \ \  is proven in $P$.\\
-$\strut \ \ \hspace{2.3cm} \ \ (1') \ \ M\ \vdash\  \quadruple {A_{one}}  {stmt}{A_{two}} {A_{inv}}$. \ \  is proven in $P$.
+ $\strut \ \ \hspace{2.3cm} \ \ (1a) \ \ \vdash M $\ \ \  is proven in $P$.\\
+$\strut \ \ \hspace{2.3cm} \ \ (1b) \ \ M\ \vdash\  \quadruple {A_{one}}  {stmt}{A_{two}} {A_{inv}}$ \ \  is proven in $P$.
 \\
 We want to show  that\\
- $\strut \ \ \hspace{2.3cm} \ \ (\alpha) \  M\ \models\  \quadruple {A_{one}}  {stmt}{A_{two}} {A_{inv}}$. 
+ $\strut \ \ \hspace{2.3cm} \ \ (\alpha)\  \  M\ \models\  \quadruple {A_{one}}  {stmt}{A_{two}} {A_{inv}}$. 
  \\ 
 We shall prove,  by induction on $\_ \ll_{M,\Mtwo,P}  \_$, that 
 \\ 
 $(*) \hspace{1cm} \forall A, A', A'' \sigma, \sigma',\sigma''[$\\
-$\strut \ \ \hspace{2.3cm} \ \ (2) \ \ M\ \vdash\  \quadruple {A}  {\sigma.\prg{stmr}} {A'} {A''} \ \ $ is proven in $P$,\\
+$\strut \ \ \hspace{2.3cm} \ \ (2) \ \ M\ \vdash\  \quadruple {A}  {\sigma.\prg{cont}} {A'} {A''} \ \ $ is proven in $P$,\\
 $\strut \ \ \hspace{2.3cm} \ \ (3) \ \ M, \sigma \models A$, \\
 $\strut \ \ \hspace{2.3cm} \ \ (4) \ \ \leadstoBoundedStarFin {\Mtwo\cdot M}  {\sigma}  {\sigma'}$,\\
 $\strut \ \ \hspace{2.3cm} \ \ (5) \ \ \leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma''}$,\\
 $\strut \ \ \hspace{2.3cm} \ \ \ \ \ \ \ \ \ \Longrightarrow$\\
 $\strut  \ \ \hspace{2.3cm} \ \ (\beta)\ \  M, \sigma' \models A'$,\\
-$\strut  \ \ \hspace{2.3cm} \ \ (\gamma)\ \  M, \sigma'' \models A''$.\\
+$\strut  \ \ \hspace{2.3cm} \ \ (\gamma)\ \  M, \sigma'' \models [\external{this} \rightarrow A'']$.\\
 $\strut \ \   \hspace{1cm} ]$
 .
 \\
-Then the  theorem follows by substituting $A_{one}$, $A_{two}$ into (*).
+Then the  theorem follows by substituting $A_{one}$, $A_{two}$, and $A_{inv}$ for $A$, $A'$, and $A''$ into (*).
+
 
 \vspace{.1cm}
 \noindent
 \textbf{Proof of (*)}\\
-Take any $A, A', \sigma, \sigma'$. Assume  (1), (2), (3) and (4).
-Proceed by case analysis on the last step in $P$'s proof of (2).
-
+By lemma \ref{lemma:normal:two} the relation $\_ \ll_{M,\Mtwo,P}  \_$ is well-founded.
+\\
+Take any $A, A', A'', \sigma, \sigma'$. Assume  (1), (2), (3),  (4), and (5).
+Proceed by case analysis on the proof rule applied to obtain last step in $P$'s proof of (2).
 
 \begin{description} 
 
-\item[${\sc{extend}}$] 
+\item[{\sc{extend}}] 
 
-By soundness of the underlying Hoare logic
+By soundness of the underlying Hoare logic, we obtain that  $M\ \models\ \triple {A_{one}} {stmt}   {A_{two}}$. Moreover, 
+by the assumption of {\sc{extend}}, $stmt$ does not contain any method call. Rest follows by lemma \ref{l:no:call}.
 
-\item[${\sc{combine}}$] 
+\item[{\sc{inv}}] 
 
-Therefore, $A \txteq A_1 \wedge A_2$,  and $A' \txteq A_1' \wedge A_2'$, and the direct predecessors of the proof of $(2)$
-% in $P$ 
-are $M\ \vdash\  \{\, A_1 \,  \}\ \sigma.\prg{cont}\  \{\, A_1' \, \}$ and $M\ \vdash\  \{\, A_2 \,  \}\ \sigma.\prg{cont}\  \{\, A_2' \, \}$. 
+By Theorem \ref{l:triples:sound}.
 
-Therefore, $(A_1,\sigma,A_1') \ll_{M,\Mtwo,P} (A,\sigma,A')$ and also $(A_2,\sigma,A_2') \ll_{M,\Mtwo,P} (A,\sigma,A')$. 
+\item[{\sc{types-2}}] 
 
-By  induction hypothesis we obtain   
-% $M\ \models\  \{\, A_1 \,  \}\ stmt\  \{\, A_1' \, \}$ and $M\ \models\  \{\, A_2 \,  \}\ stmt\  \{\, A_2' \, \}$. 
-$M, \sigma' \models A_1'$ and $M, \sigma' \models A_2'$.
+...
 
-This gives that $M, \sigma' \models A'$.
+\item[{\sc{combine}}] 
+ ...
 
-
-\item[${\sc{sequ}}$] 
-
-Therefore, there exist statements $s_1$ and $s_2$, and assertion  $A''$ so that $\sigma.\prg{cont}\txteq  s1; s2$, and
+\item[{\sc{sequ}}] 
+Therefore, there exist statements $s_1$ and $s_2$, and assertions  $A_1$, $A_2$ and $A''$, so that $A_1\txteq A$, and $A_2 \txteq A'$, and $\sigma.\prg{cont}\txteq  s1; s2$, and
 the proof of  $(2)$ %$M\ \vdash\  \{\, A \,  \}\ s_1;s_2\  \{\, A' \, \}$ in $P$ 
 has as its immediate predecessors proofs for 
-$M\ \vdash\  \{\, A \,  \}\ s_1\  \{\, A'' \, \}$ and $M\ \vdash\  \{\, A'' \,  \}\  s_2\  \{\, A' \, \}$.
+$M\ \vdash\  \quadruple {A_1} {s_1} {A_2} {A''}$ and $ M\ \vdash\  \quadruple {A_2} {s_2} {A_3} {A''}$.
 
 Define $\sigma_1$ as  $\sigma_1 \triangleq \sigma[\prg{cont} \mapsto s_1]$.
-Therefore,  $(A,\sigma_1,A'') \ll_{M,\Mtwo,P} (A,\sigma,A')$. 
+Therefore,  $(A_1,\sigma_1,A_2, A'') \ll_{M,\Mtwo,P} (A_1,\sigma,A_3, A'')$. 
 
-By lemma \ref{lemma:subexp} we obtain that there exists a $\sigma''$ such that $\leadstoBoundedStarFin {\Mtwo\cdot M}  {\sigma_1}  {\sigma''}$. 
- By application of the induction hypothesis we obtain that $M, \sigma'' \models A''$.
+By lemma \ref{lemma:subexp} we obtain that there exists a $\sigma_3$ such that $\leadstoBoundedStarFin {\Mtwo\cdot M}  {\sigma_1}  {\sigma_3'}$. 
+ By application of the induction hypothesis we obtain that $M, \sigma_3  \models A_3$. 
  
- Define $\sigma_2$ as  $\sigma_2 \triangleq \sigma''[\prg{cont} \mapsto s_2]$
-Therefore, we have that $(A'',\sigma_2,A') \ll_{M,\Mtwo,P} (A,\sigma,A')$. 
+ Define $\sigma_2$ as  $\sigma_2 \triangleq \sigma_3[\prg{cont} \mapsto s_2]$
+Therefore, we have that $(A_2,\sigma_2,A_3,A'') \ll_{M,\Mtwo,P} (A_1,\sigma,A_3, A'')$. 
 
  
 Again by lemma \ref{lemma:subexp}, we obtain that $\leadstoBoundedStarFin {\Mtwo\cdot M}  {\sigma_2}  {\sigma'}$.  
- By application of the induction hypothesis we obtain t $M, \sigma' \models A'$.
+ By application of the induction hypothesis we obtain that $(\beta)$, ie that \ \ $ M, \sigma' \models A'$.
+ 
+Let us now take an arbitrary $\sigma''$ such that   $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma''}$. By
+lemma  \ref{lemma:subexp}, either $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma_1}  {\sigma''}$ or
+$\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma_2}  {\sigma''}$. In the first case, $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma_1}  {\sigma''}$. Then, because $(A_1,\sigma_1,A_2, A'') \ll_{M,\Mtwo,P} (A_1,\sigma,A_3, A'')$, we can apply the inductive hypothesis, and obtain $(\gamma)$, ie that \ \ $ M, \sigma'' \models A''$. The second case is analogous.
 
-\item[${\sc{consequ}}$] Similar to the proof of  ${\sc{combine}}$. 
+\item[{\sc{consequ}}] Similar to the proof of  {\sc{combine}}. 
 
-\item[${\sc{types}}$] obvious
 
-\item[${\sc{Prot-1}}$] ...
+\item[ {\sc{Call\_A}}]
 
-\item[${\sc{Prot-2}}$] ...
+Therefore, there exist $u$, $y_o$, $C$, $\overline y$,  $A_1$ and $A_2$ such that \\
+%\begin{tabbing}
+(6)\ $\sigma.\prg{cont}\txteq u=y_0.m(\overline y)$,   \hspace{2cm}
+ (7)\ $A \txteq y_0:C  \ \wedge\ \overline {y:C}\ \wedge \  A_1$, 
+\\ 
+ (8)\ $\promises  M {\mprepostN {A_1}{C}{m}{y}{C}{A_2} {A''}}$,    \hspace{1cm}
+ (9)\ $A' \txteq  A_2[ u/result]$. 
+% \end{tabbing}
 
-\item[${\sc{IntCall}}$]
+By (1), (8), and definition of $\vdash M$ in Section \ref{sect:wf}, we obtain that   $\prg{mBody}(m,C,M)=\overline{y:C}\{\  s \ \}$ and that\\
+(10) \  $M \vdash  \quadruple { \ \prg{this}:\prg{C}\, \wedge\, \overline{y:C}\, \wedge\, A_1\  } {\ s\ } {\ A_2\ } {A''}$ is proven in $P$.
+ 
+ By the operational semantics, we obtain that there exist states $\sigma_1$, and $\sigma_2$, such that \\
+ (11)\ $\sigma_1=\sigma.PUSHFRAME(\prg{this}, {\overline y} \mapsto \overline{\interpret {\sigma} y},\prg{cont} \mapsto s) $, TODO   \hspace{1cm}
+   (12)\ $\leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma_1}$ \\
+ (13)\ $\leadstoBoundedStarFin {\Mtwo\cdot M}  {\sigma_1}  {\sigma_2}$,   \hspace{3cm}
+ (14)\ $\sigma'=\sigma_2[...]$ TODO.
+ 
+ From (3), (11) and lemma \ref{lemma:push}.\ref{pushOne}  we obtain that \ \ \  $ (15) \ \ M, \sigma_1 \models \overline{y:C}\, \wedge\, A_1$.\footnote{\red{Here some renaming needed,  but easy to do0.}}
+ 
+ From (10), (11) and (12) we obtain that $( \prg{this}:\prg{C}\, \wedge\, \overline{y:C}\, \wedge\, A_1,\sigma_1,A_2) \ll_{M,\Mtwo,P} (A,\sigma,A')$. By induction hypothesis, (15) and (13) we obtain that (16) $M,\sigma_2 \models A_2$.
+ 
+ By (14) and lemma  \ref{lemma:push}.\ref{pushTwo}  we obtain that 
+\ \ $M,\sigma' \models \PushAS  {y} {A_2[ u/result]}$. \. With (9) this gives $M,\sigma' \models A'$.
+
+\item[ {\sc{Call\_B}}]
 
 Therefore, there exist $u$, $y_o$, $C$, $\overline y$,  $A_1$ and $A_2$ such that \\
 %\begin{tabbing}
@@ -368,7 +623,7 @@ By (8) and (2) we obtain that there exists an $A_0$ \\
 (15)\ $\TwoStatesQ {\overline {x:C}} {A_0}{A_0} \in HS(M)$\\ and \\
  (16) $M \vdash A_1 \rightarrow A_0$ proven in $P$ \ \ \ \ \ \ \  (17) $M \vdash A_0 \rightarrow A_2$ proven in $P$ \\
 By (7) and (3) we obtain \ \ 
-(18) $M, \sigma \models \external{\prg{this}}$, %\hspace{2cm) 
+(18) $M, \sigma \models \extThis$, %\hspace{2cm) 
 \\
 By (3), (7), (11), (16) and lemma  \ref{lemma:push}.\ref{pushOne} , we get \ \ \ \  (19) $M, \sigma_{e\_1} \models  {  A_0} \,   \wedge \,  {\extract{M}} \, \wedge \, 
 \overline{ {\interpret \sigma x} : C}$.
@@ -412,6 +667,9 @@ $\ \strut \ \ (30) \   M, \sigma'  \models \PushAS  {y}{A_2}$.
 
 \vspace{1cm}
 
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \subsubsection{Soundness of the overall system}
+\label{sect:prove:triples:overall}
 Finally, we can now prove soundness of the overall system
 
 \begin{theorem}[Soundness]
@@ -438,4 +696,3 @@ Theorem. \ref{thm:soundness} demonstrates
  $\proves{M}{A}$, and 
  assertion encapsulation ($\proves{M}{\encaps{A}}$), and is sound
  provided that these two proof systems are sound.
-
