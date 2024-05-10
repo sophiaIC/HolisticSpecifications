@@ -33,13 +33,45 @@ Module Hoare.
                               big_step M σ2 σ3 ->
                               big_step M σ1 σ2.
 
+  Definition final (M : module)(σ : config) := forall σ', ~ reduction M σ σ'.
+
   Definition hoare_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
     forall χ lcl s' ψ χ' lcl',
-      big_step M (χ, frm lcl (s_seq s s') ;; ψ) (χ', frm lcl' s' ;; ψ) ->
-      sat M (χ, frm lcl (s_seq s s') ;; ψ) P ->
-      sat M (χ', frm lcl' s' ;; ψ) Q.
+      big_step M (frm lcl (s_seq s s') ;; ψ, χ) (frm lcl' s' ;; ψ, χ') ->
+      sat M (frm lcl (s_seq s s') ;; ψ, χ) P ->
+      sat M (frm lcl' s' ;; ψ, χ) Q.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_semantics M P s Q)(at level 40).
+
+  Definition push (σ : config)(αs : list addr) : config -> Prop :=
+    match σ with
+    | (ϕ ;; ψ, χ) => fun σ' =>
+                      match σ' with
+                      | (ϕ' ;; ψ', χ') =>
+                          ψ' = ϕ :: ψ /\
+                            χ' = χ /\
+                            (forall x α, local ϕ x = Some (v_addr α) ->
+                                    In (α) αs) (* this is weaker than the paper, but I think sufficient*)
+                      end
+    end.
+
+  Fixpoint prt_frms (e : exp)(ys : list var) :=
+    match ys with
+    | y :: ys' => (a_prt_frm e (e_ y)) ∧ (prt_frms e ys')
+    | nil => a_true
+    end.
+
+  Fixpoint adapt (A : asrt)(ys : list var) : asrt :=
+    match A with
+    | a_prt e => prt_frms e ys
+    | a_prt_frm e x => a_prt_frm e x
+    | a_extl e => a_extl e
+    | a_ e => a_ e
+    | A1 ∧ A2 => (adapt A1 ys) ∧ (adapt A2 ys)
+    | a_all C A => a_all C (adapt A ys)
+    | ¬ A => ¬ (adapt A ys)
+    | _ => a_true (* partial ......*)
+    end.
 
   Fixpoint zip {A B : Type} (l1 : list A)(l2 : list B) : option (list (A * B)) :=
     match l1, l2 with
@@ -49,12 +81,6 @@ Module Hoare.
                          end
     | nil, nil => Some nil
     | _, _ => None
-    end.
-
-  Fixpoint listSubst {A B C : Type}`{Subst A B C} (a : A)(cb : list (C * B)) : A :=
-    match cb with
-    | nil => a
-    | (c, b) :: t => listSubst ([c /s b] a) t
     end.
 
   (* Proof Rules *)
@@ -288,12 +314,12 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** -----------------------------*)
   (** M ⊢ ⦃ P ⦄ x := y.m(args) ⦃ Q ⦄*)
 
-  | h_ext_call : forall M P x y m zs Q xCs A1 A2,
+  (*| h_ext_call : forall M P x y m zs Q xCs A1 A2,
       M ⊢ P ⊆ (a_extl (e_ y)) ->
       lift (y::zs) P A1 ->
       lower A2 = Q ->
       defined_spec M (S_inv xCs A1 A2) ->
-      M ⊢ ⦃ P ⦄ (s_call x y m zs) ⦃ Q ⦄.
+      M ⊢ ⦃ P ⦄ (s_call x y m zs) ⦃ Q ⦄*).
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {

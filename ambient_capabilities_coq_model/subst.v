@@ -49,7 +49,6 @@ Module SubstDefn.
           | a_all C A  => a_all C (sbst' A (S n) α)
           | a_ex C A   => a_ex C (sbst' A (S n) α)
 
-          | a_intl e => a_intl ([α /s n] e)
           | a_extl e => a_extl ([α /s n] e)
 
           | a_prt_frm e1 e2 => a_prt_frm ([α /s n] e1) ([α /s n] e2)
@@ -86,13 +85,30 @@ Module SubstDefn.
           | a_all C A' => a_all C (sbst' A' x e)
           | a_ex C A' => a_ex C (sbst' A' x e)
 
-          | a_intl e' => a_intl ([e /s x] e')
           | a_extl e' => a_extl ([e /s x] e')
 
           | a_prt e' => a_prt ([e /s x] e')
           | a_prt_frm e1 e2 => a_prt_frm ([e /s x] e1) ([e /s x] e2)
           end
     }.
+
+
+
+  #[global] Instance list_subst {A B C : Type}`{Subst A B C} : Subst (list A) B C :=
+    {
+      sbst :=
+        fix sbst' l b c :=
+          match l with
+          | nil => nil
+          | a :: t => ([c /s b] a) :: (sbst' t b c)
+          end
+    }.
+
+  Fixpoint listSubst {A B C : Type}`{Subst A B C} (a : A)(cb : list (C * B)) : A :=
+    match cb with
+    | nil => a
+    | (c, b) :: t => listSubst ([c /s b] a) t
+    end.
 
   (*#[global] Instance exp_acc_subst : Subst exp (var * fld) var :=
     {

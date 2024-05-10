@@ -52,16 +52,22 @@ Module Assert.
     exists x p, x ∈ (local ϕ) /\ interpret_p p σ x = Some (v_addr α).
 
   Definition loc_reachable (α : addr)(σ : config) : Prop :=
-    exists ϕ ψ, snd σ = ϕ ;; ψ /\ reachable α ϕ σ.
+    exists ϕ ψ, fst σ = ϕ ;; ψ /\ reachable α ϕ σ.
 
   Definition glob_reachable (α : addr)(σ : config) : Prop :=
-    exists ϕ ϕ' ψ, snd σ = ϕ ;; ψ /\ (ϕ' = ϕ \/ In ϕ' ψ) /\ reachable α ϕ' σ.
+    exists ϕ ϕ' ψ, fst σ = ϕ ;; ψ /\ (ϕ' = ϕ \/ In ϕ' ψ) /\ reachable α ϕ' σ.
+
+  Definition intl (M : module)(σ : config)(α : addr) :=
+    exists o, snd σ α = Some o /\
+           (o_cls o) ∈ snd M.
+
+  Definition extl (M : module)(σ : config)(α : addr) :=
+    forall o, snd σ α = Some o -> ~ (o_cls o) ∈ snd M.
 
   Inductive is_protected_path : module -> config -> addr -> path -> Prop :=
-  | is_prot1 : forall M σ α_orig f1 f2 α1 o, interpret_αf σ α_orig f1 = Some (v_addr α1) ->
-                                        fst σ α1 = Some o ->
-                                        (o_cls o) ∈ snd M ->
-                                        is_protected_path M σ α_orig (p_cons f1 (p_fld f2))
+  | is_prot1 : forall M σ α_orig f1 f2 α1, interpret_αf σ α_orig f1 = Some (v_addr α1) ->
+                                      intl M σ α1 ->
+                                      is_protected_path M σ α_orig (p_cons f1 (p_fld f2))
 
   | is_protn : forall M σ α_orig f p α, interpret_αf σ α_orig f = Some (v_addr α) ->
                                    is_protected_path M σ α p ->
@@ -98,10 +104,6 @@ Module Assert.
                           sat M σ (a_exp (e_class (e_val (v_addr α)) C)) ->
                           sat M σ (a_ex C A)
 
-  | sat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                          C ∈ snd M ->
-                          sat M σ (a_intl e)
-
   | sat_extl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
                           ~ C ∈ snd M ->
                           sat M σ (a_extl e)
@@ -130,20 +132,20 @@ The above relies on the fact that "this" is always in the local variable map
                                            α <> α_orig ->
                                            (forall p, interpret_αp p σ α_orig = Some (v_addr α) ->
                                                  is_protected_path M σ α_orig p) ->
-                                           sat M σ (a_intl (e_ this)) \/
-                                             (forall ϕ ψ x, snd σ = ϕ ;; ψ ->
+(*)                                             (forall ϕ ψ x, fst σ = ϕ ;; ψ ->
                                                        x ∈ local ϕ ->
                                                        sat M σ (a_prt_frm e (e_ x)) \/
-                                                         sat M σ (a_prt_frm e_orig (e_ x))) ->
+                                                         sat M σ (a_prt_frm e_orig (e_ x))) ->*)
                                            sat M σ (a_prt_frm e e_orig)
 
-  | sat_prt_frm_intl : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
+(*)  | sat_prt_frm_intl : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
                                                 eval M σ e_orig (v_addr α_orig) ->
                                                 α <> α_orig ->
                                                 sat M σ (a_intl e) ->
-                                                sat M σ (a_prt_frm e e_orig)
+                                                sat M σ (a_prt_frm e e_orig)*)
 
   | sat_prt : forall M σ e, (forall α, loc_reachable α σ ->
+                             extl M σ α ->
                              sat M σ (a_prt_frm e (e_val (v_addr α)))) ->
                        sat M σ (a_prt e)
 
@@ -177,20 +179,14 @@ The above relies on the fact that "this" is always in the local variable map
                                nsat M σ ([α /s 0] A)) ->
                          nsat M σ (a_ex C A)
 
-  | nsat_intl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
-                           ~C ∈ snd M ->
-                           nsat M σ (a_intl e)
-
   | nsat_extl : forall M σ e C, sat M σ (a_exp (e_class e C)) ->
                            C ∈ snd M ->
                            nsat M σ (a_extl e)
 
-  | nsat_prt_from1 : forall M σ e e_orig, (forall v α, eval M σ e v ->
-                                             v <> v_addr α) ->
+  | nsat_prt_from1 : forall M σ e e_orig, (forall α, ~ eval M σ e (v_addr α)) ->
                                      nsat M σ (a_prt_frm e e_orig)
 
-  | nsat_prt_from2 : forall M σ e e_orig, (forall v_orig α, eval M σ e_orig v_orig ->
-                                                  v_orig <> v_addr α) ->
+  | nsat_prt_from2 : forall M σ e e_orig, (forall α_orig, ~ eval M σ e_orig (v_addr α_orig)) ->
                                      nsat M σ (a_prt_frm e e_orig)
 
   | nsat_prt_from3 : forall M σ e e_orig v v_orig, eval M σ e v ->
@@ -204,11 +200,19 @@ The above relies on the fact that "this" is always in the local variable map
                                                 ~ is_protected_path M σ α_orig p ->
                                                 nsat M σ (a_prt_frm e e_orig)
 
+  | nsat_prt1 : forall M σ e, (forall α, ~ eval M σ e (v_addr α)) ->
+                         nsat M σ (a_prt e)
+
+  | nsat_prt2 : forall M σ e α, loc_reachable α σ ->
+                           sat M σ (a_extl (v_ (v_addr α))) ->
+                           nsat M σ (a_prt_frm (v_ (v_addr α)) e) ->
+                           nsat M σ (a_prt e).
+
 
   (*
 TODO:
 M ⊢ {P1 /\ P2} s {Q1 /\ Q2}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   *).
+   *)
 
 
   Scheme sat_mut_ind := Induction for sat Sort Prop

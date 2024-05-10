@@ -396,7 +396,7 @@ Module LanguageDefinition.
   | a_all : cls -> asrt -> asrt
   | a_ex : cls -> asrt -> asrt
 
-  | a_intl : exp -> asrt
+(*)  | a_intl : exp -> asrt*)
   | a_extl : exp -> asrt
 
   | a_prt : exp -> asrt
@@ -459,21 +459,21 @@ Module LanguageDefinition.
 
   Notation "ϕ ';;' ψ" := (stack_cons ϕ ψ)(at level 41).
 
-  Definition config := (heap * stack) % type.
+  Definition config := (stack * heap) % type.
 
   Definition top (σ : config) :=
     match σ with
-    | (χ, stack_cons ϕ ψ) => ϕ
+    | (stack_cons ϕ ψ, _) => ϕ
     end.
 
   Definition interpret_x (σ : config)(x : var) : option val :=
     match σ with
-    | (χ, frm lcl c ;; ψ) => lcl x
+    | (frm lcl c ;; ψ, _) => lcl x
     end.
 
   Definition interpret_αf (σ : config)(α : addr)(f : fld) : option val :=
     match σ with
-    | (χ, ϕ ;; ψ) =>
+    | (ϕ ;; ψ, χ) =>
         match χ α with
         | Some o => o_flds o f
         | _ => None
@@ -487,7 +487,7 @@ Module LanguageDefinition.
     end.
 
   Definition ghostLookup (M : module)(σ : config)(α : addr)(g : ghost) : option (var * exp) :=
-    match fst σ α with
+    match snd σ α with
     | Some o => match snd M (o_cls o) with
                | Some CDef => c_ghosts CDef g
                | None => None
@@ -511,7 +511,7 @@ Module LanguageDefinition.
   Definition classOf (σ : config)(x : var): option cls :=
     match interpret_x σ x with
     | Some (v_addr l) =>
-        match fst σ l with
+        match snd σ l with
         | Some o => Some (o_cls o)
         | _ => None
         end
@@ -523,7 +523,7 @@ Module LanguageDefinition.
     | v_null, _ => True
     | v_nat _, t_nat => True
     | v_bool _, t_bool => True
-    | v_addr α, t_cls C => match fst σ α with
+    | v_addr α, t_cls C => match snd σ α with
                           | Some o => if eqb (o_cls o) C
                                      then True
                                      else False
