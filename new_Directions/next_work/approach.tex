@@ -356,14 +356,14 @@ class Shop
        this.send(buyer,anItem)
     else
        buyer.tell("you have not paid me") 
-    public method send(buyer: Object, anItem: Item) -> void  
+    public method send(buyer: external anItem: Item) -> void  
        ...            
 \end{lstlisting}
  
 \noindent
  
 If the \prg{Account} comes from a module that satisfies $S_4$, and if at the point of the call to \prg{buy} -- \ie at line 4 -- the \password~was protected from the \prg{buyer}, then it is guaranteed that after the external call -- \ie after line 7 --  the shop's account's balance will not have decreased.
- \ruleExtCallB is out Hoare logic rule from Fig. \ref{f:external:calls}, which when verifies line 4 through application of $S_4$.
+ \ruleExtCallB\, is our Hoare logic rule from Fig. \ref{f:external:calls}, which when verifies line 7 through application of $S_4$.
 
  
 
@@ -384,15 +384,42 @@ It is safe to apply $S_4$,  because from the point of view of the callee at line
  \notesep Requiring that the account's  password was protected at the time of the call of \prg{buy} would also be far too strong: our module cannot impose restrictions on the callers' external state  upon the call to \prg{buy}.
  \notesep 
  We could specify the method \prg{buy} through the pre-condition $\protectedFrom {\prg{a.pwd}} {\prg{buyer}} \wedge {\prg{a.\myAccount.\balance}}=\prg{b}$ which
- guarantees that $\prg{a..\myAccount.\balance}\geq \prg{b}$.  Note that this is a  direct conclusion of $S_4$; 
-  as \prg{Shop} is part of our internal module, this specification is superfluous -- more in Example \ref{example:mprepostl}.
+ guarantees that $\prg{a.\myAccount.\balance}\geq \prg{b}$.  Note that this is a  direct conclusion of $S_4$; 
+  as \prg{Shop} is part of our internal module, this specification is superfluous -- more in Ex. \ref{example:mprepost}.\footnote{TODO need to re-introduce spec inference in the main text}
  
  \subsection{Third Challenge: Proving that a module adheres to its specification}
  \label{sec:howThird}
  
-{In order to prove that a module adheres to its specification, we need to prove that all  private methods satisfy their  PRE/POST post-conditions, and that all public methods satisfy the module's scoped invariants combined with their PRE/POST conditions -- if any.
-This means that we need Hoare logic rules to reason about, among other things, protection.}
+A module is well-formed, if   its invariants are well-formed,  all  its public methods preserve each of its invariants, and  all its methods satisfy their specifications - \cf  Fig.  \ref{f:wf}.
 
+An invariant is well-formed if % the constituent assertion 
+it is \emph{encapsulated}, \ie can only be invalidated by code from that module -- \cf Def. \ref{d:encaps}. 
+For example, in \ModA the assertion  \prg{a.balance}$\geq$\prg{b} is encapsulated, but it would not be encapsulated 
+% in a module \ModD   implements balances through a third party, openly accessible ledger 
+if balances were in an external, openly modifiable ledger -- \cf Ex. \ref{ex:not:encaps}.
+ 
+A method preserves an assertion $A$ if it preserves it across its pre- and post-states and also during any intermediate external state.
+% f execution of its body in a state
+% state that satisfies  $A$  leads to a state that satisfies $A$, and  any intermediate external call also satisfies $A$.
+For this, we introduce Hoare quadruples $\quadruple {A} {\, stmt\, }{A'} {A''}$ which promise that terminating execution of $stmt$ in a state satisfying $A$  reaches a final state satisfying $A'$, and any intermediate external states reachable during execution of $stmt$ satisfy    $A''$. 
+
+To prove satisfaction of $S\_1$-$S\_4$ for method \prg{Shop::buy} we  need to prove:
+\\
+{\footnotesize{
+$\strut \ \ \ \ \ \ \ \  \quadruple {A_1  \wedge \inside{\prg{a}} } {\ stmt\_buy  \ } {\inside{\prg{a}}} { \inside{\prg{a}}} $
+\\
+$\strut \ \ \ \ \ \   \ \  \quadruple {A_1  \wedge  \inside{\prg{a.\password}} } {\  stmt\_buy  \  } {\inside{\prg{a.\password}}}  {\inside{\prg{a.\password}}}$
+\\
+$\strut \ \ \ \ \ \  \ \    \quadruple {A_2  \wedge  \inside{\prg{a}} \wedge  \prg{a.\balance}\!=\!{\prg{b}} } {\   stmt\_buy  \  } {\inside{\prg{a}} \wedge  \prg{a.\balance}\!=\!\prg{b}}   
+                         {  \inside{\prg{a}} \wedge  \prg{a.\balance}\!=\!\prg{b} }$
+\\
+$\strut \ \ \ \ \ \   \ \   \quadruple {A_2  \wedge  \inside{\prg{a.\password}} \wedge  \prg{a.\balance}\!\geq\!{\prg{b}} } {\  stmt\_buy  \  } {\inside{\prg{a.\password}} \wedge  \prg{a.\balance}\!\geq\!{\prg{b}}}  
+   { \inside{\prg{a.\password}}\wedge  \prg{a.\balance}\!\geq\!{\prg{b} }}$
+}}
+\\
+where   $stmt\_buy$ is shorthand for the method body of \prg{buy}, and $A_1 \triangleq \prg{this}:\prg{Shop}, \prg{buyer}:\prg{external}, \prg{anItem}:\prg{Item} \wedge \prg{a}:\prg{Accounct}$
+and $A_2 \triangleq A_1 \wedge \prg{b}:\prg{int}$
+ 
 {For our work, we assume an underlying sound Hoare logic for {our} language, and extend it with rules about protection, external calls, and the module's adherence to its 
 specification - more in Figs. \ref{f:underly} - \ref{f:wf}.
 We prove that the extended Hoare logic is sound.
