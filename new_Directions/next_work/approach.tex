@@ -244,13 +244,20 @@ For this, we propose two %a specification language for modules, which has two ma
  
 \begin{description}
 \item[Protection] to describe a lack of access to capabilities: An object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  if $o$ cannot obtain direct access to $o'$ unless an internal object affords that access. %to $o$. 
-And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. 3.5, 4.5 and 4.6.
+And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. \ref{def:chainmail-protection-from}, and \ref{def:chainmail-protection}.
 
-\item[{Scoped invariants}] to describe emergent behaviour:  {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if a reachable state $\sigma$ 
-  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will  {also} satisfy  {$A$}. The scoped future contains future states, including further method calls and returns, but {does not return} from the call active in $\sigma$ -- more in Def 5.3. \sdN{and 3.1}.
-I% In other words, the current call \emph{scopes} where \se{$A$} must hold -- more in Def 3.1. 
-We consider executions of the internal module linked with any number of unknown, external modules -- \cf Sect. 2.2.
- For $\sigma$ and its scoped future   we only consider states whose receiver is \emph{external}. 
+\item[{Scoped invariants}] to describe emergent behaviour:  {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if a 
+% SD: drop reachable, as we not define it here, and it is not that fundamenal, I think
+% reachable 
+\sdN{state} $\sigma$ 
+  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will  {also} satisfy  {$A$}. 
+The scoped future contains future states, including further method calls and returns, but {does not return} from the call active in $\sigma$ -- more in Def \ref{def:necessity-semantics} \sdN{and \ref{def:shallow:term}}.
+% In other words, the call active in  $\sigma$  \emph{scopes} how much og the future is relevant. 
+% SD removed the below because it seems to talk both about the meaning of  {$\TwoStatesN  {\overline{x:C}}  {A}$}  and scoped future.
+% I was confused when I read it
+% in other words, the current call \emph{scopes} where \se{$A$} must hold -- more in Def 3.1. 
+We consider executions of the internal module linked with any number of unknown, external modules -- \cf Sect. \ref{sect:execution}.
+ For $\sigma$ and its scoped future   we only consider states \sdN{with \emph{external} receiver}.
 
 \end{description}
 
@@ -290,13 +297,13 @@ $S_4$ & $\triangleq$   &
 }
 
 \noindent
-They 
+\sdN{They}
 %specifications
  give the following guarantees: \ \   $S_1$:\   accounts are not leaked, 
 \ \  $S_2$:\    passwords are not leaked,
 \ \  $S_3$:\  the balance is not modified unless there is unprotected access to the account,  %while 
-\ \ $S_4$:\   the balance does not decrease unless there is unprotected access to the password.
-\\
+\ \ $S_4$:\   the balance does not decrease unless there is unprotected access to the password. \ \ 
+% \\
  All three modules satisfy $S_1$ and $S_3$. $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, but $\ModB$ satisfies neither $S_2$ nor $S_4$.
  
  
@@ -307,13 +314,17 @@ implies that they can characterize  any
 module with bank accounts which have a % {\textit{implementation}} of a bank account with a 
  \balance~and a \password -- even as ghost fields --}, irrespective of the API offered, services  exported, or  dependencies on other parts of the system.\footnoteSD{does this come from OOPSLA? if so we need to rephrase}
 \notesep
-{Adherence to   specifications is not monotonic:
-Adding a method to a module does not necessarily preserve adherence to
-a specification, and while separate methods may adhere to a  specification, their combination does
+Adherence to   specifications is not monotonic:
+\sdN{Eg, while  \ModA satisfies $S_4$, the addition of \prg{set} lead to \ModB, which does not.}
+% Adding a method to a module does not necessarily preserve such adherence,
+% \eg adding method \prg{set} in module \ModB breaks 
+%SD removed the below. When we changed the invaraints to have the same assertion re and post it no longer hel
+\forget{, and while separate methods may adhere to a  specification, their combination does
 not necessarily do so. 
 {For example, \ModB's  \prg{tansfer} and \prg{set} satisfy $S_4$, but their interplay does not.}
 %In this sense, and, similar to OOPSLA'22, our  specifications capture a module's \emph{emergent behaviour}. 
 }
+
 
  
 \subsection{Second Challenge: Reasoning about external calls}
@@ -352,7 +363,7 @@ class Shop
 \noindent
  
 If the \prg{Account} comes from a module that satisfies $S_4$, and if at the point of the call to \prg{buy} -- \ie at line 4 -- the \password~was protected from the \prg{buyer}, then it is guaranteed that after the external call -- \ie after line 7 --  the shop's account's balance will not have decreased.
-{The corresponding Hoare logic rule, which applying  $S_4$ would verify line 7, appears in Fig. 10.}
+ \ruleExtCallB is out Hoare logic rule from Fig. \ref{f:external:calls}, which when verifies line 4 through application of $S_4$.
 
  
 
@@ -366,8 +377,8 @@ If the \prg{Account} comes from a module that satisfies $S_4$, and if at the poi
  a \emph{stronger} property than the one we have.
  Namely,   $S_4$ requires   the \password~to be protected, while we only know 
   that the \password~is protected from the  \prg{buyer}.
-It is safe to apply $S_4$,  because from the point of view of the callee at line 7 the \password~is indeed protected -- \cf Fig, 5,   Lemma 4.7, and the 
-  Hoare logic rule in Fig.10.
+It is safe to apply $S_4$,  because from the point of view of the callee at line 7 the \password~is indeed protected -- \cf Def. \ref{def:push},   Lemma \ref{lemma:push:ass:state}, and the 
+  Hoare logic rule \ruleExtCallB in Fig.\ref{f:external:calls}
    \notesep  If at the point of call of \prg{buy} the  password was not protected from the \prg{buyer}, then, of course, no guarantee can be made about the account's balance.
  \notesep Requiring that the account's password was protected from all external objects would be far too strong; if that were the case, then the account would not be useful for any payments.
  \notesep Requiring that the account's  password was protected at the time of the call of \prg{buy} would also be far too strong: our module cannot impose restrictions on the callers' external state  upon the call to \prg{buy}.
@@ -383,7 +394,7 @@ It is safe to apply $S_4$,  because from the point of view of the callee at line
 This means that we need Hoare logic rules to reason about, among other things, protection.}
 
 {For our work, we assume an underlying sound Hoare logic for {our} language, and extend it with rules about protection, external calls, and the module's adherence to its 
-specification - more in Figs. 7-11.
+specification - more in Figs. \ref{f:underly} - \ref{f:wf}.
 We prove that the extended Hoare logic is sound.
 }
 
