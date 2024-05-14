@@ -30,11 +30,19 @@ Before describing these three phases, we introduce some preliminaries.
 
 \subsection{Preliminaries: Specification Lookup and  Assertion Encapsulation}
 
+\paragraph{More Notation} 
+\begin{itemize}
+\item
+ \sdN{For statement $s_1$ and $s_2$, we write $s_1 \txtin   s_2$  when $s_1 \txteq  s_2$ or  $s_2 \txteq  s_1; s_3$ for some $s_3$.}
+ \item
+ \sdN{ For specifications $S_1$ and $S_2$, we write $S_1 \txtin   S_2$  when $S_2 \txteq  S_1$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.}
+\end{itemize}
+
 We will be using the notation $\promises M S$ to indicate that $S$ is part of the module's specification
 
 \begin{definition}
 \label{d:encaps}
- $\promises M S\ \ \ \triangleq\ \ \ \SpecOf M \txteq  S \wedge \_  \ \vee\  \SpecOf M \txteq \_ \wedge S   \ \vee\ \SpecOf M \txteq \_ \wedge S $
+ $\promises M S\ \ \ \triangleq\ \ \ \S \txtin SpecOf M  $
  \end{definition} 
 
 \subsubsection {Assertion Encapsulation}
@@ -355,8 +363,8 @@ Rules  {\sc{sequ}} and  {\sc{consequ}} are the usual rules for statement sequenc
 
 
 \subsubsection{Reasoning about   calls}
-is described in Fig. \ref{f:internal:calls}. The first two rules are about calling private methods,  the next four rules are about public methods, and the last two rules
-are about calling. external methods.
+is described in Fig. \ref{f:internal:calls}. {\sc{Call\_Int}} describes calling of internal methods, whether public or private;   {\sc{Call\_Pub}} describes calling public methods;   {\sc{Call\_Ext}} 
+describes calling. external methods.
 
 
 % {We now move to the discussion of  external calls. For all external calls we require that the module's invariants hold before the external call.
@@ -387,25 +395,26 @@ are about calling. external methods.
 \begin{figure}[htb]
 $\begin{array}{c}
 %\begin{array}{ll}
-\inferruleSD{\hspace{4.7cm} [\sc{Call\_A}]}
- 	{
-	   	
-	   	\begin{array}{l}
-		\promises  M  { \mprepostN {A_1} {p\ C} {m} {y} {C} {A_2} {A_3} }
-%		\\
-%		A_3 \txteq \overline {x:C} \wedge A \hspace{1.4cm}
-%		\promises {M} {\TwoStatesN  {\overline {x:C}} {A}}
-          	\end{array}
-          		}
-	{  \hprovesN {M} 
-						{ \  y_0:C  \ \wedge\ \overline {y:C}\ \wedge \ \red{A_1}\   \  }
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \ \red{ A_2[ u/result] }  \ }
-						{\red {A_3}}	
- }
+% SD: does not hold as is
+%\inferruleSD{\hspace{4.7cm} [\sc{Call\_A}]}
+% 	{
+%	   	
+%	   	\begin{array}{l}
+%		\promises  M  { \mprepostN {A_1} {p\ C} {m} {y} {C} {A_2} {A_3} }
+%%		\\
+%%		A_3 \txteq \overline {x:C} \wedge A \hspace{1.4cm}
+%%		\promises {M} {\TwoStatesN  {\overline {x:C}} {A}}
+%          	\end{array}
+%          		}
+%	{  \hprovesN {M} 
+%						{ \  y_0:C  \ \wedge\ \overline {y:C}\ \wedge \ {A_1}\   \  }
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \ { A_2[ u/result] }  \ }
+%						{\red {A_3}}	
+% }
  \\
  \\
- \inferruleSD{\hspace{4.7cm} [\sc{Call\_B}]}
+ \inferruleSD{\hspace{4.7cm} [\sc{Call\_Int}]}
 	{
 	   	\begin{array}{l}
 		\promises  M {\mprepostN{A_1}{p\ C}{m}{y}{C}{A_2} {A_3}}  
@@ -415,53 +424,32 @@ $\begin{array}{c}
           	\end{array}
 		}
 	{  \hprovesN {M} 
-						{ \  y_0:C  \ \wedge\ \overline {y:C}\ \wedge \ \red{\PushAS {y}{A_1}}  \ } %\wedge A_3)}}}
+						{ \  y_0:C  \ \wedge\ \overline {y:C}\ \wedge \ {\PushAS {y}{A_1}}  \ } %\wedge A_3)}}}
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \ \red{ \PushAS {y}{(A_2[ u/result]}}  \ }
-						{ \red {A_3} }	
+						{ \ { \PushAS {y}{(A_2[ u/result]}}  \ }
+						{  {A_3} }	
 }
-
-% \\
-% \\
-% \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub\_A}]}
+%% SD
+%% DOES NOT HOLD AS IS
+%\\
+%\\
+%  \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub\_A}]}
 %	{
 %	   	\begin{array}{l}
 %		\promises  M {\mprepost{A_1}{\prg{public}\ C}{m}{y}{C}{A_2} } \\
-%%		 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-%%		\\
-%%		A_3 \txteq \overline {x:C} \wedge A \hspace{1.4cm}
-%%		\promises {M} {\TwoStatesN  {\overline {x:C}} {A}}
+%		 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
 %          	\end{array}
 %		}
 %	{  \hprovesN {M} 
-%						{ \  y_0:C  \, \wedge\ ,\overline {y:C}\, \wedge \, \red{\PushAS {y}{A_1} } \ }
+%						{ \  y_0:C  \, \wedge\ ,\overline {y:C}\, \wedge \,  \overline{x:D}  \wedge\, {A}\ }
 %						%\wedge A_3)}}}
-%						{ \ u:=y_0.m(y_1,.. y_n)\    }
-%						{ \ \red{ \PushAS {y}{(A_2[ u/result]}}  \ }
-%						{ \red {true} }	
+%						{ \ u:=y_0.m(y_1,.. y_n)\   }
+%						{   \ {A} \ }
+%						{\  \red { A}\  }	
 %}
-% \\
-% \\
-% \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub\_A}]}
-%	{
-%	   	\begin{array}{l}
-%		\promises  M {\mprepost{A_1}{\prg{public}\ C}{m}{y}{C}{A_2} } \\
-%%		 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-%%		\\
-%%		A_3 \txteq \overline {x:C} \wedge A \hspace{1.4cm}
-%%		\promises {M} {\TwoStatesN  {\overline {x:C}} {A}}
-%          	\end{array}
-%		}
-%	{  \hprovesN {M} 
-%						{ \  y_0:C   \wedge \overline {y:C}  \wedge  A_1    \ }
-%						%\wedge A_3)}}}
-%						{ \ u:=y_0.m(y_1,.. y_n)\    }
-%						{ \ \red{ A_2[ u/result]} \ }
-%						{ \red {true} }
-%}
+ \\
 \\
-\\
-  \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub\_A}]}
+ \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub}]}
 	{
 	   	\begin{array}{l}
 		\promises  M {\mprepost{A_1}{\prg{public}\ C}{m}{y}{C}{A_2} } \\
@@ -469,45 +457,28 @@ $\begin{array}{c}
           	\end{array}
 		}
 	{  \hprovesN {M} 
-						{ \  y_0:C  \, \wedge\ ,\overline {y:C}\, \wedge \,  \overline{x:D}  \wedge\, \red{A}\ }
-						%\wedge A_3)}}}
-						{ \ u:=y_0.m(y_1,.. y_n)\   }
-						{   \ \red{A} \ }
-						{\  \red { A}\  }	
-}
- \\
-\\
- \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub\_B}]}
-	{
-	   	\begin{array}{l}
-		\promises  M {\mprepost{A_1}{\prg{public}\ C}{m}{y}{C}{A_2} } \\
-		 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
-          	\end{array}
-		}
-	{  \hprovesN {M} 
-						{ \  y_0:C  \, \wedge\ ,\overline {y:C}\, \wedge \,  \overline{x:D}  \wedge\, \red{\PushAS {y}{A}}\ }
+						{ \  y_0:C  \, \wedge\ ,\overline {y:C}\, \wedge \,  \overline{x:D}  \wedge\, {\PushAS {y}{A}}\ }
 						%\wedge A_3)}}}
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{    \red{\PushAS {y}{A}} \ }
-						{ \red {\   A\ }} 	
+						{    {\PushAS {y}{A}} \ }
+						{  {\   A\ }} 	
 }
- \\
- \\
 \\
  \\ 
-  \inferruleSD{\hspace{4.7cm} [\sc{Ext\_Cal\_A}]}
-	{ 
-   	 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
-        }
-	{   \hprovesN{M} 
-						{ \    \sdN{ \external{y_0}} \,     \wedge \,  \overline{x:D}\  \wedge\ \sdN{A} \ } 
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \   \sdN{A}  \ }
-						{\  A \  }	
-}
-\\
-\\
- \inferruleSD{\hspace{4.7cm} [\ruleExtCallB]}
+% DOES NOIT HOLD AS IS
+%  \inferruleSD{\hspace{4.7cm} [\sc{Ext\_Cal\_A}]}
+%	{ 
+%   	 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
+%        }
+%	{   \hprovesN{M} 
+%						{ \    \sdN{ \external{y_0}} \,     \wedge \,  \overline{x:D}\  \wedge\ \sdN{A} \ } 
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \   \sdN{A}  \ }
+%						{\  A \  }	
+%}
+%\\
+%\\
+ \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}]}
  	{ 
    	 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
         }
@@ -527,17 +498,15 @@ $
 \end{figure}
 % }}
 
-For private methods, we start by  looking up (one of) the method's specifications: $ \promises  M {\mprepostN{A_1}{\prg{private} C}{m}{y}{C}{A_2} {A_3}}  $  indicates that if $m$ starts in a state that satisfies $A_1$, then  its execution will lead to a state that sariafies $A_2$, and
-that during its execution, $A_3$  any reachable scoped external state will satisfy $A_3$.
-This is reflected  in rule {\sc{Call\_Priv\_A}};  notice that in the post condition ($A_2$) we replace the $result$ by the left hand side of the assignment ($u$).
-In rule  {\sc{Call\_Priv\_B}} we require a weaker pre-condition ($  \PushAS {y}{A_1}$  rather than $A_1$) and also ensure a weaker post-condition ($ PushAS {y}{A_2}$, rather than $A_2$).
-Remember that $  \PushAS {y}{A_1}$ guarantees that $A_1$ held before popping the callee's frame (ie $  \PushAS {y}{A_1}$). and thartxxxx
+For internal methods, {\sc{Call\_Int}}, we start by  looking up (one of) the method's specifications: $ {\mprepostN{A_1}{\prg{private} C}{m}{y}{C}{A_2} {A_3}}  $  indicates that if $m$ starts in a state that satisfies $A_1$, then  its execution will lead to a state that satisfies $A_2$, and
+that during its execution, $A_3$  any reachable scoped external state will satisfy $A_3$. Notice that in the post condition ($A_2$) we replace the $result$ by the left hand side of the assignment ($u$).
+Moreover, we require a weaker pre-condition ($  \PushAS {y}{A_1}$  rather than $A_1$) and also ensure a weaker post-condition ($ PushAS {y}{A_2}$, rather than $A_2$).
+Remember that $  \PushAS {y}{A_1}$ guarantees that $A_1$ held before popping the callee's frame (ie $  \PushAS {y}{A_1}$);
 %Looking more closely, we notice  that {\sc{IntCall}} does not require the method's precondition ($A_1$) to hold before the call, but instead requires that it will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{A_1}$).
-
 %Similarly, after the call it does not guarantee the method's post condition ($A_2$), but instead guarantees that it held before popping the calllee's frame (ie $  \PushAS {y}{A_1}$).
 %Remember that the assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
 %onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ 
-(cf.  lemma \ref{lemma:push:ass:state}).
+cf.  lemma \ref{lemma:push:ass:state}).
 
 
 explain explainexplain explain explain explainexplain explain explain explainexplain explain explain explainexplain explain
@@ -682,7 +651,7 @@ explain explainexplain explain explain explainexplain explain explain explainexp
 
 
  
-\footnoteSD{\red{QUESTIONS: }
+\footnoteSD{{QUESTIONS: }
 
 \begin{enumerate}
 \item 
