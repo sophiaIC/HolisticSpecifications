@@ -31,7 +31,7 @@ The ghost fields may be defined recursively.
 \subsection{Syntax}
 The syntax of \LangOO is given in Fig. \ref{f:loo-syntax}.
 \LangOO modules ($M$) map class names ($C$) to class definitions ($\textit{ClassDef}$).
-A class definition consists of \jm[]{an optional annotation \enclosed},
+A class definition consists of % \jm[]{an optional annotation \enclosed},
 a list of field definitions, ghost field definitions, and method definitions.
 {Fields, ghost fields, and methods all have types: {types are
     classes}. Ghost fields may be optionally 
@@ -40,10 +40,10 @@ body of the ghost field to only contain references to internal objects. This is 
 limited type system of \LangOO.}
 A program state ($\sigma$) is represented as a heap ($\chi$), stack ($\psi$) pair, 
 where a heap is a map from addresses ($\alpha$) to objects ($o$), and a stack is a non-empty list of frames ($\phi$). A frame consists of a local variable
-map and a continuation ($c$) that represents the statements that are yet to be executed ($s$),
-or a hole waiting to be filled by a method return in the frame above ($x := \bullet; s$).
+map and a continuation ($c$) that represents the statements that are yet to be executed ($s$).
+% or a hole waiting to be filled by a method return in the frame above ($x := \bullet; s$).
 A statement is either a field read ($x := y.f$), a field write ($x.f := y$), a method call
-($x := y.m(\overline{z})$), a constructor call ($\prg{new}\ C(\overline{x})$), a method return statement
+($u :=y_0.m(\overline{y})$), a constructor call ($\prg{new}\ C(\overline{x})$), a method return statement
 ($\prg{return}\ x$), or a sequence of statements ($s;\ s$).
 
 \LangOO also includes syntax for expressions $e$ that may %only
@@ -180,7 +180,7 @@ specifications or the definition of ghost fields.
 \label{f:loo-syntax}
 \end{figure}
 
-\red{JULIAN: Do we need the selectors? SD}
+\footnoteSD{\red{JULIAN: Do we need the selectors? SD}}
 
 \subsection{Semantics}
 \LangOO is a simple object oriented language, and the operational semantics 
@@ -219,15 +219,35 @@ Definition \ref{def:meth-lookup} defines the method lookup function for a method
 call $m$ on an object of class $C$.
 \begin{definition}[Method Lookup]
 \label{def:meth-lookup}
-For module $M$, class $C$, and method name $m$, method lookup is defined as 
-$$\meth{M}{C}{m}\ \triangleq\ M(C).\prg{mths}(m)$$
+For module $\Mtwo$, class $C$, and method name $m$, method lookup is defined as 
+$$\meth{\Mtwo}{C}{m}\ \triangleq\ M(C).\prg{mths}(m)\ \ \mbox{for some} M\in\Mtwo$$
 \end{definition}
+
+We borrow the definition  of module linking, given in Definition \ref{def:linking}.
+\begin{definition}
+\label{def:linking}
+For all modules $\Mtwo$ and $M$, if the domains of$\Mtwo$ and $M$ are disjoint, 
+we define the module linking function as $M\cdot \Mtwo\ \triangleq\ M\ \cup\ M'$.
+\end{definition}
+That is,  their linking is the union of the two if their domains are disjoint.
+
+
+\newcommand{\Same}[4]{{SameModule(#1,#2,#3,#4)}}
+
+Finally, we define what it means for two objects to come from the same module
+\begin{definition}[Same Module]
+\label{def:class-lookup}
+For program state $\sigma$,  modules $\Mtwo$, and variables $x$ and $y$, we defone
+$$\Same {x} {y} {\sigma}{\Mtwo}\ \triangleq\ \exists C, C', M[ \ M\in \Mtwo \wedge C, C'\in M \wedge  \class{\sigma}{x}=C \wedge \class{\sigma}{y} =C'\ ]$$
+\end{definition}
+
 
 Fig. \ref{f:loo-semantics} gives the operational semantics of \LangOO. 
 Program state $\sigma_1$ reduces to $\sigma_2$ in the context of
-module $M$ if $\exec{M}{\sigma_1}{\sigma_2}$. The semantics in Fig. \ref{f:loo-semantics}
+modules$\Mtwo$ if $\exec{\Mtwo}{\sigma_1}{\sigma_2}$. The semantics in Fig. \ref{f:loo-semantics}
 are unsurprising, but it is notable that reads (\textsc{Read}) and writes (\textsc{Write})
-are restricted to the class that the field belongs to.
+are restricted to the class that the field belongs to,
+\sdN{and methods  may only be called if public, or from same module as current receiver.}
 \begin{figure}[t]
 \begin{minipage}{\textwidth}
 \begin{minipage}{\textwidth}
@@ -236,62 +256,68 @@ are restricted to the class that the field belongs to.
 \infer
 	{
 	\sigma_1 = (\sdN{\overline{\phi}\cdot\phi},  \chi)\\
-        \sdN{\phi}.(\prg{contn})  \txteq   x := y_0.m(\overline{y}); s \\
+        \sdN{\phi}.(\prg{contn})  \txteq   u := y_0.m(\overline{y}); s \\
        % \phi_1' = \phi_1[\prg{contn} := (x := \bullet; s)]\\
-	\meth{\Mtwo}{\class{\sigma_1}{x}}{m} = m(\overline{p : T})\red{:T}\{s'\}\\
-	  \sigma_2 = \sdN{\overline{\phi}\cdot\phi\cdot\phi'},\chi)\\
-	\phi' = \{\prg{local}:= ([\prg{this}\ \mapsto\ \interpret{\sigma_1}{y_0}]\overline{[p\ \mapsto\ \interpret{\sigma_1}{y}]}), \prg{contn}:=s'\}
+	\meth{\Mtwo}{\class{\sigma_1}{y}}{m} = p \ C::m(\overline{x : T})\red{:T}\{s'\}\\
+        	{\sdN{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {\sigma_1}{\Mtwo} }} \\
+	\phi' = \{\prg{local}:= ([\prg{this}\ \mapsto\ \interpret{\sigma_1}{y_0}]\overline{[x\ \mapsto\ \interpret{\sigma_1}{y}]}), \prg{contn}:=s'\} \\
+	  \sigma_2 = \sdN{(\overline{\phi}\cdot\phi\cdot\phi'},\chi)\\
 	}
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{Call})
 	\and
 \infer
 	{
-	\sigma_1 = (\chi, \phi_1 \cdot\psi) \\
-	\sigma_2 = (\chi, \phi_2 \cdot\psi) \\
-	\phi_1.(\prg{contn}) = (x := y.f; s)\\
-	\interpret{\sigma_1}{x.f} = v \\
-	\phi_2 = \{\prg{local}:=\phi_1.(\prg{local})[x\ \mapsto\ v],\ \prg{contn}:=s\}\\
-	\class{\sigma_1}{\prg{this}} = \class{\sigma_1}{y}
+%	\sigma_1 = (\chi, \phi_1 \cdot\psi) \\
+%	\sigma_2 = (\chi, \phi_2 \cdot\psi) \\
+	\sdN{\sigma_1.(\prg{contn}) =  x := y.f; s} \\
+	 \Same {\prg{this}}  {y}  {\sigma_1} {\Mtwo}\\
+	%\phi_2 = \{\prg{local}:=\phi_1.(\prg{local})[x\ \mapsto\ v],\ \prg{contn}:=s\}
+	\sigma_2=\sigma_1[x\mapsto  \interpret{\sigma_1}{y.f} \} ]
 	}
-	{\exec{M}{\sigma_1}{\sigma_2}}
+	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{Read})
 	\and
 \infer
 	{
-	\sigma_1 = (\chi_1, \phi_1 \cdot\psi) \\
-	\sigma_2 = (\chi_2, \phi_2 \cdot\psi) \\
-	\phi_1.(\prg{contn}) = (x.f := y; s)\\
-	\interpret{\sigma_1}{y} = v \\
-	\phi_2 = \{\prg{local}:=\phi_1.(\prg{local}),\ \prg{contn}:=s\}\\
-	\chi_2 = \chi_1[\interpret{\sigma_1}{x}.f \mapsto\ v]\\
-	\class{\sigma_1}{\prg{this}} = \class{\sigma_2}{x}
+ %	\sigma_1 = (\overline{\phi}\cdot\phi,\chi ) \\
+	\sigma_1 .(\prg{contn}) =  x.f := y; s \\
+	\Same {\prg{this}}  {x}  {\sigma_1} {\Mtwo}\\
+%	\phi' = \phi [ \prg{contn}:=s ] \\ % \{\prg{local}:=\phi_1.(\prg{local}),\ \prg{contn}:=s\}\\
+%	\chi' = \chi[\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ]\\
+	\sigma_2 = \sigma[\prg{contn}:=s][\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ]	
+	(\overline{\phi}\cdot\phi',\chi' )\\
 	}
-	{\exec{M}{\sigma_1}{\sigma_2}}
+	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	{}
 	\quad(\textsc{Write})
 	\and
 \infer
 	{
-	\sigma_1 = (\chi, \phi \cdot\psi) \\
-	\phi.(\prg{contn}) = (x := \prg{new}\ C(\overline{z}); s)\\
-	M(C).(\prg{constr}) = (\overline{p : T})\{ s' \} \\
-	\phi' = \{\prg{local}:=[\prg{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \prg{contn} := s'\}\\
-	\sigma_2 = (\chi[\alpha\ \mapsto\ \{\prg{class}:=C, \prg{flds}:=\overline{f\ \mapsto\ \nul}], \phi' \cdot\phi[\prg{contn}\ :=\ (x := \bullet; s)] \cdot\psi)
-	}
-	{\exec{M}{\sigma_1}{\sigma_2}}
+	\sigma_1.(\prg{contn})\ =\  x := \prg{new}\ C(\overline{z}); s \\
+	fields(C)=\overline{f} \\
+	\alpha \mbox{ fresh in } \sigma_1 \\
+	% \phi' = \{\prg{local}:=[\prg{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \prg{contn} := s'\}\\
+	\sigma_2 = \sigma_1[x\mapsto \alpha][\prg{cont}\mapsto s][\alpha  \mapsto  \{\prg{class}:=C, \prg{flds}:=\overline{f\ \mapsto\ \interpret {\sigma_1} {x}} ] 
+%	\sigma_1 = (\chi, \phi \cdot\psi) \\
+%	\phi.(\prg{contn}) = (x := \prg{new}\ C(\overline{z}); s)\\
+%	M(C).(\prg{constr}) = (\overline{p : T})\{ s' \} \\
+%	\phi' = \{\prg{local}:=[\prg{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \prg{contn} := s'\}\\
+%	\sigma_2 = (\chi[\alpha\ \mapsto\ \{\prg{class}:=C, \prg{flds}:=\overline{f\ \mapsto\ \nul}], \phi' \cdot\phi[\prg{contn}\ :=\ (x := \bullet; s)] \cdot\psi)	
+		}
+	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{New})
 	\and
 \infer
 	{
 	\sigma_1 = (\sdN{\overline{\phi}\cdot}\phi_ \cdot\phi', \chi) \\
-	\phi'.(\prg{contn}) \txteq  \red{z; \_} \\ % )\ \textit{or}\ \phi_1.(\prg{contn}) = (\red{z})\\
+	\phi'.(\prg{contn}) \txtin  \red{z} \\ % )\ \textit{or}\ \phi_1.(\prg{contn}) = (\red{z})\\
 	\phi.(\prg{contn})   \txteq  \red{x := y_0.m(\overline y)}; s \\
-	\phi''= (\prg{local} := \phi.(\prg{local})[x \mapsto \interpret{\sigma_1}{z}],
-	                \prg{contn}:= \red{s} )   \\
+	\phi''= \phi[x \mapsto \interpret{\sigma_1}{z}][\prg{contn}:= \red{s} ]\\ 
+	%(\prg{local} := \phi.(\prg{local})[x \mapsto \interpret{\sigma_1}{z}],  \prg{contn}:= \red{s} )   \\
 	\sigma_2 = (\sdN{\overline{\phi}\cdot} \phi'', \chi)
 	}
-	{\exec{M}{\sigma_1}{\sigma_2}}
+	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	{}
 	\quad(\textsc{Return})
 \end{mathpar}
@@ -394,17 +420,8 @@ are restricted to the class that the field belongs to.
 
 While the small-step operational semantics of \LangOO is given in Fig. \ref{f:loo-semantics},
 specification satisfaction is defined over an abstracted notion of 
-the operational semantics that models the open world, called \jm[]{\emph{external states semantics}}. 
-That is, execution occurs in the context of not just an internal, trusted module, but 
-an external, untrusted module. We borrow the definition of external \jm[]{states} semantics 
-from \citeauthor{FASE}, along with the related definition of module linking, given in Definition \ref{def:linking}.
-\begin{definition}
-\label{def:linking}
-For all modules $M$ and $M'$, if the domains of $M$ and $M'$ are disjoint, 
-we define the module linking function as $M\ \circ\ M'\ \triangleq\ M\ \cup\ M'$.
-\end{definition}
-That is, given an internal, module $M$, and an external module $M'$, 
-we take their linking as the union of the two if their domains are disjoint.
+the operational semantics that models the open world. %, called \jm[]{\emph{external states semantics}}. 
+
 
 
 
