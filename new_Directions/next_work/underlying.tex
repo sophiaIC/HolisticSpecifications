@@ -8,8 +8,12 @@ Wrt to encapsulation and  capability safety},  \LangOO supports private fields, 
  It has a simple concept of module with module-private fields and methods, described in Sect. \ref{sect:execution}.
  The definition of \LangOO  {can be found in the appendices  \cite{necessityFull}}, and is  similar to   OOPSLA-22.\footnoteSD{any differences?}
 
-A \LangOO state, $\sigma$,  consists of a  heap $\chi$, and a   stack $\psi$. A stack is is a sequence of frames, $\phi$.
-A frame consists of a local variable map, and a continuation, \ie a sequence of statements to be executed.
+A \LangOO state, $\sigma$,  consists of a  heap $\chi$, and a   stack. 
+\sdN{A stack  is a sequence of frames, $\phi_1\!\cdot\!...\!\cdot\! \phi_n$.}
+A  frame, $\phi$, consists of a local variable map, and a continuation, \ie a sequence of statements to be executed.
+%\sdN{The result of pushing a frame $\phi$ onto a stack, $\phi_1\!\cdot\!...\!\cdot\! \phi_n$, is  $\phi_1\!\cdot\!...\!\cdot\! \phi_n \!\cdot\! \phi$. }
+\sdN{
+The top frame in a state $(\phi_1\!\cdot\!...\!\cdot\! \phi_n, \chi)$ is $\phi_n$.} 
 
 
  
@@ -32,7 +36,9 @@ has the expected meaning.
 \item
 {$\phi.\prg{local\_map}$ is the local variable map of $\phi$}, and $\sigma.\prg{cont}$ is the continuation in the top frame.
 \item
-$text_1 \txteq text_2$ expresses that $text_1$ and $text_2$ are textually equal. 
+$text_1 \txteq text_2$ expresses that $text_1$ and $text_2$ are textually equal.  \sdN{For statement $s_1$ and $s_2$, we write $s_1 \txtin   s_2$  when $s_1 \txteq  s_2$ or  $s_2 \txteq  s_1; s_3$ for some $s_3$.}
+\item
+\sdN{We define the depth of a stack as $\DepthFs {\phi_1...\phi_n} \triangleq n$, and for states, $\DepthSt {(\overline \phi, \chi)} \triangleq  \DepthFs {\overline \phi}$.}
 \end{itemize}
 
   
@@ -127,7 +133,7 @@ while $\leadstoOrigStar  {\Mtwo} {\sigma_{10}}   {\sigma_{15}}$,   involves no c
 \subsection{ Method Calls and Returns}
 
  
-\sdN{
+ 
 Method calls and returns are a fundamental concern for our work. 
 They are characterized through pushing/popping stack frames. %, and thus restrict/extend the set of locally reachable objects. 
 The operator   $ \PushS  {\phi} {\sigma}$ pushes 
@@ -139,7 +145,7 @@ frame $\phi$ onto the stack of $\sigma$.
 % which a method is called or returned from is important.
 % The set ${\_} \triangledown {\_}$ does exactly that:
 %\footnoteSD{We need to say that all we care about is what is reachable in the rnew state vs what w
- }
+ 
  
 
 \begin{definition}
@@ -147,10 +153,10 @@ frame $\phi$ onto the stack of $\sigma$.
 Given a state $\sigma$, addresses $\overline \alpha$, a frame $\phi$,  variables or addresses $\overline \va$, we define
 \begin{itemize}
 \item
-\sdN{$ \PushSF  {\phi} {\sigma} \ \triangleq \ (\phi\!\cdot\!\psi, \chi)$ \ \ \  if \ \ \  $\sigma=(\psi, \chi)$}
+ $ \PushSF  {\phi} {\sigma} \ \triangleq \ (\sdN{\overline{\phi}\cdot\phi}, \chi)$ \ \ \  if \ \ \  $\sigma=(\overline{\phi}, \chi)$.
 \item
 $ \PushS  {\alpha} {\sigma} \ \triangleq\ \{ \ \sigma' \ \mid\ \exists \phi  \ s.t.\ \ 
-\sdN{  \sigma'=\PushSF  {\phi} {\sigma}  \ \wedge\    Rng(\phi)=\overline \alpha \ \ }  \ \}$
+   \sigma'=\PushSF  {\phi} {\sigma}  \ \wedge\    Rng(\phi)=\overline \alpha \ \   \ \}$
 \item
 {$ \PushS  {\va}  {\sigma}\  \triangleq\     \PushS  {\interpret {\sigma} {\va}} {\sigma} $.}
 \end{itemize}
@@ -196,9 +202,9 @@ We define relations \    $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma\bd} {\si
 
 \begin{itemize}
 \item
-\sdN{$\EarlierS {\sigma}  {\sigma'} \ \ \triangleq \ \ % \exists  \psi, \psi', s.t. 
- \exists  \phi, \phi',\psi. [\  \sigma\!=\!(\phi\cdot\psi,\_)\, \wedge\, \sigma\!=\!(\phi'\cdot\psi,\_)\ ] \ \  \vee\  \ 
- \exists \phi,\sigma''.[\  \EarlierS {\sigma} {\sigma''}\,  \wedge\,  \sigma'\!=\!\PushSF {\phi} {\sigma''}\ ]$}
+ $\EarlierS {\sigma}  {\sigma'} \ \ \triangleq \ \ % \exists  \psi, \psi', s.t. 
+ \exists  \phi, \phi',\overline \phi. [\  \sigma\!=\!(\sdN{\overline \phi\cdot \phi},\_)\, \wedge\, \sigma\!=\!(\sdN{\overline \phi\cdot \phi'},\_)\ ] \ \  \vee\  \ 
+ \exists \phi,\sigma''.[\  \EarlierS {\sigma} {\sigma''}\,  \wedge\,  \sigma'\!=\!\PushSF {\phi} {\sigma''}\ ]$ 
 \item
 \sdN{ $\leadstoBoundedThree {\Mtwo} {\sigma} {\sigma\bd}  {\sigma'}  \    \triangleq \ \    \leadstoOrig {\Mtwo} {\sigma} {\sigma'} \, \wedge\, 
  \EarlierS {\sigma\bd}  {\sigma} \, \wedge\,  \EarlierS {\sigma\bd}  {\sigma'} $}
@@ -305,8 +311,7 @@ states that method calls  correspond  to pushing of frames (here $\sigma_2 \in \
 method returns  correspond  to popping  a frame  (here $\sigma_3 \in  \PushSLong  {( {\interpret {\sigma_1} {y}},{\overline \alpha})} {\sigma_4}$), where the local map of the frame being popped contains the original arguments ($\overline {{\interpret {\sigma_1} {y}}}$) as well as some additional addresses ($\overline \alpha$).
 The latter property -- that  the frame being popped from $\sigma_3$ contained the original arguments passed in to $\sigma_2$ -- holds because 
  we forbid assignments to formal parameters (but we do allow  assignments to the other local variables).
- We use $s_0\txteq s;\_$ as short for $s_0\txteq s$  or  $s_0\txteq s;s'$ for some $s'$.
-
+ 
  
  \begin{lemma}
  \label{lemma:call:return}
@@ -328,7 +333,7 @@ The latter property -- that  the frame being popped from $\sigma_3$ contained th
  \mbox{implies} \ \ 
   \begin{cases}
      \ \strut \ \  \sigma_2 \in \PushS  {\interpret {\sigma_1} {y}} {\sigma_1},\\
-     \ \strut \  \exists z.\ \sigma_3.\prg{cont}\txteq z;\_  \\
+     \ \strut \  \exists z.\ \sigma_3.\prg{cont}\sdN{\txtin z} \\
        \ \strut \ \       \forall z. \interpret {\sigma_1} {z} = \interpret {\sigma_4} {z},\\  
         \ \strut \ \       \exists \overline \alpha. [\ \sigma_3 \in  \PushSLong  {( {\interpret {\sigma_1} {y}},{\overline \alpha})} {\sigma_4} \ ]
     \end{cases} 
