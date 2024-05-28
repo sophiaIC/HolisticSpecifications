@@ -5,9 +5,7 @@
 
 We will now develop an inference system to prove that a module % is well-formed $\vdash M$, \ie that a module 
 satisfies its specification. This is done in three phases.
-%For this, we will   develop an extended  Hoare logic with quadruples of the  form  ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$. 
-
-% Our logic extends any underlying classical Hoare logic judgment of the form ${M \vdash_{ul}  \{A\} {\ s\ } \{A'\} }$.
+\red{TODO: refer to what we said in approach section}
 
 In the first phase we develop a logic of triples ${\hproves{M}  {A} {\ s\ }{A'} }$, which have the expected meaning, \ie 
 (*) execution of statement $s$ in a state satisfying \sdN{the \emph{precondition}}  $A$ will lead to a state satisfying  \sdN{the \emph{postcondition}}  $A'$.
@@ -282,6 +280,7 @@ $
 \end{figure}
 
 We assume  an underlying Hoare logic with judgements of the form $M \vdash_{ul} \{ A \} s \{ A' \}$.
+\red{Moreover, we assume that the assertions $A$, $A'$ and $A''$ do not mention protection.}
 % On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. 
 With rule {{\sc{extend}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
 can be proven in the underlying Hoare logic, to also be proven in our logic.
@@ -414,30 +413,58 @@ $\begin{array}{c}
           	\end{array}
 		}
 	{  \hprovesN {M} 
-						{ \  y_0:C  \wedge\ \overline {y:C} \wedge {\PushAS {y}{A_1[y_0/\prg{this}]}}  \ } %\wedge A_3)}}}
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{  { \PushAS {y}{A_2[ u/result,y_0/\prg{this}]}}   }
-						{  {A_3} }	
+						{ \  y_0:C,\overline {y:C} \wedge  A_1[y_0/\prg{this}] \ }
+						 { \ u:=y_0.m(y_1,.. y_n)\    }
+					         { A_2[ u/res,y_0/\prg{this}] } 
+						{   A_3  }	
 }
  \\
 \\
- \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub}]}
+ \inferruleSD{\hspace{4.7cm} [\sc{Call\_Int\_Adapt}]}
 	{
 	   	\begin{array}{l}
-		\promises  M {\mprepostN{A_1}{\prg{public}\ C}{m}{y}{C}{A_2} {A_3} } \\
-		 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
+		\promises  M {\mprepostN{A_1}{p\ C}{m}{y}{C}{A_2} {A_3}}  
           	\end{array}
 		}
 	{  \hprovesN {M} 
-						{ \  y_0:C  \, \wedge\ ,\overline {y:C}\, \wedge \,  \overline{x:D}  \wedge\, {\PushAS {y}{A}}\ }
-						%\wedge A_3)}}}
+						{ \  y_0:C, \overline {y:C} \wedge {\PushAS {y}{A_1[y_0/\prg{this}]}}  \ } %\wedge A_3)}}}
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{    {\PushAS {y}{A}} \ }
-						{  {\   A\ }} 	
+						{  { \PushAS {y}{A_2[ u/res,y_0/\prg{this}]}}   }
+						{   A_3  }	
 }
+% \\
+%\\
+% \inferruleSD{\hspace{4.7cm} [\sc{Call\_Pub}]}
+%	{
+%	   	\begin{array}{l}
+%		\promises  M {\mprepostN{A_1}{\prg{public}\ C}{m}{y}{C}{A_2} {A_3} } \\
+%		 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
+%          	\end{array}
+%		}
+%	{  \hprovesN {M} 
+%						{ \  y_0:C  \, \wedge\ ,\overline {y:C}\, \wedge \,  \overline{x:D}  \wedge\, {\PushAS {y}{A}}\ }
+%						%\wedge A_3)}}}
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{    {\PushAS {y}{A}} \ }
+%						{  {\   A\ }} 	
+%}
+%\\
+%\\
 \\
  \\ 
  \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}]}
+ 	{ 
+   	 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
+        }
+	{   \hprovesN{M} 
+						{ \    \sdN{ \external{y_0}} \,     \wedge \,  \overline{x:D}\  \wedge\ \sdN{{A}}\ }  
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \   \sdN{{A}}  \ }
+						{\  A \   }	
+}
+\\
+ \\ 
+ \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}\_Adapt]}
  	{ 
    	 \promises M   {\TwoStatesN {\overline {x:D}} {A}} 
         }
@@ -457,10 +484,11 @@ $
 \end{figure}
 % }}
 
-\sdN{For internal methods, {\sc{Call\_Int}},  we  look  up (one of) the method's specifications. 
+\sdN{ {\sc{Call\_Int}} is as expected for methods for which we have a specification;  We  look  up (one of) the method's specifications. 
+We require the precondition, and guarantee the postcondition and midcondiition after the relevant renamings.
 %: $ {\mprepostN{A_1}{\prg{private} C}{m}{y}{C}{A_2} {A_3}}  $  promises that if $m$ starts in a state that satisfies $A_1$, then  its execution will lead to a state that satisfies $A_2$, and
 % that during its execution, $A_3$  any reachable scoped external state will satisfy $A_3$. Notice that in the post condition ($A_2$) we replace the $result$ by the left hand side of the assignment ($u$).
-We require a weaker pre-condition ($  \PushAS {y}{A_1}$  rather than $A_1$) and also ensure a weaker post-condition ($\PushAS {y}{A_2}$, rather than $A_2$).
+For {\sc{Call\_Int\_Adapt}} we require a weaker pre-condition ($  \PushAS {y}{A_1}$  rather than $A_1$) and also ensure a weaker post-condition ($\PushAS {y}{A_2}$, rather than $A_2$).
 Remember that $  \PushAS {y}{A_1}$ guarantees that $A_1$ held before popping the callee's frame (ie $  \PushAS {y}{A_1}$);
 %Looking more closely, we notice  that {\sc{IntCall}} does not require the method's precondition ($A_1$) to hold before the call, but instead requires that it will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{A_1}$).
 %Similarly, after the call it does not guarantee the method's post condition ($A_2$), but instead guarantees that it held before popping the calllee's frame (ie $  \PushAS {y}{A_1}$).
@@ -472,13 +500,17 @@ Moreover, the call has the same \midcond,   here $A_3$, as the specification of 
 }
 
 
-\sdN{For public methods,  {\sc{Call\_Pub}},  we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and if the adapted versiob of $A$, \ie   $  \PushAS {y}{A}$ holds before the call, then it also holds after the call. Moreover, $A$ is also a \midcond of the call.
-As for {\sc{Call\_Int}},  the calls pre- and post are weaker than the invariants, here  $  \PushAS {y}{A}$  rather than $A$. 
-Notice that we used the method's spec only to find whether it was public, and did not make use of its pre-post, or mid-condition, $A_1$, $A_2$ and $A_3$.
-We could however use them by applying {\sc{Call\_Int}} any number of times, as well as {\sc{Call\_Pub}} again any number of times, and combining through {\sc{Combine}}
+%\sdN{For public methods,  {\sc{Call\_Pub}},  we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and if the adapted versiob of $A$, \ie   $  \PushAS {y}{A}$ holds before the call, then it also holds after the call. Moreover, $A$ is also a \midcond of the call.
+%As for {\sc{Call\_Int}},  the calls pre- and post are weaker than the invariants, here  $  \PushAS {y}{A}$  rather than $A$. 
+%Notice that we used the method's spec only to find whether it was public, and did not make use of its pre-post, or mid-condition, $A_1$, $A_2$ and $A_3$.
+%We could however use them by applying {\sc{Call\_Int}} any number of times, as well as {\sc{Call\_Pub}} again any number of times, and combining through {\sc{Combine}}
+%}
+
+\sdN{For external methods,  {\sc{Call\_Ext}}, we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and   $A$  holds before the call, then it also holds after and during the call. }
+In  {\sc{Call\_Ext\_adapt}}, we require a weaker version,  \ie that   $  \PushAS {y}{A}$ holds before the call. Then the 
+weaker version also holds after the call. Moreover, $A$ is also a \midcond of the call.
 }
 
-For external methods,  {\sc{Call\_Ext}}, we apply similar treatment as for  {\sc{Call\_Pub}}.
 
 \vspace{.1cm}
 \red{
@@ -580,27 +612,6 @@ M \vdash {\mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3} }
 %  \\
 %  ~ \strut \hspace{1.7cm} \ \ \ \ \  \ \ \ 
  {\hprovesN{M} { \ \prg{this}:\prg{D}, \overline{y:D}\, \wedge\, \neg\inside{this}\wedge\overline{ \neg\inside{y}}\, \wedge\, \overline{x:C}\, \wedge\,  A\  } {\ stmt\ } {\ A\ } {\ A \ }  }\ \ \ \ \  \ \  
-\end{array}
-}
-{
-M \vdash \TwoStatesN{ \overline{x:C}} {A}
-}
-\\
-\\
-\\
-\\
-\inferruleSD 
-{~ \strut \hspace{6.5cm} {\sc{invariant}}}
-{  
-\begin{array}{l}
- M \vdash {\encaps  { \overline{x:C}\, \wedge\, A} }
-\\
-\forall  D,  m:\ \ \  \ \  \prg{mBody}(m,D,M)=\prg{public} \ (\overline{y:C})\{\  stmt \ \}      \ \ \Longrightarrow  
-    \\
-   ~ \strut \hspace{0.7cm}  \ \ \ \  \  %SD chop: do not know whay I had added \ A_{inv} \triangleq \overline{x:C}\, \wedge\, A
-%%  \\
-%%  ~ \strut \hspace{1.7cm} \ \ \ \ \  \ \ \ 
-  {\hprovesN{M} { \ \prg{this}:\prg{D}, \overline{y:D},\,  \overline{x:C}\, \wedge\,  PRE(A)\  } {\ stmt\ } {\ POST( A)\ }  {\ POST( A)\ } }\  
 \end{array}
 }
 {
