@@ -1,4 +1,4 @@
-\newcommand{\midcond}{midcondition\xspace}
+
 
 \section{Proving Adherence to \SpecLang Specifications}
 \label{sect:proofSystem}
@@ -28,34 +28,151 @@ For module invariants we prove that they  are preserved by all public methods of
 Before describing these three phases, we introduce some preliminaries.
 
 
-\subsection{Preliminaries: Specification Lookup and  Assertion Encapsulation}
+\subsection{Preliminaries: Specification Lookup, Assertion Stability  and  Encapsulation}
 
-\paragraph{More Notation} 
- \begin{itemize}
-%\item
-% Moved to earlier
-% \sdN{For statement $s_1$ and $s_2$, we write $s_1 \txtin   s_2$  when $s_1 \txteq  s_2$ or  $s_2 \txteq  s_1; s_3$ for some $s_3$.}
- \item
- \sdN{ For specifications $S_1$ and $S_2$, we write $S_1 \txtin   S_2$  when $S_2 \txteq  S_1$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.}
-\end{itemize}
 
 We will be using the notation $\promises M S$ to indicate that $S$ is part of the module's specification
 
 \begin{definition}
 \label{d:encaps}
- $\promises M S\ \ \ \triangleq\ \ \ S \txtin SpecOf M  $
+ $\promises M S\ \ \ \triangleq\ \ \ S \txtin \SpecOf M  $
+ \\
+ where  \sdN{ for specifications $S_1$ and $S_2$, we write $S_1 \txtin   S_2$  when $S_2 \txteq  S_1$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.}
  \end{definition} 
 
-\subsubsection {Assertion Encapsulation}
-\label{s:encaps-proof}
+\red{TODO: motivate better}
+Assertions which do not contain the requirement $\inside{\_}$ are called {\emph {stable}}. 
+Such assertions are stable against pushing and popping of frames.
+
+% An assertion is {\emph {stable}}, written as $\Stable A$ if it does not contain $\inside {\re}$ assertions:
+\begin{definition}
+\label{def:Basic}
+%\begin{figure}[hbt]
+[$\Stable{\_}$] assertions: %  defined below
+
+$
+\begin{array}{c}
+ \Stable {\inside{\re}}  \triangleq  false
+ \\
+ \begin{array}{lll}
+ \Stable  {A_1  \wedge  A_2}  \triangleq     \Stable  { A_1}  \wedge    \Stable  {A_2}    
+ \ \  &  
+ \Stable  {\forall x:C.A}   \triangleq   \Stable  {A} \ \ 
+ &   
+  \Stable  {\neg A}    \triangleq   \Stable A
+%\\ \\
+%  \Stable {\protectedFrom \re {\overline {u}}} &  \triangleq& true 
+%& & 
+%  \Stable  {\internal \re} &  \triangleq & true  %   \PushAS y  {(\external \re)} & \triangleq &   {\external \re}
+%& &
+%    \Stable {\re} &  \triangleq&   true %    \PushAS y  {(\internal \re)} &  \triangleq & {\internal \re}
+%\\  \\
+%   \Stable {(\re:C)} &  \triangleq&   true
+ \end{array}
+ \\ 
+   \Stable {\protectedFrom \re {\overline {u}}} \ = \   
+  \Stable  {\internal \re}  \ = \   %   \PushAS y  {(\external \re)} & \triangleq &   {\external \re}
+    \Stable {\re} \ = \     
+     \Stable {\re:C}\   \triangleq \    true
+%\end{array}
+\end{array}
+$
+% \caption{The $\pushSymbolAA$  operator  } 
+\label{f:Basic}
+%\end{figure}
+\end{definition}
+
+\begin{lemma}
+For all $\sigma$, $A$ and $\overline \alpha$.
+
+\begin{itemize}
+\item $ fv(A)=\emptyset\ \wedge\ \Stable{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \Longleftrightarrow \ \  M,\PushS \alpha \sigma \models A\ \ ]$
+\end{itemize}
+\end{lemma}
 
 {
 Proofs of adherence to {\SpecLang specifications  hinge on the expectation that some, 
 specific, assertions cannot be invalidated unless some 
 } internal (and thus known) computation took place. 
-{We call such assertions   \emph{encapsulated},}
+{We call such assertions   \emph{encapsulated}.}
 }
-formally $M\ \models  \encaps{A}$.
+We give a judgementt,  $M\ \vdash  \encaps{A}$, and define its meaning as $M\ \models  \encaps{A}$.
+
+
+\begin{figure}[thb]
+$
+\begin{array}{l}
+\begin{array}{lclcl}
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_1}}}
+{  
+\begin{array}{l}
+M; \Gamma \vdash \re : \prg{intl} \\
+M; \Gamma \vdash \encaps{\re}; \Gamma
+\end{array}
+}
+{
+M; \Gamma \vdash \encaps{\re.f}; \Gamma
+}
+& &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_2}}}
+{  
+\\
+M; \Gamma \vdash \encaps{\re}; \Gamma 
+}
+{
+M; \Gamma \vdash \encaps{\inside{\re}}; \Gamma
+}
+& &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_3}}}
+{  
+\\
+M; \Gamma \vdash \encaps{\re}; \Gamma 
+}
+{
+M; \Gamma \vdash \encaps{\re:C}; \Gamma
+}
+\\ \\ 
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_4}}}
+{  
+\\
+M; \Gamma, {x:C} \vdash \encaps {A}; \Gamma' 
+}
+{
+M; \Gamma \vdash \encaps {\forall {x:C}. A}; \Gamma
+}
+&   &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_5}}}
+{   
+\begin{array}{l}
+M; \Gamma \vdash \encaps{A}; \Gamma'\\  \Stable A
+\end{array}
+}
+{
+M; \Gamma \vdash \encaps{ \neg A}; \Gamma'  
+}
+&    &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_6}}}
+{  
+\begin{array}{l}
+M; \Gamma \vdash \encaps{A_1}; \Gamma''   \\
+  M; \Gamma'' \vdash \encaps{ A_2}; \Gamma' 
+  \end{array} 
+}
+{
+M; \Gamma \vdash \encaps{A_1 \wedge A_2}; \Gamma'
+}
+\end{array}
+\end{array}
+$
+\caption{The judgment $M; \Gamma \vdash \encaps  {A}; \Gamma'$}
+\label{f:encaps}
+\end{figure}
  
 
 % \subsubsection{Semantics of Assertion Encapsulation}
@@ -63,17 +180,23 @@ formally $M\ \models  \encaps{A}$.
 {An assertion $A$  is  encapsulated by a module $M$  if in all possible states which arise from execution of module $M$ with any other  module $\Mtwo$, the validity of $A$}  {can only be changed via computations internal to that module}.
  
 
-\begin{definition}[An assertion $A$ is \emph{encapsulated} by module $M$ ] $~$ \\
+\begin{definition}[An assertion $A$ is \emph{encapsulated} by module $M$] $~$ \\
 \label{def:encapsulation}
+\begin{itemize}
+\item 
+$M \vdash \encaps{A}  \ \   \triangleq  \ \  \exists \Gamma.[\ M; \emptyset \vdash \encaps{A}; \Gamma\ ]$ \ \  as defined in Fig. \ref{f:encaps}.
+\item
 $ % \begin{equation}
     M\ \models \encaps{A}\ \   \triangleq  \ \   
     \begin{cases}
      \forall \Mtwo, \sigma, \sigma',  \overline{\alpha}, \overline{x} \mbox{ with } \overline{x}=Free(A)\\ % , \mbox{and }  \arising{M\madd\Mtwo}{\sigma}:\\
-   \ \ \ \  [\ \ \  \satisfiesA{M}{\sigma}{({A[{\overline {\alpha/x}}]} \ \wedge\ \externalexec)}\  \wedge\ \sdN{ \leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}}\\
-    \ \ \ \ \ \   \ \ \ \Longrightarrow\\
-    \ \ \ \ \ \  \  {M},{\sigma'}\models{A[{\overline {\alpha/x}}]} \ \  ]
+   \ \ \ \  [\ \ \  \satisfiesA{M}{\sigma}{({A[{\overline {\alpha/x}}]} \ \wedge\ \externalexec)}\  \wedge\ \sdN{ \leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}} % \\    \ \ \ \ \ \   \ \ \ 
+   \ \ \Longrightarrow\ \ 
+  %  \ \ \ \ \ \  \ 
+   {M},{\sigma'}\models{A[{\overline {\alpha/x}}]} \ \  ]
     \end{cases}
  $% \end{equation}
+ \end{itemize}
   \end{definition}
 
 \noindent
@@ -96,47 +219,21 @@ and modules \ModB and  \ModC  from \S~\ref{s:outline}, we have  \ \ \ $\ModB\ \m
 \end{example}
 
 
-\begin{example} Assume   further modules, $\ModD$ and $\ModE$,  which  use ledgers mapping  accounts to their balances, and export functions that update this map. In  $\ModD$ the ledger is \emph{not} protected, while in $\ModE$ it \emph{is}. 
+\begin{example} Assume   further modules, $\ModD$ and $\ModE$,  which  use ledgers mapping  accounts to their balances, and export functions that update this map. In  $\ModD$ the ledger is  part of the \sdN{internal} module, %\emph{not} protected, while 
+while in $\ModE$ it is part of the  \sdN{external} module.
 Then  \ \ $\ModD \ \not\models\encaps{ A_{bal}} $, \ \  and \ \ $\ModE  \models \encaps{ A_{bal}} $.
-% Then, in    $A_{bal}$  is \emph{not} encapsulated in $\ModParam{up\_ldg}$, and in $\ModParam{pr\_ldg}$ it  \emph{is} encapsulated.} 
-%
-%\\
-%\begin{tabular}{llll}
-%$\ModB\ \models\ \encaps{ A_{bal} }$
-% & 
-% 
-%  &  
-%$\ModD \ \not\models\encaps{ A_{bal}} $
-%  &  
-% $\ModE  \models \encaps{ A_{bal}} $
-%\end{tabular} 
-%\\
-\noindent
 Note that in both $\ModD$ and $\ModE$, the term \prg{a.balance} is a ghost field. 
 \end{example}
 
-Relative protection % (a variable is protected from another one) 
-is not encapsulated, but  absolute protection is.
+\begin{note} Relative protection % (a variable is protected from another one) 
+is not encapsulated, (\eg $M \not\models {\encaps{\protectedFrom{x}{y}}}$), even though    absolute protection is
+(\eg $M \models \encaps{\inside{x}}$).
 Encapsulation of an assertion does not imply encapsulation of its negation; 
- for example,  ${\inside{x}}$ is encapsulated, % (as per below), 
- but $\neg  {\inside{x}}$ is not.
+ for example,  $M \not\models {\encaps{\neg\inside{x}}}$.
+\end{note}
 
 
-\begin{lemma}
-For any module $M$, and variables $x$ and $y$:
-\begin{enumerate} 
-\item $M \models \encaps{\inside{x}}$
-\item $M \not\models {\encaps{\neg\inside{x}}}$
-\item $M \not\models {\encaps{\protectedFrom{x}{y}}}$
-\item  $M \models  \encaps{A}$ and $M \models  \encaps{A'}$ implies 
-$M \models  \encaps{A \wedge A'}$ and $M \models  \encaps{A \vee A'}$
-\end{enumerate}
-\end{lemma}
-
-On the other hand,  $M \models A \rightarrow A'$ and $ M \models  \encaps{{A'}}$ does not  imply \ $M \models  \encaps{A}$, nor does
-$M \models A \rightarrow A'$ and 
- $ M \models  \encaps{{A}}$ imply \ $M \models  \encaps{A'}$.
-
+ 
 %\begin{proof} Sketches:
 %
 %(1) because if $y$ is protected, and since the fields are all private ... the only way .. 
@@ -149,37 +246,40 @@ $M \models A \rightarrow A'$ and
 %\end{proof}
 %%The key consequence of soundness is that -- SD dropped; it is   not a consequence of soundness!
 
-\subsubsection{Deriving  Assertion Encapsulation}
+%\subsubsection{Deriving  Assertion Encapsulation}
+%
+%{In general},  code that does not contain 
+%calls to a {given} module is guaranteed not to invalidate any assertions encapsulated by that module.
+% Assertion encapsulation has been used in proof systems to {address}   the  {frame} problem
+% \cite{objInvars,encaps}. 
+%
+%We  do not mandate how this property should be derived -- instead, we rely on a judgment 
+%$M\ \models  \encaps{A}$ provided by some external system. \footnoteSD{This is simpler than the oopsla-33 setting}
+%Thus, \SpecLang is parametric over the derivation of the encapsulation
+%     judgment; in fact, several ways to do that are possible \cite{TAME2003,ownEncaps,objInvars}. For example,
+% the appendices of
+%    \cite{necessityFull} present a 
+%	%Appendix~\ref{s:encap-proof} and
+%    %Figure~\ref{f:asrt-encap}  we present a 
+%    rudimentary system that is sufficient to support our example
+%    proof.   Like OOPSLA 22 Our logic does not {deal with, nor} rely on, the specifics of  how   encapsulation
+%{is derived}.
+%{Instead, it relies} on an encapsulation judgment and expects it to be sound:
+%
 
-{In general},  code that does not contain 
-calls to a {given} module is guaranteed not to invalidate any assertions encapsulated by that module.
- Assertion encapsulation has been used in proof systems to {address}   the  {frame} problem
- \cite{objInvars,encaps}. 
+{\red{TODO}: Say that there are more ways to define the encaps judgement. ALSO: show the rule for the ghostfields. }
 
-We  do not mandate how this property should be derived -- instead, we rely on a judgment 
-$M\ \models  \encaps{A}$ provided by some external system. \footnoteSD{This is simpler than the oopsla-33 setting}
-Thus, \SpecLang is parametric over the derivation of the encapsulation
-     judgment; in fact, several ways to do that are possible \cite{TAME2003,ownEncaps,objInvars}. For example,
- the appendices of
-    \cite{necessityFull} present a 
-	%Appendix~\ref{s:encap-proof} and
-    %Figure~\ref{f:asrt-encap}  we present a 
-    rudimentary system that is sufficient to support our example
-    proof.   Like OOPSLA 22 Our logic does not {deal with, nor} rely on, the specifics of  how   encapsulation
-{is derived}.
-{Instead, it relies} on an encapsulation judgment and expects it to be sound:
-
-\begin{definition}[Encapsulation Soundness]
+\begin{lemma}[Encapsulation Soundness]
 \label{lem:encap-soundness}
-A judgement of the form $\proves{M}{\encaps{A}}$  is\  \emph{sound}, \ if 
-for all modules $M$, and assertions $A$:\\
+% A judgement of the form $\proves{M}{\encaps{A}}$  is\  \emph{sound}, \ if 
+For all modules $M$, and assertions $A$: 
 
-$\strut \hspace{1.5cm} \proves{M}{\encaps{A}} \ \ \ \ $ implies $\ \ \ \ \satisfies{M}{\encaps{A}}$.
-\end{definition}
+$\strut \hspace{1.5cm} \proves{M}{\encaps{A}} \ \ \ \ \Longrightarrow\ \ \ \ \satisfies{M}{\encaps{A}}$.
+\end{lemma}
 
 
  \subsubsection{Well-formed specs}
- TODO Need to say encapsulated, and we do not have protected in negative positions. TODO think about $\vee$ and protection.
+{ \red{TODO}} Need to say encapsulated 
 
 % PROBABLY NOT NEEDED -- KEEP PROVISIONALLY
 %\subsection{Weaker/Stronger Specifications}
@@ -279,8 +379,13 @@ $
 \label{f:protection}
 \end{figure}
 
-We assume  an underlying Hoare logic with judgements of the form $M \vdash_{ul} \{ A \} s \{ A' \}$.
-\red{Moreover, we assume that the assertions $A$, $A'$ and $A''$ do not mention protection.}
+\begin{axiom}
+\label{ax:ul}
+\sdN{Assume   Hoare logic with judgements % of the form 
+\ $M \vdash_{ul} \{ A \} s \{ A' \}$, \ 
+so that $\Stable{A}$ and $\Stable{A'}$. }
+\end{axiom}
+
 % On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. 
 With rule {{\sc{extend}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
 can be proven in the underlying Hoare logic, to also be proven in our logic.
@@ -315,7 +420,7 @@ If ${\hproves{M}  {A} {\ s\ }{A'} }$, then $s$ contains no method calls.
 $
 \begin{array}{c}
 % \begin{array}{lcl}
-\inferrule[\sc{inv}]
+\inferrule[\sc{Mid}]
 	{\hproves{M}  {A} {\ s\ }{A'} }
 	{\hprovesN{M}  {A} {\ s\ }{A'} {A''} }
 \\
@@ -355,16 +460,16 @@ $
 	{   \hprovesN{M}  {A_2 }{\ s\ } {A_5 } {A_6} }
   \end{array}
  $
-\caption{Hoare Quadruples - incorporating Hoare triples and subsctructural rules }
+\caption{Hoare Quadruples - incorporating Hoare triples and substructural rules }
 \label{f:substructural}
 \end{figure}
 
 \subsection{Second Phase: Quadruples}
 
-\subsubsection{Introducing Invariants, and substructural rules}
+\subsubsection{Introducing mid-conditions, and substructural rules}
 Fig. \ref{f:substructural} introduces quadruple rules of the from ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$ which do not deal with method calls.
 
-Rule {\sc{inv}} embeds  triples  ${\hproves{M}  {A} {\ s\ }{A'} }$  into quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$; this is sound, because $s$ is guaranteed not to contain method calls (by lemma \ref{l:non:meth:calss})\footnote{The restriction to statements which do not contain method calls in rule {\sc{types-1}} was imposed so as to make this lemma valid}, and therefore its execution is guaranteed not to reach any external states.
+Rule {\sc{mid}} embeds  triples  ${\hproves{M}  {A} {\ s\ }{A'} }$  into quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$; this is sound, because $s$ is guaranteed not to contain method calls (by lemma \ref{l:non:meth:calss})\footnote{The restriction to statements which do not contain method calls in rule {\sc{types-1}} was imposed so as to make this lemma valid}, and therefore its execution is guaranteed not to reach any external states.
 
  
 The remaining rules in Fig. \ref{f:substructural} apply to \emph{any} statements -- even those containing method calls.
