@@ -74,25 +74,25 @@ In the above, we expect that $f$ stands  for a field or a ghost field, but not a
 {While addresses make little sense in user-written assertions, they are useful when giving semantics to universal quantifiers 
 \cf Def. \ref{def:chainmail-semantics}.(\ref{quant1}), {when the local map changes \eg upon call and return, and in general,} for two-state invariants, \cf Def. \ref{def:necessity-semantics}.(2).}
 \notesep The syntax does  not distinguish between fields and ghost fields. For instance, $\prg{a}.\prg{\balance}$ may, in some modules (\eg in \ModA), be a field lookup, while in others (e.g. when the balance is defined though an entry in a lookup table) may involve executing a ghost function. 
-\notesep The syntax does not %explicitly 
-include the forms $A\rightarrow A'$, $A \vee A'$, ${\ex{x:C}{A}}$. --
-%, or $\external {\re}$,
- these can be {encoded.} % with the given connectives.
 % -  $\external {\re}$ is short for $\neg \internal {\re}$. We use these forms freely in the subsequent text without further definition.
 %\kjx{These NOTES seem to make heavy work of mostly trivial points
 %{{SD: WIll work on that}}
 % \footnoteSD{{\textbf{NOTE for us} It also allows assertions like $a1.passwd \neq a2.passwd$, whereas in the past we would have written as $\exists x,y.[\ a1.passwd=x \wedge  a2.passwd=y \wedge x\neq y\ ]$.}} \footnoteSD{{TODO compare with oopsla }}
 
 
-
+\begin{definition}[Shorthands] 
+\label{def:assertions:short}
+We use $\extThis$ as  short  for $\external{\prg{this}}$. %, and $\re:\prg{intl}$ as short for $ \neg \external {\re}}$. 
+While the syntax does not include the forms $A \rightarrow A'$, or $A \vee A'$, or $\exists x:C.A$, these can be encoded; we use these forms freely in the subsequent text.
+% without further definition.  
+\end{definition}
 
 
 
 \begin{definition}[Satisfaction  of Assertions by module and  state] 
 \label{def:chainmail-semantics-all}
 \label{def:chainmail-semantics}
-We define satisfaction of an assertion $A$ by a % program  state $\sigma$ with 
- module $M$ \ \  through \ $\satisfiesA{M}{\sigma}{{A}}$ \ \ \ by cases on the shape of $A$, in definitions \ref{def:chainmail-semantics}, \ref{def:chainmail-protection-from}, and 
+is expressed through  through \ \ $\satisfiesA{M}{\sigma}{{A}}$ \ \ \ and defined by cases on the shape of $A$, in definitions \ref{def:chainmail-semantics}, \ref{def:chainmail-protection-from}, and 
  \ref{def:chainmail-protection}.
 \end{definition}
 
@@ -288,7 +288,7 @@ $\satisfiesA{M}{\sigma} {\inside {\re}}$  \ \ \ iff \ \ \
 \item
 {$\forall \alpha.[ \  \LRelevant {\alpha}  {\sigma}\ \wedge\ { \satisfiesA{M}{\sigma}{\external \alpha}} \ \ \Longrightarrow \ \  \satisfiesA{M}{\sigma}{\protectedFrom{\re} {{\alpha}}}\ ] $}, \ \ \ and 
 \item
-$\satisfiesA{M}{\sigma}{\external{\prg{this}}}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
+$\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
 \end{enumerate}
 \end{enumerate}
 \end{definition} 
@@ -332,34 +332,32 @@ The locally reachable objects from $\phi_1$ were highlighted in the middle pane 
 We highlight the protected objects in each pane with a golden halo.
  Note that $o_3$ is protected from $\phi_2$, but is not protected from $\phi_3$. This is so, because \prg{this} in $\phi_3$ is external, and  $o_3$ is an argument to the call. That means, that during the call, $o_7$ may obtain unmitigated access (permission?) to $o_3$. 
  
- \subsection{Preservation of Sartisfaction}
+ \subsection{Preservation of Srtisfaction}
+
+
+Lemma \ref{l:assrt:unaffect} says that satisfaction of an assertion is not affected by replacing a variable by its value, nor changing the continuation in a state.
+
 
 \begin{lemma}
 \label{lemma:addr:expr}
-For all $M$, $\sigma$, $\alpha$, $x$, $\re$:
+\label{l:assrtr:unaffect}
+For all $M$, $\sigma$, $\alpha$, $x$, $\re$, $A$:
 
 \begin{enumerate}
 \item
+\label{one:ad:exp}
 $ \satisfiesA{M}{\sigma[x\mapsto \alpha]}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{A[\alpha/x]} $ 
 \item
 $\eval{M}{\sigma}{{\re}}{\alpha}  \ \ \ \Longrightarrow\ \ \  [ \ \satisfiesA{M}{\sigma}{A} \  \Longleftrightarrow\   \  \satisfiesA{M}{\sigma}{A[\alpha/\re]} \  \  ]$
+\item
+$ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma[\prg{cont}\mapsto stmt]}{A}$ 
 \end{enumerate}
 
 \end{lemma}
 
-A corollary of the lemma above is $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
+A corollary of   lemma \ref{lemma:addr:expr}.\ref{one:ad:exp} is $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
 
-Lemma \ref{l:assrt:unaffect} says that satisfaction of an assertion is not affected by the statements that are to be executed.
 
-\begin{lemma}
-\label{l:assrtr:unaffect}
-For any modules $\Mtwo$, states $\sigma$ and statement $stmt$, and variable $y$ 
-\begin{itemize}
-\item
-$ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma[\prg{cont}\mapsto stmt]}{A}$ 
-\end{itemize}
-
-\end{lemma}
    
  \subsection{Viewpoints and Protection}
  
@@ -403,7 +401,7 @@ $
   & &
  \PushAS y  {(\forall x:C.A)} & \triangleq & \forall x:C.({\PushAS y A} )  
   \\  
-  \PushAS y  {(\internal \re)} &  \triangleq & {\internal \re}  %   \PushAS y  {(\external \re)} & \triangleq &   {\external \re}
+  \PushAS y  {(\external \re)} &  \triangleq & {\external \re}  %   \PushAS y  {(\external \re)} & \triangleq &   {\external \re}
   & & 
   \PushAS y  {(\neg A)} &  \triangleq & \neg( {\PushAS y A} )  
     \\
@@ -442,7 +440,7 @@ $\PushAS {y} {A}$. } % will hold {in the caller state}. % after popping that fra
 \label{lemma:push:ass:state}
 For any state  $\sigma$, assertion $A$, and variables   $\overline y, \overline z$, disjoint with one another:
 \\
-If  $fv(A)=\emptyset$, then
+If  $\fv(A)=\emptyset$, then
 \begin{enumerate}
  \item
  \label{lemma:push:ass:state:one}
@@ -467,7 +465,7 @@ $M, {(\PushSLong {(\overline y, \overline z)} {(\sigma[\overline{x \mapsto \alph
 
 \noindent
 \textbf{NOTES} \notesep 
-{We require   $fv(A)=\emptyset$ in order to be accommodate for the difference between variable maps in $\sigma$ and  $\PushS {y} {\sigma}$.}
+{We require   $\fv(A)=\emptyset$ in order to be accommodate for the difference between variable maps in $\sigma$ and  $\PushS {y} {\sigma}$.}
 %We could, instead,  require that $fv(A)=\overline x$, \ $\overline x \notin \sigma$, \ $\overline x \notin  \PushAS {y} {A}$, and   assert that (1)\ $M, \sigma[\overline{x \mapsto \alpha} ] \models \PushAS {y} {A}\  \Longrightarrow   \ M,  \PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}   \models A$, and similarly for (2).}
 %In both (1) and (2), we  use the renaming $\sigma[\overline{x \mapsto \alpha} ]$ to ensure that the free variables of $A$ are mapped to the same values in the caller's and the callee's frame.
  \notesep 
