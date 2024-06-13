@@ -39,10 +39,10 @@ Module OperationalSemantics.
       eval M σ ([v_ v1 /s x] body) v ->
       eval M σ (e_ghost e0 g e) v
 
-  | eval_class : forall M σ e C α,
+  | eval_class : forall M σ e T α,
       eval M σ e (v_addr α) ->
-      typeOf_v σ (v_addr α) (t_cls C) ->
-      eval M σ (e_class e C) v_true
+      typeOf_v σ (v_addr α) T ->
+      eval M σ (e_typ e T) v_true
 
   | eval_eq : forall M σ e1 e2 v,
       eval M σ e1 v ->
@@ -145,8 +145,12 @@ Module OperationalSemantics.
                                   scoped_executions M σsc σ2 σ3 ->
                                   scoped_executions M σsc σ1 σ3.
 
-  Definition final_execution (M : module)(σsc σ1 σ2 : config) :=
+  Definition scoped_exec M σ := scoped_executions M σ σ.
+
+  Definition scoped_final M σsc σ1 σ2 :=
     scoped_executions M σsc σ1 σ2 /\
       forall σ, ~ scoped_execution M σsc σ2 σ.
+
+  Definition final M σ:= scoped_final M σ σ.
 
 End OperationalSemantics.

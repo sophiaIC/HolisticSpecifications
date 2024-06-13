@@ -24,14 +24,24 @@ Module SubstDefn.
       sbst :=
         fix sbst' e n α :=
           match e with
-          | e_hole m  => if beq_nat n m
+          | e_hole m  => if Nat.eqb n m
                         then e_val (v_addr α)
                         else e_hole m
           | e_fld e' f => e_fld (sbst' e' n α) f
-          | e_class e' C => e_class (sbst' e' n α) C
+          | e_typ e' C => e_typ (sbst' e' n α) C
           | e_ghost e0 g e1 => e_ghost (sbst' e0 n α) g (sbst' e1 n α)
           | e_if e0 e1 e2 => e_if (sbst' e0 n α) (sbst' e1 n α) (sbst' e2 n α)
           | _ => e
+          end
+    }.
+
+  #[global] Instance list_subst {A B C : Type}`{Subst A B C} : Subst (list A) B C :=
+    {
+      sbst :=
+        fix sbst' l b c :=
+          match l with
+          | nil => nil
+          | a :: t => ([c /s b] a) :: (sbst' t b c)
           end
     }.
 
@@ -42,7 +52,7 @@ Module SubstDefn.
           match A with
           | a_exp e     => a_exp ([ α /s n ] e)
           | A1 ∧ A2     => (sbst' A1 n α) ∧ (sbst' A2 n α)
-          | A1 ∨ A2     => (sbst' A1 n α) ∨ (sbst' A2 n α)
+(*          | A1 ∨ A2     => (sbst' A1 n α) ∨ (sbst' A2 n α)*)
           | ¬ A         => ¬ (sbst' A n α)
           (*)        | A1 ⟶ A2   => (sbst' A1 n α) ⟶ (sbst' A2 n α)*)
 
@@ -65,7 +75,7 @@ Module SubstDefn.
                       then e'
                       else e_var y
           | e_fld e0 f => e_fld (sbst' e0 x e') f
-          | e_class e0 C => e_class (sbst' e0 x e') C
+          | e_typ e0 C => e_typ (sbst' e0 x e') C
           | e_ghost e0 g e1 => e_ghost (sbst' e0 x e') g (sbst' e1 x e')
           | e_if e0 e1 e2 => e_if (sbst' e0 x e') (sbst' e1 x e') (sbst' e2 x e')
           | _ => e
@@ -80,7 +90,7 @@ Module SubstDefn.
           | a_exp e' => a_exp ([e /s x] e')
 
           | A1 ∧ A2 => (sbst' A1 x e) ∧ (sbst' A2 x e)
-          | A1 ∨ A2 => (sbst' A1 x e) ∨ (sbst' A2 x e)
+(*)          | A1 ∨ A2 => (sbst' A1 x e) ∨ (sbst' A2 x e)*)
           | ¬ A' => ¬ (sbst' A' x e)
           | a_all C A' => a_all C (sbst' A' x e)
           | a_ex C A' => a_ex C (sbst' A' x e)
@@ -93,16 +103,6 @@ Module SubstDefn.
     }.
 
 
-
-  #[global] Instance list_subst {A B C : Type}`{Subst A B C} : Subst (list A) B C :=
-    {
-      sbst :=
-        fix sbst' l b c :=
-          match l with
-          | nil => nil
-          | a :: t => ([c /s b] a) :: (sbst' t b c)
-          end
-    }.
 
   Fixpoint listSubst {A B C : Type}`{Subst A B C} (a : A)(cb : list (C * B)) : A :=
     match cb with

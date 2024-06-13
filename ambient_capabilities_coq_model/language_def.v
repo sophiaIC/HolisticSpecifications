@@ -35,12 +35,17 @@ Module LanguageDefinition.
   Inductive mdl :=
   | mdl_id : nat -> mdl.
 
+  Inductive ty : Type :=
+  | t_cls : cls -> ty
+  | t_nat : ty
+  | t_bool : ty.
+
   Inductive exp :=
   | e_hole : nat -> exp
   | e_var : var -> exp
   | e_val : val -> exp
   | e_fld : exp -> fld -> exp
-  | e_class : exp -> cls -> exp
+  | e_typ : exp -> ty -> exp
   | e_ghost : exp -> ghost -> exp -> exp
   | e_if : exp -> exp -> exp -> exp
   | e_eq : exp -> exp -> exp.
@@ -378,11 +383,6 @@ Module LanguageDefinition.
       crush.
   Defined.
 
-  Inductive ty : Type :=
-  | t_cls : cls -> ty
-  | t_nat : ty
-  | t_bool : ty.
-
   (**
      Assertions
    **)
@@ -391,7 +391,7 @@ Module LanguageDefinition.
   | a_exp : exp -> asrt
 
   | a_and : asrt -> asrt -> asrt
-  | a_or : asrt -> asrt -> asrt
+(*  | a_or : asrt -> asrt -> asrt*)
   | a_neg : asrt -> asrt
   | a_all : cls -> asrt -> asrt
   | a_ex : cls -> asrt -> asrt
@@ -404,9 +404,10 @@ Module LanguageDefinition.
 
   Notation "'a_' e" := (a_exp e)(at level 38).
   Notation "A1 '∧' A2" := (a_and A1 A2)(at level 39).
+  Notation "'¬' A" := (a_neg A)(at level 38).
+  Definition a_or A1 A2 := ¬ (¬ A1 ∧ ¬ A2).
   Notation "A1 '∨' A2" := (a_or A1 A2)(at level 39).
-  Notation "'¬' A" := (a_neg A)(at level 39).
-  Definition arr (A1 A2 : asrt) := ¬ A1 ∨ A2.
+  Definition arr A1 A2 := ¬ A1 ∨ A2.
   Notation "A1 ⟶ A2" :=(arr A1 A2)(at level 40).
   Definition a_true := (a_ (e_true)).
   Definition a_false := (a_ (e_false)).
@@ -420,7 +421,7 @@ Module LanguageDefinition.
    ***)
 
   Record methDef := meth{
-                        spec : list (asrt * asrt);
+                        spec : list (asrt * asrt * asrt);
                         params : list (var * ty);
                         body : stmts
                       }.
@@ -434,17 +435,10 @@ Module LanguageDefinition.
       }.
 
   Inductive l_spec :=
-  | S_inv : list (var * cls) -> asrt -> asrt -> l_spec
+  | S_inv : list (var * cls) -> asrt -> l_spec
   | S_and : l_spec -> l_spec -> l_spec.
 
   Definition module := (l_spec * (partial_map cls classDef)) %type.
-
-  Inductive defined_spec : module -> l_spec -> Prop :=
-  | spec_base : forall S Cdefs, defined_spec (S, Cdefs) S
-  | spec_and1 : forall S S1 S2 Cdefs, defined_spec (S1, Cdefs) S ->
-                                 defined_spec (S_and S1 S2, Cdefs) S
-  | spec_and2 : forall S S1 S2 Cdefs, defined_spec (S2, Cdefs) S ->
-                                 defined_spec (S_and S1 S2, Cdefs) S.
 
   Record object := obj{o_cls : cls;
                         o_flds : partial_map fld val}.
