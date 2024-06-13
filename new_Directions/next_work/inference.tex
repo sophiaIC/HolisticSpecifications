@@ -5,16 +5,16 @@
 
 We will now develop an inference system to prove that a module % is well-formed $\vdash M$, \ie that a module 
 satisfies its specification. This is done in three phases.
-\red{TODO: refer to what we said in approach section}
+\TODO{\red{TODO: refer to what we said in approach section}}
 
 In the first phase we develop a logic of triples ${\hproves{M}  {A} {\ s\ }{A'} }$, which have the expected meaning, \ie 
-(*) execution of statement $s$ in a state satisfying \sdN{the \emph{precondition}}  $A$ will lead to a state satisfying  \sdN{the \emph{postcondition}}  $A'$.
+(*) execution of statement $s$ in a state satisfying {the \emph{precondition}}  $A$ will lead to a state satisfying  {the \emph{postcondition}}  $A'$.
 These tuples only apply to statements $s$ that  do not contain method calls  (even internal calls) -- this is so, because method calls may contain calls to external methods, and therefore can only be described through quadruples.
 Our triples extend an underlying Hoare logic  (${M \vdash_{ul}  \{A\} {\ s\ } \{A'\} }$) and  introduce new judgements  which talk about protection.
 
 In the second phase we develop a logic of quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''}}$. These promise, as usual, that (*) 
 In addition, they promise that (**) any intermediate external states reachable during execution of that statement will satisfy the invariant  $A'''$.  
-\sdN{We call $A''$ the \midcond.}
+{We call $A''$ the \midcond.}
  We incorporate all triples from the first phase,       
 introducing invariants, give the usual substructural rules, and deal with method calls. 
 For method calls we use the methods' specs, and in addition, for public methods we use the fact that they preserve the module's invariants. 
@@ -30,19 +30,52 @@ Before describing these three phases, we introduce some preliminaries.
 
 \subsection{Preliminaries: Specification Lookup, Assertion Stability  and  Encapsulation}
 
+We will now discuss  three auxiliary concepts: A module's \emph{guarantees}; \   \emph{stability} of assertions whose satisfaction   with respect to pushing frames; \ \ and \emph{encapsulation}  of assertions. 
 
-We will be using the notation $\promises M S$ to indicate that $S$ is part of the module's specification
+
+\subsubsection{Module's guarantees}  %Definition \ref{d:promises} describes
+  $\promises M S$ expresses that $S$ is guaranteed by the module. In particular, it allows   \emph{safe  renamings}. These renamings are   a convenience, akin to the Barendregt convention, and  allow simpler Hoare rules for  method calls -- \cf Sect. \ref{s:calls}.
+
+Definition \ref{d:promises} is broken down as follows:  $S_1 \txtin  S_2$ says that $S_1$ is textually included in $S_2$; \ \ $S \thicksim S'$ says that $S$ is a safe renaming of $S'$; \ \   $\promises M S$ says that $S$ is a safe renaming of one of the specifications given for $M$. 
+ 
+In particular, a safe renaming of  ${ \TwoStatesN {\overline {x:C}} {A}  }$ can replace any of the variables $\overline x$.  
+A safe renaming  of ${\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}$  can replace  the formal parameters ($\overline y$) by actual parameters  ($\overline {y'}$) but requires the actual parameters  not to include \prg{this}, or \prg{res}, (\ie $\prg{this}, \prg{res}\notin \overline{y'}$). -- %The latter requirement 
+Moreover, it can replace  the free variables which do not overlap with the formal parameters or the receiver ( $\overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this}\}$).
 
 \begin{definition}
-\label{d:encaps}
- $\promises M S\ \ \ \triangleq\ \ \ S \txtin \SpecOf M  $
- \\
- where  \sdN{ for specifications $S_1$ and $S_2$, we write $S_1 \txtin   S_2$  when $S_2 \txteq  S_1$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.}
- \end{definition} 
+For a module $M$ and a specification $S$, we define:
+\label{d:promises}
+\begin{itemize}
+\item
+$S_1 \txtin  S_2  \ \ \ \triangleq\ \ \   S_1 \txteq  S_2$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.
+\item
+$S  \thicksim  S'$ \ \ \  is defined by cases
 
-\red{TODO: motivate better}
-Assertions which do not contain the requirement $\inside{\_}$ are called {\emph {stable}}. 
-Such assertions are stable against pushing and popping of frames.
+\begin{itemize}
+\item
+$ { \TwoStatesN {\overline {x:C}} {A}  }   \thicksim  { \TwoStatesN {\overline {x':C}} {A'[\overline{x'/x}]} } $
+\item
+$ {\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}  \thicksim
+ {\mprepostN{A_1'}{p\ D}{m}{y'}{D}{A_2'} {A_3'}} $
+  \\
+ $\strut \hspace{2cm}    \ \  \triangleq\ \ \  A_1 = A_1'[\overline{y/y'}][\overline{x/x'}], \ \ A_2 = A_2'[\overline{y/y'}][\overline{x/x'}], \ \ A_3 = A_3'[\overline{y/y'}][\overline{x/x'}], \ \ \wedge$\\
+ $\strut \hspace{2cm}\ \ \ \ \ \ \ \ \ \prg{this}, \prg{res}\notin \overline{y'}, \ \ \overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this} \} $
+  \end{itemize} 
+  
+ \item  
+ $\promises M  S \ \ \ \triangleq
+ \ \ \ \exists S'.[ \ \ S'  \txtin \SpecOf M\ \ \wedge\ \ S' \thicksim S \ \ ]$
+  \end{itemize} 
+  \end{definition} 
+  
+The restriction on renamings of method specifications that  the actual parameters should not to include \prg{this}  or \prg{res} 
+ is necessary because \prg{this} and \prg{res}  denote different objects from the point of the caller  than from the point of the callee.
+It means that we are not able to verify a method call whose actual parameters include \prg{this} or \prg{res}. 
+This is not a serious restriction: we can encode any such method call by preceding it with assignments to fresh local variables, \prg{this' }:= \prg{this}, and   \prg{res' }:= \prg{res}, and using \prg{this'} and \prg{res'} in the call.
+
+\TODO{\red{TODO: motivate better}}
+\subsubsection{Stable assertions} are those which   do not contain the requirement $\inside{\_}$ are called {\emph {stable}}. 
+Their satisfaction is stable against pushing and popping of frames.
 
 % An assertion is {\emph {stable}}, written as $\Stable A$ if it does not contain $\inside {\re}$ assertions:
 \begin{definition}
@@ -190,7 +223,7 @@ $ % \begin{equation}
     M\ \models \encaps{A}\ \   \triangleq  \ \   
     \begin{cases}
      \forall \Mtwo, \sigma, \sigma',  \overline{\alpha}, \overline{x} \mbox{ with } \overline{x}=Free(A)\\ % , \mbox{and }  \arising{M\madd\Mtwo}{\sigma}:\\
-   \ \ \ \  [\ \ \  \satisfiesA{M}{\sigma}{({A[{\overline {\alpha/x}}]} \ \wedge\ \externalexec)}\  \wedge\ \sdN{ \leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}} % \\    \ \ \ \ \ \   \ \ \ 
+   \ \ \ \  [\ \ \  \satisfiesA{M}{\sigma}{({A[{\overline {\alpha/x}}]} \ \wedge\ \externalexec)}\  \wedge\ { \leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}} % \\    \ \ \ \ \ \   \ \ \ 
    \ \ \Longrightarrow\ \ 
   %  \ \ \ \ \ \  \ 
    {M},{\sigma'}\models{A[{\overline {\alpha/x}}]} \ \  ]
@@ -200,8 +233,8 @@ $ % \begin{equation}
   \end{definition}
 
 \noindent
-\textbf{Aside} \sdN{If the definition above used the more general execution, $\leadstoOrig  {M\madd\Mtwo}  {\sigma}{\sigma'}$, rather than the scoped execution,  $\leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}$, then fewer assertions would have been encapsulated.}
-\footnote{\sdN{Assertions like    $\inside {x.f}$ would not be encapsulated.
+\textbf{Aside} {If the definition above used the more general execution, $\leadstoOrig  {M\madd\Mtwo}  {\sigma}{\sigma'}$, rather than the scoped execution,  $\leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}$, then fewer assertions would have been encapsulated.}
+\footnote{{Assertions like    $\inside {x.f}$ would not be encapsulated.
 Consider, \eg, a heap $\chi$, with objects $1$, $2$, $3$ and $4$, where  $1$, $2$ are external, and $3$, $4$ are internal, and  $1$ has fields pointing to $2$ and $4$, and $2$ has a field pointing to $3$, and $3$ has a field $f$ pointing to $4$. Take  state $\sigma$=$(\phi_1\!\cdot\!\phi_2,\chi)$, where $\phi_1$'s receiver is $1$,  $\phi_2$'s receiver is $2$,   and there are no local variables. 
 We have  $...\sigma\models \externalexec \wedge \inside {3.f}$. 
 We  return from the most recent all, 
@@ -219,8 +252,8 @@ and modules \ModB and  \ModC  from \S~\ref{s:outline}, we have  \ \ \ $\ModB\ \m
 \end{example}
 
 
-\begin{example} Assume   further modules, $\ModD$ and $\ModE$,  which  use ledgers mapping  accounts to their balances, and export functions that update this map. In  $\ModD$ the ledger is  part of the \sdN{internal} module, %\emph{not} protected, while 
-while in $\ModE$ it is part of the  \sdN{external} module.
+\begin{example} Assume   further modules, $\ModD$ and $\ModE$,  which  use ledgers mapping  accounts to their balances, and export functions that update this map. In  $\ModD$ the ledger is  part of the {internal} module, %\emph{not} protected, while 
+while in $\ModE$ it is part of the  {external} module.
 Then  \ \ $\ModD \ \not\models\encaps{ A_{bal}} $, \ \  and \ \ $\ModE  \models \encaps{ A_{bal}} $.
 Note that in both $\ModD$ and $\ModE$, the term \prg{a.balance} is a ghost field. 
 \end{example}
@@ -267,7 +300,7 @@ Encapsulation of an assertion does not imply encapsulation of its negation;
 %{Instead, it relies} on an encapsulation judgment and expects it to be sound:
 %
 
-{\red{TODO}: Say that there are more ways to define the encaps judgement. ALSO: show the rule for the ghostfields. }
+\TODO{{\red{TODO}: Say that there are more ways to define the encaps judgement. ALSO: show the rule for the ghostfields. }}
 
 \begin{lemma}[Encapsulation Soundness]
 \label{lem:encap-soundness}
@@ -279,7 +312,7 @@ $\strut \hspace{1.5cm} \proves{M}{\encaps{A}} \ \ \ \ \Longrightarrow\ \ \ \ \sa
 
 
  \subsubsection{Well-formed specs}
-{ \red{TODO}} Need to say encapsulated 
+\TODO{{ \red{TODO}} Need to say encapsulated }
 
 % PROBABLY NOT NEEDED -- KEEP PROVISIONALLY
 %\subsection{Weaker/Stronger Specifications}
@@ -349,7 +382,7 @@ $
 	}}
 % this onw ia wronf!!!
 %\\
-%	{\sdN{\inferruleSD{\hspace{2.3cm} [\sc{prot-2}]}
+%	{{\inferruleSD{\hspace{2.3cm} [\sc{prot-2}]}
 %	{   stmt \ \mbox{contains no method call, and no assignment to $z$ or $z'$}
 %	\\
 %	{\hproves{M}  {\re = z \wedge \re' = z'} {\ stmt\ }{\re = z \wedge \re' = z'} }
@@ -407,7 +440,7 @@ $
 
 \begin{axiom}
 \label{ax:ul}
-\sdN{Assume   Hoare logic with judgements % of the form 
+{Assume   Hoare logic with judgements % of the form 
 \ $M \vdash_{ul} \{ A \} s \{ A' \}$, \ 
 so that $\Stable{A}$ and $\Stable{A'}$. }
 \end{axiom}
@@ -503,13 +536,14 @@ The remaining rules in Fig. \ref{f:substructural} apply to \emph{any} statements
 Rule {\sc{combine}} combines two quadruples for the same statement into one.
 Rule   {\sc{sequ}}is the usual rule  for statement sequences  adapted to quadruples.
 % SD: at the moment the below is not needed
-%{\sdN{Rule   {\sc{consequ}} is more interesting, because it employs a new inference, {\red{$\inferd$}}, rather than  the usual inference, $\rightarrow$.
+%{{Rule   {\sc{consequ}} is more interesting, because it employs a new inference, {\red{$\inferd$}}, rather than  the usual inference, $\rightarrow$.
 %For stable assertions, $\rightarrow$ and $\inferd$ behave the same way -- more  in section 
 %} }
 
 
 
 \subsubsection{Reasoning about   calls}
+\label{s:calls}
 is described in Fig. \ref{f:internal:calls}. {\sc{Call\_Int}}  and {\sc{Call\_Int\_Adapt}}  or internal methods, whether public or private;  \  {\sc{Call\_Ext}} 
 and {\sc{Call\_Ext\_Adapt}} for  external methods.
 
@@ -569,8 +603,60 @@ $\begin{array}{c}
 }
 }
 \\
+ \\ 
+ \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}]}
+ 	{ 
+   	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
+        }
+	{   \hprovesN{M} 
+						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {{A}}\ }  
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \   {{A}}  \ }
+						{\  A \   }	
+}
 \\
-{\red{  \inferruleSD  {\hspace{4.7cm} [\sc{Call\_Int\_Combine}]}
+ \\ 
+ \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}\_Adapt]}
+ 	{ 
+   	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
+        }
+	{   \hprovesN{M} 
+						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {\PushAS {y}{A}}\ }  
+						{ \ u:=y_0.m(y_1,.. y_n)\    }
+						{ \   {\PushAS {y}{A}}  \ }
+						{\  A \   }	
+}
+
+\end{array}
+$
+\caption{Hoare Quadruples for Internal and External Calls}
+\label{f:internal:calls}
+\label{f:external:calls}
+\label{f:calls}
+\end{figure}
+% }}
+
+  {\sc{Call\_Int}} is as expected:  
+We look up the method's specification,   require the precondition, and guarantee the postcondition and midcondiition after the relevant renamings.
+%: $ {\mprepostN{A_1}{\prg{private} C}{m}{y}{C}{A_2} {A_3}}  $  promises that if $m$ starts in a state that satisfies $A_1$, then  its execution will lead to a state that satisfies $A_2$, and
+% that during its execution, $A_3$  any reachable scoped external state will satisfy $A_3$. Notice that in the post condition ($A_2$) we replace the $result$ by the left hand side of the assignment ($u$).
+For {\sc{Call\_Int\_Adapt}} we require a weaker pre-condition ($  \PushAS {y}{A_1}$  rather than $A_1$) and also ensure a weaker post-condition ($\PushAS {y}{A_2}$, rather than $A_2$).
+Remember that $  \PushAS {y}{A_1}$ guarantees that $A_1$ held before popping the callee's frame (ie $  \PushAS {y}{A_1}$);
+%Looking more closely, we notice  that {\sc{IntCall}} does not require the method's precondition ($A_1$) to hold before the call, but instead requires that it will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{A_1}$).
+%Similarly, after the call it does not guarantee the method's post condition ($A_2$), but instead guarantees that it held before popping the calllee's frame (ie $  \PushAS {y}{A_1}$).
+%Remember that the assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
+%onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ 
+cf.  lemma \ref{lemma:push:ass:state}).
+Moreover, the call has the same \midcond,   here $A_3$, as the specification of the method.
+ {\sc{Call\_Int}} is applicable whether the method is public or private.
+\footnote{
+The rules {\sc{Call\_Int}} and {\sc{Call\_Int\_Adapt}}   are weaker forms of    rule {\sc{Call\_Int\_Combine}} given here. 
+Even though  {\sc{Call\_Int\_Combine}} is sound, we did not include in the presented system, for the sake of simplicity and separation of concerns.
+A similar stronger rule can be expressed for {\sc{Call\_Ext}} and {\sc{Call\_Ext\_Adapt}}.
+ \\
+$
+{\begin{array}{c}
+  \inferruleSD  {\hspace{4.7cm} [\sc{Call\_Int\_Combine}]}
  	{
  	  	\begin{array}{c}
  		  \promises  M { \mprepostN  {A_{1a} \wedge A_{1r} }  {p\ C} {m} {y} {C} { A_{2a} \wedge A_{2r}}   {A_3}  }
@@ -586,81 +672,28 @@ $\begin{array}{c}
 						{ \ A_2'\ }
 						{  \  A_3 \ }	
       }
-}
-}
-\\
- \\ 
- \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}]}
- 	{ 
-   	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-        }
-	{   \hprovesN{M} 
-						{ \    \sdN{ \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ \sdN{{A}}\ }  
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \   \sdN{{A}}  \ }
-						{\  A \   }	
-}
-\\
- \\ 
- \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}\_Adapt]}
- 	{ 
-   	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-        }
-	{   \hprovesN{M} 
-						{ \    \sdN{ \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ \sdN{\PushAS {y}{A}}\ }  
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \   \sdN{\PushAS {y}{A}}  \ }
-						{\  A \   }	
-}
-
 \end{array}
+}
 $
-\caption{Hoare Quadruples for Internal and External Calls}
-\label{f:internal:calls}
-\label{f:external:calls}
-\label{f:calls}
-\end{figure}
-% }}
-
-\sdN{ {\sc{Call\_Int}} is as expected:  
-We look up the method's specification,   require the precondition, and guarantee the postcondition and midcondiition after the relevant renamings.
-%: $ {\mprepostN{A_1}{\prg{private} C}{m}{y}{C}{A_2} {A_3}}  $  promises that if $m$ starts in a state that satisfies $A_1$, then  its execution will lead to a state that satisfies $A_2$, and
-% that during its execution, $A_3$  any reachable scoped external state will satisfy $A_3$. Notice that in the post condition ($A_2$) we replace the $result$ by the left hand side of the assignment ($u$).
-For {\sc{Call\_Int\_Adapt}} we require a weaker pre-condition ($  \PushAS {y}{A_1}$  rather than $A_1$) and also ensure a weaker post-condition ($\PushAS {y}{A_2}$, rather than $A_2$).
-Remember that $  \PushAS {y}{A_1}$ guarantees that $A_1$ held before popping the callee's frame (ie $  \PushAS {y}{A_1}$);
-%Looking more closely, we notice  that {\sc{IntCall}} does not require the method's precondition ($A_1$) to hold before the call, but instead requires that it will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{A_1}$).
-%Similarly, after the call it does not guarantee the method's post condition ($A_2$), but instead guarantees that it held before popping the calllee's frame (ie $  \PushAS {y}{A_1}$).
-%Remember that the assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
-%onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ 
-cf.  lemma \ref{lemma:push:ass:state}).
-Moreover, the call has the same \midcond,   here $A_3$, as the specification of the method.
- {\sc{Call\_Int}} is applicable whether the method is public or private.
 }
 
 
-%\sdN{For public methods,  {\sc{Call\_Pub}},  we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and if the adapted versiob of $A$, \ie   $  \PushAS {y}{A}$ holds before the call, then it also holds after the call. Moreover, $A$ is also a \midcond of the call.
-%As for {\sc{Call\_Int}},  the calls pre- and post are weaker than the invariants, here  $  \PushAS {y}{A}$  rather than $A$. 
-%Notice that we used the method's spec only to find whether it was public, and did not make use of its pre-post, or mid-condition, $A_1$, $A_2$ and $A_3$.
-%We could however use them by applying {\sc{Call\_Int}} any number of times, as well as {\sc{Call\_Pub}} again any number of times, and combining through {\sc{Combine}}
-%}
 
-\sdN{For external methods,  {\sc{Call\_Ext}}, we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and   $A$  holds before the call, then it also holds after and during the call. }
+{For external methods,  {\sc{Call\_Ext}}, we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and   $A$  holds before the call, then it also holds after and during the call. }
 In  {\sc{Call\_Ext\_adapt}}, we require a weaker version,  \ie that   $  \PushAS {y}{A}$ holds before the call. Then the 
 weaker version also holds after the call. Moreover, $A$ is also a \midcond of the call.
 }
 
 
 \vspace{.1cm}
-\red{
+ {\red{
 \noindent
-\textbf{Implicit renamings} In the three rules above we follow a form of Barendregt convention:  In  {\sc{Call\_Int}} and  {\sc{Call\_Ext}} we assume, wlog, that the formal and actual parameters have the same names ($\overline y$) -- this is as if  the formal parameters were consistently  renamed in $A_1$, $A_2$ and $A_3$. 
-We also assume wlog, that the variables $\overline x$ and $\overline y$ are pairwise disjoint -- if they were not, then  l $\overline x$ could be consistently renamed in $A$.
-Finally, the variables  $\overline x$ from ${\TwoStatesN {\overline {x:D}} {A}}$ can be renamed, so as to allow the specification to be applied to any object.
-}
+\textbf{Implicit renamings} In all rules above  the actual and formal parameter names were identical. We achieved this through the implicit renamings from Def. \ref{d:promises}.  
+ }}
  
 \subsubsection{Aliasing and Calls}
 
-TODO: revisit that section
+\TODO{TODO: revisit that section}
 
 %{Rules  {\sc{CallAndAlias}}  and  {\sc{CallNonAlias}} say that calls preserve aliasing, resp. non-aliasing, between variables, ie they preserve $x=x$ resp. $x\neq x$. These two rules apply to internal as well as external calls. When the callee's receiver is external, they make the extra requirement that  $\PushAS {y}{\extract{M}}$ -- we  will discuss this requirement together with the discussion of Fig. \ref{f:external:calls}.     Note that $x=x'$ expresses that $x$ and $x'$ are aliases, while  $u\txteq x$ expresses that $u$ and $x$ are textually the same --
 %the latter is stronger, i.e.   $x\txteq u$ implies $x=u$. 
@@ -764,13 +797,13 @@ $
 %$\begin{array}{lclcl}
 %PRE(A_1 \wedge A_2} \trangleq PRE(A_1) \wedge PRE(A_2} & PRE{\protectedFrom \re \re
 %
-%\sdN{{\sc{WellFrm\_Mod}} and 
+%{{\sc{WellFrm\_Mod}} and 
 % {\sc{Comb\_Spec}} together say that a module is well formed if it satisfies each conjunct of its specification.
 % }
 % 
- \sdN{{\sc{Method}} says that  a module satisfies a method specification if the method body satisfies the corresponding pre-, post- and \midcond.
+ {{\sc{Method}} says that  a module satisfies a method specification if the method body satisfies the corresponding pre-, post- and \midcond.
  }
- \sdN{{\sc{Invariant}} says that  a module satisfies an invariant specification $\TwoStatesN{ \overline{x:C}} {A}$,  if the method body of each public method
+ {{\sc{Invariant}} says that  a module satisfies an invariant specification $\TwoStatesN{ \overline{x:C}} {A}$,  if the method body of each public method
  has $A$ as its  pre-, post- and \midcond.}
  
  \vspace{.1cm}
