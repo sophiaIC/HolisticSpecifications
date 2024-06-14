@@ -1,11 +1,171 @@
 \section{Introduction}
 \label{s:intro}
 
-\red{TODO} Explain OCAP; introduce the challenge of the open word; reasoning and works by Devries, Birkedahl, Vechev, and ours.
-Include in that in OCAPs the capabilities act as guards. 
-That this has been tackled in FASE/OOPSLA'22 and gets better tackled here
-Also the difference between necessary and sufficient.
-And relation to POPL'23 paper; perhaps also some of recent work by Toby 
+\newcommand{\Tamed}{Tamed\xspace}
+\newcommand{\tamed}{tamed\xspace}
+\newcommand{\tame}{tame\xspace}
+\newcommand{\tames}{tames\xspace}
+\newcommand{\Taming}{Taming\xspace}
+\newcommand{\taming}{taming\xspace}
+
+ In today's complex software, internal, trusted, code  is tightly intertwined  with external, untrusted, code:
+External, unverified, untrusted code may call functions from the internal code.
+And internal, trusted code may call functions from the  external  code.
+This tight intertwining   introduces a high degree of uncertainty.
+
+To  reduce  that uncertainty, programmers employ  
+\emph{encapsulation  features}
+ (\eg   modules, private fields and methods, ownership types, memory safety, capability safety,  etc, \cite{private}),
+as well as programming patterns (\eg monitors, proxies, membranes, object capabilities etc, \cite{mebranes}).
+Such  features and patterns were first introduced in the 70s, and widely improved, employed, and studied since.\footnote{AUTHORS: careful, though; they were studied in a less adversary situation -- there was little worry of the untrusted code, Can we say this?}
+
+Such features have been  used in the verification of purely internal code  \cite{Muller, Leino}.
+However, the extent to which these features and patterns help reduce the uncertainty in intertwined code
+has only recently  been studied \cite{xxx} -- Dreyer, Devriese, Mackay,  
+
+%The subject of this work is the specification  and verification of properties of internal code which 
+% reduces the uncertainty 
+% through the 
+%employs objects capabilities to reduce the uncertainty when intertwined with external, unknown code. 
+%
+In this paper, we address the reasoning about the effects of  \emph{open calls}\footnote{Do we call them open or external?} 
+\ie  internal code which contains calls to external, untrusted functions.
+Such open calls may have effects on the state of the internal code. 
+Reasoning about  open calls poses two challenges:  
+We do not have a specification of the called method. 
+And the external code may have any number of effects, and in particular may call back into the internal code.
+
+The code sketch below illustrates the point:  An internal, trusted module $M_{intl}$  has methods \prg{m1} and \prg{m2}.
+Parameter  \prg{untrs}% in \prg{m2} 
+ is an external object. 
+The open call on line  6 is the challenge:
+What effects can it have?
+What happens if that call later on calls back into $M_{intl}$, \eg  calls  \prg{m1}?
+\footnote{AUTHORS: Can we make the text wrap the code?}
+%  \footnote{AUTHORS: I think we should not worry about public/private yet}
+%\begin{wrapfigure}[6]{r}{.6\textwidth}
+%\begin{minipage}{.6\textwidth}
+%\vspace{-2em}
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+module $M_{intl}$        
+  method m1 ..
+    ...  $\mbox{trusted code}$ ...  
+  method m2(untrs:external) 
+    ... $\mbox{trusted code}$ ...
+    untrs.unkn(this)  // open call    
+    ... $\mbox{trusted code}$ ...
+\end{lstlisting}
+%\end{minipage}
+%\end{wrapfigure}
+% \blindtext
+
+ 
+
+\paragraph{\Tamed effects}
+%{\textbf
+{Our remit
+ is not to rule out effects caused by external objects, % at the open call,  
+ but to {\tame} them:}
+ %}
+\footnote{AUTHORS: Do we like the term \tame? Can we think if a better one? t I do not like "conditional effects".  Guarded effects? Reduced effects?}
+We use the term \emph{\tamed  effect} for an effect which may be caused by an external object, but only if that external objects satisfies
+ certain conditions specific to that effect.
+\footnote{AUTHORS: I think this is key.}
+For instance, an external object may cause the reduction of the balance of a bank account, 
+but only if the causing object is in procession of the corresponding credentials.
+ 
+
+%The subject of this paper is how to characterize the possible effects at the point of the open call.
+
+\paragraph{Program Development for \tamed effects} %To \emph{develop} programs with \tamed effects, programmers have to employ
+needs to
+ encapsulation features and \emph{encapsulated properties}.
+\footnote{AUTHORS: All terms used in this section have been used with many different meanings. 
+We must warn the reader that we use our own meanings here. 
+Do not know where to say that.}
+\footnote{We us the term encapsulated  property, if it can  be invalidated only through calls of  public methods of that module.}
+Thus the module can preserve its internal invariants  even in the presence of open calls,
+some effects can be ruled out altogether (\eg it is impossible for an account's balance to be negative), and
+also ensure that effects are tamed.
+ %
+ Often  programs \taming effects are developed following the object capability model (OCAP)\cite{Miller}, where  
+ capabilties are transferable rights to perform one or more operations on a given object.
+Thus, capabilities \emph{enable} and  \emph{guard} effects:   
+Capabilities \emph{guard} effects: callers can make the effect   happen, only if they have access to the corresponding capability.
+ 
+ 
+% \vspace{.1cm}
+\paragraph{Program Specification and Verification  for \tamed effects} But how to \emph{prove} that program's effects are, indeed, \tamed?
+ 
+Recent work has developed logics to prove properties of programs employing object capabilities.\footnote{not necessarily from the point of view of \tamed effects.}
+Dreyer OOPSLA'18 develop a logic to prove that   code employing object capabilities as encapsulation features preserve invariants for intertwined code, but in the absence of open calls. 
+ \footnote{\red{TO CHECK}}.
+Devriese - 17? also develop xx logic for object capabilties and code invariants, they propose interesting problems for open calls, 
+but can only prove these properties through tailor-made proofs rather than Hoare logics.
+Birkedahl-PLDI'23 xxx The paper includes a property of an open call, but again through a tailor-made proof, and not as a Hoare logic.
+
+
+Since open calls may in turn call any number of internal, public methods, 
+it is crucial  to prove that \taming of effects is preserved by the module's 
+\emph{emergent} behaviour, \ie any intertwining of external code with calls to internal, public methods.
+\footnote{Properties which rely on the type system, are of course preserved, but what about more semantic properties?}
+xxx-OOPSLA-22-workshop does this by replacing the open call though an unbounded number of calls to the module's public method.
+ FASE instead proposes holistic specifications to describe   module's emergent behaviour. 
+ OOPLSA'22 proposes a xxx-specification language for a module's emergent behaviour, and  tailor-made Hoare logic to prove that modules which do not contain open call adhere to such specifications.
+%They propose a taylor-made proof for an open call.
+
+
+
+%We argue that in order to \emph{prove} that effects are \tamed,
+%we need a way to specify the conditions necessary for that effect, 
+%and a way to prove that the   module in its entirety preserves this \taming.
+%In order to prove that the module in its entirety preserves this \taming, 
+% \vspace{.2cm} 
+% Thus, no work so far has tackled Hoare logics which support open calls as well as \tamed effects.
+
+\paragraph{This paper proposes} % In this paper we propose 
+ ways to specify  \taming of effects for  programs which employ the OCAP model, 
+ and a Hoare logic of quadruples which can reason about open calls, and prove module's emergent behaviour indeed \tames the effects as specified.
+%Our specifications reflect modules' emergent behaviour,
+% We also develop  Hoare logics to reason about modules containing open calls.
+
+ \vspace{.8cm}
+ \red{I want to also make these points, but do not know where. The points are overlapping,  and need  polishing:} 
+ \begin{enumerate}
+ \item
+\Tamed effects rely on conditions which are not under the control of the module. 
+For example, the module may require that the credentials are shown before it reduces the balance, but it cannot control which external objects have access to the credentials. 
+\item
+\label{reduced}
+The competition's effects  are not flexible enough. \footnote{not conditional}.
+They rely on only exposing a reduced version of the module's interface:
+For example, Birkedahl'22   prove -- by  hand -- that the stack's depth with remain the same, but only because the interface of their module does not expose a \prg{pop} method. 
+Such an assumption is too strong. 
+A module which did not support methods to reduce the stack are not as interesting or useful ... \red{here would be better to talk of balance and accounts}.
+What we want to have is modules with a rich interface, which expose different parts  of their interface to different external objects.
+\item
+One might think that it is possible to ensure that access to an object only goes through a reduced interface (as in point  \ref{reduced}).
+Namely, an internal object $o_1$ may create a proxy object $o_2$ to itself, which only exposes the reduced interface, and then pass $o_2$ as  argument to an external object $o_3$ .
+However, this does not guarantee that $o_3$ does not have a different route to $o_1$, which does not pass through the proxy $o_2$
+\item
+\Tamed effects \emph{have} to be hypothetical. \footnote{ (or context-dependent)}.  
+Some external objects will have access to the capability, and others will not. 
+We can gaurantee that without the relevant capability the effect will not happen, and also the capabilities will not be leaked. 
+But we can never guarantee that the capability is not present.
+\item
+In the context of OCAP, we need to reflect not only whether an external object has direct access (through a field, aor method  argumet) to the capability, but also, whether an external object may eventually obtain  direct access to the capability,
+% Eg they say that the interface does not provide a method to reduce the balance; then the reduction will not happen.
+\item
+\Tamed effects should take emergent behaviour into account. 
+They should hold over any number of execution steps, and not just over one particular method call. 
+For example \tamed effects should preclude  a module which does require the credentials in order to reduce the balance, but leaks the credentials. Therefore, per-method specifications are not sufficient.
+\end{enumerate}
+
+%\red{TODO} Explain OCAP; introduce the challenge of the open word; reasoning and works by Devries, Birkedahl, Vechev, and ours.
+%Include in that in OCAPs the capabilities act as guards. 
+%That this has been tackled in FASE/OOPSLA'22 and gets better tackled here
+%Also the difference between necessary and sufficient.
+%And relation to POPL'23 paper; perhaps also some of recent work by Toby 
 
 %Overall structure -- I do not know in what  order though.
 %
