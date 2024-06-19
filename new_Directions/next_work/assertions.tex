@@ -107,7 +107,8 @@ is expressed through  through \ \ $\satisfiesA{M}{\sigma}{{A}}$ \ \ \ and define
  to look up the definitions of ghost fields, and to find class definitions to determine whether an object is  external.
 % -- c.f. Def. \ref{def:chainmail-semantics}, cases (\ref{cExpr}),  (\ref{cInternal}). %,  and (\ref{cExternal}) .
 
-\subsection{Semantics of \AssertLang -- first part}
+\subsection{Semantics of assertions % \AssertLang 
+-- first part}
 \label{sect:semantics:assert:standard}
 
 % An illustration of the concept of reachable appears in the next subsection, in Fig. \ref{fig:Relevant}.
@@ -332,10 +333,17 @@ The locally reachable objects from $\phi_1$ were highlighted in the middle pane 
 We highlight the protected objects in each pane with a golden halo.
  Note that $o_3$ is protected from $\phi_2$, but is not protected from $\phi_3$. This is so, because \prg{this} in $\phi_3$ is external, and  $o_3$ is an argument to the call. That means, that during the call, $o_7$ may obtain unmitigated access (permission?) to $o_3$. 
  
- \subsection{Preservation of Satisfaction}
+ \subsection{Preservation of Satisfaction across Method Calls and Returns}
 
+\sdN{Satisfaction of an assertion depends on the contents of the heap, and the map of local variables to addresses in the top frame of that stack. 
+It is useful to know under what conditions  satisfaction of  assertions is preserved across changes to the state.
+In particular, what if the heap remains the same, and the assertion has no free variables?
+Usually, in such cases satisfaction is preserved across pushing/popping of frames on the stack.
+However, in our assertion language, assertions may talk about protection, and as we have already seen in Fig. 4, this property is affected when we push of pop frames.
 
-Lemma \ref{l:assrtr:unaffect}  says that satisfaction of an assertion is not affected by replacing a variable by its value, nor by changing the continuation in a state.
+In this section we will study the preservation of satisfaction across pushing and popping of frames.
+
+Lemma \ref{l:assrt:unaffect}  says that satisfaction of an assertion is not affected by replacing a variable by its value, nor by changing the continuation in a state.
 
 
 \begin{lemma}
@@ -355,11 +363,117 @@ $ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sig
 
 \end{lemma}
 
-A corollary of   lemma \ref{lemma:addr:expr}.\ref{one:ad:exp} is $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
+A corollary of   lemma \ref{l:assrt:unaffect}.\ref{one:ad:exp} is that $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
 
 
+\subsubsection{Stable, and Positive Assertions}\footnote{BETTER NAME?}  Stable assertions are those which   do not contain the requirement $\inside{\_}$ are called {\emph {stable}}. 
+Their satisfaction is preserved against pushing and popping of frames.
+Positive Assertions are those where protection appears only in positive positions.
+Their satisfaction is preserved against pushing of frames.
+
+\newcommand{\lclSPACE}{\ \ \ \ \ }
+% An assertion is {\emph {stable}}, written as $\Stable A$ if it does not contain $\inside {\re}$ assertions:
+\begin{definition}
+\label{def:Basic}
+%\begin{figure}[hbt]
+[$\Stable{\_}$] assertions: %  defined below
+
+$
+\begin{array}{l}
+ \begin{array}{lll}
+  \Stable {\inside{\re}}  \triangleq  false & \lclSPACE &   \Stable {\protectedFrom \re {\overline {u}}} =  
+  \Stable  {\internal \re} =  %   \PushAS y  {(\external \re)} & \triangleq &   {\external \re}
+    \Stable {\re}=   
+     \Stable {\re:C}\   \triangleq \    true
+ \end{array}
+  \\
+ \begin{array}{lcl}
+ \Stable  {A_1  \wedge  A_2}\  \triangleq\     \Stable  { A_1}  \wedge    \Stable  {A_2}    &
+\lclSPACE  &  
+ \Stable  {\forall x:C.A} =\Stable  {\neg A} \   \triangleq\   \Stable A
+ \end{array}
+ \end{array}
+$
+\label{f:Basic}
+\end{definition}
+
+ 
+% An assertion is {\emph {stable}}, written as $\Stable A$ if it does not contain $\inside {\re}$ assertions:
+\begin{definition}
+\label{def:Pos}
+%\begin{figure}[hbt]
+[$\Pos{\_}$] assertions: %  defined below
+
+$
+\begin{array}{l}
+ \begin{array}{l}
+  \Pos {\inside{\re}} =  \Pos {\protectedFrom \re {\overline {u}}} =  
+  \Pos  {\internal \re} =   
+    \Pos {\re}=   
+     \Pos {\re:C}\   \triangleq \    true
+ \end{array}
+  \\
+ \begin{array}{lll}
+ \Pos  {A_1  \wedge  A_2}\  \triangleq\     \Pos  { A_1}  \wedge    \Pos  {A_2}   \  &
+      
+ \Pos  {\forall x:C.A}   \triangleq\   \Pos A
+\   &
+  \Pos {\neg A}  \triangleq \Neg A
+ \end{array}
+ \\
+ \\
+  \begin{array}{ll}
+  \Neg {\inside{\re}}\  \triangleq \    false &    \Neg {\protectedFrom \re {\overline {u}}} =  
+  \Neg  {\internal \re} =   
+    \Neg {\re}=   
+     \Neg {\re:C}\   \triangleq \    true
+ \end{array}
+  \\
+ \begin{array}{lll}
+ \Neg  {A_1  \wedge  A_2}\  \triangleq\     \Neg  { A_1}  \wedge    \Neg  {A_2}   \ \   
+ &    
+ \Neg  {\forall x:C.A}   \triangleq\   \Neg A \ \ 
+&
+  \Neg {\neg A}  \triangleq \Pos A
+ \end{array}
+
+ \end{array}
+$
+\label{f:Pos}
+\end{definition}
+
+As we see in the following lemma, stability is stronger than positive and also negative protection. On the other hand, positive protection does not imply stability, consider, \eg the assertion $\inside \re$.
+
+\begin{lemma}
+For all   assertions $A$  
+\label{l:preserve:asrt}
+ 
+\begin{itemize}
+\item 
+$\Stable{A}\ \ \ \  \Longrightarrow \ \  \ \  \Pos{A}\  \wedge\  \Neg{A} $
+\end{itemize}
+\end{lemma}
+
+Lemma \ref{l:preserve:asrt}  is about preservation of satisfaction of   assertions  across pushing and popping of frames:
+
+\begin{lemma}
+For all  states $\sigma$ and frames $\phi$, and for all assertions $A$ such that $ fv(A)=\emptyset$:
+\label{l:preserve:asrt}
+ 
+\begin{itemize}
+\item 
+$\Stable{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \ \Longleftrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+\item 
+$\Pos{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \ \Longrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+\item 
+$\Neg{A}\ \ \   \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \Longleftarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+
+\end{itemize}
+\end{lemma}
+ }
+  
    
- \subsection{Viewpoints and Protection}
+ \subsubsection{Viewpoints and Protection}
  
  
 {The examples in Fig. \ref{fig:Protected} demonstrate that % validity of assertions which refer to 
@@ -416,6 +530,8 @@ $
 \label{f:Push}
 %\end{figure}
 \end{definition}
+
+ 
 
 
 \newcommand{\sigmas}{\widetilde \sigma}
