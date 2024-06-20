@@ -31,11 +31,11 @@ And as execution of that open call may call back into the internal code, it seem
 \begin{tabular}{lll}
 \begin{minipage}{.5\textwidth}
 The code sketch to the right  illustrates the point:  An internal, trusted module $M_{intl}$  has methods \prg{m1} and \prg{m2}.
-Parameter  \prg{untrs} % in \prg{m2} 
+Parameter  \prg{untrst} % in \prg{m2} 
  is an external object. 
 The open call on line  6 is the challenge:
 What effects can it have?
-What % happens 
+What 
 if that call later on calls back into $M_{intl}$, \eg  by calling  \prg{m1}?
 \end{minipage}
 & \ \  \   &
@@ -44,9 +44,9 @@ if that call later on calls back into $M_{intl}$, \eg  by calling  \prg{m1}?
 module $M_{intl}$        
   method m1 ..
     ...  $\mbox{trusted code}$ ...  
-  method m2(untrs:external) 
+  method m2(untrst:external) 
     ... $\mbox{trusted code}$ ...
-    untrs.unkn(this)  // open call    
+    untrst.unkn(this)  // open call    
     ... $\mbox{trusted code}$ ...
 \end{lstlisting}
 \end{minipage}
@@ -56,7 +56,7 @@ module $M_{intl}$
  
  
 
-\paragraph{\Tamed effects} Nevertheless, open calls do not necessarily have unlimited effects.  
+\paragraph{\Tamed effects} Nevertheless, not all open calls have unlimited effects:
 % But  under some circumstances we know that the open call will not include certain effects.
 %
 %%{\textbf
@@ -66,13 +66,30 @@ module $M_{intl}$
 % %}
 %\footnote{AUTHORS: Do we like the term \tame? Can we think if a better one? t I do not like "conditional effects".  Guarded effects? Reduced effects?
 %An advantage of "tamed" is that it is a short word.}
-The internal module can be written so as to ensure that external objects will never cause certain effects
--- for example, an external object can never make an account's balance negative.\footnote{\red{AUTHORS: do we have a better example?}}
-And, more interestingly, the internal module can be written so as to ensure that external objects may cause effects, but only under certain conditions -- an external object may cause   the reduction of the balance of a bank account, 
-but only if the causing object is in procession of the account's credentials.
+\sdN{If the programming language supports some form of encapsulation (\eg private fields, no forging of addresses, \etc), then the internal module can be written so as to ensure that external objects can cause effects only if some conditions specific to that effect are met.
+For example, the DAO can be implemented so as to ensure that an external object cannot cause
+ the reduction of the balance of the DAO unless the causing object is one of the DAO's account holders; moreover, an external object should not cause the balance of the DAO to become less than the sum of the valances of the accounts it is holding\cite{DAO}.\footnote{\red{AUTHORS: I prefer that example}}
+}
 
-We  use the term \emph{\tamed  effect} for   an effect which may be caused by an external object, but only if the external objects satisfies certain conditions specific to that effect -- 
-while the literature has studied open calls \cite{Lars},  to our knowledge, it does not have a term for that concept. % of \tamed effect.   
+We  use the term \emph{\tamed  effects} for  effects which \sdN{may be caused by an external object, but only under certain conditions specific to that effect
+.}\footnote{
+While the literature has studied open calls \cite{Lars},  to our knowledge, it does not have a term for that concept.}
+\sdN{\Taming of effects %is important, because it 
+allows to reduce the uncertainty at the point of the open call.}
+ 
+
+\paragraph{Effects \tamed by capabilities} To \tame  effects in their code, programmers often employ  the object capability model (OCAP)\cite{Miller} --
+ or capability model for short. 
+Capabilities are transferable rights to perform one or more operations on a given object.
+Thus, capabilities are  \sdN{ \emph{necessary conditions} for effects:   
+ callers can make the effect   happen, only if they have access to the corresponding capability.
+We say that an effect is \tamed by a capability, if it can be caused by an external object only if the latter has access to a capability.
+For example, an external object may cause a change   in the balance 
+of a bank account (whether positive or negative)  only if the causing object  can obtain access to that account} moreover
+an external object may cause a change   in the balance 
+of a bank account (whether positive or negative)  only if the causing object  can obtain access to that account.
+ %is in procession of the account's credentials.
+ % of \tamed effect.   
 %
 %The subject of this paper is how to characterize the possible effects at the point of the open call.
 %
@@ -88,20 +105,16 @@ while the literature has studied open calls \cite{Lars},  to our knowledge, it d
 %can ensure that effects are tamed.
 % %
  
-To \tame  effects in their code, programmers often  employ encapsulation features 
- (\eg private fields, opaque functions \etc \cite{xxx}), and  follow the object capability model (OCAP)\cite{Miller} --
- or capability model for short. 
-Capabilities are transferable rights to perform one or more operations on a given object.
-Thus, capabilities \emph{enable} and  \emph{guard} effects:   
- callers can make the effect   happen, if and only if they have access to the corresponding capability.
+\sdN{In general,  the guarantees given by \tamed effects  are  hypothetical: In general there is no guarantees that the untrusted object (line 6 above) has no access to the capability. In the case where the untrusted object has no access to the corresponding capability, the effect can be excluded. Moreover, leaking if the capability can also be excluded.}
  
  
 % \vspace{.1cm}
-\paragraph{Our remit: Specification and Verification  for  effects \tamed by object capabilities}  
-We want to reason about  code which \tames effects by use of capabilities.
-How  to specify such \tamed effects? How to \emph{prove} that a program's effects are, indeed, \tamed?
-Can we follow a sytematic discipline to develop these proofs,
-e.g.\ embodied a Hoare logic, rather constructing proofs that are 
+\paragraph{Our remit: Specification and Verification  for  \tamed effects}  
+We want to reason about  code which \tames effects,  \sd{including effects \tamed by  capabilities.}
+How  to specify such \tamed effects? How to \emph{prove} that %a program's 
+effects are, indeed, \tamed?
+Can we follow a systematic discipline to develop these proofs,
+e.g.\ embodied in  a Hoare logic, rather constructing proofs that are 
 specific to each problem?
  
 Recent work has developed logics to prove properties of programs employing object capabilities.\footnote{albeit not necessarily with a focus on \tamed effects.}
