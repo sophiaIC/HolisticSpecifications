@@ -1,4 +1,4 @@
-
+        
 This is a very scrappy first draft of a related work section ---
 hopefully someone will at least edit it, fix typos, and remove this
 sentence! It is Sophia's text from the introduction, plus stuff from
@@ -46,10 +46,31 @@ and then outgoing external calls either to other external objects (if
 we're lucky) or callbacks into the internal objects that are currently
 suspended waiting for the results of the external call (if we're not).
 
-%\footnote{Properties which rely on the type system, are of course preserved, but what about more semantic properties?}
-\textbf{xxx-OOPSLA-22-workshop} WHAT IS THIS REFERENCE? does this by
-replacing an open call though an unbounded number of calls to a
-module's public method.
+\citet{CassezFQ24} illustrates one approach to handling external
+calls in the context of the Dafny verifier. The key idea is that
+external callbacks (outgoing external calls that themselves make
+re{\"e}ntrant incoming calls) are necessarily restricted to the public
+interface of the module to be verified.  This technique replaces
+actual external calls with a generated \texttt{externalcall()} method,
+where that method nondterministically issues a squence of calls to the
+module's public interface.  This means that in order to verify their
+code, programmers must ensure that no such sequence of external calls
+will break their invariants, and provide enough information for Dafny
+to accept that proof.
+
+%% \citet{Rinard03} first made clear how type systems express
+%% properties that hold for all program executions: type safety assures
+%% that e.g.\ typesafe execution can continue indefinitely, even if the
+%% data being processed, memory layouts, or communications into and out
+%% of a program are completely randomised. The point of program
+%% verification, of course, is to give rather more semantic guarantees.
+
+
+
+%\footnote{Properties which rely on the type system, are of course preserved,%%  but what about more semantic properties?}
+%% \textbf{xxx-OOPSLA-22-workshop} SOPHIA WHAT IS THIS REFERENCE? does this by
+%% replacing an open call though an unbounded number of calls to a
+%% module's public method.
 
 \citet{FASE} instead proposes holistic specifications to describe a
 module's emergent behaviour. Holistic specifications take an external
@@ -68,12 +89,20 @@ they rely on simplistic type-based module confinement
 prevents any kind of external references or external calls, either
 outgoing or incoming.
 
+Key to these approachces is the goal of proving properties that must
+hold across every execution. The semantics we use in this paper,
+defined in section~\ref{def:necessity-semantics}, are based on
+primitive classical assertions that characterise individual states.
+The semantics of the underlying language require those
+specifications to hold over all states that can possible arise from
+any execution of a module beginning from a defined initial state
 
-
-
-
-
-
+Hyper-Hoare Logic \cite{hyper-hoare-pldi2024} embodies 
+an alternative formulation of the problem. Hyper-Hoare logic expresses
+programs' hyper-properties in terms of hyper-assertions directly over
+sets of states, rather than e.g.\ our classical approach. This
+increases the power of the specification language \textbf{(does it?)}
+although at the cost of making the specification languaghe more complex.
 
 \paragraph{Guarantee Reasoning}
 
@@ -373,7 +402,7 @@ distinction between internal and external objects.
 
 This stream of work has culminated in VMSL, a seperation logic for
 virtual machines 
-\cite{vmsl-pldi-2023}
+\cite{vmsl-pldi2023}
 (sadly not a logic for VAX/VMS systems)
 that demonstrates how VMs can assume ``robust safety'' (more or less
 defensive consistency), and Cerise, a full-scale extension build on 
@@ -475,6 +504,27 @@ original incoming call to the internal object has finished
 --- thus turning an incoming \textit{callback} (a call invoked 
 to handle an outoing external call) into a more straightforward plain
 incoming call. 
+
+
+The \textsc{ConSol} project \cite{consolidating-pldi2024} takes a
+different approach, drawing on programming langauge contracts that are
+checked at runtime \cite{FinFel01}. \textsc{ConSol} provides a
+specification langauge, based around classical pre- and post-conditions and
+a special higher-order treatment of the blockchain addresses used in
+smart contracts. The project analyses twenty well-known erroneous
+contracts and claims that ConSol specifications would prevent those
+errors.
+SCIO* \cite{secure-io-fstar-popl2024} implemented in the dependently
+typed langauge F* offers another approach: the system supports both
+verified and unverified code --- with unverified code 
+corresponding to our external or untrusted modules.  SCIO,
+like \textsc{ConSol}, then uses runtime checks in the form of
+higher-order contracts and reference monitors to ensure the unverified
+code cannot break invariants on the verified code. Both these
+approaches are similar to e.g.\  techniques for gradual
+verification \cite{gradual-verification-popl2024,Cok2022} which often
+rely on inserting dynamic checks at the interface between verified
+(known, trusted) and unverified (unknown, untrusted) code.
 
 
 
@@ -591,7 +641,6 @@ which then call back into our verified and trusted components.
 
 
 % \paragraph{Specifying Design Patterns}
-
 % Techniques for specifying Design Patterns go back at least to 
 % Helm's contracts \cite{Helm92}.
 
@@ -710,13 +759,14 @@ which then call back into our verified and trusted components.
 Finally it is interesting to compare our approach to tamed effects
 with the kind of ownership systems developed in Ownership Types
 \cite{simpleOwnership,existOwn} as used in Rust
-\cite{RustPL2,RustBelt18} and before that, in a number of approaches
+\cite{RustPL2,RustBelt18,funk-ownership2024} and before that, in a number of approaches
 to heap analyses \cite{PotterNC98,HillNP02,MitECOOP06} and
 program verification
 \cite{BoyLisShrPOPL03,hypervisor} including Spec$\#$
 \cite{BarLeiSch05,BarDelFahLeiSch04} and universes
 \cite{DieDroMue07,DietlMueller05,LuPotPOPL06},
-and Borrowable Fractional Ownership \cite{borrow-fract-vmcai2024}.
+and Borrowable Fractional Ownership \cite{borrow-fract-vmcai2024},
+and recently integrated into OCAML \cite{ocaml-ownership-icfp2024}.
 
 
 By enforcing encapsulation, \sd{all} % used to say both
@@ -754,9 +804,3 @@ ownership.
 
 
 
-
-
-
-
-
-\cite{Permenev, Grossman, Albert},
