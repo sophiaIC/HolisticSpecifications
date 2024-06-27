@@ -1,5 +1,6 @@
+\renewcommand{\password}{key}
 
-\se{SUSAN: I am assuming that the intro defines and uses holistic specification and has defined what emergent behaviour is. If it doesn't fit then it needs to start this section.}
+\footnote{\se{SUSAN: I am assuming that the intro defines and uses holistic specification and has defined what emergent behaviour is. If it doesn't fit then it needs to start this section.}}
   
 In this Section we introduce our problem  through an example and outline our approach.  We work with a  small, object oriented, class-based  language similar to Joe-E \cite{JoeE} with modules,   module-private fields
 ({accessible} only from   methods {from} the same module),  
@@ -18,7 +19,8 @@ $M$ must be programmed so that
 execution of $M$ together with \emph{any} number of external modules $\overline M$
 will uphold these guarantees. 
 These guarantees must be upheld while 
- $\overline M$, the  \emph{\externalM} modules, are executing; in contrast, \sdN{they may be} temporarily broken the internal module may 
+ $\overline M$, the  \emph{\externalM} modules, are executing; % in contrast, 
+ \sdN{they may be} temporarily broken by  the internal module  
 tso long as they %are it 
 hold {upon entry to external modules.}
  
@@ -28,31 +30,7 @@ and \emph{\externalO} objects -- instances of classes defined in any other modul
 We also distinguish between
   \emph{\internalC} and   \emph{\externalC} states - those whose receiver is internal or external respectively. 
  
-\forget{
-Our specifications should describe  which effects are tamed by which capabilities.
-In particular, lack of access to {a capability  should} guarantee  that the effect tamed by that capability cannot happen. 
- These guarantees should hold  in the context of   emergent behaviour.
-  
-
-For this, we propose two %a specification language for modules, which has two main novel ingredients.
- novel concepts:
  
- 
-\begin{description}
-\item[Protection] describes a lack of access to capabilities: An object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  if $o'$ cannot obtain direct access to $o$ unless an internal object affords that access. %to $o$. 
-And $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. \ref{def:chainmail-protection-from}, and \ref{def:chainmail-protection}.
-
-\item[{Scoped invariants}] describe emergent behaviour:  {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if a 
-
-{state} $\sigma$ 
-  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will  {also} satisfy  {$A$}. 
-The scoped future contains all states which can be reached through any steps, including further method calls and returns, but stopping before returning from the call active in $\sigma$ --  \cf. Def  \ref{def:shallow:term}.
-We consider executions of the internal module linked with any number of unknown, external modules,
--- \cf Sect. \ref{sect:execution}.
- For $\sigma$ and its scoped future   we only consider external states -- \cf Def \ref{def:necessity-semantics}.
-
-\end{description}
-}
 
 \subsection{\prg{Shop} -- illustrating tamed effects} % Reason about external calls (using protection)}
 \label{sec:how}
@@ -100,12 +78,14 @@ module M$_{shop}$
 
 The critical point is line 9, where we call the method  \prg{payMe} on \prg{buyer}, passing the shop's account as an argument.
 As \prg{buyer} is an external object, we have no method specification for \prg{payMe}. 
-How can we reason about this external call?
-More worryingly, is it possible that the \prg{buyer} will use this opportunity  to drain the shop's account?
+\sd{What are the possible effects of that external call?}
+% How can we reason about this external call?
+\sdN{In particular}, is it possible that the \prg{buyer} will use this opportunity  to drain the shop's account?
 
 \vspace{.3cm}
 \noindent
-However, it is plausible  that if \Mshop guarantees that \\
+However, if \Mshop provides makes some appropriate guarantees, then  the effects at line 9 are tamed. One can see that
+if \Mshop guarantees that \\
 $\strut \ \ \ (A)\ \ $ No money can be withdrawn from an account unless the external object causing the\\  
 $\strut \ \ \ \ \ \ \ \ \ \ \ $ wirthdrawal can eventually get access to the account's password \\
 then \\
@@ -114,9 +94,10 @@ $\strut \ \ \ (B)\ \ $ The external  call on line 9 will not cause a reduction i
 
 \vspace{.3cm}
 The remit of our work is to provide the formal specification and verification tools to support arguments as the one given above. 
+\footnote{\sdN{TODO: elaborate here on "can eventually get access", and on "tamed effect"}}
 In particular, we need to address the following three challenges:
 \begin{description}
-\item[1st Challenge] The semanrics of "can eventually get access to" 
+\item[1st Challenge] The semantics of "can eventually get access to" 
 
 \item[2nd Challenge] The semantics of "effect will not happen unless .."
 
@@ -192,22 +173,115 @@ $
  guarantees that $\prg{a.\myAccount.\balance}\geq \prg{b}$.  Note that this is a  direct conclusion of $S_4$; 
   as \prg{Shop} is part of our internal module, this specification is superfluous -- more in Ex. \ref{example:mprepost}.\footnote{TODO need to re-introduce spec inference in the main text}
  }
- }
-    \subsection{Challenge: Specify code that tames emergent behaviour} % of modules}
-\label{s:bank}
-% In Sect.  \ref{s:approach:necopers} 
-Having protection to limit access from external modules is necessary to tame the use of our code by potentially hostile external modules. We also need to make sure that our code doesn't accidentally leak effects.  Traditional PRE/POST condition specifications cannot express guarantees that two or more of our methods won't interact to produce an untamed effect. We use an example from \cite{XXXELang,FASE} to demonstrate this  \emph{emergent behaviour} and show how our holistic specifications, similar to those proposed in \cite{OOPSLA22}, which must hold whenever an external module is executing our code, can be used to tame effects.
+}
+ 
+\subsection{1st Challenge: eventual access} 
 
-We show three versions of a bank account class that is part of our internal module \prg{M}. To differentiate between the three we rename \prg{M} as $\ModA$,  $\ModB$, or $\ModC$.
-All versions {use the same method to} allow the withdrawal of money, only when supplied with the key to the account....
+We introduce the concept of protection to  describes a lack of access to capabilities: 
+ \begin{description}
+\item[Protection] An object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  if $o'$ cannot obtain direct access to $o$ unless an internal object affords that access. %to $o$. 
+Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. \ref{def:chainmail-protection-from}, and \ref{def:chainmail-protection}.
+ \end{description}
+ 
+Figure \ref{fig:ProtectedBoth} illustrates  these concepts.  In the left pane,   $o_1$, $o_4$, $o_5$ and $o_9$ 
+are protected from $o_2$.
+ The middle pane's  top frame is  $\phi_1$; it has one  variables,   \prg{this},  pointing to $o_1$; here 
+ $o_1$, $o_2$, $o_4$, $o_5$ and $o_9$  are protected. 
+ The right pane's  top frame is  $\phi_2$; it has two  variables,   \prg{this},  and \prg{x}, pointing to $o_3$ and  $o_7$ resp;
+  in addition  to  the objects protected in the previous pane, objects $o_3$ and $o_7$ are protected.
+
+
+\begin{figure}[htb]
+\begin{tabular}{|c|c|c|}
+\hline
+\resizebox{4.5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/prfC.png}
+} 
+&
+\resizebox{4.5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/prtFirst.png}
+}
+&
+\resizebox{4.5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/prtSecond.png}
+}
+\\
+\hline
+protected from object $o_2$
+&
+protected  with top frame $\phi_1$
+&
+protected  with top frame $\phi_2$
+\\
+\hline \hline
+\end{tabular}
+   \caption{Protected from, and Protected. Pink resp. green squares are external resp. internal objects. Connecting straight arrows  indicate fields. Blue boxes are frames on the stack. Protected objects   highlighted in yellow.}
+   \label{fig:ProtectedBoth}
+ \end{figure}
+ 
+
+\subsection{2nd Challenge: Specification of tamed effects}
+
+How to express the guarantee that some effects will not happen? In particular, when such effects can be the outcome of the execution of more than one method? Traditional PRE/POST condition specifications cannot express guarantees that two or more of our methods won't interact to produce an untamed effect. 
+
+Instead, we build on the concept of two-state invariants, and define
+
+\begin{description}
+
+\item[{Scoped invariants}] describe emergent behaviour:  {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if a 
+% SD: drop reachable, as we not define it here, and it is not that fundamental, I think
+{state} $\sigma$ 
+  satisfies ${\overline{x:C}}  \wedge A$, then all $\sigma$'s \emph{scoped} future  states will  {also} satisfy  {$A$}. 
+The scoped future  {contains all states which can be reached through any steps, including further method calls and returns, but stopping before returning} from the call active in $\sigma$ --  \cf. Def  \ref{def:shallow:term}.
+% SD removed the below because it seems to talk both about the meaning of  {$\TwoStatesN  {\overline{x:C}}  {A}$}  and scoped future.
+% I was confused when I read it
+% in other words, the current call \emph{scopes} where \se{$A$} must hold -- more in Def 3.1. 
+\sdM{We} consider executions of the internal module linked with any number of unknown, external modules,
+-- \cf Sect. \ref{sect:execution}.
+ For $\sigma$ and its scoped future   we only consider external states -- \cf Def \ref{def:necessity-semantics}.
+
+\end{description}
+
+    
+%    \subsection{Challenge: Specify code that tames emergent behaviour} % of modules}
+\label{s:bank}
+
+\noindent
+For example, the following scoped invariants\\
+\label{s:bankSpecEx}
+%{
+% \begin{tabular}{lcll}
+%
+$\strut\ \ \ \ \ S_1\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} $ 
+\\
+$\strut\ \ \ \ \  S_2\ \  \triangleq \ \ \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.pwd}}} $ 
+ \\
+$\strut\ \ \ \ \  S_3\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.\balance}=\prg{b}}  $
+\\
+$\strut\ \ \ \ \  S_4\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg{b}:\prg{int} } {\inside{\prg{a.pwd}} \wedge \prg{a.\balance} \geq \prg{b} } $
+ 
+% \end{tabular}
+%}
+
+\noindent
+%specifications
+ give the  guarantees:\\
+ $\strut\ \ \ \ \ S_1$:\   accounts are not leaked, \\
+$\strut\ \ \ \ \ S_2$:\    keys are not leaked,\\
+$\strut\ \ \ \ \ S_3$:\  the balance is not modified unless there is unprotected access to the account,  \\%while 
+$\strut\ \ \ \ \ S_4$:\   the balance does not decrease unless there is unprotected access to the key.  
+
+
+%Having protection to limit access from external modules is necessary to tame the use of our code by potentially hostile external modules. We also need to make sure that our code doesn't accidentally leak effects.  Traditional PRE/POST condition specifications cannot express guarantees that two or more of our methods won't interact to produce an untamed effect. We use an example from \cite{XXXELang,FASE} to demonstrate this  \emph{emergent behaviour} and show how our holistic specifications, similar to those proposed in \cite{OOPSLA22}, which must hold whenever an external module is executing our code, can be used to tame effects.
+
+\vspace{.2cm}
+
+\begin{example}
+To illustrate the meaning of these specifications, we show three versions of a bank account class that is part of our internal module \Mshop. To differentiate between the three we rename \Mshop  as $\ModA$,  $\ModB$, or $\ModC$.
+All versions {use the same method to} allow the withdrawal of money, only when supplied with the key to the account.
 Moreover, in $\ModA$ the key is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the key may be modified, but only if supplied with the old key. 
 
-{Thus, in all three modules, the key is an object capability which \emph{enables} the withdrawal of the money. 
-Moreover, in $\ModA$ and $\ModC$, the key also \emph{tames} the money, preventing those without it from getting the money from the account.
-Crucially however,  in $\ModB$ the key \emph{does not tame} the money. 
-Using $\ModB$, it is possible to start in a state where the account's key is unknown, modify the key, and then withdraw the money. 
-% This is not possible  in $\ModA$ and $\ModC$.
-}
+
 
 %\emph{Guarding} is the crucial expectation that comes with object capabilities. \footnoteSD{SAY THIS BETTER?} 
 %Hoare logics support the specification of    enabling of effects (through per-method PRE/POST-condition pairs), but not of guarding of effects.
@@ -272,10 +346,16 @@ module $\ModC$
 \end{minipage} 
 \end{tabular}
 
-\noindent
+{Thus, in all three modules, the key is an object capability which \emph{enables} the withdrawal of the money. 
+Moreover, in $\ModA$ and $\ModC$, the key
+\sdN{is a capability} used to  \emph{tame} withdrawal of money, preventing those without it from getting the money from the account.}
+
+Crucially however,  in $\ModB$ the key \emph{does not tame} withdrawal of money.
+Using $\ModB$, it is possible to start in a state where the account's key is unknown, modify the key, and then withdraw the money. 
+% This is not possible  in $\ModA$ and $\ModC$.
+% \noindent
 Although the \prg{transfer} method is the same in
-all three modules,   % and each one satisfies \Sclassic,
-code  {such as}
+all three modules,   code  {such as}
 \\ 
 $\ \strut \hspace{.2in} $ \prg{k=new Key;  acc.set(k); acc.transfer(rogue\_accnt,k,1000)} 
 \\ 
@@ -286,38 +366,15 @@ $\ \strut \hspace{.01in} $ \prg{an\_account.set(42); an\_account.transfer(rogue\
 \emph{Emergent behaviour} is key here: 
 Even though the method \prg{transfer} in  \ModB is ``safe'' when considered in isolation, it is not safe when considered in conjunction with other methods from the same module. 
 
-Fortunately, we can write holistic specifications which  rule  out \ModB while permitting \ModA and
-\ModC, namely:\\
-%
-\label{s:bankSpecEx}
-%{
-% \begin{tabular}{lcll}
-%
-$\strut\ \ \ \ \ S_1\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{a}}}  
-% $ \\
-% $\strut\ \ \ \ \
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \    S_2\ \  \triangleq \ \ \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.pwd}}} $
- \\
- $\strut\ \ \ \ \ S_3\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.\balance}=\prg{b}}  $
-\\
-$\strut\ \ \ \ \ S_4\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg{b}:\prg{int} } {\inside{\prg{a.pwd}} \wedge \prg{a.\balance} \geq \prg{b} } $
+\vspace{.2cm}
+Fortunately, our holistic  specifications  rule  out \ModB while permitting \ModA and
+\ModC. Namely
+all three modules satisfy $S_1$ and $S_3$. However, $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, while $\ModB$ satisfies neither $S_2$ nor $S_4$.
+\end{example}
+ \vspace{1cm}
+ \sdN{SD: I have stopped the restructuring here}
  
-% \end{tabular}
-%}
-
-\noindent
-{They}
-%specifications
- give the following guarantees: \ \   $S_1$:\   accounts are not leaked, 
-\ \  $S_2$:\    keys are not leaked,
-\ \  $S_3$:\  the balance is not modified unless there is unprotected access to the account,  %while 
-\ \ $S_4$:\   the balance does not decrease unless there is unprotected access to the key. \ \ 
-% \\
- All three modules satisfy $S_1$ and $S_3$. $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, but $\ModB$ satisfies neither $S_2$ nor $S_4$.
-
- 
- 
-  \subsection{Challenge: Prove that a module adheres to its specification  (using scoped invariants)}
+  \subsection{3rd Challenge:  Proving that a module adheres to its specification} %  (using scoped invariants)}
  \label{sec:howThird}
  
  The holistic specifications we have shown are all of the form {$\TwoStatesN  {\overline{x:C}}  {A}$.
