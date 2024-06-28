@@ -48,7 +48,7 @@ and when given an account  and its \password, one can transfer money from that a
 Implementations of these classes appear in the following section.
 }
 
- \prg{Shop}  has  a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object.}
+ \prg{Shop}  has  a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object. 
  % SD chopped  with a method { \prg{payMe}.}} 
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
@@ -80,7 +80,7 @@ As \prg{buyer} is an external object, we have no method specification for \prg{p
 
 \vspace{.3cm}
 \noindent
-However, if \Mshop provides makes some appropriate guarantees, then  the effects at line 9 are tamed. One can see that
+However, if \Mshop  makes some appropriate guarantees, then  the effects at line 9 are tamed. In particular,
 if \Mshop guarantees that \\
 $\strut \ \ \ (A)\ \ $ No money can be withdrawn from an account unless the external object causing the\\  
 $\strut \ \ \ \ \ \ \ \ \ \ \ $ wirthdrawal can eventually get access to the account's \password \\
@@ -298,6 +298,25 @@ Our holistic  specifications  rule  out \ModB while permitting \ModA and
 all three modules satisfy $S_1$ and $S_3$. However, $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, while $\ModB$ satisfies neither $S_2$ nor $S_4$.
 \end{example}
  
+ \noindent
+ \textbf{NOTE} \ \  Our specifications are  in terms of externally observable effects (\eg the key stays protected), % the account's balance may increase), 
+ rather than in terms of individual methods (\eg\, \prg{set}). %  or \prg{transfer}).
+{Thus,  % gives our specifications the the vital advantage that our specifications can % be used to constrain
+  they can characterize  any 
+module with  accounts which have a % {\textit{implementation}} of a bank account with a 
+ \balance~and a \password -- even as ghost fields --},  irrespective of the API offered.
+ % , services  exported, or  dependencies on other parts of the system.\footnoteSD{does this come from OOPSLA? if so we need to rephrase}
+%\notesep
+%Adherence to   specifications is not monotonic:
+%{Eg, while  \ModA satisfies $S_4$, the addition of \prg{set} lead to \ModB, which does not.}
+%% Adding a method to a module does not necessarily preserve such adherence,
+%% \eg adding method \prg{set} in module \ModB breaks 
+%%SD removed the below. When we changed the invaraints to have the same assertion re and post it no longer hel
+%\forget{, and while separate methods may adhere to a  specification, their combination does
+%not necessarily do so. 
+%{For example, \ModB's  \prg{tansfer} and \prg{set} satisfy $S_4$, but their interplay does not.}
+%%In this sense, and, similar to OOPSLA'22, our  specifications capture a module's \emph{emergent behaviour}. 
+
   
   \subsection{3$^{rd}$ Challenge:  A Hoare logic for external calls} %  (using scoped invariants)}
  \label{sec:howThird}
@@ -320,7 +339,7 @@ $
  We now  revisit the external call from line 9 in Section \ref{sec:shop}. Our argument is that if the module satisfies $S_4$, and if before calling \prg{payMe}, the \password\ of the shop's account is protected from \prg{buyer}, then, after the call, the balance of that account will not have decreased. 
  That is, we want to be able to establish   a Hoare triple of the form
  \\
-$\strut \ \ \ \ \ \ \ \ \ \ \  \{\  \ {\protectedFrom {\prg{this.\myAccount.key}} {\prg{buyer}}\ \wedge\ {\prg{this.\myAccount.\balance}}=\prg{b}    }\ \  \}$\\
+$\strut \ \ \ \ \ \ \ \ \ \ \  \{\  \ { \external{\prg{buyer}}} \ \wedge\ {\protectedFrom {\prg{this.\myAccount.key}} {\prg{buyer}}\ \wedge\ {\prg{this.\myAccount.\balance}}=\prg{b}    }\ \  \}$\\
 $\strut \ \ \ \ \ \ \ \ \ \ \   \ \ \ \ \ \ \ \ \ \ \ \ {\ \prg{buyer.payMe(this.accnt,price)}   \ } $\\
 $\strut \ \ \ \ \ \ \ \ \ \ \  \{\  \ \  {\prg{this.\myAccount.\balance}} \geq  \prg{b} \  \  \}$ 
 
@@ -333,7 +352,7 @@ We only know that $\protectedFrom {\prg{this.\myAccount.key}} {\prg{buyer}}$, bu
  {While we cannot be certain that \prg{this.\myAccount.key} 
  {is  protected during execution of \prg{buy}\footnote{\sdN{What if one of the \prg{clients} had access to it?}}, we are certain that it  \emph{is} protected during execution} of \prg{payMe}: 
 This is so, because the   accessible objects in the execution of \prg{payMe} are those accessible from \prg{buyer}.
-{In general, more objects are protected from the viewpoint of the callee than from the viewpoint of the caller. 
+{In general, more objects are protected from the viewpoint of the callee than from the viewpoint of the caller. -- cf Fig.  \ref{fig:ProtectedBoth}.
 To express this,} we define the operator $\pushSymbolAA$ , which   translates an assertion from the viewpoint of the callee, to that of the caller:
  $\PushAS y A$   guarantees that $A$ will hold when the values of variables $\overline y$ have been pushed onto a new frame. 
  In particular,   $\PushAS y {(\inside \re)} =  \protectedFrom \re {\overline {y} }$ for any term  $\re$ -- \cf 
@@ -362,23 +381,22 @@ $
  
    \subsection{4$^{th}$ Challenge: A Hoare Logic for Proving that module adhere to specifications} %  (using scoped invariants)}
 
-  
-\Eg if $\sigma$ was an external state executing a call to \prg{Shop::buy}, then $\sigma'$ could be an external state reachable 
+ We now revisit the meaning of scoped invariants: 
+  {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if an external {state} $\sigma$ 
+ with objects $\overline x$ of class $\overline C$ satisfies $A$, then all its \emph{scoped} external future  states will  {also} satisfy  {$A$}. 
+\Eg if $\sigma$ was an external state executing a call to \prg{Shop::buy}, then a \emph{scoped} external future  state
+ could be an external state reachable 
 after the return from \prg{Shop::buy}, but could also be reachable
 during execution of the external call \prg{payMe}.
-This means that we are  interested in the states before and after a method (or statements), but  also  in the external states reachable during execution of that method (or statements).
-To accommodate this, we extend   traditional Hoare triples to quadruples of the form\\
+This means that we are  interested in the states before and after a method (or statements), \emph{but  also}  in the external states reachable \emph{during} execution of that method (or statements).
+To accommodate this, we extend   traditional Hoare triples to quadruples of  form\\
  $\strut \ \hspace{4cm} \quadruple {A} {\, stmt\, }{A'} {A''}$\\  
  % These promise 
- promising that terminating execution of $stmt$ in  states satisfying $A$  reaches  a  final state satisfying $A'$, and any intermediate external states reachable during execution of $stmt$ satisfy    $A''$ -- \cf Def. \ref{def:hoare:sem}.
+ promising that terminating execution of $stmt$ in  states satisfying $A$  reaches    final states satisfying $A'$, and any intermediate external states reachable during execution of $stmt$ satisfy    $A''$ -- \cf Def. \ref{def:hoare:sem}.
 
 \vspace{.1cm}
 
-We assume a  Hoare logic of  triples, and define an embedding into our quadruples. 
-We then extend it with substructural rules, rules talking about protection, internal and external calls, 
-and the module's adherence to its 
-specification - more in Figs. \ref{f:underly} -  \ref{f:calls}. % \ref{f:wf}.
-Our Hoare logic rule dealing with external calls is:
+The Hoare logic rule from earlier dealing with external calls is:
  
  $\inferruleNoName  
  	{ 
@@ -390,6 +408,12 @@ Our Hoare logic rule dealing with external calls is:
 						{\  A  \ }
          }
 $
+
+\vspace{.1cm}
+Moreover, we assume a  Hoare logic of  triples, and define an embedding into our quadruples. 
+We then extend it with substructural rules, rules talking about protection, internal and external calls, 
+and the module's adherence to its 
+specification - more in Figs. \ref{f:underly} -  \ref{f:calls}. % \ref{f:wf}.
  
  \vspace{.2cm}
 A module is well-formed, if  its invariants are well-formed,  all  its public methods preserve each of its invariants, and  all its methods satisfy their specifications - \cf  Fig.  \ref{f:wf}.
@@ -402,7 +426,8 @@ it is \emph{encapsulated}, \ie can only be invalidated by code from that module 
 % 
 A method preserves an assertion   if it preserves it across its pre- and post-states and also during any intermediate external state.
 
-\Eg to prove satisfaction of \se{$S_1$ and $S_3$} for method \prg{Shop::buy} we  need to prove:
+\vspace{.1cm}
+\Eg to prove  that method \prg{Shop::buy} satisfies  {$S_1$ and $S_3$} r we  need to prove:
 \\
 % {\footnotesize{
 $\strut \ \ \ \ \ \ \ \ \ \ \ \quadruple {A_1  \wedge \inside{\prg{a}} } {\ stmt\_b  \ } {\inside{\prg{a}}} { \inside{\prg{a}}} $
@@ -416,31 +441,32 @@ $\strut \ \ \ \ \ \  \ \  \ \ \   \quadruple {A_2  \wedge  \inside{\prg{a}} \wed
 %   { \inside{\prg{a.\password}}\wedge  \prg{a.\balance}\!\geq\!{\prg{b} }}$
 % }}
 \\
-and similar for \se{$S_2$ and $S_4$}. Here we used   $stmt\_b$  as short for the method body of \prg{buy}, and $A_1 \triangleq \prg{this}:\prg{Shop}, \prg{buyer}:\prg{external}, \prg{anItem}:\prg{Item}\sdN{,}\prg{a}:\prg{Account}$
+and similar for {$S_2$ and $S_4$}. Here we used   $stmt\_b$  as short for the method body of \prg{buy}, and $A_1 \triangleq \prg{this}:\prg{Shop}, \prg{buyer}:\prg{external}, \prg{anItem}:\prg{Item}\sdN{,}\prg{a}:\prg{Account}$
 and $A_2 \triangleq A_1\sdN{,} \prg{b}:\prg{int}$.
  
+ \vspace{.2cm}
 Quadruples are also used in method specifications, \eg we specify \prg{transfer} through
 \\
 $\strut \ \ \ \ \ \  \ \  \ \ \  { \mprepostLongN {A_3}{\prg{public}\ \prg{Account}}{\prg{transfer}}{params}{A_4} {true} }$
 \\
-%where we used 
-with shorthands 
-$params \triangleq$ \prg{dest:Account}, \prg{key':Key}, \prg{amt:int}, and 
+with shorthands  $params \triangleq$ \prg{dest:Account}, \prg{key':Key}, \prg{amt:int}, and 
 $A_3  \triangleq$  $\prg{key'}=\prg{this.\password} \wedge \prg{dest}\neq \prg{this}$
 $\wedge\, b, b':\prg{int}$
 $\, \wedge\, \prg{this.\balance}=b$ 
 $\, \wedge\,  \prg{dest.\balance}=b'$, 
  and $A_4 \triangleq$  
  $\prg{this.\balance}=b-\prg{amt} \wedge \prg{dest.\balance}=b'+\prg{amt}$.
-% To prove  -- chop to avoid line
-For this specification, we need to prove\\
-$\strut \ \ \ \ \ \ \ \ \ \ \ \quadruple {\ \prg{this}:\prg{Account}\, \wedge\, params\, \wedge\, A_3  \  } {\ stmt\_{tr}  \ } {A_4} { true} $
-\\
-where $stmt\_{tr}$ is short for the body of  \prg{transfer}.
+%For this specification, we need to prove\\
+%$\strut \ \ \ \ \ \ \ \ \ \ \ \quadruple {\ \prg{this}:\prg{Account}\, \wedge\, params\, \wedge\, A_3  \  } {\ stmt\_{tr}  \ } {A_4} { true} $
+%\\
+%where $stmt\_{tr}$ is short for the body of  \prg{transfer}.
 
 
 
-\vspace{.1cm}
+\vspace{.3cm}
+In summary, we assume a Hoare logic of triples, and embed it into our logic of quadtuples. 
+We add method specifications of quadruples, and scoped invariants. We extend the assertions 
+to reason about external calls, 
 \se{What is our extension? Is it going from triples to quadruples or is it adding protection, scoped invariants and external?}
 Our extension preserves soundness of the  Hoare logic --  \cf    Def. \ref{def:hoare:sem}, % and  proofs in 
 and  Thms.  \ref{l:triples:sound}, \ref{t:quadruple:sound}, \ref{thm:soundness}.
@@ -456,23 +482,7 @@ For this we define a new measure of execution ...}
  
  
  
- \noindent
- \textbf{NOTES} \notesep  Our specifications are expressed in terms of observable effects (\eg the key stays protected, the account's balance may increase), rather than in terms of individual methods (\eg\, \prg{set} or \prg{transfer}).
-{This % gives our specifications the the vital advantage that our specifications can % be used to constrain
-implies that they can characterize  any 
-module with bank accounts which have a % {\textit{implementation}} of a bank account with a 
- \balance~and a \password -- even as ghost fields --}, irrespective of the API offered, services  exported, or  dependencies on other parts of the system.\footnoteSD{does this come from OOPSLA? if so we need to rephrase}
-\notesep
-Adherence to   specifications is not monotonic:
-{Eg, while  \ModA satisfies $S_4$, the addition of \prg{set} lead to \ModB, which does not.}
-% Adding a method to a module does not necessarily preserve such adherence,
-% \eg adding method \prg{set} in module \ModB breaks 
-%SD removed the below. When we changed the invaraints to have the same assertion re and post it no longer hel
-\forget{, and while separate methods may adhere to a  specification, their combination does
-not necessarily do so. 
-{For example, \ModB's  \prg{tansfer} and \prg{set} satisfy $S_4$, but their interplay does not.}
-%In this sense, and, similar to OOPSLA'22, our  specifications capture a module's \emph{emergent behaviour}. 
-}
+ 
 
 
 \subsection{Our Contributions}
