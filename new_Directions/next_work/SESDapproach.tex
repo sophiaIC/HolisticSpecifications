@@ -3,7 +3,7 @@
 \renewcommand{\password}{key\xspace}
 
 
-\footnote{\se{SUSAN: I am assuming that the intro defines and uses holistic specification and has defined what emergent behaviour is. If it doesn't fit then it needs to start this section.}}
+\footnote{\se{SUSAN: I am assuming that the intro defines and uses holistic specification and has defined what emergent behaviour is. If it doesn't fit then it needs to start this section. \sdN{SD: There is no mention of holistic in that section. Do we want to bring it back?}}}
   
 In this Section we introduce our problem  through an example and outline our approach.  We work with a  small, object oriented, class-based  language similar to Joe-E \cite{JoeE} with modules,   module-private fields
 ({accessible} only from   methods {from} the same module),  
@@ -42,14 +42,14 @@ The challenge when calling a method on an external object, is that we have no sp
  For illustration, consider the following, internal, module \Mshop, and assume that it includes the classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
 Classes  \sdN{\prg{Inventory} and \prg{Item} have the expected functionality. 
 \prg{Account}s hold a balance and have a \password. 
-When given an \prg{Account},%'s address, 
-one can pay money into it, 
-and when given an account  and its \password, one can transfer money from that account.
-Implementations of these classes appear in the following section.
+With access to an \prg{Account}, %'s address, 
+one  can pay money into it, 
+and with access to an account  and its \password, one can withdraw money from that account.
+Implementations of such a class  appear in the next section.
 }
 
  \prg{Shop}  has  a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object. 
- % SD chopped  with a method { \prg{payMe}.}} 
+ % SD chopped  with a method { \prg{pay}.}} 
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 module M$_{shop}$
@@ -57,10 +57,10 @@ module M$_{shop}$
   class Shop
     field accnt:Account, invntry:Inventory, clients: [external]    
   
-    public method buy(buyer: external, anItem:Item) -> void
+    public method buy(buyer: external, anItem:Item) : void
       int price = anItem.price
       int oldBlnce = this.accnt.blnce
-      buyer.payMe(this.accnt, price)     // $\red{\mbox{external\ call}}!$
+      buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}!$
       if (this.accnt.blnce == oldBlnce+price)
          this.send(buyer,anItem)
       else
@@ -72,54 +72,79 @@ module M$_{shop}$
 \end{lstlisting}
  
 
-The critical point is line 9, where we call the method  \prg{payMe} on \prg{buyer}, passing the shop's account as an argument.
-As \prg{buyer} is an external object, we have no method specification for \prg{payMe}. 
-\sd{What are the possible effects of that external call?}
+The critical point is the external call on line 9,   \sdN{where the \prg{Shop} asks the \prg{buyer} to pay the price of that item,
+by calling  \prg{pay} on \prg{buyer} and passing its account as an argument.
+As \prg{buyer} is an external object, the module \Mshop has no method specification for \prg{pay}, and no 
+certainty about what its implementation %knowledge of what the implementation of \prg{pay} 
+might do. 
+}
+
+\sdN{What are the possible effects of that external call?}
 % How can we reason about this external call?
-\sdN{In particular}, is it possible that the \prg{buyer} will use this opportunity  to drain the shop's account?
+\sdN{The \prg{Shop} hopes, but cannot be sure, that at line 10  it  will have received moneys; but 
+it wants to be certain  that   the \prg{buyer} will not use this opportunity and the access to the 
+shop's account  to drain its moneys.
+Can \prg{Shop}  be certain?}
+
+\vspace{.1cm}
+% \noindent
+Indeed, if \Mshop  makes appropriate guarantees, it can \tame  the effects at line 9. In particular,  
+ \\
+$\strut \ \ \ (A)\ \ $ If \Mshop guarantees that no money can be withdrawn from an account unless the external\\  
+$\strut \ \ \ \ \ \ \ \ \ \ \ $ object causing the withdrawal can eventually get access to the account's \password, \ \ \ \ \. and  \\
+$\strut \ \ \ (B)\ \ $  if \prg{buyer} cannot eventually get access to the account's \password,  \\
+$\strut \ \ \ \ \ \ \  \ \ \ \ \ $ then \\
+$\strut \ \ \ (C)\ \ $ The external  call on line 9 will not cause a reduction in the shop's account's balance.
+
 
 \vspace{.3cm}
-\noindent
-However, if \Mshop  makes some appropriate guarantees, then  the effects at line 9 are tamed. In particular,
-if \Mshop guarantees that \\
-$\strut \ \ \ (A)\ \ $ No money can be withdrawn from an account unless the external object causing the\\  
-$\strut \ \ \ \ \ \ \ \ \ \ \ $ wirthdrawal can eventually get access to the account's \password \\
-then \\
-$\strut \ \ \ (B)\ \ $ The external  call on line 9 will not cause a reduction in the shop's account's balance.:q
-
-
-\vspace{.3cm}
-The remit of our work is to provide the formal specification and verification tools to support arguments as the one given above. 
+\sdN{The remit of our work is to provide the formal specification and verification tools to support arguments as the one given above. 
 \footnote{\sdN{TODO: elaborate here on "can eventually get access", and on "tamed effect"}}
-In particular, we need to address the following three challenges:
+In the argument above, we used the, not yet defined, concept of  "can  eventually get access to", and assumed \tamed effects (no money withdrawn ... unless ..). 
+We need need to define these concepts, and develop Hoare Logics for reasoning.
+Therefore, we need to address the following four challenges:}
 \begin{description}
-\item[1$^{st}$ Challenge] The semantics of "can eventually get access to" 
+\item[\ \ \ \ \  1$^{st}$ Challenge] The specification   of "can eventually get access to". 
 
-\item[2$^{nd}$ Challenge] The semantics of "effect will not happen unless .."
+\item[\ \ \ \ \   2$^{nd}$ Challenge] The specification of tamed effects, 
 
-\item[3$^{rd}$ Challenge] A  Hoare Logic for external calls
+\item[\ \ \ \ \  3$^{rd}$ Challenge] A  Hoare Logic for external calls,
 
-\item [4$^{th}$ Challenge]  A Hoare Logic for Proving that module adhere to specifications
+\item [\ \ \ \ \   4$^{th}$ Challenge]  A Hoare Logic for proving that modules adhere to specifications
 \end{description}
 
+\vspace{.2cm}
+\noindent
+ \textbf{NOTE} \sdN{One might think that  wrapping the account so as to allow payments but forbid withdrawals, would be sufficient  to \tame the possible effects on line 9. 
+However, such a wrapper might not be sufficient, as the
+% nece\tame the effects because
+ \prg{buyer} might  have access to the account and its \password even before the call to \prg{pay}. 
+}
 
- 
  
  
 \subsection{1$^{st}$ Challenge: eventual access} 
 
-We introduce the concept of protection to  describe  lack of access to capabilities: 
+\sdN{We propose  the concept of \emph{protection} to  describe  lack of access. We say that $o$ is \emph{protected}, if external objects  cannot obtain direct access to $o$ unless some internal object affords that access.}
+
  \begin{description}
-\item[Protection] An object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  if $o'$ cannot obtain direct access to $o$ unless an internal object affords that access. %to $o$. 
-Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. More in Def. \ref{def:chainmail-protection-from}, and \ref{def:chainmail-protection}.
+\item[Protection] Object $o$ is \emph{protected} from $o'$, formally $\protectedFrom {o} {o'}$,  
+ if the penultimate object on any path from $o$ to $o'$  is internal.
+% if $o'$ cannot obtain direct access to $o$ unless an internal object affords that access. %to $o$. 
+Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. %More in 
+-- \cf Defs. \ref{def:chainmail-protection-from}, \ % and 
+\ref{def:chainmail-protection}.
  \end{description}
  
-Figure \ref{fig:ProtectedBoth} illustrates  these concepts.  In the left pane,   $o_1$, $o_4$, $o_5$ and $o_9$ 
+ \sdN{During program execution  protected objects might become un-protected, but this may only be caused by execution of an internal method -- hence only internal objects can afford that access.}
+
+Figure \ref{fig:ProtectedBoth} illustrates  protection.  In the left pane,   $o_1$, $o_4$, $o_5$ and $o_9$ 
 are protected from $o_2$.
  The middle pane's  top frame is  $\phi_1$; its receiver,   \prg{this},  points to $o_1$; here 
  $o_1$, $o_2$, $o_4$, $o_5$ and $o_9$  are protected. 
  The right pane's  top frame is  $\phi_2$;  its receiver,  \prg{this},  and local variable, \prg{x}, point to $o_3$ and  $o_7$ resp;
   in addition  to  the objects protected in the previous pane, objects $o_3$ and $o_7$ are protected.
+
 
 
 \begin{figure}[htb]
@@ -151,40 +176,39 @@ protected  with top frame $\phi_2$
  \end{figure}
  
 
+
 \subsection{2$^{nd}$ Challenge: Specification of tamed effects}
 
-How to express the guarantee that some effects will not happen? In particular, when such effects can be the outcome of the execution of more than one method? Traditional PRE/POST condition specifications cannot express guarantees that two or more of our methods won't interact to produce an untamed effect. 
-
-Instead, we build on the concept of two-state invariants, and define
+How to express the guarantee that effects are \tamed? %some effects will not happen? 
+ In particular, when such effects can be the outcome of the execution of more than one method? Traditional PRE/POST condition specifications cannot express guarantees that two or more of our methods won't interact to produce an untamed effect. 
+%
+We build on the concept of two-state invariants, and define
 
 \begin{description}
-
-\item[{Scoped invariants}] describe emergent behaviour:  {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if a {state} $\sigma$ 
- has objects $\overline x$ of class $\overline C$, and satisfies $A$, then all $\sigma$'s \emph{scoped} future  states will  {also} satisfy  {$A$}. 
+\item[{Scoped invariants}] %describe emergent behaviour:  
+{$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if a {state} $\sigma$ 
+ has objects $\overline x$ of class $\overline C$, and satisfies $A$, then all $\sigma$'s \emph{scoped  future  states} will  {also} satisfy  {$A$}. 
 The scoped future  {contains all states which can be reached through any steps, including further method calls and returns, but stopping before returning} from the call active in $\sigma$ --  \cf Def  \ref{def:shallow:term}.
-{We} consider executions of the internal module linked with any number of unknown, external modules,
--- \cf Sect. \ref{sect:execution}.
- For $\sigma$ and its scoped future   we only consider external states -- \cf Def \ref{def:necessity-semantics}.
-
+%{We} consider executions of the internal module linked with any number of unknown, external modules,
+%-- \cf Sect. \ref{sect:execution}.
+% SD: I dropped sentence above; too much detail, I thought!
+\sdN{For} $\sigma$ and its scoped future   we only consider external states -- \cf Def \ref{def:necessity-semantics}.
 \end{description}
 
     
-%    \subsection{Challenge: Specify code that tames emergent behaviour} % of modules}
 \label{s:bank}
 \label{s:bankSpecEx}
 
+\newcommand{\SPSP}{\ \ \ \ \ \  \ \ \ \  }
 \noindent
 For example, the following scoped invariants\\
-%{
-% \begin{tabular}{lcll}
-%
-$\strut\ \ \ \ \  S_1\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} $ 
+$\strut \SPSP  S_1\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} $ 
 \\
-$\strut\ \ \ \ \  S_2\ \  \triangleq \ \ \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}}} $ 
+$\strut  \SPSP  S_2\ \  \triangleq \ \ \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}}} $ 
  \\
-$\strut\ \ \ \ \  S_3\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.\balance}=\prg{b}}  $
+$\strut  \SPSP   S_3\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.\balance}=\prg{b}}  $
 \\
-$\strut\ \ \ \ \  S_4\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg{b}:\prg{int} } {\inside{\prg{a.key}} \wedge \prg{a.\balance} \geq \prg{b} } $
+$\strut\  \SPSP  S_4\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg{b}:\prg{int} } {\inside{\prg{a.key}} \wedge \prg{a.\balance} \geq \prg{b} } $
  
 % \end{tabular}
 %}
@@ -192,19 +216,21 @@ $\strut\ \ \ \ \  S_4\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg
 \noindent
 %specifications
  give the  guarantees:\\
- $\strut\ \ \ \ \ S_1$:\   accounts are not leaked, \\
-$\strut\ \ \ \ \ S_2$:\    keys are not leaked,\\
-$\strut\ \ \ \ \ S_3$:\  the balance is not modified unless there is unprotected access to the account,  \\%while 
-$\strut\ \ \ \ \ S_4$:\   the balance does not decrease unless there is unprotected access to the key.  
+ $\strut  \SPSP  S_1$:\   accounts are not leaked, \\
+$\strut\ \SPSP S_2$:\    keys are not leaked,\\
+$\strut \SPSP  S_3$:\  the balance is not modified unless there is unprotected access to the account,  \\%while 
+$\strut \SPSP  S_4$:\   the balance does not decrease unless there is unprotected access to the key.  
 
 
-%Having protection to limit access from external modules is necessary to tame the use of our code by potentially hostile external modules. We also need to make sure that our code doesn't accidentally leak effects.  Traditional PRE/POST condition specifications cannot express guarantees that two or more of our methods won't interact to produce an untamed effect. We use an example from \cite{XXXELang,FASE} to demonstrate this  \emph{emergent behaviour} and show how our holistic specifications, similar to those proposed in \cite{OOPSLA22}, which must hold whenever an external module is executing our code, can be used to tame effects.
-
-\vspace{.2cm}
+ 
+\vspace{.1cm}
 
 \begin{example}
-To illustrate the meaning of these specifications, we show three versions of a class \prg{Account}  that is part of our internal module \Mshop. To differentiate between the three we rename \Mshop  as $\ModA$,  $\ModB$, or $\ModC$.
-All versions {use the same method to} allow the withdrawal of money, only when supplied with the key to the account.
+We illustrate the meaning of our specifications  using three  versions of a class \prg{Account}  from  \cite{OOPSLA22} 
+as part of our internal module \Mshop. 
+To differentiate between the three modules we rename \Mshop  as $\ModA$,  $\ModB$, or $\ModC$.
+
+All versions {use the same method \prg{transfer} to} allow  withdrawal of money, only when supplied with the key to the account.
 Moreover, in $\ModA$ the key is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the key may be modified, but only if supplied with the old key. 
 
 
@@ -287,19 +313,20 @@ $\ \strut \hspace{.2in} $ \prg{k=new Key;  acc.set(k); acc.transfer(rogue\_accnt
 \\ 
 is enough to drain  \prg{acc} in \ModB without knowing the \password.\footnoteSD{CAREFUL: we had 
 $\ \strut \hspace{.01in} $ \prg{an\_account.set(42); an\_account.transfer(rogue\_accnt,42)} but this was type incorrect!}
-%
-%This example demonstrates that we need to consider the 
-\emph{Emergent behaviour} is key here: 
-Even though the method \prg{transfer} in  \ModB is ``safe'' when considered in isolation, it is not safe when considered in conjunction with other methods from the same module. 
+ 
+ \emph{Emergent behaviour} is key here: 
+Even though % the method 
+\prg{transfer} in  \ModB is ``safe'' when considered in isolation, it is not safe when considered in conjunction with other methods from the same module. 
 
 \vspace{.2cm}
-Our holistic  specifications  rule  out \ModB while permitting \ModA and
-\ModC. Namely
-all three modules satisfy $S_1$ and $S_3$. However, $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, while $\ModB$ satisfies neither $S_2$ nor $S_4$.
+Our  specifications  rule  out \ModB while permitting \ModA and
+\ModC:
+All three modules satisfy $S_1$ and $S_3$. Modules $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, while $\ModB$ satisfies neither $S_2$ nor $S_4$.
 \end{example}
  
  \noindent
- \textbf{NOTE} \ \  Our specifications are  in terms of externally observable effects (\eg the key stays protected), % the account's balance may increase), 
+ \textbf{NOTE} \ \  Our specifications are  in terms of externally observable effects (\eg the key stays protected), 
+ % the account's balance may increase), 
  rather than in terms of individual methods (\eg\, \prg{set}). %  or \prg{transfer}).
 {Thus,  % gives our specifications the the vital advantage that our specifications can % be used to constrain
   they can characterize  any 
@@ -321,7 +348,7 @@ module with  accounts which have a % {\textit{implementation}} of a bank account
   \subsection{3$^{rd}$ Challenge:  A Hoare logic for external calls} %  (using scoped invariants)}
  \label{sec:howThird}
  
- When reasoning about external calls, even though we do not have a specification for the call, we know that the effects of the call are tamed accroding to the module's scoped invariants. That is expressed in the  simplified Hoare rule below -- \cf. Fig.\ref{f:external:calls}. 
+ When reasoning about external calls, even though we do not have a specification for the call, we know that the effects of the call are tamed according to the module's scoped invariants. That is expressed in the  simplified Hoare rule below -- \cf. Fig.\ref{f:external:calls}. 
  
   $\inferruleNoName  
  	{ 
@@ -336,11 +363,11 @@ $
 
 \vspace{.1cm}
 
- We now  revisit the external call from line 9 in Section \ref{sec:shop}. Our argument is that if the module satisfies $S_4$, and if before calling \prg{payMe}, the \password\ of the shop's account is protected from \prg{buyer}, then, after the call, the balance of that account will not have decreased. 
+ We now  revisit the external call from line 9 in Section \ref{sec:shop}. Our argument is that if the module satisfies $S_4$, and if before calling \prg{pay}, the \password\ of the shop's account is protected from \prg{buyer}, then, after the call, the balance of that account will not have decreased. 
  That is, we want to be able to establish   a Hoare triple of the form
  \\
 $\strut \ \ \ \ \ \ \ \ \ \ \  \{\  \ { \external{\prg{buyer}}} \ \wedge\ {\protectedFrom {\prg{this.\myAccount.key}} {\prg{buyer}}\ \wedge\ {\prg{this.\myAccount.\balance}}=\prg{b}    }\ \  \}$\\
-$\strut \ \ \ \ \ \ \ \ \ \ \   \ \ \ \ \ \ \ \ \ \ \ \ {\ \prg{buyer.payMe(this.accnt,price)}   \ } $\\
+$\strut \ \ \ \ \ \ \ \ \ \ \   \ \ \ \ \ \ \ \ \ \ \ \ {\ \prg{buyer.pay(this.accnt,price)}   \ } $\\
 $\strut \ \ \ \ \ \ \ \ \ \ \  \{\  \ \  {\prg{this.\myAccount.\balance}} \geq  \prg{b} \  \  \}$ 
 
 We cannot directly apply the Hoare rule as given above. Namely, to apply $S_4$, we need to establish  
@@ -350,8 +377,8 @@ But what about the former?
 We only know that $\protectedFrom {\prg{this.\myAccount.key}} {\prg{buyer}}$, but   need the stronger property  ${\inside {\prg{this.\myAccount.key}}}$. 
 
  {While we cannot be certain that \prg{this.\myAccount.key} 
- {is  protected during execution of \prg{buy}\footnote{\sdN{What if one of the \prg{clients} had access to it?}}, we are certain that it  \emph{is} protected during execution} of \prg{payMe}: 
-This is so, because the   accessible objects in the execution of \prg{payMe} are those accessible from \prg{buyer}.
+ {is  protected during execution of \prg{buy}\footnote{\sdN{What if one of the \prg{clients} had access to it?}}, we are certain that it  \emph{is} protected during execution} of \prg{pay}: 
+This is so, because the   accessible objects in the execution of \prg{pay} are those accessible from \prg{buyer}.
 {In general, more objects are protected from the viewpoint of the callee than from the viewpoint of the caller. -- cf Fig.  \ref{fig:ProtectedBoth}.
 To express this,} we define the operator $\pushSymbolAA$ , which   translates an assertion from the viewpoint of the callee, to that of the caller:
  $\PushAS y A$   guarantees that $A$ will hold when the values of variables $\overline y$ have been pushed onto a new frame. 
@@ -383,18 +410,23 @@ $
 
  We now revisit the meaning of scoped invariants: 
   {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if an external {state} $\sigma$ 
- with objects $\overline x$ of class $\overline C$ satisfies $A$, then all its \emph{scoped} external future  states will  {also} satisfy  {$A$}. 
+% with objects $\overline x$ of class $\overline C$ 
+ satisfies $\overline {x:A} \wedge A$, then all its \emph{scoped} external future  states will  {also} satisfy  {$A$}. 
 \Eg if $\sigma$ was an external state executing a call to \prg{Shop::buy}, then a \emph{scoped} external future  state
  could be an external state reachable 
 after the return from \prg{Shop::buy}, but could also be reachable
-during execution of the external call \prg{payMe}.
-This means that we are  interested in the states before and after a method (or statements), \emph{but  also}  in the external states reachable \emph{during} execution of that method (or statements).
+during execution of the external call \prg{pay}.
+This means that we are  interested in the states before %and after a method (or statements)
+statements, \emph{but  also}  in the external states reachable \emph{during} execution of these statements. 
+%of that method (or statements).
 To accommodate this, we extend   traditional Hoare triples to quadruples of  form\\
  $\strut \ \hspace{4cm} \quadruple {A} {\, stmt\, }{A'} {A''}$\\  
- % These promise 
- promising that terminating execution of $stmt$ in  states satisfying $A$  reaches    final states satisfying $A'$, and any intermediate external states reachable during execution of $stmt$ satisfy    $A''$ -- \cf Def. \ref{def:hoare:sem}.
+ promising that if a state satisfies $A$ and executes $stmt$, any terminating state will satisfy $A'$, and 
+ and  any intermediate external states reachable during execution of $stmt$ satisfy    $A''$ -- \cf Def. \ref{def:hoare:sem}.
+% same as above, but ugly line break:
+% terminating execution of $stmt$ in  states satisfying $A$  reaches    final states satisfying $A'$, and any intermediate external states reachable during execution of $stmt$ satisfy    $A''$ -- \cf Def. \ref{def:hoare:sem}.
 
-\vspace{.1cm}
+\vspace{.05cm}
 
 The Hoare logic rule from earlier dealing with external calls is:
  
@@ -410,21 +442,25 @@ The Hoare logic rule from earlier dealing with external calls is:
 $
 
 \vspace{.1cm}
-Moreover, we assume a  Hoare logic of  triples, and define an embedding into our quadruples. 
-We then extend it with substructural rules, rules talking about protection, internal and external calls, 
+
+To develop our logic, we     assume a  Hoare logic of  triples, whose assertions do not known the concept of protection.
+We then extend this logic as follows: We define an embedding into our quadruples. 
+and allow method specifications which also talk about intermediate external states.
+We add substructural rules, rules talking about protection,   rules about internal and external calls, 
 and the module's adherence to its 
 specification - more in Figs. \ref{f:underly} -  \ref{f:calls}. % \ref{f:wf}.
  
- \vspace{.2cm}
-A module is well-formed, if  its invariants are well-formed,  all  its public methods preserve each of its invariants, and  all its methods satisfy their specifications - \cf  Fig.  \ref{f:wf}.
+ \vspace{.1cm}
+A module is well-formed, if  its invariants are well-formed,    its public methods preserve   its invariants, and  all  methods satisfy their specifications - \cf  Fig.  \ref{f:wf}.
 %
 An invariant is well-formed if % the constituent assertion 
-it is \emph{encapsulated}, \ie can only be invalidated by code from that module -- \cf Def. \ref{d:encaps}. 
+it is \emph{encapsulated}, \ie can only be invalidated by internal code %from that module 
+-- \cf Def. \ref{d:encaps}. 
 %For example, in \ModA the assertion  \prg{a.balance}$\geq$\prg{b} is encapsulated, but it would not be encapsulated 
 %% in a module \ModD   implements balances through a third party, openly accessible ledger 
 %if balances were in an external, openly modifiable ledger -- \cf Ex. \ref{ex:not:encaps}.
 % 
-A method preserves an assertion   if it preserves it across its pre- and post-states and also during any intermediate external state.
+A method preserves an assertion   if it preserves it   from pre- to  post-states and also to any intermediate external state.
 
 \vspace{.1cm}
 \Eg to prove  that method \prg{Shop::buy} satisfies  {$S_1$ and $S_3$} r we  need to prove:
@@ -464,10 +500,8 @@ $\, \wedge\,  \prg{dest.\balance}=b'$,
 
 
 \vspace{.3cm}
-In summary, we assume a Hoare logic of triples, and embed it into our logic of quadtuples. 
-We add method specifications of quadruples, and scoped invariants. We extend the assertions 
-to reason about external calls, ... TODO enumerate
-%\se{What is our extension? Is it going from triples to quadruples or is it adding protection, scoped invariants and external?}
+ \footnote{\se{What is our extension? Is it going from triples to quadruples or is it adding protection, scoped invariants and external?
+ \sdN{Is it clearer now? Some paragraphs earlier we use the word "extension.}. }}
 Our extension preserves soundness of the  Hoare logic --  \cf    Def. \ref{def:hoare:sem}, % and  proofs in 
 and  Thms.  \ref{l:triples:sound}, \ref{t:quadruple:sound}, \ref{thm:soundness}.
  
@@ -485,7 +519,7 @@ For this we define a new measure of execution ...}
  
 
 
-\subsection{Our Contributions}
+\subsection{Our Contributions}\footnote{\sdN{Perhaps drop this section?  }}
 
 Our contributions are
 
@@ -493,7 +527,7 @@ Our contributions are
 \item
 New capability assertions, $\protectedFrom {x} {y}$  and $\inside{x}$ 
 \item
-A new specification language for emergent behaviour  
+A new specification language for \tamed effects %emergent behaviour 
 \item
 The adaptation operator  $\PushAS y A$  applicable on assertions
 \item
@@ -501,5 +535,5 @@ A Hoare logic extension, which handles external calls
 \item
 A logic which proves adherence to our specification language
 \item
-Proofs, and a worked out example
+Soundness proofs, and a worked out example
 \end{enumerate}
