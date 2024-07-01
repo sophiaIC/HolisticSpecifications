@@ -8,7 +8,7 @@ To reduce the complexity of our formal models, \LangOO lacks many
 common languages features, omitting static fields and methods, interfaces,
 inheritance, subsumption, exceptions, and control flow.  
  \LangOO includes ghost fields,  that may only be used in the specification language.
-The ghost fields may be defined recursively.
+and which may be defined recursively.
 %
 %\kjx{
 %These features are
@@ -33,20 +33,25 @@ The syntax of \LangOO is given in Fig. \ref{f:loo-syntax}.
 \LangOO modules ($M$) map class names ($C$) to class definitions ($\textit{ClassDef}$).
 A class definition consists of % \jm[]{an optional annotation \enclosed},
 a list of field definitions, ghost field definitions, and method definitions.
-{Fields, ghost fields, and methods all have types: {types are
-    classes}. Ghost fields may be optionally 
-annotated as \texttt{intrnl}, requiring the argument to have an internal type, and the 
+{Fields, ghost fields, and methods all have types, $C$; {types are
+    classes}.
+    Ghost fields may be optionally 
+ annotated as \texttt{intrnl}, requiring the argument to have an internal type, and the 
 body of the ghost field to only contain references to internal objects. This is enforced by the
 limited type system of \LangOO.}
-A program state ($\sigma$) is represented as a heap ($\chi$), stack ($\psi$) pair, 
-where a heap is a map from addresses ($\alpha$) to objects ($o$), and a stack is a non-empty list of frames ($\phi$). A frame consists of a local variable
-map and a continuation ($c$) that represents the statements that are yet to be executed ($s$).
+A program state ($\sigma$) is a pair of of a stack and a heap.
+The stack is a a stack is a non-empty list of frames ($\phi$), and the heal ($\chi$)
+is a map from addresses ($\alpha$) to objects ($o$). A frame consists of a local variable
+map and a continuation (\prg{cont}) that represents the statements that are yet to be executed ($s$).
 % or a hole waiting to be filled by a method return in the frame above ($x := \bullet; s$).
 A statement is either a field read ($x := y.f$), a field write ($x.f := y$), a method call
-($u :=y_0.m(\overline{y})$), a constructor call ($\prg{new}\ C(\overline{x})$), a method return statement
-($\prg{return}\ x$), or a sequence of statements ($s;\ s$).
+($u :=y_0.m(\overline{y})$), a constructor call ($\prg{new}\ C$), 
+% a method return statement ($\prg{return}\ x$), 
+  a sequence of statements ($s;\ s$),
+  or empty ($\epsilon$).
 
-\LangOO also includes syntax for expressions $e$ that may %only
+
+\LangOO also includes syntax for ghost terms $gt$ that may %only
 be used in writing
 specifications or the definition of ghost fields.
 
@@ -81,13 +86,14 @@ specifications or the definition of ghost fields.
 \endSyntaxElement\\
 \syntaxElement{CDef}{Class Def.}
 		{
-		[An]\ \prg{class}\ C\ 
-		\{\ \prg{cnstr}:= (\overline{x : T})\{s\};\ \prg{flds}:=\overline{fld};\ \prg{mths}:=\overline{mth};\ \prg{gflds}:=\overline{gfld};\  \}		
+		% [An]\
+		 \prg{class}\ C\ 
+		\{\  \overline{fld}; \overline{mth};\  \overline{gfld};\  \}		
 		}
 \endSyntaxElement\\
-\syntaxElement{An}{Class Annotation}
-		{\enclosed}
-\endSyntaxElement\\
+%\syntaxElement{An}{Class Annotation}
+%		{\enclosed}
+%\endSyntaxElement\\
 \syntaxElement{T}{Type}
 		{
 		\syntaxline
@@ -95,26 +101,23 @@ specifications or the definition of ghost fields.
 				{C}
 		\endsyntaxline
 		}
-\endSyntaxElement\\
+\endSyntaxElement
+\\
 \syntaxElement{s}{Statement}
 		{
-		\syntaxline
+				\syntaxline
 				{\sdN{x:=y}}
 				{\sdN{x:=v}}
 				{x:=y.f}
 				{x.f:=y}
 				{x:=y_0.m(\overline{y})}
-%		\endsyntaxline
-%		}
-%		{
-%		\syntaxline
-				{\new{C}{\overline{x}}}
-				{\red{x}}
-%				{\return{x}}
-				{s;\ s}
-		\endsyntaxline
+				{\prg{new} \ {C} }
+				{ s;\ s }
+				  { \epsilon }
+			       \endsyntaxline
 		}
-\endSyntaxElement\\
+\endSyntaxElement
+\\
 %\syntaxElement{c}{Continuation}
 %		{
 %		\syntaxline
@@ -125,7 +128,17 @@ specifications or the definition of ghost fields.
 %\endSyntaxElement\\
 \syntaxElement{mth}{Method Def.}
 		{
-		\prg{method}\ m\ (\overline{x : T})\sdN{:T}\{\ s\ \}
+		\syntaxline
+		{ \sdN{pr}\  \prg{method}\ m\ (\overline{x : T})\sdN{:T}\{\ s\ \} }
+		\endsyntaxline
+		}
+\endSyntaxElement\\
+\syntaxElement{pr}{Privacy}
+		{
+		\syntaxline
+		{\prg{private}}
+		{\prg{protected}}
+		\endsyntaxline
 		}
 \endSyntaxElement\\
 \syntaxElement{fld}{Field Def.}
@@ -145,34 +158,45 @@ specifications or the definition of ghost fields.
 		\syntaxline
 				{x}
 				{v}
-				{gt + gt}
-				{gt = gt}
-				{gt < gt}
-	%	\endsyntaxline
-	%	}
-	%	{
-	%	\syntaxline
+				{gt\! +\! gt}
+				{gt\! =\! gt}
+				{gt \!< \!gt}
 				{\prg{if}\ gt\ \prg{then}\ gt\ \prg{else}\ gt}
-				{gt.f}
-				{t.g(gt)}
 		\endsyntaxline
 		}
+		{
+		\syntaxline
+				{gt.f}
+				{gt.g(\overline {gt})}
+		\endsyntaxline
+		}
+\endSyntaxElement
 \\
-\endSyntaxElement\\
-\syntaxElement{\sigma}{Program Config.}
-		{(\prg{stack}:=\psi; \prg{heap}:=\chi)}
-\endSyntaxElement\\
-\syntaxElement{\psi}{Stack}
-		{\syntaxline{\phi}{\phi \sdN{\cdot} \psi}\endsyntaxline}
-\endSyntaxElement\\
+\\
+\syntaxElement{\sigma}{Program \sdN{State}}
+		{
+		\syntaxline
+		{( \overline \phi, \chi )}
+		\endsyntaxline
+		}
+\endSyntaxElement 
+\\
+% SD Stack is implictt now
+%\syntaxElement{\psi}{Stack}
+%		{\syntaxline{\phi}{\phi \sdN{\cdot} \psi}\endsyntaxline}
+%\endSyntaxElement\\
 \syntaxElement{\phi}{Frame}
-		{\{\prg{local}:=\overline{x\mapsto v};\ \prg{contn}:=\sdN{s}\}}
+		{
+		\syntaxline
+		{  (\  \overline{x\mapsto v};\ s \ ) }
+		\endsyntaxline
+		}
 \endSyntaxElement\\
 \syntaxElement{\chi}{Heap}
-		{\overline{\alpha \mapsto o}}
+		{(\  \overline{\alpha \mapsto o}\ )}
 \endSyntaxElement\\
 \syntaxElement{o}{Object}
-		{\{\prg{class}:=C;\ \prg{flds}:=\overline{f \mapsto v} \}}
+		{(\ C;\  \overline{f \mapsto v} \ )}
 \endSyntaxElement\\
 \end{syntax}
 \]
@@ -189,19 +213,40 @@ do not introduce any novel or surprising features. The operational
 semantics make use of several helper definitions that we 
 define here.
 
+\sdN{
 We provide a definition of reference interpretation in Definition \ref{def:interpret}
 \begin{definition}
 \label{def:interpret}
-For a program state $\sigma = (\chi, \phi : \psi)$, we provide the following function definitions:
+For a frame $\phi= (\overline {x \mapsto v}, s)$, and a program state $\sigma = (\overline \phi \cdot \phi,, \chi)$, we   define:
 \begin{itemize}
 \item
-$\interpret{\sigma}{x}\ \triangleq\ \phi.(\prg{local})(x)$
+$\interpret{\phi}{x}\ \triangleq\ v_i$\ \ \ if \ \ \ $x=x_i$
 \item
-$\interpret{\sigma}{\alpha.f}\ \triangleq\ \chi(\alpha).(\prg{flds})(f)$
+ $\interpret{\sigma}{x}\ \triangleq\  \interpret{\phi}{x}$
+\item
+$\interpret{\sigma}{\alpha.f}\ \triangleq\ v_i $ \ \ if \ \ $\chi(\alpha)=(\_; \  \overline {f \mapsto v})$, and $f_i=f$
 \item
 $\interpret{\sigma}{x.f}\ \triangleq\ \interpret{\sigma}{\alpha.f}$ where $\interpret{\sigma}{x}=\alpha$
+\item
+$\phi(\prg{contn}) \ \triangleq\ s$ 
+\item
+$\sigma(\prg{contn}) \ \triangleq\ \phi(\prg{contn})$\
+\item
+$\phi[\prg{contn}\mapsto s'] \ \triangleq\ (\overline {x \mapsto v}, s')$
+\item
+$\sigma[\prg{contn}\mapsto s'] \ \triangleq \ (\ {\overline \phi}\cdot \phi[\prg{contn}\mapsto s'],\  \chi\ )$ 
+\item
+$\phi[\prg{x'}\mapsto v'] \ \triangleq\ ( \ (\overline {x \mapsto v})[\prg{x'}\mapsto v'],\ s \ )$
+\item
+$\sigma[\prg{x'}\mapsto v'] \ \triangleq\ (\ (\overline {\phi} \cdot (\phi[\prg{x'}\mapsto v']), \ \chi)$ 
+\item
+$\sigma [\alpha \mapsto o ] \ \triangleq\ (\ (\overline {\phi} \cdot \phi), \ \chi [\alpha \mapsto o ]\ )$ 
+\item
+$\sigma [\alpha.f' \mapsto v' ] \ \triangleq\ \sigma [\alpha \mapsto o ] $\ \ \  if \ \  
+$\chi(\alpha)=(C, {\overline {f \mapsto v}})$, and $o=(\ C;  ({\overline {f \mapsto v}})[f' \mapsto v' ]\ )$ 
 \end{itemize}
 \end{definition}
+}
 That is, a variable $x$, or a field access on a variable $x.f$ 
 has an interpretation within a program state of value $v$
 if $x$ maps to $v$ in the local variable map, or the field
@@ -211,25 +256,28 @@ Definition \ref{def:class-lookup} defines the class lookup function an object
 identified by variable $x$.
 \begin{definition}[Class Lookup]
 \label{def:class-lookup}
-For program state $\sigma = (\chi, \phi \cdot\psi)$, class lookup is defined as 
-$$\class{\sigma}{x}\ \triangleq\ \chi(\interpret{\sigma}{x}).(\prg{class})$$
+For program state $\sigma = ({\overline {\phi}}\cdot\phi, \chi)$, class lookup is defined as 
+$$\class{\sigma}{x}\ \triangleq\ C \ \ \ \ \ \mbox{if} \ \ \  \chi(\interpret{\sigma}{x})=(C,\_ )$$
 \end{definition}
+
+Module linking is defined for modules with disjoint definitions:
+
+\begin{definition}
+\label{def:linking}
+For all modules $\Mtwo$ and $M$, if the domains of $\Mtwo$ and $M$ are disjoint, 
+we define the module linking function as $M\cdot \Mtwo\ \triangleq\ M\ \cup\ M'$.
+\end{definition}
+That is,  their linking is the union of the two if their domains are disjoint.
 
 Definition \ref{def:meth-lookup} defines the method lookup function for a method
 call $m$ on an object of class $C$.
 \begin{definition}[Method Lookup]
 \label{def:meth-lookup}
 For module $\Mtwo$, class $C$, and method name $m$, method lookup is defined as 
-$$\meth{\Mtwo}{C}{m}\ \triangleq\ M(C).\prg{mths}(m)\ \ \mbox{for some} M\in\Mtwo$$
+$$\meth{\Mtwo}{C}{m}\ \triangleq\ { pr}\  \prg{method}\ m\ (\overline{x : T}) {:T}\{\ s\ \}  $$
+if there exists an $M$ in $\Mtwo$, so that $M(C)$ contains the definition ${ pr}\  \prg{method}\ m\ (\overline{x : T}) {:T}\{\ s\ \} $
 \end{definition}
 
-We borrow the definition  of module linking, given in Definition \ref{def:linking}.
-\begin{definition}
-\label{def:linking}
-For all modules $\Mtwo$ and $M$, if the domains of$\Mtwo$ and $M$ are disjoint, 
-we define the module linking function as $M\cdot \Mtwo\ \triangleq\ M\ \cup\ M'$.
-\end{definition}
-That is,  their linking is the union of the two if their domains are disjoint.
 
 
 \newcommand{\Same}[4]{{SameModule(#1,#2,#3,#4)}}
@@ -255,38 +303,41 @@ are restricted to the class that the field belongs to,
 \begin{mathpar}
 \infer
 	{
-	\sigma_1 = (\sdN{\overline{\phi}\cdot\phi},  \chi)\\
-        \sdN{\phi}.(\prg{contn})  \txteq   u := y_0.m(\overline{y}); s \\
-       % \phi_1' = \phi_1[\prg{contn} := (x := \bullet; s)]\\
-	\meth{\Mtwo}{\class{\sigma_1}{y}}{m} = p \ C::m(\overline{x : T})\red{:T}\{s'\}\\
+	   \sdN{\phi_n}(\prg{contn})  \txteq   u := y_0.m(\overline{y}); s \\
+    \meth{\Mtwo}{\class{(\phi,\chi)}{y}}{m} = p \ C::m(\overline{x : T})\red{:T}\{s'\}\\
         	{\sdN{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {\sigma_1}{\Mtwo} }} \\
-	\phi' = \{\prg{local}:= ([\prg{this}\ \mapsto\ \interpret{\sigma_1}{y_0}]\overline{[x\ \mapsto\ \interpret{\sigma_1}{y}]}), \prg{contn}:=s'\} \\
-	  \sigma_2 = \sdN{(\overline{\phi}\cdot\phi\cdot\phi'},\chi)\\
+	\phi'_{n+1}= \sdN{  (\  \prg{this}\, \mapsto\, \interpret{\phi}{y_0},\overline{x\, \mapsto\, \interpret{\phi}{y}}; \ s' \ ) } 
+	% \\   \sigma_2 = \sdN{(\overline{\phi}\cdot\phi\cdot\phi'},\chi)\\
 	}
-	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
+	{\exec{\Mtwo}{ ( \sdN{\overline{\phi}\cdot\phi_n},  \chi) }{\sdN{(\overline{\phi}\cdot\phi_n\cdot\phi_{n+1}},\chi)}}
 	\quad(\textsc{Call})
+	\and
+\infer
+	{
+		\phi_{n+1}(\prg{contn}) \txteq  \red{\epsilon} \\ % )\ \textit{or}\ \phi_1(\prg{contn}) = (\red{z})\\
+	\phi_n(\prg{contn})   \txteq  \red{x := y_0.m(\overline y)}; s \\
+	\phi'_n= \phi[x \mapsto \interpret{\phi_{n+1}}{\prg{res}}][\prg{contn} \mapsto \red{s} ]\\ 
+		}
+	{\exec{\Mtwo}{(\sdN{\overline{\phi} \cdot \phi_n \cdot \phi_{n+1}}, \chi) }{(\sdN{\overline{\phi}\cdot  \phi'_n}, \chi)}}
+	\quad(\textsc{Return})
 	\and
 \infer
 	{
 %	\sigma_1 = (\chi, \phi_1 \cdot\psi) \\
 %	\sigma_2 = (\chi, \phi_2 \cdot\psi) \\
-	\sdN{\sigma_1.(\prg{contn}) =  x := y.f; s} \\
+	\sdN{\sigma_1(\prg{contn})  \txteq  x := y.f; s} \\
 	 \Same {\prg{this}}  {y}  {\sigma_1} {\Mtwo}\\
-	%\phi_2 = \{\prg{local}:=\phi_1.(\prg{local})[x\ \mapsto\ v],\ \prg{contn}:=s\}
-	\sigma_2=\sigma_1[x\mapsto  \interpret{\sigma_1}{y.f} \} ]
+	%\phi_2 = \{\prg{local}:=\phi_1(\prg{local})[x\ \mapsto\ v],\ \prg{contn}:=s\}
+	\sigma_2=\sigma_1[x\mapsto  \interpret{\sigma_1}{y.f} \} ][\prg{cont} \mapsto s ]
 	}
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{Read})
 	\and
 \infer
 	{
- %	\sigma_1 = (\overline{\phi}\cdot\phi,\chi ) \\
-	\sigma_1 .(\prg{contn}) =  x.f := y; s \\
+	\sigma_1 (\prg{contn})  \txteq  x.f := y; s \\
 	\Same {\prg{this}}  {x}  {\sigma_1} {\Mtwo}\\
-%	\phi' = \phi [ \prg{contn}:=s ] \\ % \{\prg{local}:=\phi_1.(\prg{local}),\ \prg{contn}:=s\}\\
-%	\chi' = \chi[\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ]\\
-	\sigma_2 = \sigma[\prg{contn}:=s][\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ]	
-	(\overline{\phi}\cdot\phi',\chi' )\\
+	\sigma_2 = \sigma[\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ][\prg{contn}\mapsto s]	
 	}
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	{}
@@ -294,32 +345,15 @@ are restricted to the class that the field belongs to,
 	\and
 \infer
 	{
-	\sigma_1.(\prg{contn})\ =\  x := \prg{new}\ C(\overline{z}); s \\
+	\sigma_1(\prg{contn})\  \txteq\  x := \red{\prg{new}\ C }; s \\
 	fields(C)=\overline{f} \\
+	\red{\overline v}   \mbox{ initial values for } \overline f\\
 	\alpha \mbox{ fresh in } \sigma_1 \\
 	% \phi' = \{\prg{local}:=[\prg{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \prg{contn} := s'\}\\
-	\sigma_2 = \sigma_1[x\mapsto \alpha][\prg{cont}\mapsto s][\alpha  \mapsto  \{\prg{class}:=C, \prg{flds}:=\overline{f\ \mapsto\ \interpret {\sigma_1} {x}} ] 
-%	\sigma_1 = (\chi, \phi \cdot\psi) \\
-%	\phi.(\prg{contn}) = (x := \prg{new}\ C(\overline{z}); s)\\
-%	M(C).(\prg{constr}) = (\overline{p : T})\{ s' \} \\
-%	\phi' = \{\prg{local}:=[\prg{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \prg{contn} := s'\}\\
-%	\sigma_2 = (\chi[\alpha\ \mapsto\ \{\prg{class}:=C, \prg{flds}:=\overline{f\ \mapsto\ \nul}], \phi' \cdot\phi[\prg{contn}\ :=\ (x := \bullet; s)] \cdot\psi)	
+	\sigma_2 = \sigma_1[x\mapsto \alpha][\alpha  \mapsto  (\ C;\  \overline{f\, \mapsto \, v} \  ] [\prg{cont}\mapsto s]
 		}
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{New})
-	\and
-\infer
-	{
-	\sigma_1 = (\sdN{\overline{\phi}\cdot}\phi_ \cdot\phi', \chi) \\
-	\phi'.(\prg{contn}) \txtin  \red{z} \\ % )\ \textit{or}\ \phi_1.(\prg{contn}) = (\red{z})\\
-	\phi.(\prg{contn})   \txteq  \red{x := y_0.m(\overline y)}; s \\
-	\phi''= \phi[x \mapsto \interpret{\sigma_1}{z}][\prg{contn}:= \red{s} ]\\ 
-	%(\prg{local} := \phi.(\prg{local})[x \mapsto \interpret{\sigma_1}{z}],  \prg{contn}:= \red{s} )   \\
-	\sigma_2 = (\sdN{\overline{\phi}\cdot} \phi'', \chi)
-	}
-	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
-	{}
-	\quad(\textsc{Return})
 \end{mathpar}
 \caption{\LangOO operational Semantics}
 \label{f:loo-semantics}
@@ -404,7 +438,7 @@ are restricted to the class that the field belongs to,
 		{
 		\eval{M}{\sigma}{e_1}{\alpha}\\
 		\eval{M}{\sigma}{e_2}{v'}\\
-		\prg{ghost}\ g(x : T)\{e\} : T'\ \in\ M(\class{\sigma}{\alpha}).(\prg{gflds})\\
+		\prg{ghost}\ g(x : T)\{e\} : T'\ \in\ M(\class{\sigma}{\alpha})(\prg{gflds})\\
 		\eval{M}{\sigma}{[v'/x]e}{v}
 		}
 		{
@@ -434,9 +468,7 @@ A program state $\sigma$ is said to be an initial state ($\initial{\sigma}$)
 if and only if
 \begin{itemize}
 \item
-$\sigma.\prg{heap} = [\alpha\ \mapsto\ \{\prg{class}:=\prg{Object};\ \prg{flds}:=\emptyset\}]$ and
-\item
-$\sigma.\prg{stack} = \{\prg{local}:=[\prg{this}\ \mapsto\ \alpha];\ \prg{contn}:= s\}$
+$\sigma\ =\  ( ((\prg{this}\ \mapsto\ \alpha), s); \  (\alpha \mapsto (\prg{Object}, \emptyset) 
 \end{itemize} 
 for some address $\alpha$ and some statement $s$.
 \end{definition}
@@ -449,16 +481,16 @@ for some address $\alpha$ and some statement $s$.
 %we say that $\reduction{M_1}{M_2}{\sigma}{\sigma'}$ if and only if
 %\begin{itemize}
 %\item
-%$\class{\sigma}{\sigma.(\prg{this})}\ \in\ M_2$ and
+%$\class{\sigma}{\sigma(\prg{this})}\ \in\ M_2$ and
 %\item
-%$\class{\sigma'}{\sigma'.(\prg{this})}\ \in\ M_2$ and 
+%$\class{\sigma'}{\sigma'(\prg{this})}\ \in\ M_2$ and 
 %\end{itemize} 
 %and
 %\begin{itemize}
 %\item
 %$\exec{M_1\ \circ\ M_2}{\sigma}{\sigma'}$ or
 %\item
-%$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i.(\prg{this})} \in M_1$ for all $1 \leq i \leq\ n$
+%$M_1 \circ M_2, \sigma \leadsto \sigma_1 \leadsto \ldots \sigma_n \leadsto \sigma'$ and $\class{\sigma_i}{\sigma_i(\prg{this})} \in M_1$ for all $1 \leq i \leq\ n$
 %\end{itemize}
 %\end{definition}
 
