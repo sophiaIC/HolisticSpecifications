@@ -88,50 +88,49 @@ module $M_{intl}$
  
 
 \paragraph{\Tamed effects}  In practice, not all external calls will have unlimited effects.
- \sdN{If the programming language supports encapsulation (\eg private
+{If the programming language supports encapsulation (\eg private
  fields, no forging of addresses %, ownership, no direct memory access 
  \etc) then internal modules can be
  written \emph{defensively} \cite{MillerPhD}, to ensure that external
- calls \se{have limited effects}  on internal components.} %  can cause effects only if some conditions specific to that effect are met.
-For example a defensive implementation of the DAO  \cite{DAO} can ensure (a)
-  % that an external object cannot cause
-% the reduction of the balance of the DAO unless the causing object is one of the DAO's account holders; moreover, an external object should not cause 
- that its overall balance %of the DAO 
- is sufficient to cover the sum of the balances of its individual
- accounts, and
- concomitantly (b) that its overall balance can only be reduced along
- with one or more of its account balances, and (c) only with the 
- permission the each account's signatory.
+ calls  {have limited effects}  on internal components.} %  can cause effects only if some conditions specific to that effect are met.
+For example a defensive implementation of the DAO  \cite{DAO} can ensure that  (a)
+\sdN{no external object can cause the DAO's balance to fall below the sum of the balances of its subsidiary accounts}, 
+and (b) \sdN{no external object can cause reduction of the balance of the DAO unless the causing object is  one of the DAO's account holders.}
+% ; moreover, an external object should not cause 
+%  that its overall balance %of the DAO 
+% is sufficient to cover the sum of the balances of its individual
+ %accounts, and
+ % concomitantly (b) that its overall balance can only be reduced along
+% with one or more of its account balances, and (c) only with the 
+%  permission the each account's signatory.
  
 
 % We  use the term \emph{\tamed  effects} for  effects which \sdN{may be caused by an external object, but only under certain conditions specific to that effect
-\red{We say that a module has \emph{\tamed an effect}, when
- an outgoing external call cannot cause that effect.}
+{We say that a module has \emph{\tamed an effect}, when
+ \sdN{no} outgoing external call can cause that effect.}
 % can be guaranteed not to cause  % are not possible at external calls. 
 %\footnote{
-(While the literature has studied external
-calls \cite{vanproving,cerise-jacm2024,vmsl-pldi2023,ddd},  to our
-knowledge there is no accepted term for a component's exposure to external
-effects \cite{NobPotVitECOOP98}, rather many papers 
-borrow terms like ``robustness'' or ``robust safety'' from the security
-literature \cite{gordonJefferyRobustSafety,robustSafetyPatrignani,abate2019journey}.
+% SD chopped the below. Doe not wpork well
+{While the literature has studied external
+calls \cite{vanproving,cerise-jacm2024,vmsl-pldi2023,ddd},  
+as well as ``robustness'' or ``robust safety'' % from the security literature 
+\cite{gordonJefferyRobustSafety,robustSafetyPatrignani,abate2019journey}, to our
+knowledge there is no accepted term \sdN{for limited range of effects of external calls.}}
 %}
-)
-\Tamed effects %is important, because it 
-reduce the uncertainty integral to an outgoing external
-call \sdN{-- \eg with \tamed effects, we can ensure some properties established
-before an outgoing call will still be valid after it.}
+\Tamed effects reduce the uncertainty integral to an outgoing external
+call  --  with \tamed effects, we can ensure some properties established
+before an outgoing call will still be valid after it. 
 
-\sdN{
+\forget{
  Some \tamed effects depend only on internal state, \eg 
   (a) and (b) above depend only upon the DAO's overall balance,
-  and the balance of each of its internal, subsidary, accounts.
+  and the balance of each of its internal, subsidiary, accounts.
   (A call to manipulate an account with a DAO is always an internal call.)
 Other \tamed effects can also depend on the state of external
   objects, \eg  (c) above also depends on accounts' signatories, and
   those signatories are necessarily external to the DAO, and thus its
   subsidiary accounts. 
-Reasoning about  taming the \emph{internal} effects of internal
+Reasoning about  \taming the \emph{internal} effects of internal
   calls typically requires only an adaptation of
   techniques
  \forget{ \footnote{is there a name for such reasoning techiques?
@@ -141,44 +140,45 @@ from reasoning about object
   Reasoning about  taming the \emph{external} effects of external calls
 requires rather more --- thus the topic of this paper.}
 
-\paragraph{Effects \tamed by capabilities} To \tame  effects in their code, programmers can employ  the object capability model (OCAP)\cite{MillerPhD} --
+ 
+\sdN{\Taming of effects may be \emph{unconditional} of \emph{conditional}.
+For example, (a) is unconditional: the balance of the DAO is always, unconditionally, kept above the sum of the balances of its accounts.
+On the other hand, (b) is conditional: % reduction of the balance of the DAO is conditionally \tamed: 
+ reduction is possible, but only 
+if the causing, external, object is an account holder.}
+Reasoning about \sdN{unconditional}  \taming of  effects     typically requires only an adaptation of
+  techniques from % reasoning about  
+object  invariants \cite{staticsfull,DrossoFrancaMuellerSummers08,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06}.
+  Reasoning about  \sdN{conditional} taming of    effects
+requires rather more --- \sdN{hence} the topic of this paper. 
+
+\paragraph{Effects \tamed by capabilities} 
+To \tame  effects  in their code, 
+programmers   \sdN{rely on some kind of encapsulation -- \eg if address forging were possible, then 
+the l range of potential effects of external calls would be unlimited. 
+In addition, to conditionally \tame effects, programmers often}
+employ  the object capability model (OCAP)\cite{MillerPhD} --
  or capability model for short. 
 Capabilities are transferable rights to perform one or more operations on a given object.
-Capabilities are  \sdN{ \emph{necessary conditions} for effects:}   
- callers can only cause effects when they possess the necesary capabilities.
-We say a module has \emph{\tamed an effect by a capability} if the
-effect can only be caused by an external object with the requisite
-capability. 
-For example. a signatory may only withdraw funds from a DAO --- \ie decrease the
-balance of their DAO subsidiary account --- if they have a ``withdraw''
+Capabilities are  \sdN{\emph{necessary conditions} for effects:}   
+ callers can only cause effects when they possess the necessary capabilities.
+% \sdN{For example, an external object may reduce the balance of the DAO, only if it has access
+% to the corresponding capability: one of the DAO's account holders.}
+%We say a module has \emph{\tamed an effect by a capability} if the
+%effect can only be caused by an external object with the requisite
+%capability. 
+For example. a signatory may only withdraw funds from a DAO 
+  % --- \ie decrease thebalance of their DAO subsidiary account --- 
+  if they have a ``withdraw''
 capability for that particular account in that particular DAO.
-%
-%of a bank account (whether positive or negative)  only if the causing object  can obtain access to that account.}
-%  moreover,
-% an external object may cause a  reduction of  the balance 
-% of a bank account   only if the causing object  can obtain access to that account's password.
- %is in procession of the account's credentials.
- % of \tamed effect.    
-%
-%The subject of this paper is how to characterize the possible effects at the point of the external call.
-%
-%\paragraph{Program Development for \tamed effects} %To \emph{develop} programs with \tamed effects, programmers have to employ
-%needs to employ 
-% encapsulation features and \emph{encapsulated properties}.
-% \footnote{We use the term encapsulated property for a property which can only invaliated through through one or more calls to a module's public methods}
-%\footnote{AUTHORS: All terms used in this section have been used with many different meanings. 
-%We must warn the reader that we use our own meanings here. 
-%Do not know where to say that.}
-%Using these, the programmer can preserve the module's internal invariants  even in the presence of external calls,
-%can rule out some effects altogether (\eg it is impossible for an account's balance to be negative), and
-%can ensure that effects are tamed.
-%
-\footnote{
-\red{I think this comment is good bit comes too early. Where should it go?}
-\se{I think it is fine here - it is entirely understandable and makes your statements more concrete.}
-\sdN{Often, the guarantees given by \tamed effects  are  hypothetical: In general there is no guarantee  that the untrusted object  (\eg \prg{untrst} in line 6 above) has no access to the capability. \emph{If} the untrusted object has no access to the corresponding capability, then the effect can be excluded; but otherwise, it cannot be excluded.\footnote{AUTHORS: Can this sentence be made elegant.}. But what \emph{can} be excluded, is that the capability will be leaked.}
-\kjx{I wil put this on my list to come back to (first thing on that list)}
-}
+
+% SD CHOPPED THE BELOW, because I think it is now covered under "conditional" taming
+% \footnote{
+%\red{I think this comment is good bit comes too early. Where should it go?}
+%\se{I think it is fine here - it is entirely understandable and makes your statements more concrete.}
+%\sdN{Often, the guarantees given by \tamed effects  are  hypothetical: In general there is no guarantee  that the untrusted object  (\eg \prg{untrst} in line 6 above) has no access to the capability. \emph{If} the untrusted object has no access to the corresponding capability, then the effect can be excluded; but otherwise, it cannot be excluded.\footnote{AUTHORS: Can this sentence be made elegant.}. But what \emph{can} be excluded, is that the capability will be leaked.}
+%\kjx{I wil put this on my list to come back to (first thing on that list)}
+%}
  
 % \vspace{.1cm}
 %\forget{
@@ -207,35 +207,38 @@ capability for that particular account in that particular DAO.
 %%%KJX alternative version 
 
 \paragraph{Our remit:  Specification and Verification for  \tamed effects}
-In this paper we demonstrate how to reason about  code which \tames effects.  %\sd{especially effects \tamed by  capabilities.
+In this paper we demonstrate how to reason about  code which \tames effects,
+\sdN{including those \tamed by capabilities.}  
 We can specify effects to be \tamed, 
 and then we can \emph{prove} that a module has indeed \tamed the effects we've specified.
 We follow a systematic discipline to prove our modules have successfully \tamed effects,
 so our proofs are embedded in a Hoare logic, rather than constructing proofs that are specific to each problem.
 
-Recent work has developed logics to prove properties of programs employing object capabilities.\footnote{albeit not necessarily with a focus on \tamed effects.}
+Recent work has developed logics to prove properties of programs employing object capabilities.
+%SD chopped, as we do talk of open calls.
+%\footnote{albeit not necessarily with a focus on \tamed effects.}
 \citet{ddd} develop a logic to prove that   code employing object
 capabilities as encapsulation features preserve invariants for
 intertwined code, but in the absence of external calls. 
-\forget{Relying on techniques from separation logic, they intend their proofs
-e.g.\ to support library components that can be reused in different
-contexts.}
-\forget{--- which is implicitly support in our distinction between
-external and internal code.
+\forget{Relying on techniques from separation logic, they intend their proofs e.g.\ to support library components that can be reused in different contexts.}
+\forget{--- which is implicitly support in our distinction between external and internal code.
  \footnote{\red{TO CHECK}\kjx{I have looked at it - good enough for
  me.}}}
-  \citet{dd} \forget{work with Kripke logical relations describing
-program semantics, which} can describe and verify invariants
-about multi-object structures and the availability and exercise of
-object capabilities.  %\citeauthor{dd} 
-They propose and solve several
-problems involving external calls \forget{, 
-but require proofs specific to each individual problem,
-rather than a systematic Hoare logic.} Similarly,
-\citet{vmsl-pldi2023} \forget{deploy seperation logics, the IRIS framework
+  \citet{dd} \forget{work with Kripke logical relations describing program semantics, which} can describe and verify invariants
+about multi-object structures and the availability and exercise of object capabilities.  %\citeauthor{dd} 
+% They propose and solve several
+% problems involving external calls. 
+\forget{,  but require proofs specific to each individual problem, rather than a systematic Hoare logic.}
+ Similarly,
+\sdN{\citet{vmsl-pldi2023} propose a separation logic to support formal modular reasoning about communicating VMs, inlcuding in the presence of unknown VMs.
+while \cite{irisWasm23} specify WASM modules, %and compose them in a simple target language, 
+and prove that adversarial code  can only affect other modules through the functions} that they explicitly export.
+\sdN{The last three works propose and prove interesting properties of external calls, but with problem-specific proofs, \ rather than a systematic Hoare logic.}
+
+
+\forget{deploy separation logics, the IRIS framework
 \cite{iris-jfp2018}, and mechanistic metamathematics
-to} prove properties of programs involving external calls.\forget{, but again
-with problem-specific proofs, rather than a systematic logic.}
+to}  
 
 
 Since external calls may in turn call any number of internal, public methods, 
@@ -271,13 +274,14 @@ does this by replacing the external call through an unbounded number of calls to
 \kjx{How many DIFFERENT HOARE LOGICS WE GOT??}
 }
 
-\se{\paragraph{This paper's contributions} % In this paper we propose 
-{1) a specification language to describe \taming of effects,
-with new assertions to describe access to capabilities, 
-2) a Hoare logic to reason about external calls and to prove that modules satisfy their \tamed effects specifications,
-3)  proofs of soundness,
-4) a worked illustrative example.
-}}
+\paragraph{This paper's contributions} % In this paper we propose 
+\sdN{(1) assertions to describe   access to capabilities}, 
+(2) a specification language to describe \taming of effects,
+% with new assertions to describe access to capabilities, 
+3) a Hoare logic to reason about external calls and to prove that modules satisfy their \tamed effects specifications,
+4)  proofs of soundness,
+5) a worked illustrative example.
+ 
 
  \paragraph{Structure of this paper}
 Sect.\ \ref{s:outline}   outlines the main ingredients of our approach in terms of an example, and explains the main contributions.
