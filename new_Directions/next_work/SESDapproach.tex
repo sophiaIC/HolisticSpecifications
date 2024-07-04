@@ -62,7 +62,6 @@ one  can pay money into it,
 and with access to an account  and its \password, one can withdraw money from that account.
 Implementations of such a class  appear in the next section.
 }
-
  \prg{Shop}  has  a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object. 
  % SD chopped  with a method { \prg{pay}.}} 
 
@@ -72,16 +71,15 @@ module M$_{shop}$
   class Shop
     field accnt:Account, invntry:Inventory, clients:[external]    
   
-    public method buy(buyer:external, anItem:Item) : void
+    public method buy(buyer:external, anItem:Item)
       int price = anItem.price
       int oldBlnce = this.accnt.blnce
       buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}!$
-      if (this.accnt.blnce == oldBlnce+price)
-         this.send(buyer,anItem)
+      if (this.accnt.blnce == oldBlnce+price)  this.send(buyer,anItem)
       else
          buyer.tell("you have not paid me") 
      
-      private method send(buyer:external, anItem:Item) -> void  
+      private method send(buyer:external, anItem:Item)  
        ... 
         
 \end{lstlisting}
@@ -96,7 +94,7 @@ might do.
 
 \sdN{What are the possible effects of that external call?}
 % How can we reason about this external call?
-\sdN{The \prg{Shop} hopes, but cannot be sure, that at line 10  it  will have received moneys; but 
+\sdN{The \prg{Shop} hopes, but cannot be sure, that at line 10  it  will have received money; but 
 it wants to be certain  that   the \prg{buyer} will not use this opportunity and the access to the 
 shop's account  to drain its moneys.
 Can \prg{Shop}  be certain?}
@@ -106,20 +104,19 @@ Can \prg{Shop}  be certain?}
 Indeed, if \Mshop  makes appropriate guarantees, it can \tame  the effects at line 9. In particular,  
  \\
 $\strut \ \ \ (A)\ \ $ If \Mshop guarantees that no money can be withdrawn from an account unless the external\\  
-$\strut \ \ \ \ \ \ \ \ \ \ \ $ object causing the withdrawal can eventually get access to the account's \password, \ \ \ \ \. and  \\
-$\strut \ \ \ (B)\ \ $  if \prg{buyer} cannot eventually get access to the account's \password,  \\
-$\strut \ \ \ \ \ \ \  \ \ \ \ \ $ then \\
+$\strut \ \ \ \ \ \ \ \ \ \ \ $ object causing the withdrawal can eventually get access to the account's \password, \ \ \  \se{\emph{and}} \\
+$\strut \ \ \ (B)\ \ $  if \prg{buyer} cannot eventually get access to the account's \password,   \ \ \    \se{\emph{ then}}  \\
 $\strut \ \ \ (C)\ \ $ The external  call on line 9 will not cause a reduction in the shop's account's balance.
 
 
 \vspace{.3cm}
 \sdN{The remit of our work is to provide the formal specification and verification tools to support arguments as the one given above. 
-\footnote{\sdN{TODO: elaborate here on "can eventually get access", and on "tamed effect"}}
+\footnote{\sdN{TODO: elaborate here on ``can eventually get acces'', and on ``tamed effect''}}
 In the argument above, we used the, not yet defined, concept of  "can  eventually get access to", and assumed \tamed effects (no money withdrawn ... unless ..). 
 We need need to define these concepts, and develop Hoare Logics for reasoning.
 Therefore, we need to address the following four challenges:}
 \begin{description}
-\item[\ \ \ \ \  1$^{st}$ Challenge] The specification   of "can eventually get access to". 
+\item[\ \ \ \ \  1$^{st}$ Challenge] The specification   of ``can eventually get access to''. 
 
 \item[\ \ \ \ \   2$^{nd}$ Challenge] The specification of tamed effects, 
 
@@ -192,10 +189,9 @@ protected  with top frame $\phi_2$
  \end{figure}
  
 
-
 \subsection{2$^{nd}$ Challenge: Specification of tamed effects}
 
-How to express the guarantee that effects are \tamed? %some effects will not happen? 
+How can we express the guarantee that effects are \tamed? %some effects will not happen? 
  In particular, when such effects can be the outcome of the execution of more than one method? Traditional PRE/POST condition specifications cannot express guarantees that two or more of our methods won't interact to produce an untamed effect. 
 %
 We build on the concept of two-state invariants, and define
@@ -232,8 +228,8 @@ $\strut  \SPSP  S_4\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg{b
 \noindent
 %specifications
  give the  guarantees:\\
-$\strut  \SPSP  S_1$:\   accounts are not leaked, \\
-$\strut \SPSP S_2$:\    keys are not leaked,\\
+ $\strut  \SPSP  S_1$:\   accounts are not leaked, \\
+$\strut   \SPSP S_2$:\    keys are not leaked,\\
 $\strut \SPSP  S_3$:\  the balance is not modified unless there is unprotected access to the account,  \\%while 
 $\strut \SPSP  S_4$:\   the balance does not decrease unless there is unprotected access to the key.  
 
@@ -244,12 +240,12 @@ $\strut \SPSP  S_4$:\   the balance does not decrease unless there is unprotecte
 \begin{example}
 We illustrate the meaning of our specifications  using three  versions of a class \prg{Account}  from  \cite{OOPSLA22} 
 as part of our internal module \Mshop. 
-To differentiate between the three modules we rename \Mshop  as $\ModA$,  $\ModB$, or $\ModC$.
-
-All versions {use the same method \prg{transfer} to} allow  withdrawal of money, only when supplied with the key to the account.
-Moreover, in $\ModA$ the key is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the key may be modified, but only if supplied with the old key. 
-
-
+To differentiate, we rename \Mshop  as $\ModA$,  $\ModB$, or $\ModC$. 
+All use the same \prg{transfer} method for withdrawing money.
+%All use the same method \prg{transfer} to  withdraw money, only when supplied with the key.
+\forget{All versions {use the same method \prg{transfer} to} allow  withdrawal of money, only when supplied with the key to the account.
+All use the same method \prg{transfer} to  withdraw money, only when supplied with the key.}
+%Moreover, in $\ModA$ the key is immutable, in $\ModB$ it is unconditionally mutable, while in $\ModC$ the key may be modified, but only if supplied with the old key. 
 
 %\emph{Guarding} is the crucial expectation that comes with object capabilities. \footnoteSD{SAY THIS BETTER?} 
 %Hoare logics support the specification of    enabling of effects (through per-method PRE/POST-condition pairs), but not of guarding of effects.
@@ -261,55 +257,36 @@ Moreover, in $\ModA$ the key is immutable, in $\ModB$ it is unconditionally muta
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 module $\ModA$      
   class Shop   ... as earlier ...
-  
   class Key
-  
   class Account
     field blnce:int 
-    field key: Key
-    public method transfer(dest:Account, key':Key, amt:int) -> void
-      if this.key==key'
+    field key:Key
+    public method transfer(dest:Account, key':Key, amt:int)
+      if (this.key==key')
         this.blnce-=amt
         dest.blnce+=amt
-     public method set(key':Key) -> void
-      if this.key==null
-        this.key=key'
+     public method set(key':Key)
+      if (this.key==null)  this.key=key'
 \end{lstlisting}
 
-Now consider  module \ModB, which allows any client to reset an account's key at any time.  \ModC, on the other hand  requires the existing key in order to change it.
-  
+Now consider  modules \ModB and \ModC who differ from \ModA only in their \prg{set} methods. Whereas \ModA 's key is immutable, \ModB 's allows any client to reset an account's key at any time, whereas \ModC 's requires the existing key in order to change it.
   
 
 \begin{tabular}{lll}
-\begin{minipage}[b]{0.42\textwidth}
+\begin{minipage}[b]{0.40\textwidth}
+
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
-module $\ModB$
-   ... as earlier ...
- 
-   class Account
-    field blnce:int 
-    field key:Key 
-    public method transfer(..) ...
-      ... as earlier ...
-    public method set(key':Key)
-      this.key=key'
-      $\ \ \ $
+$\ModB$
+public method set(key':Key)
+  this.key=key'
 \end{lstlisting}
 \end{minipage}
 &\ \ \  \ \   &%
-\begin{minipage}[b]{0.45\textwidth}
+\begin{minipage}[b]{0.48\textwidth}
 \begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
-module $\ModC$
-  ... as earlier ...
-
-  class Account
-    field blnce:int 
-    field key: Key
-    public method transfer(..) 
-      ... as earlier ...
-    public method set(key',key'':Key)
-      if (this.key==key') 
-        this.key=key''
+$\ModC$
+public method set(key',key'':Key)
+  if (this.key==key')  this.key=key''
 \end{lstlisting}
 \end{minipage} 
 \end{tabular}
@@ -333,22 +310,21 @@ $\ \strut \hspace{.01in} $ \prg{an\_account.set(42); an\_account.transfer(rogue\
  \emph{Emergent behaviour} is key here: 
 Even though % the method 
 \prg{transfer} in  \ModB is ``safe'' when considered in isolation, it is not safe when considered in conjunction with other methods from the same module. 
-
-\vspace{.2cm}
 Our  specifications  rule  out \ModB while permitting \ModA and
 \ModC:
 All three modules satisfy $S_1$ and $S_3$. Modules $\ModA$ and $\ModC$ also satisfy $S_2$ and $S_4$, while $\ModB$ satisfies neither $S_2$ nor $S_4$.
 \end{example}
  
  \noindent
- \textbf{NOTE} \ \  \sdN{Our specifications are  in terms of the complete module, rather than per-method.}
+% \textbf{NOTE} \ \  
+ Our specifications are  in terms of the complete module, rather than per-method.
  They talk about externally observable effects (\eg the key stays protected), 
  % the account's balance may increase), 
  rather than about  individual methods (\eg\, \prg{set}). %  or \prg{transfer}).
 {Thus,  % gives our specifications the the vital advantage that our specifications can % be used to constrain
   they can characterize  any 
 module with  accounts which have a % {\textit{implementation}} of a bank account with a 
- \balance~and a \password -- even as ghost fields --},  irrespective of the API offered.
+ \balance~and a \password -- even as ghost fields --}  irrespective of the API offered.
  % , services  exported, or  dependencies on other parts of the system.\footnoteSD{does this come from OOPSLA? if so we need to rephrase}
 %\notesep
 %Adherence to   specifications is not monotonic:
@@ -423,7 +399,7 @@ $
  
  
  
-   \subsection{4$^{th}$ Challenge: A Hoare Logic for Proving that module adhere to specifications} %  (using scoped invariants)}
+   \subsection{4$^{th}$ Challenge: A Hoare Logic for Proving that modules adhere to specifications} %  (using scoped invariants)}
 
  We now revisit the meaning of scoped invariants: 
   {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if an external {state} $\sigma$ 
@@ -480,7 +456,7 @@ it is \emph{encapsulated}, \ie can only be invalidated by internal code %from th
 A method preserves an assertion   if it preserves it   from pre- to  post-states and also to any intermediate external state.
 
 \vspace{.1cm}
-\Eg to prove  that method \prg{Shop::buy} satisfies  {$S_1$ and $S_3$} r we  need to prove:
+\Eg to prove  that method \prg{Shop::buy} satisfies  {$S_1$ and $S_3$}  we  need to prove:
 \\
 % {\footnotesize{
 $\strut \ \ \ \ \ \ \ \ \ \ \ \quadruple {A_1  \wedge \inside{\prg{a}} } {\ stmt\_b  \ } {\inside{\prg{a}}} { \inside{\prg{a}}} $
