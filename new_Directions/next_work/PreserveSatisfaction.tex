@@ -3,8 +3,6 @@
  \section{Preservation of Satisfaction of Assertions}
 
 All program logics deal with framing in some form or other, \ie conditions under which  satisfaction of  assertions is preserved across program execution. 
-% For us it is relevant to discuss conditions under which  assertions preserved when pushing/popping frames, or modifying the heap.
-%In this section we will study the preservation of satisfaction across program execution,
 This is the subject of the current Section.
 
 We start with  Lemma \ref{l:assrt:unaffect}  which says that satisfaction of an assertion is not affected by replacing a variable by its value, nor by changing the continuation in a state.
@@ -20,7 +18,7 @@ For all $M$, $\sigma$, $\alpha$, $x$, $\re$, $stmt$, and $A$:
 \label{one:ad:exp}
 $ \satisfiesA{M}{\sigma[x\mapsto \alpha]}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{A[\alpha/x]} $ 
 \item
-$\eval{M}{\sigma}{{\re}}{\alpha}  \ \ \ \Longrightarrow\ \ \  [ \ \satisfiesA{M}{\sigma}{A} \  \Longleftrightarrow\   \  \satisfiesA{M}{\sigma}{A[\alpha/\re]} \  \  ]$
+$\eval{M}{\sigma}{{\re}}{\alpha}  \ \ \Longrightarrow\ \  [ \ \satisfiesA{M}{\sigma}{A} \  \Longleftrightarrow\   \  \satisfiesA{M}{\sigma}{A[\alpha/\re]} \  \  ]$
 \item
 $ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma[\prg{cont}\mapsto stmt]}{A}$ 
 \end{enumerate}
@@ -28,18 +26,24 @@ $ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sig
 \end{lemma}
 
 A corollary of   lemma \ref{l:assrt:unaffect}.\ref{one:ad:exp} is that $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
+We now move to the preservation of assertions which do not have free variables.
 
-
-\subsection{Preservation across pushing and popping of frames}
+\subsection{Preservation across method call and return}
 %Stable, and Positive Assertions}\footnote{BETTER NAME?}  Stable assertions are those which   do not contain the requirement $\inside{\_}$ are called {\emph {stable}}. 
-In most program logics, satisfaction of assertions without any free variables  is preserved when pushing/popping frames.
+In most program logics, satisfaction of assertions without any free variables  is preserved when pushing/popping frames
+-- \ie immediately after entering a method or  returning from it,
 This, however, is not   the case for our assertions, because  $\inside {\alpha}$ depends on the heap as well as the set of objects reachable from the top frame, and  
 that changes when the frame changes.
+{This is shown, \eg in  Fig. \ref{fig:Protected} where $o_3$ was not protected with top frame $\phi_1$,  
+became protected when we pushed the frame $\phi_2$,  and again, is no longer protected when we push $\phi_3$ on the stack. 
+
  
 
-Nevertheless, an assertion which does not contain  $\inside {\_}$ is stable against pushing and popping of frames. We call such assertions $\Stable {\_}$, \cf Def. \ref{def:Basic}  in Appendix \ref{app:preserve}. 
-Similarly, an assertion which does not contain $\inside {\_}$ in negative positions is stable against pushing  of frames. We call such assertions $\Pos {\_}$, \cf Def. \ref{def:Pos}.
-Also, an assertion which does not contain $\inside {\_}$ in positive positions is stable against pushing  of frames. We call such assertions $\Neg {\_}$, \cf Def. \ref{def:Pos}.
+Nevertheless,  assertions which do  not contain  $\inside {\_}$, called   $\Stable {\_}$, are stable against pushing and popping of frames.  
+Moreover, assertions which do  not contain $\inside {\_}$ in negative positions, called $\Pos {\_}$,  are stable against pushing  of \sdN{internal} frames.
+Assertions which do  not contain $\inside {\_}$ in positive positions, called $\Neg {\_}$,  are stable against popping  of frames.  
+\Cf  Defs % \ref{def:Basic},   \ref{def:Pos}, and  \ref{def:Neg}
+ in \A \ref{app:preserve}.
 
 \begin{lemma}
 For all  states $\sigma$ and frames $\phi$, and for all assertions $A$ such that $ fv(A)=\emptyset$:
@@ -49,9 +53,9 @@ For all  states $\sigma$ and frames $\phi$, and for all assertions $A$ such that
 \item 
 $\Stable{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \ \Longleftrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
 \item 
-$\Pos{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \ \Longrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+$\Pos{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \  \wedge \  \sdN{M, {\PushSLong \phi \sigma} \models  \intThis} \ \ \Longrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
 \item 
-$\Neg{A}\ \ \   \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \Longleftarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+$\Neg{A}\ \ \   \Longrightarrow \ \  \ \  [\ \  M,{\PushSLong \phi \sigma} \models A\ \ \Longrightarrow \ \  M, \sigma \models A   \ \  ]$
 
 \end{itemize}
 \end{lemma}
@@ -61,8 +65,6 @@ $\Neg{A}\ \ \   \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \Longleftar
  \subsubsection{Viewpoints and Protection}
  
  
-{The examples in Fig. \ref{fig:Protected} demonstrate that % validity of assertions which refer to 
- protection may be affected by the pushing and popping of frames on the stack. For example, $o_3$ was not protected with top frame $\phi_1$,   became protected when we pushed the frame $\phi_2$,  and again, is no longer protected when we push $\phi_3$ on the stack. 
  
 Below we define 
 $\pushSymbolAA$, which  translates an assertion from the viewpoint of the callee, to that of the caller:
