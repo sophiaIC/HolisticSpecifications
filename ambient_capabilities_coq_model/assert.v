@@ -52,10 +52,10 @@ Module Assert.
     exists x p, x ∈ (local ϕ) /\ interpret_p p σ x = Some (v_addr α).
 
   Definition loc_reachable (α : addr)(σ : config) : Prop :=
-    exists ϕ ψ, fst σ = ϕ ;; ψ /\ reachable α ϕ σ.
+    exists ϕ ψ, fst σ = ϕ ⋅ ψ /\ reachable α ϕ σ.
 
   Definition glob_reachable (α : addr)(σ : config) : Prop :=
-    exists ϕ ϕ' ψ, fst σ = ϕ ;; ψ /\ (ϕ' = ϕ \/ In ϕ' ψ) /\ reachable α ϕ' σ.
+    exists ϕ ϕ' ψ, fst σ = ϕ ⋅ ψ /\ (ϕ' = ϕ \/ In ϕ' ψ) /\ reachable α ϕ' σ.
 
   Definition intl (M : module)(σ : config)(α : addr) :=
     exists o, snd σ α = Some o /\

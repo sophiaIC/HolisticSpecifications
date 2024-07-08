@@ -1,16 +1,19 @@
 Require Import Arith.
+Require Export ZArith.ZArith.
 Require Import List.
 Require Import common.
 Require Import CpdtTactics.
 
 Module LanguageDefinition.
 
+  Import ZArith.ZArith.
+
   Inductive addr :=
   | address : nat -> addr.
 
   Inductive val :=
   | v_addr : addr -> val
-  | v_nat : nat -> val
+  | v_int : Z -> val
   | v_bool : bool -> val
   | v_null : val.
 
@@ -37,8 +40,9 @@ Module LanguageDefinition.
 
   Inductive ty : Type :=
   | t_cls : cls -> ty
-  | t_nat : ty
-  | t_bool : ty.
+  | t_int : ty
+  | t_bool : ty
+  | t_ext : ty.
 
   Inductive exp :=
   | e_hole : nat -> exp
@@ -48,7 +52,9 @@ Module LanguageDefinition.
   | e_typ : exp -> ty -> exp
   | e_ghost : exp -> ghost -> exp -> exp
   | e_if : exp -> exp -> exp -> exp
-  | e_eq : exp -> exp -> exp.
+  | e_eq : exp -> exp -> exp
+  | e_plus : exp -> exp -> exp
+  | e_minus : exp -> exp -> exp.
 
   Definition v_true := (v_bool true).
   Definition v_false := (v_bool false).
@@ -62,17 +68,28 @@ Module LanguageDefinition.
   Notation "e1 ⩵ e2" := (e_eq e1 e2)(at level 38).
 
   Inductive stmt :=
+  | s_read : var -> exp -> stmt
+  | s_write : var -> fld -> exp -> stmt
+  | s_call : var -> var -> mth -> list var -> stmt
+  | s_ret : exp -> stmt
+  | s_if : exp -> stmts -> stmts -> stmt
+  | s_hole : var -> stmt
+  | s_new : var -> cls -> stmt
+
+  with stmts :=
+  | s_stmt : stmt -> stmts
+  | s_seq : stmt -> stmts -> stmts.
+
+(*  Inductive stmt :=
   | s_read : var -> var -> fld -> stmt
   | s_write : var -> fld -> var -> stmt
   | s_call : var -> var -> mth -> list var -> stmt
   | s_ret : var -> stmt
   | s_if : exp -> stmt -> stmt -> stmt
   | s_hole : var -> stmt
-  | s_new : var -> cls -> stmt.
+  | s_new : var -> cls -> stmt.*)
 
-  Inductive stmts :=
-  | s_stmt : stmt -> stmts
-  | s_seq : stmt -> stmts -> stmts.
+  Notation "s ';;' ss" := (s_seq s ss)(at level 41).
 
   #[global] Program Instance eqbFld : Eq fld :=
     {
@@ -451,7 +468,8 @@ Module LanguageDefinition.
   Inductive stack :=
     | stack_cons : frame -> list frame -> stack.
 
-  Notation "ϕ ';;' ψ" := (stack_cons ϕ ψ)(at level 41).
+  (*notation for stack: \cdot *)
+  Notation "ϕ '⋅' ψ" := (stack_cons ϕ ψ)(at level 41).
 
   Definition config := (stack * heap) % type.
 
@@ -462,12 +480,12 @@ Module LanguageDefinition.
 
   Definition interpret_x (σ : config)(x : var) : option val :=
     match σ with
-    | (frm lcl c ;; ψ, _) => lcl x
+    | (frm lcl c ⋅ ψ, _) => lcl x
     end.
 
   Definition interpret_αf (σ : config)(α : addr)(f : fld) : option val :=
     match σ with
-    | (ϕ ;; ψ, χ) =>
+    | (ϕ ⋅ ψ, χ) =>
         match χ α with
         | Some o => o_flds o f
         | _ => None
@@ -515,7 +533,7 @@ Module LanguageDefinition.
   Definition typeOf_v (σ : config)(v : val)(t : ty) :=
     match v, t with
     | v_null, _ => True
-    | v_nat _, t_nat => True
+    | v_int _, t_int => True
     | v_bool _, t_bool => True
     | v_addr α, t_cls C => match snd σ α with
                           | Some o => if eqb (o_cls o) C

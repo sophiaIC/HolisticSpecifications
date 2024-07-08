@@ -68,14 +68,14 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   (* old hoare semantics *)
   Definition hoare_triple_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
     forall χ lcl s' ψ χ' lcl',
-      big_step M (frm lcl (s_seq s s') ;; ψ, χ) (frm lcl' s' ;; ψ, χ') ->
-      sat M (frm lcl (s_seq s s') ;; ψ, χ) P ->
-      sat M (frm lcl' s' ;; ψ, χ) Q.
+      big_step M (frm lcl (s_seq s s') ⋅ ψ, χ) (frm lcl' s' ⋅ ψ, χ') ->
+      sat M (frm lcl (s_seq s s') ⋅ ψ, χ) P ->
+      sat M (frm lcl' s' ⋅ ψ, χ) Q.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_triple_semantics M P s Q)(at level 40).
 
   Definition hoare_quad_semantics (M : module)(P : asrt)(s : stmt)(Q A : asrt) :=
-    forall σ1 σ2, (forall χ ψ ϕ, σ1 = (ϕ ;; ψ, χ) -> continuation ϕ = s_stmt s) ->
+    forall σ1 σ2, (forall χ ψ ϕ, σ1 = (ϕ ⋅ ψ, χ) -> continuation ϕ = s_stmt s) ->
              forall αs zs zSubst , zip αs zs = Some zSubst ->
                               sat M σ1 (listSubst P zSubst) ->
                               final M σ1 σ2 ->
@@ -87,9 +87,9 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
 
   Definition push (σ : config)(αs : list addr) : config -> Prop :=
     match σ with
-    | (ϕ ;; ψ, χ) => fun σ' =>
+    | (ϕ ⋅ ψ, χ) => fun σ' =>
                       match σ' with
-                      | (ϕ' ;; ψ', χ') =>
+                      | (ϕ' ⋅ ψ', χ') =>
                           ψ' = ϕ :: ψ /\
                             χ' = χ /\
                             (forall x α, local ϕ x = Some (v_addr α) ->
@@ -273,7 +273,7 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** M ⊢ ⦃ [y.f / x] P ⦄  ⦃ P ⦄  *)
 
   | h_read : forall M x y f P,
-      M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x y f ⦃ P ⦄
+      M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x (e_fld (e_ y) f) ⦃ P ⦄
 
   (** M ⊢ ⦃ P ∧ e ⦄ s1 ⦃ Q ⦄ *)
   (** M ⊢ ⦃ P ∧ ¬ e ⦄ s2 ⦃ Q ⦄ *)
@@ -289,7 +289,7 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** M ⊢ ⦃ w prt-frm x ⦄ y := z.f ⦃ w prt-frm x ⦄  *)
 
   | h_write_prt_frm : forall M w x y z f,
-      M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ∧ a_prt_frm (e_ w) (e_ z) ⦄ s_write y f z ⦃ a_prt_frm (e_ w) (e_ x) ⦄
+      M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ∧ a_prt_frm (e_ w) (e_ z) ⦄ s_write y f (e_ z) ⦃ a_prt_frm (e_ w) (e_ x) ⦄
 
 
   (** -----------------------------*)
