@@ -1,7 +1,7 @@
 
 
 In this section we demonstrate that the proof system presented in section \ref{sect:proofSystem} is sound. 
-For this, we give a stronger, deeper meaning to our Hoare tuples  (Sect \ref{s:deep:valid}), which requires that validity of assertions is preserved for all frames 
+For this, we give a stronger, deeper meaning to our Hoare tuples  (Sect \ref{s:deep:valid}), which requires that validity of assertions is preserved from the perspective of several frames, rather than just the top frame.
 
 % In Sect.  \ref{s:deep:mean} we define deep satisfaction of assertions. 
 % In Sect \ref{sect:HLmeans} we define deep satisfaction of specifications.
@@ -11,31 +11,38 @@ We then show how execution starting from some external state can be summarised i
 
 
 
-\subsection{Deep Validity}%\footnoteSD\red{better term than deep? 
+\subsection{Deep Satisfaction} 
 \label{s:deep:valid}
-% MOVED
+% SOME MOVED
 
-As we saw in section \ref{ }, method return establish a post-condtion at the end of the method body (at the callee's side), but not necessarily also at the caller's side. 
-For example, consider a state $\sigma$, such that $\interpret {\sigma} {\prg{this}}=o_1$, and $\interpret {\sigma} {x}=o_2$,  and where 
-$\interpret {\sigma} {\prg{this}.f}=o_3$, and $\interpret {\sigma} {\prg{this}.f.g}=o_4$, and $\interpret {\sigma} {x.f}=o_3$, where there are no other fields or objects,
- and where all objects except for $o_3$, are internal.
-We call a method $x.m()$, whose body is $x.f:=x$. 
-At the end of the method body  we have that $\inside {o_4}$. 
+As we saw in section \ref{s:viewAndProtect}, it is possible  for an assertion to hold in some state,  but no longer hold after popping the top frame from the stack. 
+This has implications for the appropriate meaning of Hoare tuples:
 
- $\interpret {\sigma} {\prg{this.f}}=o_3$, and $\interpret {\sigma} {x}=o_2$
+\begin{example}
+Assume state $\sigma_a$, such that $\interpret {\sigma_a} {\prg{this}}=o_1$, and $\interpret {\sigma} {\prg{this}.f}=o_2$, and $\interpret {\sigma} {x}=o_3$, and $\interpret {\sigma} {x.f}=o_2$,  
+and $\interpret {\sigma} {x.g}=o_4$ and   where $o_2$ is external and all other objects are internal. 
+We then have $..,\sigma_a \models  \inside {o_4}$.
+Assume that $\sigma_a$   calls a method $x.m()$; then,
+upon entry to that method, when we push the new frame, we have a state $\sigma_b$, which also satisfies $..,\sigma_a \models  \inside {o_4}$.
+Assume that the   body of $m$ is $\prg{this}.f.m1(\prg{this}.g); \prg{this}.f := \prg{this};  \prg{this}.g := \prg{this}$, and that the external method $m1$ stores in the 
+receiver a reference to the argument.
+Then, at the end of method execution, and before popping the stack, we have a state $\sigma_c$, which also satisfies $..,\sigma_c \models  \inside {o_4}$.
+However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \not\models  \inside {o_4}$.
+\end{example}
  
- n which we call a method $\prg{x}.m()$, whose body 
-This means, that it is possible for an assertion $A$ which has no free variables to be valid at the $k^{th}$  frame, but invalid at the $k-1^{st}$ frame.
 
-To addrresss (*) we introduce "deep satisfaction" of assertions $ \satDAssertFrom M  \sigma k   A$ which says that $A$ is satisfied in $\sigma$  in all frames of $\sigma$ form $k$ onwards,
+To adrress this problem, we introduce "deep satisfaction" of assertions $ \satDAssertFrom M  \sigma k   A$ which says that $A$ is satisfied in $\sigma$  in all frames of $\sigma$ from $k$ onwards, 
+\ie  $ \satDAssertFrom M  \sigma k   A$ iff $\sigma = ((\phi_1\cdot ... \phi_n), \chi)$ and $k\leq n$ and $\forall j. [\  k\leq j \leq n \ \rightarrow \ M, ((\phi_1\cdot ... \phi_j), \chi) \models A'\ ]$ where $A'$ is $A$ where all free variables have been substituted according to $\phi_n$ --
 \cf Def. \ref{def:restrict}.
-And introduce "deep" quadruples,   $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}$ , which promise that if $stmt$ executes in a state which satisfies $A$ from $k$ onwards, then, if ir terminates, the final state will satisfy $A'$ from $k$ onwards, and also, all intermediate external states will satisfy $A''$ from $k$ onwards - \cf Def \ref{def:restrict}.
+We then ntroduce "deep" quadruples,   $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}$ , which promise that if $stmt$ executes in a state which satisfies $A$ from $k$ onwards, then, if ir terminates, the final state will satisfy $A'$ from $k$ onwards, and also, all intermediate external states will satisfy $A''$ from $k$ onwards - \cf Def \ref{def:restrict}.
 
 
-\begin{lemma}[Deep   vs Shallow Semantics of Specifications]
-For all $M$, $A$, $A'$, $stmt$, and $S''$
+\begin{lemma}[Deep   vs Shallow Semantics]
+For all $M$, $A$, $A'$, $A''$, $stmt$, and $S$
 \begin{itemize}
 \item
+ $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}   \ \ \ \Longrightarrow \ \ \   \satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}$
+\item 
 $\satisfiesD {M} {S}  \ \ \ \Longrightarrow \ \ \ \satisfies {M} {S}$
 \end{itemize}
 \end{lemma}
