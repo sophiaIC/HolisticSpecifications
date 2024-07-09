@@ -61,14 +61,16 @@ $\Neg{A}\ \ \   \Longrightarrow \ \  \ \  [\ \  M,{\PushSLong \phi \sigma} \mode
  }
   
    
- \subsubsection{Viewpoints and Protection}
+ \subsection{Viewpoints and Protection}
  
+ As we discussed in section \ref{sec:howThird} it may happen that an assertion $A$ does not hold from the caller’s
+viewpoint, but does hold from the callee’s viewpoint:  right before the method call, $A$ might   not hold,
+but if  $\PushASLong  {\overline y} A$ holds (where $\overline y$ are the receiver and arguments to the call), then $A$
+will hold right when the callee’s method body starts. Thus, the operator $\pushSymbolAA$
+ translates an assertion from the viewpoint of the callee, to that of the caller.
  
- 
-Below we define 
-$\pushSymbolAA$, which  translates an assertion from the viewpoint of the callee, to that of the caller:
-it applies to assertions and sequences of variables:  $\PushAS y A$   guarantees that $A$ will hold when the values of $y$ have been pushed onto a new frame:
- thus, $\PushAS y A$ is \emph{hypothetical}.
+% it applies to assertions and sequences of variables:  $\PushAS y A$   guarantees that $A$ will hold when the values of $y$ have been pushed onto a new frame:
+% thus, $\PushAS y A$ is \emph{hypothetical}.
  % : if a state satisfies $\PushAS y A$, then after pushing
 % onto that state a frame which contains the values  of $\overline y$, assertion $A$ will hold. }
 % $\pushSymbolAA$ is the counterpart to $\pushSymbol$, which we had defined for states, \cf Lemma \ref{lemma:push:ass:state}
@@ -78,11 +80,15 @@ it applies to assertions and sequences of variables:  $\PushAS y A$   guarantees
 %in an external state preserves absolute protection.
 %(3) An objects which is protected from  the receiver and arguments of a method call, is protected   after the corresponding frame has been pushed onto the stack.
 
-The  $\pushSymbolAA$  operator is  defined in Fig. \ref{f:Push}. Only the first equation is interesting, i.e.  $\PushAS y {(\inside x)}$: For 
-$x$ to be protected from the viewpoint of the callee, it should be protected from all the call's arguments,
-\ie  $\protectedFrom x {\overline {y}}$. 
-In all other cases,   $\pushSymbolA$  leaves simple $\re$'s unmodified %(i.e. the second to sixth equation), 
- or is applied to the sub-assertions. % (i.e. the seventh to eleventh equation).
+The  $\pushSymbolAA$  operator is  defined in Fig. \ref{f:Push}. 
+Only the first equation is interesting, i.e.  $\PushAS y {(\inside \re)}$: For 
+$\re$ to be protected from the viewpoint of the callee, it should be protected from all the call's arguments,
+\ie  $\protectedFrom {\re} {\overline {y}}$. 
+\sdN{The notation $\protectedFrom \re {y_0, ... y_n}$ stands for $\protectedFrom \re {y_0}\, \wedge\, ...  \protectedFrom \re {y_n}$.
+%In all other cases,   $\pushSymbolA$  leaves simple $\re$'s unmodified %(i.e. the second to sixth equation), 
+% or is applied to the sub-assertions. % (i.e. the seventh to eleventh equation).
+}
+
 
 \begin{definition}
 \label{def:push}
@@ -129,10 +135,10 @@ $
  Lemma \ref{lemma:push:ass:state}  states that $\pushSymbolAA$ is the counterpart to the states' operator $\pushSymbol$:
  %states the guarantees given by $\pushSymbolAA$: \  
  (1) If \ %the current state 
-$\sigma$ satisfies  $\PushAS y A$, then   { the callee state (after pushing a frame with the values of $\overline y$) 
-will satisfy $A$}. %after pushing a frame with the values of $\overline y$ (here $\PushS {y} {\sigma}$)
-(2) is the opposite: {If the callee state (in which we pushed a frame with the values for $\overline y, \overline z$) satisfies $A$, then the
-caller state will satisfy 
+$\sigma$ satisfies  $\PushAS y A$, then  the callee state  ($\PushS {y} {\sigma}$) % (after pushing a frame with the values of $\overline y$) 
+will satisfy $A$. %after pushing a frame with the values of $\overline y$ (here $\PushS {y} {\sigma}$)
+(2) is the opposite: {If the callee state ($\PushSLong {(\overline y, \overline z)} {\sigma}$) % (in which we pushed a frame with the values for $\overline y, \overline z$
+ satisfies $A$, then the caller state will satisfy 
 % (here , conversely,   if a state satisfies  $A$ after a top frame containing the  values of $\overline y$  and some other variables has been pushed % (here \PushSLong {(\overline y, \overline z)} \sigma), 
 $\PushAS {y} {A}$. } % will hold {in the caller state}. % after popping that frame.
 %, and mapping the free variables of $A$ to their values  in the state  before.
@@ -167,7 +173,7 @@ $M, {(\PushSLong {(\overline y, \overline z)} {(\sigma[\overline{x \mapsto \alph
 
 \noindent
 \textbf{NOTES} \notesep 
-{We require   $\fv(A)=\emptyset$ in order to be accommodate for the difference between variable maps in $\sigma$ and  $\PushS {y} {\sigma}$.}
+{The requirement   $\fv(A)=\emptyset$   accommodates for the difference between variable maps in $\sigma$ and  $\PushS {y} {\sigma}$.}
 %We could, instead,  require that $fv(A)=\overline x$, \ $\overline x \notin \sigma$, \ $\overline x \notin  \PushAS {y} {A}$, and   assert that (1)\ $M, \sigma[\overline{x \mapsto \alpha} ] \models \PushAS {y} {A}\  \Longrightarrow   \ M,  \PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}   \models A$, and similarly for (2).}
 %In both (1) and (2), we  use the renaming $\sigma[\overline{x \mapsto \alpha} ]$ to ensure that the free variables of $A$ are mapped to the same values in the caller's and the callee's frame.
  \notesep 
@@ -180,3 +186,5 @@ $M,   \sigmas \models A$ stands for  $\forall\sigma\! \in\! \sigmas.[\, M,\sigma
 {\textbf{Comment}} The $ \pushSymbol$ operator reminds me of the magic wand. Namely, $-\!-\!*$ is spatial and heap based:  the assertion $A -\!-\!* A'$ says: if you combine with a heap that satisfies $A$, then the complete heap will satisfy $A'$. While $\PushASLong {\_} {\_}$ is temporal and  stack based: the assertion  $\PushAS {y} A$ says that if you push a frame with range the values of $\overline y$, then $A$ will hold. {\textbf{End Comment} }
  }
 %{{I am surprised that $ \pushSymbol$  only affects  ${\inside x}$, and leaves all else unmodified,}}
+
+\subsection{Preservation across heap modifications}
