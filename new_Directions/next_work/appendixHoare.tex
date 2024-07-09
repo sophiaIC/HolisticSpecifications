@@ -1,5 +1,79 @@
 \section{Appendix to Section \ref{sect:proofSystem} -- Proving Open Calls and Adherence to \SpecLang Specifications} \label{app:proof}
 
+
+\subsection{Specification Lookup}
+
+Definition \ref{d:promises} is broken down as follows:  $S_1 \txtin  S_2$ says that $S_1$ is textually included in $S_2$; \ \ $S \thicksim S'$ says that $S$ is a safe renaming of $S'$; \ \   $\promises M S$ says that $S$ is a safe renaming of one of the specifications given for $M$. 
+ 
+In particular, a safe renaming of  ${ \TwoStatesN {\overline {x:C}} {A}  }$ can replace any of the variables $\overline x$.  
+A safe renaming  of ${\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}$  can replace  the formal parameters ($\overline y$) by actual parameters  ($\overline {y'}$) but requires the actual parameters  not to include \prg{this}, or \prg{res}, (\ie $\prg{this}, \prg{res}\notin \overline{y'}$). -- %The latter requirement 
+Moreover, it can replace  the free variables which do not overlap with the formal parameters or the receiver ( $\overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this}\}$).
+
+\begin{definition}
+For a module $M$ and a specification $S$, we define:
+\label{d:promises}
+\begin{itemize}
+\item
+$S_1 \txtin  S_2  \ \ \ \triangleq\ \ \   S_1 \txteq  S_2$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.
+\item
+$S  \thicksim  S'$ \ \ \  is defined by cases
+
+\begin{itemize}
+\item
+$ { \TwoStatesN {\overline {x:C}} {A}  }   \thicksim  { \TwoStatesN {\overline {x':C}} {A'[\overline{x'/x}]} } $
+\item
+$ {\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}  \thicksim
+ {\mprepostN{A_1'}{p\ D}{m}{y'}{D}{A_2'} {A_3'}} $
+  \\
+ $\strut \hspace{2cm}    \ \  \triangleq\ \ \  A_1 = A_1'[\overline{y/y'}][\overline{x/x'}], \ \ A_2 = A_2'[\overline{y/y'}][\overline{x/x'}], \ \ A_3 = A_3'[\overline{y/y'}][\overline{x/x'}], \ \ \wedge$\\
+ $\strut \hspace{2cm}\ \ \ \ \ \ \ \ \ \prg{this}, \prg{res}\notin \overline{y'}, \ \ \overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this} \} $
+  \end{itemize} 
+  
+ \item  
+ $\promises M  S \ \ \ \triangleq
+ \ \ \ \exists S'.[ \ \ S'  \txtin \SpecOf M\ \ \wedge\ \ S' \thicksim S \ \ ]$
+  \end{itemize} 
+  \end{definition} 
+  
+The restriction on renamings of method specifications that  the actual parameters should not to include \prg{this}  or \prg{res} 
+ is necessary because \prg{this} and \prg{res}  denote different objects from the point of the caller  than from the point of the callee.
+It means that we are not able to verify a method call whose actual parameters include \prg{this} or \prg{res}. 
+This is not a serious restriction: we can encode any such method call by preceding it with assignments to fresh local variables, \prg{this'}:=\prg{this}, and   \prg{res'}:=\prg{res}, and using \prg{this'} and \prg{res'} in the call.
+
+
+\subsection{Types}
+\label{types}
+
+The rules in Fig. \ref{f:types} allow triples to talk about the types 
+Rule {\sc{types-1}} promises that types of local variables do not change.
+ The restriction to statements that do not contain method calls will be discussed with rule {\sc{types-2}} in the next section.
+
+\begin{figure}[tht]
+$
+\begin{array}{c}
+ \begin{array}{lcl}
+\inferrule[\sc{types-1}]
+	{  stmt \ \mbox{contains no method call} \\
+	stmt  \ \mbox{contains   no assignment to $x$}}
+	{\hproves{M}  {x:C} {\ stmt\ }{x:C} }
+\\
+\\
+% THIS RULE IS NOT SOUND -- we need to adapt it
+%{
+\inferrule[\sc{types-2}]
+	{ \hprovesN{M}  {A} {\ s\ }  {A'} {A''}  }
+	{\hprovesN{M}  {x:C \wedge A} {\ s\ }  {x:C\wedge A'} {A''}}
+% \end{array}
+\end{array}
+\end{array}
+ $
+\caption{Types}
+\label{f:types}
+\end{figure}
+
+\subsection{Method Calls}
+
+
 The rules {\sc{Call\_Int}} and {\sc{Call\_Int\_Adapt}}   are weaker forms of  the  rule {\sc{Call\_Int\_Combine}} given here. 
 Even though  {\sc{Call\_Int\_Combine}} is sound, we did not include it in the presented system, for the sake of simplicity and separation of concerns.
 A similar stronger rule can be expressed for {\sc{Call\_Ext}} and  for {\sc{Call\_Ext\_Adapt}}.

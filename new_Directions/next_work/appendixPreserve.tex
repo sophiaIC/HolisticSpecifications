@@ -1,6 +1,8 @@
 \section{Appendix to Section \ref{s:preserve} -- Preservation of Satisfaction of Assertions}
 \label{app:preserve}
 
+\subsection{Stability}
+
 The proof of lemma \ref{lemma:addr:expr} is by induction on the structure of $A$.
 
 \vspace{.2cm}
@@ -81,4 +83,131 @@ The definitions of $\Pos{\_}$ and $\Neg {\_}$ are less  general than would be   
 We have given these less general definitions in order to simplify our proofs.
 The proof of lemma \ref{l:assrt:unaffect} is by induction on the structure of$A$.
 
-\vspace{.2cm}
+\subsection{Encapsulation}
+
+{
+Proofs of adherence to {\SpecLang specifications  hinge on the expectation that some, 
+specific, assertions cannot be invalidated unless some 
+} internal (and thus known) computation took place. 
+{We call such assertions   \emph{encapsulated}.}
+}
+We give a judgementt,  $M\ \vdash  \encaps{A}$, and define its meaning as $M\ \models  \encaps{A}$.
+
+\begin{figure}[thb]
+$
+\begin{array}{l}
+\begin{array}{lclcl}
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_1}}}
+{  
+\begin{array}{l}
+M; \Gamma \vdash \re : \prg{intl} \\
+M; \Gamma \vdash \encaps{\re}; \Gamma
+\end{array}
+}
+{
+M; \Gamma \vdash \encaps{\re.f}; \Gamma
+}
+& &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_2}}}
+{  
+\\
+M; \Gamma \vdash \encaps{\re}; \Gamma 
+}
+{
+M; \Gamma \vdash \encaps{\inside{\re}}; \Gamma
+}
+& &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_3}}}
+{  
+\\
+M; \Gamma \vdash \encaps{\re}; \Gamma 
+}
+{
+M; \Gamma \vdash \encaps{\re:C}; \Gamma
+}
+\\ \\ 
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_4}}}
+{  
+\\
+M; \Gamma, {x:C} \vdash \encaps {A}; \Gamma' 
+}
+{
+M; \Gamma \vdash \encaps {\forall {x:C}. A}; \Gamma
+}
+&   &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_5}}}
+{   
+\begin{array}{l}
+M; \Gamma \vdash \encaps{A}; \Gamma'\\  \Stable A
+\end{array}
+}
+{
+M; \Gamma \vdash \encaps{ \neg A}; \Gamma'  
+}
+&    &
+\inferruleSDNarrow 
+{~ \strut  {\sc{Enc\_6}}}
+{  
+\begin{array}{l}
+M; \Gamma \vdash \encaps{A_1}; \Gamma''   \\
+  M; \Gamma'' \vdash \encaps{ A_2}; \Gamma' 
+  \end{array} 
+}
+{
+M; \Gamma \vdash \encaps{A_1 \wedge A_2}; \Gamma'
+}
+\end{array}
+\end{array}
+$
+\caption{The judgment $M; \Gamma \vdash \encaps  {A}; \Gamma'$}
+\label{f:encaps}
+\end{figure}
+
+{An assertion $A$  is  encapsulated by a module $M$  if in all possible states which arise from execution of module $M$ with any other  module $\Mtwo$, the validity of $A$}  {can only be changed via computations internal to that module}.
+ 
+
+\begin{definition}[An assertion $A$ is \emph{encapsulated} by module $M$] $~$ \\
+\label{d:encaps:sytactic}
+\begin{itemize}
+\item 
+$M \vdash \encaps{A}  \ \   \triangleq  \ \  \exists \Gamma.[\ M; \emptyset \vdash \encaps{A}; \Gamma\ ]$ \ \  as defined in Fig. \ref{f:encaps}.
+ \end{itemize}
+  \end{definition}
+  
+
+
+\noindent
+\textbf{More on Def. \ref{d:encaps:semantic}} {If the definition \ref{d:encaps:semantic} used the more general execution, $\leadstoOrig  {M\madd\Mtwo}  {\sigma}{\sigma'}$, rather than the scoped execution,  $\leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}$, then fewer assertions would have been encapsulated.}
+Namely, assertions like    $\inside {x.f}$ would not be encapsulated.
+Consider, \eg, a heap $\chi$, with objects $1$, $2$, $3$ and $4$, where  $1$, $2$ are external, and $3$, $4$ are internal, and  $1$ has fields pointing to $2$ and $4$, and $2$ has a field pointing to $3$, and $3$ has a field $f$ pointing to $4$. Take  state $\sigma$=$(\phi_1\!\cdot\!\phi_2,\chi)$, where $\phi_1$'s receiver is $1$,  $\phi_2$'s receiver is $2$,   and there are no local variables. 
+We have  $...\sigma\models \externalexec \wedge \inside {3.f}$. 
+We  return from the most recent all, 
+getting  $\leadstoOrig  {...}  {\sigma}{\sigma'}$ where $\sigma'=(\phi_1,\chi)$; and have   $...,\sigma'\not\models  \inside {3.f}$.
+
+\begin{example}
+\label{ex:not:encaps}
+For an assertion $A_{bal}\  \triangleq\ a:\prg{Account}\wedge a.\prg{balance}=b$, % can only be invalidated through internal  methods.  %on internal objects.
+and modules \ModB and  \ModC  from \S~\ref{s:outline}, we have  \ \ \ $\ModB\ \models\ \encaps{ A_{bal} }$, \ \ \ and \ \ \ $\ModB\ \models\ \encaps{ A_{bal} }$.
+\end{example}
+
+
+\begin{example} Assume   further modules, $\ModD$ and $\ModE$,  which  use ledgers mapping  accounts to their balances, and export functions that update this map. In  $\ModD$ the ledger is  part of the {internal} module, %\emph{not} protected, while 
+while in $\ModE$ it is part of the  {external} module.
+Then  \ \ $\ModD \ \not\models\encaps{ A_{bal}} $, \ \  and \ \ $\ModE  \models \encaps{ A_{bal}} $.
+Note that in both $\ModD$ and $\ModE$, the term \prg{a.balance} is a ghost field. 
+\end{example}
+
+\begin{note} Relative protection % (a variable is protected from another one) 
+is not encapsulated, (\eg $M \not\models {\encaps{\protectedFrom{x}{y}}}$), even though    absolute protection is
+(\eg $M \models \encaps{\inside{x}}$).
+Encapsulation of an assertion does not imply encapsulation of its negation; 
+ for example,  $M \not\models {\encaps{\neg\inside{x}}}$.
+\end{note}
+
+\TODO{{\red{TODO}: Say that there are more ways to define the encaps judgement. ALSO: show the rule for the ghostfields. }}
+

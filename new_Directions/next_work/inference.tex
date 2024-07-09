@@ -1,6 +1,6 @@
 We will now develop an inference system to prove that a module % is well-formed $\vdash M$, \ie that a module 
 satisfies its specification. This is done in three phases.
-\TODO{\red{TODO: refer to what we said in approach section}}
+%\TODO{\red{TODO: refer to what we said in approach section}}
 
 In the first phase we develop a logic of triples ${\hproves{M}  {A} {\ s\ }{A'} }$, which have the expected meaning, \ie 
 (*) execution of statement $s$ in a state satisfying {the \emph{precondition}}  $A$ will lead to a state satisfying  {the \emph{postcondition}}  $A'$.
@@ -23,283 +23,14 @@ For module invariants we prove that they  are preserved by all public methods of
 Before describing these three phases, we introduce some preliminaries.
 
 
-\subsection{Preliminaries: Specification Lookup, Assertion Stability  and  Encapsulation}
+\subsection{Preliminaries: Specification Lookup and Renamings}
 
-We will now discuss  three auxiliary concepts: A module's \emph{guarantees}; \   \emph{stability} of assertions whose satisfaction   with respect to pushing frames; \ \ and \emph{encapsulation}  of assertions. 
-
-
-\subsubsection{Module's guarantees}  %Definition \ref{d:promises} describes
-  $\promises M S$ expresses that $S$ is guaranteed by the module. In particular, it allows   \emph{safe  renamings}. These renamings are   a convenience, akin to the Barendregt convention, and  allow simpler Hoare rules for  method calls -- \cf Sect. \ref{s:calls}.
-
-Definition \ref{d:promises} is broken down as follows:  $S_1 \txtin  S_2$ says that $S_1$ is textually included in $S_2$; \ \ $S \thicksim S'$ says that $S$ is a safe renaming of $S'$; \ \   $\promises M S$ says that $S$ is a safe renaming of one of the specifications given for $M$. 
- 
-In particular, a safe renaming of  ${ \TwoStatesN {\overline {x:C}} {A}  }$ can replace any of the variables $\overline x$.  
-A safe renaming  of ${\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}$  can replace  the formal parameters ($\overline y$) by actual parameters  ($\overline {y'}$) but requires the actual parameters  not to include \prg{this}, or \prg{res}, (\ie $\prg{this}, \prg{res}\notin \overline{y'}$). -- %The latter requirement 
-Moreover, it can replace  the free variables which do not overlap with the formal parameters or the receiver ( $\overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this}\}$).
-
-\begin{definition}
-For a module $M$ and a specification $S$, we define:
-\label{d:promises}
-\begin{itemize}
-\item
-$S_1 \txtin  S_2  \ \ \ \triangleq\ \ \   S_1 \txteq  S_2$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.
-\item
-$S  \thicksim  S'$ \ \ \  is defined by cases
-
-\begin{itemize}
-\item
-$ { \TwoStatesN {\overline {x:C}} {A}  }   \thicksim  { \TwoStatesN {\overline {x':C}} {A'[\overline{x'/x}]} } $
-\item
-$ {\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}  \thicksim
- {\mprepostN{A_1'}{p\ D}{m}{y'}{D}{A_2'} {A_3'}} $
-  \\
- $\strut \hspace{2cm}    \ \  \triangleq\ \ \  A_1 = A_1'[\overline{y/y'}][\overline{x/x'}], \ \ A_2 = A_2'[\overline{y/y'}][\overline{x/x'}], \ \ A_3 = A_3'[\overline{y/y'}][\overline{x/x'}], \ \ \wedge$\\
- $\strut \hspace{2cm}\ \ \ \ \ \ \ \ \ \prg{this}, \prg{res}\notin \overline{y'}, \ \ \overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this} \} $
-  \end{itemize} 
-  
- \item  
- $\promises M  S \ \ \ \triangleq
- \ \ \ \exists S'.[ \ \ S'  \txtin \SpecOf M\ \ \wedge\ \ S' \thicksim S \ \ ]$
-  \end{itemize} 
-  \end{definition} 
-  
-The restriction on renamings of method specifications that  the actual parameters should not to include \prg{this}  or \prg{res} 
- is necessary because \prg{this} and \prg{res}  denote different objects from the point of the caller  than from the point of the callee.
-It means that we are not able to verify a method call whose actual parameters include \prg{this} or \prg{res}. 
-This is not a serious restriction: we can encode any such method call by preceding it with assignments to fresh local variables, \prg{this'}:=\prg{this}, and   \prg{res'}:=\prg{res}, and using \prg{this'} and \prg{res'} in the call.
-
-
-
-{
-Proofs of adherence to {\SpecLang specifications  hinge on the expectation that some, 
-specific, assertions cannot be invalidated unless some 
-} internal (and thus known) computation took place. 
-{We call such assertions   \emph{encapsulated}.}
-}
-We give a judgementt,  $M\ \vdash  \encaps{A}$, and define its meaning as $M\ \models  \encaps{A}$.
-
-
-\begin{figure}[thb]
-$
-\begin{array}{l}
-\begin{array}{lclcl}
-\inferruleSDNarrow 
-{~ \strut  {\sc{Enc\_1}}}
-{  
-\begin{array}{l}
-M; \Gamma \vdash \re : \prg{intl} \\
-M; \Gamma \vdash \encaps{\re}; \Gamma
-\end{array}
-}
-{
-M; \Gamma \vdash \encaps{\re.f}; \Gamma
-}
-& &
-\inferruleSDNarrow 
-{~ \strut  {\sc{Enc\_2}}}
-{  
-\\
-M; \Gamma \vdash \encaps{\re}; \Gamma 
-}
-{
-M; \Gamma \vdash \encaps{\inside{\re}}; \Gamma
-}
-& &
-\inferruleSDNarrow 
-{~ \strut  {\sc{Enc\_3}}}
-{  
-\\
-M; \Gamma \vdash \encaps{\re}; \Gamma 
-}
-{
-M; \Gamma \vdash \encaps{\re:C}; \Gamma
-}
-\\ \\ 
-\inferruleSDNarrow 
-{~ \strut  {\sc{Enc\_4}}}
-{  
-\\
-M; \Gamma, {x:C} \vdash \encaps {A}; \Gamma' 
-}
-{
-M; \Gamma \vdash \encaps {\forall {x:C}. A}; \Gamma
-}
-&   &
-\inferruleSDNarrow 
-{~ \strut  {\sc{Enc\_5}}}
-{   
-\begin{array}{l}
-M; \Gamma \vdash \encaps{A}; \Gamma'\\  \Stable A
-\end{array}
-}
-{
-M; \Gamma \vdash \encaps{ \neg A}; \Gamma'  
-}
-&    &
-\inferruleSDNarrow 
-{~ \strut  {\sc{Enc\_6}}}
-{  
-\begin{array}{l}
-M; \Gamma \vdash \encaps{A_1}; \Gamma''   \\
-  M; \Gamma'' \vdash \encaps{ A_2}; \Gamma' 
-  \end{array} 
-}
-{
-M; \Gamma \vdash \encaps{A_1 \wedge A_2}; \Gamma'
-}
-\end{array}
-\end{array}
-$
-\caption{The judgment $M; \Gamma \vdash \encaps  {A}; \Gamma'$}
-\label{f:encaps}
-\end{figure}
- 
-
-% \subsubsection{Semantics of Assertion Encapsulation}
-
-{An assertion $A$  is  encapsulated by a module $M$  if in all possible states which arise from execution of module $M$ with any other  module $\Mtwo$, the validity of $A$}  {can only be changed via computations internal to that module}.
- 
-
-\begin{definition}[An assertion $A$ is \emph{encapsulated} by module $M$] $~$ \\
-\label{d:encaps}
-\begin{itemize}
-\item 
-$M \vdash \encaps{A}  \ \   \triangleq  \ \  \exists \Gamma.[\ M; \emptyset \vdash \encaps{A}; \Gamma\ ]$ \ \  as defined in Fig. \ref{f:encaps}.
-\item
-$ % \begin{equation}
-    M\ \models \encaps{A}\ \   \triangleq  \ \   
-    \begin{cases}
-     \forall \Mtwo, \sigma, \sigma',  \overline{\alpha}, \overline{x} \mbox{ with } \overline{x}=Free(A)\\ % , \mbox{and }  \arising{M\madd\Mtwo}{\sigma}:\\
-   \ \ \ \  [\ \ \  \satisfiesA{M}{\sigma}{({A[{\overline {\alpha/x}}]} \ \wedge\ \externalexec)}\  \wedge\ { \leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}} % \\    \ \ \ \ \ \   \ \ \ 
-   \ \ \Longrightarrow\ \ 
-  %  \ \ \ \ \ \  \ 
-   {M},{\sigma'}\models{A[{\overline {\alpha/x}}]} \ \  ]
-    \end{cases}
- $% \end{equation}
- \end{itemize}
-  \end{definition}
-
-\noindent
-\textbf{Aside} {If the definition above used the more general execution, $\leadstoOrig  {M\madd\Mtwo}  {\sigma}{\sigma'}$, rather than the scoped execution,  $\leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}$, then fewer assertions would have been encapsulated.}
-\footnote{{Assertions like    $\inside {x.f}$ would not be encapsulated.
-Consider, \eg, a heap $\chi$, with objects $1$, $2$, $3$ and $4$, where  $1$, $2$ are external, and $3$, $4$ are internal, and  $1$ has fields pointing to $2$ and $4$, and $2$ has a field pointing to $3$, and $3$ has a field $f$ pointing to $4$. Take  state $\sigma$=$(\phi_1\!\cdot\!\phi_2,\chi)$, where $\phi_1$'s receiver is $1$,  $\phi_2$'s receiver is $2$,   and there are no local variables. 
-We have  $...\sigma\models \externalexec \wedge \inside {3.f}$. 
-We  return from the most recent all, 
-getting  $\leadstoOrig  {...}  {\sigma}{\sigma'}$ where $\sigma'=(\phi_1,\chi)$; and have   $...,\sigma'\not\models  \inside {3.f}$.
-}}
-
- 
-% Revisiting the examples from \S~\ref{s:outline}, % we can see
-%Namely, 
-
-\begin{example}
-\label{ex:not:encaps}
-For an assertion $A_{bal}\  \triangleq\ a:\prg{Account}\wedge a.\prg{balance}=b$, % can only be invalidated through internal  methods.  %on internal objects.
-and modules \ModB and  \ModC  from \S~\ref{s:outline}, we have  \ \ \ $\ModB\ \models\ \encaps{ A_{bal} }$, \ \ \ and \ \ \ $\ModB\ \models\ \encaps{ A_{bal} }$.
-\end{example}
-
-
-\begin{example} Assume   further modules, $\ModD$ and $\ModE$,  which  use ledgers mapping  accounts to their balances, and export functions that update this map. In  $\ModD$ the ledger is  part of the {internal} module, %\emph{not} protected, while 
-while in $\ModE$ it is part of the  {external} module.
-Then  \ \ $\ModD \ \not\models\encaps{ A_{bal}} $, \ \  and \ \ $\ModE  \models \encaps{ A_{bal}} $.
-Note that in both $\ModD$ and $\ModE$, the term \prg{a.balance} is a ghost field. 
-\end{example}
-
-\begin{note} Relative protection % (a variable is protected from another one) 
-is not encapsulated, (\eg $M \not\models {\encaps{\protectedFrom{x}{y}}}$), even though    absolute protection is
-(\eg $M \models \encaps{\inside{x}}$).
-Encapsulation of an assertion does not imply encapsulation of its negation; 
- for example,  $M \not\models {\encaps{\neg\inside{x}}}$.
-\end{note}
-
-
- 
-%\begin{proof} Sketches:
-%
-%(1) because if $y$ is protected, and since the fields are all private ... the only way .. 
-%\\
-%(2) Take a state where $\neg\inside{x}$ and that there is only external object that has access to $x$, and that this object becomes no longer accessible -- eg through field override. That means that we now have  $\inside{x}$.
-%\\
-%(3) it is always possible that another external object $z'$ has unprotected access to $x$; if $z'$ has access to $z$, then it can give it access to $x$ without invoking am internal method. (3) as a counterexample, 
-%\\
-%(4) Use that $M \models A \rightarrow A'$ implies $M \models \neg A'  \rightarrow \neg  A$. BUT CAREFUL, TODO! with the potential of non-termination on assertions!!
-%\end{proof}
-%%The key consequence of soundness is that -- SD dropped; it is   not a consequence of soundness!
-
-%\subsubsection{Deriving  Assertion Encapsulation}
-%
-%{In general},  code that does not contain 
-%calls to a {given} module is guaranteed not to invalidate any assertions encapsulated by that module.
-% Assertion encapsulation has been used in proof systems to {address}   the  {frame} problem
-% \cite{objInvars,encaps}. 
-%
-%We  do not mandate how this property should be derived -- instead, we rely on a judgment 
-%$M\ \models  \encaps{A}$ provided by some external system. \footnoteSD{This is simpler than the oopsla-33 setting}
-%Thus, \SpecLang is parametric over the derivation of the encapsulation
-%     judgment; in fact, several ways to do that are possible \cite{TAME2003,ownEncaps,objInvars}. For example,
-% the appendices of
-%    \cite{necessityFull} present a 
-%	%Appendix~\ref{s:encap-proof} and
-%    %Figure~\ref{f:asrt-encap}  we present a 
-%    rudimentary system that is sufficient to support our example
-%    proof.   Like OOPSLA 22 Our logic does not {deal with, nor} rely on, the specifics of  how   encapsulation
-%{is derived}.
-%{Instead, it relies} on an encapsulation judgment and expects it to be sound:
-%
-
-\TODO{{\red{TODO}: Say that there are more ways to define the encaps judgement. ALSO: show the rule for the ghostfields. }}
-
-\begin{lemma}[Encapsulation Soundness]
-\label{lem:encap-soundness}
-% A judgement of the form $\proves{M}{\encaps{A}}$  is\  \emph{sound}, \ if 
-For all modules $M$, and assertions $A$: 
-
-$\strut \hspace{1.5cm} \proves{M}{\encaps{A}} \ \ \ \ \Longrightarrow\ \ \ \ \satisfies{M}{\encaps{A}}$.
-\end{lemma}
-
-
- \subsubsection{Well-formed specs}
-\TODO{{ \red{TODO}} Need to say encapsulated }
-
-% PROBABLY NOT NEEDED -- KEEP PROVISIONALLY
-%\subsection{Weaker/Stronger Specifications}
-%
-%In   Fig.  \ref{fig:si} in the appendix we define the judgment  $\strongerI M  S  {S'} $, which expresses that the specification $S$ is stronger than the specification $S'$ under module $M$.  
-%
-%
-%\begin{lemma}
-%For all modules $M$, and specifications $S$ and $S'$, we have that
-%\begin{itemize}
-%\item
-% $\strongerI M  S  {S'}    \ \ \ \ \Longrightarrow\ \ \ \ \stronger M S {S'}'$ 
-%\item
-% $\vdash M S \equiv {S'}    \ \ \ \ \Longrightarrow\ \ \ \ \strongerEq M S {S'}$
-%\end{itemize}
-%\end{lemma}
-%
-%
-%We assume a specification look-up function $\specs {\_}$ which returns the specification of a module $M$.
-%We now define what it means for a module $M$ to promise a specification $S$:
-%
-%\begin{definition}
-%Given module $M$ and specification  $S$: %, $S'$:
-%\begin{itemize}
-%\item
-%$\promises M S$ \ \ \ \  iff \ \ \ \  ${\strongerI M {\specs M} {S}}$
-%\end{itemize}
-%\end{definition}
-%
-%\noindent
-%Note that $\promises M S$ is based on the {\emph{specification} of $M$, and does \emph{not} guarantee that  $M$ satisfies $S$.
+The judgment    $\promises M S$ expresses that $S$ is guaranteed by the module. 
+In particular, it allows   \emph{safe  renamings}. 
+These renamings are   a convenience, akin to the Barendregt convention, and  allow simpler Hoare rules for  method calls -- \cf Sect. \ref{s:calls}.
+\Cf Definition \ref{d:promises}.
 
 \subsection{First Phase: Triples}
-
-In  Fig. \ref{f:underly} we introduce our triples, of the form ${   \hproves{M}  {A} s {A'}}$. 
-These promise, as expected, that any execution of $s$ in a state that satisfies $A$ leads to a state that satisfies $A'$.
-These tuples only apply to statements that do not contain method calls.
-
- 
-\subsubsection{Extending an underlying Hoare Logic}
 
 
 \begin{figure}[tht]
@@ -307,15 +38,44 @@ $
 \begin{array}{c}
 % \begin{array}{lcl}
 \inferrule[\sc{extend}]
-	{ M \vdash_{ul} \{ \ A\ \} {\ stmt\ }\{\ A'\ \} \ \ \  stmt  \ \mbox{contains no method call} }
+	{ M \vdash_{ul} \{ \ A\ \} {\ stmt\ }\{\ A'\ \} \\
+	 stmt  \ \mbox{contains no method call} }
 	{\hproves{M}  {A} {\ stmt\ }{A'} } 
+% MOVED
 %	& &
-\\
-\inferrule[\sc{types-1}]
-	{  stmt \ \mbox{contains no method call, and no assignment to $x$} }
-	{\hproves{M}  {x:C} {\ stmt\ }{x:C} }
+%\inferrule[\sc{types-1}]
+%	{  stmt \ \mbox{contains no method call} \\
+%	stmt  \ \mbox{contains   no assignment to $x$}}
+%	{\hproves{M}  {x:C} {\ stmt\ }{x:C} }
 % \end{array}
-\\
+% \end{array}
+\end{array}
+ $
+\caption{Embedding underlying Hoare Loagic}
+\label{f:underly}
+\end{figure}
+ 
+\subsubsection{Embedding an underlying Hoare Logic}
+
+\begin{axiom}
+\label{ax:ul}
+{Assume   Hoare logic with judgements % of the form 
+\ $M \vdash_{ul} \{ A \} s \{ A' \}$, \ 
+so that $\Stable{A}$ and $\Stable{A'}$. }
+\end{axiom}
+
+
+In  Fig. \ref{f:underly} and \ref{f:protection} we introduce our triples, of the form ${   \hproves{M}  {A} s {A'}}$. 
+These promise, as expected, that any execution of $stmt$ in a state that satisfies $A$ leads to a state that satisfies $A'$.
+These tuples only apply to statements that do not contain method calls.
+
+With rule {{\sc{extend}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
+can be proven in the underlying Hoare logic, to also be proven in our logic. More in \ref{s:types}.
+ 
+
+\begin{figure}[tht]
+$
+\begin{array}{c}
 	{{\inferruleSD{\hspace{2.3cm} [\sc{prot-1}]}
 	{   stmt \ \mbox{contains no method call, and no assignment to $z$}
 	\\
@@ -326,7 +86,8 @@ $
 						{\  stmt \ }
 						{\  \inside{\re}\ }
 	}
-	}}
+}}
+\\
 % this onw ia wronf!!!
 %\\
 %	{{\inferruleSD{\hspace{2.3cm} [\sc{prot-2}]}
@@ -341,31 +102,32 @@ $
 %	}
 %	}}
 \\
-\\
-\\
-\mbox{\sdN{We had this rule, but I believe  that it is not sound when $y$=$z$, or $x$=$y$}}
-\\
-      {\inferruleSD{\hspace{5.3cm} [\sc{prot-????}]}
-	{ }
-	{\hproves{M} 
-						{\ \protectedFrom{x}{z} \ }
-						{\ y =y'.f\ }
-						{\ \protectedFrom{x}{z}\ }
-	}
-}
-
-\\
-\\
-\sdN{\mbox{Is his rule is subsumed by {\sc{Prot-1}}}}
-\\
-       {\inferruleSD{\hspace{5.3cm} [\sc{prot-???}]}
-	{ }
-	{\hproves{M} 
-						{\  \inside{x}\ \wedge \   \protectedFrom{x}{y'} \ }
-						{\ y.f=y'\ }
-						{\  \inside{x}\ }
-	}
-}	
+%\\
+%\mbox{\sdN{We had this rule, but I believe  that it is not sound when $y$=$z$, or $x$=$y$}}
+%\\
+%      {\inferruleSD{\hspace{5.3cm} [\sc{prot-????}]}
+%	{ }
+%	{\hproves{M} 
+%						{\ \protectedFrom{x}{z} \ }
+%						{\ y =y'.f\ }
+%						{\ \protectedFrom{x}{z}\ }
+%	}
+%}
+%
+%\\
+%\\
+%\sdN{\mbox{Is his rule is subsumed by {\sc{Prot-1}}}}
+%\\
+%       {\inferruleSD{\hspace{5.3cm} [\sc{prot-???}]}
+%	{ }
+%	{\hproves{M} 
+%						{\  \inside{x}\ \wedge \   \protectedFrom{x}{y'} \ }
+%						{\ y.f=y'\ }
+%						{\  \inside{x}\ }
+%	}
+%}	
+%\\
+%\\
 \\
 \\
         {\inferruleSD{\hspace{5.3cm} [\sc{prot-4}]}
@@ -378,34 +140,22 @@ $
 }	 
 \end{array}
  $
-\caption{Hoare triples -- incorporating underlying logic, types and protection}
-\label{f:underly}
+\caption{Triples -- protection}
 \label{f:protection}
 \end{figure}
 
 
 
-\begin{axiom}
-\label{ax:ul}
-{Assume   Hoare logic with judgements % of the form 
-\ $M \vdash_{ul} \{ A \} s \{ A' \}$, \ 
-so that $\Stable{A}$ and $\Stable{A'}$. }
-\end{axiom}
 
-% On top this, we define our extension, with shape ${   \hproves{M}  {A} s {A'}}$. 
-With rule {{\sc{extend}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
-can be proven in the underlying Hoare logic, to also be proven in our logic.
 
-% The rules for this extension appear in Figures \ref{f:protection}, \ref{f:calls} and \ref{f:substructural}.
 
-Moreover, rule {\sc{types-1}} promises that types of local variables do not change. The restriction to statements that do not contain method calls will be discussed with rule {\sc{types-2}} in the next section.
 
  
 
  \subsubsection{Reasoning about protection}
 
-{
-In Fig. \ref{f:protection} we also give rules about the preservation of protection.
+\red{ NEED CHECKING:
+In Fig. \ref{f:protection} we  give rules about the preservation of protection.
 In \textsc{Prot-1}, if $y$ is internal, then no new external object becomes locally reachable, and therefore $ \inside{x}$ is preserved;
 similarly, if the rhs of the assignment ($y'.f$) is not an alias of $x$, then no new unprotected route to $x$ is introduced, and therefore  $ \inside{x}$ is preserved.
 In \textsc{Prot-2}, the assignment $y=y'.f$ does not create a new route from $z$ to $x$, and therefore  $\protectedFrom{x}{z}$ is preserved.
@@ -431,11 +181,12 @@ $
 	{\hprovesN{M}  {A} {\ s\ }{A'} {A''} }
 \\
 \\
+% MOVED
 % THIS RULE IS NOT SOUND -- we need to adapt it
 %{
-\inferrule[\sc{types-2}]
-	{ \hprovesN{M}  {A} {\ s\ }  {A'} {A''}  }
-	{\hprovesN{M}  {x:C \wedge A} {\ s\ }  {x:C\wedge A'} {A''}}
+%\inferrule[\sc{types-2}]
+%	{ \hprovesN{M}  {A} {\ s\ }  {A'} {A''}  }
+%	{\hprovesN{M}  {x:C \wedge A} {\ s\ }  {x:C\wedge A'} {A''}}
 %}
 % \end{array}
 % \\
@@ -754,11 +505,11 @@ $
  has $A$ as its  pre-, post- and \midcond.}
  
  \vspace{.1cm}
-\red{
+
 \noindent
-\textbf{Implicit renamings} Again, we follow a form of Barendregt convention: In  {\sc{Method}}  we assume, wlog, that no free variable  in $A_1$   clashes with a variable  in $stmt$.
+\textbf{Implicit renamings} We follow a form of Barendregt convention: In  {\sc{Method}}  we assume, wlog, that no free variable  in $A_1$   clashes with a variable  in $stmt$.
 In {\sc{Invariant}} we assume, wlog, that none of
- $\overline x$ clash with  $\overline y$ or a variable  in $stmt$.}
+ $\overline x$ clash with  $\overline y$ or a variable  in $stmt$. 
 % : Any of $\overline x$  which clashes with $\ovelrine y$ or a variable  in $stmt$,   gets implicitly renamed  in the proof that $ {\hprovesN{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{y:D}\,  \overline{x:C}\, \wedge\,  \wedge\,  A\  } {\ stmt\ } {\ A\ } {\ A \ }  } $
 
 
