@@ -8,7 +8,7 @@ For this, we give a stronger, deeper meaning to our Hoare tuples  (Sect \ref{s:d
 % We give the usual meaning to the Hoare triples (Sect \ref{sect:HLmeans}), in a deep as well as shallow version,
 We prove soundness of of Hoare triples (Sect \ref{sect:prove:triples:sound}).
 We then show how execution starting from some external state can be summarised into purely external execution and terminating execution of public methods (Sect \ref{sect:termExecs}). We then use these decompositions and a well-founded ordering to prove soundness of our quadruples  (Sect \ref{sect:prove:sound:quadruples}), and %then 
-\se{finally} prove soundness of the overall system  (Sect \ref{sect:prove:triples:overall}). 
+{finally} prove soundness of the overall system  (Sect \ref{sect:prove:triples:overall}). 
 
 
 
@@ -20,10 +20,11 @@ As we saw in section \ref{s:viewAndProtect}, it is possible  for an assertion to
 This has implications for the appropriate meaning of Hoare tuples:
 
 \begin{example}
+\label{ex:motivate:deep}
 Assume state $\sigma_a$, such that $\interpret {\sigma_a} {\prg{this}}=o_1$, $\interpret {\sigma} {\prg{this}.f}=o_2$, $\interpret {\sigma} {x}=o_3$, $\interpret {\sigma} {x.f}=o_2$,  
 and $\interpret {\sigma} {x.g}=o_4$, where $o_2$ is external and all other objects are internal. 
 We then have $..,\sigma_a \models  \inside {o_4}$.
-Assume that $\sigma_a$   calls a method $x.m()$; then,
+Assume that the continuation of $\sigma_a$   consists of a method $x.m()$. Then,
 upon entry to that method, when we push the new frame, we have a state $\sigma_b$, which also satisfies $..,\sigma_a \models  \inside {o_4}$.
 Assume that the   body of $m$ is $\prg{this}.f.m1(\prg{this}.g); \prg{this}.f := \prg{this};  \prg{this}.g := \prg{this}$, and that the external method $m1$ stores in the 
 receiver a reference to the argument.
@@ -33,16 +34,23 @@ However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \n
  
 
 To address this problem, we introduce ``deep satisfaction'' of assertions $ \satDAssertFrom M  \sigma k   A$ which says that $A$ is satisfied in $\sigma$  in all frames of $\sigma$ from $k$ onwards, 
-\ie  $ \satDAssertFrom M  \sigma k   A$ iff $\sigma = ((\phi_1\cdot ... \phi_n), \chi)$ and $k\leq n$ and $\forall j. [\  k\leq j \leq n \ \rightarrow \ M, ((\phi_1\cdot ... \phi_j), \chi) \models A'\ ]$ where $A'$ is $A$ where all free variables have been substituted according to $\phi_n$ --
-\cf Def. \ref{def:restrict}.
-We then introduce `deep'' quadruples,   $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}$ , which promise that if $stmt$ executes in a state which satisfies $A$ from $k$ onwards, then, if it terminates, the final state will satisfy $A'$ from $k$ onwards, and also, all intermediate external states will satisfy $A''$ from $k$ onwards - \cf Def \ref{def:restrict}.
-\se{SUSAN: second satisfiesD should be satisfies?}
+\ie  $ \satDAssertFrom M  \sigma k   A$ iff $\sigma = ((\phi_1\cdot ... \phi_n), \chi)$ and $k\leq n$ and $\forall j. [\  k\leq j \leq n \ \Rightarrow \ M, ((\phi_1\cdot ... \phi_j), \chi) \models A'\ ]$ where $A'$ is $A$ where all free variables have been substituted according to $\phi_n$ -- \cf Def. \ref{def:restrict}.
+We then introduce ``deep'' quadruples,   $\satisfiesD {M} {\quadruple  {A} }   {\sigma}   {A'} {A''}$ , which promise that if $\sigma$ satisfies $A$ from $k$ onwards, then, and executes its continuation to termination, then the final state will satisfy $A'$ from $k$ onwards, and also, all intermediate external states will satisfy $A''$ from $k$ onwards - \cf Def \ref{def:restrict}.
+We define   $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''} $ and  $\satisfiesD {M} {S}$ accordingly.
 
-\begin{lemma}[Deep   vs Shallow Semantics]
-For all $M$, $A$, $A'$, $A''$, $stmt$, and $S$
+
+Thus. continuing with example \ref{ex:motivate:deep},  we have that $\satisfies {M} {\quadruple   {\inside {o_4}} }   {\sigma_b}   {\inside {o_4}}  {true} $, 
+ but \\ $\notSatisfiesD {M}   {\quadruple   {\inside {o_4}} }  {\sigma_b}   {\inside {o_4}}  {true}  $.
+In general, deep satisfaction is stronger than shallow satisfaction.
+ 
+\begin{lemma}[Deep   vs Shallow Satisfaction]
+For all $M$, $A$, $A'$, $A''$, $\sigma$, $stmt$, and $S$
 \begin{itemize}
 \item
- $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}   \ \ \ \Longrightarrow \ \ \   \satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}$
+ $\satisfiesD {M} {\quadruple  {A} }   {\sigma}   {A'} {A''}   \ \ \ \Longrightarrow \ \ \   \satisfies {M} {\quadruple  {A} }   {\sigma}   {A'} {A''}$
+
+\item
+ $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''}   \ \ \ \Longrightarrow \ \ \   \satisfies {M} {\quadruple  {A} }   {stmt}   {A'} {A''}$
 \item 
 $\satisfiesD {M} {S}  \ \ \ \Longrightarrow \ \ \ \satisfies {M} {S}$
 \end{itemize}
@@ -51,15 +59,7 @@ $\satisfiesD {M} {S}  \ \ \ \Longrightarrow \ \ \ \satisfies {M} {S}$
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Semantics of Hoare triples and quadruples}
-\label{sect:HLmeans}
-
-We  define the {\emph {meaning}} of  our Hoare triples, $\triple {A} {stmt} {A'}$,  in the usual way, \ie that execution of $stmt$ in a state that satisfies $A$ leads to a state which satisfies $A'$.  
-In addition to that, Hoare quadruples, $\quadruple {A} {stmt} {A'} {A''}$, promise that any external future states scoped by $\sigma$ will satisfy $A''$.
-We give both a weak and a shallow version of the semantics
-
-
-
+ 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Soundness of the Hoare Triples Logic}
@@ -67,10 +67,9 @@ We give both a weak and a shallow version of the semantics
 We start by requiring  that the supporting proof system for assertions and for encapsulation are sound.
 \begin{axiom}
 \label{lemma:axiom:enc:assert:ul}
-We assume two judgments, with the    form $M \vdash A$,  and $M \vdash \encaps{A}$, and which have the property that
+We assume a judgments, with the    form $M \vdash A$  which has the property that
 \begin{center}
-$M \vdash A $ \ \ \ \ implies \ \ \ \ $M \models A$.\\
- $M \vdash \encaps{A} $ \ \ \ \ implies \ \ \ \ $M \models \encaps{A}$.
+$M \vdash A $ \ \ \ \ implies \ \ \ \ $\forall \sigma.M, \sigma \models A$.\\
  \end{center}
 \end{axiom}
 
@@ -86,13 +85,6 @@ For all $A$, $A'$, $stmt$:\ \ \  {$M\ \vdash_{ul}\  \triple A {stmt} {A'}  \ \ \
 We first prove soundness of the inference system for triples $M \vdash  \triple A {stmt} {A'} $:
 
  
-\begin{auxLemma}
-\label{l:no:call}
-For any module $M$, assertions $A$, $A'$ and $A''$, and statement $stmt$ which does not contain any method calls:
-\begin{center}
-$  \satisfiesD {M} {\triple {A} {stmt} {A'} }  \ \ \Longrightarrow\ \  \satisfiesD {M} {\quadruple {A} {stmt} {A'} {A''}}$
-\end{center}
-\end{auxLemma}
  
 
 
@@ -106,37 +98,7 @@ $M\ \vdash\  \triple A {stmt} {A'}  \ \ \ \  \Longrightarrow  \ \ \ \ \satisfies
 \end{Theorem}
  
 
-\noindent
-\vspace{.2cm}
- {\textbf{Proof Sketch}} 
-The proof goes by case analysis over the rule applied to obtain $M \vdash \{ A \}\ stmt \  \{ A' \} $:
 
-\begin{description} 
-
-\item[${\sc{extend}}$] 
-By  soundness of the underlying Hoare logic (axiom \ref{ax:ul:sound}), we obtain that  $M\ \models\ \triple {A} {stmt}   {A'}$.
-By axiom \ref{ax:ul} we also obtain that $\Stable{A}$ and  $\Stable{A'}$. 
-This, together with   Lemma \ref{l:shallow:deep}, part \ref{shallow:to:deep}, gives us that
-$\satisfiesD {M} {\triple {A} {stmt} {A'} }$. 
-By the assumption of {\sc{extend}}, $stmt$ does not contain any method call. Rest follows by lemma \ref{l:no:call}.
-
-\item[${\sc{types-1}}$] 
-
-Follows from type system, the assumption of {\sc{types-1}} and lemma \ref{l:no:call}.
-
-\item[${\sc{prot-1}}$]  
-Therefore, $A \txteq ....$ and $A' \txteq ....$  and $stmt \txteq y=y'.f$ .... TODO: write rest of proof ...
-Rest follows by lemma \ref{l:no:call}.
-\item[${\sc{prot-2}}$] ... Rest follows by lemma \ref{l:no:call}.
-
-\item[${\sc{prot-3}}$] ... Rest follows by lemma \ref{l:no:call}.
-
-\item[${\sc{prot-4}}$] ... Rest follows by lemma \ref{l:no:call}.
-
-\end{description}
-\noindent
-\vspace{.1cm}
-{\textbf{End Proof Sketch}} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Lemmas about protection}
