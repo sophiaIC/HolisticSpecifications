@@ -62,7 +62,7 @@ $\satisfiesD {M} {S}  \ \ \ \Longrightarrow \ \ \ \satisfies {M} {S}$
 
 \subsection{Soundness of the Hoare Triples Logic}
 
-We require  that the supporting proof system for assertions ,$M\vdash A$, and the  underlying Hoare logic ,$M\ \vdash_{ul}\  \triple A {stmt} {A'}$, are sound:
+We require  that the supporting proof system for assertions, $M\vdash A$, and the  underlying Hoare logic, $M\ \vdash_{ul}\  \triple A {stmt} {A'}$, are sound:
 \begin{axiom}
 \label{lemma:axiom:enc:assert:ul}
 \label{ax:ul:sound}
@@ -103,10 +103,49 @@ $M\ \vdash\  \triple A {stmt} {A'}  \ \ \ \  \Longrightarrow  \ \ \ \ \satisfies
 
 
 
-\subsection{Soundness of the Hoare Quadruples}
+\subsection{Soundness of the Hoare Quadruples, and of the overall System}
+
+For the soundness proof of our quadruples we need to address two challenges. 
+First, that we need to apply induction on the execution, as well as on the Hoare logic proof. 
+Second, that execution of an external call may consist os any number of external steps, interleaved with calls of public, internal methods, which in their turn may may make external calls, leading to further calls of public methods.
+
+
+We address the first challenge  through the definition of a well-founded ordering (\cf Section \ref{sect:prove:wellfounded}). 
+We address the second challenge by introducing summarized executions, which essentially collapse all oublic, internal method calls into one large step (\cf Section \ref{sect:termExecs}).
+
+\subsubsection{A well-founded ordering}
+\label{sect:prove:wellfounded}
+
+ 
+\begin{definition}
+For a module $M$, and modules $\Mtwo$,   we define a measure, $\measure {A, \sigma,A',A''} {M,\Mtwo} $, and based on it, a well founded ordering $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5,A_6)$
+as follows:
+\begin{itemize}
+\item
+ $\measure {A, \sigma,A',A''} {M,\Mtwo} \  \ \triangleq \ \  (m, n)$,  \ \ \  where
+\begin{itemize}
+\item
+$m$ is the minimal number of execution steps so that $ \leadstoBoundedStarFin {M\cdot \Mtwo} {\sigma}    {\sigma'}$  for some $\sigma'$, {and $\infty$ otherwise}.
+ \item
+  $n$ is minimal depth of all proofs of $M \vdash \quadruple {A} {\sigma.\prg{cont}} {A'} {A''} $.
+\end{itemize}
+ \item
+ $(m,n) \ll (m',n')$\ \  \ \ $\triangleq$ \ \  \ \ $ m<m'\vee  (m=m'  \wedge n < n')   $.
+\item
+$(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$  \  \  $\triangleq$ \ \ 
+$\measure {A_1, \sigma_1,A_2, A_3} {M,\Mtwo}  \ll \measure {A_4, \sigma_2,A_5. A_6} {M,\Mtwo} $
+\end{itemize}
+\end{definition}
+ 
+
+
+\begin{auxLemma}
+\label{lemma:normal:two}
+For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-founded.
+\end{auxLemma}
 
 %%%%%%%%%%%%%%%%%%%%%%% S U M M A R I E S of exectuon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-\subsection{Summarised  execution} 
+\subsubsection{Summarised  execution} 
 \label{sect:termExecs}
 
 In this subsection we prove auxiliary lemmas that allow us to decompose execution into its constituent parts. 
@@ -294,42 +333,7 @@ TOTHINK: Do we also need that $A$ is a module invariant?
 
 
 
-\subsection{A well-founded ordering}
-\label{sect:prove:wellfounded}
 
-We will prove soundness by well-founded induction.
-% \footnote{This kind of induction is described in \texttt{https://en.wikipedia.org/wiki/Well-founded\_relation.}}
-We start by designing a well--founded ordering. 
-
-
-
-{
-\begin{definition}
-For a module $M$, and modules $\Mtwo$,   we define a measure, $\measure {A, \sigma,A',A''} {M,\Mtwo} $, and based on it, a well founded ordering $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5,A_6)$
-as follows:
-\begin{itemize}
-\item
- $\measure {A, \sigma,A',A''} {M,\Mtwo} \  \ \triangleq \ \  (m, n)$,  \ \ \  where
-\begin{itemize}
-\item
-$m$ is the minimal number of execution steps so that $ \leadstoBoundedStarFin {M\cdot \Mtwo} {\sigma}    {\sigma'}$  for some $\sigma'$, {and $\infty$ otherwise}.
- \item
-  $n$ is minimal depth of all proofs of $M \vdash \quadruple {A} {\sigma.\prg{cont}} {A'} {A''} $.
-\end{itemize}
- \item
- $(m,n) \ll (m',n')$\ \  \ \ $\triangleq$ \ \  \ \ $ m<m'\vee  (m=m'  \wedge n < n')   $.
-\item
-$(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$  \  \  $\triangleq$ \ \ 
-$\measure {A_1, \sigma_1,A_2, A_3} {M,\Mtwo}  \ll \measure {A_4, \sigma_2,A_5. A_6} {M,\Mtwo} $
-\end{itemize}
-\end{definition}
-}
-
-
-\begin{auxLemma}
-\label{lemma:normal:two}
-For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-founded.
-\end{auxLemma}
 
 %%%
 
