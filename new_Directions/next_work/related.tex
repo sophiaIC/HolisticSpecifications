@@ -110,65 +110,6 @@ over sets of states.
 Hyper-logics increase the power of the specification language although
 at the cost of making the language more complex.
 
-% \paragraph{Guarantee Reasoning}
-
-Rely-Guarantee
-\cite{relyGuarantee-HayesJones-setss2017,relyGuarantee-vanStaden-mpc2015}
-and Deny-Guarantee \cite{DenyGuarantee} %reasoning techniques
-distinguish between assertions guaranteed by a thread, and those a
-thread can reply upon.% (rely-guarantee)% or actions denied to all other
-%threads (deny-guarantee, where the ``deny'' condition limits access to
-%some state to a particular thread, i.e.\ a thread can rely that other
-%threads will not write to the denied state).
-%}
-Assume-guarantee
-reasoning, especially circular
-assume-guarantee  \cite{circular-assume-guarantee-fm2015} evinces
-% another commonality with our work here:
-the main reason callbacks
-are hard to handle: circular control flow can lead
-all too easily towards circular reasoning.
-%%%
-Our Hoare quadruples are (roughly) Hoare triples plus 
-%that we use in our work are clearly related to
-the ``guarantee'' portion of rely-guarantee.
-When a
-specification includes a guarantee, that guarantee must be maintained
-by every ``atomic step'' in an execution
-\cite{relyGuarantee-HayesJones-setss2017}, rather than just at method
-boundaries as in visible states semantics
-\cite{MuellerPoetzsch-HeffterLeavens06,DrossoFrancaMuellerSummers08,considerate}.
-%Liquid information flow \cite{liquid-infoflow-icfp2020} and liquid
-%resource types \cite{} are likewise similar to the work in this paper.
-%
-In concurrent reasoning,% the original domain of Rely- and
-%Deny-Guarantee reasoning,
-this is because shared state may be accessed
-by another co{\"o}perating thread at any time:
-%not just outside method
-%execution boundaries:
-while in our case, it is because unprotected
-state may be accessed by an untrusted component within the same
-thread.  Guarantees correspond to our
-properties that must be preserved by all code linked to the current
-module. Deny-guarantee assumes
-co{\"o}peration:
-%composition is legal only if threads adhere to their guarantees,
-while we use these ``guarantees'' precisely to
-ensure our code can interoperate safely with external untrusted code.
-%irrespective of whatever the untrusted code does.
-
-
-
-
-
-
-
-
-
-%% s case studies of
-%% twelve Solidity contracts.
-%% %\textbf{(ideally also say something about proof status) 
 
 
 
@@ -181,7 +122,9 @@ ensure our code can interoperate safely with external untrusted code.
 
 
 
-\paragraph{Defensive Consistency}
+
+
+%\paragraph{Defensive Consistency}
 
 %cute but wrong.
 %To misparaphrase Tolstoy, secure systems are all alike;
@@ -213,139 +156,192 @@ easier to make guarantees about systems composed of multiple components
 
 
 
-
-
 \citet{CassezFQ24} illustrates one approach to ensuring defensive
-consistency while handling external calls in the context of the Dafny
-verifier. The key idea is that external callbacks (outgoing external
-calls that themselves make re{\"e}ntrant incoming calls) are
-necessarily restricted to the public interface of the module to be
-verified.  This technique replaces actual external calls with a
-generated \texttt{externalcall()} method, where that method
-nondeterministically issues a sequence of calls to the module's public
-interface.  This means that in order to verify their code, programmers
-must ensure that no such sequence of external calls will break their
-invariants, and provide enough information for Dafny to accept that
-proof.
+consistency while handling external calls.
+%in the context of the Dafny verifier.
+Given that 
+%The key idea is that
+external callbacks
+%(outgoing external calls that themselves make re{\"e}ntrant incoming calls)
+are
+necessarily restricted to the public interface of the module
+% to be verified, 
+external callsites are replaced 
+with a
+generated \texttt{externalcall()} method that 
+nondeterministically invokes
+%
+%issues a sequence of callsf to the module's\
+that 
+public
+interface ---
+ensuring that any 
+%This means that in order
+%To verify their code, programmers
+%must ensure that no
+sequence of external calls will maintain the
+invariants.
+
+%and provide enough information for Dafny to accept that proof.
 
 \citet{iris-wasm-pldi2023}'s Iris-Wasm follows a similar approach,
 %%similar to Cassez which is why this is here 
-to enforce 
-modularity in a formal model of WASM built in Iris.  WASM has the
-advantage that its modules are very losely coupled --- each module
-instantiation has its own byte memory and object table that, by default,
-cannot themselves be shared between modules; byte memory stores bytes,
-and object tables stores opaque references to closures and operating
-system handles. Iris-Wasm builds on this to ensure module can omly be
-accessed via their explicitly exported interfaces.
+%% to enforce 
+%% modularity in a formal model of WASM built in Iris.
+WASM's
+%% has the
+%% advantage that its
+modules are very loosely coupled --- a module
+%instantiation has its own
+has its own byte memory
+(stores only bytes) 
+and object table
+(stores opaque references to closures and external handles).
+%
+%% that
+%% are generalltion not shared between modules; byte memory stores bytes,
+%% and object tables
+%
+Iris-Wasm thus ensures models 
+ecan only be
+modified via their explicitly exported interfaces.
+%
+Likewise, Rich-Ethereum \cite{rich-specs-smart-contracts-oopsla2021}
+replies on Ethereum's intrinsic modularity:
+contract's fields are instance-private
+%% (as in Smalltalk, each object can only
+%% assign to fields which are its very own).  ,
+and unaliased.
+%intercontract aliasing is prohibited
+%by the underlyiung infrastructure.
+A per-contract ``finished'' flag
+%, effectively a latch obeying a
+%5``write-once-after-initialisation'' modelled
+manages callbacks and termination.
+%
+Both appproaches depend on
+% both rely on significantly more
+environments which support encapsulation:
+%% impmore lementations than our take on the open world, where
+%% interobject references are unconstrainted.
+%% In our approach,
+we show how unrestricted references to mutable objects can be protected
+t%by the emergent
+%behaviour of a module's code, i.e.\
+by programmer discipline,
+and that disciplline trusted, then verified.
 
-Rich-Ethereum \cite{rich-specs-smart-contracts-oopsla2021} relies on similar
-properties of Ethereum smart contracts: objects' fields,
-or rather contract's fields, 
-are instance-private (as in Smalltalk, each object can only
-assign to fields which are its very own).  , and again intercontract aliasing is prohibited
-by the underlyiung infrastructure.  A per-cofntract ``finisheed''
-flag, effectively a latch obeying a
-5``write-once-after-initialisation'' modelled to manage callbacks and
-termination.  These appproaches both rely on significantly more
-supportive implementations than our take on the open world, where
-interobject references are unconstrainted.
-In our approach, references must be protected by the emergent
-behaviour of a module's code, i.e.\  by programmer discipline ---
-albeit a discipline reffied with our protection constructs and
-consequently succeptible to verificaiton.
+%% albeit a discipline reifird with our protection constructs and
+%% consequently succeptible to verificaiton.
 
 
 
 
 
 
-\paragraph{Verification of Object Capability Programs}
+%\paragraph{Verification of Object Capability Programs}
 
 
 %%\paragraph{Object Capabilities and Sandboxes.}
 
-{{\em Capabilities} as a means to support the development of concurrent and distributed system  were developed in the 60's
-by Dennis and Van Horn \cite{Dennis66}, and were adapted to the
-programming languages setting in the 70's \cite{JamesMorris}. 
-{\em Object capabilities} were first introduced~\cite{MillerPhD} in the early 2000s},
- and many recent % work attempts to manage
-studies manage
-to verify  safety or correctness of object capability programs.
-Google's Caja \cite{Caja} applies   sandboxes, proxies, and wrappers
+
+
+%% {{\em Capabilities} as a means to support the development of concurrent and distributed system  were developed in the 60's
+%% by Dennis and Van Horn \cite{Dennis66}, and were adapted to the
+%% programming languages setting in the 70's \cite{JamesMorris}. 
+%% {\em Object capabilities} were first introduced~\cite{MillerPhD} in the early 2000s},
+%%  and many recent % work attempts to manage
+%% studies manage
+%% to verify  safety or correctness of object capability programs.
+
+
+Google's Caja \cite{Caja} applies
+(object-)capabilities \cite{Dennis66,JamesMorris,MillerPhD}, 
+sandboxes, proxies, and wrappers
  to limit components'
 access to \textit{ambient} authority.
 % --- that is, capabilities that
 %can be obtained from the wider environment, rather than being granted
 %to a component explicitly.
 Sandboxing has been validated
-55formally: Maffeis et al.\ \cite{mmt-oakland10} develop a model of
-JavaScript, demonstrate that it obeys two principles of
-object capability systems
+formally % Maffeis et al.\
+\cite{mmt-oakland10} 
+%develop a model of
+%JavaScript, demonstrate that it obeys two principles of
+%object capability systems
 %  (``connectivity begets connectivity'' and
 %``no authority amplification''), and then % uses these principles to
-and show  how untrusted applications can be prevented from interfering with
-the rest of the system. 
-Recent programming languages % and web systems
+%and show  how untrusted applications can be prevented from interfering with
+%the rest of the system.
+and 
+recent programming languages % and web systems
 \cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14} including Newspeak
 \cite{newspeak17}, Dart \cite{dart15}, Grace \cite{grace,graceClasses}
 and Wyvern \cite{wyverncapabilities} have adopted the object
 5capability model.`
 
 
+\citet{Murray10dphil} made the first attempt to formalise defensive
+consistency, based on counterfactual causation~\cite{Lewis_73}
+to tolerate interacting with any untrustworthy object,
+although
+%
+%% an object is defensively
+%% consistent when the addition of untrustworthy clients cannot cause
+%% well-behaved clients to be given incorrect service.
+%
+%% Murray formalised
+%% defensive consistency very abstractly, over models of (concurrent)
+%% object-capability systems in the process algebra
+%% CSP~\cite{Hoare:CSP},
+%
+without a specification language for describing effects (i.e.\ what it
+means for an object to be correct).
+%% , such as what
+%% it means for an object to provide incorrect service.  Both Miller and
+%% Murray's definitions are intensional, describing what it means for an
+%% object to be defensively consistent.
 
-Murray made the first attempt to formalise defensive consistency and
-correctness~\cite{Murray10dphil}.  Murray's model was rooted in
-counterfactual causation~\cite{Lewis_73}: an object is defensively
-consistent when the addition of untrustworthy clients cannot cause
-well-behaved clients to be given incorrect service.  Murray formalised
-defensive consistency very abstractly, over models of (concurrent)
-object-capability systems in the process algebra CSP~\cite{Hoare:CSP},
-without a specification language for describing effects, such as what
-5it means for an object to provide incorrect service.  Both Miller and
-Murray's definitions are intensional, describing what it means for an
-object to be defensively consistent.
 
-
-\citet{capeFTfJP,capeFTfJP14} have
-analysed \citet{MillerPhD}'s Mint and Purse example 
-% SD Chope details by
-% expressing it in Joe-E 
-% a Java subset without reflection and static
-%fields, 
-%and in Grace \cite{capeFTfJP14}, 
-and discussed the six
-capability policies 
-% that characterise the correct behaviour of the
-% program, 
-as proposed by \citet{MillerPhD}.
-%We argued that these policies require a novel
-%approach to specification, and showed some first ideas on how to use
-%temporal logic.
-%  an unpublished technical report
-\citet{WAS-OOPSLA14-TR} %, {they} % Drossopoulou and Noble
-sketched a  specification language,  \sd{used}  it to  
-specify the six policies from \cite{MillerPhD}, % however,
-%{their} partial formalisation showed that % they allowed
-\sd{showed} that several possible interpretations were possible, %.  They also 
-\sd{and} uncovered
-the need for another four further policies.
-%  and formalised them as well, showing how different implementations of the underlying Mint and Purse
-% systems coexist with different policies \cite{capeIFM14},
-They also
-  sketched how 
-a trust-sensitive 
-example (the escrow exchange) could be verified in an open world
-\cite{swapsies}. 
-% In contrast, our work focuses on the semantics of the  \Chainmail\ specification
-% language and how it can be used to provide holistic specifications for
-% robust programs.
-%% \sd{Their work does not support the concepts of control, time, or space, as in \Chainmail,
-%%   but it offers a primitive expressing trust.}
+%% %% \citet{capeFTfJP,capeFTfJP14} have
+%% %% analysed \citet{MillerPhD}'s Mint and Purse example 
+%% %% % SD Chope details by
+%% %% % expressing it in Joe-E 
+%% %% % a Java subset without reflection and static
+%% %% %fields, 
+%% %% %and in Grace \cite{capeFTfJP14}, 
+%% %% and discussed the six
+%% %% capability policies 
+%% %% % that characterise the correct behaviour of the
+%% %% % program, 
+%% %% as proposed by \citet{MillerPhD}.
+%% %% %We argued that these policies require a novel
+%% %% %approach to specification, and showed some first ideas on how to use
+%% %% %temporal logic.
+%% %% %  an unpublished technical report
+%% %% \citet{WAS-OOPSLA14-TR} %, {they} % Drossopoulou and Noble
+%% %% sketched a  specification language,  \sd{used}  it to  
+%% %% specify the six policies from \cite{MillerPhD}, % however,
+%% %% %{their} partial formalisation showed that % they allowed
+%% %% \sd{showed} that several possible interpretations were possible, %.  They also 
+%% %% \sd{and} uncovered
+%% %% the need for another four further policies.
+%% %% %  and formalised them as well, showing how different implementations of the underlying Mint and Purse
+%% %% % systems coexist with different policies \cite{capeIFM14},
+%% %% They also
+%% %%   sketched how 
+%% %% a trust-sensitive 
+%% %% example (the escrow exchange) could be verified in an open world
+%% %% \cite{swapsies}. 
+%% %% % In contrast, our work focuses on the semantics of the  \Chainmail\ specification
+%% %% % language and how it can be used to provide holistic specifications for
+%% %% % robust programs.
+%% %% %% \sd{Their work does not support the concepts of control, time, or space, as in \Chainmail,
+%% %% %%   but it offers a primitive expressing trust.}
 
  
-Some more recent work is particularly relevant to proof of properties
-of programs employing object capabilities in this open world.
+%% Some more recent work is particularly relevant to proof of properties
+%% of programs employing object capabilities in this open world.
 
 % SWASSEY 18 garg dreyer
 
@@ -799,13 +795,97 @@ which then call back into our verified and trusted components.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% % % % % % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %
+% \paragraph{Guarantee Reasoning}
+
+Rely-Guarantee
+\cite{relyGuarantee-HayesJones-setss2017,relyGuarantee-vanStaden-mpc2015}
+and Deny-Guarantee \cite{DenyGuarantee} %reasoning techniques
+distinguish between assertions guaranteed by a thread, and those a
+thread can reply upon.% (rely-guarantee)% or actions denied to all other
+%threads (deny-guarantee, where the ``deny'' condition limits access to
+%some state to a particular thread, i.e.\ a thread can rely that other
+%threads will not write to the denied state).
+%}
+Assume-guarantee
+reasoning, especially circular
+assume-guarantee  \cite{circular-assume-guarantee-fm2015} evinces
+% another commonality with our work here:
+the main reason callbacks
+are hard to handle: circular control flow can lead
+all too easily towards circular reasoning.
+%%%
+Our Hoare quadruples are (roughly) Hoare triples plus 
+%that we use in our work are clearly related to
+the ``guarantee'' portion of rely-guarantee.
+When a
+specification includes a guarantee, that guarantee must be maintained
+by every ``atomic step'' in an execution
+\cite{relyGuarantee-HayesJones-setss2017}, rather than just at method
+boundaries as in visible states semantics
+\cite{MuellerPoetzsch-HeffterLeavens06,DrossoFrancaMuellerSummers08,considerate}.
+%Liquid information flow \cite{liquid-infoflow-icfp2020} and liquid
+%resource types \cite{} are likewise similar to the work in this paper.
+%
+In concurrent reasoning,% the original domain of Rely- and
+%Deny-Guarantee reasoning,
+this is because shared state may be accessed
+by another co{\"o}perating thread at any time:
+%not just outside method
+%execution boundaries:
+while in our case, it is because unprotected
+state may be accessed by an untrusted component within the same
+thread.  Guarantees correspond to our
+properties that must be preserved by all code linked to the current
+module. Deny-guarantee assumes
+co{\"o}peration:
+%composition is legal only if threads adhere to their guarantees,
+while we use these ``guarantees'' precisely to
+ensure our code can interoperate safely with external untrusted code.
+%irrespective of whatever the untrusted code does.
+
+% % % % % % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
 %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
-
-
-
-
-
 
 
 \paragraph{Protection vs.\ Ownership}
@@ -870,3 +950,7 @@ and object instances. Although these approaches do not directly
 support e.g.\ concepts analogous to our notion of protection,
 they accumulate more than enough infomation, and expressing protection
 in one or more of these frameworks could be fruitful future work.
+
+
+%%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
+%%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
