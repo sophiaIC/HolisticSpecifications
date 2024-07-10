@@ -116,9 +116,8 @@ We address the second challenge by introducing summarized executions, which esse
 \subsubsection{A well-founded ordering}
 \label{sect:prove:wellfounded}
 
-We define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to terminations in fewer steps than $\sigma_2$ (we consider   scoped exercution,
-\ie execution of the continuation of the top frames, and consider the shortest terminating execution), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
-is shallower than the the proof of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_5} $ (we consider the shallowest possible proofs). Full Def. in \ref{def:measure}.
+We define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to terminations in fewer steps than $\sigma_2$ considering the shortest, terminating scoped execution), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
+is shallower than the the proof of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_6} $ (considering the shallowest possible proofs). Full Def. in \ref{def:measure}.
 
  
 
@@ -136,7 +135,9 @@ For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-fo
 
 In this subsection we prove auxiliary lemmas that allow us to decompose execution into its constituent parts. 
 These summaries are useful in the proof of Theorem \ref{t:quadruple:sound}, when we consider sequences of statements, and also method calls.
-We first define two shorthands \se{SUSAN: only one shorthand here}
+
+
+% We first define two shorthands \se{SUSAN: only one shorthand here}
  
 \begin{definition}
 We use the form
@@ -201,8 +202,6 @@ For any module $M$  where $M$ is the internal module, external modules $\Mtwo$, 
 {
 $
 \begin{cases}
-% we do not need external for the trivial case
-% M, \sigma  \models  \extThis\, \wedge\,  
 \sigma=\sigma' \, \wedge\,  \EarlierS  {\sigma\bd}  {\sigma} \, \wedge\,  \EarlierS  {\sigma\bd}  {\sigma''}\ \ \ \ \ \vee\\
 \exists \sigma''[\,  \leadstoBoundedThree {\Mtwo\cdot M} {\sigma}  {\sigma\bd}   {\sigma''} \  \wedge\  M, \sigma  \models  \extThis\  \wedge\ 
 {\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma''}  {\sigma'}}\, ]
@@ -231,6 +230,61 @@ $
 \end{itemize}
 \end{definition}
 
+For illustration of these definitions, consider  Fig. \ref{fig:summaries}: 
+The  execution $ \leadstoBoundedStarFin {\Mtwo\cdot M}    {\sigma_2}  {\sigma_{30}}$ consists of 4 calls to external objects,
+and 3 calls to internal objects.
+The calls to external objects are from $\sigma_2$ to $\sigma_3$,  from $\sigma_3$ to $\sigma_4$, from $\sigma_9$ to $\sigma_{10}$, 
+and  from $\sigma_{16}$ to $\sigma_{17}$.
+ The calls to internal objects are from $\sigma_5$ to $\sigma_6$, rom $\sigma_7$ to $\sigma_8$, and from $\sigma_{21}$ to $\sigma_{23}$. 
+ 
+We can see the following execution summaries:
+\begin{enumerate}
+\item
+${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_3}  {\sigma_5}}$\\
+Namely,  execution from $\sigma_3$ to $\sigma_5$ is scoped by $\sigma_3$, and  only involves external states.  
+\item
+${\WithPub {\Mtwo\cdot M}    {\sigma_5}  {\sigma_{20}} {\sigma_{6}}}$.\\
+Namely, the public method call from the external state $\sigma_5$ into the internal state $\sigma_6$ leads to $\sigma_{20}$. 
+Note that execution summarises two  internal method executions ($\sigma_{6}-\sigma_{19}$, and $\sigma_8-\sigma_{14}$),
+and two internal method executions ($\sigma_{6}-\sigma_{19}$, and $\sigma_8-\sigma_{14}$).
+\item
+ ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{20}}  {\sigma_{21}}}$.
+ \item
+${\WithPub {\Mtwo\cdot M}    {\sigma_{21}}  {\sigma_{25}} {\sigma_{23}}}$.\\
+A  public method call from an external state ${\sigma_{21}}$ into internal state $\sigma_{23}$, and returning to external state $\sigma_25$
+ \item
+  ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{25}}  {\sigma_{28}}}$.
+  \\
+  Purely external execution, scoped by ${\sigma_3}$
+\end{enumerate}
+
+
+
+
+ \begin{figure}[htb]
+\begin{tabular}{lc|cl}
+\strut \hspace{1.4cm}  original execution:
+& & &
+\strut \hspace{1.4cm}  summarised execution:
+ \\
+\resizebox{6.2cm}{!}
+{
+\includegraphics[width=\linewidth]{diagrams/summaryA.png}
+} 
+& & &
+\resizebox{6.2cm}{!}
+{
+\includegraphics[width=\linewidth]{diagrams/summaryB.png}
+} 
+\end{tabular}
+   \caption{Summaries. 
+   }
+   \label{fig:summaries}
+ \end{figure}
+ 
+
+For illustration of our lemma \ref{lemma:external_breakdown:term}, we consider, again,  Fig. \ref{fig:summaries}: 
+
  
  \begin{auxLemma}
 \label{lemma:external_breakdown:term}[Summarised Executions]
@@ -252,29 +306,10 @@ $
 \end{itemize}
 \end{auxLemma}
  
- 
- \begin{figure}[htb]
-\begin{tabular}{lcl}
-\strut \hspace{1cm}  original execution:
-& &
-\strut \hspace{1cm}  summarised execution:
- \\
-\resizebox{6.2cm}{!}
-{
-\includegraphics[width=\linewidth]{diagrams/summaryA.png}
-} 
-& &
-\resizebox{6.2cm}{!}
-{
-\includegraphics[width=\linewidth]{diagrams/summaryB.png}
-} 
-\end{tabular}
-   \caption{Summaries. 
-   }
-   \label{fig:summariesNew}
- \end{figure}
 
-The lemma  \ref{lemma:external_exec_preserves_more} describes how an encapsulated assertion $A$ is preserved during an execution, provided that all finalizing internal executions preserved it. 
+
+The lemma  \ref{lemma:external_exec_preserves_more} describes how an encapsulated assertion $A$ is preserved during an execution, 
+provided that all finalising internal executions preserved it. 
 It will be used in the proof of soundness of the rule {\sc{ExtCall\_WithSpec\_Weak}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
 
 
@@ -318,10 +353,6 @@ TOTHINK: Do we also need that $A$ is a module invariant?
 
 
 
-
-
-
-%%%
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
