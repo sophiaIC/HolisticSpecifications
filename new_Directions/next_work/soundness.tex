@@ -105,13 +105,13 @@ $M\ \vdash\  \triple A {stmt} {A'}  \ \ \ \  \Longrightarrow  \ \ \ \ \satisfies
 
 \subsection{Soundness of the Hoare Quadruples, and of the overall System}
 
-For the soundness proof of our quadruples we need to address two challenges. 
+For the soundness proof of our quadruples we need to address two challenges:
 First, that we need to apply induction on the execution, as well as on the Hoare logic proof. 
 Second, that execution of an external call may consist os any number of external steps, interleaved with calls of public, internal methods, which in their turn may may make external calls, leading to further calls of public methods.
 
 
 We address the first challenge  through the definition of a well-founded ordering (\cf Section \ref{sect:prove:wellfounded}). 
-We address the second challenge by introducing summarized executions, which essentially collapse all oublic, internal method calls into one large step (\cf Section \ref{sect:termExecs}).
+We address the second challenge by introducing summarised executions, which essentially collapse all public, internal method calls into one large step (\cf Section \ref{sect:termExecs}).
 
 \subsubsection{A well-founded ordering}
 \label{sect:prove:wellfounded}
@@ -133,59 +133,55 @@ For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-fo
 \subsubsection{Summarised  execution} 
 \label{sect:termExecs}
 
-In this subsection we prove auxiliary lemmas that allow us to decompose execution into its constituent parts. 
-These summaries are useful in the proof of Theorem \ref{t:quadruple:sound}, when we consider sequences of statements, and also method calls.
+In this subsection we prove auxiliary lemmas that allow us to summarise execution into  constituent parts, which are useful for the proof of soundness of our quadruples, Theorem \ref{t:quadruple:sound}, when we consider sequences of statements, and also method calls.
 
-
-% We first define two shorthands \se{SUSAN: only one shorthand here}
- 
-\begin{definition}
-We use the form
-$M, \sigma \models \pubMeth$ to expresse that the currently executing method is public.\footnote{This can be done by looking in the caller's frame -- ie the one right under the topmost frame -- the class of the current receiver and the name of the currently executing method, and then looking up the method definition in the module $M$; if not defined there, then it is not \prg{public}. }
-Note that $\pubMeth$ is not part of the assertion language.
-\end{definition}
+%We prove some unsurprising 
+% DO we need it?
+%Lemma \ref{lemma:encl:tem} guarantees that any state reachable from a state with a terminating execution has itself a terminating execution, and that this execution is enclosed in the original one:
+ Lemma \ref{lemma:subexp} makes the usual guarantee about terminating execution of statement sequences.
  
 
 
 \label{sect:termExecs}
 
- 
-Lemma \ref{lemma:encl:tem} guarantees that any state reachable from a state with a terminating execution has itself a terminating execution, and that this execution is enclosed in the original one:
- 
- \begin{auxLemma}[Enclosed Terminating Executions]\footnoteSD{TODO find better name for the aux lemma}
- \label{lemma:encl:tem}
- For   modules $\Mtwo$,   states $\sigma$, $\sigma'$, $\sigma_1$:
-\begin{itemize}
-\item
-$  \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'} \  \wedge \  \leadstoBoundedStar  {\Mtwo}  {\sigma}  {\sigma_1} 
-% $\\ $
-\ \ \  \Longrightarrow\ \ \  % $\\ $  
- \exists \sigma_2.[\ \ \leadstoBoundedStarFin {\Mtwo} {\sigma_1}  {\sigma_2}  
-\ \wedge\ 
-\leadstoBoundedStarThree  {\Mtwo}  {\sigma_2}  {\sigma}   {\sigma'} \ \ ]$
-\end{itemize}
+The challenge in the proof of soundness of our quadruples, Theorem \ref{t:quadruple:sound} is the proof of external calls. 
+Namely, an external call may eventually call any number of public, internal, methods, which , in turn, may make further external calls.
+Thus, an external call will involve several internal and external states.
 
-\end{auxLemma} 
+
+\begin{tabular}{lll}
+\begin{minipage}{.45\textwidth}
+Such an execution is shown in the diagram to the left.
+The  execution $ \leadstoBoundedStarFin {\Mtwo\cdot M}    {\sigma_2}  {\sigma_{30}}$ consists of 4 calls to external objects,
+and 3 calls to internal objects.
+The calls to external objects are from $\sigma_2$ to $\sigma_3$,  from $\sigma_3$ to $\sigma_4$, from $\sigma_9$ to $\sigma_{10}$, 
+and  from $\sigma_{16}$ to $\sigma_{17}$.
+ The calls to internal objects are from $\sigma_5$ to $\sigma_6$, rom $\sigma_7$ to $\sigma_8$, and from $\sigma_{21}$ to $\sigma_{23}$. 
+\end{minipage}
+& \ \  &
+\begin{minipage}{.4\textwidth}
+\resizebox{6.2cm}{!}
+{
+\includegraphics[width=\linewidth]{diagrams/summaryA.png}
+} \end{minipage}
+\end{tabular}
  
-Lemma \ref{lemma:subexp} makes the usual guarantee about terminating execution of statement sequences.
+
+
+When proving soundness of the rule {\sc{Call\_Ext}}, % and  {\sc{Call\_Ext\_Adapt}}
+we will use that  $M \vdash \encaps A$ (and also deep satisfaction)  to argue that 
+external transitions (from one external call to another) will preserve $A$. 
+For the internal calls, we want to just apply the fact that the method body has been proven to preserve $A$ (by  {\sc{MEthod}}).
+That is, for the external states we consider small steps, while for each of the public method calls we consider large steps. 
+Moreover, for the external states we apply different arguments than for the internal states.
+
+
+ 
+
+ 
+ 
+
   
-\begin{auxLemma}[Executing  sequences]
-\label{lemma:subexp}
-For modules $\Mtwo$, statements $s_1$, $s_2$,  states $\sigma$, $\sigma'$, $\sigma'''$:
-\begin{itemize}
-\item
-$ \sigma.\texttt{cont} = s_1; s_2 \ \ \wedge\ \  \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}\ \ 
-\wedge \ \
-\leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma''}\
-$\\
-$  \Longrightarrow$\\
-$   \exists \sigma''.[\ \ \ \ \   \leadstoBoundedStarFin {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}  {\sigma''}  
-\ \wedge\ 
-\leadstoBoundedStarFin {\Mtwo} {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'} \  \wedge$
-\\
-$\strut \hspace{1.2cm}  [ \ \ \leadstoBoundedStar {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}   {\sigma''}\ \vee \ \leadstoBoundedStar {\Mtwo}  {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'''}\ ]\ \ \ \ \ \ \ \  \ ] $
-\end{itemize}
-\end{auxLemma}
  
 
 Lemma \ref{lemma:external_breakdown} says that a terminating execution,  $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$ starting in an external state  consists of a sequence of  external states interleaved with terminating executions in internal states. 
@@ -231,12 +227,6 @@ $
 \end{definition}
 
 For illustration of these definitions, consider  Fig. \ref{fig:summaries}: 
-The  execution $ \leadstoBoundedStarFin {\Mtwo\cdot M}    {\sigma_2}  {\sigma_{30}}$ consists of 4 calls to external objects,
-and 3 calls to internal objects.
-The calls to external objects are from $\sigma_2$ to $\sigma_3$,  from $\sigma_3$ to $\sigma_4$, from $\sigma_9$ to $\sigma_{10}$, 
-and  from $\sigma_{16}$ to $\sigma_{17}$.
- The calls to internal objects are from $\sigma_5$ to $\sigma_6$, rom $\sigma_7$ to $\sigma_8$, and from $\sigma_{21}$ to $\sigma_{23}$. 
- 
 We can see the following execution summaries:
 \begin{enumerate}
 \item
