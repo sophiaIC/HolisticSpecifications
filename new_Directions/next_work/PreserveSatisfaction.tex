@@ -25,12 +25,12 @@ $ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sig
 \end{lemma}
 
 A corollary of   lemma \ref{l:assrt:unaffect}.\ref{one:ad:exp} is that $\satisfiesA{M}{\sigma}{A}  \ \ \Longleftrightarrow  \ \   \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}$.
-We now move to the preservation of assertions which do not have free variables.
+We now move to the preservation of assertions across pushing/popping of frames, or heap modification.
 
 \subsection{Preservation across method call and return}
 %Stable, and Positive Assertions}\footnote{BETTER NAME?}  Stable assertions are those which   do not contain the requirement $\inside{\_}$ are called {\emph {stable}}. 
 In most program logics, satisfaction of assertions without any free variables  is preserved when pushing/popping frames
--- \ie immediately after entering a method or  returning from it,
+-- \ie immediately after entering a method or  returning from it.
 This, however, is not   the case for our assertions, because  $\inside {\alpha}$ depends on the heap as well as the set of objects reachable from the top frame, and  
 that changes when the frame changes.
 {This is shown, \eg in  Fig. \ref{fig:Protected} where $o_3$ was not protected with top frame $\phi_1$,  
@@ -39,10 +39,10 @@ became protected when we pushed the frame $\phi_2$,  and again, is no longer pro
  
 
 Nevertheless,  assertions which do  not contain  $\inside {\_}$, called   $\Stable {\_}$, are stable against pushing and popping of frames.  
-Moreover, assertions which do  not contain $\inside {\_}$ in negative positions, called $\Pos {\_}$,  are stable against pushing  of \sdN{internal} frames -- 
+Moreover, assertions which do  not contain $\inside {\_}$ in negative positions, called $\Pos {\_}$,  are stable against pushing  of {internal} frames -- 
 % SD chopped the \Neg - definition
 %Assertions which do  not contain $\inside {\_}$ in positive positions, called $\Neg {\_}$,  are stable against popping  of frames.  
-\Cf  Defs % \ref{def:Basic},   \ref{def:Pos}, and  \ref{def:Neg}
+\cf  Defs % \ref{def:Basic},   \ref{def:Pos}, and  \ref{def:Neg}
  in \A \ref{app:preserve}.
 
 \begin{lemma}
@@ -53,13 +53,21 @@ For all  states $\sigma$ and frames $\phi$, and for all assertions $A$ such that
 \item 
 $\Stable{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \ \Longleftrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
 \item 
-$\Pos{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \  \wedge \  \sdN{M, {\PushSLong \phi \sigma} \models  \intThis} \ \ \Longrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+$\Pos{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \  \wedge \  M, {\PushSLong \phi \sigma} \models  \intThis \ \ \Longrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
 %\item 
 %$\Neg{A}\ \ \   \Longrightarrow \ \  \ \  [\ \  M,{\PushSLong \phi \sigma} \models A\ \ \Longrightarrow \ \  M, \sigma \models A   \ \  ]$
 %
 \end{itemize}
 \end{lemma}
- }
+
+ 
+$Stbl$ assertions give us   preservation of satisfaction against pushing/popping of frames, but do not allow to include 
+$\inside {\_}$ requirements -- a crucial ingredient for our work. On the other hand,
+$Stb^+$ assertions  give us only limited preservation against pushing, and no preservation against popping. 
+
+Nevertheless, to work with method calls, it is  it is crucial to be able to ensure at the point of a method call, that upon method entry the method's precondition will hold, 
+and to use an assertion at the end of method execution to ensure properties which hold upon method return.
+We will see how to do that in the next section, and also in Section \ref{s:deep:valid}.
   
    
  \subsection{Viewpoints and Protection}
@@ -86,10 +94,10 @@ The  $\pushSymbolAA$  operator is  defined in Fig. \ref{f:Push}.
 Only the first equation is interesting, i.e.  $\PushAS y {(\inside \re)}$: For 
 $\re$ to be protected from the viewpoint of the callee, it should be protected from all the call's arguments,
 \ie  $\protectedFrom {\re} {\overline {y}}$. 
-\sdN{The notation $\protectedFrom {\re} {\overline {y}}$   stands for $\protectedFrom \re {y_0}\, \wedge\, ...  \protectedFrom \re {y_n}$, assuming that $\overline y$=${y_0, ... y_n}$.
+The notation $\protectedFrom {\re} {\overline {y}}$   stands for $\protectedFrom \re {y_0}\, \wedge\, ...  \protectedFrom \re {y_n}$, assuming that $\overline y$=${y_0, ... y_n}$.
 %In all other cases,   $\pushSymbolA$  leaves simple $\re$'s unmodified %(i.e. the second to sixth equation), 
 % or is applied to the sub-assertions. % (i.e. the seventh to eleventh equation).
-}
+
 
 
 \begin{definition}
@@ -165,10 +173,10 @@ $M, { \PushSLong {(\overline y, \overline z)} {\sigma} } \models\  A \  \ \ \ \L
 
 \noindent
 \textbf{NOTES} \notesep 
-{The requirement   $\fv(A)=\emptyset$   accommodates for the difference between variable maps in $\sigma$ and  $\PushS {y} {\sigma}$.}
-%We could, instead,  require that $fv(A)=\overline x$, \ $\overline x \notin \sigma$, \ $\overline x \notin  \PushAS {y} {A}$, and   assert that (1)\ $M, \sigma[\overline{x \mapsto \alpha} ] \models \PushAS {y} {A}\  \Longrightarrow   \ M,  \PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}   \models A$, and similarly for (2).}
-%In both (1) and (2), we  use the renaming $\sigma[\overline{x \mapsto \alpha} ]$ to ensure that the free variables of $A$ are mapped to the same values in the caller's and the callee's frame.
- \notesep 
+% The requirement   $\fv(A)=\emptyset$   accommodates for the difference between variable maps in $\sigma$ and  $\PushS {y} {\sigma}$.}
+%%We could, instead,  require that $fv(A)=\overline x$, \ $\overline x \notin \sigma$, \ $\overline x \notin  \PushAS {y} {A}$, and   assert that (1)\ $M, \sigma[\overline{x \mapsto \alpha} ] \models \PushAS {y} {A}\  \Longrightarrow   \ M,  \PushS {y} {(\sigma[\overline{x \mapsto \alpha}])}   \models A$, and similarly for (2).}
+%%In both (1) and (2), we  use the renaming $\sigma[\overline{x \mapsto \alpha} ]$ to ensure that the free variables of $A$ are mapped to the same values in the caller's and the callee's frame.
+% \notesep 
 To simplify notation,  we lifted % the $\models$ 
 judgements to sets of states: If  $\sigmas$ is a set of states,  then
 $M,   \sigmas \models A$ stands for  $\forall\sigma\! \in\! \sigmas.[\, M,\sigma \models A \, ]$.    
@@ -176,7 +184,7 @@ $M,   \sigmas \models A$ stands for  $\forall\sigma\! \in\! \sigmas.[\, M,\sigma
 \footnoteSD{\vspace{.1cm}
 \noindent 
 {\textbf{Comment}} The $ \pushSymbol$ operator reminds me of the magic wand. Namely, $-\!-\!*$ is spatial and heap based:  the assertion $A -\!-\!* A'$ says: if you combine with a heap that satisfies $A$, then the complete heap will satisfy $A'$. While $\PushASLong {\_} {\_}$ is temporal and  stack based: the assertion  $\PushAS {y} A$ says that if you push a frame with range the values of $\overline y$, then $A$ will be satisfied. {\textbf{End Comment} }
- }
+}
 %{{I am surprised that $ \pushSymbol$  only affects  ${\inside x}$, and leaves all else unmodified,}}
 
 \subsection{Preservation across heap modifications}
