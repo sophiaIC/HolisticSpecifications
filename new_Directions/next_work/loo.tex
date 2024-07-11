@@ -12,7 +12,7 @@ and which may be defined recursively.
 
 \subsection{Syntax}
 
-The syntax of \LangOO is given in Fig. \ref{f:loo-syntax}\footnote{\se{Our motivating example is provided in a slightly richer syntax for greater readability.}}.
+The syntax of \LangOO is given in Fig. \ref{f:loo-syntax}\footnote{{Our motivating example is provided in a slightly richer syntax for greater readability.}}.
 \LangOO modules ($M$) map class names ($C$) to class definitions ($\textit{ClassDef}$).
 A class definition consists of % \jm[]{an optional annotation \enclosed},
 a list of field definitions, ghost field definitions, and method definitions.
@@ -89,8 +89,8 @@ specifications or the definition of ghost fields.
 \syntaxElement{s}{Statement}
 		{
 				\syntaxline
-				{\sdN{x:=y}}
-				{\sdN{x:=v}}
+				{{x:=y}}
+				{{x:=v}}
 				{x:=y.f}
 				{x.f:=y}
 				{x:=y_0.m(\overline{y})}
@@ -104,15 +104,15 @@ specifications or the definition of ghost fields.
 %\syntaxElement{c}{Continuation}
 %		{
 %		\syntaxline
-%				{\sdN{s; \ x}}
-%				{\sdN{x}}
+%				{{s; \ x}}
+%				{{x}}
 %		\endsyntaxline
 %		}
 %\endSyntaxElement\\
 \syntaxElement{mth}{Method Def.}
 		{
 		\syntaxline
-		{ \sdN{pr}\  \prg{method}\ m\ (\overline{x : T})\sdN{:T}\{\ s\ \} }
+		{ {pr}\  \prg{method}\ m\ (\overline{x : T}){:T}\{\ s\ \} }
 		\endsyntaxline
 		}
 \endSyntaxElement\\
@@ -136,7 +136,7 @@ specifications or the definition of ghost fields.
 			{\prg{ghost}\ \prg{intrnl}\ g\  (\overline{x : T})\{\ gt\ \} : T}
 		\endsyntaxline}
 \endSyntaxElement\\
-\syntaxElement{\sdN{gt}}{\sdN{Ghost Term}}
+\syntaxElement{{gt}}{{Ghost Term}}
 		{
 		\syntaxline
 				{x}
@@ -156,7 +156,7 @@ specifications or the definition of ghost fields.
 \endSyntaxElement
 \\
 \\
-\syntaxElement{\sigma}{Program \sdN{State}}
+\syntaxElement{\sigma}{Program {State}}
 		{
 		\syntaxline
 		{( \overline \phi, \chi )}
@@ -166,7 +166,7 @@ specifications or the definition of ghost fields.
 \\
 % SD Stack is implictt now
 %\syntaxElement{\psi}{Stack}
-%		{\syntaxline{\phi}{\phi \sdN{\cdot} \psi}\endsyntaxline}
+%		{\syntaxline{\phi}{\phi {\cdot} \psi}\endsyntaxline}
 %\endSyntaxElement\\
 \syntaxElement{\phi}{Frame}
 		{
@@ -187,7 +187,7 @@ specifications or the definition of ghost fields.
 \label{f:loo-syntax}
 \end{figure}
 
-\footnoteSD{\red{JULIAN: Do we need the selectors? SD}}
+
 
 \subsection{Semantics}
 \LangOO is a simple object oriented language, and the operational semantics 
@@ -196,7 +196,7 @@ do not introduce any novel or surprising features. The operational
 semantics make use of several helper definitions that we 
 define here.
 
-\sdN{
+{
 We provide a definition of reference interpretation in Definition \ref{def:interpret}
 \begin{definition}
 \label{def:interpret}
@@ -265,20 +265,31 @@ if there exists an $M$ in $\Mtwo$, so that $M(C)$ contains the definition ${ pr}
 
 \newcommand{\Same}[4]{{SameModule(#1,#2,#3,#4)}}
 
-Finally, we define what it means for two objects to come from the same module
+We define what it means for two objects to come from the same module
 \begin{definition}[Same Module]
 \label{def:class-lookup}
 For program state $\sigma$,  modules $\Mtwo$, and variables $x$ and $y$, we defone
 $$\Same {x} {y} {\sigma}{\Mtwo}\ \triangleq\ \exists C, C', M[ \ M\in \Mtwo \wedge C, C'\in M \wedge  \class{\sigma}{x}=C \wedge \class{\sigma}{y} =C'\ ]$$
 \end{definition}
 
+Finally, we define well-formed states, $\models \sigma$, which guarantee  that for all frames  on the stack of $\sigma$, any the actual parameter of any caller frame have the same values as the formal parameters in the callee frame
+\begin{definition}[Well-formed state]
+\label{def:wf:state}
+For program state $\sigma$:
+
+$\models \sigma \ \ \triangleq \ \  \forall \overline {\phi}, \overline {\phi'}, {\phi_k}, {\phi_{k+1}}, stmt $\\
+$\strut \hspace{2cm}  [\ \sigma = ((\overline {\phi}\cdot{\phi_k}\cdot{\phi_{k+1}}\cdot{\overline {\phi'}}), \chi) \wedge \phi_k.\prg{cont}=z:=y_0.m(y_1,...y_n); stmt \ \Longrightarrow \ 
+$
+\\
+$\strut \hspace{3cm} \interpret {\phi_k} {y_0} = \interpret {\phi_{k+1}} {\prg{this}} \ \wedge \  \exists y_1',...y_n'.\forall j\in [1..n].\ [ \interpret {\phi_k} {y_j} = \interpret {\phi_{k+1}} {y_j'} \ ]$
+\end{definition}
 
 Fig. \ref{f:loo-semantics} gives the operational semantics of \LangOO. 
 Program state $\sigma_1$ reduces to $\sigma_2$ in the context of
 modules$\Mtwo$ if $\exec{\Mtwo}{\sigma_1}{\sigma_2}$. The semantics in Fig. \ref{f:loo-semantics}
 are unsurprising, but it is notable that reads (\textsc{Read}) and writes (\textsc{Write})
 are restricted to the class that the field belongs to,
-\sdN{and methods  may only be called if public, or from same module as current receiver.}
+{and methods  may only be called if public, or from same module as current receiver.}
 \begin{figure}[t]
 \begin{minipage}{\textwidth}
 \begin{minipage}{\textwidth}
@@ -286,32 +297,34 @@ are restricted to the class that the field belongs to,
 \begin{mathpar}
 \infer
 	{
-	   \sdN{\phi_n}(\prg{cont})  \txteq   u := y_0.m(\overline{y}); s \\
-    \meth{\Mtwo}{\class{(\phi,\chi)}{y}}{m} = p \ C::m(\overline{x : T})\red{:T}\{s'\}\\
-        	{\sdN{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {\sigma_1}{\Mtwo} }} \\
-	\phi'_{n+1}= \sdN{  (\  \prg{this}\, \mapsto\, \interpret{\phi}{y_0},\overline{x\, \mapsto\, \interpret{\phi}{y}}; \ s' \ ) } 
-	% \\   \sigma_2 = \sdN{(\overline{\phi}\cdot\phi\cdot\phi'},\chi)\\
+	   {\phi_n}(\prg{cont})  \txteq   u := y_0.m(\overline{y}); s \\
+    \meth{\Mtwo}{\class{(\phi,\chi)}{y}}{m} = p \ C::m(\overline{x : T}){:T}\{s'\}\\
+        	{{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {\sigma_1}{\Mtwo} }} \\
+	\phi'_{n+1}= {  (\  \prg{this}\, \mapsto\, \interpret{\phi}{y_0},\overline{x\, \mapsto\, \interpret{\phi}{y}}; \ s' \ ) } 
+	% \\   \sigma_2 = {(\overline{\phi}\cdot\phi\cdot\phi'},\chi)\\
 	}
-	{\exec{\Mtwo}{ ( \sdN{\overline{\phi}\cdot\phi_n},  \chi) }{\sdN{(\overline{\phi}\cdot\phi_n\cdot\phi_{n+1}},\chi)}}
+	{\exec{\Mtwo}{ ( {\overline{\phi}\cdot\phi_n},  \chi) }{{(\overline{\phi}\cdot\phi_n\cdot\phi_{n+1}},\chi)}}
 	\quad(\textsc{Call})
 	\and
 \infer
 	{
-		\phi_{n+1}(\prg{cont}) \txteq  \red{\epsilon} \\ % )\ \textit{or}\ \phi_1(\prg{cont}) = (\red{z})\\
-	\phi_n(\prg{cont})   \txteq  \red{x := y_0.m(\overline y)}; s \\
-	\phi'_n= \phi[x \mapsto \interpret{\phi_{n+1}}{\prg{res}}][\prg{cont} \mapsto \red{s} ]\\ 
+		\phi_{n+1}(\prg{cont}) \txteq  {\epsilon} \\ % )\ \textit{or}\ \phi_1(\prg{cont}) = ({z})\\
+	\phi_n(\prg{cont})   \txteq  {x := y_0.m(\overline y)}; s \\
+	\phi'_n= \phi[x \mapsto \interpret{\phi_{n+1}}{\prg{res}}][\prg{cont} \mapsto {s} ]\\ 
+	\models ({\overline{\phi}\cdot  \phi'_n}, \chi)
 		}
-	{\exec{\Mtwo}{(\sdN{\overline{\phi} \cdot \phi_n \cdot \phi_{n+1}}, \chi) }{(\sdN{\overline{\phi}\cdot  \phi'_n}, \chi)}}
+	{\exec{\Mtwo}{({\overline{\phi} \cdot \phi_n \cdot \phi_{n+1}}, \chi) }{({\overline{\phi}\cdot  \phi'_n}, \chi)}}
 	\quad(\textsc{Return})
 	\and
 \infer
 	{
 %	\sigma_1 = (\chi, \phi_1 \cdot\psi) \\
 %	\sigma_2 = (\chi, \phi_2 \cdot\psi) \\
-	\sdN{\sigma_1(\prg{cont})  \txteq  x := y.f; s} \\
+	{\sigma_1(\prg{cont})  \txteq  x := y.f; s} \\
 	 \Same {\prg{this}}  {y}  {\sigma_1} {\Mtwo}\\
 	%\phi_2 = \{\prg{local}:=\phi_1(\prg{local})[x\ \mapsto\ v],\ \prg{cont}:=s\}
-	\sigma_2=\sigma_1[x\mapsto  \interpret{\sigma_1}{y.f} \} ][\prg{cont} \mapsto s ]
+	\sigma_2=\sigma_1[x\mapsto  \interpret{\sigma_1}{y.f} \} ][\prg{cont} \mapsto s ] \\
+	\models \sigma_2
 	}
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{Read})
@@ -328,12 +341,13 @@ are restricted to the class that the field belongs to,
 	\and
 \infer
 	{
-	\sigma_1(\prg{cont})\  \txteq\  x := \red{\prg{new}\ C }; s \\
+	\sigma_1(\prg{cont})\  \txteq\  x := {\prg{new}\ C }; s \\
 	fields(C)=\overline{f} \\
-	\red{\overline v}   \mbox{ initial values for } \overline f\\
+	{\overline v}   \mbox{ initial values for } \overline f\\
 	\alpha \mbox{ fresh in } \sigma_1 \\
 	% \phi' = \{\prg{local}:=[\prg{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \prg{cont} := s'\}\\
-	\sigma_2 = \sigma_1[x\mapsto \alpha][\alpha  \mapsto  (\ C;\  \overline{f\, \mapsto \, v} \  ] [\prg{cont}\mapsto s]
+	\sigma_2 = \sigma_1[x\mapsto \alpha][\alpha  \mapsto  (\ C;\  \overline{f\, \mapsto \, v} \  ] [\prg{cont}\mapsto s] \\
+	\models \sigma_2
 		}
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{New})
@@ -341,6 +355,11 @@ are restricted to the class that the field belongs to,
 \caption{\LangOO operational Semantics}
 \label{f:loo-semantics}
 \end{minipage}
+
+Notice that the operational semantics preserves wellformedness of the state.
+This is expressed through an explicit condition which overwrites a variable in the top frame, but can, if course, be done more elegantly, eg by looking up the names of the formal parameters. However, since this can easily be done, and is not the main subject of our paper, we decided not to incorporate it in the operational semantics.
+From now on we require implicitly that $\models \sigma$.
+
 \begin{minipage}{\textwidth}
 \footnotesize
 \begin{mathpar}
