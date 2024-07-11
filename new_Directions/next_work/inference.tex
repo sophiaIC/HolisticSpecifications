@@ -176,7 +176,7 @@ If ${\hproves{M}  {A} {\ s\ }{A'} }$, then $s$ contains no method calls.
 $
 \begin{array}{c}
 % \begin{array}{lcl}
-\inferrule[\sc{Mid}]
+\inferruleSD{[\sc{Mid}]}
 	{\hproves{M}  {A} {\ s\ }{A'} }
 	{\hprovesN{M}  {A} {\ s\ }{A'} {A''} }
 \\
@@ -191,22 +191,29 @@ $
 % \end{array}
 % \\
 % \\
- \\
- \\
-\inferrule[\sc{combine}]
-	{  \hprovesN{M}  {A_1} {\ s\ } {A_2}  {A} \hspace{1.4cm}  \hprovesN{M}  {A_3} {\ s\ } {A_4} {A}}
+\begin{array}{lcl}
+\inferruleSD{[\sc{combine}]}
+	{  \begin{array}{l}
+	\hprovesN{M}  {A_1} {\ s\ } {A_2}  {A} \\ % \hspace{1.4cm}  
+	\hprovesN{M}  {A_3} {\ s\ } {A_4} {A}
+	\end{array}
+	}
 	{ \hprovesN{M}  {A_1 \wedge A_3 }{\ s\ } {A_2 \wedge A_4} {A} }
-\\
-\\
-\inferrule[\sc{sequ}]
-	{  \hprovesN{M}  {A_1} {\ s_1\ } {A_2}  {A}  \hspace{1.4cm} \hproves{M}  {A_2} {\ s_2\ } {A_3} {A}}
+& &
+\inferruleSD{[\sc{sequ}]}
+	{  \begin{array}{l} 
+	\hprovesN{M}  {A_1} {\ s_1\ } {A_2}  {A}  \\ % \hspace{1.4cm} 
+	\hproves{M}  {A_2} {\ s_2\ } {A_3} {A}
+	\end{array}
+	}
 	{   \hprovesN{M}  {A_1   }{\ s_1; \, s_2\ } {  A_3} {A} }
+\end{array}
 \\ \\
-\inferrule[\sc{consequ}]
+\inferruleSD{ \hspace{3cm} [\sc{consequ}]}
 	{
 %	\begin{array}{l}
 	 { \hprovesN  {M}  {A_4} {\, s\, } { A_5} {A_6}  }
-	 \\
+	 \hspace{1.4cm} 
 	 M \vdash A_1 \rightarrow A_4 
 	 \hspace{1.4cm} 
 	{ M \vdash A_5   \rightarrow  A_2  }
@@ -226,7 +233,8 @@ $
 \subsubsection{Introducing mid-conditions, and substructural rules}
 Fig. \ref{f:substructural} introduces quadruple rules of the from ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$ which do not deal with method calls.
 
-Rule {\sc{mid}} embeds  triples  ${\hproves{M}  {A} {\ s\ }{A'} }$  into quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$; this is sound, because $s$ is guaranteed not to contain method calls (by lemma \ref{l:no:meth:calls})\footnote{The restriction to statements which do not contain method calls in rule {\sc{types-1}} was imposed so as to make this lemma valid}, and therefore its execution is guaranteed not to reach any external states.
+Rule {\sc{mid}} embeds  triples  ${\hproves{M}  {A} {\ s\ }{A'} }$  into quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$; this is sound, because $s$ is guaranteed not to contain method calls (by lemma \ref{l:no:meth:calls})
+\footnote{The restriction to statements which do not contain method calls in rule {\sc{types-1}} was imposed so as to make this lemma valid}, and therefore its execution is guaranteed not to reach any external states.
 
  
 The remaining rules in Fig. \ref{f:substructural} apply to \emph{any} statements -- even those containing method calls.
@@ -247,32 +255,10 @@ is described in Fig. \ref{f:internal:calls}. {\sc{Call\_Int}}  and {\sc{Call\_In
 and {\sc{Call\_Ext\_Adapt}} for  external methods.
 
 
-% {We now move to the discussion of  external calls. For all external calls we require that the module's invariants are satisfied before the external call.
-%This is enforced through the requirement ${\external{y_0}}  \rightarrow \  \PushAS {y}{\extract{M}}$ in rules
-%{\sc{CallAndAlias}} and {\sc{CallNonAlias}} in  Fig. \ref{f:internal:alias:calls}, and the precondition part  
-% $\PushAS {y}{\extract{M}}$ in all rules in Fig.  \ref{f:external:calls}. }
-%
-%
-%{Looking more closely, we notice  that we do not require that invariants hold (ie ${\extract{M}}$), but require that they will hold after the method call has been pushed on the stack, (ie $  \PushAS {y}{\extract{M}}$). We use the  assertion push-function $\pushSymbol$   defined earlier in Figure \ref{f:Push}.}
-%Remember that the assertion $\PushAS y A$ is \emph{hypothetical}: if a state satisfies $\PushAS y A$, then after pushing
-%onto that state a frame which contained the values  of $\overline y$, assertion $A$ will hold, and conversely,   if a state satisfies  $A$ with a top frame containing the  values of $\overline y, \overline z$, then  after popping that frame, the state  satisfies assertion  $\PushAS y A$ (cf. llemma \ref{lemma:push:ass:state}).
-% 
-% {In rule {\sc{ExtCall}} we   ensure that the module's invariants are preserved by the external call. } {Notice that while  {\sc{CallAndAlias}}, {\sc{CallNonAlias}}, {\sc{ExtCall\_WithSpec\_Weak}} and {\sc{ExtCall\_WithSpec\_Weak}}    include 
-% $\PushAS y {A_1}$ in their precondition,  they do not include it in the postcondition. A variation where was  $\PushAS y {A_1}$ in the postcondition is admissible, as it would be the outcome of the combination of these rules with  {\sc{ExtCall}} through the application of {\sc{Consequ}}.}
-% 
-%{The precondition of {\sc{ExtCall\_WithSpec\_Weak}} is stronger than that of {\sc{ExtCall}}. It makes use of one of the  module's  promises: Here $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, i.e. that  $\overline {x:C} \ \wedge\ A_1$ can only lead to $A_2$. 
-%% Moreover, the call's precondition requires  $\overline {x:C} \wedge \PushAS y {A_1}$. 
-% Therefore, by lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:one}, right after pushing a frame with $\overline y$, ie right after  entering the external call, $\overline {x:C}$ and  $A_1$ hold. `Therefore, by the semantics of $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, at the end of the external call,  $\overline {x:C} \wedge A_2$ will hold. This, together with  lemma \ref{lemma:push:ass:state}.\ref{lemma:push:ass:state:two} gives that after popping the frame, ie after  exiting the external call, $\PushAS y {A_1}$ will hold.}
-%
-%
-%{The precondition of {\sc{ExtCall\_WithSpec\_Strong}} is stronger than that of {\sc{ExtCall\_WithSpec\_Weak}}: it also requires $A_1$. Therefore, the module's promise, $  {\TwoStatesQ {\overline {x:C}} {A_1}{A_2}}$, guarantees that after exiting the external call, $A_2$ will hold.}
- 
-
-
-
 
 
 \begin{figure}[htb]
+\small{
 $\begin{array}{c}
  \inferruleSD{\hspace{4.7cm} [\sc{Call\_Int}]}
 	{
@@ -284,7 +270,7 @@ $\begin{array}{c}
 						{ \  y_0:C,\overline {y:C} \wedge  A_1[y_0/\prg{this}] \ }
 						 { \ u:=y_0.m(y_1,.. y_n)\    }
 					         { A_2[ u/res,y_0/\prg{this}] } 
-						{   A_3  }	
+						{   A_3[y_0/\prg{this}]   }	
 }
  \\
 \\
@@ -298,21 +284,22 @@ $\begin{array}{c}
 						{ \  y_0:C, \overline {y:C} \wedge {\PushAS {y}{A_1[y_0/\prg{this}]}}  \ }  
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
 						{  { \PushAS {y}{A_2[ u/res,y_0/\prg{this}]}}   }
-						{   A_3  }	
+						{   A_3[y_0/\prg{this}]  }	
 }
 }
-\\
- \\ 
- \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}]}
- 	{ 
-   	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-        }
-	{   \hprovesN{M} 
-						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {{A}}\ }  
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \   {{A}}  \ }
-						{\  A \   }	
-}
+%\\
+% \\ 
+% WRONG
+% \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}]}
+% 	{ 
+%   	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
+%        }
+%	{   \hprovesN{M} 
+%						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {{A}}\ }  
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \   {{A}}  \ }
+%						{\  A \   }	
+%}
 \\
  \\ 
  \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}\_Adapt]}
@@ -328,6 +315,7 @@ $\begin{array}{c}
 
 \end{array}
 $
+}
 \caption{Hoare Quadruples for Internal and External Calls}
 \label{f:internal:calls}
 \label{f:external:calls}
@@ -348,34 +336,7 @@ Remember that $  \PushAS {y}{A_1}$ guarantees that $A_1$ held before popping the
 cf.  lemma \ref{lemma:push:ass:state}).
 Moreover, the call has the same \midcond,   here $A_3$, as the specification of the method.
  {\sc{Call\_Int}} is applicable whether the method is public or private.
- \footnote{Appendix~\ref{app:proof} shows stronger alternative rules.}
-\move{\footnote{
-The rules {\sc{Call\_Int}} and {\sc{Call\_Int\_Adapt}}   are weaker forms of    rule {\sc{Call\_Int\_Combine}} given here. 
-Even though  {\sc{Call\_Int\_Combine}} is sound, we did not include in the presented system, for the sake of simplicity and separation of concerns.
-A similar stronger rule can be expressed for {\sc{Call\_Ext}} and {\sc{Call\_Ext\_Adapt}}.
- \\
-$
-{\begin{array}{c}
-  \inferruleSD  {\hspace{4.7cm} [\sc{Call\_Int\_Combine}]}
- 	{
- 	  	\begin{array}{c}
- 		  \promises  M { \mprepostN  {A_{1a} \wedge A_{1r} }  {p\ C} {m} {y} {C} { A_{2a} \wedge A_{2r}}   {A_3}  }
-		\\
-		A_1'\txteq    A_{1a}[y_0/\prg{this}]  \wedge {\PushAS {y}{A_{1r}[y_0/\prg{this}]}}
-		\\
-		A_2'\txteq    A_{2a}[u/res,y_0/\prg{this}]  \wedge {\PushAS {y}{A_{2r}[u/res,y_0/\prg{this}]}}\
-       	\end{array}
- 		}
- 	{  \hprovesN {M} 
-						{ \  y_0:C, {\overline {y:C}} \wedge A_1' \ }  
-						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \ A_2'\ }
-						{  \  A_3 \ }	
-      }
-\end{array}
-}
-$
-}}
+% \footnote{Appendix~\ref{app:proof} shows stronger alternative rules.}
 
 %%%%%%%%%%%%%
 {For external methods,  {\sc{Call\_Ext}}, we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and   $A$  holds before the call, then it also holds after and during the call. }
@@ -515,29 +476,6 @@ In {\sc{Invariant}} we assume, wlog, that none of
 
 
  
-\footnoteSD{{QUESTIONS: }
-
-\begin{enumerate}
-\item 
-Can we express what Fig \ref{f:calls} does, but more streamlined? -- SD has no ideas here  :-(
-\item
-In the rule for $\models M$,   I wonder whether we should be using ${\extract{M}}$ rather than $\PushAS {y} {\extract{M}}$. -- SD thinks this is only a matter of more thinking
-\item
-Do we want to forbid private methods to make external calls -- see Sect \ref{s:privateMs}? If we do that, then we need to extend the oper semantics and the inference rules in trivial, and boring ways...
-\item
-In  Fig \ref{f:calls} I wonder whether there are also stronger versions, where we require ${\extract{M}}$ rather than $\PushAS {y} {\extract{M}}$, pretty much as in the difference between {\sc{ExtCall\_WithSpec\_Weak}}  and the other rule, {\sc{ExtCall\_WithSpec\_Strong}}. But this would blow up the rules even more! 
-\item
- Does the consequence rule require that the assertions are encapsulated? And if an assertion is encapsulated, is its consequence also encapsulated? TODO - EASY
-\item
-All rules require that the variables in the quantifiers do not appear in the meathod bodies, and are disjoint from the parameters.
-TODO explain -EASY. 
-\item  We need to add some dynamic type checking to the language, ie the public method call crashes if the actual params do not fit the formal types. Thisi is only for convenience; we cloud type them all as \prg{Object}, and crash by hand. TODO - EASY
-\item
-Do we need "modifies" or "does not modify" clauses too? Or can we assume that the underlying HL does this implicitly? For example, does\\
-$\strut \ \ \  \hproves{M}  {a:Account \wedge p:Password \wedge a.passwd=p} {stmts}  {a.passwd=p}$\\ (with $a$ and $p$  free in $stmts$),  implicitly promise that no account's password has been modified? Shall we require the underlying logic to support such judgments -- say that if it has modifies clauses, or SL, it could do that?\\
-Such an approach might solve the "late binding" issues mentioned below.
-\end{enumerate}
- }
 
 
 
