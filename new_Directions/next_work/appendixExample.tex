@@ -1,0 +1,187 @@
+\section{Example: Taming Effects for the Shop/Account}
+In Section \ref{s:outline} we introduced a \verb|Shop| that allows clients to make purchases through the
+\verb|buy| method, a method that included a method call to an unknown external object (\verb|buyer.pay(...)|).
+Here we use our Hoare logic from Section \ref{sect:proofSystem} to prove that the \verb|buy| method
+does not expose the \verb|Shop|'s  \verb|Account|, its \verb|Key|, or allow the \verb|Account|'s balance to be illicitly modified. 
+More specifically, we prove the following scoped invariants are satisfied by \verb|M|$_{good}$\\
+%$\strut \SPSP  S_1\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{a}}} $ 
+%\\
+$\strut  \SPSP  S_1\ \  \triangleq \ \ \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}}} $ 
+ \\
+%$\strut  \SPSP   S_3\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account},\prg{b}:\prg{int}}  {\inside{\prg{a}} \wedge \prg{a.\balance}=\prg{b}}  $
+%\\
+$\strut  \SPSP  S_2\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg{b}:\prg{int} } {\inside{\prg{a.key}} \wedge \prg{a.\balance} \geq \prg{b} } $\\
+\verb|M|$_{good}$ is given below.
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+module M$_{good}$
+  ...   
+  class Shop
+    field accnt:Account, invntry:Inventory, clients:[external]    
+  
+    public method buy(buyer:external, anItem:Item)
+      int price = anItem.price
+      int oldBlnce = this.accnt.blnce
+      buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}!$
+      if (this.accnt.blnce == oldBlnce+price)  this.send(buyer,anItem)
+      else
+         buyer.tell("you have not paid me") 
+     
+      private method send(buyer:external, anItem:Item)  
+       ... 
+  class Key
+  class Account
+    field blnce:int 
+    field key:Key
+    public method transfer(dest:Account, key':Key, amt:int)
+      if (this.key==key')
+        this.blnce-=amt
+        dest.blnce+=amt
+     public method set(key':Key)
+      if (this.key==null)  this.key=key'
+\end{lstlisting}
+
+For brevity we only show that \verb|buy| satisfies our scoped invariants, as the all other methods of 
+the \verb|M|$_{good}$ interface are relatively simple, and do not make any external calls. 
+Our approach follows the 3 phases outlined in Section \ref{sect:proofSystem}. That is, in
+phase 1 we use more an assumed underlying Hoare logic and more traditional Hoare triples to prove the adherence of internal code to
+the specification. In phase 2 we use Hoare quadruples to prove external calls adhere
+to the specificaiton, and finally in phase 3 we use raise the results from phase 1 and 2 to proved
+the entire module satisfies the specification.
+
+\begin{lemma}
+$M_{good} \vdash S_1$
+\end{lemma}
+\begin{proof}
+We construct our proof tree using a top down approach.  That is, we start with our goal
+$$M_{good} \vdash \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}}}$$
+and apply  \textsc{Invariant} from Fig. \ref{f:wf}.
+From this we are left with a subgoal for each method $m$ in  class $C$ with parameters $\overline{y:D}$ and body $stmt$ in the public interface of $M_{good}$:
+\small
+$$\hprovesN{M_{good}} { \ \prg{this}:\prg{C}, \overline{y:D}\, \wedge\, \neg\inside{this}\wedge\overline{ \neg\inside{y}}\, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \prg{a.key}\  } {\ stmt\ } {\ \inside{\prg{a.key}}\ } {\ \inside{\prg{a.key}} \ } $$
+\normalsize
+This is relatively simple to prove for methods without external method calls, as we can rely entirely on the Hoare logic extension described in Section \ref{sect:proofSystem}. The only  method within $M_{good}$ that contains 
+an external method call is  the \prg{buy} method within the \prg{Shop} class. Thus, we need to prove:
+\small
+\begin{align*}
+\text{(1)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item} \, \wedge\, \neg\inside{this}\wedge \\ 
+		&\neg\inside{\prg{buyer}} \wedge \neg\inside{\prg{anItem}}, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \} 
+		 stmt\ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \ \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+Where $stmt$ is the body of \prg{buy}. We now construct this proof using the quadruple rules described in \ref{sect:proofSystem}. By our hoare triple extension and the \textsc{Mid} rule that raises triples to quaruples, the first two lines
+of \prg{buy} preserve the precondition in (1) above, and further that 
+\small
+$$
+\text{(2)} \ \ \ \ \prg{price} : \prg{int}
+$$ 
+We now need to prove that the external method call \prg{buyer.pay(this.accnt, price)} protects the \prg{key}. i.e.
+\small
+\begin{align*}
+M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, \neg\inside{this}\wedge \\ 
+		&\neg\inside{\prg{buyer}} \wedge \neg\inside{\prg{anItem}}, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
+		 & \prg{buyer.pay(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+or simplifying the precondition to what we need:
+\small
+\begin{align*}
+\text{(3)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
+		 \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
+		 & \prg{buyer.pay(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+Now we use the fact the law of excluded middle and \textsc{Conseq} to introduce $\prg{a} = \prg{this.accnt}\ \vee\ \prg{a} \not= \prg{this.accnt}$ to the precondition.
+\small
+\begin{align*}
+\text{(4)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\,  \\
+		 &\prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}}\ \wedge\ (\prg{a} = \prg{this.accnt}\ \vee\ \prg{a} \not= \prg{this.accnt}) \}  \\
+		 & \prg{buyer.pay(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+Now the traditional  Hoare rule for disjunction gives us two subgoals:
+\small
+\begin{align*}
+\text{(5.1)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\,  \\
+		 &\prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}}\ \wedge\ \prg{a} = \prg{this.accnt} \}  \\
+		 & \prg{buyer.pay(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+\small
+\begin{align*}
+\text{(5.2)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\,  \\
+		 &\prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}}\ \wedge\ \prg{a} \not= \prg{this.accnt} \}  \\
+		 & \prg{buyer.pay(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+Both (5.1) and (5.2) can now be discharged in the same manner, since in both cases, \prg{a.key} is protected from the arguments of \prg{buyer.pay}.  Finally, by application of \textsc{Conseq} and \textsc{Call\_Ext\_Adapt} we get our goal.
+%\small
+%\begin{align*}
+%\text{(3)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
+%		 \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
+%		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+%
+%\normalsize
+\end{proof}
+
+
+
+\begin{lemma}
+$M_{good} \vdash S_2$
+\end{lemma}
+\begin{proof}
+We construct our proof tree using a top down approach.  That is, we start with our goal
+$$M_{good} \vdash \TwoStatesN {\prg{a}:\prg{Account}, \prg{b} : \prg{int}}  {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}$$
+and apply  \textsc{Invariant} from Fig. \ref{f:wf}.
+From this we are left with a subgoal for each method $m$ in  class $C$ with parameters $\overline{y:D}$ and body $stmt$ in the public interface of $M_{good}$:
+\small
+$$\hprovesN{M_{good}} { \ \prg{this}:\prg{C}, \overline{y:D}\, \wedge\, \neg\inside{this}\wedge\overline{ \neg\inside{y}}\, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \prg{a.key}\  } {\ stmt\ } {\ \inside{\prg{a.key}}\ } {\ \inside{\prg{a.key}} \ } $$
+\normalsize
+This is relatively simple to prove for methods without external method calls, as we can rely entirely on the Hoare logic extension described in Section \ref{sect:proofSystem}. The only  method within $M_{good}$ that contains 
+an external method call is  the \prg{buy} method within the \prg{Shop} class. Thus, we need to prove:
+\small
+\begin{align*}
+\text{(1)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item} \, \wedge\, \neg\inside{this}\wedge \\ 
+		&\neg\inside{\prg{buyer}} \wedge \neg\inside{\prg{anItem}}, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \} 
+		 stmt\ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \ \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+Where $stmt$ is the body of \prg{buy}. We now construct this proof using the quadruple rules described in \ref{sect:proofSystem}. By our hoare triple extension and the \textsc{Mid} rule that raises triples to quaruples, the first two lines
+of \prg{buy} preserve the precondition in (1) above, and further that 
+\small
+$$
+\text{(2)} \ \ \ \ \prg{price} : \prg{int}
+$$ 
+We now need to prove that the external method call \prg{buyer.pay(this.accnt, price)} protects the \prg{key}. i.e.
+\small
+\begin{align*}
+M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, \neg\inside{this}\wedge \\ 
+		&\neg\inside{\prg{buyer}} \wedge \neg\inside{\prg{anItem}}, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
+		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+or simplifying the precondition to what we need:
+\small
+\begin{align*}
+\text{(3)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
+		 \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
+		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+\end{align*}
+\normalsize
+Now, by application of \textsc{Conseq} and \textsc{Call\_Ext\_Adapt} we get our goal.
+%\small
+%\begin{align*}
+%\text{(3)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
+%		 \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
+%		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+%
+%\normalsize
+\end{proof}
+
+%$$M_{shop} \vdash \{{\inside{\texttt{a.key}}}\}\ {\texttt{public}\ \texttt{Shop}}::{\texttt{buy}}{(\texttt{buyer} : \texttt{external})}\ \{{\inside{\texttt{a.key}}}\}\ ||\ \{{\inside{\texttt{a.key}}} \}$$
+%\end{proof}
+%\begin{lemma}
+%$$M_{good} \vdash \{{\inside{\texttt{a.key}}}\}\ {\texttt{public}\ \texttt{Shop}}::{\texttt{buy}}{(\texttt{buyer} : \texttt{external}, \texttt{price} : \texttt{int})}\ \{{\inside{\texttt{a.key}}}\}\ ||\ \{{\inside{\texttt{a.key}}} \}$$
+%\end{lemma}
+%\begin{lemma}
+%$$M_{good} \vdash \{{\inside{\texttt{a.key}}}\}\ {\texttt{public}\ \texttt{Shop}}::{\texttt{buy}}{(\texttt{buyer} : \texttt{external}, \texttt{price} : \texttt{int})}\ \{{\inside{\texttt{a.key}}}\}\ ||\ \{{\inside{\texttt{a.key}}} \}$$
+%\end{lemma}
