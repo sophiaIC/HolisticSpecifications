@@ -101,57 +101,22 @@ $M\ \vdash\  \triple A {stmt} {A'}  \ \ \ \  \Longrightarrow  \ \ \ \ \satisfies
 
 \subsection{Summarised Execution}
 
-When proving soundness of the external call rule, we are faced with the following challenge; 
-%For the soundness proof of our quadruples we need to address two challenges:
-Execution of an external call may consist of any number of external
+When proving soundness of the external call rule, we are faced with the challenge that
+execution of an external call may consist of any number of external
 steps, interleaved with calls to public internal methods, which in
 turn may may make any number of further internal call (whether public or private), and these, again may call external methods.
- 
-
-, etc\ldots% leading to further calls of public methods.
-%
-We address the second challenge by introducing summarised executions, which essentially collapse all public, internal method calls into one large step (\cf Section \ref{sect:termExecs}).
-
-\subsubsection{A well-founded ordering}
-\label{sect:prove:wellfounded}
-
-We define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to terminations in fewer steps than $\sigma_2$ considering the shortest, terminating scoped execution), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
-is shallower than the the proof of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_6} $ (considering the shallowest possible proofs). Full Def. in \ref{def:measure}.
-
- 
-
- 
-
-
-\begin{auxLemma}
-\label{lemma:normal:two}
-For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-founded.
-\end{auxLemma}
-
-%%%%%%%%%%%%%%%%%%%%%%% S U M M A R I E S of exectuon %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-\subsubsection{Summarised  execution} 
-\label{sect:termExecs}
-
-In this subsection we prove auxiliary lemmas that allow us to summarise execution into  constituent parts, which are useful for the proof of soundness of our quadruples, Theorem \ref{t:quadruple:sound}, when we consider sequences of statements, and also method calls.
-
-%We prove some unsurprising 
-% DO we need it?
-%Lemma \ref{lemma:encl:tem} guarantees that any state reachable from a state with a terminating execution has itself a terminating execution, and that this execution is enclosed in the original one:
-% Lemma \ref{lemma:subexp} makes the usual guarantee about terminating execution of statement sequences.
+Thus, execution of an external call will involve several internal and external states.
  
 
 
 \label{sect:termExecs}
 
-The challenge in the proof of soundness of our quadruples, Theorem \ref{t:quadruple:sound} is the proof of external calls. 
-Namely, an external call may eventually call any number of public, internal, methods, which , in turn, may make further external calls.
-Thus, an external call will involve several internal and external states.
 
 \vspace{.1cm}
 
 \begin{tabular}{lll}
 \begin{minipage}{.45\textwidth}
-The diagram to the left shows such an execution, where
+The diagram to the left shows such an execution:
   $ \leadstoBoundedStarFin {\Mtwo\cdot M}    {\sigma_2}  {\sigma_{30}}$ consists of 4 calls to external objects,
 and 3 calls to internal objects.
 The calls to external objects are from $\sigma_2$ to $\sigma_3$,  from $\sigma_3$ to $\sigma_4$, from $\sigma_9$ to $\sigma_{10}$, 
@@ -168,15 +133,19 @@ and  from $\sigma_{16}$ to $\sigma_{17}$.
  
 \vspace{.1cm}
 
+
+ 
 When proving soundness of the rule {\sc{Call\_Ext}}, % and  {\sc{Call\_Ext\_Adapt}}
 we will use that  $M \vdash \encaps A$ (and also deep satisfaction)  to argue that 
 external transitions (from one external call to another) will preserve $A$. 
-For the internal calls, we want to just apply the fact that the method body has been proven to preserve $A$ (by  {\sc{MEthod}}).
-That is, for the external states we consider small steps, while for each of the public method calls we consider large steps. 
+For the internal calls, we want to apply the fact that the method body has been proven to preserve $A$ (by  {\sc{MEthod}}).
+That is, for the external states we consider small steps, while for each of the public method calls we want to consider large steps --
+in other words, we notionally \emph{syummarize} the calls of the public methods into one large step.
 Moreover, for the external states we apply different arguments than for the internal states.
 
-\vspace{.1cm}
-
+%\vspace{.1cm}
+% In this subsection we define some auxialliary concepts to express summarized execution, and prove  associated  lemmas.
+  
 \begin{tabular}{lll}
 \begin{minipage}{.45\textwidth}
  In terms of our example, we want to summarise the execution of the two ``outer'' internal, public methods into the 
@@ -197,7 +166,7 @@ Moreover, for the external states we apply different arguments than for the inte
 In order to express such summaries, Def. \ref{def:exec:sum} introduces the following concepts:
 \begin{itemize}
 \item
- ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}}$ \ \ \  execution from $\sigma$ to $\sigma'$ scoped by $\sigma\bd$, involving  external states.
+ ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}}$ \ \ \  execution from $\sigma$ to $\sigma'$ scoped by $\sigma\bd$, involving  external states only.
 \item
 ${\WithPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} {\sigma_1}}$ \  \ \  \ \ \ \ \ \ \ \  ${\sigma}$ is an external state  calling an internal public method, and \\
 $\strut \hspace{3.25cm}$ $\sigma'$ is the state after return from the public method, and \\
@@ -212,6 +181,7 @@ $\strut \hspace{3.25cm}$  $\sigma_1$ is the first state upon entry to the public
 %$
 \end{itemize}
   
+  \noindent
 Continuing with our example, we have the following execution summaries:
 \begin{enumerate}
 \item
@@ -226,24 +196,45 @@ and two external method executions ($\sigma_{6}-\sigma_{19}$, and $\sigma_8-\sig
  ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{20}}  {\sigma_{21}}}$.
  \item
 ${\WithPub {\Mtwo\cdot M}    {\sigma_{21}}  {\sigma_{25}} {\sigma_{23}}}$. \ \ \ 
-Public method call from  external state ${\sigma_{21}}$ into internal state $\sigma_{23}$, and returning to external state $\sigma_25$.
+Public method call from  external state ${\sigma_{21}}$ into internal state $\sigma_{23}$, and returning to external state $\sigma_{25}$.
  \item
   ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{25}}  {\sigma_{28}}}$.
 \ \ \ 
-  Purely external execution from $\sigma_{25}$ to $\sigma_{28}$,, scoped by ${\sigma_3}$.
+  Purely external execution from $\sigma_{25}$ to $\sigma_{28}$, scoped by ${\sigma_3}$.
 \end{enumerate}
 
-\vspace{.1cm}
+
 \noindent
 Finally, Def. \ref{def:exec:sum} also defines:
 \begin{itemize}
 \item
 $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$  \ \ purely external executions, interleaved with summarised public internal method calls, starting at ${\sigma_1...\sigma_n}$, respectively.
 \end{itemize}
-
+\noindent
 In terms of our example, we have that \ \ \ $\WithExtPub {\Mtwo\cdot M} {\sigma_2}  {\sigma_{2}}   {\sigma_{20}}  {\sigma_5,\sigma_{21}}$.
 
 
+\vspace{.1cm}
+
+We now revisit external executions interleaved with public method calls:   
+Lemma \ref{lemma:external_breakdown:term} says that any terminating execution
+% ,  $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$, 
+ starting in an external state  consists of a  sequence of  external states interleaved with terminating executions
+ %  in internal states, 
+% $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$.
+of public methods.
+Lemma  \ref{lemma:external_exec_preserves_more} says that an encapsulated assertion $A$  is preserved by an execution
+% $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$, 
+starting at an external state is provided that all finalising internal executions  %(the public methods called at $\sigma_1$, ... $\sigma_n$) 
+also preserve $A$. 
+% It is used to prove  soundness of the rule {\sc{ExtCall}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
+
+In more technical detail, if $\sigma$ is external and $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$, 
+then there exist $\sigma_1$, ... $\sigma_n$, such that
+ $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$.
+ Conversely, if $A$ is encapsulated, 
+ and $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$, and 
+ the calls at  $\sigma_1$, ... $\sigma_n$ preserve $A$,  then $A$ is preserved from $\sigma$ to $\sigma'$.
   
 
 
@@ -251,16 +242,14 @@ In terms of our example, we have that \ \ \ $\WithExtPub {\Mtwo\cdot M} {\sigma_
 
 \subsection{ Soundness of the Hoare Quadruples Logic}
 
-Another challenge when proving soundness of our quadruples, is that in some cases we want to 
-%For the soundness proof of our quadruples we need to address two challenges:
-apply induction on the execution and  in other cases we want to apply induction on the Hoare logic
-proof.  We address this challenge  through the definition of a well-founded ordering (\cf Section \ref{sect:prove:wellfounded}). 
+Another challenge when proving soundness of our quadruples, is that the proof of some cases  requires induction on the execution while the proof of other cases  requires induction on the quadruples
+proof.  We address this challenge  through  a well-founded ordering that combines both:
 
-\subsubsection{A well-founded ordering}
+% \subsubsection{A well-founded ordering}
 \label{sect:prove:wellfounded}
 
-We define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to terminations in fewer steps than $\sigma_2$ considering the shortest, terminating scoped execution), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
-is shallower than the the proof of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_6} $ (considering the shallowest possible proofs). Full Def. in \ref{def:measure}.
+In Def.  \ref{def:measure}  we define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to terminations in fewer steps than $\sigma_2$ considering the shortest, terminating scoped execution), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
+is shallower than the  proof of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_6} $ (considering the shallowest possible proofs).  
 
 
 \begin{auxLemma}
@@ -269,14 +258,8 @@ For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-fo
 \end{auxLemma}
 
 \label{sect:prove:sound:quadruples}
-We now prove soundness of the inference system $M \vdash  \quadruple A {stmt} {A'} {A''}$, using the decomposition of execution from the earlier section, and the ordering defined in Def. \ref{lemma:normal:two}.
+We now prove soundness of the inference system $M \vdash  \quadruple A {stmt} {A'} {A''}$, using summarized executions from the earlier section, and the ordering $_ \ll \_$:  
 
-\noindent
-Lemma \ref{lemma:external_breakdown:term} says that any terminating execution,  $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$ starting in an external state  consists such a a sequence of  external states interleaved with terminating executions in internal states, $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$.
-Lemma  \ref{lemma:external_exec_preserves_more} says that an encapsulated assertion $A$  is preserved by an execution
- $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$, 
-provided that all finalising internal executions (the public methods called at $\sigma_1$, ... $\sigma_n$) also preserved it. 
-It is used to prove  soundness of the rule {\sc{ExtCall}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
 
 
 \begin{theorem}
@@ -308,7 +291,7 @@ Finally, we  prove soundness of the overall system:
  $$\proves{M}{S}\ \ \ \ \ \ \ \mbox{implies}\ \ \ \ \ \  \ \ \ {M} \modelsD {S}$$
 \end{theorem}
 
-Proof sketches for these theorems can be found in \A \ref{s:app:proof:sketch;quadruples} and \ref{s:app:proof:sketch;overall}. 
+Proof outlines for these theorems can be found in \A \ref{s:app:proof:sketch;quadruples} and \ref{s:app:proof:sketch;overall}. 
 
 %
 %Theorem. \ref{thm:soundness} demonstrates 
