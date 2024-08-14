@@ -25,6 +25,7 @@ module M$_{good}$
       if (this.accnt.blnce == oldBlnce+price)  this.send(buyer,anItem)
       else
          buyer.tell("you have not paid me") 
+      return 0
      
       private method send(buyer:external, anItem:Item)  
        ... 
@@ -49,28 +50,33 @@ to the specificaiton, and finally in phase 3 we use raise the results from phase
 the entire module satisfies the specification.
 
 \begin{lemma}
+\label{lemma:exampleKeyProtect}
 $M_{good} \vdash S_1$
 \end{lemma}
 \begin{proof}
 We construct our proof tree using a top down approach.  That is, we start with our goal
 $$M_{good} \vdash \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{\prg{a.key}}}}$$
-and apply  \textsc{Invariant-Hope} from Fig. \ref{f:wf}.
+and apply  \textsc{Invariant-Success?} from Fig. \ref{f:wf}.
 From this we are left with a subgoal for each method $m$ in  class $C$ with parameters $\overline{y:D}$ and body $stmt$ in the public interface of $M_{good}$:
 \small
 \begin{align*}
 M_{good} \vdash
-		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\, 
-\external z \wedge\ {\PushASLong {z} {\inside{\prg{a.key}}}}\} \\
+		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
+		   {\inside{\prg{a.key}}}\} \\
 		& stmt\ \\
-		& \{\ {\PushASLong {z} {\inside{\prg{a.key}}}}\ \}\ ||\ \{\ {\PushASLong {z} {\inside{\prg{a.key}}}} \ 			\} 
+		& \{\ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}\ \}\ ||\ \{\ {\inside{\prg{a.key}}} \ 			\} 
 \end{align*}
 \normalsize
 This is relatively simple to prove for methods without external method calls, as we can rely entirely on the Hoare logic extension described in Section \ref{sect:proofSystem}. The only  method within $M_{good}$ that contains 
 an external method call is  the \prg{buy} method within the \prg{Shop} class. Thus, we need to prove:
 \small
 \begin{align*}
-\text{(1)}  \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, \external z \wedge\ {\PushASLong {z} {\inside{\prg{a.key}}}} \} \\
-		  &stmt\ \\  &\{ {\PushASLong {z} {\inside{\prg{a.key}}}} \} \ \ \  || \ \ \ \{ {\PushASLong {z} {\inside{\prg{a.key}}}} \}
+\text{(1)}  \ \ \ \ M_{good} \vdash 
+		&	\{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, 
+				{\inside{\prg{a.key}}} \} \\
+		& stmt\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 \normalsize
 Where $stmt$ is the body of \prg{buy}. We now construct this proof using the quadruple rules described in \ref{sect:proofSystem}. By our hoare triple extension and the \textsc{Mid} rule that raises triples to quaruples, the first two lines
@@ -85,121 +91,119 @@ $$
 We now need to prove that the external method call \prg{buyer.pay(this.accnt, price)} protects the \prg{key}. i.e.
 \small
 \begin{align*}
-M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
-				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
-				  \prg{this.accnt}:\prg{Account},\, \\
+M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \\
 				& \prg{price} : \prg{int},\,
 				  \wedge\, 
-				  \external z \wedge\ {\PushASLong {z} {\inside{\prg{a.key}}}} \} \\
+				  {\inside{\prg{a.key}}} \} \\
 		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
-		  		& \{ {\PushASLong {z} {\inside{\prg{a.key}}}} \} \ \ \  || \ \ \ \{ {\PushASLong {z} {\inside{\prg{a.key}}}} \}
+		  		& \{ {\inside{\prg{a.key}}}  \} \ \ \  || \ \ \ 
+		  		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 \normalsize
-or simplifying the precondition to what we need and applying the ``pop''.
+By the \textsc{Consequ} in Fig. \ref{f:substructural} and \ref{rule for deriving protection from integers and internal objects} (add to underlying assertion proof system???), we have
 \small
 \begin{align*}
-\text{(4)} \ \ \ \ 
-M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
-				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
-				  \prg{this.accnt}:\prg{Account},\, \\
+M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{this.accnt}:\prg{Account}\\
 				& \prg{price} : \prg{int},\,
 				  \wedge\, 
-				  \external z \wedge\ 
-				  {\protectedFrom{\prg{a.key}}{z}} \} \\
+				  {\inside{\prg{a.key}}}\ \wedge\ 
+				  \protectedFrom{\prg{a.key}}{\prg{price}}\ \wedge\ 
+				   \protectedFrom{\prg{a.key}}{\prg{this.accnt}}\} \\
 		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
-		  		& \{ {\protectedFrom{\prg{a.key}}{z}} \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
+		  		& \{ {\inside{\prg{a.key}}}  \} \ \ \  || \ \ \ 
+		  		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 \normalsize
 
-This is discharged by the rule \textsc{Call\_Ext\_Adapt}, giving us the desired result.
+This is discharged by the rules \textsc{Call\_Ext\_Adapt\_Strong} and \textsc{Consequ}, giving us the desired result.
 
-\jm{(julian: I did the below bit because I thought it would be necessary, but I'm not sure that it is. I feel like this might be a problem. Don't we need to know that \prg{a.key} is protected from the arguments to \prg{buyer.pay}?????)}
-
-From the definition of protection \jm{(Julian: we need some proof rules for this)}, 
-we have 
-$$
-\text{(5)} \ \ \ \ \protectedFrom{\prg{a.key}}{\prg{this.accnt}}
-$$
-since $\prg{this.accnt}:\prg{Account}$ and $\prg{Account} \in M_{good}$.
-We also get
-$$
-\text{(6)} \ \ \ \ \protectedFrom{\prg{a.key}}{\prg{price}}
-$$
-because \prg{price} is a prmitive and is thus everything is protected from 
-it. \jm{(julian: we need to add this.)}
-
-This gives us:
-\small
-\begin{align*}
-\text{(7)} \ \ \ \ 
-M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
-				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
-				  \prg{this.accnt}:\prg{Account},\, \\
-				& \prg{price} : \prg{int},\,
-				  \wedge\, 
-				  \external z \wedge\ 
-				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge\, 
-				  \protectedFrom{\prg{a.key}}{\prg{price}}\, \wedge\, \\
-				& \protectedFrom{\prg{a.key}}{\prg{this.accnt}}\} \\
-		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
-		  		& \{ {\protectedFrom{\prg{a.key}}{z}} \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
-\end{align*}
-\normalsize
-
-
-\jm{Julian: I don't think below is necessary...}\\
-\jm{Julian: I think there might be a problem here. If \prg{buyer.pay} had an external 
-object as an
-argument, then there would be no way we'd able to prove that \prg{a.key} was 
-protected from that external object.}
-Now we use the fact the \jm{law of excluded middle} and \textsc{Conseq} to introduce $\prg{a} = \prg{this.accnt}\ \vee\ \prg{a} \not= \prg{this.accnt}$ to the precondition.
-\small
-\begin{align*}
-\text{(5)} \ \ \ \ 
-M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
-				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
-				  \prg{this.accnt}:\prg{Account},\, \\
-				& \prg{price} : \prg{int},\,
-				  \wedge\, 
-				  \external z \wedge\ 
-				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge \,
-				  \prg{a} = \prg{this.accnt}\ \vee\ \prg{a} \not= \prg{this.accnt} \} \\
-		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
-		  		& \{ {\protectedFrom{\prg{a.key}}{z}}  \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
-\end{align*}
-\normalsize
-Now \jm{the traditional  Hoare rule for disjunction} gives us two subgoals:
-\small
-\begin{align*}
-\text{(6.1)} \ \ \ \ 
-M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
-				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
-				  \prg{this.accnt}:\prg{Account},\, \\
-				& \prg{price} : \prg{int},\,
-				  \wedge\, 
-				  \external z \wedge\ 
-				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge \,
-				  \prg{a} = \prg{this.accnt} \} \\
-		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
-		  		& \{ {\protectedFrom{\prg{a.key}}{z}}  \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
-\end{align*}
-\normalsize
-\small
-\begin{align*}
-\text{(6.2)} \ \ \ \ 
-M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
-				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
-				  \prg{this.accnt}:\prg{Account},\, \\
-				& \prg{price} : \prg{int},\,
-				  \wedge\, 
-				  \external z \wedge\ 
-				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge \,
-				  \prg{a} \not= \prg{this.accnt} \} \\
-		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
-		  		& \{ {\protectedFrom{\prg{a.key}}{z}}  \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
-\end{align*}
-\normalsize
-Both (5.1) and (5.2) can now be discharged in the same manner, since in both cases, \prg{a.key} is protected from the arguments of \prg{buyer.pay}.  Finally, by application of \textsc{Conseq} and \textsc{Call\_Ext\_Adapt} we get our goal.
+%\jm{(julian: I did the below bit because I thought it would be necessary, but I'm not sure that it is. I feel like this might be a problem. Don't we need to know that \prg{a.key} is protected from the arguments to \prg{buyer.pay}?????)}
+%
+%From the definition of protection \jm{(Julian: we need some proof rules for this)}, 
+%we have 
+%$$
+%\text{(5)} \ \ \ \ \protectedFrom{\prg{a.key}}{\prg{this.accnt}}
+%$$
+%since $\prg{this.accnt}:\prg{Account}$ and $\prg{Account} \in M_{good}$.
+%We also get
+%$$
+%\text{(6)} \ \ \ \ \protectedFrom{\prg{a.key}}{\prg{price}}
+%$$
+%because \prg{price} is a prmitive and is thus everything is protected from 
+%it. \jm{(julian: we need to add this.)}
+%
+%This gives us:
+%\small
+%\begin{align*}
+%\text{(7)} \ \ \ \ 
+%M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
+%				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
+%				  \prg{this.accnt}:\prg{Account},\, \\
+%				& \prg{price} : \prg{int},\,
+%				  \wedge\, 
+%				  \external z \wedge\ 
+%				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge\, 
+%				  \protectedFrom{\prg{a.key}}{\prg{price}}\, \wedge\, \\
+%				& \protectedFrom{\prg{a.key}}{\prg{this.accnt}}\} \\
+%		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
+%		  		& \{ {\protectedFrom{\prg{a.key}}{z}} \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
+%\end{align*}
+%\normalsize
+%
+%
+%\jm{Julian: I don't think below is necessary...}\\
+%\jm{Julian: I think there might be a problem here. If \prg{buyer.pay} had an external 
+%object as an
+%argument, then there would be no way we'd able to prove that \prg{a.key} was 
+%protected from that external object.}
+%Now we use the fact the \jm{law of excluded middle} and \textsc{Conseq} to introduce $\prg{a} = \prg{this.accnt}\ \vee\ \prg{a} \not= \prg{this.accnt}$ to the precondition.
+%\small
+%\begin{align*}
+%\text{(5)} \ \ \ \ 
+%M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
+%				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
+%				  \prg{this.accnt}:\prg{Account},\, \\
+%				& \prg{price} : \prg{int},\,
+%				  \wedge\, 
+%				  \external z \wedge\ 
+%				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge \,
+%				  \prg{a} = \prg{this.accnt}\ \vee\ \prg{a} \not= \prg{this.accnt} \} \\
+%		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
+%		  		& \{ {\protectedFrom{\prg{a.key}}{z}}  \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
+%\end{align*}
+%\normalsize
+%Now \jm{the traditional  Hoare rule for disjunction} gives us two subgoals:
+%\small
+%\begin{align*}
+%\text{(6.1)} \ \ \ \ 
+%M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
+%				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
+%				  \prg{this.accnt}:\prg{Account},\, \\
+%				& \prg{price} : \prg{int},\,
+%				  \wedge\, 
+%				  \external z \wedge\ 
+%				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge \,
+%				  \prg{a} = \prg{this.accnt} \} \\
+%		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
+%		  		& \{ {\protectedFrom{\prg{a.key}}{z}}  \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
+%\end{align*}
+%\normalsize
+%\small
+%\begin{align*}
+%\text{(6.2)} \ \ \ \ 
+%M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
+%				  \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\,
+%				  \prg{this.accnt}:\prg{Account},\, \\
+%				& \prg{price} : \prg{int},\,
+%				  \wedge\, 
+%				  \external z \wedge\ 
+%				  {\protectedFrom{\prg{a.key}}{z}}\, \wedge \,
+%				  \prg{a} \not= \prg{this.accnt} \} \\
+%		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
+%		  		& \{ {\protectedFrom{\prg{a.key}}{z}}  \} \ \ \  || \ \ \ \{ {\protectedFrom{\prg{a.key}}{z}} \}
+%\end{align*}
+%\normalsize
+%Both (5.1) and (5.2) can now be discharged in the same manner, since in both cases, \prg{a.key} is protected from the arguments of \prg{buyer.pay}.  Finally, by application of \textsc{Conseq} and \textsc{Call\_Ext\_Adapt} we get our goal.
 %\small
 %\begin{align*}
 %\text{(3)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
@@ -222,19 +226,32 @@ From this we are left with a subgoal for each method $m$ in  class $C$ with para
 \small
 \begin{align*}
 M_{good} \vdash
-		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\, 
-\external z \wedge\ {\PushASLong {z} {(\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b})}}\} \\
+		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
+		   {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\} \\
 		& stmt\ \\
-		& \{\ {\PushASLong {z} {(\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b})}}\ \}\ ||\ \{\ {\PushASLong {z} {(\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b})}} \ 			\} 
+		& \{\ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\ \wedge\ {\PushASLong {\prg{res}} {(\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b})}}\ \}\ ||\ \{\ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}} \ 			\} 
 \end{align*}
 \normalsize
-This is relatively simple to prove for methods without external method calls, as we can rely entirely on the Hoare logic extension described in Section \ref{sect:proofSystem}. The only  method within $M_{good}$ that contains 
+We can simplify the above using the definition of $\PushASLong{\overline{z}}{A}$:
+\small
+\begin{align*}
+M_{good} \vdash
+		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
+		   {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\} \\
+		& stmt\ \\
+		& \{\ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\ \wedge\ \protectedFrom{\prg{a.key}}{\prg{res}}\ \}\ ||\ \{\ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}} \ 			\} 
+\end{align*}
+\normalsize
+This is relatively simple to prove for methods without external method calls, as we can rely entirely on the Hoare logic extension described in Section \ref{sect:proofSystem}. As in Lemma \ref{lemma:exampleKeyProtect} the only  method within $M_{good}$ that contains 
 an external method call is  the \prg{buy} method within the \prg{Shop} class. Thus, we need to prove:
 \small
 \begin{align*}
-\text{(1)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item} \, \wedge\, \neg\inside{this}\wedge \\ 
-		&\neg\inside{\prg{buyer}} \wedge \neg\inside{\prg{anItem}}, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \} 
-		 stmt\ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \ \{ \inside{\prg{a.key}} \}
+\text{(1)}  \ \ \ \ M_{good} \vdash 
+		&	\{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, 
+				{\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\} \\
+		& stmt\ \\  
+		& \{ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\ \wedge\ \protectedFrom{\prg{a.key}}{\prg{res}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}} \}
 \end{align*}
 \normalsize
 Where $stmt$ is the body of \prg{buy}. We now construct this proof using the quadruple rules described in \ref{sect:proofSystem}. By our hoare triple extension and the \textsc{Mid} rule that raises triples to quaruples, the first two lines
@@ -249,29 +266,31 @@ $$
 We now need to prove that the external method call \prg{buyer.pay(this.accnt, price)} protects the \prg{key}. i.e.
 \small
 \begin{align*}
-M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, 
-		\prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
-		\neg\inside{this}\wedge \\ 
-		&\neg\inside{\prg{buyer}} \wedge \neg\inside{\prg{anItem}}, \wedge\, \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
-		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \\
+				& \prg{price} : \prg{int},\,
+				  \wedge\, 
+				  {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}} \} \\
+		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
+		  		& \{ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\ \wedge\ \protectedFrom{\prg{a.key}}{\prg{res}}  \} \ \ \  || \ \ \ 
+		  		   \{ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}} \}
 \end{align*}
 \normalsize
-or simplifying the precondition to what we need:
+By the \textsc{Consequ} in Fig. \ref{f:substructural} and \ref{rule for deriving protection from integers and internal objects} (add to underlying assertion proof system???), we have
 \small
 \begin{align*}
-\text{(3)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
-		 \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
-		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
+M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{this.accnt}:\prg{Account}\\
+				& \prg{price} : \prg{int},\,
+				  \wedge\, 
+				  {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\ \wedge\ 
+				  \protectedFrom{\prg{a.key}}{\prg{price}}\ \wedge\ 
+				   \protectedFrom{\prg{a.key}}{\prg{this.accnt}}\} \\
+		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
+		  		& \{ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}}\ \wedge\ \protectedFrom{\prg{a.key}}{\prg{res}}  \} \ \ \  || \ \ \ 
+		  		   \{ {\inside{\prg{a.key}} \wedge \prg{a.blnce} \geq \prg{b}} \}
 \end{align*}
 \normalsize
-Now, by application of \textsc{Conseq} and \textsc{Call\_Ext\_Adapt} we get our goal.
-%\small
-%\begin{align*}
-%\text{(3)} \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item}, \prg{price} : \prg{int} \, \wedge\, 
-%		 \prg{a} : \prg{Account}\, \wedge\,  \inside{\prg{a.key}} \}  \\
-%		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
-%
-%\normalsize
+
+This is discharged by the rules \textsc{Call\_Ext\_Adapt\_Strong} and \textsc{Consequ}, giving us the desired result.
 \end{proof}
 
 %$$M_{shop} \vdash \{{\inside{\texttt{a.key}}}\}\ {\texttt{public}\ \texttt{Shop}}::{\texttt{buy}}{(\texttt{buyer} : \texttt{external})}\ \{{\inside{\texttt{a.key}}}\}\ ||\ \{{\inside{\texttt{a.key}}} \}$$
