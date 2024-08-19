@@ -56,30 +56,65 @@ $M_{good} \vdash S_1$
 \begin{proof}
 We construct our proof tree using a top down approach.  That is, we start with our goal
 $$M_{good} \vdash \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{\prg{a.key}}}}$$
-and apply  \textsc{Invariant-Success?} from Fig. \ref{f:wf}.
-From this we are left with a subgoal for each method $m$ in  class $C$ with parameters $\overline{y:D}$ and body $stmt$ in the public interface of $M_{good}$:
+and apply  \textsc{Invariant} from Fig. \ref{f:wf}.
+From this we are left with a subgoal for each method $m$ in  class $C$ with parameters $\overline{y:D}$ in the public interface of $M_{good}$ (note, we denote the body of such a method as \prg{C}::\prg{m}.\prg{body}):
 \small
 \begin{align*}
 M_{good} \vdash
 		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
 		   {\inside{\prg{a.key}}}\} \\
-		& stmt\ \\
+		& \prg{C}::\prg{m}.\prg{body}\ \\
 		& \{\ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}\ \}\ ||\ \{\ {\inside{\prg{a.key}}} \ 			\} 
 \end{align*}
 \normalsize
-This is relatively simple to prove for methods without external method calls, as we can rely entirely on the Hoare logic extension described in Section \ref{sect:proofSystem}. The only  method within $M_{good}$ that contains 
-an external method call is  the \prg{buy} method within the \prg{Shop} class. Thus, we need to prove:
+Thus, we need to prove the above for \prg{buy} in the \prg{Shop} class:
 \small
 \begin{align*}
 \text{(1)}  \ \ \ \ M_{good} \vdash 
 		&	\{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, 
 				{\inside{\prg{a.key}}} \} \\
-		& stmt\ \\  
+		& \prg{Shop}::\prg{buy}.\prg{body}\ \\  
 		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 \normalsize
-Where $stmt$ is the body of \prg{buy}. We now construct this proof using the quadruple rules described in \ref{sect:proofSystem}. By our hoare triple extension and the \textsc{Mid} rule that raises triples to quaruples, the first two lines
+\prg{transfer} in the \prg{Account} class:
+\small
+\begin{align*}
+\text{(2)}  \ \ \ \ M_{good} \vdash 
+		&	\{  \prg{this}:\prg{Account}, \prg{dest} : \prg{Account}, 
+			\prg{key'} : \prg{Key},\, \prg{amt}:\prg{int},\, \prg{a}:\prg{Account}\,
+			\wedge\,{\inside{\prg{a.key}}} \} \\
+		& \prg{Account}::\prg{transfer}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+\normalsize
+and \prg{set} in the \prg{Account} class:
+\small
+\begin{align*}
+\text{(3)}  \ \ \ \ M_{good} \vdash 
+		&	\{  \prg{this}:\prg{Account},\,
+			\prg{key'} : \prg{Key},\, \prg{a}:\prg{Account}\,
+			\wedge\,{\inside{\prg{a.key}}} \} \\
+		& \prg{Account}::\prg{set}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+\normalsize
+
+We start with the \prg{buy} method within the \prg{Shop} class. i.e.:
+\small
+\begin{align*}
+\text{(1)}  \ \ \ \ M_{good} \vdash 
+		&	\{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, 
+				{\inside{\prg{a.key}}} \} \\
+		& \prg{Shop}::\prg{buy}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+\normalsize
+We construct this proof using the quadruple rules described in \ref{sect:proofSystem}. By our hoare triple extension and the \textsc{Mid} rule that raises triples to quaruples, the first two lines
 of \prg{buy} preserve the precondition in (1) above, and further that 
 \small
 $$
@@ -110,12 +145,17 @@ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{
 				  \protectedFrom{\prg{a.key}}{\prg{price}}\ \wedge\ 
 				   \protectedFrom{\prg{a.key}}{\prg{this.accnt}}\} \\
 		  		& \prg{buyer.pay(this.accnt, price)}\ \\  
-		  		& \{ {\inside{\prg{a.key}}}  \} \ \ \  || \ \ \ 
-		  		   \{ {\inside{\prg{a.key}}} \}
+		  		& \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{this.accnt}:\prg{Account}\\
+				& \prg{price} : \prg{int},\,
+				  \wedge\, 
+				  {\inside{\prg{a.key}}}\ \wedge\ 
+				  \protectedFrom{\prg{a.key}}{\prg{price}}\ \wedge\ 
+				   \protectedFrom{\prg{a.key}}{\prg{this.accnt}}\} \ \ \  || \ \ \ \\
+		  		& \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 \normalsize
 
-This is discharged by the rules \textsc{Call\_Ext\_Adapt\_Strong} and \textsc{Consequ}, giving us the desired result.
+Using the rules \textsc{Call\_Ext\_Adapt\_Strong} and \textsc{Consequ}, we prove that our precondition is maintained across the external call.
 
 %\jm{(julian: I did the below bit because I thought it would be necessary, but I'm not sure that it is. I feel like this might be a problem. Don't we need to know that \prg{a.key} is protected from the arguments to \prg{buyer.pay}?????)}
 %
