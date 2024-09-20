@@ -1,23 +1,27 @@
-
+\newcommand{\Ao}{A_{o}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Preservation of assertions when pushing or popping frames}
 
-In this section we  discuss the preservation  assertions when pushing and popping of frames. 
-The result of this discussion is  lemma \ref{l:calls}. 
- which will be used when we prove soundness of the rules about method calls, as given in Fig. \ref{f:calls}. 
+In this section we  discuss the preservation of satisfaction of assertions when calling methods or returning from methods -- \ie when pushing or popping  frames. 
+Namely, since  pushing/popping frames  do not modify the heap, these operations should preserve satisfaction of some assertion $\Ao$, up to the fact that a) passing an object as a parameter of a a result might break its protection, and 
+b) the bindings of variables change  with pushing/popping frames.
+To deal with a) we either require that the fame being pushed is internal ($M, \sigma' \models \intThis$), or require the adapted version of an assertion (\ie  ${\PushAS  {v} { \Ao}}$ rather than $\Ao$).
+To deal with b) we break the free variables of $A$ into four parts, \ie $\fv(\Ao) =  \overline{v_1}, \overline{v_2}, \overline {v_3}, \overline {v_4} $, where the value of $\overline{v_1}$ is the same in both the caller and the callee frame, the value of $\overline {v_5}$ in the callee is the same as in the caller, $\overline {v_3}$ do not necessarily have a value in the caller frame, and $\overline {v_4}$ do not necessarily have a value in the callee frame.
 
-%We will first state  lemma \ref{l:calls}, then discuss it, and a then we will define and prove a sequence of concepts and 
-% lemmas which we will use in the proof of lemma \ref{l:calls}.
+More precisely, the preservation of satisfaction of assertions is described in  lemma \ref{l:calls}. 
+ which will be used when we prove soundness of the rules about method calls, as given in Fig. \ref{f:calls}. 
+%
+We will first state  the lemma \ref{l:calls}, then discuss it,   then  will define and prove a sequence of auxiliary concepts and 
+ lemmas, and finally prove it. % the  lemma \ref{l:calls}.
  
 \begin{lemma}
 \label{l:calls}
 
-For states $\sigma$, $\sigma'$, assertion $A$, %,  such that $\fv(A)=\emptyset$, 
-variables  $\overline{v_1}$,    $\overline{v_2}$,  $\overline{v_3}$,   $\overline{v_4}$,    $\overline{v_5}$,    $\overline{v_6}$, and  $\overline{v_7}$,
-addresses $\overline \alpha$ and $\overline \alpha_3$, %and $\overline \alpha$, 
-and statement $stmt$, and frame $\phi$.
+For any assertion $\Ao$, states $\sigma$, $\sigma'$,  
+variables  $\overline{v_1}$,    $\overline{v_2}$,  $\overline{v_3}$,   $\overline{v_4}$,    $\overline{v_5}$,     $\overline{v_6}$, and  $\overline{v_7}$, addresses $\overline \alpha_3$ and $\overline \alpha_5$, 
+statement $stmt$, and frame $\phi$.
 
 \noindent
 % $ ~ $ % and $\overline{y'}$,  \\
@@ -25,67 +29,85 @@ If
 \begin{enumerate}[(i)]
 \item 
 \label{l:calls:r:one}
-$ \Pos A$,  
+$ \Pos \Ao$,  
 \item 
 \label{l:calls:r:two}
-$\fv(A) =  \overline{v_1}, \overline{v_2}, \overline {v_3}, \overline {v_4} $\footnote{This fives us, implicitly, also that $\overline{v_1}\#\overline{v_2}$, $\overline{v_1}\#\overline{v_3}$, ... etc.}
-\item 
-\label{l:calls:r:three}
- $\overline{v_7} \#\ fv(A) $, \ \  and 
+$\fv(\Ao) =  \overline{v_1}, \overline{v_2}, \overline {v_3}, \overline {v_4} $\footnote{This gives, implicitly, also that the variables are pairwise disjoint, \ie $\overline{v_1}\#\overline{v_2}$, $\overline{v_1}\#\overline{v_3}$, ... etc.}
+%\item 
+%\label{l:calls:r:three}
+% $\overline{v_7} \#\ fv(\Ao) $, \ \  and 
 \item 
 \label{l:calls:r:four}
- $\overline {\interpret {\sigma'} {v_1} } = \overline {\interpret {\sigma} {v_1} }$, \ \ and\ \  $\overline {\interpret {\sigma'}  {v_2} } = \overline {\interpret {\sigma} {v_6} }$, \ \ and \ \  $\overline {\interpret {\sigma}  {v_3} } = \overline {\alpha_3}$,   
+ $\overline {\interpret {\sigma'} {v_1} } = \overline {\interpret {\sigma} {v_1} }$, 
 \end{enumerate}
  then 
 \begin{enumerate}
 
 \item
 \label{l:calls:callee}
-$\sigma'=\sigma  \pushSymbol \phi  \ \ \ \  \wedge\ \ \  dom(\phi)=\overline{v_1},\overline{v_2} \Longrightarrow$
+$\sigma'=\sigma  \pushSymbol \phi  \ \ \ \  \wedge\ \ \  Rng(\phi)= \overline{\interpret {\sigma} {v_1} }, \overline{\interpret {\sigma} {v_6} }\ \ \ \ \wedge \ \  \ \ \overline {\interpret {\sigma'}  {v_2} } = \overline {\interpret {\sigma} {v_6} }$ 
+\\ 
+$\Longrightarrow$
 
 \begin{enumerate}
 \item
 \label{l:calls:callee:one}
-$\satDAssertFrom M  \sigma k   A[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}] \ \    \wedge\ \ M, \sigma' \models \intThis  
-% $\\
- \hfill  \Longrightarrow\ \ \ \ \ \ \  \ \satDAssertFrom M  {\sigma} k  {A[\overline { \alpha_3/v_3}][\overline { {\interpret \sigma {v_4}} / v_4}]}$.
+$\satDAssertFrom M  \sigma k   \Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}] \ \    \wedge\ \ M, \sigma' \models \intThis  $
+ \\ 
+$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \ \satDAssertFrom M  {\sigma} k  {\Ao[\overline { \alpha_3/v_3}][\overline { {\interpret \sigma {v_4}} / v_4}]}$.
 
-%\item
-%\label{l:calls:callee:two}
-%$% \satDAssertFrom M  \sigma k   {\PushAS  {v_5} { A[\overline {v_4/v_2}] }} 
-%M, \sigma \models {\PushAS  {v_5} { A[\overline {v_4/v_2}] }}  \ \ \wedge\ \ Range(\phi)=\overline {\interpret {\sigma} {v_5}}
-%\hfill \Longrightarrow  \ \ \ \  \   \ \ \ \ %\satDAssertFrom M  {\sigma'} {\DepthSt {\sigma'}}  {A[\overline  {\alpha_3/v_3}]}$.
-%M, \sigma' \models  {A[\overline  {\alpha_3/v_3}]}$.
-%
-%\item
-%\label{l:calls:callee:three}
-%$\satDAssertFrom M  \sigma k   {A[\overline {v_4/v_2}]  \wedge (\PushAS  {v_5} { A[\overline {v_4/v_2}] )}}  \ \ \wedge\ \ Range(\phi)=\overline {\interpret {\sigma} {v_5}}
-%  $\\  $
-%\strut \hspace{5cm} \hfill \Longrightarrow \ \ \ \ \ \ \  \   \satDAssertFrom M  {\sigma'} k  {A[\overline { \alpha_3/v_3}]}$.
-%
+
+\item
+\label{l:calls:callee:two}
+$\satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_1},\overline {v_6})} {(\Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])}} $ \\ 
+$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \  
+M, \sigma' \models  {\Ao[\overline { \alpha_3/v_3}][\overline { {\interpret \sigma {v_4}} / v_4} ] }$.
+
+
+\item
+\label{l:calls:callee:three}
+$\satDAssertFrom M  \sigma k   {(\Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])  \wedge ( {\PushASLong  {(\overline {v_1},\overline {v_6})} {(\Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])}})}   $
+ \\ 
+$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k  {\Ao[\overline { \alpha_3/v_3}]}$.
 
 \end{enumerate}
+
 \item
 \label{l:calls:caller}
-$\sigma'= (\sigma \popSymbol)[\overline{ v_7\! \mapsto\! \alpha}][\prg{cont}\!\mapsto\! stmt]
- \ \ \ \ \wedge \ \ \ \overline v_4 = \emptyset\ \ \ \  \Longrightarrow$ 
+$\sigma'= (\sigma \popSymbol)[\overline{ v_7\! \mapsto\! \alpha_7}][\prg{cont}\!\mapsto\! stmt]
+\ \ \wedge \ \  \overline {\alpha_7} \subseteq \LRelevantO \sigma  \ \ \wedge \ \  M, \sigma' \models \intThis
+ \ \ \wedge $\\
+ $\overline v_4 = \emptyset\ \ \wedge \ \  \overline {\interpret {\sigma}  {v_2} } = \overline {\interpret {\sigma'} {v_6} }$ 
+\\ 
+$\Longrightarrow$
+ 
 
 \begin{enumerate}
 \item
 \label{l:calls:caller:one}
-$\satDAssertFrom M  \sigma k   A[\overline {\alpha_3/v_3}] \ \  \wedge\ \ \DepthSt {\sigma'} \geq k  \wedge\ \ M, \sigma' \models \intThis
-\hfill \Longrightarrow   \ \ \ \ \ \ \  \   \satDAssertFrom M  {\sigma'} k   {A[\overline {v_6 / v_2}][\overline { \alpha_3/v_3}]}$ 
+$\satDAssertFrom M  \sigma k   \Ao[\overline {\alpha_3/v_3}] \ \  \wedge\ \ \DepthSt {\sigma'} \geq k  \ 
+$ \\ 
+$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k   {\Ao[\overline {v_6 / v_2}][\overline { \alpha_3/v_3}]}$ 
 
-%\item
-%\label{l:calls:caller:two}
-%%$\satDAssertFrom M  \sigma k   A[\overline {v_4/v_2}] \ \ 
-%$M, \sigma \models  {A[\overline  {v_4/v_2}]}\ \ \wedge\ \  \overline \alpha,  \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma
-%\hfill \Longrightarrow   \ \ \ \ \ \ \  \  M , \sigma' \models  {\PushASLong  {\overline {v_5}}   {{(A[\overline {\alpha_3/v_3}])}}}$
-%
-%\item
-%\label{l:calls:caller:three}
-%$\satDAssertFrom M  \sigma k   {A[\overline  {v_4/v_2}]} \ \ \wedge\ \  \overline \alpha, \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma  $\\  $\strut \hspace{5cm} \hfill \Longrightarrow  \ \ \ \ \ \ \  \  \satDAssertFrom M  {\sigma'} k    {{{(A[\overline {\alpha_3/v_3}])}} \wedge \PushASLong  {\overline {v_5}}   {{(A[\overline {\alpha_3/v_3}])}}}$
+\item
+\label{l:calls:caller:two}
+$M, \sigma \models  {\Ao[\overline {\alpha_3/v_3}]}\ \ \wedge\ \  \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma
+$ \\ 
+$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \  M , \sigma' \models  {\PushASLong  {\overline {v_5}}    {(\Ao[\overline {v_6 / v_2}][\overline { \alpha_3/v_3}])} }$
 
+
+\item
+\label{l:calls:caller:three}
+$\satDAssertFrom M  \sigma k   {\Ao[\overline  {\alpha_3/v_3}]} \ \ \wedge\ \  %\overline \alpha, 
+\overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma  \ \ \wedge \ \  k < \DepthSt \sigma$
+\\  
+$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k    
+{
+{(A[\overline {v_6 / v_2}][\overline { \alpha_3/v_3}])} 
+\wedge
+{\PushASLong  {\overline {v_5}}    {(\Ao[\overline {v_6 / v_2}][\overline { \alpha_3/v_3}])} }
+}
+$
  \end{enumerate}
 \end{enumerate}
 
