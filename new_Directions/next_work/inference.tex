@@ -30,6 +30,21 @@ In particular, it allows   \emph{safe  renamings}.
 These renamings are   a convenience, akin to the Barendregt convention, and  allow simpler Hoare rules for  method calls -- \cf Sect. \ref{s:calls}.
 \Cf Definition \ref{d:promises}.
 
+\begin{example}
+\label{e:rename}
+The specification  from  Example ref{example:mprepostl} can be renamed as 
+
+\small
+{
+   {\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_{9r}} 
+		{  a1:\prg{Account}, a2: \prg{Account}\wedge  \inside{a1}\wedge  \inside{a2.\prg{key}} }
+		{\prg{public Account}} {\prg{set}} {\prg{nKey}:\prg{Key}}
+		{   \inside{a1}\wedge  \inside{a2.\prg{key}} }
+}}
+
+\end{example}
+
 \subsection{First Phase: Triples}
 
 
@@ -317,9 +332,9 @@ $\begin{array}{c}
 	{
 	   	\begin{array}{c}
 		\promises  M {\mprepostN{A_1}{p\ C}{m}{x}{C}{A_2} {A_3}}  \\
-		\sdN{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}]} \\
-		\sdN{y_0,\overline y \ \#\ \prg{this},\overline x, \fv(A_1) }
-          	\end{array}
+		\sdN{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}]}  
+%		\red{( y_0,\overline y ) \ \#\ \fv(\prg{this}:C,\overline x:\overline{C} \, \wedge \,  \fv(A_1) ) }
+		          	\end{array}
 		}
 	{  \hprovesN {M} 
 						{ \  y_0:C,\overline {y:C} \wedge  \sdN{A_1'}\ } % A_1[y_0/\prg{this}] \ }
@@ -333,8 +348,8 @@ $\begin{array}{c}
 	{
 	   	\begin{array}{c}
 		\promises  M {\mprepostN{A_1}{p\ C}{m}{y}{C}{A_2} {A_3}}   \\
-				\sdN{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}] } \\
-				\sdN{y_0,\overline y \ \#\ \prg{this},\overline x, \fv(A_1) }
+				\sdN{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}] }  
+%				\sdN{y_0,\overline y \ \#\ \prg{this},\overline x, \fv(A_1) }
 
           	\end{array}
 		}
@@ -365,8 +380,7 @@ $\begin{array}{c}
  	{ 
 	 \\
 	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-	 \\
-	 \sdN{y_0,\overline y\ \#\ \overline x}
+% \\  \sdN{y_0,\overline y\ \#\ \overline x}
         }
 	{   \hprovesN{M} 
 						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {\PushASLong {\sdN{(y_0,\overline {y})}}  {A}}  \ } 
@@ -382,8 +396,7 @@ $\begin{array}{c}
  	{ 
 	 \\
 	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-	 \\
-	 \sdN{y_0,\overline y\ \#\   \overline x}
+% 	 \\  \sdN{y_0,\overline y\ \#\   \overline x}
         }
 	{   \hprovesN{M} 
 						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\ \wedge  A   \wedge\ {\PushASLong {\sdN{(y_0,\overline {y})}}  {A} }\  }   
@@ -438,19 +451,25 @@ This is sound, because of our use  of the concept of \emph{deep satisfaction} of
 
 % \vspace{.1cm}
 
-\noindent
-\red{{\textbf{Required textual disjointness}}}
-\label{renamings:calls}
-In all rules above  we require that the receiver and actual parameters are textually disjoint from the formal parameters and other free variables in the method's precondition, \ie that $\sdN{y_0,\overline y \ \#\ \prg{this},\overline x, \fv(A_1) }$ or that $\sdN{y_0,\overline y\  \#\   \overline x}$. For example, given a method $m$ with $\promises  M {\mprepostN{z_a:C_a \wedge ....}{...\ C_b}{m}{x_c}{C_c}{...} {...}} $ calls of the form $z_a.m(...)$, or  $x_c.m(...)$, or $\prg{this}.m(...)$ would not type check.
-This requirement is introduced to simplify the proofs of soundness, and 
-does not restrict the expressive power of our approach: We can always satisfy this requirement 
-%through the implicit renamings defined in  Def. \ref{d:promises}, or
- through  the introduction and initialization of variables. For the example from above, we can introduce a fresh variable  $v$ and
- replace the three calls  by
-$v:=z_a;\, v.m(...)$, or  $v:=x_c;\, v.m(...)$, or $v:=\prg{this};\, v.m(...)$. 
-%In the particular case, $\promises  M {\mprepostN{z_a:C_a \wedge ....}{...\ C_b}{m_c}{x_d}{C_d}{...} {...}} $ would also give
-%$\promises  M {\mprepostN{z_p:C_a \wedge ....}{...\ C_b}{m_c}{x_q}{C_d}{...} {...}} $, where $z_a, x_d \ \#\ z_p, x_q$.
-  
+%\noindent
+%\red{{\textbf{Required textual disjointness}}}
+%\label{renamings:calls}
+%In all rules above  we require that the receiver and actual parameters are textually disjoint from the formal parameters and other free variables in the method's precondition, \ie that $( y_0,\overline y ) \ \#\ \fv(\prg{this}:C,\overline x:\overline{C} \, \wedge \,  \fv(A_1) )$ or that $\sdN{y_0,\overline y\  \#\   \overline x}$. 
+%For example, for the method \prg{set} with specification $S_9$ from Example \ref{example:mprepostl}
+%the call $a.set(key')$ would not typeset. 
+%% with $\promises  M {\mprepostN{z_a:C_a \wedge ....}{...\ C_b}{m}{x_c}{C_c}{...} {...}} $ calls of the form $z_a.m(...)$, or  $x_c.m(...)$, or $\prg{this}.m(...)$ would not type check.
+%This requirement is introduced to simplify the proofs of soundness, and 
+%does not restrict the expressive power of our approach: We can always satisfy this requirement 
+%%through the implicit renamings defined in  Def. \ref{d:promises}, or
+% through  W  the implicit renamings from Def. \ref{d:promises}. 
+% For exmple, we could instead of $S_9$, use $S_{9r}$ from Example \ref{e:rename}.
+%% 
+%% the introduction and initialization of variables. For the example from above, we can introduce a fresh variable  $v$ and
+%% replace the three calls  by
+%$v:=z_a;\, v.m(...)$, or  $v:=x_c;\, v.m(...)$, or $v:=\prg{this};\, v.m(...)$. 
+%%In the particular case, $\promises  M {\mprepostN{z_a:C_a \wedge ....}{...\ C_b}{m_c}{x_d}{C_d}{...} {...}} $ would also give
+%%$\promises  M {\mprepostN{z_p:C_a \wedge ....}{...\ C_b}{m_c}{x_q}{C_d}{...} {...}} $, where $z_a, x_d \ \#\ z_p, x_q$.
+%  
 
 %the actual and formal parameter names were identical. We achieved this through the implicit renamings from Def. \ref{d:promises}.  
 %\sdN{The requirement $\sdN{\prg{this}\notin y_0, \overline y}$ means that \prg{this} is not textually equal with the receiver or arguments of the method call. 
