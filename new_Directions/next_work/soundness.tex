@@ -1,21 +1,21 @@
 
 
 In this section we demonstrate that the proof system presented in section \ref{sect:proofSystem} is sound. 
-For this, we give a stronger, deeper meaning to our Hoare tuples  (Sect \ref{s:deep:valid}), which requires that satisfaction of assertions is preserved from the perspective of several frames, rather than just the top frame.
+For this, we give a stronger meaning to our Hoare tuples  (Sect \ref{s:scoped:valid}), we require  that   assertion hold from the perspective of \emph{several frames}, rather than just the top frame.
 
-We prove soundness of of Hoare triples (Sect \ref{sect:prove:triples:sound}).
+We prove soundness  of Hoare triples (Sect \ref{sect:prove:triples:sound}).
 We then show how execution starting from some external state can be summarised into purely external execution and terminating execution of public methods (Sect \ref{sect:termExecs}). We then use these decompositions and a well-founded ordering to prove soundness of our quadruples  and of the overall system (Sect \ref{sect:prove:sound:quadruples}).
 
 
-\subsection{Deep Satisfaction} 
-\label{s:deep:valid}
+\subsection{\Scoped Satisfaction} 
+\label{s:scoped:valid}
 
 
 Per section~\ref{s:viewAndProtect}, an assertion may hold in one state
 but not afterwards.
 
 \begin{example}
-\label{ex:motivate:deep}
+\label{ex:motivate:scoped}
 Assume state $\sigma_a$, such that $\interpret {\sigma_a} {\prg{this}}=o_1$, $\interpret {\sigma} {\prg{this}.f}=o_2$, $\interpret {\sigma} {x}=o_3$, $\interpret {\sigma} {x.f}=o_2$,  
 and $\interpret {\sigma} {x.g}=o_4$, where $o_2$ is external and all other objects are internal. 
 We then have $..,\sigma_a \models  \inside {o_4}$.
@@ -28,17 +28,17 @@ However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \n
 \end{example}
  
 
-To address this problem, we introduce ``deep satisfaction'' of assertions $ \satDAssertFrom M  \sigma k   A$ which says that $A$ is satisfied in $\sigma$  in all frames of $\sigma$ from $k$ onwards, 
+To address this problem, we introduce ``\scoped satisfaction'' of assertions $ \satDAssertFrom M  \sigma k   A$ which says that $A$ is satisfied in $\sigma$  in all frames of $\sigma$ from $k$ onwards, 
 \ie  $ \satDAssertFrom M  \sigma k   A$ iff $\sigma = ((\phi_1\cdot ... \phi_n), \chi)$ and $k\leq n$ and $\forall j. [\  k\leq j \leq n \ \Rightarrow \ M, ((\phi_1\cdot ... \phi_j), \chi) \models A'\ ]$ where $A'$ is $A$ where all free variables have been substituted according to $\phi_n$ -- \cf Def. \ref{def:restrict}.
-We then introduce ``deep'' quadruples,   $\satisfiesD {M} {\quadruple  {A} }   {\sigma}   {A'} {A''}$ , which promise that if $\sigma$ satisfies $A$ from $k$ onwards, and executes its continuation to termination, then the final state will satisfy $A'$ from $k$ onwards, and also, all intermediate external states will satisfy $A''$ from $k$ onwards - \cf Def \ref{def:restrict}.
+We then introduce ``\scoped'' quadruples,   $\satisfiesD {M} {\quadruple  {A} }   {\sigma}   {A'} {A''}$ , which promise that if $\sigma$ satisfies $A$ from $k$ onwards, and executes its continuation to termination, then the final state will satisfy $A'$ from $k$ onwards, and also, all intermediate external states will satisfy $A''$ from $k$ onwards - \cf Def \ref{def:restrict}.
 We define   $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''} $ and  $\satisfiesD {M} {S}$ accordingly.
 
 
-Thus. continuing with example \ref{ex:motivate:deep},  we have that\ \  $\satisfies {M} {\quadruple   {\inside {o_4}} }   {\sigma_b}   {\inside {o_4}}  {true} $, \ \ 
+Thus. continuing with example \ref{ex:motivate:scoped},  we have that\ \  $\satisfies {M} {\quadruple   {\inside {o_4}} }   {\sigma_b}   {\inside {o_4}}  {true} $, \ \ 
  but \\ $\notSatisfiesD {M}   {\quadruple   {\inside {o_4}} }  {\sigma_b}   {\inside {o_4}}  {true}  $.
-\ \  In general, deep satisfaction is stronger than shallow:   
+\ \  In general, \scoped satisfaction is stronger than shallow:   
  
-\begin{lemma}[Deep   vs Shallow Satisfaction]
+\begin{lemma}[\Scoped   vs Shallow Satisfaction]
 For all $M$, $A$, $A'$, $A''$, $\sigma$, $stmt$, and $S$
 \begin{itemize}
 \item
@@ -136,7 +136,7 @@ and  from $\sigma_{16}$ to $\sigma_{17}$.
 
  
 When proving soundness of the rule {\sc{Call\_Ext}}, % and  {\sc{Call\_Ext\_Adapt}}
-we will use that  $M \vdash \encaps A$ (and also deep satisfaction)  to argue that 
+we will use that  $M \vdash \encaps A$ (and also \scoped satisfaction)  to argue that 
 external transitions (from one external call to another) will preserve $A$. 
 For the internal calls, we want to apply the fact that the method body has been proven to preserve $A$ (by  {\sc{MEthod}}).
 That is, for the external states we consider small steps, while for each of the public method calls we want to consider large steps --
@@ -245,53 +245,50 @@ then there exist $\sigma_1$, ... $\sigma_n$, such that
 Another challenge when proving soundness of our quadruples, is that the proof of some cases  requires induction on the execution while the proof of other cases  requires induction on the quadruples
 proof.  We address this challenge  through  a well-founded ordering that combines both:
 
-% \subsubsection{A well-founded ordering}
+
 \label{sect:prove:wellfounded}
+\label{sect:prove:sound:quadruples}
 
 In Def.  \ref{def:measure}  we define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to terminations in fewer steps than $\sigma_2$ considering the shortest, terminating scoped execution), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
 is shallower than the  proof of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_6} $ (considering the shallowest possible proofs).  
-
-
-\begin{auxLemma}
-\label{lemma:normal:two}
-For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-founded.
-\end{auxLemma}
-
-\label{sect:prove:sound:quadruples}
-We now prove soundness of the inference system $M \vdash  \quadruple A {stmt} {A'} {A''}$, using summarized executions from the earlier section, and the ordering $_ \ll \_$:  
-
-
+the relation $\_ \ll_{M,\Mtwo}  \_$  -- \cf lemma \ref{lemma:normal:two}
+ 
 
 \begin{theorem}
 \label{t:quadruple:sound}
-For module  $M$ % and $\Mtwo$, 
-such that  $\vdash M$, and for any assertions $A$ and $A'$, and state  $\sigma$, we have
-
-\begin{center}
-$M\ \vdash\  \quadruple {A} {stmt} {A'} {A''}$ \ \ \ \ implies \ \ \ \ $M\ \modelsD\  \quadruple {A} {stmt} {A'} {A''}$
-\end{center}
-
-\end{theorem}
-
-  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  \subsection{Soundness of the overall system}
-\label{sect:prove:triples:overall}
-\noindent
-Finally, we  prove soundness of the overall system:
-
-\begin{theorem}[Soundness]
 \label{thm:soundness}
-%Assume an \SpecO proof system, $\proves{M}{A}$, 
-%an encapsulation inference system, $\proves{M}{\encaps{A}}$,
-%% Axiom xx, and 
-% and  that on top of these systems we built
-% the \SpecLang logic according to zzzz,  then, for    all modules $M$, and all \SpecLang specifications  $S$:
- For any module $M$, and specification $S$:
+For module  $M$,   assertions $A$, $A'$, $A''$,   state  $\sigma$, and specification $S$:
+
+\begin{enumerate}[(A)]
+\item
+ $:\strut \   \vdash M  \ \ \ \wedge \ \ \  M\ \vdash\  \quadruple {A} {stmt} {A'} {A''}$ \ \ \ \ \ \ \ \mbox{implies}\ \ \ \ \ \  \ \ \ $M\ \modelsD\  \quadruple {A} {stmt} {A'} {A''}$
+ \item
+  $:\strut \  \  \proves{M}{S}\ \ \ \ \ \ \ \mbox{implies}\ \ \ \ \ \  \ \ \ {M} \modelsD {S}$
  
- $$\proves{M}{S}\ \ \ \ \ \ \ \mbox{implies}\ \ \ \ \ \  \ \ \ {M} \modelsD {S}$$
+\end{enumerate}
+
 \end{theorem}
 
-Proof outlines for these theorems can be found in \A \ref{s:app:proof:sketch;quadruples} and \ref{s:app:proof:sketch;overall}. 
+The proofs make use of summarized executions, well-founded orderings, and various assertion preservation properties. They can be found in App. \ref{s:app:proof:sketch;quadruples}
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  \subsection{Soundness of the overall system}
+%\label{sect:prove:triples:overall}
+%\noindent
+%Finally, we  prove soundness of the overall system:
+%
+%\begin{theorem}[Soundness]
+%\label{thm:soundness}
+%%Assume an \SpecO proof system, $\proves{M}{A}$, 
+%%an encapsulation inference system, $\proves{M}{\encaps{A}}$,
+%%% Axiom xx, and 
+%% and  that on top of these systems we built
+%% the \SpecLang logic according to zzzz,  then, for    all modules $M$, and all \SpecLang specifications  $S$:
+% For any module $M$, and specification $S$:
+% 
+% $$\proves{M}{S}\ \ \ \ \ \ \ \mbox{implies}\ \ \ \ \ \  \ \ \ {M} \modelsD {S}$$
+%\end{theorem}
+%
+%We now prove soundness of the inference system $M \vdash  \quadruple A {stmt} {A'} {A''}$, using summarized executions from the earlier section, and the ordering $_ \ll \_$:   Proof outlines for these theorems can be found in \A \ref{s:app:proof:sketch;quadruples} and \ref{s:app:proof:sketch;overall}. 
 
 %
 %Theorem. \ref{thm:soundness} demonstrates 
