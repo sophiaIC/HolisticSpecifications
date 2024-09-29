@@ -8,7 +8,7 @@
 Our system makes heavy use of textual substitution,   textual inequality, and the concept of free variables in assertions. 
  
 In this subsection we introduce some notation and some lemmas to deal with these concepts.
-These concepts and lemmas are by no means novel, but we list them here for the sake of completeness.
+These concepts and lemmas are by no means novel; we list them here so as to use them more easily in the subsequent proofs.
 
 
 \begin{definition}[Sequences,   Disjointness, and Disjoint Concatenation]
@@ -23,9 +23,9 @@ $\overline v \subseteq \overline w \ \ \triangleq \ \ \forall v.[\ v \in  \overl
 \item
 $\overline v \#  \overline w \ \ \triangleq \ \ \forall v \in  \overline v. \forall w \in  \overline w.  [ \ v \# w\  ]$
 \item
-$ \overline v \cap \overline w \ \ \triangleq \ \  \overline u, \ \ \ \ \mbox{sucht that}\   \forall u.[ \ \ u  \in   \overline v \cap \overline w \ \ \Leftrightarrow\ \  [ \ u\in \overline v\ \wedge\ u\in \overline w\  ]$
+$ \overline v \cap \overline w \ \ \triangleq \ \  \overline u, \ \ \ \ \mbox{such that}\   \forall u.[ \ \ u  \in   \overline v \cap \overline w \ \ \Leftrightarrow\ \  [ \ u\in \overline v\ \wedge\ u\in \overline w\  ]$
 \item
-$ \overline v \setminus \overline w \ \ \triangleq \ \  \overline u, \ \ \ \ \mbox{sucht that}\   \forall u.[ \ \ u  \in  \overline v \setminus \overline w \ \ \Leftrightarrow\ \  [ \ u\in \overline v\ \wedge\ u\notin \overline w\  ]$
+$ \overline v \setminus \overline w \ \ \triangleq \ \  \overline u, \ \ \ \ \mbox{such that}\   \forall u.[ \ \ u  \in  \overline v \setminus \overline w \ \ \Leftrightarrow\ \  [ \ u\in \overline v\ \wedge\ u\notin \overline w\  ]$
 \item
 $\overline v; \overline w \ \ \triangleq \ \ \overline v$, $\overline w$ \ \ if $\overline v \#  \overline w $ \ \ \ and  undefined otherwise.
 \end{itemize}
@@ -159,24 +159,49 @@ The above, together with (b) conclude the proof
 \textbf{End Proof}
 
 
+\begin{lemma}[Substitutions and Adaptations]
+\label{l:sybbs:adapt}
+For any sequences of variables $\overline x$, $\overline y$, sequences of expressions $\overline e$, and   any assertion $A$, we have
+\begin{itemize}
+\item
+$ \overline x \# \overline y \ \ \ \Longrightarrow \ \ \  \PushAS {y} {(A[\overline {e/x}])}  \txteq   (\PushAS {y} {A})[\overline{ e/x}] $
+\end{itemize}
+
+\end{lemma}
+
+\noindent
+\textbf{Begin Proof}
+We first consider $A$ to be $\inside e_0$, and just take one variable. Then, $\PushA {y} {(\inside e_0)[{e/x}])} \txteq \protectedFrom {e_0[ {e/x}]} {y}$, while
+$(\PushAS {y} {\inside e_0})[{ e/x}]  \txteq \protectedFrom {e_0[{e/x}]} {y[ {e/x}]}$. When $x \# y$  then the two asserion are textually equal.
+The rest follows by induction on the length of $\overline x$ and the structure of $A$/
+ 
+
+\noindent
+\textbf{End Proof}
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Preservation of assertions when pushing or popping frames}
 
 In this section we  discuss the preservation of satisfaction of assertions when calling methods or returning from methods -- \ie when pushing or popping  frames. 
-Namely, since  pushing/popping frames  do not modify the heap, these operations should preserve satisfaction of some assertion $\Ain$, up to the fact that a) passing an object as a parameter of a a result might break its protection, and 
+Namely, since  pushing/popping frames  does not modify the heap, these operations should preserve satisfaction of some assertion $\Ain$, up to the fact that a) passing an object as a parameter of a a result might break its protection, and 
 b) the bindings of variables change  with pushing/popping frames.
-To deal with a) we either require that the fame being pushed is internal ($M, \sigma' \models \intThis$), or require the adapted version of an assertion (\ie  ${\PushAS  {v} { \Ain}}$ rather than $\Ain$).
-To deal with b) upon method call. we break the free variables of $A$ into two parts, \ie $\fv(\Ain) =  \overline{v_1}, \overline{v_2}$, where the value of $\overline{v_3}$ in the caller is the same as that of  i$\overline{v_1}$ in the callee frame.
-To deal with b) upon method return, we also break the free variables of $A$ into two parts, \ie $\fv(\Ain) =  \overline{v_1}, \overline{v_2}$, where the value of $\overline{v_1}$ in the callee is the same as that of  i$\overline{v_3}$ in the caller.
-And in both cases   $\overline {v_2}$ do not necessarily have a value in the callee frame.
+To deal with a)  upon method call, 
+we   require that the fame being pushed is internal ($M, \sigma' \models \intThis$), or require the adapted version of an assertion (\ie  ${\PushAS  {v} { \Ain}}$ rather than $\Ain$).
+To deal with b)  upon method call. 
+we break the free variables of $A$ into two parts, \ie $\fv(\Ain) =  \overline{v_1};\overline{v_2}$, where the value of $\overline{v_3}$ in the caller is the same as that of  $\overline{v_1}$ in the called frame.
+%To deal with b) upon method return, we also break the free variables of $A$ into two parts, \ie $\fv(\Ain) =  \overline{v_1}, \overline{v_2}$, where the value of $\overline{v_1}$ in the callee is the same as that of  i$\overline{v_3}$ in the caller.
+%And in both cases   $\overline {v_2}$ do not necessarily have a value in the callee frame.
+This   is described in  lemma \ref{l:calls}.
+Similar approaches apply to method returns. This   is described in  lemma \ref{l:calls:return}.
 
-This is is described in  lemma \ref{l:calls}, 
- which will be used when we prove soundness of the rules about method calls, as given in Fig. \ref{f:calls}. 
-We will first state  the lemma,
-then discuss it,   then    define and prove a sequence of auxiliary concepts and 
- lemmas, and finally prove it.  
+Lemmas \ref{l:calls}and  \ref{l:calls:return} are used in the proofs soundness of the rules about method calls, as given in Fig. \ref{f:calls}. 
+We will first state  the lemmas,
+then discuss them,   then    define and prove a sequence of auxiliary concepts and 
+their properties, and finally prove the lemmas. 
  
 \begin{lemma}
 \label{l:calls}
@@ -207,93 +232,30 @@ $\Longrightarrow$
 \item
 \label{l:calls:callee:one}
 $\satDAssertFrom M  \sigma k   \Ain[\overline {v_3/v_1}] % [\overline {\alpha_2/v_2}] \ \   
-\ \ \wedge\ \ M, \sigma' \models \intThis  $
- \\ 
-$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \ \satDAssertFrom M  {\sigma'} k  {\Ain[\overline { {\interpret {\sigma} {v_6}} / {v_6} } ] }$
+\ \ \wedge\ \ M, \sigma' \models \intThis
+%   $  \\  $\strut \hspace{2cm} 
+ \hfill \Longrightarrow  \ \ \  \   \ \satDAssertFrom M  {\sigma'} k  {\Ain[\overline { {\interpret {\sigma} {v_6}} / {v_6} } ] } $
+ 
 \item
 
 \label{l:calls:callee:two}
-$\satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_3})} {(\Ao[\overline {v_3/v_1}])}}  $ \\ 
-$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \  
-M, \sigma' \models   {\Ao[\overline { {\interpret {\sigma} {v_6}} / {v_6} } ] }$.
-%\label{l:calls:callee:two}
-%$\satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_1},\overline {v_6})} {(\Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])}} $ \\ 
-%$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \  
-%M, \sigma' \models  {\Ao[\overline { \alpha_3/v_3}][\overline { {\interpret \sigma {v_4}} / v_4} ] }$.
+$ \satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_3})} {(\Ao[\overline {v_3/v_1}])}} 
+%  $ \\  $\strut \hspace{2cm}  
+\hfill \Longrightarrow  \ \ \  \  
+M, \sigma' \models   {\Ain\overline { {\interpret {\sigma} {v_6}} / {v_6} } ] }$.
+
 
 \item
-to add ...
-%\label{l:calls:callee:two}
-%TODO
-%%$\satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_1},\overline {v_6})} {(\Ain[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])}} $ \\ 
-%%$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \  
-%%M, \sigma' \models  {\Ain[\overline { \alpha_3/v_3}][\overline { {\interpret \sigma {v_4}} / v_4} ] }$.
-%%
-%%
-
-%\item
-%\label{l:calls:callee:three}
-%TODO
-%%$\satDAssertFrom M  \sigma k   {(\Ain[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])  \wedge ( {\PushASLong  {(\overline {v_1},\overline {v_6})} {(\Ain[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])}})}   $
-%% \\ 
-%%$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k  {\Ain[\overline { \alpha_3/v_3}]}$.
+\label{l:calls:callee:three}
+$\satDAssertFrom M  \sigma k    {(\Ain[\overline {v_3/v_1}] ) \wedge  ({\PushASLong  {(\overline {v_3})} {(\Ao[\overline {v_3/v_1} ])} } ) }  
+% $  \\   $\strut \hspace{2cm} 
+ \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k  {\Ain[\overline  { {\interpret {\sigma} {v_6}} / {v_6} } ] }$
 
 
 \end{enumerate}
 \end{enumerate}
 
 \end{lemma}
-
-%\begin{lemma}
-%\label{l:calls}
-%
-%For any assertion $\Ao$, states $\sigma$, $\sigma'$,  
-%variables  $\overline{v_1}$,    $\overline{v_2}$,  $\overline{v_3}$,  $\overline{v_4}$,  $\overline{v_6}$,  % addresses $\overline \alpha_2$ and $\overline \alpha_4$, 
-%statement $stmt$, and frame $\phi$.
-%
-%\noindent
-%% $ ~ $ % and $\overline{y'}$,  \\
-%If 
-%\begin{enumerate}[(i)]
-%\item 
-%\label{l:calls:r:one}
-%$ \Pos \Ao$,  
-%\item 
-%\label{l:calls:r:two}
-%$\fv(\Ao) =  \overline{v_1}
-%\item
-%\label{l:calls:r:three
-%$\sigma'=\sigma  \pushSymbol \phi  \ \ \ \  \wedge\ \ \  Rng(\phi)= \overline{\interpret {\sigma} {v_3} }\ \ \ \ \wedge \ \  \ \ \overline {\interpret {\sigma'}  {v_1} } = \overline {\interpret {\sigma} {v_3} }$ 
-%\\ 
-%$\Longrightarrow$
-%
-%\begin{enumerate}
-%\item
-%\label{l:calls:callee:one}
-%$\satDAssertFrom M  \sigma k   \Ao[\overline {v_3/v_1}] % [\overline {\alpha_2/v_2}] \ \   
-%\ \ \wedge\ \ M, \sigma' \models \intThis  $
-% \\ 
-%$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \ \satDAssertFrom M  {\sigma'} k  {\Ao[\overline { {\interpret {\sigma} {v_6}} / {v_6} } ] }$
-%
-%
-%%\item
-%%\label{l:calls:callee:two}
-%%TODO
-%%%$\satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_1},\overline {v_6})} {(\Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])}} $ \\ 
-%%%$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \  
-%%%M, \sigma' \models  {\Ao[\overline { \alpha_3/v_3}][\overline { {\interpret \sigma {v_4}} / v_4} ] }$.
-%%%
-%%%
-%%\item
-%%\label{l:calls:callee:three}
-%%TODO
-%%%$\satDAssertFrom M  \sigma k   {(\Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])  \wedge ( {\PushASLong  {(\overline {v_1},\overline {v_6})} {(\Ao[\overline {v_6/v_2}] [\overline {\alpha_3/v_3}])}})}   $
-%%% \\ 
-%%%$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k  {\Ao[\overline { \alpha_3/v_3}]}$.
-%\end{enumerate}
-%\end{enumerate}
-%\end{lemma}
-
 
 
 \begin{lemma}
@@ -304,8 +266,8 @@ variables  $\overline{v_1}$,    $\overline{v_2}$,  $\overline{v_3}$,  $\overline
 statement $stmt$, and frame $\phi$.
 
 \noindent
-% $ ~ $ % and $\overline{y'}$,  \\
-If 
+ If 
+ 
 \begin{enumerate}[(i)]
 \item 
 \label{l:calls:r:one}
@@ -314,38 +276,36 @@ $ \Pos \Aout$,
 \label{l:callers:r:two}
 $\fv(\Aout) \subseteq  \overline{v_1} $
 \item
+$  \overline {\interpret {\sigma'} {v_5}}, \overline {\alpha_4} \subseteq \LRelevantO \sigma  \ \ \wedge \ \  M, \sigma' \models \intThis$
+ \item
 \label{l:callers:three}
 $\sigma'= (\sigma \popSymbol)[\overline{ v_4\! \mapsto\! \alpha_4}][\prg{cont}\!\mapsto\! stmt]
-\ \ \wedge \ \  \overline {\alpha_4} \subseteq \LRelevantO \sigma  \ \ \wedge \ \  M, \sigma' \models \intThis
- \ \ \wedge $\\
- $ \overline {\interpret {\sigma'}  {v_3} } = \overline {\interpret {\sigma} {v_1} }$ 
-\\ 
-$\Longrightarrow$
- 
+\ \ \wedge \ \   \overline {\interpret {\sigma'}  {v_3} } = \overline {\interpret {\sigma} {v_1} }$ 
+  \end{enumerate}
+  
+\noindent
+then
+% $\Longrightarrow$
 
-\begin{enumerate}
+
+\begin{enumerate}[(a)]
 \item
 \label{l:calls:caller:one}
 $\satDAssertFrom M  \sigma k   \Aout  \ \  \wedge\ \ \DepthSt {\sigma'} \geq k  \ 
 $ \\ 
 $\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k   {\Aout[\overline {v_3 / v_1}]  }$ 
 
-\item
-to add ...
-
-\item
-to add ...
-%\item
-%\label{l:calls:caller:two}
-%TODO
-%%$M, \sigma \models  {\Aout[\overline {\alpha_3/v_3}]}\ \ \wedge\ \  \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma
-%%$ \\ 
-%%$\strut \hspace{2cm}  \hfill \Longrightarrow  \ \ \  \  M , \sigma' \models  {\PushASLong  {\overline {v_5}}    {(\Aout[\overline {v_6 / v_2}][\overline { \alpha_3/v_3}])} }$
+ 
+ \item
+ \label{l:calls:caller:two}
+ $M, \sigma \models  {\Aout}\ % \ \wedge\ \  \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma
+%  $ \\   $\strut \hspace{2cm} 
+ \hfill \Longrightarrow  \ \ \  \  M , \sigma' \models  {\PushASLong  {\overline {v_5}}    {(\Aout[\overline { v_3/v_1}])} }$
 %
 %
-%\item
-%\label{l:calls:caller:three}
-%TODO
+ \item
+ \label{l:calls:caller:three}
+ TODO
 %%$\satDAssertFrom M  \sigma k   {\Aout[\overline  {\alpha_3/v_3}]} \ \ \wedge\ \  %\overline \alpha, 
 %%\overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma  \ \ \wedge \ \  k < \DepthSt \sigma$
 %%\\  
@@ -356,7 +316,7 @@ to add ...
 %%{\PushASLong  {\overline {v_5}}    {(\Aout[\overline {v_6 / v_2}][\overline { \alpha_3/v_3}])} }
 %%}
 %%$
- \end{enumerate}
+
 \end{enumerate}
 
 \end{lemma}
