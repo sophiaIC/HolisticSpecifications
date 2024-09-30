@@ -11,24 +11,13 @@ We then show how execution starting from some external state can be summarised i
 \label{s:scoped:valid}
 
 
-Per section~\ref{s:viewAndProtect}, an assertion may hold in one state
-but not afterwards.
-
-\begin{example}
-\label{ex:motivate:scoped}
-Assume state $\sigma_a$, such that $\interpret {\sigma_a} {\prg{this}}=o_1$, $\interpret {\sigma} {\prg{this}.f}=o_2$, $\interpret {\sigma} {x}=o_3$, $\interpret {\sigma} {x.f}=o_2$,  
-and $\interpret {\sigma} {x.g}=o_4$, where $o_2$ is external and all other objects are internal. 
-We then have $..,\sigma_a \models  \inside {o_4}$.
-Assume that the continuation of $\sigma_a$   consists of a method $x.m()$. Then,
-upon entry to that method, when we push the new frame, we have a state $\sigma_b$, which also satisfies $..,\sigma_a \models  \inside {o_4}$.
-Assume that the   body of $m$ is $\prg{this}.f.m1(\prg{this}.g); \prg{this}.f := \prg{this};  \prg{this}.g := \prg{this}$, and that the external method $m1$ stores in the 
-receiver a reference to the argument.
-Then, at the end of method execution, and before popping the stack, we have a state $\sigma_c$, which also satisfies $..,\sigma_c \models  \inside {o_4}$.
-However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \not\models  \inside {o_4}$.
-\end{example}
+As shown in section~\ref{s:viewAndProtect}, an assertion which held at the end of a method execution, need not hold upon return from it -- \cf Ex. \ref{ex:motivate:scoped}.  
  
 
-To address this problem, we introduce ``\scoped satisfaction'' of assertions $ \satDAssertFrom M  \sigma k   A$ which says that $A$ is satisfied in $\sigma$  in all frames of $\sigma$ from $k$ onwards, 
+
+ 
+
+To address this problem, we introduce ``\scoped satisfaction'' of assertions: $ \satDAssertFrom M  \sigma k   A$   says that $A$ is satisfied in $\sigma$  in all frames of $\sigma$ from $k$ onwards, 
 \ie  $ \satDAssertFrom M  \sigma k   A$ iff $\sigma = ((\phi_1\cdot ... \phi_n), \chi)$ and $k\leq n$ and $\forall j. [\  k\leq j \leq n \ \Rightarrow \ M, ((\phi_1\cdot ... \phi_j), \chi) \models A'\ ]$ where $A'$ is $A$ where all free variables have been substituted according to $\phi_n$ -- \cf Def. \ref{def:restrict}.
 We then introduce ``\scoped'' quadruples,   $\satisfiesD {M} {\quadruple  {A} }   {\sigma}   {A'} {A''}$ , which promise that if $\sigma$ satisfies $A$ from $k$ onwards, and executes its continuation to termination, then the final state will satisfy $A'$ from $k$ onwards, and also, all intermediate external states will satisfy $A''$ from $k$ onwards - \cf Def \ref{def:restrict}.
 We define   $\satisfiesD {M} {\quadruple  {A} }   {stmt}   {A'} {A''} $ and  $\satisfiesD {M} {S}$ accordingly.
@@ -52,38 +41,20 @@ $\satisfiesD {M} {S}  \ \ \ \Longrightarrow \ \ \ \satisfies {M} {S}$
 \end{lemma}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
- \subsection{Expectations}
-
-We require a  proof system for assertions, $M\vdash A$, and expect it to be sound.
-We also require
-an   underlying Hoare logic, $M\ \vdash_{ul}\  \triple A {stmt} {A'}$, and expect it to be be  sound:
-\begin{axiom}
-\label{lemma:axiom:enc:assert:ul}
-\label{ax:ul:sound}
-We require a sound logic of assertions ($M \vdash A$), and a sound Hoare logic , \ie that for all $M$, $A$, $A'$, $stmt$:
-\begin{center}
-$M \vdash A   \ \ \ \  \Longrightarrow  \ \ \ \  \forall \sigma.[\ M, \sigma \models A\ ]$.\\
-% \end{center}
-%\end{axiom}
-%
-%\noindent
-%Moreover, we assume that the  \ie for all $A$, $A'$, $stmt$:\ \ \  
-%
-%\begin{axiom}
-% \begin{center}
-{$M\ \vdash_{ul}\  \triple A {stmt} {A'}  \ \ \ \  \Longrightarrow  \ \ \ \ \satisfies  {M} { \triple A {stmt} {A'}}$ }
- \end{center}
-\end{axiom}
+% \subsection{Expectations}
+% MOVED 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Soundness of the Hoare Triples Logic}
 
+We require a  proof system for assertions, $M\vdash A$, and expect it to be sound.
+We also require
+an   underlying Hoare logic, $M\ \vdash_{ul}\  \triple A {stmt} {A'}$, and expect it to be be  sound, \cf Axiom \ref{ax:ul:sound}.
 \label{sect:prove:triples:sound}
-We prove various properties about protection
+We then prove various properties about protection
 \cf section \ref{s:app:protect:lemmas}.
 Using these lemmas. we prove soundness of the inference system for triples $M \vdash  \triple A {stmt} {A'} $ -- \cf \A, \ref{s:sound:app:triples}.
 
@@ -100,6 +71,7 @@ $M\ \vdash\  \triple A {stmt} {A'}  \ \ \ \  \Longrightarrow  \ \ \ \ \satisfies
  
 
 \subsection{Summarised Execution}
+\label{s:summaized}
 
 When proving soundness of the external call rule, we are faced with the challenge that
 execution of an external call may consist of any number of external
@@ -116,7 +88,7 @@ Thus, execution of an external call will involve several internal and external s
 
 \begin{tabular}{lll}
 \begin{minipage}{.45\textwidth}
-The diagram to the left shows such an execution:
+The diagram opposite shows such an execution:
   $ \leadstoBoundedStarFin {\Mtwo\cdot M}    {\sigma_2}  {\sigma_{30}}$ consists of 4 calls to external objects,
 and 3 calls to internal objects.
 The calls to external objects are from $\sigma_2$ to $\sigma_3$,  from $\sigma_3$ to $\sigma_4$, from $\sigma_9$ to $\sigma_{10}$, 
@@ -163,49 +135,7 @@ Moreover, for the external states we apply different arguments than for the inte
  \vspace{.15cm}
 
 \noindent 
-In order to express such summaries, Def. \ref{def:exec:sum} introduces the following concepts:
-\begin{itemize}
-\item
- ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}}$ \ \ \  execution from $\sigma$ to $\sigma'$ scoped by $\sigma\bd$, involving  external states only.
-\item
-${\WithPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} {\sigma_1}}$ \  \ \  \ \ \ \ \ \ \ \  ${\sigma}$ is an external state  calling an internal public method, and \\
-$\strut \hspace{3.25cm}$ $\sigma'$ is the state after return from the public method, and \\
-$\strut \hspace{3.25cm}$  $\sigma_1$ is the first state upon entry to the public method.  
-%$\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\epsilon}$ \ \     \ \  $\triangleq$ \ \ 
-%$\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma''}$
-%\item
-%$\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$   \ \  int
-%\item
-%$\leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} $   \ \ \ \ \   \ \ \  \ \ \ \   \ \ \ \  $\triangleq$   \ \ 
-%  $ \exists n\in \mathbb{N}. \exists \sigma_1,...\sigma_n. \ \WithExtPub {\Mtwo\cdot M} {\sigma}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n} 
-%$
-\end{itemize}
-  
-  \noindent
-Continuing with our example, we have the following execution summaries:
-\begin{enumerate}
-\item
-${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_3}  {\sigma_5}}$\ \ \ 
-Purely external execution from $\sigma_3$ to $\sigma_5$, scoped by $\sigma_3$.
-\item
-${\WithPub {\Mtwo\cdot M}    {\sigma_5}  {\sigma_{20}} {\sigma_{6}}}$. \ \ \ 
-Public method call from external state $\sigma_5$ into  nternal state $\sigma_6$ returning to $\sigma_{20}$. 
-Note that this   summarises two  internal method executions ($\sigma_{6}-\sigma_{19}$, and $\sigma_8-\sigma_{14}$),
-and two external method executions ($\sigma_{6}-\sigma_{19}$, and $\sigma_8-\sigma_{14}$).
-\item
- ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{20}}  {\sigma_{21}}}$.
- \item
-${\WithPub {\Mtwo\cdot M}    {\sigma_{21}}  {\sigma_{25}} {\sigma_{23}}}$. \ \ \ 
-Public method call from  external state ${\sigma_{21}}$ into internal state $\sigma_{23}$, and returning to external state $\sigma_{25}$.
- \item
-  ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{25}}  {\sigma_{28}}}$.
-\ \ \ 
-  Purely external execution from $\sigma_{25}$ to $\sigma_{28}$, scoped by ${\sigma_3}$.
-\end{enumerate}
-
-
-\noindent
-Finally, Def. \ref{def:exec:sum} also defines:
+In order to express such summaries, Def. \ref{def:exec:sum} introduces \emph{summarized} executions: 
 \begin{itemize}
 \item
 $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$  \ \ purely external executions, interleaved with summarised public internal method calls, starting at ${\sigma_1...\sigma_n}$, respectively.
@@ -216,8 +146,9 @@ In terms of our example, we have that \ \ \ $\WithExtPub {\Mtwo\cdot M} {\sigma_
 
 \vspace{.1cm}
 
-We now revisit external executions interleaved with public method calls:   
-Lemma \ref{lemma:external_breakdown:term} says that any terminating execution
+% We now revisit external executions interleaved with public method calls:   
+In the appendix, we prove 
+Lemma \ref{lemma:external_breakdown:term} which says that any terminating execution
 % ,  $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$, 
  starting in an external state  consists of a  sequence of  external states interleaved with terminating executions
  %  in internal states, 
@@ -226,15 +157,18 @@ of public methods.
 Lemma  \ref{lemma:external_exec_preserves_more} says that an encapsulated assertion $A$  is preserved by an execution
 % $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$, 
 starting at an external state is provided that all finalising internal executions  %(the public methods called at $\sigma_1$, ... $\sigma_n$) 
-also preserve $A$. 
-% It is used to prove  soundness of the rule {\sc{ExtCall}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
-
-In more technical detail, if $\sigma$ is external and $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$, 
-then there exist $\sigma_1$, ... $\sigma_n$, such that
- $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$.
- Conversely, if $A$ is encapsulated, 
+also preserve $A$: that is, if $A$ is encapsulated, 
  and $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$, and 
- the calls at  $\sigma_1$, ... $\sigma_n$ preserve $A$,  then $A$ is preserved from $\sigma$ to $\sigma'$.
+ the calls at  $\sigma_1$, ... $\sigma_n$ preserve $A$,  then $A$ is preserved from $\sigma$ to $\sigma'$.  
+% It is used to prove  soundness of the rule {\sc{ExtCall}}\footnoteSD{perhaps also {\sc{ExtCall\_WithSpec\_Strong}}}
+% 
+%In the appendix we prove lemmas \ref{lemma:external_breakdown:term} and \ref{lemma:external_exec_preserves_more} 
+%which guarantee  that if $\sigma$ is external and $ \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}$, 
+%then there exist $\sigma_1$, ... $\sigma_n$, such that
+% $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$.
+% Conversely, if $A$ is encapsulated, 
+% and $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$, and 
+% the calls at  $\sigma_1$, ... $\sigma_n$ preserve $A$,  then $A$ is preserved from $\sigma$ to $\sigma'$.
   
 
 
@@ -249,9 +183,9 @@ proof.  We address this challenge  through  a well-founded ordering that combine
 \label{sect:prove:wellfounded}
 \label{sect:prove:sound:quadruples}
 
-In Def.  \ref{def:measure}  we define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to terminations in fewer steps than $\sigma_2$ considering the shortest, terminating scoped execution), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
-is shallower than the  proof of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_6} $ (considering the shallowest possible proofs).  
-the relation $\_ \ll_{M,\Mtwo}  \_$  -- \cf lemma \ref{lemma:normal:two}
+In Def.  \ref{def:measure}  we define that $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$ if $\sigma_1$ executes to termination  in fewer steps than $\sigma_2$ (considering the shortest scoped executions), or  the proof of $M \vdash \quadruple {A_1} {\sigma.\prg{cont}} {A_2} {A_3} $
+is shallower than that of  $M \vdash \quadruple {A_4} {\sigma.\prg{cont}} {A_5} {A_6} $ (considering the shallowest proofs).  
+The relation $\_ \ll_{M,\Mtwo}  \_$  is well-founded -- \cf lemma \ref{lemma:normal:two}
  
 
 \begin{theorem}
