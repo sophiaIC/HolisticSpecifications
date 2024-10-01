@@ -4,80 +4,55 @@ satisfies its specification. This is done in three phases.
 
 In the first phase we develop a logic of triples ${\hproves{M}  {A} {\ s\ }{A'} }$, which have the expected meaning, \ie 
 (*) execution of statement $s$ in a state satisfying {the \emph{precondition}}  $A$ will lead to a state satisfying  {the \emph{postcondition}}  $A'$.
-These tuples only apply to statements $s$ that  do not contain method calls  (even internal calls) -- this is so, because method calls may contain calls to external methods, and therefore can only be described through quadruples.
+These triples only apply to statements $s$ that  do not contain method calls  (even internal calls) -- this is so, because method calls may contain calls to external methods, and therefore can only be described through quadruples.
 Our triples extend an underlying Hoare logic  (${M \vdash_{ul}  \{A\} {\ s\ } \{A'\} }$) and  introduce new judgements  which talk about protection.
 
-In the second phase we develop a logic of quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''}}$. These promise, as usual, that (*) 
-In addition, they promise that (**) any intermediate external states reachable during execution of that statement will satisfy the invariant  $A'''$.  
-{We call $A''$ the \midcond.}
+In the second phase we develop a logic of quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''}}$. These promise, as usual, that (*). 
+In addition, they promise that (**) any intermediate external states reachable during execution of that statement will satisfy the invariant  $A'$.  
+% {We call $A''$ the \midcond.}
  We incorporate all triples from the first phase,       
 introducing invariants, give the usual substructural rules, and deal with method calls. 
 For method calls we use the methods' specs, and in addition, for public methods we use the fact that they preserve the module's invariants. 
-For call to external  methods, we can only use the fact that they preserve the module's invariants. 
+For calls to external  methods, we   use %can only use  the fact that they preserve
+ the module's invariants. 
  
-In the third phase, we prove adherence to each of the specifications. 
+In the third phase, we prove that a modules adherences to its specifications. 
 For method specifications we prove that the body maps the precondition to the postcondition and preserves the method's invariant. 
-For module invariants we prove that they  are preserved by all public methods of the module.
+For module invariants we prove that they  are preserved by the public methods of the module.
 
-\vspace{.1cm}
-Before describing these three phases, we introduce some preliminaries.
 
 
 \subsection{Preliminaries: Specification Lookup and Renamings}
 
-The judgment    $\promises M S$ expresses that $S$ is guaranteed by the module. 
+Before describing the three phases, we introduce some preliminaries.
+The judgement    $\promises M S$ expresses that $S$ is guaranteed by the module. 
 In particular, it allows   \emph{safe  renamings}. 
-These renamings are   a convenience, akin to the Barendregt convention, and  allow simpler Hoare rules for  method calls -- \cf Sect. \ref{s:calls}.
-\Cf Definition \ref{d:promises}, and example \ref{e:rename}.
-
-
-\subsection{First Phase: Triples}
-
-
-\begin{figure}[tht]
-$
-\begin{array}{c}
-% \begin{array}{lcl}
-\inferrule[\sc{extend}]
-	{ M \vdash_{ul} \{ \ A\ \} {\ stmt\ }\{\ A'\ \} \\
-	 stmt  \ \mbox{contains no method call} }
-	{\hproves{M}  {A} {\ stmt\ }{A'} } 
-% MOVED
-%	& &
-%\inferrule[\sc{types-1}]
-%	{  stmt \ \mbox{contains no method call} \\
-%	stmt  \ \mbox{contains   no assignment to $x$}}
-%	{\hproves{M}  {x:C} {\ stmt\ }{x:C} }
-% \end{array}
-% \end{array}
-\end{array}
- $
-\caption{Embedding underlying Hoare Loagic}
-\label{f:underly}
-\end{figure}
- 
-\subsubsection{Embedding an underlying Hoare Logic}
+These renamings are   a convenience, akin to the Barendregt convention, and  allow simpler Hoare rules  -- \cf Sect. \ref{sect:wf},
+Def. \ref{d:promises}, and Ex. \ref{e:rename}. We also require an underlying Hoare logic.
 
 \begin{axiom}
 \label{ax:ul}
 {Assume   Hoare logic with judgements % of the form 
-\ $M \vdash_{ul} \{ A \} s \{ A' \}$, \ 
-so that $\Stable{A}$ and $\Stable{A'}$. }
+\ $M \vdash_{ul} \{ A \} stmt \{ A' \}$, 
+with  $\Stable{A}$,  $\Stable{A'}$. }
 \end{axiom}
 
+\subsection{First Phase: Triples}
 
-In  Fig. \ref{f:underly} and \ref{f:protection} we introduce our triples, of the form ${   \hproves{M}  {A} s {A'}}$. 
-These promise, as expected, that any execution of $stmt$ in a state that satisfies $A$ leads to a state that satisfies $A'$.
-These tuples only apply to statements that do not contain method calls.
+In  Fig. \ref{f:underly}  we introduce our triples, of the form ${   \hproves{M}  {A} stmt {A'}}$. 
+These promise, as expected, that any execution of $stmt$ in a state   satisfying $A$ leads to a state sartisfying $A'$.
+These triples only apply to statements that do not contain method calls.
 
-With rule {\sc{extend}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
-can be proven in the underlying Hoare logic, to also be proven in our logic. %More in \ref{s:types}.
- 
 
 \begin{figure}[tht]
 $
 \small{
 \begin{array}{c}
+\inferruleSD{\hspace{0.5cm} [\sc{extend}]}
+	{ M \vdash_{ul} \{ \ A\ \} {\ stmt\ }\{\ A'\ \} \ \ \ \ \ \ \ \ \ \ 
+	 stmt  \ \mbox{contains no method call} }
+	{\hproves{M}  {A} {\ stmt\ }{A'} } 
+\\	
 \begin{array}{lcl}
  \sdN{\inferruleSD{\hspace{0.5cm} [\sc{prot-new}]}
 	{	 
@@ -122,7 +97,6 @@ $
 %\\
 %\mbox{\sdN{We had this rule, but I believe  that it is not sound when $y$=$z$, or $x$=$y$}}
 \\
-\\
       {\inferruleSD{\hspace{0.5cm} [\sc{prot-3}]}
 	{ }
 	{\hproves{M} 
@@ -155,7 +129,6 @@ $
 	}
 }	
 \\
-\\
 {\inferrule
 	{C \in M}
 	{M \vdash x : C \rightarrow x : \prg{intl}}
@@ -171,22 +144,13 @@ $
 \end{array}
 }
  $
-\caption{Protection: Triples and Consequence Rules}
+\caption{Embedding the Underlying Hoare Logic, and Protection}
 \label{f:protection}
+\label{f:underly}
 \end{figure}
 
-
-
-
-
-
-
- 
-
- \subsubsection{Reasoning about protection}
-
-
-In Fig. \ref{f:protection} we  give rules about the preservation of protection.
+With rule {\sc{extend}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
+can be proven in the underlying Hoare logic, can also be proven in our logic. %More in \ref{s:types}.
 In \textsc{Prot-1}, we see that  protection of an object $o$ is preserved by internal code which does not call any methods: namely any heap modifications will
 ony affect internal objects, and this will not expose new, unmitigated external access to $o$.
 %In \textsc{Prot-2}, the assignment $y=y'.f$ does not create a new route from $z$ to $x$, and therefore  $\protectedFrom{x}{z}$ is preserved.
@@ -194,7 +158,9 @@ ony affect internal objects, and this will not expose new, unmitigated external 
 In \textsc{Prot-4}, if $x$ is protected from $y'$, then the assignment $y.f=y'$ does not create a new unprotected route  to $x$, and therefore   $\protectedFrom{x}{z}$ is preserved.
 }
 Moreover, ``protection'' of an object can decrease is if we call an external method, and pass it an internal object as argument. This is then covered by the rule in Fig. \ref{f:external:calls}.
-\jm{Moreover, we introduce some consequence rules in Fig. \ref{f:protection:conseq} to reason about protection apart from a Hoare logic. These are primarily useful when applying \textsc{Consquence} style Hoare rules.}
+\jm{Moreover, we introduce some consequence rules in Fig. \ref{f:protection:conseq} to reason about protection apart from a Hoare logic. These are primarily useful when applying \textsc{Consquence} style Hoare rules.} 
+
+
 
 \begin{lemma}
 \label{l:no:meth:calls}
@@ -246,6 +212,14 @@ If ${\hproves{M}  {A} {\ s\ }{A'} }$, then $s$ contains no method calls.
 %\end{figure}
 
 %\jm{Julian: I added the above, but these are not sensible with the current definition of protection because protection is only defined between objects, and not ints, bools, and strings. They are necessary for the example proofs (or alternatively we can use object encodings of these types, but I think that might be more difficult). The rules for strings are potentially not necessary. They only help make the Seciton 2 example work when we send back a message as a string. Similarly, we could probably drop the bool rules.}
+
+\subsection{Second Phase: Quadruples}
+
+\subsubsection{Introducing invariants, and substructural rules}
+Fig. \ref{f:substructural} introduces quadruple rules of the from ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$. % which do not deal with method calls.
+Rule {\sc{mid}} embeds  triples  ${\hproves{M}  {A} {\ s\ }{A'} }$  into quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$; this is sound, because $s$ is guaranteed not to contain method calls (by lemma \ref{l:no:meth:calls})
+\footnote{The restriction to statements which do not contain method calls in rule {\sc{types-1}} was required to make this lemma valid}, and therefore its execution will not reach any external states.
+
 
 
 \begin{figure}[htb]
@@ -304,24 +278,10 @@ $
 \label{f:substructural}
 \end{figure}
 
-\subsection{Second Phase: Quadruples}
-
-\subsubsection{Introducing mid-conditions, and substructural rules}
-Fig. \ref{f:substructural} introduces quadruple rules of the from ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$ which do not deal with method calls.
-
-Rule {\sc{mid}} embeds  triples  ${\hproves{M}  {A} {\ s\ }{A'} }$  into quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''} }$; this is sound, because $s$ is guaranteed not to contain method calls (by lemma \ref{l:no:meth:calls})
-\footnote{The restriction to statements which do not contain method calls in rule {\sc{types-1}} was required to make this lemma valid}, and therefore its execution is guaranteed not to reach any external states.
-
  
 The remaining rules in Fig. \ref{f:substructural} apply to \emph{any} statements -- even those containing method calls.
-%MOVED 
-% Rule {\sc{types-2}} generalizes {\sc{types-1}} to any statement, provided that  there already exists a triple for that statement.
 Rule {\sc{combine}} combines two quadruples for the same statement into one.
-Rule   {\sc{sequ}}is the usual rule  for statement sequences  adapted to quadruples.
-% SD: at the moment the below is not needed
-%{{Rule   {\sc{consequ}} is more interesting, because it employs a new inference, {{$\inferd$}}, rather than  the usual inference, $\rightarrow$.
-%For stable assertions, $\rightarrow$ and $\inferd$ behave the same way -- more  in section 
-%} }
+Rules   {\sc{sequ}} and {\sc{consequ}} are  the usual rules for statement sequences and consequence, adapted to quadruples.
 
 
 
@@ -340,15 +300,14 @@ $\begin{array}{c}
 	{
 	   	\begin{array}{c}
 		\promises  M {\mprepostN{A_1}{p\ C}{m}{x}{C}{A_2} {A_3}}  \\
-		\sdN{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}]}  
-%		\red{( y_0,\overline y ) \ \#\ \fv(\prg{this}:C,\overline x:\overline{C} \, \wedge \,  \fv(A_1) ) }
+		{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}]}  
 		          	\end{array}
 		}
 	{  \hprovesN {M} 
-						{ \  y_0:C,\overline {y:C} \wedge  \sdN{A_1'}\ } % A_1[y_0/\prg{this}] \ }
+						{ \  y_0:C,\overline {y:C} \wedge  {A_1'}\ }  
 						 { \ u:=y_0.m(y_1,.. y_n)\    }
-					         { \ \sdN{A_2'} \ } % A_2[ u/res,y_0/\prg{this}] } 
-						{  \ A_3 \ } % A_3[y_0/\prg{this}]   }	
+					         { \ {A_2'} \ } 
+						{  \ A_3 \ }  
 }
  \\
   \\
@@ -356,44 +315,27 @@ $\begin{array}{c}
 	{
 	   	\begin{array}{c}
 		\promises  M {\mprepostN{A_1}{p\ C}{m}{x}{C}{A_2} {A_3}}   \\
-				\sdN{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}] }  
-%				\sdN{y_0,\overline y \ \#\ \prg{this},\overline x, \fv(A_1) }
+				{A_1' = A_1[y_0,\overline y/\prg{this}, \overline x]  \ \ \ \ \ \ \ \ \  A_2' = A_2[y_0,\overline y,u/\prg{this}, \overline x,\prg{res}] }  
 
           	\end{array}
 		}
 	{  \hprovesN {M} 
-						{ \,  y_0\!:\!C, \overline {y\!:\!C} \wedge {\PushASLong {\sdN{(y_0,\overline {y})}} {A_1'}}\ }
-			%			{(A_1[y_0/\prg{this}])} }  \, }
+						{ \,  y_0\!:\!C, \overline {y\!:\!C} \wedge {\PushASLong {{(y_0,\overline {y})}} {A_1'}}\ }
 												{ \, u\!:=\!y_0.m(y_1,.. y_n)\,    }
-						{ \  { \PushASLong  {\sdN{(y_0,\overline {y})}} {A_2'}  } \ } %{(A_2[ u/res,y_0/\prg{this}])} }   }
-						{  \  A_3\  } % [y_0/\prg{this}]  }	
+						{ \  { \PushASLong  {{(y_0,\overline {y})}} {A_2'}  } \ }  
+						{  \  A_3\  }  
 }
 }
-%\\
-% \\ 
-% WRONG
-% \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}]}
-% 	{ 
-%   	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-%        }
-%	{   \hprovesN{M} 
-%						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {{A}}\ }  
-%						{ \ u:=y_0.m(y_1,.. y_n)\    }
-%						{ \   {{A}}  \ }
-%						{\  A \   }	
-%}
 \\
  \\ 
  \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}\_Adapt]}
  	{ 
-%	 \\
 	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-% \\  \sdN{y_0,\overline y\ \#\ \overline x}
         }
 	{   \hprovesN{M} 
-						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {\PushASLong {\sdN{(y_0,\overline {y})}}  {A}}  \ } 
+						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\  \wedge\ {\PushASLong {{(y_0,\overline {y})}}  {A}}  \ } 
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \   {\PushASLong {\sdN{(y_0,\overline {y})}}  A}  \ }
+						{ \   {\PushASLong {{(y_0,\overline {y})}}  A}  \ }
 						{\  A \   }
 	}	
 \\
@@ -401,14 +343,12 @@ $\begin{array}{c}
 {
  \inferruleSD{\hspace{4.7cm} [\sc{Call\_Ext}\_Adapt\_Strong]}
  	{ 
-%	 \\
 	 \promises M   {\TwoStatesN {\overline {x:C}} {A}} 
-% 	 \\  \sdN{y_0,\overline y\ \#\   \overline x}
         }
 	{   \hprovesN{M} 
-						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\ \wedge  A   \wedge\ {\PushASLong {\sdN{(y_0,\overline {y})}}  {A} }\  }   
+						{ \    { \external{y_0}} \,     \wedge \,  \overline{x:C}\ \wedge  A   \wedge\ {\PushASLong {{(y_0,\overline {y})}}  {A} }\  }   
 						{ \ u:=y_0.m(y_1,.. y_n)\    }
-						{ \   A \wedge {\PushASLong {\sdN{(y_0,\overline {y})}}  {A} } \  }  
+						{ \   A \wedge {\PushASLong {{(y_0,\overline {y})}}  {A} } \  }  
 						{\  A \   }	
 }
 }
@@ -417,74 +357,53 @@ $\begin{array}{c}
 $
 }
 \caption{Hoare Quadruples for Internal and External Calls -- here $\overline y$ stands for $y_1, ... y_n$}
-%, and  $\overline C$ stands for  $C_1, ... C_n$}
 \label{f:internal:calls}
 \label{f:external:calls}
 \label{f:calls}
 \end{figure}
-% }}
 
-  {\sc{Call\_Int}} is as expected:  
-We look up the method's specification,   require the precondition, and guarantee the postcondition and midcondiition. 
-For {\sc{Call\_Int\_Adapt}} we require the adapted pre-condition ($  \PushASLong {(y_0, \overline y)}{A_1}$  rather than $A_1$) and also ensure the adapted post-condition ($ \PushASLong {(y_0, \overline y)}{A_2}$  rather than $A_2$).
-Remember that$  \PushASLong {(y_0, \overline y)}{A_1}$ at the caller's side guarantees that $A_1$ holds at the start of the callee (after pushing the frame with   $y_0, \overline y$), while  
-$A_2$ at the end of the callee guarantees that  $ \PushASLong {(y_0, \overline y)}{A_2}$  holds when returning to the callee's frame (when popping the frame)
+For the internal calls, we  start as usual by looking up the method's specification, and 
+naming the formal   parameters in the method's pre- and post-condition.
+  {\sc{Call\_Int}} is as expected:   we  require the precondition, and guarantee the postcondition and invariant.
+For {\sc{Call\_Int\_Adapt}} we require the adapted pre-condition ($  \PushASLong {(y_0, \overline y)}{A_1'}$  rather than $A_1'$) and also ensure the adapted post-condition ($ \PushASLong {(y_0, \overline y)}{A_2'}$  rather than $A_2'$).
+Remember that$  \PushASLong {(y_0, \overline y)}{A_1}$ at the caller's side guarantees that $A_1$ holds at the start of the call  (after pushing the frame with   $y_0, \overline y$), while  
+$A_2$ at the end of the cal  guarantees that  $ \PushASLong {(y_0, \overline y)}{A_2}$  holds when returning to the caller's   (after popping the called frame)
 -- cf.  lemma \ref{lemma:push:ass:state}.
  {\sc{Call\_Int}} and {\sc{Call\_Int\_Adapt}}  are applicable whether the method is public or private.
 
 
-For external methods,  {\sc{Call\_Ext\_Adapt}}, we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and   $ \PushASLong {(y_0, \overline y)}{A}$  holds before the call, then it also holds after  the call, and $A$ is also a \midcond of the call.
+For external methods,  {\sc{Call\_Ext\_Adapt}}, we consider the module's invariants. If the module promises to preserve $A$, \ie if  $\promises M   {\TwoStatesN {\overline {x:D}} {A}}$, and   $ \PushASLong {(y_0, \overline y)}{A}$  holds before the call, then it also holds after  the call.
+% SHORTER
+%, and $A$ is also a \midcond of the call.
 In  {\sc{Call\_Ext\_adapt}},  we require that the adapted version,  \ie that   $ \PushASLong {(y_0, \overline y)}{A}$ holds before the call. Then, the 
-adapted version version also holds after the call. Moreover, $A$ is also a \midcond of the call.
+adapted version version also holds after the call. 
+% SHORTER
+% Moreover, $A$ is also a \midcond of the call.
 
 
 \vspace{.1cm}
 
-Notice that at the point of the call, for internal calls, in {\sc{Call\_Int}} we require the the un-adapted version of the the method's precondition (\ie $A_1[y_0/\prg{this}]$), while for external calls, both {\sc{Call\_Ext\_Adapt}} and {\sc{Call\_Ext\_Adapt\_Strong}}, we require the adapted version of the invariant (\ie $ \PushASLong {(y_0, \overline y)}{A}$). 
-This is so, because when the callee is internal, then  variable-free, $\Pos{\_}$-assertions are preserved against pushing of frames -- \cf lemma \ref{l:preserve:asrt}.\ref{l:preserve:asrt:two}.
-On the other hand, when the callee is external, then $\Pos{\_}$-assertions are not necessarily preserved against pushing of frames -- \cf \ref{push:does:not:preserve} 
-Therefore, we can only safely assume that $A$ holds upon entry to the callee, if $ \PushASLong {(y_0, \overline y)}{A}$ held at the caller site -- \cf lemma \ref{lemma:push:ass:state}.
+Notice that %at the point of the call, 
+ for internal calls, in {\sc{Call\_Int}} we require the the \emph{un-adapted} %version of the the 
+ method  precondition (\ie $A_1'$), while for external calls, both {\sc{Call\_Ext\_Adapt}} and {\sc{Call\_Ext\_Adapt\_Strong}}, we require the 
+ \emph{adapted} % version of the 
+ invariant (\ie $ \PushASLong {(y_0, \overline y)}{A}$). 
+This is so, because when the called is internal, then  %variable-free, 
+ $\Pos{\_}$-assertions are preserved against pushing of frames -- \cf Lemma \ref{l:preserve:asrt}. 
+On the other hand, when the called is external, then $\Pos{\_}$-assertions are not necessarily preserved against pushing of frames -- \cf Ex. \ref{push:does:not:preserve} 
+Therefore, in order to guarantee that $A$ holds upon entry to the called, we need to know that $ \PushASLong {(y_0, \overline y)}{A}$ held at the caller site -- \cf Lemma \ref{lemma:push:ass:state}.
 
 Remember also, that $A$ does not imply $ \PushASLong {(y_0, \overline y)} {A}$, nor does $ \PushASLong {(y_0, \overline y)}{A}$  imply $A$ -- \cf example \ref{push:does:not:imply}.
 
 
-% \vspace{.1cm}
-The interested reader might notice, that while $\Pos{\_}$,-assertions are preserved against pushing of internal frames, they are not necessarily preserved against popping of such frames. }\red{TODO - write the counterexample}.
+Finally notice, that while $\Pos{\_}$,-assertions are preserved against pushing of internal frames, they are not necessarily preserved against popping of such frames \cf Ex. \ref{ex:motivate:scoped}.
 Nevertheless, {\sc{Call\_Int}} guarantees the unadapted version, $A$, 
-% rather than the adapted version, $\PushAS {y} {A}$, 
 upon return from the method call. 
-This is sound, because of our use  of the concept of \emph{\scoped satisfaction} of assertions -- more in section \ref{s:scoped:valid}.
+This is sound, because of our % use  of the concept of
+ \emph{\scoped satisfaction} of assertions -- more in Sect.  \ref{s:scoped:valid}.
  
 
-% \vspace{.1cm}
 
-%\noindent
-%\red{{\textbf{Required textual disjointness}}}
-%\label{renamings:calls}
-%In all rules above  we require that the receiver and actual parameters are textually disjoint from the formal parameters and other free variables in the method's precondition, \ie that $( y_0,\overline y ) \ \#\ \fv(\prg{this}:C,\overline x:\overline{C} \, \wedge \,  \fv(A_1) )$ or that $\sdN{y_0,\overline y\  \#\   \overline x}$. 
-%For example, for the method \prg{set} with specification $S_9$ from Example \ref{example:mprepostl}
-%the call $a.set(key')$ would not typeset. 
-%% with $\promises  M {\mprepostN{z_a:C_a \wedge ....}{...\ C_b}{m}{x_c}{C_c}{...} {...}} $ calls of the form $z_a.m(...)$, or  $x_c.m(...)$, or $\prg{this}.m(...)$ would not type check.
-%This requirement is introduced to simplify the proofs of soundness, and 
-%does not restrict the expressive power of our approach: We can always satisfy this requirement 
-%%through the implicit renamings defined in  Def. \ref{d:promises}, or
-% through  W  the implicit renamings from Def. \ref{d:promises}. 
-% For exmple, we could instead of $S_9$, use $S_{9r}$ from Example \ref{e:rename}.
-%% 
-%% the introduction and initialization of variables. For the example from above, we can introduce a fresh variable  $v$ and
-%% replace the three calls  by
-%$v:=z_a;\, v.m(...)$, or  $v:=x_c;\, v.m(...)$, or $v:=\prg{this};\, v.m(...)$. 
-%%In the particular case, $\promises  M {\mprepostN{z_a:C_a \wedge ....}{...\ C_b}{m_c}{x_d}{C_d}{...} {...}} $ would also give
-%%$\promises  M {\mprepostN{z_p:C_a \wedge ....}{...\ C_b}{m_c}{x_q}{C_d}{...} {...}} $, where $z_a, x_d \ \#\ z_p, x_q$.
-%  
-
-%the actual and formal parameter names were identical. We achieved this through the implicit renamings from Def. \ref{d:promises}.  
-%\sdN{The requirement $\sdN{\prg{this}\notin y_0, \overline y}$ means that \prg{this} is not textually equal with the receiver or arguments of the method call. 
-%It  made to simplify our proofs, and does not restrict applicability, because we can always achieve it through aliasing prior to the call.}
-%\sdN{We also require that $u \notin \fv{A_1}$, and that the variables $u$, $y_0$, $y_1$ ... $y_n$ are pairwise textually different -- this simplifies the proofs, but does not impose a restriction on applicability -- since the requirement can always be achieved through the introduction of aliasing.}
-% 
- 
-%\subsubsection{Aliasing and Calls}
 
 \TODO{TODO: revisit that section}
 
@@ -555,9 +474,7 @@ M \vdash S_1 \wedge S_2
 \inferruleSD 
 {~ \strut \hspace{6.5cm} {\sc{method}}}
 {  
-\sdN{(\vs(stmt)\setminus \{ \prg{this}, y_1, ... y_n \} ) \, \cap\, \fv(A_1) \, =\, \emptyset }
-\\
- \prg{mBody}(m,D,M)=p \ (\overline{y:D})\{\  stmt \ \}  %\ \ \vee \ \   \prg{mBody}(m,D,M)=\prg{public} \ \overline{x:C}\{\  stmt \ \}       
+ \prg{mBody}(m,D,M)=p \ (\overline{y:D})\{\  stmt \ \}       
     \\
   {\hprovesN{M} { \ \prg{this}:\prg{D}, \overline{y:D}\, \wedge\, A_1\  } {\ stmt\ } {\ A_2 \ }   {A_3} } 
 }
@@ -569,19 +486,16 @@ M \vdash {\mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3} }
 {~ \strut \hspace{6.5cm} {\sc{invariant}}}
 {
 \begin{array}{l}
-\forall  D,  m:\ \ \  \ \  \prg{mBody}(m,D,M)=\prg{public} \ (\overline{y:C})\{\  stmt \ \}      \ \ \Longrightarrow  
+\forall  D,  m:\ \ \  \ \  \prg{mBody}(m,D,M)=\prg{public} \ (\overline{y:D})\{\  stmt \ \}      \ \ \Longrightarrow  
   \\
    ~ \strut \hspace{0.3cm}  \ \ \ 
  \begin{array}{l}
-  \sdN{ \vs(stmt)\,  \cap\, \overline x\, =\, \emptyset }
-  \\
-  \hprovesN {M}  
+   \hprovesN {M}  
 { \ \prg{this}:\prg{D}, \overline{y:D},\,   \overline{x:C} \, \wedge\,  A\ }   
   	{\ stmt\ }   
 	 {\  A\, \wedge\, \PushASLong {\prg{res}} {A} \ }  
-
+{\ A \ }
  \end{array}
-
  \end{array}
 }
 {
@@ -593,7 +507,7 @@ $
 \label{f:wf}
 \end{figure}
 
-\footnote{Julian's reflections on the invariant and metod call rules:
+\footnoteSD{Julian's reflections on the invariant and method call rules:
 
  I think it somewhat makes sense for the Invariant rule to be asymmetric since
 calls to internal code are asymmetric from the perspective of protection. There is no change in specific protection when entering 
@@ -628,11 +542,9 @@ fits in with my above description of magic wand adaptation.
  \vspace{.1cm}
 
 \noindent
-\textbf{No Clashes} Moreover, in  {\sc{method}}, we require that   the free variables  in a method's precondition  do not overlap with variables in the method's body, unless they are the receiver or one of the parameters ($\sdN{\vs(stmt)\setminus \{ \prg{this}, y_1, ... y_n \} \cap \fv(A_1) =\emptyset }$).  Moreover, in {\sc{invariant}} we require   the free variables in $A$ (which are a subset of  $\overline x$) do not overlap with the variable  in $stmt$ ($ \sdN{ \vs(stmt)\,  \cap\, \overline x\, =\, \emptyset } $).
-% : Any of $\overline x$  which clashes with $\ovelrine y$ or a variable  in $stmt$,   gets implicitly renamed  in the proof that $ {\hprovesN{M} { \ \prg{this}:\prg{D}\, \wedge\, \overline{y:D}\,  \overline{x:C}\, \wedge\,  \wedge\,  A\  } {\ stmt\ } {\ A\ } {\ A \ }  } $
+\textbf{Barendregt} In  {\sc{method}} we \sdN{implicitly} require   the free variables  in a method's precondition  not to overlap with variables in its body, unless they are the receiver or one of the parameters ($\sdN{\vs(stmt) \cap \fv(A_1) \subseteq   \{ \prg{this}, y_1, ... y_n \} }$).  And in {\sc{invariant}} we require   the free variables in $A$ (which are a subset of  $\overline x$) not to overlap with the variable  in $stmt$ ($ \sdN{ \vs(stmt)\,  \cap\, \overline x\, =\, \emptyset}$).
+This can easily be achieved through renamings, \cf Def. \ref{d:promises}.
 
-
- 
 
 
 
