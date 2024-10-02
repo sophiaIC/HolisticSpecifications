@@ -193,25 +193,25 @@ The rest follows by induction on the length of $\overline x$ and the structure o
 \subsection{Preservation of assertions when pushing or popping frames}
 
 In this section we  discuss the preservation of satisfaction of assertions when calling methods or returning from methods -- \ie when pushing or popping  frames. 
-Namely, since  pushing/popping frames  does not modify the heap, these operations should preserve satisfaction of some assertion $\Ain$, up to the fact that a) passing an object as a parameter of a a result might break its protection, and 
+Namely, since  pushing/popping frames  does not modify the heap, these operations should preserve satisfaction of some assertion $A$, up to the fact that a) passing an object as a parameter of a a result might break its protection, and 
 b) the bindings of variables change  with pushing/popping frames.
 To deal with a)  upon method call, 
-we   require that the fame being pushed is internal ($M, \sigma' \models \intThis$), or require the adapted version of an assertion (\ie  ${\PushAS  {v} { \Ain}}$ rather than $\Ain$).
-To deal with b)  upon method call. 
-we break the free variables of $A$ into two parts, \ie $\fv(\Ain) =  \overline{v_1};\overline{v_2}$, where the value of $\overline{v_3}$ in the caller is the same as that of  $\overline{v_1}$ in the called frame.
+we   require that the fame being pushed or the frame to which we return is internal ($M, \sigma' \models \intThis$), or require the adapted version of an assertion (\ie  ${\PushAS  {v} { A}}$ rather than $A$).
+To deal with b) we either require that there are no free variables in $A$, or we break the free variables of $A$ into two parts, \ie $\fv(\Ain) =  \overline{v_1};\overline{v_2}$, where the value of $\overline{v_3}$ in the caller is the same as that of  $\overline{v_1}$ in the called frame.
 %To deal with b) upon method return, we also break the free variables of $A$ into two parts, \ie $\fv(\Ain) =  \overline{v_1}, \overline{v_2}$, where the value of $\overline{v_1}$ in the callee is the same as that of  i$\overline{v_3}$ in the caller.
 %And in both cases   $\overline {v_2}$ do not necessarily have a value in the callee frame.
-This   is described in  lemma \ref{l:calls}.
-Similar approaches apply to method returns. This   is described in  lemma \ref{l:calls:return}.
+This   is described in  lemmas \ref{l:calls} -  \ref{l:calls:return}.
 
-Lemmas \ref{l:calls}and  \ref{l:calls:return} are used in the proofs soundness of the rules about method calls, as given in Fig. \ref{f:calls}. 
-We will first state  the lemmas,
-then discuss them,   then    define and prove a sequence of auxiliary concepts and 
-their properties, and finally prove the lemmas. 
- 
+We have four lemmas: Lemma \ref{l:calls} describes preservation from a caller to an internal called, lemma \ref{l:calls:external}
+describes preservation from a caller to any called, Lemma \ref{l:calls:return} describes preservation from an internal called to a caller, and  Lemma \ref{l:calls:return:ext} describes preservation from an any called to a caller, 
+These four lemmas are used in the soundness proof for the four Hoare rules   about method calls, as given in Fig. \ref{f:calls}. 
+
+In the rest of this subsection we will first  state and discuss each of the lemmas,
+and we will then prove them.
+  
  
  %%%% From caller to called %%%
-\begin{lemma}
+\begin{lemma}[From caller to internal called]
 \label{l:calls}
 
 For any assertion $\Ain$, states $\sigma$, $\sigma'$,  
@@ -239,7 +239,7 @@ $\sigma'=\sigma  \pushSymbol \phi  \ \ \ \  \wedge\ \ \  Rng(\phi)= \overline{\i
 \noindent
 then
 
-\begin{enumerate}
+\begin{enumerate}[(a)]
 \item
 \label{l:calls:callee:one}
 $\satDAssertFrom M  \sigma k   \Ain[\overline {v_3/v_1}] % [\overline {\alpha_2/v_2}] \ \   
@@ -250,25 +250,36 @@ $\satDAssertFrom M  \sigma k   \Ain[\overline {v_3/v_1}] % [\overline {\alpha_2/
 \item
 
 \label{l:calls:callee:two}
-$ \satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_3})} {(\Ao[\overline {v_3/v_1}])}} 
+$ \satDAssertFrom M  \sigma k    {\PushASLong  {(\overline {v_3})} {(\Ain[\overline {v_3/v_1}])}} 
 %  $ \\  $\strut \hspace{2cm}  
 \hfill \Longrightarrow  \ \ \  \   \ \ \  \  
 M, \sigma' \models   {\Ain\overline { {\interpret {\sigma} {v_6}} / {v_6} } ] }$.
-
-
-%\item
-%\label{l:calls:callee:three}
-%$\satDAssertFrom M  \sigma k    {(\Ain[\overline {v_3/v_1}] ) \wedge  ({\PushASLong  {(\overline {v_3})} {(\Ao[\overline {v_3/v_1} ])} } ) }  
-%% $  \\   $\strut \hspace{2cm} 
-% \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k  {\Ain[\overline  { {\interpret {\sigma} {v_6}} / {v_6} } ] }$
 
 \end{enumerate}
 
 \end{lemma}
 
+In lemma \ref{l:calls},   state $\sigma$ is the state right before pushing the new frame on the stack,   while 
+state $\sigma'$ is the state right after pushing the frame on the stack.
+That is, $\sigma$ is the last state before entering the method body, and $\sigma'$ is the first state after entering the method body.
+$\Ain$ stands for the method's precondition, while the variables $\overline {v_1}$ stand for the formal parameters of the method,
+and $\overline {v_3}$ stand for the actual parameters of the call.
+Therefore, $\overline {v_1}$ is the domain of the new frame, and $\overline {\sigma} {v_3}$ is its range.
+The variables $\overline {v_6}$ are the free variables of $\Ain$ which are not in  $\overline {v_1}$ -- \cf Lemma \ref{l:sfs} part
+( \ref{l:sfs:five}).
+Therefore if (\ref{l:calls:callee:one})  the callee is internal, and 
+ $\Ain[\overline {v_3/v_1}]$ holds  at the call point, or
+ if (\ref{l:calls:callee:two}) ${\PushASLong  {(\overline {v_3})} {(\Ain[\overline {v_3/v_1}])}}$
+ holds  at the call point, 
+ then $\Ain[\overline {.../v_61}]$  holds right after pushing $\phi$ onto the stack.
+% Moreover, (\ref{l:calls:callee:two})  , then $\Ain[\overline {.../v_6}]$  holds right after pushing $\phi$ onto the stack.
+Notice the difference in the conclusion in (\ref{l:calls:callee:one}) and (\ref{l:calls:callee:two}): in the first case we have \scoped satisfaction, while in the second case we only have shallow satisfaction.
+
+
+
 %%% calling external
 
-\begin{lemma}
+\begin{lemma}[From caller to any called]
 \label{l:calls:external}
 
 For any assertion $\Ain$, states $\sigma$, $\sigma'$,  
@@ -293,7 +304,7 @@ $\sigma'=\sigma  \pushSymbol \phi  \ \ \ \  \wedge\ \ \  Rng(\phi)= \overline{\i
 \noindent
 then
 
-\begin{enumerate}
+\begin{enumerate}[(a)]
 \item
 
 \label{l:calls:callee:three}
@@ -304,7 +315,7 @@ M, \sigma' \models   {\Ain} $.
 
 
 \item
-\label{l:calls:callee:three}
+\label{l:calls:callee:four}
 $\satDAssertFrom M  \sigma k    {(\Ain  \wedge  ({\PushASLong  {(\overline {v_3})} {\Ain} } ) )}  
 % $  \\   $\strut \hspace{2cm} 
  \hfill \Longrightarrow  \ \ \  \   \satDAssertFrom M  {\sigma'} k  {\Ain}$
@@ -314,10 +325,28 @@ $\satDAssertFrom M  \sigma k    {(\Ain  \wedge  ({\PushASLong  {(\overline {v_3}
 
 \end{lemma}
 
+In lemma \ref{l:calls:external},  as in  lemma \ref{l:calls}, 
+  $\sigma$ stands for the last state before entering the method body, and $\sigma'$ for the first state after entering the method body.
+$\Ain$ stands for a module invariant in which all free variables have been substituted by addresses.
+The lemma is intended for external calls, and therefore we have no knowledge of the method's formal parameters.
+The variables   $\overline {v_3}$ stand for the actual parameters of the call, and therefore 
+ $\overline {\interpret {\sigma} {v_3}}$ is the range of the new frame.
+Therefore if (\ref{l:calls:callee:three})   the adapted version,
+ ${\PushASLong  {(\overline {v_3})} {\Ain} }$, holds  at the call point,
+ then the unadapted version, $\Ain$  holds right after pushing $\phi$ onto the stack.
+ Notice that  even though the premise of (\ref{l:calls:callee:three}) requires \scoped satisfaction, the conclusion promises
+ only weak satisfaction.
+ Moreover, if (\ref{l:calls:callee:four})   the adapted as well as the unadapted version,
+ $\Ain \wedge {\PushASLong  {(\overline {v_3})} {\Ain} }$
+ holds  at the call point,
+ then the unadapted version, $\Ain$  holds right after pushing $\phi$ onto the stack.
+ % Moreover, (\ref{l:calls:callee:two})  , then $\Ain[\overline {.../v_6}]$  holds right after pushing $\phi$ onto the stack.
+Notice the difference in the conclusion in (\ref{l:calls:callee:three}) and (\ref{l:calls:callee:four}): in the first case we have  shallow satisfaction, while in the second case we only have \scoped satisfaction.
+
 
 %%% From called back to caller
 
-\begin{lemma}
+\begin{lemma}[From internal called to caller]
 \label{l:calls:return}
 
 For any assertion $\Aout$, states $\sigma$, $\sigma'$,  
@@ -339,7 +368,7 @@ $  \overline {\interpret {\sigma'} {v_5}}, \overline {\alpha_4} \subseteq \LRele
  \item
 \label{l:callers:three}
 $\sigma'= (\sigma \popSymbol)[\overline{ v_4\! \mapsto\! \alpha_4}][\prg{cont}\!\mapsto\! stmt]
-\ \ \wedge \ \   \overline {\interpret {\sigma'}  {v_3} } = \overline {\interpret {\sigma} {v_1} }$, 
+\ \ \wedge \ \   \overline {\interpret {\sigma} {v_1} }\, =\,  \overline {\interpret {\sigma'}  {v_3} }$, 
   \end{enumerate}
   
 \noindent
@@ -347,7 +376,7 @@ then
 % $\Longrightarrow$
 
 
-\begin{enumerate}[(a)]
+\begin{enumerate} [a]
 \item
 \label{l:calls:caller:one}
 $\satDAssertFrom M  \sigma k   \Aout  \ \  \wedge\ \ \DepthSt {\sigma'} \geq k  \ 
@@ -359,14 +388,35 @@ $\satDAssertFrom M  \sigma k   \Aout  \ \  \wedge\ \ \DepthSt {\sigma'} \geq k  
  \label{l:calls:caller:two}
  $M, \sigma \models  {\Aout}\ % \ \wedge\ \  \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma
 %  $ \\   $\strut \hspace{2cm} 
- \hfill \Longrightarrow  \ \ \  \  M , \sigma' \models  {\PushASLong  {\overline {v_5}}    {(\Aout[\overline { v_3/v_1}])} }$.
+ \hfill \Longrightarrow  \ \ \  \  %
+ \satDAssertFrom M  {\sigma'} k   {\PushASLong  {\overline {v_5}}    {(\Aout[\overline { v_3/v_1}])} }$.
 
  
 \end{enumerate}
 
 \end{lemma}
 
-\begin{lemma}
+In lemma \ref{l:calls:return},  
+ state  $\sigma$ stands for the last state in the method body, and $\sigma'$ for the first state after exiting  the method call.
+$\Aout$ stands for a method postcondition.
+The lemma is intended for internal calls, and therefore we know the method's formal parameters.
+The variables   $\overline {v_1}$ stand for the formal  parameters of the method, and  
+  $\overline {v_3}$ stand for the actual parameters of the call, and therefore 
+  the  the formal parameters of the called have the same values as the actual parameters in the caller
+  $  \overline {\interpret {\sigma} {v_1} }\, =\,  \overline {\interpret {\sigma'}  {v_3} }$.
+% $\overline {\interpret {\sigma} {v_3}}$ is the range of the new frame.
+Therefore   ( \ref{l:calls:caller:one})  and  (\ref{l:calls:caller:two})  
+promise that if the postcondition $\Aout$ holds before popping the frame, then it also holds after popping frame after replacing the 
+the formal parameters by the actual parameters $\Aout[\overline{v_3/v_1}]$.
+As in earlier lemmas, there is an important difference between  (\ref{l:calls:caller:one}) and (\ref{l:calls:caller:two}):
+In (\ref{l:calls:caller:one}), we require \emph{deep satisfaction at the called}, 
+and obtain at the deep satisfaction of the \emph{unadapted} version ($\Aout[\overline{v_3/v_1}]$) at the return point;
+while in (\ref{l:calls:caller:two}), we only require \emph{shallow satisfaction at the called}, 
+and obtain deep satisfaction of the \emph{adapted} version (${\PushASLong  {\overline {v_5}}    {(\Aout[\overline { v_3/v_1}])} }$),
+at the return point.
+
+
+\begin{lemma}[From any called to caller]
 \label{l:calls:return:ext}
 
 For any assertion $\Aout$, states $\sigma$, $\sigma'$,  
@@ -397,7 +447,7 @@ then
 \item
  \label{l:ext:return:one}
  $M, \sigma \models  {\Aout}\  
- \hfill \Longrightarrow  \ \ \  \  M , \sigma' \models  {\PushASLong  {\overline {v_5}}    {\Aout}}$.
+ \hfill \Longrightarrow  \ \ \  \  \satDAssertFrom M  {\sigma'} k  {\PushASLong  {\overline {v_5}}    {\Aout}}$.
 
 \item
 \label{l:ext:return:two}
@@ -411,420 +461,29 @@ $\satDAssertFrom M  \sigma k   \Aout  \ \  \wedge\ \ \DepthSt {\sigma'} \geq k  
 \end{lemma}
 
 
+In lemma  \ref{l:calls:return:ext}, similarly to  lemma \ref{l:calls:return},  
+ state  $\sigma$ stands for the last state in the method body, and $\sigma'$ for the first state after exiting  the method call.
+$\Aout$ stands for a method postcondition.
+The lemma is meant to apply to external calls, and therefore, we do not know the method's formal parameters, 
+$\Aout$ is meant to stand for a module invariant where all the free variables have been substituted by addresses --
+\ie $\Aout$ has no free variables.
+The variables $\overline {v_3}$ stand for the actual parameters of the call, and therefore 
+ % $\overline {\interpret {\sigma} {v_3}}$ is the range of the new frame.
+Therefore    (\ref{l:ext:return:one})  and  (\ref{l:ext:return:two})
+promise that if the postcondition $\Aout$ holds before popping the frame, then it its adapted version 
+also holds after popping frame (${\PushASLong  {\overline {v_5}}    {\Aout}}$).
+ As in earlier lemmas, there is an important difference between   (\ref{l:ext:return:one})  and  (\ref{l:ext:return:two})
+In  (\ref{l:ext:return:one}),  we require \emph{shallow satisfaction at the called}, 
+and obtain   deep satisfaction of the \emph{adapted} version (${\PushASLong  {\overline {v_5}}    {\Aout}}$) at the return point;
+while in (\ref{l:ext:return:two}), we  require \emph{deep satisfaction at the called}, 
+and obtain deep satisfaction of the   \emph{conjuction}  of the \emph{unadapted} with the \emph{adapted} version (${\Aout \, \wedge\, {\PushASLong  {\overline {v_5}}    {\Aout}}}$),
+at the return point.
 
+\subsubsection{Use of these Lemmas}
 
-TODO: discuss the lemmas, and write the proof
-
-% TO REVISIT THIS
-%Note that in  parts \ref{l:calls:caller:two} and \ref{l:calls:caller:three} we have ${\PushASLong  {\overline {v_5}}   {{(A[\overline {\alpha_3/v_3}])}}}$, and not $({\PushASLong  {\overline {v_5}}   A})[\overline {\alpha_3/v_3}]$.  The two assertions differ when $\overline {v_5}$ and $\overline {v_3}$ overlap.
-
-%OLDER VERSION
-
-%\begin{lemma}
-%\label{l:calls}
-%For states $\sigma$, $\sigma'$, assertion $A$, %,  such that $\fv(A)=\emptyset$, 
-%variables  $\overline{v_1}$,    $\overline{v_2}$,  $\overline{v_3}$,   $\overline{v_4}$,    $\overline{v_5}$,  and  $\overline{v_6}$,
-%addresses $\overline \alpha_3$, and $\overline \alpha$, statement $stmt$, and frame $\phi$.
-%
-%\noindent
-%% $ ~ $ % and $\overline{y'}$,  \\
-%If 
-%\begin{enumerate}[(i)]
-%\item 
-%\label{l:calls:r:one}
-%$ \Pos A$,  
-%\item 
-%\label{l:calls:r:two}
-%$\overline {v_3} =\fv(A) \setminus \{  \overline{v_1} , \overline{v_2} \}$ % \,  \subseteq \, \overline{v_3}$, 
-%\item 
-%\label{l:calls:r:three}
-% $\overline{v_1} \cap \overline{v_2}\  =\ \emptyset\ = \ \overline{v_3} \cap \overline{v_6}$,
-%\item 
-%\label{l:calls:r:four}
-% $\overline {\interpret {\sigma'} {v_1} } = \overline {\interpret {\sigma} {v_1} }$, \ \ and\ \  $\overline {\interpret {\sigma'}  {v_2} } = \overline {\interpret {\sigma} {v_4} }$, \ \ and \ \  $\overline {\interpret {\sigma}  {v_3} } = \overline {\alpha_3}$,   
-%\end{enumerate}
-% then 
-%\begin{enumerate}
-%
-%\item
-%\label{l:calls:callee}
-%$\sigma'=\sigma  \pushSymbol \phi  \ \ \ \   \Longrightarrow$
-%
-%\begin{enumerate}
-%\item
-%\label{l:calls:callee:one}
-%$\satDAssertFrom M  \sigma k   A[\overline {v_4/v_2}] \ \    \wedge\ \ M, \sigma' \models \intThis  
-%% $\\
-% \hfill  \Longrightarrow\ \ \ \ \ \ \  \ \satDAssertFrom M  {\sigma'} k   A[\overline { \alpha_3/v_3}]$.
-%
-%\item
-%\label{l:calls:callee:two}
-%$% \satDAssertFrom M  \sigma k   {\PushAS  {v_5} { A[\overline {v_4/v_2}] }} 
-%M, \sigma \models {\PushAS  {v_5} { A[\overline {v_4/v_2}] }}  \ \ \wedge\ \ Range(\phi)=\overline {\interpret {\sigma} {v_5}}
-%\hfill \Longrightarrow  \ \ \ \  \   \ \ \ \ %\satDAssertFrom M  {\sigma'} {\DepthSt {\sigma'}}  {A[\overline  {\alpha_3/v_3}]}$.
-%M, \sigma' \models  {A[\overline  {\alpha_3/v_3}]}$.
-%
-%\item
-%\label{l:calls:callee:three}
-%$\satDAssertFrom M  \sigma k   {A[\overline {v_4/v_2}]  \wedge (\PushAS  {v_5} { A[\overline {v_4/v_2}] )}}  \ \ \wedge\ \ Range(\phi)=\overline {\interpret {\sigma} {v_5}}
-%  $\\  $
-%\strut \hspace{5cm} \hfill \Longrightarrow \ \ \ \ \ \ \  \   \satDAssertFrom M  {\sigma'} k  {A[\overline { \alpha_3/v_3}]}$.
-%
-%
-%\end{enumerate}
-%\item
-%\label{l:calls:caller}
-%$\sigma'= (\sigma \popSymbol)[\overline{ v_6\! \mapsto\! \alpha}][\prg{cont}\!\mapsto\! stmt]
-% \ \ \ \   \Longrightarrow$ 
-%
-%\begin{enumerate}
-%\item
-%\label{l:calls:caller:one}
-%$\satDAssertFrom M  \sigma k   A[\overline {v_4/v_2}] \ \  \wedge\ \ \DepthSt {\sigma'} \geq k  \wedge\ \ M, \sigma' \models \intThis
-%\hfill \Longrightarrow   \ \ \ \ \ \ \  \   \satDAssertFrom M  {\sigma'} k   {A[\overline { \alpha_3/v_3}]}$ 
-%
-%\item
-%\label{l:calls:caller:two}
-%%$\satDAssertFrom M  \sigma k   A[\overline {v_4/v_2}] \ \ 
-%$M, \sigma \models  {A[\overline  {v_4/v_2}]}\ \ \wedge\ \  \overline \alpha,  \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma
-%\hfill \Longrightarrow   \ \ \ \ \ \ \  \  M , \sigma' \models  {\PushASLong  {\overline {v_5}}   {{(A[\overline {\alpha_3/v_3}])}}}$
-%
-%\item
-%\label{l:calls:caller:three}
-%$\satDAssertFrom M  \sigma k   {A[\overline  {v_4/v_2}]} \ \ \wedge\ \  \overline \alpha, \overline {\interpret {\sigma'} {v_5}} \subseteq \LRelevantO \sigma  $\\  $\strut \hspace{5cm} \hfill \Longrightarrow  \ \ \ \ \ \ \  \  \satDAssertFrom M  {\sigma'} k    {{{(A[\overline {\alpha_3/v_3}])}} \wedge \PushASLong  {\overline {v_5}}   {{(A[\overline {\alpha_3/v_3}])}}}$
-%
-% \end{enumerate}
-%\end{enumerate}
-%
-%\end{lemma}
-
-%\begin{lemma}
-%\label{l:calls:old}
-%For states $\sigma$, $\sigma'$, assertion $A$, %,  such that $\fv(A)=\emptyset$, 
-%variables  $u$, $u'$, $y_0$, $\overline{x}$, and  $\overline{y}$\footnote{We take $\overline y$ to stand for $y_1, ... y_n$}, statement $stmt$, frame $\phi$.
-%
-%$ ~ $ % and $\overline{y'}$, 
-%\\
-%If 
-% $\overline{x}=\fv(A)\setminus\{ {\overline{y}} \cup \prg{this} \}$, and 
-% %= \ \wedge \ \ 
-% $ \Pos A$, then
-%  
-%\begin{enumerate}
-%
-%\item
-%\label{l:calls:callee}
-%$\sigma'=\sigma  \pushSymbol \phi \ \ \wedge \ \  dom(\phi)=\overline{y}\cup \{ \prg{this} \}\ \ \wedge\ \ 
-%\overline{y} \subseteq dom(\sigma)\ \  \wedge\ \
-%\interpret \sigma {y_0} = \interpret \phi {\prg{this}}\ \ \wedge \ \ 
-%\overline{ {\interpret \sigma y}= {\interpret {\sigma'} y}}$\\
-%implies
-%
-%\begin{enumerate}
-%\item
-%\label{l:calls:callee:one}
-%$\satDAssertFrom M  \sigma k   A[y_0/\prg{this}] \ \    \wedge\ \ M, \sigma' \models \intThis  
-%% $\\
-% \hfill  \Longrightarrow\ \ \ \ \  \ \satDAssertFrom M  {\sigma'} k   A[\overline {x \mapsto {\interpret \sigma x}}]$.
-%
-%\item
-%\label{l:calls:callee:two}
-%$\satDAssertFrom M  \sigma k   {\PushASLong  {(y_0,\overline{y})} {( A[y_0/\prg{this}])}}
-%% $\\  $
-%\hfill \Longrightarrow\ \ \ \ \ \ M,  {\sigma'} \models   A[\overline {x \mapsto {\interpret \sigma x}}]$.
-%
-%\item
-%\label{l:calls:callee:three}
-%$\satDAssertFrom M  \sigma k   {(A \wedge \PushASLong  {(y_0,\overline{y})} {( A[y_0/\prg{this}])})}$\\  
-%$\Longrightarrow\ \  \satDAssertFrom M  {\sigma'} k   A[\overline {x \mapsto {\interpret \sigma x}}]$
-%
-%%\item
-%%$\satDAssertFrom M  \sigma k   {(A\ \wedge \ \PushAS  {y} {( A[y_0/\prg{this}])})}$\\ % \ \  \wedge\ \   \wedge\ \ M, \sigma' \models \intThis 
-%%$\Longrightarrow\ \  \satDAssertFrom M  {\sigma'} k   A[\overline {x \mapsto {\interpret \sigma x}}]$
-%
-%\end{enumerate}
-%\item
-%\label{l:calls:caller}
-%$\sigma'= (\sigma \popSymbol)[u\! \mapsto\! {\interpret {\sigma} {u'}}][\prg{cont}\!\mapsto\! stmt]\ \wedge \ u'\! \in\! dom(\sigma)\ \  \wedge\ \  
-% \interpret \sigma {\prg{this}}\! =\! \interpret {\sigma'} {y_0} \ \ \wedge \ \ 
-%\overline{ {\interpret {\sigma} y}\!=\! {\interpret {\sigma'} y}}$\\
-%implies
-%
-%\begin{enumerate}
-%\item
-%\label{l:calls:caller:one}
-%$\satDAssertFrom M  \sigma k   A \ \ \wedge\ \ \DepthSt {\sigma'} \geq k  \wedge\ \ M, \sigma' \models \intThis $ \\
-%$\Longrightarrow\ \  \satDAssertFrom M  {\sigma'} k   {A[\overline {x \mapsto {\interpret \sigma x}}]}$ 
-%
-%\item
-%\label{l:calls:caller:two}
-%$  M , \sigma \models   A$   \\
-%$\Longrightarrow\ \  M , \sigma' \models  {\PushASLong  {(y_0,\overline y)}   {(A[\overline {x \mapsto {\interpret \sigma x}}])}}$
-%
-%\item
-%\label{l:calls:caller:three}
-%$\satDAssertFrom M  \sigma k   A $   \\
-%$\Longrightarrow\ \  \satDAssertFrom M  {\sigma'} k    {(A \wedge \PushASLong  {(y_0,\overline y)}   {(A[\overline {x \mapsto {\interpret \sigma x}}])})}$
-%
-% \end{enumerate}
-%\end{enumerate}
-%
-%\end{lemma}
-%
-%\textbf{Discussion of lemma  \ref{l:calls}}
-%As we said earlier, this lemma is used in the proof of soundness of the call rules. 
-%We consider a method call of the form $u:= y_0.m(\overline y)$.
-%
-%Part (\ref{l:calls:callee}) describes that $\sigma'$ is the first state after starting a method call; it is
-%the result of pushing a frame (here $\phi$), where \prg{this} has the same value as $y_0$, 
-%and the formal parameters of the method body ($\overline y$) have the same values as in the callee -- by Barendregt, we are allowed to make this assumption. 
-%Part (\ref{l:calls:caller}) describes that $\sigma'$ is the first state after terminating a method body; it is
-%the result of popping a frame  and assigning  some value from the domain of $\sigma$ to the variable $u$(here $u'$) where \prg{this} has the same value os $y_0$; 
-%and the formal parameters of the method body ($\overline y$) have the same values as in the caller
-%-- again,  by Barendregt, we are allowed to make this assumption 
-%
-%In case of an internal call, the assertion $A$ of the lemma stands for the pre-or post-condtiion
-%of the method specification.
-%We  expect that the specification of the method $m$ has been
-%given for formal parameters $\overline y$ --again, following a form of Barendregt convention.
-%%We  expect that  the pre-condition 
-%%% (as in (\ref{l:calls:callee:one}), (\ref{l:calls:callee:two}) 
-%%% and (\ref{l:calls:callee:three})) 
-%%is expressed in terms of \prg{this}, $\overline y$, and some further free variables $\overline x$.
-%%Similarly, we   expect that  the post-condition 
-%%%  (as in (\ref{l:calls:caller:one}), (\ref{l:calls:caller:two}), 
-%%%  and (\ref{l:calls:caller:three})) 
-%%is expressed in terms of \prg{this}, $\overline y$, and some further free variables $\overline x$.
-%
-%In case of an external call, we consider invariant of the form ${\TwoStatesN {\overline {x:C}} {A}}$, and we
-%expect that the only free variables on $A$ are    $\overline x$.
-%By Barendregt again, we expect that the variables $\overline x$ do not overlap with the variables $y_0, \overline y$.
-%
-%
-%Thus, for internal as well as for external call, for the reasons discussed in the previous two paragraphs, it makes sense to require that  $\fv(A)\setminus\{ {\overline{y}} \cup \prg{this} \} =\overline{x}$. 
-%It makes sense to also require that $\Pos A$, because $\Pos {\_}$ is a requirement for any well-formed  specification.
-%
-% 
-%Parts  (\ref{l:calls:callee:one})  and (\ref{l:calls:caller:one})  are  used to prove soundness of rule {[\sc{Call\_Int}]}.
-%  Note that the requirement $M, \sigma' \models \intThis $  in (\ref{l:calls:callee:one}) ensures that the callee is internal
-%  (one can see an example demonstrating the need for a local callee in Fig.  \ref{fig:Protected}),
-%  while the requirement $M, \sigma' \models \intThis $  in   (\ref{l:calls:caller:one}) ensures that the caller is internal
-%  (the caller has to be internal because of similar situation to that in .Fig.  \ref{fig:Protected}).
-%Parts
-% (\ref{l:calls:callee:two}) and (\ref{l:calls:caller:two}) and are  used to prove soundness of rule {[\sc{Call\_Int\_Adapt}]},
-%as well as rule {[\sc{Call\_Ext\_Adapt}]}.
-%  Note that   (\ref{l:calls:callee:two}) and (\ref{l:calls:caller:two}) make no requirement for the callee or the caller to be internal.  
-% Parts
-%(\ref{l:calls:callee:three}) and (\ref{l:calls:caller:three}) are  used to prove soundness of rule {[\sc{Call\_Int\_Adapt\_Strong}]}.
-%
-%\vspace{.4cm}
-%We will next consider the proof of lemma  \ref{l:calls}.
-%The lemma's validity hinges on the fact that the  heap does not change,
-% the locally visible objects decrease upon entry to a method body, ad that  upon exit, we know that the arguments of the callee are 
-% locally visible to the caller.
-%Moreover, the lemma does some renaming of variables,
-%In the next section we shall introduce some auxialiary concepts tha 
-%
-%\vspace{.2cm}
-%\subsubsection{Auxiliary concepts and lemmas to prove  lemma  \ref{l:calls}}
-%The remainder of this section is devoted to the proof of lemma  \ref{l:calls}.
-%%
-%Lemma \ref{l:push:pop} is  the counterpart of that lemma, but expressed for  variable-free assertions,
-%and abstracting the reachability relations between states,
-% For a more convenient formulation of Lemma \ref{l:push:pop}, we define in Def. \ref{def:prec} the relation  $\sigma \parallel \sigma' $ which expresses that the two states have identical heaps. 
-% We also define 
-% $\sigma \prec \sigma'$ which expresses that all addresses reachable from the top frame of $\sigma'$ are also reachable from the top frame of $\sigma$. 
-%Finally, we define  $\overline \alpha \prec \sigma$ expresses that all objects locally reachable from the top frame of $\sigma$ are reachable from some address in $\overline \alpha$.
-% 
-%\newcommand{\Relevant}[3]{\ensuremath{\,Reachbl(\,#1,#2,#3\,)}}
- 
-% 
-%\begin{definition}
-%$~ $ %
-%\label{def:prec}
-%\begin{itemize}
-%\item
-%$\sigma \prec \alpha\ \ \ \triangleq\ \ \ \LRelevantO {\alpha} {\phi}$
-%\item
-%$\sigma \prec \sigma'\ \ \ \triangleq\ \ \  \forall \alpha.[\ \LRelevant {\alpha} {\sigma'} \ \Rightarrow \  \LRelevant {\alpha} {\sigma}] $
-%\item
-%$\overline \alpha \prec \sigma \ \ \ \triangleq\ \ \  \forall \alpha'.[\ \LRelevant {\alpha'} {\sigma} \ \Rightarrow \  \exists \overline f, \alpha. [\ \alpha \in \overline \alpha \wedge 
-%\interpret \sigma {\alpha.{\overline f}} = \alpha' \ ]$
-%\item
-%$\sigma \parallel \sigma'  \ \ \ \triangleq\ \ \ \exists \overline \phi,  \overline {\phi'}, \chi. [\ \sigma=( \overline \phi, \chi )\ \wedge\ 
-%\sigma=( \overline {\phi'}, \chi )\ ]$
-%\end{itemize}
-%\end{definition}
-%
-%We then ....
-%
-%\begin{lemma}
-%For any states $\sigma$, $\sigma'$, assertion $A$,  such that $\fv(A)=\emptyset$
-%\label{l:push:pop:prelim}
-%\begin{enumerate}
-%\item
-%$\sigma \parallel \sigma'\ \ \wedge \ \ \Stable {A}\  \ \ \ \ \Longrightarrow\  \ \ \ \ [ \ M, \sigma \models A  \ \Longleftrightarrow \ \ M, \sigma' \models A\ ] $.
-%\item
-%$\sigma \parallel \sigma'\ \ \wedge \ \ \sigma \prec \sigma'\ \ \wedge  \ \ M, \sigma' \models \intThis\  \ \ \ \ \Longrightarrow\  \ \ \ \ [ \ M, \sigma \models \inside \alpha \ \ \Longrightarrow \ \ M, \sigma' \models  \inside \alpha\ ]$.
-%\item
-%$\sigma \parallel \sigma'\ \ \wedge \ \ \sigma \prec \sigma'\ \ \wedge  \ \ M, \sigma' \models \intThis\ \wedge \ \ \Pos A \  \ \ \ \ \Longrightarrow\  \ \ \ \ [ \ M, \sigma \models A \ \ \Longrightarrow \ \ M, \sigma' \models A\ ]$.
-%\item
-% $\sigma \parallel \sigma'\ \ \wedge \ \ \overline \alpha \prec \sigma'\  \ \ \ \ \Longrightarrow\  \ \ \ \ [ \ M, \sigma \models \protectedFrom {\alpha'} {\overline \alpha} \ \ \Longrightarrow \ \ M, \sigma' \models \inside {\alpha'}\ ]$.
-%\item
-% $\sigma \parallel \sigma'\ \ \wedge \ \ \overline \alpha \prec \sigma'\ \  \wedge \ \ \Pos A   \ \ \ \ \Longrightarrow\  \ \ \ \ [ \ M, \sigma \models  {\PushAS   {\alpha} {A}}  \ \ \Longrightarrow \ \ M, \sigma' \models A\ ]$.
-%\item
-%$\sigma \parallel \sigma'\ \ \wedge \ \ \sigma \prec {\overline \alpha}%\ \ \wedge \ \ M, \sigma' \models \intThis
-%  \ \ \ \ \Longrightarrow\  \ \ \ \ [ \ M, \sigma   \models \inside {\alpha'} \ \ \Longrightarrow \ \ M, \sigma' \models \protectedFrom {\alpha'} {\overline \alpha} \ ]$
-%\item
-%$\sigma \parallel \sigma'\ \ \wedge \ \ \sigma \prec {\overline \alpha}\ \  \wedge \ \ \Pos A   \ \ \ \ \Longrightarrow\  \ \ \ \ [ \ M, \sigma   \models A \ \ \Longrightarrow \ \ M, \sigma' \models \protectedFrom {\alpha'} {\PushAS   {\alpha} {A}} \ ]$
-%\end{enumerate}
-%\end{lemma}
-%
-%{\textbf{Proof Sketch  of Lemma \ref{l:push:pop:prelim}}}
-%\begin{enumerate}
-%\item
-%by unfolding the definitions
-%\item
-%by induction on the definition of $\Stable {\_}$; the requirement $M, \sigma' \models \intThis$ ensures that ....
-%\item
-%by induction on the definition of $\Pos {\_}$, and part (2)
-%\item
-%by unfolding the definitions
-%\item
-%by induction on the definition of $\Pos {\_}$, and part (4)
-%by unfolding the definitions
-%\item
-%by induction on the definition of $\Pos {\_}$, and part (6)
-%
-%\end{enumerate}
-%{\textbf{End Proof Sketch}}
-%
-%
-%\vspace{.2cm}
-%
-%We now express preservation of variable-free assertions in the presence of pushing and popping frames
-% 
-%\begin{lemma}
-%\label{l:push:pop}
-%For all   variables $y$, statements $stmt$, states $\sigma$, $\sigma'$, numbers $k\in \mathbb{N}$, assertions  $A$,
-% frames $\overline {\phi}$ %, $\phi_n$, $\phi_{n+1}$ and $\phi$, heap $\chi$,  and 
-%and addresses $\alpha$ and $\overline \alpha$: % variables $\overline z$, $\overline u$:
-%
-%% $\strut \\ $
-%
-%\noindent
-%If $\Pos A$ and $\fv(A)=\emptyset$, then
-%
-%
-%\begin{enumerate}
-%
-%\item
-%\label{pp:l:same:one}
-%$\sigma'=\sigma[\prg{cont}\mapsto stmt]$,   and $\sigma \prec \alpha$, then for any assertion $A'$:\\
-%%\begin{itemize}
-%%\item
-%$\strut \ \   \ \ \ \ \satDAssertFrom M  \sigma k   A' \ \ \wedge\ \ M, \sigma' \models \intThis  \strut \hspace{3.6cm}  \Longrightarrow  \ \ \satDAssertFrom M  {\sigma'} k   A' $
-%%\end{itemize}
-%
-%
-%\item
-%\label{pp:l:same:two}
-%If $\sigma'=\sigma[y \mapsto \alpha]$,   then \\
-%%\begin{itemize}
-%%\item
-%$\strut \ \   \ \ \ \ \satDAssertFrom M  \sigma k   A \ \ \wedge\ \ M, \sigma' \models \intThis  \strut \hspace{3.6cm}  \Longrightarrow  \ \ \satDAssertFrom M  {\sigma'} k   A $
-%%\end{itemize}
-%
-%\item
-%\label{pp:l:push}
-%If $\sigma'=\sigma  \pushSymbol \phi$   and $\sigma \prec \sigma'$, then
-%\begin{enumerate}
-%\item
-%\label{pp:l:one}
-%$\satDAssertFrom M  \sigma k   A \ \ \wedge \  \ M, \sigma' \models \intThis $ \\
-%$\strut \hspace{8cm} \Longrightarrow\   \satDAssertFrom M  {\sigma'} k   A $.
-%
-% 
-%\item 
-%\label{pp:l:three}
-%$M, \sigma \models    {\PushAS   {\alpha} {A}} \ \ \wedge\ \  Rng(\phi)=\overline {\alpha}$ \\
-%$\strut \hspace{8cm} \Longrightarrow\  M,  {\sigma'} \models   A $.
-%
-%\item
-%\label{pp:l:five}
-%$\satDAssertFrom M  \sigma k     {A \wedge ( \PushAS   {\alpha} {A})} \ \ \wedge\ \  Rng(\phi)=\overline {\alpha}$ \\
-%$\strut \hspace{8cm} \Longrightarrow\   \satDAssertFrom M  {\sigma'} k   {A \wedge( \PushAS   {\alpha} {A})}  $.
-%\end{enumerate}
-%
-%
-%\item
-%\label{pp:l:pop}
-%If $\sigma=\sigma'  \pushSymbol \phi$ and $ \sigma' \prec \sigma$, then
-%\begin{enumerate}
-%
-%\item
-%\label{pp:l:two}
-%$\satDAssertFrom M  \sigma k   A  \ \  \wedge\ \ k \leq \DepthSt{\sigma'}$ \\
-%$\strut \hspace{8cm} \Longrightarrow\  \satDAssertFrom M  {\sigma'} k   A  $.
-% 
-%\item
-%\label{pp:l:four}
-%$M, \sigma  \models A  \ \  %\wedge\ \ k \leq \DepthSt{\sigma'} \ \ 
-%\wedge\ \      \sigma \prec {\overline \alpha}$,\\
-%$\strut \hspace{8cm} \Longrightarrow \  
-%M, \sigma  \models {\PushAS   {\alpha} {A}}$.
-%
-%\item
-% \label{pp:l:six}
-%$\satDAssertFrom M  \sigma k     {A \wedge ( \PushAS   {\alpha} {A})} \ \ \wedge\ \  \sigma \prec {\overline {\alpha}}
-% %\ \ \wedge \ \ M, \sigma' \models \intThis
-% \ \  \wedge\ \ k \leq \DepthSt{\sigma'} \ \ $ \\
-%$\strut \hspace{8cm} \Longrightarrow \  \satDAssertFrom M  {\sigma'} k   {A \wedge( \PushAS   {\alpha} {A})}  $.
-%
-%\end{enumerate}
-%
-%\end{enumerate}
-%\end{lemma}
-% 
-% \noindent
-%\vspace{.1cm}
-%{\textbf{Discussion of Lemma \ref{l:push:pop}}} 
-% In the lemma above, part \ref{pp:l:same:one}  and  \ref{pp:l:same:two} are
-% about small modifications to the top frame, which, if is is internal, preserves validity of any assertion.
-% Part \ref{pp:l:push} is about preservation of validity from the caller to the  callee's frame (this is why we require that $\sigma'=\sigma  \pushSymbol \phi$),
-% while part \ref{pp:l:pop} is about preservation of validity from the callee's frame to the caller's (this is why we require that $\sigma=\sigma'  \pushSymbol \phi$),
-% 
-%%   parts (\ref{pp:l:one}), (\ref{pp:l:three}) and (\ref{pp:l:five}) are about preservation of assertions when pushing a frame (since $\sigma'=\sigma  \pushSymbol \phi$), while parts (\ref{pp:l:two}), (\ref{pp:l:four}) and (\ref{pp:l:six}) are about preservation of assertions when popping a frame (since $\sigma=((\overline {\phi}\cdot \phi_n \cdot \phi_{n+1}),\chi)$ and $\sigma' = ((\overline {\phi}\cdot \phi_n[..],\chi)$).
-% 
-% In part  (\ref{pp:l:one}) we require that  $M, \sigma' \models \intThis$ -- therefore this part is applicable only if the callee is internal; note that we make no such requirement   in (\ref{pp:l:three}) or (\ref{pp:l:five})  -- therefore we can 
-% apply these parts to internal as well as external calls.
-%% No loger true, as I introdiced part (1)
-%%In parts    (\ref{pp:l:four}) and (\ref{pp:l:six})  we require that  $M, \sigma'  \models \intThis$ -- therefore these parts are applicable only if the caller is internal. This, however is not a restriction, really, because our quadruples are always from the point of view of the caller, and are applicable to internal code only.
-% 
-% Note the requirements that $k \leq \DepthSt {\sigma'}$ in parts (\ref{pp:l:two})  and (\ref{pp:l:six}): this ensures that the corresponding assertion holds at the level of the callee as well as of the caller. 
-% This requirement is necessary so  that the assertion 
-% 
-% We do  not make such a requirement in part  (\ref{pp:l:four})  
-% 
-%\noindent
-%\vspace{.1cm}
-%{\textbf{Proof Sketch  of Lemma \ref{l:push:pop}}}
-%By application of Lemma  \ref{l:push:pop:prelim} -- TODO add details
-%%\vspace{.1cm}
-%
-%{\textbf{End Proof Sketch}} 
-%
-%\vspace{.2cm}
-%\subsubsection{Poving  lemma  \ref{l:calls}}
-%
-%\noindent
-%\vspace{.1cm}
-%{\textbf{Proof Sketch  of Lemma \ref{l:calls}}}
-% 
-% %\vspace{.1cm}
-%
-%{\textbf{End Proof Sketch}} 
-%
-%%%%%%%%%
-%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+As we said earlier, Lemmas \ref{l:calls}-\ref{l:calls:external} are used to prove the soundnes of the Hoare logic rules for method calls.
+In the proof of soundness of {\sc{Call\_Int}}. we will use Lemma \ref{l:calls} part (\ref{l:calls:callee:one}) and Lemma \ref{l:calls:return} part (\ref{l:calls:caller:one}).  
+In the proof of soundness of {\sc{Call\_Int\_Adapt}} we will use  Lemma \ref{l:calls} part (\ref{l:calls:callee:two}) and Lemma \ref{l:calls:return} part (\ref{l:calls:caller:two}).
+In the proof of soundness of {\sc{Call\_Ext\_Adapt}} we will use  Lemma \ref{l:calls:external} part (\ref{l:calls:callee:three}) and Lemma \ref{l:calls:return:ext} part (\ref{l:ext:return:one}).
+In the proof of soundness of {\sc{Call\_Ext\_Adapt\_Strong}} we will use  Lemma \ref{l:calls:external} part (\ref{l:calls:callee:four}) and Lemma \ref{l:calls:return:ext} part (\ref{l:ext:return:two}).
+  
