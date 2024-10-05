@@ -1,4 +1,4 @@
-All program logics deal with framing in some form or other, \ie conditions under which  satisfaction of  assertions is preserved across program execution. 
+Program logics require some form of framing, \ie conditions under which  satisfaction of  assertions is preserved across program execution. 
 This is the subject of the current Section.
 
 We start with  Lemma \ref{l:assrt:unaffect}  which says that satisfaction of an assertion is not affected by replacing a variable by its value, nor by changing the continuation in a state.
@@ -12,13 +12,9 @@ For all $M$, $\sigma$, $\alpha$, $x$, $\re$, $stmt$, and $A$:
 \begin{enumerate}
 \item
 \label{one:ad:exp}
-$
-\satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]} % \ ]
- $ 
 \label{l:assrt:unaffect:one}
 $\satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{A[{\interpret \sigma x}/x]}   $ 
 % holds, but not used
->>>>>>> 1c2697daf51fc05cd432cc357bf0ecc94789eb60
 %\item
 %$\eval{M}{\sigma}{{\re}}{\alpha}  \ \ \Longrightarrow\ \  [ \ \satisfiesA{M}{\sigma}{A} \  \Longleftrightarrow\   \  \satisfiesA{M}{\sigma}{A[\alpha/\re]} \  \  ]$
 \item
@@ -30,11 +26,11 @@ $ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sig
  \noindent
 We now move to assertion preservation across method call and return. % (Sect \ref{s:preserve:call:ret}),   or heap modification (Sect \ref{s:preserve:encaps}).
 
-\subsection{Stability: Preservation across method call and return}
+\subsection{Stability} %{Stability: Preservation across method call and return}
 \label{s:preserve:call:ret}
 In most program logics, satisfaction of  variable-free assertions  is preserved when pushing/popping frames
 -- \ie immediately after entering a method or  returning from it.
-This, however, is not   the case for our assertions, because whether  $\inside {\alpha}$ holds, depends on the heap as well as the set of objects reachable from the top frame, and
+This, however, is not   the case for our assertions, where satisfaction of   $\inside {\alpha}$ holds, depends on the heap as well as the set of objects reachable from the top frame;
 the latter  changes when the frame changes.
 This is shown, \eg in  Fig. \ref{fig:Protected} where 
 $\sigma_1,\chi \models \inside {o_3}$, then $.\sigma_2,\chi \not\models \inside {o_3}$, and then $\sigma_3,\chi  \models \inside {o_3}$
@@ -43,35 +39,32 @@ $\sigma_1,\chi \models \inside {o_3}$, then $.\sigma_2,\chi \not\models \inside 
 
  
 
-Nevertheless,  assertions which do  not contain  $\inside {\_}$, called   $\Stable {\_}$, are stable against pushing and popping of frames.  
-Moreover, assertions which do  not contain $\inside {\_}$ in negative positions, called $\Pos {\_}$,  are stable against pushing  of {internal} frames provided that the range of the new frame contains locallty reachable addresses -- 
-\cf  Defs   in \A\ \ref{app:preserve}.
+%Nevertheless,  
+\sdN{Assertions} which do  not contain  $\inside {\_}$, called   $\Stable {\_}$, are preserved when pushing/popping  frames.  
+\sdN{Less strictly}, assertions which do  not contain $\inside {\_}$ in \emph{negative} positions, called $\Pos {\_}$,  are preserved when pushing  {internal} frames provided that the range of the new frame contains locallty reachable addresses -- 
+\cf  Defs   in \A\ \ref{app:preserve} and Lemma \ref{l:stbl:preserves}.
 
 \begin{lemma}
-For all  states $\sigma$ and frames $\phi$, and for all assertions $A$ such that $ fv(A)=\emptyset$:
+For all  states $\sigma$, frames $\phi$,   all assertions $A$ with  $\fv(A)=\emptyset $
 \label{l:preserve:asrt}
- 
+\label{l:stbl:preserves} 
 \begin{itemize}
 \item 
-$\Stable{A}\ \ \ \  \Longrightarrow \ \  \ \  [\ \ M, \sigma \models A \ \ \Longleftrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+$\Stable{A} \  \ \  \Longrightarrow  \  \ \  [\ \ M, \sigma \models A \ \ \Longleftrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
 \item 
 \label{l:preserve:asrt:two}
-$\Pos{A}\ \ \  \wedge \ \ \  {   \ Rng(\phi)\subseteq \LRelevantO   \sigma \ } \ \ \ \Longrightarrow $
-\\
-$\strut \hspace{2cm} \ \  \ \  [\ \ M, \sigma \models A \  \wedge \  M, {\PushSLong \phi \sigma} \models  \intThis \ \ \Longrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
-%\item 
-%$\Neg{A}\ \ \   \Longrightarrow \ \  \ \  [\ \  M,{\PushSLong \phi \sigma} \models A\ \ \Longrightarrow \ \  M, \sigma \models A   \ \  ]$
-%
+$\Pos{A}   \ \wedge    \ Rng(\phi)\!\subseteq\! \LRelevantO   \sigma\ \wedge\  M, {\PushSLong \phi \sigma} \models  \intThis\  \wedge  \ M, \sigma \models A $
+% \\
+%$\strut \hspace{2cm} \ \  \ \ 
+$\  \ \Longrightarrow \  \ M,{\PushSLong \phi \sigma} \models A\ $
 \end{itemize}
 \end{lemma}
 
- 
-$Stbl$ assertions are preserved when pushing or popping frames, but do not support % allow to include 
-$\inside {\_}$ requirements -- a crucial ingredient for our work. While
-$Stb^+$ assertions \emph{are} preserved  when pushing  internal frames,   they  are \emph{not} preserved when pushing  external frames   (\cf  Ex. \ref{push:does:not:preserve}), \emph{nor} when popping frames   (\cf Ex. \ref{ex:motivate:scoped}). 
+
+While $Stb^+$ assertions \emph{are} preserved  when pushing  internal frames,   they  are \emph{not} necessarily preserved when pushing  external frames   (\cf  Ex. \ref{push:does:not:preserve}), \emph{nor} when popping frames   (\cf Ex. \ref{ex:motivate:scoped}). 
 
  
-\begin{example}[External Push might not preserve]
+\begin{example}[$Stb^+$  not always preserved by External Push]
 \label{push:does:not:preserve}
 In    Fig. \ref{fig:Protected}, where $\sigma_2$ by pushing external frame onto $\sigma_1$, and 
 $\sigma_1 \models \inside {o_3}$ but $\sigma_2 \not\models \inside {o_3}$.
@@ -79,48 +72,42 @@ $\sigma_1 \models \inside {o_3}$ but $\sigma_2 \not\models \inside {o_3}$.
 \end{example}
  
 
-\begin{example}[Method return might not preserve]
+\begin{example}[$Stb^+$ not always preserved by Method Return]
 \label{ex:motivate:scoped}
 Assume state $\sigma_a$, such that $\interpret {\sigma_a} {\prg{this}}=o_1$, $\interpret {\sigma} {\prg{this}.f}=o_2$, $\interpret {\sigma} {x}=o_3$, $\interpret {\sigma} {x.f}=o_2$,  
 and $\interpret {\sigma} {x.g}=o_4$, where $o_2$ is external and all other objects are internal. 
 We then have $..,\sigma_a \models  \inside {o_4}$.
-Assume that the continuation of $\sigma_a$   consists of a method $x.m()$. Then,
-upon entry to that method, when we push the new frame, we have a state $\sigma_b$, which also satisfies $..,\sigma_a \models  \inside {o_4}$.
-Assume that the   body of $m$ is $\prg{this}.f.m1(\prg{this}.g); \prg{this}.f := \prg{this};  \prg{this}.g := \prg{this}$, and that the external method $m1$ stores in the 
+Assume %that
+ the continuation of $\sigma_a$   consists of a method $x.m()$. Then,
+upon entry to that method, when we push the new frame, we have  state $\sigma_b$, which also satisfies $..,\sigma_b \models  \inside {o_4}$.
+Assume % that
+ the   body of $m$ is $\prg{this}.f.m1(\prg{this}.g); \prg{this}.f := \prg{this};  \prg{this}.g := \prg{this}$, and % that 
+ the external method $m1$ stores in the 
 receiver a reference to the argument.
-Then, at the end of method execution, and before popping the stack, we have a state $\sigma_c$, which also satisfies $..,\sigma_c \models  \inside {o_4}$.
+Then, at the end of method execution, and before popping the stack, we have   state $\sigma_c$, which also satisfies $..,\sigma_c \models  \inside {o_4}$.
 However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \not\models  \inside {o_4}$.
 \end{example}
 
 
-\vspace{.1cm}
-Even though  $Stb^+$ assertions    are \emph{not} preserved when  external frames are pushed, \emph{nor} when frames are popped, we need
-ways to ensure that an assertion holds when entering a method or returning from a method. 
-The former  is done through the viewpoint adaptation operator (Sect \ref{s:viewAndProtect}); the latter thought   
-\scoped sarisfaction (Section \ref{s:scoped:valid}).
-  
+% \vspace{.1cm}
+\sdN{We work with  $Stb^+$  assertions   (the  $Stbl$ requirement is too strong). 
+But  we need to address the lack of preservation of $Stb^+$ assertions upon external call,  or method returns.
+ %,  makes it difficult to  ensure certain (perhaps weaker) assertions hold when entering   or returning from a method. 
+We do the former   through    \emph{adaptation}   ($\FIXSymbolA$ in Sect \ref{s:viewAndProtect}), and the latter through  
+\emph{\scoped satisfaction} (\S \ref{s:scoped:valid}).
+  }
    
- \subsection{Viewpoints and Protection}
+ \subsection{Adaptation } % and Protection}
  \label{s:preserve:encaps}
  \label{s:viewAndProtect}
  
- As we discussed in section \ref{sec:howThird} sometimes an assertion $A$ is not satisfied at the caller’s
-viewpoint, but is satisfied at the called viewpoint:  right before a method call, $A$ might not be satisfied,
-but if  $\PushASLong  {\overline y} A$ is satisfied (where $\overline y$ are the receiver and arguments to the call), then $A$
-will be satisfied right when the called method body starts. Thus, the operator $\FIXSymbolA$
- translates an assertion from the viewpoint of the called, to that of the caller.
- 
-
-The  $\FIXSymbolA$  operator is  defined in Fig. \ref{f:Push}. 
-Only the first equation is interesting, i.e.  $\PushAS y {(\inside \re)}$: For 
-$\re$ to be protected from the viewpoint of the called, it should be protected from all the call's arguments,
-\ie  $\protectedFrom {\re} {\overline {y}}$. 
-The notation $\protectedFrom {\re} {\overline {y}}$   stands for $\protectedFrom \re {y_0}\, \wedge\, ...  \protectedFrom \re {y_n}$, assuming that $\overline y$=${y_0, ... y_n}$.
-
+ As we discussed in \S  \ref{sec:howThird} it is possible for an assertion  not to be satisfied at the callerr
+but to be  satisfied at the called viewpoint. %:  right before a method call, $A$ might not be satisfied,
+We define then operator $\FIXSymbolA$ which  translates an assertion from the viewpoint of the called, to that of the caller.
 
 \begin{definition}
 \label{def:push}
-[The $\FIXSymbolA$  operator] is  defined below
+[The $\FIXSymbolA$  operator]  
 
 $
 \begin{array}{c}
@@ -148,28 +135,16 @@ $
 \label{f:Push}
 \end{definition}
 
- 
+Only the first equation in  Def.  \ref{def:push}  is interesting,
+  $\PushAS y {(\inside \re)}$.  
+For $\re$ to be \sdN{protected at  the} called, it should be protected from all the call's arguments,
+\ie  $\protectedFrom {\re} {\overline {y}}$. 
+The notation $\protectedFrom {\re} {\overline {y}}$   stands for $\protectedFrom \re {y_0}\  \wedge\  ...  \wedge \protectedFrom \re {y_n}$, assuming that $\overline y$=${y_0, ... y_n}$.
 
-
-
-
-
-\vspace{.1cm}
-
-\begin{example}
-\label{push:does:not:imply}
-$A$ does not imply $\PushAS {y} {A}$: \Eg  take 
-  a   $\sigma_1$ where $\interpret {\sigma_1} {\prg{this}}$ = $o_1$, and $o_1$ is internal,  and there is no other object. Then, we have
-$\_,\sigma_1 \models \inside {\prg{this}}$ and $\_,\sigma_1 \not\models \protectedFrom {\prg{this}} {\prg{this}}$.
-Nor does  $\PushAS {y} {A}$  imply $A$. \Eg  take a $\sigma_2$ where $\interpret {\sigma_2} {\prg{this}}$ = $o_1$,
- $\interpret {\sigma_2} {x}$ = $o_2$ , and  $\interpret {\sigma_2} {x.f}$ = $o_3$, and $o_2$ is external, and there are no other objects or fields.
- Then $\_,\sigma_2 \models   \protectedFrom {x.f} {\prg{this}}$ but  $\_,\sigma_2 \not\models \inside {x.f}$.
-\end{example}
-
- Lemma \ref{lemma:push:ass:state}  states that $\FIXSymbolA$ is the counterpart to the states' operator $\pushSymbol$:
-A caller state
-$\sigma$ satisfies  $\PushAS y A$, if and only if the called state  ($\PushASLong {\phi} {\sigma}$) % (after pushing a frame with the values of $\overline y$) 
-satisies $A$.  
+Lemma \ref{lemma:push:ass:state}  states that  $\FIXSymbolA$ indeed adapts assertions from the called to the caller.
+It is the counterpart to the states' operator $\pushSymbol$:
+A caller   $\sigma$ satisfies  $\PushAS y A$, if and only if the called   ($\PushASLong {\phi} {\sigma}$) % (after pushing a frame with the values of $\overline y$) 
+satisfies $A$.  
 %% The below was fine when we had a more detailed version
 % (1) If \ the caller state
 %$\sigma$ satisfies  $\PushAS y A$, then  the called state  ($\PushASLong {\phi} {A}$) % (after pushing a frame with the values of $\overline y$) 
@@ -178,10 +153,9 @@ satisies $A$.
 % satisfies $A$, then the caller state will satisfy 
 %$\PushAS {y} {A}$. } % will hold {in the caller state}. % after popping that frame.
 
-
 \begin{lemma} 
 \label{lemma:push:ass:state}
-For a  state  $\sigma$, assertion $A$ with $\fv(A)=\emptyset$,  variables   $\overline y$, frame $\phi$ with $Range (\phi)=\overline {\interpret \sigma y}$:
+For   state  $\sigma$, assertion $A$ with $\fv(A)=\emptyset$,  variables   $\overline y$, frame $\phi$ with $Range (\phi)=\overline {\interpret \sigma y}$:
 
 
 \begin{itemize} %{enumerate}
@@ -189,15 +163,41 @@ For a  state  $\sigma$, assertion $A$ with $\fv(A)=\emptyset$,  variables   $\ov
  \label{lemma:push:ass:state:one}
  \label{lemma:push:ass:state:two}
 $M, \sigma \models \PushAS  {y} {A}\ \  \ \ \ \ \  \ \ \    \Longleftrightarrow  \ \ \ \ M,  \PushSLong {\phi} {\sigma}   \models A$
-%\item
-%\label{lemma:push:ass:state:two}
-%$M, { \PushSLong {\phi} {\sigma} } \models  A \ \  \ \ \ \ \  \ \ \    \Longrightarrow  \ \ \ \ M,  \sigma \models  \PushAS  {y} {A}$
 \end{itemize}  % {enumerate}
 \end{lemma}
 
 
+Moreover, $\FIXSymbolA$ turns an assertion into a stable assertion; as stated in   Lemma \ref{l:push:stbl}.
+
+\begin{lemma}
+For all    assertions $A$ : \ \ \ \ \  $\Stable{ \PushAS y A}$
+\label{l:push:stbl}
+% 
+%\begin{itemize}
+%\item
+%$\Stable{ \PushAS y A}$
+%\end{itemize}
+\end{lemma}
+
+Note that the adapted version is not stronger than the original, nor the other way round.
+
+\begin{example}[Adapted and Original versions are incomparable]
+\label{push:does:not:imply}
+\notesep   $A$ does not imply $\PushAS {y} {A}$:\  \Eg  take 
+  a   $\sigma_1$ where $\interpret {\sigma_1} {\prg{this}}$ = $o_1$, and $o_1$ is internal,  and there is no other object. Then, we have
+$\_,\sigma_1 \models \inside {\prg{this}}$ and $\_,\sigma_1 \not\models \protectedFrom {\prg{this}} {\prg{this}}$.
+\notesep Nor does  $\PushAS {y} {A}$  imply $A$.\  \Eg  take a $\sigma_2$ where $\interpret {\sigma_2} {\prg{this}}$ = $o_1$,
+ $\interpret {\sigma_2} {x}$ = $o_2$ , and  $\interpret {\sigma_2} {x.f}$ = $o_3$, and $o_2$ is external, and there are no other objects or fields.
+ Then $\_,\sigma_2 \models   \protectedFrom {x.f} {\prg{this}}$ but  $\_,\sigma_2 \not\models \inside {x.f}$.
+\end{example}
+
+
+
+
+
+
  
-\subsection{Encapsulation: Preservation across heap modifications}
+\subsection{Encapsulation} % : Preservation across heap modifications}
 \label{s:preserve:encaps}
  
 Proofs of adherence to {\SpecLang specifications  hinge on the expectation that some,  specific, assertions are always satisfied unless some 
@@ -221,7 +221,7 @@ execution which involves $M$ and any set of other module $\Mtwo$, always satisfi
 $ % \begin{equation}
     M\ \models \encaps{A}\ \   \triangleq  \ \   
     \begin{cases}
-     \forall \Mtwo, \sigma, \sigma',  \overline{\alpha}, \overline{x} \mbox{ with } \overline{x}=Free(A)\\ % , \mbox{and }  \arising{M\madd\Mtwo}{\sigma}:\\
+     \forall \Mtwo, \sigma, \sigma',  \overline{\alpha}, \overline{x} \mbox{ with } \overline{x}=\fv(A)\\ % , \mbox{and }  \arising{M\madd\Mtwo}{\sigma}:\\
    \ \ \ \  [\ \ \  \satisfiesA{M}{\sigma}{({A[{\overline {\alpha/x}}]} \ \wedge\ \externalexec)}\  \wedge\ { \leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}} % \\    \ \ \ \ \ \   \ \ \ 
    \ \ \Longrightarrow\ \ 
   %  \ \ \ \ \ \  \ 
