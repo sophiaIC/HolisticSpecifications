@@ -422,7 +422,7 @@ Module LanguageDefinition.
 (*  | a_or : asrt -> asrt -> asrt*)
   | a_neg : asrt -> asrt
   | a_all : cls -> asrt -> asrt
-  | a_ex : cls -> asrt -> asrt
+(*  | a_ex : cls -> asrt -> asrt*)
 
 (*)  | a_intl : exp -> asrt*)
   | a_extl : exp -> asrt
@@ -449,6 +449,11 @@ Module LanguageDefinition.
       Core Language Definitions
    ***)
 
+  Inductive l_spec :=
+  | S_inv : list (var * cls) -> asrt -> l_spec
+  | S_mth : cls -> mth -> list (var * ty) -> asrt -> asrt -> asrt -> l_spec
+  | S_and : l_spec -> l_spec -> l_spec.
+
   Record methDef := meth{
                         spec : list (asrt * asrt * asrt);
                         params : list (var * ty);
@@ -462,10 +467,6 @@ Module LanguageDefinition.
         c_ghosts : partial_map ghost (var * exp);
         c_meths : partial_map mth methDef
       }.
-
-  Inductive l_spec :=
-  | S_inv : list (var * cls) -> asrt -> l_spec
-  | S_and : l_spec -> l_spec -> l_spec.
 
   Definition module := (l_spec * (partial_map cls classDef)) %type.
 

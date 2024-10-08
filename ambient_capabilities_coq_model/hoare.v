@@ -47,20 +47,20 @@ TODO: Need to discuss below. Clarification. Do the variables in the spec refer t
 i.e. if we overwrite the variable in the method body, but don't modify the original object, is the overwrite reflected in the post?
    *)
 
-  Inductive m_spec : module -> asrt -> cls -> mth -> list (var * ty) -> asrt -> asrt -> Prop :=
+  Inductive has_m_spec : module -> asrt -> cls -> mth -> list (var * ty) -> asrt -> asrt -> Prop :=
   | mspec : forall M P C ps Q A m mDef CDef pSubst, snd M C = Some CDef ->
                                                c_meths CDef m = Some mDef ->
                                                map snd ps = map snd (params mDef) ->
                                                zip (map (fun xC => e_var (fst xC)) ps) (map fst (params mDef)) = Some pSubst -> (* construct the substitution for parameters *)
                                                In (P, Q, A) (spec mDef) ->
-                                               m_spec M (listSubst P pSubst) C m ps (listSubst Q pSubst) (listSubst A pSubst).
+                                               has_m_spec M (listSubst P pSubst) C m ps (listSubst Q pSubst) (listSubst A pSubst).
 
-  Inductive l_spec : module -> l_spec -> Prop :=
-  | lspec_base : forall S Cdefs, l_spec (S, Cdefs) S
-  | lspec_and1 : forall S S1 S2 Cdefs, l_spec (S1, Cdefs) S ->
-                                  l_spec (S_and S1 S2, Cdefs) S
-  | lspec_and2 : forall S S1 S2 Cdefs, l_spec (S2, Cdefs) S ->
-                                  l_spec (S_and S1 S2, Cdefs) S.
+  Inductive has_l_spec : module -> l_spec -> Prop :=
+  | lspec_base : forall S Cdefs, has_l_spec (S, Cdefs) S
+  | lspec_and1 : forall S S1 S2 Cdefs, has_l_spec (S1, Cdefs) S ->
+                                  has_l_spec (S_and S1 S2, Cdefs) S
+  | lspec_and2 : forall S S1 S2 Cdefs, has_l_spec (S2, Cdefs) S ->
+                                  has_l_spec (S_and S1 S2, Cdefs) S.
 
   (** * Hoare Semantics *)
   Inductive reductions : module -> config -> config -> Prop :=
@@ -140,7 +140,6 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     | A1 ∧ A2 => (adapt A1 ys) ∧ (adapt A2 ys)
     | a_all C A => a_all C (adapt A ys)
     | ¬ A => ¬ (adapt A ys)
-    | _ => a_true (* partial ......*)
     end.
 
   (* Proof Rules *)
@@ -153,7 +152,6 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     | a_prt x => False
     | A1 ∧ A2 => Stbl A1 /\ Stbl A2
     | a_all C A => Stbl A
-    | a_ex C A => Stbl A
     | ¬ A => Stbl A
     | _ => True
     end.
@@ -442,15 +440,19 @@ Because of this, we can preserve the usual assignment rule from HL.
                                          M ⊢ A6 ⊆ A3 ->
                                          M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄
 
-  (* TODO: argument substitution *)
   (* change list subst to be subst of 2 lists, and a proof they are the same length, instead of zip?
      this would allow use of the normal subst notation. Might have to make the proof an implicit
      argument. Does that mean that all substitutions need this proof???? Can we make the subst for
      single variables implicit?
    *)
 
+  (*
+    substitute into invariant????
+    realistitcally the invariant should not contain arguments to the method calls???
+   *)
+
   | hq_call_int : forall M A1 C m ys A2 A3 y0 u xs xCs yCs yxs,
-      m_spec M A1 C m xCs A2 A3 ->
+      has_m_spec M A1 C m xCs A2 A3 ->
       xs = map fst xCs ->
       zip ys (map snd xCs) = Some yCs ->
       zip (map e_var ys) xs = Some yxs ->
@@ -460,7 +462,7 @@ Because of this, we can preserve the usual assignment rule from HL.
         ⦃ [e_ u /s result][e_ y0 /s this] (listSubst A2 yxs) ⦄ || ⦃ A3 ⦄
 
   | hq_call_int_adapt : forall M A1 C m ys A2 A3 y0 u xs xCs yCs yxs,
-      m_spec M A1 C m xCs A2 A3 ->
+      has_m_spec M A1 C m xCs A2 A3 ->
       xs = map fst xCs ->
       zip ys (map snd xCs) = Some yCs ->
       zip (map e_var ys) xs = Some yxs ->
@@ -470,7 +472,7 @@ Because of this, we can preserve the usual assignment rule from HL.
         ⦃ adapt ([e_ u /s result][e_ y0 /s this] (listSubst A2 yxs)) (y0 :: ys) ⦄ || ⦃ A3 ⦄
 
   | hq_call_ext_adapt : forall M xCs A u y0 m ys,
-      l_spec M (S_inv xCs A) ->
+      has_l_spec M (S_inv xCs A) ->
       M ⊢
         ⦃ a_extl (e_ y0) ∧
             a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
@@ -479,7 +481,7 @@ Because of this, we can preserve the usual assignment rule from HL.
         ⦃ (adapt A (y0::ys)) ⦄ || ⦃ A ⦄
 
   | hq_call_ext_adapt_strong : forall M xCs A u y0 m ys,
-      l_spec M (S_inv xCs A) ->
+      has_l_spec M (S_inv xCs A) ->
       M ⊢
         ⦃ a_extl (e_ y0) ∧
             a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
@@ -500,7 +502,7 @@ Because of this, we can preserve the usual assignment rule from HL.
                                    M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ ->
                                    M ⊢ ⦃ A1 ⦄ s_seq s1 s2 ⦃ A3 ⦄ || ⦃ A3 ⦄.*)
 
-  Ltac induction_hoare :=
+    Ltac induction_hoare :=
     match goal with
     | [ |- forall M P s Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ -> _ ] =>
         intros M P s Q Hhoare; induction Hhoare

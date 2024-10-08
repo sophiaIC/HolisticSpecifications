@@ -99,10 +99,10 @@ Module Assert.
                                sat M σ ([α /s 0] A)) ->
                          sat M σ (a_all C A)
 
-  | sat_ex : forall M σ α C A, glob_reachable α σ ->
+(*  | sat_ex : forall M σ α C A, glob_reachable α σ ->
                           sat M σ ([α /s 0] A) ->
                           sat M σ (a_exp (e_typ (e_val (v_addr α)) (t_cls C))) ->
-                          sat M σ (a_ex C A)
+                          sat M σ (a_ex C A)*)
 
   | sat_extl : forall M σ e C, sat M σ (a_exp (e_typ e (t_cls C))) ->
                           ~ C ∈ snd M ->
@@ -174,10 +174,10 @@ The above relies on the fact that "this" is always in the local variable map
                             nsat M σ ([α /s 0] A) ->
                             nsat M σ (a_all C A)
 
-  | nsat_ex : forall M σ C A, (forall α, glob_reachable α σ ->
+(*  | nsat_ex : forall M σ C A, (forall α, glob_reachable α σ ->
                                eval M σ (e_typ (e_val (v_addr α)) (t_cls C)) v_true ->
                                nsat M σ ([α /s 0] A)) ->
-                         nsat M σ (a_ex C A)
+                         nsat M σ (a_ex C A)*)
 
   | nsat_extl : forall M σ e C, sat M σ (a_exp (e_typ e (t_cls C))) ->
                            C ∈ snd M ->

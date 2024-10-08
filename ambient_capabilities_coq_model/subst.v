@@ -35,6 +35,7 @@ Module SubstDefn.
           end
     }.
 
+  (* TODO: fix??? disallow "this" in list substitutions? *)
   #[global] Instance list_subst {A B C : Type}`{Subst A B C} : Subst (list A) B C :=
     {
       sbst :=
@@ -57,7 +58,7 @@ Module SubstDefn.
           (*)        | A1 ⟶ A2   => (sbst' A1 n α) ⟶ (sbst' A2 n α)*)
 
           | a_all C A  => a_all C (sbst' A (S n) α)
-          | a_ex C A   => a_ex C (sbst' A (S n) α)
+(*          | a_ex C A   => a_ex C (sbst' A (S n) α)*)
 
           | a_extl e => a_extl ([α /s n] e)
 
@@ -90,10 +91,10 @@ Module SubstDefn.
           | a_exp e' => a_exp ([e /s x] e')
 
           | A1 ∧ A2 => (sbst' A1 x e) ∧ (sbst' A2 x e)
-(*)          | A1 ∨ A2 => (sbst' A1 x e) ∨ (sbst' A2 x e)*)
+(*          | A1 ∨ A2 => (sbst' A1 x e) ∨ (sbst' A2 x e)*)
           | ¬ A' => ¬ (sbst' A' x e)
           | a_all C A' => a_all C (sbst' A' x e)
-          | a_ex C A' => a_ex C (sbst' A' x e)
+(*          | a_ex C A' => a_ex C (sbst' A' x e)*)
 
           | a_extl e' => a_extl ([e /s x] e')
 

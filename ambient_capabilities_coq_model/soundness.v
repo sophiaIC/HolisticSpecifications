@@ -143,6 +143,10 @@ Module Soundness.
       apply hoare_base_soundness; auto.
   Qed.
 
+  (* Auxillary Lemmas go here *)
+
+  Definition ordering: 
+
   Theorem hoare_quadruple_sound :
     forall M P s Q A, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ || ⦃ A ⦄ ->
                  M ⊨ ⦃ P ⦄ s ⦃ Q ⦄ || ⦃ A ⦄.
