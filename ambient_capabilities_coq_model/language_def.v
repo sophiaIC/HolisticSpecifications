@@ -72,13 +72,24 @@ Module LanguageDefinition.
   | s_write : var -> fld -> exp -> stmt
   | s_call : var -> var -> mth -> list var -> stmt
   | s_ret : exp -> stmt
+  | s_if : exp -> stmt -> stmt -> stmt
+  | s_hole : var -> stmt
+  | s_new : var -> cls -> stmt
+  | s_empty : stmt
+  | s_seq : stmt -> stmt -> stmt.
+
+ (* Inductive stmt :=
+  | s_read : var -> exp -> stmt
+  | s_write : var -> fld -> exp -> stmt
+  | s_call : var -> var -> mth -> list var -> stmt
+  | s_ret : exp -> stmt
   | s_if : exp -> stmts -> stmts -> stmt
   | s_hole : var -> stmt
   | s_new : var -> cls -> stmt
 
   with stmts :=
   | s_stmt : stmt -> stmts
-  | s_seq : stmt -> stmts -> stmts.
+  | s_seq : stmts -> stmts -> stmts.*)
 
 (*  Inductive stmt :=
   | s_read : var -> var -> fld -> stmt
@@ -428,6 +439,7 @@ Module LanguageDefinition.
   Notation "A1 ⟶ A2" :=(arr A1 A2)(at level 40).
   Definition a_true := (a_ (e_true)).
   Definition a_false := (a_ (e_false)).
+  Notation "e1 ≠ e2" := (¬ a_ (e_eq e1 e2))(at level 37).
 
   Inductive path :=
   | p_fld : fld -> path
@@ -440,7 +452,7 @@ Module LanguageDefinition.
   Record methDef := meth{
                         spec : list (asrt * asrt * asrt);
                         params : list (var * ty);
-                        body : stmts
+                        body : stmt
                       }.
 
   Record classDef :=
@@ -463,7 +475,7 @@ Module LanguageDefinition.
   Definition heap := partial_map addr object.
 
   Record frame := frm{local : partial_map var val;
-                       continuation : stmts}.
+                       continuation : stmt}.
 
   Inductive stack :=
     | stack_cons : frame -> list frame -> stack.

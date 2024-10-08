@@ -24,6 +24,12 @@ Module Hoare.
   Declare Scope hoare_scope.
   Open Scope assert_scope.
 
+  (*Question: replace entails with a general assertion satisfaction form?
+   i.e. something like M ⊢ A instead of M ⊢ A1 ⊆ A2
+   I don't know what that would give us. Are there non-consequence assertions
+   that we want to prove are always satisfied?
+   *)
+
   (** Helper Functions *)
 
   Fixpoint zip {A B : Type} (l1 : list A)(l2 : list B) : option (list (A * B)) :=
@@ -57,29 +63,47 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
                                   l_spec (S_and S1 S2, Cdefs) S.
 
   (** * Hoare Semantics *)
-  Inductive big_step : module -> config -> config -> Prop :=
-  | bsr_single : forall M σ1 σ2, reduction M σ1 σ2 ->
-                            big_step M σ1 σ2
+  Inductive reductions : module -> config -> config -> Prop :=
+  | r_single : forall M σ1 σ2, reduction M σ1 σ2 ->
+                          reductions M σ1 σ2
 
-  | bsr_trans : forall M σ1 σ2 σ3, reduction M σ1 σ2 ->
-                              big_step M σ2 σ3 ->
-                              big_step M σ1 σ2.
+  | r_trans : forall M σ1 σ2 σ3, reduction M σ1 σ2 ->
+                            reductions M σ2 σ3 ->
+                            reductions M σ1 σ2.
 
-  (* old hoare semantics *)
+  Fixpoint final s :=
+    match s with
+    | s_empty => True
+    | s_ret _ => True
+    | s' ;; _ => final s'
+    | _ => False
+    end.
+
+  (* traditional hoare triple semantics *)
   Definition hoare_triple_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
     forall χ lcl s' ψ χ' lcl',
-      big_step M (frm lcl (s_seq s s') ⋅ ψ, χ) (frm lcl' s' ⋅ ψ, χ') ->
-      sat M (frm lcl (s_seq s s') ⋅ ψ, χ) P ->
+      reductions M (frm lcl s ⋅ ψ, χ) (frm lcl' s ⋅ ψ, χ') ->
+      final s ->
+      sat M (frm lcl s ⋅ ψ, χ) P ->
       sat M (frm lcl' s' ⋅ ψ, χ) Q.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_triple_semantics M P s Q)(at level 40).
 
+  (*
+   there is a conflict with final below. there is an old def in operational_semantics
+   that is based upon reduction, where as the one here is syntactic.
+   I think it is fine to use the one here since the only problem would
+   likely arise out of if statements, and we can just work around that
+   by not having return statements in if statements in the examples
+   *)
+
   Definition hoare_quad_semantics (M : module)(P : asrt)(s : stmt)(Q A : asrt) :=
-    forall σ1 σ2, (forall χ ψ ϕ, σ1 = (ϕ ⋅ ψ, χ) -> continuation ϕ = s_stmt s) ->
+    forall σ1 σ2, (forall χ ψ ϕ, σ1 = (ϕ ⋅ ψ, χ) -> continuation ϕ = s) ->
              forall αs zs zSubst , zip αs zs = Some zSubst ->
                               sat M σ1 (listSubst P zSubst) ->
-                              final M σ1 σ2 ->
-                              (forall σ, scoped_exec M σ1 σ -> sat M σ (a_extl(e_ this) ⟶ (listSubst A zSubst))) ->
+                              final (continuation (top σ2)) ->
+                              (forall σ, scoped_exec M σ1 σ ->
+                                    sat M σ (a_extl(e_ this) ⟶ (listSubst A zSubst))) ->
                               sat M σ2 (listSubst Q zSubst).
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄ || ⦃ A ⦄" := (hoare_quad_semantics M P s Q A)(at level 40).
@@ -123,15 +147,15 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
 
   (* Is there a purpose to splitting the internal and external method arguments? *)
 
-  Fixpoint prt_free (A : asrt) :=
+  Fixpoint Stbl (A : asrt) :=
     match A with
-    | a_prt_frm x y => false
-    | a_prt x => false
-    | A1 ∧ A2 => prt_free A1 && prt_free A2
-    | a_all C A => prt_free A
-    | a_ex C A => prt_free A
-    | ¬ A => prt_free A
-    | _ => true
+    | a_prt_frm x y => False
+    | a_prt x => False
+    | A1 ∧ A2 => Stbl A1 /\ Stbl A2
+    | a_all C A => Stbl A
+    | a_ex C A => Stbl A
+    | ¬ A => Stbl A
+    | _ => True
     end.
 
   Inductive lift : list var -> asrt -> asrt -> Prop :=
@@ -139,6 +163,13 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   | lift_prt : forall x ys A, (forall M y, In y ys ->
                                   M ⊢ A ⊆ (a_prt_frm (e_ x) (e_ y))) ->
                           lift ys A (a_prt (e_ x)).
+
+  Fixpoint call_free s :=
+    match s with
+    | s_call _ _ _ _ => False
+    | s1 ;; s2 => call_free s1 /\ call_free s2
+    | _ => True
+    end.
 
 (*)(*  | lift_eq : forall v v' z ys, lift (a_ v_ v ⩵ v_ v') z ys (a_ v_ v ⩵ v_ v') *)
   | lift_fld : forall x f v z ys, lift (a_ e_ x∙f ⩵ v_ v) z ys (a_ e_ x∙f ⩵ v_ v)
@@ -161,20 +192,20 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
                  lift A z ys A' ->
                  lift (¬ A) zs ys (¬ A').*)
 
-  Fixpoint lower (A : asrt) : asrt :=
+  (*Fixpoint lower (A : asrt) : asrt :=
     match A with
     | a_ ((v_ v) ⩵ (v_ v')) => a_ ((v_ v) ⩵ (v_ v'))
     | a_ (e_ x∙f ⩵ v_ v) => a_ (e_ x∙f ⩵ v_ v)
     | a_prt (e_ x) => a_prt (e_ x) (* is this correct? paper says true *)
     | a_prt_frm (e_ x) (e_ y) => a_prt_frm (e_ x) (e_ y)
     | A1 ∧ A2 => lower A1 ∧ lower A2
-    | ¬ A => if prt_free A
+    | ¬ A => if Stbl A
             then ¬ (lower A)
             else a_true
     | a_all C A => a_all C (lower A)
     | a_ex C A => a_ex C (lower A)
     | _ => a_true
-    end.
+    end.*)
 
   (** * Hoare Logic *)
 
@@ -194,9 +225,9 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
 
   Parameter hoare_base : HoareTriple stmt.
 
-  Parameter hoare_base_prt_free :
+  Parameter hoare_base_stbl :
     forall M P s Q, hoare_base M P s Q ->
-               prt_free P = true /\ prt_free Q = true.
+               Stbl P /\ Stbl Q /\ call_free s.
 
 (*  Definition base_hoare_triple (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
     fst(hoare_base M P s Q).
@@ -208,7 +239,25 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   Parameter hoare_base_soundness : forall M P s Q,
       hoare_base M P s Q -> M ⊨ ⦃ P ⦄ s ⦃ Q ⦄.
 
+  Fixpoint exp_not_in e x :=
+    match e with
+    | e_ y => x <> y
+    | e_typ e0 _ => exp_not_in e0 x
+    | e_fld e0 _ => exp_not_in e0 x
+    | e_ghost e0 _ e1 => exp_not_in e0 x /\ exp_not_in e1 x
+    | e_if e0 e1 e2 => exp_not_in e0 x /\ exp_not_in e1 x /\ exp_not_in e2 x
+    | e_eq e1 e2 => exp_not_in e1 x /\ exp_not_in e2 x
+    | e_plus e1 e2 => exp_not_in e1 x /\ exp_not_in e2 x
+    | e_minus e1 e2 => exp_not_in e1 x /\ exp_not_in e2 x
+    | _ => True
+    end.
+
   Inductive hoare_extension : HoareTriple stmt :=
+
+    (*
+      Note: there is no explicit use of Stbl P, Stbl Q, or call_free s in h_base because
+      it is implicitly handled by the hoare_base_stbl assumption.
+     *)
 
   (** M ⊢_base ⦃ P ⦄ s ⦃ Q ⦄ *)
   (** -----------------------------*)
@@ -217,6 +266,38 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   | h_base : forall M P s Q,
       hoare_base M P s Q ->
       M ⊢ ⦃ P ⦄ s ⦃ Q ⦄
+
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ true ⦄ x := new C ⦃ ⟪ x ⟫ ⦄ *)
+
+  | h_prot_new1 : forall M x C,
+      M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄
+
+
+  (** x ≠ y *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ true ⦄ x := new C ⦃ ⟪ x ⟫ <-\- y ⦄ *)
+
+  | h_prot_new2 : forall M x y C,
+      x <> y ->
+      M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) (e_ y)⦄
+
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ prt e ⦄ x := new C ⦃ prt e ⦄ *)
+
+  | h_prot_new3 : forall M x C e,
+      M ⊢ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄
+
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ true ⦄ x := new C ⦃ prt x ⦄ *)
+
+  | h_new_prt2 : forall M x e1 e2 C,
+      exp_not_in e1 x ->
+      exp_not_in e2 x ->
+      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ (s_new x C) ⦃ a_prt_frm e1 e2⦄
 
 
   (*
@@ -296,42 +377,14 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
 
   | h_write_prt : forall M x y f z,
-      M ⊢ ⦃ a_prt (e_ x) ⦄ (s_write y f z) ⦃ a_prt (e_ x) ⦄
-
-
-  (** -----------------------------*)
-  (** M ⊢ ⦃ e1 prt-frm e2 ⦄ x := new C ⦃ e1 prt-frm e2 ⦄ *)
-
-  | h_new_prt_frm1 : forall M x C e1 e2,
-      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ (s_new x C) ⦃ a_prt_frm e1 e2 ⦄
-
-
-  (** -----------------------------*)
-  (** M ⊢ ⦃ true ⦄ x := new C ⦃ e1 prt-frm e2 ⦄ *)
-
-  | h_new_prt_frm2 : forall M x C e,
-      M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) e ⦄
-
-
-  (** -----------------------------*)
-  (** M ⊢ ⦃ prt e ⦄ x := new C ⦃ prt e ⦄ *)
-
-  | h_new_prt1 : forall M x C e,
-      M ⊢ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄
-
-
-  (** -----------------------------*)
-  (** M ⊢ ⦃ true ⦄ x := new C ⦃ prt x ⦄ *)
-
-  | h_new_prt2 : forall M x C,
-      M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄.
+      M ⊢ ⦃ a_prt (e_ x) ⦄ (s_write y f z) ⦃ a_prt (e_ x) ⦄.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {
       triple := hoare_extension
     }.
 
-  Inductive hoare_stmts : HoareTriple stmts :=
+  (*Inductive hoare_stmts : HoareTriple stmts :=
   | h_stmt : forall M s P Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
                         M ⊢ ⦃ P ⦄ s_stmt s ⦃ Q ⦄
   | h_seq : forall M s s' P Q R, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
@@ -343,7 +396,7 @@ Because of this, we can preserve the usual assignment rule from HL.
   #[global] Instance hoare_triple_stmts : HoareTriple stmts :=
     {
       triple := hoare_stmts
-    }.
+    }.*)
 
   Class HoareQuadruple A := quad : module -> asrt -> A -> asrt -> asrt -> Prop.
   Notation "M '⊢' '⦃' P '⦄' s '⦃' Q '⦄' '||' '⦃' A '⦄'" :=
@@ -353,65 +406,99 @@ Because of this, we can preserve the usual assignment rule from HL.
   | hq_mid : forall M A1 s A2 A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ ->
                             M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄
 
-  (*  the above is only true if triples do not consider external calls
-   but they don't because they don't contain any calls ....*)
+  (* I'm pretty sure hq_types2 is derivable from hq_types1, hq_conseq, and hq_mid
+     remove?
+   *)
 
-  | hq_types_2 : forall M A1 s A2 A x T, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
-                                    M ⊢ ⦃ A1 ∧ (a_ (e_typ (e_ x) T)) ⦄ s ⦃ A2 ∧ (a_ (e_typ (e_ x) T)) ⦄ || ⦃ A ⦄
+  | hq_types2 : forall M A1 s A2 A x T,
+      M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
+      M ⊢ ⦃ A1 ∧ (a_ (e_typ (e_ x) T)) ⦄ s ⦃ A2 ∧ (a_ (e_typ (e_ x) T)) ⦄ || ⦃ A ⦄
 
   | hq_combine : forall M A1 s A2 A3 A4 A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
                                       M ⊢ ⦃ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
                                       M ⊢ ⦃ A1 ∧ A3 ⦄ s ⦃ A2 ∧ A4 ⦄ || ⦃ A ⦄
 
+  | hq_sequ : forall M A1 s1 s2 A2 A, M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ ->
+                                 M ⊢ ⦃ A1 ⦄ s2 ⦃ A2 ⦄ || ⦃ A ⦄ ->
+                                 M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A2 ⦄ || ⦃ A ⦄
+
+  (*
+    I think the invariant portion of the quadruple is in a negative position, not positive.
+    weakening the invariant makes the quadruple a stronger proof obligation
+    The easy example for this is
+    M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄ does not imply that
+    M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ true ⦄ is satisfied
+    The inverse is true however:
+    M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ true ⦄ does imply that
+    M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄ is satisfied
+
+    This has not come up yet because our examples so far do not vary the
+    invariant at all.
+   *)
+
   | hq_conseq : forall M s A1 A2 A3 A4 A5 A6, M ⊢ ⦃ A4 ⦄ s ⦃ A5 ⦄ || ⦃ A6 ⦄ ->
                                          M ⊢ A1 ⊆ A4 ->
-                                         M ⊢ A2 ⊆ A5 ->
+                                         M ⊢ A5 ⊆ A2 ->
                                          M ⊢ A6 ⊆ A3 ->
                                          M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄
 
-  | hq_call_int : forall M A1 C m ys A2 A3 y0 x yCs, m_spec M A1 C m yCs A2 A3 ->
-                                                ys = map fst yCs ->
-                                                M ⊢ ⦃ (a_typs ((y0, t_cls C)::yCs)) ∧
-                                                        [e_ y0 /s this] A1 ⦄
-                                                 s_call x y0 m ys
-                                                 ⦃ [e_ x /s result][e_ y0 /s this]  A2 ⦄ || ⦃ A3 ⦄
+  (* TODO: argument substitution *)
+  (* change list subst to be subst of 2 lists, and a proof they are the same length, instead of zip?
+     this would allow use of the normal subst notation. Might have to make the proof an implicit
+     argument. Does that mean that all substitutions need this proof???? Can we make the subst for
+     single variables implicit?
+   *)
 
-  | hq_call_int_adapt : forall M A1 C x m y0 ys A2 A3 yCs, m_spec M A1 C m yCs A2 A3 ->
-                                                      ys = map fst yCs ->
-                                                      M ⊢ ⦃ (a_typs ((y0, t_cls C) :: yCs)) ∧
-                                                              adapt ([e_ y0 /s this] A1) (y0::(map fst yCs)) ⦄
-                                                        s_call x y0 m ys
-                                                        ⦃ adapt ([e_ x /s result][e_ y0 /s this]  A2) (y0::(map fst yCs)) ⦄ || ⦃ A3 ⦄
+  | hq_call_int : forall M A1 C m ys A2 A3 y0 u xs xCs yCs yxs,
+      m_spec M A1 C m xCs A2 A3 ->
+      xs = map fst xCs ->
+      zip ys (map snd xCs) = Some yCs ->
+      zip (map e_var ys) xs = Some yxs ->
+      M ⊢ ⦃ (a_typs ((y0, t_cls C)::xCs)) ∧
+              [e_ y0 /s this](listSubst A1 yxs) ⦄
+        s_call u y0 m ys
+        ⦃ [e_ u /s result][e_ y0 /s this] (listSubst A2 yxs) ⦄ || ⦃ A3 ⦄
 
-  (** TODO: note, I have not encoded hq_call_int_combine because I need to think about it more. *)
+  | hq_call_int_adapt : forall M A1 C m ys A2 A3 y0 u xs xCs yCs yxs,
+      m_spec M A1 C m xCs A2 A3 ->
+      xs = map fst xCs ->
+      zip ys (map snd xCs) = Some yCs ->
+      zip (map e_var ys) xs = Some yxs ->
+      M ⊢ ⦃ (a_typs ((y0, t_cls C)::xCs)) ∧
+              adapt ([e_ y0 /s this](listSubst A1 yxs)) (y0 :: ys) ⦄
+        s_call u y0 m ys
+        ⦃ adapt ([e_ u /s result][e_ y0 /s this] (listSubst A2 yxs)) (y0 :: ys) ⦄ || ⦃ A3 ⦄
 
-  | hq_call_ext : forall M xCs A u y0 m ys, l_spec M (S_inv xCs A) ->
-                                       M ⊢
-                                         ⦃ a_extl (e_ y0) ∧
-                                             a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
-                                             A ⦄
-                                         s_call u y0 m ys
-                                         ⦃ A ⦄ || ⦃ A ⦄
+  | hq_call_ext_adapt : forall M xCs A u y0 m ys,
+      l_spec M (S_inv xCs A) ->
+      M ⊢
+        ⦃ a_extl (e_ y0) ∧
+            a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
+            (adapt A (y0::ys)) ⦄
+        s_call u y0 m ys
+        ⦃ (adapt A (y0::ys)) ⦄ || ⦃ A ⦄
 
-  | hq_call_ext_adapt : forall M xCs A u y0 m ys, l_spec M (S_inv xCs A) ->
-                                       M ⊢
-                                         ⦃ a_extl (e_ y0) ∧
-                                             a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
-                                             (adapt A (y0::ys)) ⦄
-                                         s_call u y0 m ys
-                                         ⦃ A ⦄ || ⦃ A ⦄.
+  | hq_call_ext_adapt_strong : forall M xCs A u y0 m ys,
+      l_spec M (S_inv xCs A) ->
+      M ⊢
+        ⦃ a_extl (e_ y0) ∧
+            a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
+            A ∧
+            (adapt A (y0::ys)) ⦄
+        s_call u y0 m ys
+        ⦃ A ∧ (adapt A (y0::ys)) ⦄ || ⦃ A ⦄.
 
   #[global] Instance hoare_quadruple_stmt : HoareQuadruple stmt :=
     {
       quad := hoare_quad
     }.
 
-  Inductive hoare_quad_stmts : HoareQuadruple stmts :=
+  (*Inductive hoare_quad_stmts : HoareQuadruple stmts :=
   | hq_stmt : forall M A1 s A2 A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
                              M ⊢ ⦃ A1 ⦄ s_stmt s ⦃ A2 ⦄ || ⦃ A ⦄
   | hq_seq : forall M A1 s1 A2 s2 A3 A, M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ ->
                                    M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ ->
-                                   M ⊢ ⦃ A1 ⦄ s_seq s1 s2 ⦃ A3 ⦄ || ⦃ A3 ⦄.
+                                   M ⊢ ⦃ A1 ⦄ s_seq s1 s2 ⦃ A3 ⦄ || ⦃ A3 ⦄.*)
 
   Ltac induction_hoare :=
     match goal with

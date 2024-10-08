@@ -32,14 +32,15 @@ Module Example.
             acc : Account
             myItem : Item
             client : external
-            public method buy(buyer : external)
-                   int price = anItem.price
+            public method buy(buyer : external, anItem : Item)
+                   int price = myItem.price
                    int oldBalance = this.acc.balance
                    buyer.pay(this.acc, price)
                    if this.acc.balance == oldBalance + price
                       buyer.send(myItem)
+                      // this.send(buyer, myItem)
                    else
-                      buyer.buyFailed()
+                      buyer.tell("pay me!!!!")
            private send(buyer : external, anItem : Item)
       }
 
@@ -61,7 +62,26 @@ Module Example.
             price : int
       }
 
+e ::=
+e.f
+x
+bool
+int
+if e then e else e
+e - e
+e + e
+e.g(e)
+e : C
+
+
    ***)
+
+  Parameter s_minus (x y : var)(i : Z) : stmt.
+
+  Parameter s_plus (x y : var)(i : Z) : stmt.
+
+  Parameter plus_hoare (M : module)(x y : var)(i : Z) :
+   M ⊢ {} x
 
   Definition Shop := c_id 1.
 
