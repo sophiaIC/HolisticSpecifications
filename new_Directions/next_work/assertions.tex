@@ -160,48 +160,45 @@ $\satisfiesA{M}{\sigma}{\external{{\re}}} \ \ \ \triangleq \ \ \  \exists C.[\ \
 \end{definition}
 
  
-%\susan{I would delete the note since -> isn't actually in the syntax and it is obvious from context}
-%\textbf{NOTE:}   $\rightarrow$ is part of \AssertLang syntax, while  $\Longrightarrow$ is used in the meta-language
-%\footnoteSD{{TODO: explain that$x$ is fresh in $\sigma$  means that $x$ is not in the domain of the top frame, nor in the top continuation of $\sigma$.
-% Note, the assumption $x$ is fresh in $\sigma$ has to be justified. Barendregt convention? Or say how we rename if $x$ is not free.}}
-
 Note that while execution takes place in the context of one or more modules, $\Mtwo$, satisfaction of assertions considers \emph{exactly one} module  $M$ -- the internal module. 
-%{This is not surprising since the goal of this work is to ensure that external modules cannot break our (internal) module's assertions.}
-%\footnoteSD{We need to have clarified internal module earlier.} 
-%In most cases, satisfaction depends only on the state $\sigma$, but 
-% in some cases it also depends on the module $M$: namely execution of extended expressions   
-{$M$} is used % might need to 
- to look up the definitions of ghost fields, and to find class definitions to determine whether an object is  external.
+{$M$} is used  mto look up the definitions of ghost fields, and to % find class definitions to 
+ determine whether objects are  external.
 
-\subsection{Semantics of Assertions - Protection}  
+\subsection{Semantics of Assertions - second part}  
 
 \label{sect:protect}
-{       
-%% As  already discussed in the introduction
-%% \footnoteSD{make sure we do
-%% discuss there},
-In the object capabilities model \cite{MillerPhD},
-\emph{permission} 
-%\footnoteSD{cite MarkMiller thesis, and our Permission and Authority revisited}
-i.e.,  access to a capability, is a necessary precondition to some
-effect: ``\emph{authority (to cause an effect) implies eventual permission}'' \cite{permissionAuthority}.
-\citet{OOPSLA22} develop the contrapositive:
-``lack of eventual
-permission to the relevant capability implies that the given effect
-will {not} take place''.
-%\
-To apply the contrapositive, we need the concept of ``lack of  eventual permission''.  We use ``eventual permission'' to express that the object might obtain access after one of more execution steps. Thus whether an object has eventual permission will depend on the object graph, and on the continuations, and on the method bodies of all objects involved.  
+      
+\sdN{In the object capabilities model \cite{MillerPhD}, \emph{permission} 
+-- i.e.,  access to a capability -- is a necessary precondition  for producing a given effect;  encapsulated by the principle that "authority (to cause an effect) implies eventual permission" \cite{permissionAuthority}.
+As   in \S \ref{sec:shop}, and also \cite{OOPSLA22}, if no external object holds eventual permission for a given capability, then the corresponding effect cannot occur.
+ Specifically,  we say that $o$ \emph{has eventual permission to} $o'$, to mean  that $o$ either currently has or will acquire direct access to $o'$ in the future \cite{permissionAuthority}.
+}
 
-A precise characterization of eventual permission is undecidable, but we approximate it through the concept of \textbf{\emph{protection}}:
-{An object $o$ is \emph{protected  from} another object $o'$, if $o'$ can obtain direct access to   $o$ only if 
-$o$ is \emph{introduced} to some external object $o_e$ by some internal object $o_i$ -- where $o'$ and $o_e$, and also $o$ and $o_i$ may be different.  
-We  use ``introduce'' following \citet{MillerPhD}, where $o$ is is ``introduced'' to $o'$ by $o''$, iff either $o''$ sends to $o'$ a message containing $o$, 
-or $o'$ calls $o''$, and $o''$ eventually returns  $o$ as the result of that call.}
- 
-We now introduce % the concept of 
-(absolute) protection.
-An object is protected, if it is protected from all locally reachable {external} objects. This can also be understood as 
-``protected from the top frame''. \footnoteSD{TODO: motivate; many external objects, no matter which one has unprotected access to an object }
+\sdN{
+Given this, it becomes essential to devise methods to determine whether eventual permission exists in a given state. 
+Unfortunately, this determination is undecidable, as it depends not only on the current object graph but also on the program code being executed.
+
+In this work, we over-approximate lack of eventual permission through a combination of two properties: one pertaining to the state, and the other to the internal code. 
+The state-related property is that   $o$ is \emph{protected} if, on any path from a locally reachable object to $o$, the penultimate object  is internal. 
+The program-related property is that it preserves the protection of object $o$.
+}
+
+\sdN{
+It is straightforward to see that if $o$ is protected and the internal code preserves its protection, then no external object can gain eventual permission to $o$.
+We now define "protected":
+}
+%\citet{OOPSLA22} develop the contrapositive: ``lack of eventualpermission to the relevant capability implies that the given effect will {not} take place''.
+
+%A precise characterization of eventual permission is undecidable, but we approximate it through the concept of \textbf{\emph{protection}}:
+%{An object $o$ is \emph{protected  from} another object $o'$, if $o'$ can obtain direct access to   $o$ only if 
+%$o$ is \emph{introduced} to some external object $o_e$ by some internal object $o_i$ -- where $o'$ and $o_e$, and also $o$ and $o_i$ may be different.  
+%We  use ``introduce'' following \citet{MillerPhD}, where $o$ is is ``introduced'' to $o'$ by $o''$, iff either $o''$ sends to $o'$ a message containing $o$, 
+%or $o'$ calls $o''$, and $o''$ eventually returns  $o$ as the result of that call.}
+% 
+%We now introduce % the concept of 
+%(absolute) protection.
+%An object is protected, if it is protected from all locally reachable {external} objects. This can also be understood as 
+%``protected from the top frame''. \footnoteSD{TODO: motivate; many external objects, no matter which one has unprotected access to an object }
 
 \begin{definition}[Satisfaction 
 of Assertions  -- Protection] 
@@ -239,17 +236,6 @@ $\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.
 \end{enumerate}
  \end{definition} 
  
- \noindent
- {\textbf{NOTE:} %  \notesep 
- Protection does not imply lack of eventual permission: it is possible for $o$ to be protected from 
- $o'$, but for  $o'$ to obtain access to  $o$ later on.
- However, 
-% $o$ being protected from $o'$ does not imply that $o'$ does not have eventual permission on $o$. However, i
- if the module does not leak protected objects, then protection does   imply lack of eventual permission.
- % if  $o$ is protected from $o'$, then $o'$ does not have eventual permission on $o$. 
- We shall  see how a module may guarantee that it does not leak protected objects in Sect. \ref{sect:spec}.
-%\notesep While simple expressions, $\re$, as in Def. \ref{def:chainmail-semantics},  may mention ghost fields,   the paths $\alpha.f_1....f_n$ 
- % from Def. \ref{def:chainmail-protection-from} may not.  
 
 % \vspace{.5cm}
 \footnoteSD{JAMES' comment: If is possible that "we" do not know the complete heap (eg we only know about the green stuff.) how do we know whether an object is protected. The answer is that we do not know that it is protected, but we do know that our code guarnartees poreservation of protectedness.
@@ -270,7 +256,7 @@ Pink and green indicate external and internal objects respectively.
 \sd{In the first row  we  highlight in yellow} the objects protected from other objects. Thus, all objects except $o_6$ are protected from $o_5$ (left pane);\ all objects expect $o_8$ are protected from $o_7$ (middle pane);\ and all objects except $o_3$, $o_6$, $o_7$, and $o_8$ are protected from $o_2$ (right pane). 
 
 
-\begin{figure}[htb]
+\begin{figure}[tbh]
 \begin{tabular}{|c|c|c|}
 \hline  
 \resizebox{4.5cm}{!}{
@@ -364,33 +350,26 @@ We also   highlight the protected objects with a yellow halo.
  Note that $o_3$ is protected in $\sigma_2$, but is not protected in $\sigma_3$. This is so, because $\interpret {\sigma_3} {\prg{this}}$  is external, and  $o_3$ is an argument to the call. As a result, during the call, $o_7$ may obtain unmitigated access (permission) to $o_3$. 
 
 %\begin{praise}{for protection}
-\subsubsection*{Discussion} Protection --- \sdN{objects to which external objects may not get %which objects can get 
-unmediated access} % to which other objects 
----  is  a crucial concept: It enables
-the verification code in the open world, % even in the presence of
-with calls to and callbacks 
-from untrusted code.
+\subsubsection*{Discussion} 
+\sdN{Lack of eventual permission is a central concept in the verification of code with calls to and callbacks  from untrusted code.
 % ARGHHH a joke citatiion? \cite{praiseYou}.   
-Unmediated access is essentially \citet{MillerPhD}'s permission: that we have a ``first
-class'' reference to the capability; that we can call any 
-method in the capability's public interface; that we can
-store or save or present the capability to any other
-object to which we've been introduced
-%\footnote{``nobody can ever be introduced in a ball-room''}
-(compare
+%Unmediated access is essentially \citet{MillerPhD}'s permission: that we have a ``first
+%class'' reference to the capability; that we can call any 
+%method in the capability's public interface; that we can
+%store or save or present the capability to any other
+%object to which we've been introduced
+%%\footnote{``nobody can ever be introduced in a ball-room''}
+It has already been over-approximated in several different ways, \eg
 2nd-class \cite{rompf-second-class-oopsla2016,rompf-dont-pop-second-class-ecoop2022}
 or borrowed (``2nd-hand'') references
-\cite{boyland-promises-icse1998,boyland-aliasburying-spe2001}
-which are restricted in some way),
-without reference to some owning class or defining module.
-We discuss alternative designs,
-ranging from overly simplistic textual modules \cite{OOPSLA22},
+\cite{boyland-promises-icse1998,boyland-aliasburying-spe2001},
+ textual modules \cite{OOPSLA22},
 information flow \cite{ddd}, runtime
 checks \cite{secure-io-fstar-popl2024},
 abstract data type exports \cite{vmsl-pldi2023},
-to automated separation-based invariants in
+  separation-based invariants 
 Iris \cite{iris-wasm-pldi2023,cerise-jacm2024},
-in section~\ref{sect:related}.
+-- more in  \S~\ref{sect:related}.
 In general, protection is applicable in more situations (i.e.\ is less
 restrictive) than most of these approaches,
  \sdN{although more restrictive than the ideal "lack of eventual permission"}. 
@@ -399,5 +378,43 @@ the contrapositive ideal that lack of eventual permission ensures
 lack of effect. Note that ``cannot get unmitigated access'' does not generally imply ``is
 protected''. 
 }
+
+It is easy to see that protection and protection preservation are sufficient but not necessary conditions for lack of eventual permission, and that, on the other hand, protection without preservation of protection does not imply lack of eventual permission.
+}
+%Protection --- \sdN{objects to which external objects may not get %which objects can get 
+%unmediated access} % to which other objects 
+%---  is  a crucial concept: It enables
+%the verification code in the open world, % even in the presence of
+%with calls to and callbacks 
+%from untrusted code.
+%% ARGHHH a joke citatiion? \cite{praiseYou}.   
+%Unmediated access is essentially \citet{MillerPhD}'s permission: that we have a ``first
+%class'' reference to the capability; that we can call any 
+%method in the capability's public interface; that we can
+%store or save or present the capability to any other
+%object to which we've been introduced
+%%\footnote{``nobody can ever be introduced in a ball-room''}
+%(compare
+%2nd-class \cite{rompf-second-class-oopsla2016,rompf-dont-pop-second-class-ecoop2022}
+%or borrowed (``2nd-hand'') references
+%\cite{boyland-promises-icse1998,boyland-aliasburying-spe2001}
+%which are restricted in some way),
+%without reference to some owning class or defining module.
+%We discuss alternative designs,
+%ranging from overly simplistic textual modules \cite{OOPSLA22},
+%information flow \cite{ddd}, runtime
+%checks \cite{secure-io-fstar-popl2024},
+%abstract data type exports \cite{vmsl-pldi2023},
+%to automated separation-based invariants in
+%Iris \cite{iris-wasm-pldi2023,cerise-jacm2024},
+%in section~\ref{sect:related}.
+%In general, protection is applicable in more situations (i.e.\ is less
+%restrictive) than most of these approaches,
+% \sdN{although more restrictive than the ideal "lack of eventual permission"}. 
+%\footnoteSD{ HER WHAT IT USED TO SAY:
+%the contrapositive ideal that lack of eventual permission ensures
+%lack of effect. Note that ``cannot get unmitigated access'' does not generally imply ``is
+%protected''
+
 
  
