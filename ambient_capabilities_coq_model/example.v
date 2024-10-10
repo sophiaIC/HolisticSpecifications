@@ -191,7 +191,7 @@ e : C
 
   Definition transferBody :=
     s_if (e_eq (e_fld (e_ this) key) (e_ k))
-      (s_write this balance (e_minus (e_fld (e_ this) balance) (e_ amt)))
+      (s_write this balance (e_minus (e_fld (e_ this) balance) (e_ amt))) 
       (s_write to balance (e_plus (e_fld (e_ to) balance) (e_ amt))) ;;
     ret e_false.
 
@@ -309,10 +309,6 @@ e : C
   Proof.
   Admitted.
 
-  Ltac simpl_conj :=
-    repeat apply hq_conj_assoc1;
-    repeat apply hq_conj_assoc2.
-
   Fixpoint contains {A : Type}`{Eq A}(l : list A)(a : A) :=
     match l with
     | nil => false
@@ -320,35 +316,93 @@ e : C
     end.
   Print asrt.
 
-  Fixpoint simplify_asrt (A : asrt)(removed : list asrt) : asrt * (list asrt) :=
+  Fixpoint simplify_conj_helper
+    (A : asrt)(removed : list asrt) : asrt * (list asrt) :=
     match A with
-    | A1 ∧ A2 => let res1 := simplify_asrt A1 removed in
-                match fst res1 with
-                | a_ e_true => simplify_asrt A2 removed
-                | _ => let res2 := simplify_asrt A2 (snd res1) in
-                      match fst res2 with
-                      | a_ e_true => res1
-                      | _ => (fst res1 ∧ fst res2, snd res2)
-                      end
-                end
-    | ¬ A' => if contains removed A
-             then (a_true, removed)
-             else (¬ fst (simplify_asrt A' nil), A :: removed)
-    | a_all C A' => if contains removed A
-                   then (a_true, removed)
-                   else let res := simplify_asrt A' removed in
-                        (a_all C (fst res), A :: removed)
-    | _ => if contains removed A
-          then (a_true, removed)
-          else (A, A :: removed)
+    | A1 ∧ A2 =>
+        let res1 := simplify_conj_helper A1 removed in
+        match fst res1 with
+        | a_exp (e_val v_true) => simplify_conj_helper A2 removed
+        | _ =>
+            let res2 := simplify_conj_helper A2 (snd res1) in
+            match fst res2 with
+            | a_ e_true => res1
+            | _ => (fst res1 ∧ fst res2, snd res2)
+            end
+        end
+    | ¬ A' =>
+        if contains removed A
+        then (a_true, removed)
+        else (¬ fst (simplify_conj_helper A' nil), A :: removed)
+    | a_all C A' =>
+        if contains removed A
+        then (a_true, removed)
+        else let res := simplify_conj_helper A' removed in
+             (a_all C (fst res), A :: removed)
+    | _ =>
+        if contains removed A
+        then (a_true, removed)
+        else (A, A :: removed)
     end.
 
-  Compute fst (simplify_asrt ((a_ e_ k) ∧ ((a_ e_ k) ∨ (a_prt (e_ k)))) nil).
+  Definition simplify_conj A := fst (simplify_conj_helper A nil).
 
-  Lemma entails_simplify :
+  Fixpoint simplify_neg (A : asrt) : asrt :=
+    match A with
+    | ¬ ¬ A' => simplify_neg A'
+    | A1 ∧ A2 => (simplify_neg A1) ∧ (simplify_neg A2)
+    | a_all C A' => a_all C (simplify_neg A')
+    | _  => A
+    end.
+
+  Compute (simplify_conj (a_ e_ k)).
+  Compute simplify_neg (simplify_conj ((a_ e_ k) ∧
+                                         ((a_prt (e_ k)) ∨
+                                            (a_prt (e_ k))))).
+
+  Lemma simplify_conj_entails1 :
+    forall M A, M ⊢ A ⊆ (simplify_conj A).
+  Proof.
+  Admitted.
+
+  Lemma simplify_conj_entails2 :
+    forall M A, M ⊢ (simplify_conj A) ⊆ A.
+  Proof.
+  Admitted.
+
+  Lemma rewrite_hoare_quad1 :
+    forall M A A1, M ⊢ A1 ⊆ A ->
+              forall A2 A3 s, M ⊢ ⦃ A ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
+                         M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄.
+  Proof.
+  Admitted.
+
+  Definition rewrite_hq_conj_simpl1 M A :=
+    rewrite_hoare_quad1 M (simplify_conj A) A
+      (simplify_conj_entails1 M A).
+
+  Lemma rewrite_hoare_quad2 :
+    forall M A A2, M ⊢ A ⊆ A2 ->
+              forall A1 A3 s, M ⊢ ⦃ A1 ⦄ s ⦃ A ⦄ || ⦃ A3 ⦄ ->
+                         M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄.
+  Proof.
+  Admitted.
+
+  Definition rewrite_hq_conj_simpl2 M A :=
+    rewrite_hoare_quad2 M (simplify_conj A) A
+      (simplify_conj_entails2 M A).
+
+
+  Ltac simpl_conj_hq :=
+    repeat apply hq_conj_assoc1;
+    repeat apply hq_conj_assoc2;
+    apply rewrite_hq_conj_simpl1;
+    apply rewrite_hq_conj_simpl2.
+
+  (*Lemma entails_simplify :
 
   Lemma hq_pre_dup :
-    forall M A1 A2 A3
+    forall M A1 A2 A3*)
 
   Lemma I1 :
     spec_sat Mgood S1.
@@ -368,25 +422,65 @@ e : C
         simpl.
         unfold buyBody.
 
+        simpl_types.
+        simpl_conj_hq.
+        unfold simplify_conj;
+          simpl.
         apply_hq_sequ_with_mid_eq_fst.
         *** (* itemPrice = item.price *)
-          simpl_types.
-          simpl_conj.
-          hq_conj_post_conseq;
-            eauto with assert_db.
-          
+          repeat apply hq_combine;
+            try solve [apply hq_types2].
+          apply hq_mid.
+          admit.
 
         ***
-          simpl_types.
+
+          apply_hq_sequ_with_mid_eq_fst.
+          **** (* thisAcc = this.acc *)
           repeat apply hq_combine;
-            try solve [apply hq_mid, post_true].
+            try solve [apply hq_types2].
+          admit.
 
           ****
+            apply_hq_sequ_with_mid_eq_fst.
+            ***** (* oldBalance = thisAcc.balance *)
+              repeat apply hq_combine;
+                try solve [apply hq_types2].
             admit.
 
+            *****
+              apply_hq_sequ_with_mid_eq_fst.
+
+            ****** (* tmp := buyer.pay(thisAcc, itemPrice) *)
+              repeat apply hq_combine;
+                try solve [apply hq_types2].
+            eapply hq_conseq; [apply hq_call_ext_adapt_strong| | | ].
+            apply lspec_base.
+            admit. (* important! fix repeat hq_combine to re-introduce
+                    full pre-condition *)
+            admit. (* easy *)
+            apply entails_refl.
+            ******
+              admit.
+      **
+        destruct H;
+          subst.
+        simpl.
+        simpl_types.
+        simpl_conj_hq.
+        unfold simplify_conj;
+          simpl.
+        admit. (* send body needs to be clarified *)
+
+      *
+        destruct H;
+          destruct H;
+          subst.
+
+        **
 
 
-
+          
   Qed.
 
 End Example.

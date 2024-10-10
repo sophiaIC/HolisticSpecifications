@@ -402,10 +402,12 @@ Because of this, we can preserve the usual assignment rule from HL.
   (* I'm pretty sure hq_types2 is derivable from hq_types1, hq_conseq, and hq_mid
      remove?
    *)
+  | hq_types2 : forall M s x T A,
+      M ⊢ ⦃ a_ (e_typ (e_ x) T) ⦄ s ⦃ a_ (e_typ (e_ x) T) ⦄ || ⦃ A ⦄
 
-  | hq_types2 : forall M A1 s A2 A x T,
+  (*)| hq_types2 : forall M A1 s A2 A x T,
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
-      M ⊢ ⦃ A1 ∧ (a_ (e_typ (e_ x) T)) ⦄ s ⦃ A2 ∧ (a_ (e_typ (e_ x) T)) ⦄ || ⦃ A ⦄
+      M ⊢ ⦃ A1 ∧ (a_ (e_typ (e_ x) T)) ⦄ s ⦃ A2 ∧ (a_ (e_typ (e_ x) T)) ⦄ || ⦃ A ⦄*)
 
   | hq_combine : forall M A1 s A2 A3 A4 A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
                                       M ⊢ ⦃ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
