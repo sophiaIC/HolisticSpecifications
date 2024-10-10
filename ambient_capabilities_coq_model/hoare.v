@@ -74,11 +74,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
                             reductions M σ1 σ2.
 
   (* TODO: fix return stuff in operational_semantics.v*)
-  Fixpoint final s :=
-    match s with
-    | s_empty => True
-    | _ => False
-    end.
+  Definition final s := s = s_empty.
 
   (* traditional hoare triple semantics *)
   Definition hoare_triple_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
