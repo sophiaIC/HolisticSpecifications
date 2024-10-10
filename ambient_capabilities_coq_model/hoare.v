@@ -370,7 +370,12 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
 
   | h_write_prt : forall M x y f z,
-      M ⊢ ⦃ a_prt (e_ x) ⦄ (s_write y f z) ⦃ a_prt (e_ x) ⦄.
+      M ⊢ ⦃ a_prt (e_ x) ⦄ (s_write y f z) ⦃ a_prt (e_ x) ⦄
+
+  | h_seq : forall M A1 A2 A3 s1 s2,
+      M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ ->
+      M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ ->
+      M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {

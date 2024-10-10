@@ -191,8 +191,9 @@ e : C
 
   Definition transferBody :=
     s_if (e_eq (e_fld (e_ this) key) (e_ k))
-      (s_write this balance (e_minus (e_fld (e_ this) balance) (e_ amt))) 
-      (s_write to balance (e_plus (e_fld (e_ to) balance) (e_ amt))) ;;
+      (s_write this balance (e_minus (e_fld (e_ this) balance) (e_ amt)) ;; 
+       (s_write to balance (e_plus (e_fld (e_ to) balance) (e_ amt))))
+      (ret e_false);;
     ret e_false.
 
   Definition transferDef := meth nil
@@ -212,7 +213,8 @@ e : C
                             ((k, t_cls Key) :: nil)
                             setKeyBody.
 
-  Definition AccountMths := ⟦ transfer ↦ transferDef ⟧ ⟦ setKey ↦ setKeyDef ⟧ ∅.
+  Definition AccountMths := ⟦ transfer ↦ transferDef ⟧
+                              ⟦ setKey ↦ setKeyDef ⟧ ∅.
 
   Definition AccountDef := clazz Account
                              AccountFlds
@@ -250,6 +252,21 @@ e : C
   Proof.
   Admitted.
 
+  Lemma destruct_accountMths :
+    forall m mDef, ⟦ m ↦ mDef ⟧_∈ c_meths AccountDef ->
+              (m = transfer /\ mDef = transferDef) \/
+                (m = setKey /\ mDef = setKeyDef).
+  Proof.
+  Admitted.
+
+(*)  Lemma destruct_keyMths :
+    forall m mDef, ⟦ m ↦ mDef ⟧_∈ c_meths KeyDef ->
+              mDef =
+              (m = transfer /\ mDef = transferDef) \/
+                (m = setKey /\ mDef = setKeyDef).
+  Proof.
+  Admitted.*)
+
   Lemma post_true :
     forall M A s, M ⊢ ⦃ A ⦄ s ⦃ a_true ⦄.
   Proof.
@@ -257,7 +274,8 @@ e : C
 
   Ltac apply_hq_sequ_with_mid_eq_fst :=
     match goal with
-      [|- _ ⊢ ⦃ ?A ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄] => apply hq_sequ with (A2:=A)
+      | [ |- _ ⊢ ⦃ ?A ⦄ _ ;; _ ⦃ _ ⦄ ] => apply h_seq with (A2:=A)
+      | [ |- _ ⊢ ⦃ ?A ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] => apply hq_sequ with (A2:=A)
     end.
 
   Ltac simpl_types :=
@@ -472,15 +490,45 @@ e : C
           simpl.
         admit. (* send body needs to be clarified *)
 
-      *
+    *
+      destruct H;
         destruct H;
+        subst;
+        simpl.
+
+      **
+        simpl_types.
+        apply destruct_accountMths in H0;
+          destruct H0;
           destruct H;
-          subst.
+          subst;
+          simpl;
+          simpl_types;
+          simpl_conj_hq.
 
-        **
+        ***
+          simpl.
+          unfold simplify_conj;
+            simpl.
+          unfold transferBody.
+          apply hq_mid.
 
+          apply_hq_sequ_with_mid_eq_fst.
 
-          
+          ****
+            apply h_if.
+
+            *****
+              apply_hq_sequ_with_mid_eq_fst.
+
+            ******
+              
+      **
+        simpl in *.
+        try match goal with
+            | [H : ⟦ _ ↦ _ ⟧_∈ empty |- _] =>
+                inversion H
+            end.
   Qed.
 
 End Example.
