@@ -318,16 +318,34 @@ e : C
     | nil => false
     | h :: t => eqb a h || contains t a
     end.
+  Print asrt.
 
-  Fixpoint remove (A : asrt)(removed : list asrt) :=
+  Fixpoint simplify_asrt (A : asrt)(removed : list asrt) : asrt * (list asrt) :=
     match A with
-    | a_exp _ => if  then
-                  (a_true, A1 :: removed)
+    | A1 ∧ A2 => let res1 := simplify_asrt A1 removed in
+                match fst res1 with
+                | a_ e_true => simplify_asrt A2 removed
+                | _ => let res2 := simplify_asrt A2 (snd res1) in
+                      match fst res2 with
+                      | a_ e_true => res1
+                      | _ => (fst res1 ∧ fst res2, snd res2)
+                      end
+                end
+    | ¬ A' => if contains removed A
+             then (a_true, removed)
+             else (¬ fst (simplify_asrt A' nil), A :: removed)
+    | a_all C A' => if contains removed A
+                   then (a_true, removed)
+                   else let res := simplify_asrt A' removed in
+                        (a_all C (fst res), A :: removed)
+    | _ => if contains removed A
+          then (a_true, removed)
+          else (A, A :: removed)
     end.
 
-  Fixpoint conj_simplify A :=
-    match A with
-    | A1 \
+  Compute fst (simplify_asrt ((a_ e_ k) ∧ ((a_ e_ k) ∨ (a_prt (e_ k)))) nil).
+
+  Lemma entails_simplify :
 
   Lemma hq_pre_dup :
     forall M A1 A2 A3
