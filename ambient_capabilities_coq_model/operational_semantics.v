@@ -127,11 +127,11 @@ Module OperationalSemantics.
         (frm lcl (s_new x C) ⋅ ψ, χ)
         (frm (⟦ x ↦ v_addr α ⟧ lcl) s_empty ⋅ ψ, ⟦ α ↦ o⟧ χ)
 
-  | r_ret : forall M χ lcl e lcl' y v ψ,
-      eval M (frm lcl (s_ret e) ⋅ (frm lcl' (s_hole y) :: ψ), χ) e v ->
+  | r_ret : forall M χ lcl lcl' x v ψ,
+      eval M (frm lcl s_empty ⋅ (frm lcl' (s_hole x) :: ψ), χ) (e_ result) v ->
       reduction M
-        (frm lcl (s_ret e) ⋅ (frm lcl' (s_hole y) :: ψ), χ)
-        (frm (⟦ y ↦ v ⟧ lcl') s_empty ⋅ ψ, χ)
+        (frm lcl s_empty ⋅ (frm lcl' (s_hole x) :: ψ), χ)
+        (frm (⟦ x ↦ v ⟧ lcl') s_empty ⋅ ψ, χ)
 
   | r_if1 : forall M χ lcl e s1 s2 ψ,
       eval M (frm lcl (s_if e s1 s2) ⋅ ψ, χ) e v_true ->
@@ -151,70 +151,17 @@ Module OperationalSemantics.
         (frm lcl (s_seq s1 s2) ⋅ ψ, χ)
         (ϕ ⋅ (frm lcl (seq s s2) :: ψ), χ)
 
-  | r_seq_ret : forall M χ lcl s1 s2 ϕ ϕ' ψ,
-      reduction M (frm lcl s1 ⋅ (ϕ :: ψ), χ) (ϕ' ⋅ ψ, χ) ->
+  | r_seq_ret : forall M χ lcl lcl' s1 s2 s ϕ ψ,
+      reduction M (ϕ ⋅ (frm lcl s1 :: ψ), χ) (frm lcl' s ⋅ ψ, χ) ->
       reduction M
-        (frm lcl (s_seq s1 s2) ⋅ ψ, χ)
-        (ϕ' ⋅ ψ, χ)
+        (ϕ ⋅ (frm lcl' (s_seq s1 s2) :: ψ), χ)
+        (frm lcl' (seq s s2) ⋅ ψ, χ)
 
   | r_seq : forall M χ lcl s1 s2 s ψ,
       reduction M (frm lcl s1 ⋅ ψ, χ) (frm lcl s ⋅ ψ, χ) ->
       reduction M
         (frm lcl (s_seq s1 s2) ⋅ ψ, χ)
         (frm lcl (seq s s2) ⋅ ψ, χ).
-
-(*  Inductive reduction : module -> config -> config -> Prop :=
-  | r_read : forall M σ χ x y v f lcl ψ C s,
-      σ = (frm lcl (s_seq (s_read x y f) s) ⋅ ψ, χ) ->
-      x <> this ->
-      classOf σ this = Some C ->
-      classOf σ y = Some C ->
-      interpret_f σ y f = Some v ->
-      reduction M σ (frm (⟦ x ↦ v ⟧  lcl) s ⋅ ψ, χ)
-
-  | r_write : forall M σ χ x y v f lcl l ψ s C flds CDef Tf,
-      σ = (frm lcl (s_seq (s_write x f y) s) ⋅ ψ, χ) ->
-      classOf σ this = Some C ->
-      classOf σ x = Some C ->
-      snd M C = Some CDef ->
-      c_fields CDef f = Some Tf ->
-      typeOf σ y Tf ->
-      interpret_x σ x = Some (v_addr l) ->
-      χ l = Some (obj C flds) ->
-      interpret_x σ y = Some v ->
-      reduction M σ (frm lcl s ⋅ ψ, ⟦ l ↦ obj C (⟦ f ↦ v ⟧ flds)⟧ χ)
-
-  | r_call : forall M σ χ x y m ps lcl s ψ C CDef mDef lcl' l,
-      σ = (frm lcl (s_seq (s_call x y m ps) s) ⋅ ψ, χ) ->
-      interpret_x σ y = Some (v_addr l) ->
-      classOf σ y = Some C ->
-      snd M C = Some CDef ->
-      c_meths CDef m = Some mDef ->
-      typeOf_l σ ps (map snd (params mDef)) ->
-      zip_to_map (map fst (params mDef)) ps lcl = Some lcl' ->
-      reduction M σ (frm (⟦ this ↦ (v_addr l) ⟧ lcl') (body mDef) ⋅ (frm lcl (s_seq (s_hole x) s) :: ψ), χ)
-
-  | r_new : forall M σ χ lcl s ψ x C α o CDef flds,
-      σ = (frm lcl (s_seq (s_new x C) s) ⋅ ψ, χ) ->
-      snd M C = Some CDef ->
-      c_fields CDef = flds ->
-      o = obj C ((fun _ => Some v_null) ∘ flds) ->
-      reduction M σ (frm (⟦ x ↦ v_addr α ⟧ lcl) s ⋅ ψ, ⟦ α ↦ o⟧ χ)
-
-  | r_ret : forall M σ χ lcl x lcl' s1 s2 y v ψ,
-      σ = (frm lcl (s_seq (s_ret x)  s1) ⋅ (frm lcl' (s_seq (s_hole y) s2) :: ψ), χ) ->
-      interpret_x σ x = Some v ->
-      reduction M σ (frm (⟦ y ↦ v ⟧ lcl') s2 ⋅ ψ, χ)
-
-  | r_if1 : forall M σ χ lcl e s1 s2 s ψ,
-      σ = (frm lcl (s_seq (s_if e s1 s2) s) ⋅ ψ, χ) ->
-      eval M σ e v_true ->
-      reduction M σ (frm lcl (s_seq s1 s) ⋅ ψ, χ)
-
-  | r_if2 : forall M σ χ lcl e s1 s2 s ψ,
-      σ = (frm lcl (s_seq (s_if e s1 s2) s) ⋅ ψ, χ) ->
-      eval M σ e v_false ->
-      reduction M σ (frm lcl (s_seq s1 s) ⋅ ψ, χ).*)
 
   Inductive sublist `{A : Type} : list A -> list A -> Prop :=
   | sub_refl : forall l, sublist l l

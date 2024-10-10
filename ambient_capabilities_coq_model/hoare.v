@@ -48,12 +48,14 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
    *)
 
   Inductive has_m_spec : module -> asrt -> cls -> mth -> list (var * ty) -> asrt -> asrt -> Prop :=
-  | mspec : forall M P C ps Q A m mDef CDef pSubst, snd M C = Some CDef ->
-                                               c_meths CDef m = Some mDef ->
-                                               map snd ps = map snd (params mDef) ->
-                                               zip (map (fun xC => e_var (fst xC)) ps) (map fst (params mDef)) = Some pSubst -> (* construct the substitution for parameters *)
-                                               In (P, Q, A) (spec mDef) ->
-                                               has_m_spec M (listSubst P pSubst) C m ps (listSubst Q pSubst) (listSubst A pSubst).
+  | mspec : forall M P C ps Q A m mDef CDef pSubst,
+      snd M C = Some CDef ->
+      c_meths CDef m = Some mDef ->
+      map snd ps = map snd (params mDef) ->
+      zip (map (fun xC => e_var (fst xC)) ps) (map fst (params mDef)) = Some pSubst ->
+      (* construct the substitution for parameters *)
+      In (P, Q, A) (spec mDef) ->
+      has_m_spec M (listSubst P pSubst) C m ps (listSubst Q pSubst) (listSubst A pSubst).
 
   Inductive has_l_spec : module -> l_spec -> Prop :=
   | lspec_base : forall S Cdefs, has_l_spec (S, Cdefs) S
@@ -71,31 +73,22 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
                             reductions M σ2 σ3 ->
                             reductions M σ1 σ2.
 
+  (* TODO: fix return stuff in operational_semantics.v*)
   Fixpoint final s :=
     match s with
     | s_empty => True
-    | s_ret _ => True
-    | s' ;; _ => final s'
     | _ => False
     end.
 
   (* traditional hoare triple semantics *)
   Definition hoare_triple_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
     forall χ lcl s' ψ χ' lcl',
-      reductions M (frm lcl s ⋅ ψ, χ) (frm lcl' s ⋅ ψ, χ') ->
+      reductions M (frm lcl s ⋅ ψ, χ) (frm lcl' s' ⋅ ψ, χ') ->
       final s ->
       sat M (frm lcl s ⋅ ψ, χ) P ->
       sat M (frm lcl' s' ⋅ ψ, χ) Q.
 
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄" := (hoare_triple_semantics M P s Q)(at level 40).
-
-  (*
-   there is a conflict with final below. there is an old def in operational_semantics
-   that is based upon reduction, where as the one here is syntactic.
-   I think it is fine to use the one here since the only problem would
-   likely arise out of if statements, and we can just work around that
-   by not having return statements in if statements in the examples
-   *)
 
   Definition hoare_quad_semantics (M : module)(P : asrt)(s : stmt)(Q A : asrt) :=
     forall σ1 σ2, (forall χ ψ ϕ, σ1 = (ϕ ⋅ ψ, χ) -> continuation ϕ = s) ->
@@ -109,6 +102,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   Notation "M ⊨ ⦃ P ⦄ s ⦃ Q ⦄ || ⦃ A ⦄" := (hoare_quad_semantics M P s Q A)(at level 40).
 
 
+  (* remove? *)
   Definition push (σ : config)(αs : list addr) : config -> Prop :=
     match σ with
     | (ϕ ⋅ ψ, χ) => fun σ' =>
@@ -261,7 +255,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   (** -----------------------------*)
   (** M ⊢ ⦃ P ⦄ s ⦃ Q ⦄  *)
 
-  | h_base : forall M P s Q,
+  | h_embed_UL : forall M P s Q,
       hoare_base M P s Q ->
       M ⊢ ⦃ P ⦄ s ⦃ Q ⦄
 
@@ -289,13 +283,14 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
       M ⊢ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄
 
 
+  (* add to appendix & fix markup *)
   (** -----------------------------*)
   (** M ⊢ ⦃ true ⦄ x := new C ⦃ prt x ⦄ *)
 
   | h_new_prt2 : forall M x e1 e2 C,
       exp_not_in e1 x ->
       exp_not_in e2 x ->
-      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ (s_new x C) ⦃ a_prt_frm e1 e2⦄
+      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ (s_new x C) ⦃ a_prt_frm e1 e2 ⦄
 
 
   (*
@@ -416,9 +411,9 @@ Because of this, we can preserve the usual assignment rule from HL.
                                       M ⊢ ⦃ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
                                       M ⊢ ⦃ A1 ∧ A3 ⦄ s ⦃ A2 ∧ A4 ⦄ || ⦃ A ⦄
 
-  | hq_sequ : forall M A1 s1 s2 A2 A, M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ ->
-                                 M ⊢ ⦃ A1 ⦄ s2 ⦃ A2 ⦄ || ⦃ A ⦄ ->
-                                 M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A2 ⦄ || ⦃ A ⦄
+  | hq_sequ : forall M A1 A2 A3 A s1 s2, M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ ->
+                                    M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ ->
+                                    M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄ || ⦃ A ⦄
 
   (*
     I think the invariant portion of the quadruple is in a negative position, not positive.
@@ -509,6 +504,8 @@ Because of this, we can preserve the usual assignment rule from HL.
     | [ |- forall M P s Q A, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ || ⦃ A ⦄ -> _ ] =>
         intros M P s Q A Hhoare; induction Hhoare
     end.
+
+    #[export] Hint Constructors hoare_quad : hoare_db.
 
   Close Scope assert_scope.
   Close Scope hoare_scope.

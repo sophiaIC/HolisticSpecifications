@@ -1,4 +1,5 @@
 Require Import Arith.
+Require Import Bool.
 Require Export ZArith.ZArith.
 Require Import List.
 Require Import common.
@@ -15,6 +16,7 @@ Module LanguageDefinition.
   | v_addr : addr -> val
   | v_int : Z -> val
   | v_bool : bool -> val
+  | v_str : String.string -> val
   | v_null : val.
 
   Inductive mth :=
@@ -42,6 +44,7 @@ Module LanguageDefinition.
   | t_cls : cls -> ty
   | t_int : ty
   | t_bool : ty
+  | t_str : ty
   | t_ext : ty.
 
   Inductive exp :=
@@ -71,7 +74,7 @@ Module LanguageDefinition.
   | s_read : var -> exp -> stmt
   | s_write : var -> fld -> exp -> stmt
   | s_call : var -> var -> mth -> list var -> stmt
-  | s_ret : exp -> stmt
+(*  | s_ret : exp -> stmt*)
   | s_if : exp -> stmt -> stmt -> stmt
   | s_hole : var -> stmt
   | s_new : var -> cls -> stmt
@@ -100,6 +103,8 @@ Module LanguageDefinition.
   | s_hole : var -> stmt
   | s_new : var -> cls -> stmt.*)
 
+
+  Definition ret x := (s_read result x).
   Notation "s ';;' ss" := (s_seq s ss)(at level 41).
 
   #[global] Program Instance eqbFld : Eq fld :=
@@ -411,6 +416,67 @@ Module LanguageDefinition.
       crush.
   Defined.
 
+  #[global] Program Instance eqbVal : Eq val :=
+    {
+      eqb := fun v1 v2 =>
+               match v1, v2 with
+               | v_addr a1, v_addr a2 => eqb a1 a2
+               | v_int n1, v_int n2 => Z.eqb n1 n2
+               | v_bool b1, v_bool b2 => Bool.eqb b1 b2
+               | v_str s1, v_str s2 => String.eqb s1 s2
+               | v_null, v_null => true
+               | _, _ => false
+               end
+    }.
+  Solve Obligations of eqbVal with crush.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+(*    destruct a1; destruct a2;
+      try solve [crush].
+    destruct a, a0;
+      try solve [crush].*)
+  Admitted.
+  Next Obligation.
+  Admitted.
+
+  #[global] Program Instance eqbExp : Eq exp :=
+    {
+      eqb := fix eqb' e1 e2 :=
+               match e1, e2 with
+               | e_hole n1, e_hole n2 => eqb n1 n2
+               | e_var x1, e_var x2 => eqb x1 x2
+               | e_val v1, e_val v2 => eqb v1 v2
+               | e_fld e1 f1, e_fld e2 f2 => eqb' e1 e2 && eqb f1 f2
+               (*)| e_typ : exp -> ty -> exp
+               | e_ghost : exp -> ghost -> exp -> exp
+               | e_if : exp -> exp -> exp -> exp
+               | e_eq : exp -> exp -> exp
+               | e_plus : exp -> exp -> exp
+               | e_minus : exp -> exp -> exp*)
+               | _, _ => false
+               end
+    }.
+  Solve Obligations of eqbExp with crush.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+
   (**
      Assertions
    **)
@@ -440,6 +506,34 @@ Module LanguageDefinition.
   Definition a_true := (a_ (e_true)).
   Definition a_false := (a_ (e_false)).
   Notation "e1 ≠ e2" := (¬ a_ (e_eq e1 e2))(at level 37).
+
+  #[global] Program Instance eqbAsrt : Eq asrt :=
+    {
+      eqb := fix eqb' a1 a2 :=
+          match a1, a2 with
+          | a_exp e1, a_exp e2 => eqb e1 e2
+          | a_and A11 A12, a_and A21 A22 => eqb' A11 A21 && eqb' A12 A22
+          | a_neg A1, a_neg A2 => eqb' A1 A2
+          | a_all C1 A1, a_all C2 A2 => eqb C1 C2 && eqb' A1 A2
+          | a_extl e1, a_extl e2 => eqb e1 e2
+          | a_prt e1, a_prt e2 => eqb e1 e2
+          | a_prt_frm e11 e12, a_prt_frm e21 e22 => eqb e11 e21 && eqb e12 e22
+          | _, _ => false
+          end
+    }.
+  Solve Obligations with crush.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
 
   Inductive path :=
   | p_fld : fld -> path
@@ -548,6 +642,7 @@ Module LanguageDefinition.
     | v_null, _ => True
     | v_int _, t_int => True
     | v_bool _, t_bool => True
+    | v_str _, t_str => True
     | v_addr α, t_cls C => match snd σ α with
                           | Some o => if eqb (o_cls o) C
                                      then True

@@ -40,22 +40,27 @@ Module SpecSatisfaction.
   (*
     question: do we need the public/private qualifiers if we have meth specs on public methods?
    *)
+  (*
+    do we need to protect A3 from result???
+   *)
   | spec_method : forall M C meth A1 A2 A3 CDef m,
       snd M C = Some CDef ->
       c_meths CDef meth = Some m ->
       M ⊢ ⦃ a_typs ((this, t_cls C) :: (params m)) ∧ A1 ⦄
         (body m)
-        ⦃ A2 ∧ (adapt A2 (result :: nil)) ⦄ || ⦃ A3 ⦄ ->
+        ⦃ A2 ∧ (adapt A2 (result :: nil)) ⦄ ||
+        ⦃ A3 ⦄ ->
       spec_sat M (S_mth C meth (params m) A1 A2 A3)
 
-  | spec_invariant : forall M C meth A CDef m xCs,
-      snd M C = Some CDef ->
-      c_meths CDef meth = Some m ->
-      M ⊢
-        ⦃ a_typs ((this, t_cls C) :: (params m)) ∧
-            (a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs)) ∧ A ⦄
-        (body m)
-        ⦃ A ∧ (adapt A (result :: nil)) ⦄ || ⦃ A ⦄ ->
+  | spec_invariant : forall M A xCs,
+      (forall C CDef m meth,
+          snd M C = Some CDef ->
+          c_meths CDef meth = Some m ->
+          M ⊢
+            ⦃ a_typs ((this, t_cls C) :: (params m)) ∧
+                (a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs)) ∧ A ⦄
+            (body m)
+            ⦃ A ∧ (adapt A (result :: nil)) ⦄ || ⦃ A ⦄) ->
       spec_sat M (S_inv xCs A).
 
 End SpecSatisfaction.
