@@ -64,11 +64,10 @@ Notation "f1 '∘' f2" := (fun x => bind (f2 x) f1)(at level 40).
       Some x ;
     bind :=
       fun T U m f =>
-            match m with
-            | None => None
-            | Some x => f x
-            end
-
+        match m with
+        | None => None
+        | Some x => f x
+        end
   }.
 
 Fixpoint concat {A : Type}(l1 l2 : list A) :=

@@ -104,9 +104,12 @@ Module Assert.
                           sat M σ (a_exp (e_typ (e_val (v_addr α)) (t_cls C))) ->
                           sat M σ (a_ex C A)*)
 
-  | sat_extl : forall M σ e C, sat M σ (a_exp (e_typ e (t_cls C))) ->
+  | sat_extl1 : forall M σ e C, sat M σ (a_exp (e_typ e (t_cls C))) ->
                           ~ C ∈ snd M ->
                           sat M σ (a_extl e)
+
+  | sat_extl2 : forall M σ e, sat M σ (a_exp (e_typ e (t_ext))) ->
+                         sat M σ (a_extl e)
 
   (*
 
@@ -166,8 +169,8 @@ The above relies on the fact that "this" is always in the local variable map
                            nsat M σ A2 ->
                            nsat M σ (A1 ∨ A2)*)
 
-(*  | nsat_neg : forall M σ A, sat M σ A ->
-                        nsat M σ (¬ A)*)
+  | nsat_neg : forall M σ A, sat M σ A ->
+                        nsat M σ (¬ A)
 
   | nsat_all : forall M σ α C A, glob_reachable α σ ->
                             sat M σ (a_exp (e_typ (e_val (v_addr α)) (t_cls C))) ->
@@ -220,7 +223,7 @@ M ⊢ {P1 /\ P2} s {Q1 /\ Q2}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   Combined Scheme sat_mutind from sat_mut_ind, nsat_mut_ind.
 
-  #[export] Hint Constructors sat : assert_db.
+  #[global] Hint Constructors sat : assert_db.
 
   Close Scope assert_scope.
 

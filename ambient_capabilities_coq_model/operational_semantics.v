@@ -27,7 +27,7 @@ Module OperationalSemantics.
   | eval_val : forall M σ v, eval M σ (v_ v) v
 
   | eval_var : forall M σ x v, local (top σ) x = Some v ->
-                          eval M σ (e_ x) v
+                          eval M σ (e_ x) (fst v)
 
   | eval_fld : forall M σ e f α v, eval M σ e (v_addr α) ->
                               interpret_αf σ α f = Some v ->
@@ -87,13 +87,15 @@ Module OperationalSemantics.
    *)
 
   Inductive reduction : module -> config -> config -> Prop :=
-  | r_read : forall M χ x e v lcl ψ C,
+  | r_read : forall M χ x e v lcl ψ T,
       x <> this ->
-      classOf (frm lcl (s_read x e) ⋅ ψ, χ) this = Some C ->
+(*      classOf (frm lcl (s_read x e) ⋅ ψ, χ) this = Some C ->*)
       (* TODO: check e is constrained *)
       (* TODO: check e is the correct type *)
+      typeOf (frm lcl (s_read x e) ⋅ ψ, χ) x T ->
       eval M (frm lcl (s_read x e) ⋅ ψ, χ) e v ->
-      reduction M (frm lcl (s_read x e) ⋅ ψ, χ) (frm (⟦ x ↦ v ⟧  lcl) s_empty ⋅ ψ, χ)
+      eval M (frm lcl (s_read x e) ⋅ ψ, χ) (e_typ e T) v_true ->
+      reduction M (frm lcl (s_read x e) ⋅ ψ, χ) (frm (⟦ x ↦ (v, T) ⟧  lcl) s_empty ⋅ ψ, χ)
 
   | r_write : forall M χ x e v f lcl l ψ C flds CDef Tf,
       classOf (frm lcl (s_write x f e) ⋅ ψ, χ) this = Some C ->
@@ -117,7 +119,7 @@ Module OperationalSemantics.
       zip_to_map (map fst (params mDef)) ps lcl = Some lcl' ->
       reduction M
         (frm lcl (s_call x y m ps) ⋅ ψ, χ)
-        (frm (⟦ this ↦ (v_addr l) ⟧ lcl') (body mDef) ⋅ (frm lcl (s_hole x) :: ψ), χ)
+        (frm (⟦ this ↦ (v_addr l, rtrn mDef) ⟧ lcl') (body mDef) ⋅ (frm lcl (s_hole x) :: ψ), χ)
 
   | r_new : forall M χ lcl ψ x C α o CDef flds,
       snd M C = Some CDef ->
@@ -125,13 +127,13 @@ Module OperationalSemantics.
       o = obj C ((fun _ => Some v_null) ∘ flds) ->
       reduction M
         (frm lcl (s_new x C) ⋅ ψ, χ)
-        (frm (⟦ x ↦ v_addr α ⟧ lcl) s_empty ⋅ ψ, ⟦ α ↦ o⟧ χ)
+        (frm (⟦ x ↦ (v_addr α, t_cls C) ⟧ lcl) s_empty ⋅ ψ, ⟦ α ↦ o⟧ χ)
 
-  | r_ret : forall M χ lcl lcl' x v ψ,
-      eval M (frm lcl s_empty ⋅ (frm lcl' (s_hole x) :: ψ), χ) (e_ result) v ->
+  | r_ret : forall M χ lcl lcl' x v ψ T,
+      lcl result = Some (v, T) ->
       reduction M
         (frm lcl s_empty ⋅ (frm lcl' (s_hole x) :: ψ), χ)
-        (frm (⟦ x ↦ v ⟧ lcl') s_empty ⋅ ψ, χ)
+        (frm (⟦ x ↦ (v, T) ⟧ lcl') s_empty ⋅ ψ, χ)
 
   | r_if1 : forall M χ lcl e s1 s2 ψ,
       eval M (frm lcl (s_if e s1 s2) ⋅ ψ, χ) e v_true ->

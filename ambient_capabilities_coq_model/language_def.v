@@ -551,7 +551,8 @@ Module LanguageDefinition.
   Record methDef := meth{
                         spec : list (asrt * asrt * asrt);
                         params : list (var * ty);
-                        body : stmt
+                        body : stmt;
+                        rtrn : ty
                       }.
 
   Record classDef :=
@@ -569,7 +570,7 @@ Module LanguageDefinition.
 
   Definition heap := partial_map addr object.
 
-  Record frame := frm{local : partial_map var val;
+  Record frame := frm{local : partial_map var (val * ty);
                        continuation : stmt}.
 
   Inductive stack :=
@@ -587,7 +588,7 @@ Module LanguageDefinition.
 
   Definition interpret_x (σ : config)(x : var) : option val :=
     match σ with
-    | (frm lcl c ⋅ ψ, _) => lcl x
+    | (frm lcl c ⋅ ψ, _) => bind (lcl x) (fun x => Some (fst x))
     end.
 
   Definition interpret_αf (σ : config)(α : addr)(f : fld) : option val :=
@@ -664,5 +665,8 @@ Module LanguageDefinition.
     | x :: lx', t :: lt' => typeOf σ x t /\ typeOf_l σ lx' lt'
     | _, _ => False
     end.
+
+  Definition typeOf_f (M : module) C f :=
+    bind (snd M C) (fun def => (c_fields def) f).
 
 End LanguageDefinition.

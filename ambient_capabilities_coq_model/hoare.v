@@ -73,7 +73,6 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
                             reductions M σ2 σ3 ->
                             reductions M σ1 σ2.
 
-  (* TODO: fix return stuff in operational_semantics.v*)
   Definition final s := s = s_empty.
 
   (* traditional hoare triple semantics *)
@@ -101,14 +100,15 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   (* remove? *)
   Definition push (σ : config)(αs : list addr) : config -> Prop :=
     match σ with
-    | (ϕ ⋅ ψ, χ) => fun σ' =>
-                      match σ' with
-                      | (ϕ' ⋅ ψ', χ') =>
-                          ψ' = ϕ :: ψ /\
-                            χ' = χ /\
-                            (forall x α, local ϕ x = Some (v_addr α) ->
-                                    In (α) αs) (* this is weaker than the paper, but I think sufficient*)
-                      end
+    | (ϕ ⋅ ψ, χ) =>
+        fun σ' =>
+          match σ' with
+          | (ϕ' ⋅ ψ', χ') =>
+              ψ' = ϕ :: ψ /\
+                χ' = χ /\
+                (forall x α T, local ϕ x = Some (v_addr α, T) ->
+                          In (α) αs) (* this is weaker than the paper, but I think sufficient*)
+          end
     end.
 
   Definition asrt_frm_list {A : Type} (f : A -> asrt)(ys : list A) :=
@@ -371,7 +371,9 @@ Because of this, we can preserve the usual assignment rule from HL.
   | h_seq : forall M A1 A2 A3 s1 s2,
       M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ ->
       M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ ->
-      M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄.
+      M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄
+
+  | h_read_type : forall M e T x, M ⊢ ⦃ a_ (e_typ e T) ⦄ (s_read x e) ⦃ a_ (e_typ (e_ x) T) ⦄.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {
