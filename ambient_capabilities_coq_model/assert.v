@@ -135,19 +135,25 @@ The above relies on the fact that "this" is always in the local variable map
                                            α <> α_orig ->
                                            (forall p, interpret_αp p σ α_orig = Some (v_addr α) ->
                                                  is_protected_path M σ α_orig p) ->
-(*)                                             (forall ϕ ψ x, fst σ = ϕ ;; ψ ->
+                                           (*(forall ϕ ψ x, fst σ = ϕ ;; ψ ->
                                                        x ∈ local ϕ ->
                                                        sat M σ (a_prt_frm e (e_ x)) \/
                                                          sat M σ (a_prt_frm e_orig (e_ x))) ->*)
                                            sat M σ (a_prt_frm e e_orig)
 
-(*)  | sat_prt_frm_intl : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
+  | sat_prt_frm_scalar : forall M σ e e_orig T α, eval M σ e (v_addr α) ->
+                                             sat M σ (a_ e_typ e_orig T) ->
+                                             (T = t_int \/ T = t_str \/ T = t_bool) ->
+                                             sat M σ (a_prt_frm e e_orig)
+
+  | sat_prt_frm_intl : forall M σ e e_orig α α_orig, eval M σ e (v_addr α) ->
                                                 eval M σ e_orig (v_addr α_orig) ->
                                                 α <> α_orig ->
-                                                sat M σ (a_intl e) ->
-                                                sat M σ (a_prt_frm e e_orig)*)
+                                                sat M σ (¬ a_extl e) ->
+                                                sat M σ (a_prt_frm e e_orig)
 
-  | sat_prt : forall M σ e, (forall α, loc_reachable α σ ->
+  | sat_prt : forall M σ e, (exists α, eval M σ e (v_addr α)) ->
+                       (forall α, loc_reachable α σ ->
                              extl M σ α ->
                              sat M σ (a_prt_frm e (e_val (v_addr α)))) ->
                        sat M σ (a_prt e)

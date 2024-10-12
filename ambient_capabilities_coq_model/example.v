@@ -277,14 +277,26 @@ e : C
   Proof.
   Admitted.*)
 
+  Lemma keyHasTypeKey :
+    forall x, Mgood ⊢ (a_ e_typ x (t_cls Account)) ⊆ (a_ e_typ (e_fld x key) (t_cls Key)).
+  Proof.
+  Admitted.
+
   Lemma post_true :
     forall M A s, M ⊢ ⦃ A ⦄ s ⦃ a_true ⦄.
   Proof.
   Admitted.
 
+  Lemma apply_entails :
+    forall M σ A1 A2, M ⊢ A1 ⊆ A2 ->
+                 sat M σ A1 ->
+                 sat M σ A2.
+  Proof.
+  Admitted.
+
   Lemma entails_fld_type :
     forall M C f T, typeOf_f M C f = Some T ->
-               forall e, M ⊢ (a_ (e_typ e (t_cls C))) ⊆ (a_ (e_typ e (t_cls C))).
+               forall e, M ⊢ (a_ (e_typ e (t_cls C))) ⊆ (a_ (e_typ (e_fld e f) T)).
   Proof.
 
   Admitted.
@@ -637,7 +649,68 @@ e : C
 
   Lemma hq_pre_dup :
     forall M A1 A2 A3*)
-  
+
+  Lemma sat_cls_is_object :
+    forall M σ e C, sat M σ (a_ e_typ e (t_cls C)) ->
+               exists a, eval M σ e (v_addr a).
+  Proof.
+    intros.
+    inversion H;
+      subst.
+    inversion H3;
+      subst.
+    eauto.
+  Qed.
+
+  Lemma entails_prt_int :
+    forall M e1 e2 C, M ⊢ (a_ (e_typ e1 (t_cls C))) ∧ (a_ (e_typ e2 t_int)) ⊆ (a_prt_frm e1 e2).
+  Proof.
+    intros_entails.
+    asrt_sat_auto_destruct_conj.
+    edestruct sat_cls_is_object;
+      eauto.
+    eapply sat_prt_frm_scalar;
+      eauto.
+  Qed.
+
+  Lemma entails_prt_str :
+    forall M e1 e2 C, M ⊢ (a_ (e_typ e1 (t_cls C))) ∧ (a_ (e_typ e2 t_str)) ⊆ (a_prt_frm e1 e2).
+  Proof.
+    intros_entails.
+    asrt_sat_auto_destruct_conj.
+    edestruct sat_cls_is_object;
+      eauto.
+    eapply sat_prt_frm_scalar;
+      eauto.
+  Qed.
+
+  Lemma entails_prt_bool :
+    forall M e1 e2 C, M ⊢ (a_ (e_typ e1 (t_cls C))) ∧ (a_ (e_typ e2 t_bool)) ⊆ (a_prt_frm e1 e2).
+  Proof.
+    intros_entails.
+    asrt_sat_auto_destruct_conj.
+    edestruct sat_cls_is_object;
+      eauto.
+    eapply sat_prt_frm_scalar;
+      eauto.
+  Qed.
+
+  Lemma entails_prt_extl :
+    forall M x y, M ⊢ (a_prt x ∧ a_extl y) ⊆ (a_prt_frm x y).
+  Proof.
+  Admitted.
+
+  Lemma entails_prt_intl :
+    forall M x y C, M ⊢ ((a_ e_typ y (t_cls C)) ∧ ¬ a_extl y) ⊆ a_prt_frm x y.
+  Proof.
+  Admitted.
+
+  Lemma entails_intl_not_extl :
+    forall M e C, C ∈ (snd M) ->
+             M ⊢ (a_ (e_typ e (t_cls C))) ⊆ ¬ a_extl e.
+  Proof.
+  Admitted.
+
   Ltac setup_shop :=
     assert (HitemPrice : ⟦ price ↦ t_int ⟧_∈ typeOf_f Mgood Item);
     [apply type_of_itemPrice|];
@@ -671,14 +744,15 @@ e : C
           simpl.
         repeat try apply_hq_sequ_with_mid_eq_fst;
           repeat split_post_condition_by_conjunction;
-          try solve [by_hq_types2; by_assumption].
-        (* TODO: second goal being produced that needs to be discharged. need to prove new typing assertion using typeOf_f and conseq  *)
-        apply hq_mid.
-        eapply h_conseq. apply h_read_type.
+          try solve [by_hq_types2; by_assumption];
 
-        match goal with
-        | [|- _ ⊢ ⦃ ?A ⦄ (s_read ?x ?e) ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] => apply hq_sequ with (A2:=(a_ (e_typ (e_ x) t_int)) ∧ A)
-        end.
+        try solve [apply hq_mid;
+                   eapply h_strengthen;
+                   [apply h_read_type|];
+                   intros_entails;
+                   repeat asrt_sat_auto_destruct_conj;
+                   eapply apply_entails;
+                   [apply entails_fld_type; eauto|eauto]].
 
         *** (* itemPrice = item.price *)
           admit.
@@ -698,34 +772,55 @@ e : C
 
           ****
             by_assumption.
-            
-
-          **** (* thisAcc = this.acc *)
-          repeat apply hq_combine;
-            try solve [apply hq_types2].
-          admit.
+            eapply apply_entails;
+              [apply entails_prt_extl|].
+            repeat asrt_sat_auto_destruct_conj;
+              auto with assert_db.
 
           ****
-            apply_hq_sequ_with_mid_eq_fst.
-            ***** (* oldBalance = thisAcc.balance *)
-              repeat apply hq_combine;
-                try solve [apply hq_types2].
+            by_assumption.
+            eapply apply_entails;
+              [apply entails_prt_intl|].
+            asrt_sat_auto_destruct_conj;
+              eauto.
+            eapply apply_entails;
+              [apply entails_intl_not_extl|];
+              eauto.
+            unfold Mgood;
+              simpl;
+              auto.
+            unfold update, t_update;
+              simpl;
+              crush.
+            auto.
+            eexists; eauto.
+
+          **** (* a.key protected from itemPrice *)
+            by_assumption.
+            eapply apply_entails;
+              [apply entails_prt_int|].
+            repeat asrt_sat_auto_destruct_conj;
+              auto with assert_db.
+            eapply apply_entails;
+              [apply keyHasTypeKey|].
+            auto.
+
+        ***
+          apply hq_if.
+
+          **** (* internal call to this.send *)
             admit.
 
-            *****
-              apply_hq_sequ_with_mid_eq_fst.
+          **** (* external call to buyer.tell *)
+            admit.
 
-            ****** (* tmp := buyer.pay(thisAcc, itemPrice) *)
-              repeat apply hq_combine;
-                try solve [apply hq_types2].
-            eapply hq_conseq; [apply hq_call_ext_adapt_strong| | | ].
-            apply lspec_base.
-            admit. (* important! fix repeat hq_combine to re-introduce
-                    full pre-condition *)
-            admit. (* easy *)
-            apply entails_refl.
-            ******
-              admit.
+        *** (* return false *)
+          unfold ret.
+          apply hq_mid.
+          apply h_read_prt.
+
+        ***
+
       **
         destruct H;
           subst.

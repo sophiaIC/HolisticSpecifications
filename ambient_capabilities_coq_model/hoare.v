@@ -420,6 +420,10 @@ Because of this, we can preserve the usual assignment rule from HL.
                                     M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ ->
                                     M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄ || ⦃ A ⦄
 
+  | hq_if : forall M A1 A2 A3 e s1 s2, M ⊢ ⦃ (a_ e) ∧ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
+                                  M ⊢ ⦃ ¬ (a_ e) ∧ A1 ⦄ s2 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
+                                  M ⊢ ⦃ A1 ⦄ s_if e s1 s2 ⦃ A2 ⦄ || ⦃ A3 ⦄
+
   (*
     I think the invariant portion of the quadruple is in a negative position, not positive.
     weakening the invariant makes the quadruple a stronger proof obligation
