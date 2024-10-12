@@ -1,39 +1,124 @@
 
-Our work is inspired by the OCAP approach to security, whereby object capabilities guard against un-sanctioned effects \cite{miller-esop2013,MillerPhD}, thus making it easier to make guarantees about systems composed of multiple components
-\cite{Murray10dphil}.
-We focused on expressing, proving, and utilising the guarantee that
-\begin{quote}
-\emph{lack of eventual access implies that certain properties will be preserved, \\ even in the presence of external calls}
-\end{quote}
-For this, we had  to: a) model the concept of "lack of eventual access," b) determine the temporal scope of the preservation, and c) develop a Hoare logic framework to formally prove such guarantees.
+\newcommand{\paragraphSD}[1]{\vspace{.1cm}\noindent{\emph{#1}}}
 
-To model lack of eventual access,  we introduced the concept of protection, which is a property of all  the paths of all external object accessible from the current stack frame.
- To determine the  temporal scope of preservation, we developed scoped invariants, which ensure that a given property holds as long as we have not returned from the current method (top of current stack has not been popped yet). 
+ % \subsection{Summary: Our Motivation  and Our Work}
+
+\paragraphSD{Our motivation}
+%Our work is motivated by 
+comes from the OCAP approach to security, whereby object capabilities guard against un-sanctioned effects.
+Miller \cite{miller-esop2013,MillerPhD} advocates
+ \emph{defensive consistency}:, whereby %\textit{``
+ {"An object is defensively
+  consistent when it can defend its own invariants and provide correct
+  service to its well behaved clients, despite arbitrary or malicious
+  misbehaviour by its other clients.''}  Defensively consistent
+modules  are  hard to design % write,  understand,  -- Shorter, and let us not be too negtive and
+ and  verify. but
+make it much
+easier to make guarantees about systems composed of multiple components
+\cite{Murray10dphil}.
+
+ \paragraphSD{Our Work} aims to elucidate such guarantees. We want to formalize and prove  that 
+%  the guarantee that 
+\cite{permissionAuthority}:
+\begin{quote}
+\emph{Lack of eventual access implies that certain properties will be preserved, even in the presence of external calls.}
+\end{quote}
+For this, we had  to  model the concept of  lack of eventual access,  determine the temporal scope of the preservation, and  develop a Hoare logic framework to formally prove such guarantees.
+
+% To model
+For lack of eventual access,  we introduced the concept of protection, which is a property of all  the paths of all external object accessible from the current stack frame.
+%  To determine the 
+For the  temporal scope of preservation, we developed scoped invariants, which ensure that a given property holds as long as we have not returned from the current method (top of current stack has not been popped yet). 
  For our Hoare logic, we introduced an adaptation operator, which translates assertions between the caller’s and callee’s frames. 
  Finally, to prove the soundness of our approach, we developed the notion of scoped satisfaction,  which mandates that an assertion must be satisfied from a particular stack frame onward. 
- 
  Thus, most concepts in this work are  \emph{scope-aware}, as they depend  on the current stack frame.
-
-\paragraph{Lack of Eventual Access} Ways to restrict  "eventual access" has been explored extensively in the literature, with ownership types being a prominent example. Ownership types enforce encapsulation boundaries that protect internal implementations, ensuring confinement and supporting representation independence [26, 90]. However, using ownership types to express protection can be restrictive, as it complicates scenarios where certain capabilities need to be accessible to some external objects while remaining inaccessible to others.
  
+ With these concepts, we have developed a specification language for modules \taming effects, a Hoare Logic for proving external calls, protection, and adherence to specifications, and have proven it sound. % and have applied it to our running Example. 
+
+% \subsection{Related Work}
+\paragraphSD{Lack of Eventual Access}   Efforts to restrict "eventual access" have been extensively explored, with
+ Ownership Types  being a prominent example \cite{simpleOwnership,existOwn}.
+These types enforce encapsulation boundaries to safeguard internal implementations, thereby ensuring representation independence and defensive consistency
+\cite{ownalias,NobPotVitECOOP98}, and thus 
+% By ensuring confinement, ownership systems  
+enforce representation independence, \sdN{and  % (a property close to
+defensive consistency} % )
+\cite{Banerjee:2005}.
+wnership is fundamental to key systems like Rust’s memory safety  
+\cite{RustPL2,RustBelt18},
+Scala's Concurrency \cite{ScalaCapabilities,ScalaLightweightAffine},
+Java heap analyses \cite{PotterNC98,HillNP02,MitECOOP06}, 
+and   plays a critical role in program verification
+\cite{BoyLisShrPOPL03,hypervisor} including Spec$\#$
+\cite{BarLeiSch05,BarDelFahLeiSch04} and universes
+\cite{DieDroMue07,DietlMueller05,LuPotPOPL06},
+Borrowable Fractional Ownership \cite{borrow-fract-vmcai2024},
+and recently integrated into languages like OCAML \cite{ocaml-ownership-icfp2024,funk-ownership-oopsla2024}.
+
+\sdN{Ownership types are closely related to the notion of protection: both are scoped relative to a frame. However, ownership requires an object to control some part of the path, while protection demands that module objects control the endpoints of paths. }
+
+\sdN{In future work we want to   explore how to express protection within Ownership Types, with the primary challenge being how to accommodate for capabilities accessible to some external objects while still   inaccessible to others. }
+Moreover,  tightening some
+rules in our current Hoare logic (e.g.\ Def. \ref{def:chainmail-protection-from})
+may lead to a native  Hoare logic of ownership.
+Also, recent approaches like
+%
+%% Whereas ownership types typically impose a geometric structure 
+%% on references over the whole heap, a group of recent approaches have 
+%% focussed on a local view of the sharing or accessibility of objects.
+%
+the Alias
+Calculus \cite{meyer-alias-calculus-scp2015,meyer-auto-alias-sncs2020},
+Reachability
+Types \cite{romf-reachability-types-oopsla2021,rompf-poly-reachability-oopsla2024}
+and Capturing
+Types \cite{odersky-capturing-types-toplas2023,scoped-effects-oopsla2022,odersky-reach-prog2024}
+abstract fine-grained method-level descriptions of 
+references and aliases flowing into and out of methods and fields,
+and likely accumulate enough information to express 
+protection. Effect exclusion
+\cite{fx-exclusion-icfp2023} directly prohibits nominated
+effects, but within a closed, fully-typed world.
 
 
 
  
-\paragraph{Temporal scope of the guarantee} Starting with loop invariants\cite{Hoare69,Floyd67}, property preservation at various granularities and duration has been widely and successfully adapted and adopted \cite{Hoare74,liskov94behavioral,usinghistory,Cohen10,Meyer92,MeyerDBC92,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06,DrossoFrancaMuellerSummers08}.
+\paragraphSD{Temporal scope of the guarantee} Starting with loop invariants\cite{Hoare69,Floyd67}, property preservation at various granularities and duration has been widely and successfully adapted and adopted \cite{Hoare74,liskov94behavioral,usinghistory,Cohen10,Meyer92,MeyerDBC92,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06,DrossoFrancaMuellerSummers08}.
 In our work, the temporal scope of the guarantee to preservation includes all nested calls, until termination of the currently executing method, but not beyond. 
 We compare with object and history invariants in \S \ref{sect:bounded}.
 
-\paragraph{Hoare Logics} were first developed in Hoare's seminal 1969 paper \cite{Hoare69}, and have inspired a plethora of influential further developments and tools. We shall discuss a few only.
+Such guarantees are maintained by the module as a whole.
+\citet{FASE}  proposed ``holistic specifications'' which take an external
+perspective across the interface of a module. % one or more modules.
+%% (compared with pre- and post- conditions that supply internal
+%% specifications for individual method implementations, and class,
+%% monitor, or module invariants that make internal specifications for all
+%% the methods in a single class, monitor, or module.
+\citet{OOPSLA22} builds upon this work, offering a specification
+language based on \emph{necessary} conditions and temporal operators.
+ %  rather than sufficient
+% conditions as in most specification languages, and a % Hoare NOT A HOARE logicc to 
+% that can prove modules  adhere to such specifications. 
+Neither of these systems support any kind of external calls.
+\sdN{Like \cite{FASE,OOPSLA22} we propose ``holistic specifications'', albeit without temporal logics, and with sufficient conditions.
+In addition, we introduce protection, and develop a Hoare logic for protection and external calls.} 
 
-\sdN{Separation logic  \cite{IshtiaqOHearn01}  facilitates reasoning about disjoint memory regions. %, enabling more modular and scalable verification. 
-Its separating conjunction focuses on the disjointness of assertions' footprints rather than eventual access. 
-\sdN{Incorporating our work into separation logic poses the challenge that we have no specification and no footprint for external calls, and that 
-because protection is "scope-aware", expressing it as a predicate in separation logic poses significant challenges:} quantification over all possible paths and variables within the current stack frame, and a new separating conjunction that would apply to protection.  
+
+\paragraphSD{Hoare Logics} were first developed in Hoare's seminal 1969 paper \cite{Hoare69}, and have inspired a plethora of influential further developments and tools. We shall discuss a few only.
+
+\sdN{Separation logics  \cite{IshtiaqOHearn01,Reynolds02}  % facilitate 
+ reason  about disjoint memory regions. %, enabling more modular and scalable verification. 
+% The separating conjunction focuses on the disjointness of assertions' footprints rather than eventual access. 
+Incorporate with Separation Logic's powerful framing mechanisms  will pose several challenges: 
+We have no specification and no footprint for external calls, that protection 
+Because protection is "scope-aware", expressing it as a predicate would require quantification over all possible paths and variables within the current stack frame.
+And we may require a  new separating conjunction.
+%We want to explore these in further work.  % that would apply to protection.  
 }
-
-Hyper-Hoare Logics \cite{hyper-hoare-pldi2024,compositional-hypersafety-oopsla2022} can reason about the execution of several programs, and  could thus be applied to our problem, if they were able to model all possible  
-sequences of calls of internal public methods.
+%
+Hyper-Hoare Logics \cite{hyper-hoare-pldi2024,compositional-hypersafety-oopsla2022}  reason about the execution of several programs, and  \sdN{could thus be applied to our problem, if extended to model all possible  
+sequences of calls of internal public methods.}
 
  Incorrectness Logic
 \cite{IncorrectnessLogic}
@@ -46,22 +131,21 @@ reasons about the presence of bugs, rather than their absence.
 %
 Our work, like classical Hoare Logic, over-approximates postconditions,
  and differs from Hoare and Incorrectness Logics
-by tolerating interactions between verified code and
-untrusted, unknown, potentially antagonistic components.
-\sdN{Interestingly, even though our work started with the aim to describe necessary conditions for effects (under-approximate the pre-condition), it evolved to sufficient conditions for lack of effects (over-approximate postconditions).
-Incorporating our work into  Incorrectness Logic might also require to develop an under-approximation of eventual access, while protection over-approximates it.}
+by tolerating interactions between verified code and unverified components.
+% code and
+% untrusted, unknown, potentially antagonistic components.
+\sdN{Interestingly, even though earlier  work in the space \cite{FASE,OOPSLA22} employ \emph{necessary} conditions for effects (\ie under-approximate pre-conditions), we can, instead, employ \emph{sufficient} conditions for the lack of effects (over-approximate postconditions).
+Incorporating our work into  Incorrectness Logic might require  under-approximating  eventual access, while protection over-approximates it.}
 
 Rely-Guarantee
 \cite{relyGuarantee-HayesJones-setss2017,relyGuarantee-vanStaden-mpc2015}
 and Deny-Guarantee \cite{DenyGuarantee} %reasoning techniques
 distinguish between assertions guaranteed by a thread, and those a
 thread can reply upon. 
-Assume-guarantee
-reasoning, especially circular
-assume-guarantee  \cite{circular-assume-guarantee-fm2015} evinces
-the main reason callbacks
-are hard to handle: circular control flow can lead
-all too easily towards circular reasoning.
+% Assume-guarantee reasoning, especially circula
+% assume-guarantee  \cite{circular-assume-guarantee-fm2015} evinces
+% the main reason callbacks are hard to handle: circular control flow can lead
+% all too easily towards circular reasoning.
 Our Hoare quadruples are (roughly) Hoare triples plus 
 the ``guarantee'' portion of rely-guarantee.
 When a
@@ -86,57 +170,27 @@ thread.
 %ensure our code can interoperate safely with external untrusted code.
 %%irrespective of whatever the untrusted code does.
 
-\paragraph{Models and Hoare Logics for the interaction with the the external world}
+\paragraphSD{Models and Hoare Logics for the interaction with the the external world}
+\citet{Murray10dphil} made the first attempt to formalise defensive
+consistency, % SD chop, is that crucial? space! based on counterfactual causation~\cite{Lewis_73}
+to tolerate interacting with any untrustworthy object,
+although without a specification language for describing effects
+(i.e.\ when an object is correct).
+
  \citet{CassezFQ24} propose one approach to reason about external calls.
 Given that external callbacks are necessarily restricted to the module's public interface,
 external callsites are replaced  with a
 generated \texttt{externalcall()} method that  nondeterministically invokes that interface.
- 
-%\paragraph{Rest}
-%To address this problem, 
-%\citet{FASE}  proposed holistic specifications which take an external
-%perspective across one or more modules.
-%%% (compared with pre- and post- conditions that supply internal
-%%% specifications for individual method implementations, and class,
-%%% monitor, or module invariants that make internal specifications for all
-%%% the methods in a single class, monitor, or module.
-%\citet{OOPSLA22} builds upon this work, offering a specification
-%language based on necessary conditions, rather than sufficient
-%conditions as in most specification languages, and a Hoare logic to 
-%that can prove modules  adhere to such specifications. Unfortunately
-%neither of these systems support any kind of external calls.
-
- 
-\citet{Murray10dphil} made the first attempt to formalise defensive
-consistency, based on counterfactual causation~\cite{Lewis_73}
-to tolerate interacting with any untrustworthy object,
-although
-without a specification language for describing effects
-(i.e.\ when an object is correct).
-%
-%and provide enough information for Dafny to accept that proof.
-%
 \citet{iris-wasm-pldi2023}'s Iris-Wasm is similar.
-%%similar to Cassez which is why this is here 
-%% to enforce 
-%% modularity in a formal model of WASM built in Iris.
 WASM's
-%% has the
-%% advantage that its
 modules are very loosely coupled: a module
-%instantiation has its own
 has its own byte memory
-(stores only bytes) 
-and object table
-(stores opaque references to closures and external handles).
-%
-%% that
-%% are generalltion not shared between modules; byte memory stores bytes,
-%% and object tables
-%
+and object table.
 Iris-Wasm ensures models 
 can only be
-modified via their explicitly exported interfaces.
+modified via their explicitly exported interfaces. 
+ 
+ 
 
 \citet{ddd}  designed OCPL, a logic
 that separates internal implementations (``high values'')
@@ -168,18 +222,10 @@ sealer/unsealer, caretaker, and membrane.
 %the
 %
 RustBelt \cite{RustBelt18}
-developed this approach to prove Rust memory safety,
-via the IRIS automated
-separation logic \cite{iris-jfp2018},
-%
-%
-%RustBelt was combined with the
-and was combined 
-with the RustHorn  %that uses classical logic 
-%\se{SUSAN: doesn't it use Horn Clause Logic? or Constraint Horn
-%Clause Logic?} \
-(which verifies the safe subset of Rust \cite{RustHorn-toplas2021}),
-producing RustHornBelt \cite{RustHornBelt-pldi2022} that verifies
+developed this approach to prove Rust memory safety using IRIS\cite{iris-jfp2018},
+and combined with RustHorn \cite{RustHorn-toplas2021} for the safe subset,
+%(which verifies the safe subset of Rust \cite{RustHorn-toplas2021}),
+produced RustHornBelt \cite{RustHornBelt-pldi2022} that verifies
 both safe and unsafe Rust programs.% in classical first-order logic.
 Similar techniques were extended to C \cite{RefinedC-pldi2021}.
 %note that while C is not ``memory-safe'', neither is unsafe Rust.
@@ -202,179 +248,70 @@ whereas all our code is ''memory safe''
 but unsafe / untrusted code is unknown to the verifier.
 
 % devrise birkedal S&P 2016; 
- 
-%\citet{dd}  have deployed
-%   \sd{powerful} %rather more complex
-%  theoretical techniques to address similar problems:  % Devrise et al.\ 
-%  \sd{They} show how
-\citet{dd} deploy
-step-indexing, Kripke worlds, and representing objects
-as public/private state machines % with public and private transitions
-%can be used to
-%reason about % object-oriented programs in general.
-%\sd{object capabilities}.
-to model 
-%Devriese have demonstrated
-%solutions to a range of 
-%including the
-problems including the 
+\citet{dd} deploy step-indexing, Kripke worlds, and representing objects
+as public/private state machines to model problems including the 
 DOM wrapper and a mashup application.
-% Although the formal techniques are much more sophisticated than we
-%apply here, and consequently 
-% not true can e.g.\ reason about recursion where we
-%cannot, there are some similarities, e.g.\ with the 
-\sd{Their} distinction
-between public and private transitions %being related 
-\sd{is similar} to our
+Their distinction between public and private transitions %being related 
+is similar  to our
 distinction between internal and external objects.
-%
-%
 This stream of work has culminated in VMSL, a Iris-based separation logic for
 virtual machines to assure defensive consistency
 \cite{vmsl-pldi2023}
-(sadly not a logic for VAX/VMS systems),
+% SD removed the joke
+%(sadly not a logic for VAX/VMS systems),
 %
 %``robust safety'' (more or less defensive consistency),
 %
-and Cerise, which
-uses Iris invariants to support proofs of programs
-with outgoing calls and callbacks,
+and Cerise, which uses Iris invariants to support proofs of programs with outgoing calls and callbacks,
 on capability-safe CPUs \cite{cerise-jacm2024},
-via
-%relatively low-level proof
-problem-specific proofs in Iris's logic.
-% variant of seperation logic. 
-%
+via problem-specific proofs in Iris's logic.
 Our work differs from Swasey, Schaefer's, and Devriese's work in that
-% \citet{ddd} and \citet{schaeferCbC} 
-they are primarily concerned \sd{with} %about
-ensuring defensive consistency, 
-while we focus on specifications
-% of programs' behaviour,
-and proofs more widely.
+they are primarily concerned   with  ensuring defensive consistency, 
+while we focus on \sdN{module specifications}.
 
-\paragraph{Smart Contracts} also pose the problem of calls to external code and potential callbacks.
+\paragraphSD{Smart Contracts} also pose the problem of external calls.
 Rich-Ethereum \cite{rich-specs-smart-contracts-oopsla2021}
-relies on Ethereum%intrinsic modularity:
-contracts' fields being instance-private
-and unaliased, while
-a per-contract ``finished'' flag
-manages callbacks and termination.
+relies on Ethereum contracts' fields being instance-private
+and unaliased. % , while a per-contract ``finished'' flag manages callbacks and termination.
 Scilla \cite{sergey-scilla-oopsla2019}
 is a minimalistic functional alternative to Ethereum,
-based on restricted actor-style
-communication, restricting recursion, and ensuring termination,
+% based on restricted actor-style communication, restricting recursion, and ensuring termination,
 which has demonstrated that popular Ethereum
 contracts avoid common contract errors.
-%type errors, out-of-gas resource failures, and
-%preservation of virtual currency. 
 %
-All these appproaches depend on
-% both rely on significantly more
-environments which support encapsulation:
-%% impmore lementations than our take on the open world, where
-%% interobject references are unconstrainted.
-%% In our approach,
-we show how unrestricted references to mutable objects can be protected
-%by the emergent
-%behaviour of a module's code, i.e.\
-by programmer discipline,
-and that disciplline trusted, then verified.
+%SD do not knoiw where this was supposed to be.
+% All these appproaches depend on
+%environments which support encapsulation:
+%we show how unrestricted references to mutable objects can be protected
+%%by the emergent
+%%behaviour of a module's code, i.e.\
+%by programmer discipline,
+%and that disciplline trusted, then verified.
 
 
 The VerX tool can verify
-specifications for solidity contracts automatically \cite{VerX}.
-VerX's specification language is based on
-temporal logic, 
-but only within a past modality, while e.g.\ \citet{OOPSLA22} has both past
-and future modalities.
-
-
-
-
-
-
-\paragraph{Programming Languages incorporating object capabilities}
-Google's Caja \cite{Caja} applies (object-)capabilities \cite{Dennis66,JamesMorris,MillerPhD}, 
-sandboxes, proxies, and wrappers to limit components'
-access to \textit{ambient} authority.
-% --- that is, capabilities that can be obtained from the wider environment, rather than being granted
-%to a component explicitly.
-Sandboxing has been validated
-formally % Maffeis et al.\
-\cite{mmt-oakland10};
-%develop a model of
-%JavaScript, demonstrate that it obeys two principles of
-%object capability systems
-%  (``connectivity begets connectivity'' and
-%``no authority amplification''), and then % uses these principles to
-%and show  how untrusted applications can be prevented from interfering with
-%the rest of the system.
-%and 
-recent languages % and web systems
-\cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14} including Newspeak
-\cite{newspeak17}, Dart \cite{dart15}, Grace \cite{grace,graceClasses}
-and Wyvern \cite{wyverncapabilities}
-have adopted
-%adopt
-object
-capabilities.
-
-
-
-
-
-
-\citet{stack-safety-csf2023} extend memory safety arguments to ``stack
-safety'': ensuring method calls and returns are well bracketed (aka
-``structured''), and that the integrity and confidentially of both
-caller and callee are ensured, by assigning objects to security
-classes. While in our paper we aim to specify and prove higher-level
-properties: some of the concepts are parallel: their ``sealed''
-objects are close to our objects accessible from earlier stack fames
-(but no longer accessible from the top fame)e, and their ``public''
-objects are close to our external objects.
-%
-%
-\citet{schaeferCbC} has also adopted
-an information-flow approach to ensure confidentially by construction.
-
- 
-
-
-
-
-
-   Unlike Cerise, which handles callbacks, VerX
+specifications for Solidity contracts automatically \cite{VerX}.
+VerX's specification language is based on temporal logic.
+% ,  but only within a past modality, while e.g.\ \citet{OOPSLA22} has both past and future modalities.
+It % Unlike Cerise, which handles callbacks, VerX
 is restricted to ``effectively call-back free'' programs
 \cite{Grossman,relaxed-callbacks-ToDES},
 delaying any callbacks until the
-incoming call to the internal object has finished,
-turning a callback
-%(a call invoked to handle an outoing external call)
-into a more straightforward  incoming call. 
-%
+incoming call to the internal object has finished.
+% , turning a callback into a more straightforward  incoming call. 
+ 
 \textsc{ConSol} \cite{consolidating-pldi2024}
 provides a specification langauge for smart contracts,
-checked at runtime \cite{FinFel01},  with case studies 
-showing it could prevent some famous smart contract errors.
-%%
-%%  language, based around classical pre- and post-conditions and
-%% a special higher-order treatment of the blockchain addresses used in
-%% smart contracts. The project analyses twenty well-known erroneous
-%% contracts and claims that ConSol specifications would prevent those
-%% errors.
-SCIO* \cite{secure-io-fstar-popl2024} implemented in
-%the dependentlytyped language
-F*
-%offers another approach: the system
-supports both
-verified and unverified code: unverified code 
-corresponds to our external modules. 
-Like \textsc{ConSol}, SCIO* uses runtime checks
-(higher-order contracts and reference monitors)
-to ensure unverified
-code cannot break verified code.
+checked at runtime \cite{FinFel01}.
+% ,  with case studies  showing it could prevent some famous smart contract errors.
+SCIO* \cite{secure-io-fstar-popl2024}, implemented in
+F*, supports both
+verified and unverified code.
+% : unverified code  corresponds to our external modules. 
+%Like \textsc{ConSol}, SCIO* uses runtime checks
+%(higher-order contracts and reference monitors)
+%to ensure unverified
+%code cannot break verified code.
 Both \textsc{Consol} and SCIO* are 
 similar to gradual verification techniques 
 \cite{gradual-verification-popl2024,Cok2022} that
@@ -383,138 +320,63 @@ and contracts for general access control
 \cite{DPCC14,AuthContract,cedar-oopsla2024}.
 
 
+
+
+\paragraphSD{Programming Languages incorporating object capabilities}
+Google's Caja \cite{Caja} applies (object-)capabilities \cite{Dennis66,JamesMorris,MillerPhD}, 
+sandboxes, proxies, and wrappers to limit components'
+access to \textit{ambient} authority.
+Sandboxing has been validated
+formally \cite{mmt-oakland10};
+Many recent languages % and web systems
+\cite{CapJavaHayesAPLAS17,CapNetSocc17Eide,DOCaT14} including Newspeak
+\cite{newspeak17}, Dart \cite{dart15}, Grace \cite{grace,graceClasses}
+and Wyvern \cite{wyverncapabilities} have adopted object capabilities.
+\citet{schaeferCbC} has also adopted
+an information-flow approach to ensure confidentially by construction.
+
+\citet{stack-safety-csf2023} extend memory safety arguments to ``stack
+safety'': ensuring method calls and returns are well bracketed (aka
+``structured''), and that the integrity and confidentially of both
+caller and callee are ensured, by assigning objects to security
+classes. 
+%While in our paper we aim to specify and prove higher-level
+%properties: some of the concepts are parallel: their ``sealed''
+%objects are close to our objects accessible from earlier stack fames
+%(but no longer accessible from the top fame)e, and their ``public''
+%objects are close to our external objects.
+\citet{schaeferCbC} has also adopted
+an information-flow approach to ensure confidentially by construction.
+
+
  
+ 
+ 
+\paragraph{Future work} includes the questions mentioned above, and also  applying these techniques to
+languages that rely on lexical nesting for access
+control such as Javascript \cite{ooToSecurity},
+rather than public/private annotations;
+languages that support ownership types that can be leveraged for
+verification
+\cite{leveragingRust-oopsla2019,RustHornBelt-pldi2022,verus-oopsla2023},
+and languages from the
+functional tradition such as OCAML, which is gaining imperative
+feature such as ownership and uniqueness \cite{funk-ownership-oopsla2024,ocaml-ownership-icfp2024}. 
+%
+%Similarly there is potential in applying this approach within
+%proof systems based e.g.\ on separation logic \cite{cerise-jacm2024},
+%and post-Hoare logics like incorrectness logic \cite{IncorrectnessLogic} or
+%hyperlogics \cite{compositional-hypersafety-oopsla2022,hyper-hoare-pldi2024},
+%and to verifying (and ``disentangling'') concurrent programs \cite{seplog-disentanglelment-popl2024}.
+%
+We expect our techniques can be incorporated into existing program
+verification tools \cite{Cok2022}, especially those attempting
+gradual verification \cite{gradual-verification-popl2024},
+thus paving the way towards practical verification for
+the open world.
+
 
  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-% % % % % % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %
-% \paragraph{Guarantee Reasoning}
-
-
-
-% % % % % % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %% % % %
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-%%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
-%%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% %%%% 
-
-
-%\paragraph{Protection vs.\ Ownership}
-
-%Finally it is interesting to compare our approach to tamed effects
-Tamed effects are also related to
-Ownership Types 
-\cite{simpleOwnership,existOwn},
-which
-enforce  encapsulation boundaries
-to protect internal implementations
-\cite{ownalias,NobPotVitECOOP98}.
-%Banerjee and Naumann demonstrated that by
-By ensuring confinement, ownership
-systems can enforce representation independence (a property close to
-defensive consistency)
-%some time ago
-\cite{Banerjee:2005}.
-%
-Ownership is central to Rust's memory safety
-\cite{RustPL2,RustBelt18},
-Scala's Concurrency \cite{ScalaCapabilities,ScalaLightweightAffine},
-Java heap analyses \cite{PotterNC98,HillNP02,MitECOOP06}. and
-program verification
-\cite{BoyLisShrPOPL03,hypervisor} including Spec$\#$
-\cite{BarLeiSch05,BarDelFahLeiSch04} and universes
-\cite{DieDroMue07,DietlMueller05,LuPotPOPL06},
-Borrowable Fractional Ownership \cite{borrow-fract-vmcai2024},
-and recently integrated into OCAML \cite{ocaml-ownership-icfp2024,funk-ownership-oopsla2024}.
-
-%% By enforcing encapsulation, \sd{all} % used to say both
-%% these approaches share similarity with techniques such as
-%% ownership types 
-%% which also
-
-
-
-
-Ownership ensures that access to an object's \textit{owned} 
-subcomponents is mediated via their owner.
-Compared to our \textit{protected} capabilities,
-owned capabilities are owned with respect to all
-modules in the system, 
-while protected capabilites are protected relative to some
-protecting module,
-Conversely, we can characterise ownership as
-protection taming \textit{all} references to an object: in practice,
-that requires the capability we are protecting is unique at the time
-protection is established: \textit{ownership $==$ protection $+$
-  uniqueness}.  This relationship presents several potential avenues
-for further work: first, where we ensure protection via
-a Hoare logic,
-weakening some 
-of ownership's guarantees may be able to ensure protection via a
-straightforward type-based approach.
-Second,  tightening some
-rules in our current Hoare logic (e.g.\ Def. \ref{def:chainmail-protection-from})
-may lead to a native  Hoare logic of ownership.
-Third, recent approaches like
-%
-%% Whereas ownership types typically impose a geometric structure 
-%% on references over the whole heap, a group of recent approaches have 
-%% focussed on a local view of the sharing or accessibility of objects.
-%
-the Alias
-Calculus \cite{meyer-alias-calculus-scp2015,meyer-auto-alias-sncs2020},
-Reachability
-Types \cite{romf-reachability-types-oopsla2021,rompf-poly-reachability-oopsla2024}
-and Capturing
-Types \cite{odersky-capturing-types-toplas2023,scoped-effects-oopsla2022,odersky-reach-prog2024}
-abstract fine-grained method-level descriptions of 
-references and aliases flowing into and out of methods and fields,
-and likely accumulate enough information to express 
-protection. Effect exclusion
-\cite{fx-exclusion-icfp2023} directly prohibits nominated
-effects, but within a closed, fully-typed world.
-
 
 %in one or more of these frameworks could be fruitful future work.
 
