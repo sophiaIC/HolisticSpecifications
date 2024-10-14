@@ -46,7 +46,7 @@ Module SpecSatisfaction.
   | spec_method : forall M C meth A1 A2 A3 CDef m,
       snd M C = Some CDef ->
       c_meths CDef meth = Some m ->
-      M ⊢ ⦃ a_typs ((this, t_cls C) :: (params m)) ∧ A1 ⦄
+      M ⊢ ⦃ a_typs ((result, rtrn m)::(this, t_cls C) :: (params m)) ∧ A1 ⦄
         (body m)
         ⦃ A2 ∧ (adapt A2 (result :: nil)) ⦄ ||
         ⦃ A3 ⦄ ->
@@ -57,7 +57,7 @@ Module SpecSatisfaction.
           snd M C = Some CDef ->
           c_meths CDef meth = Some m ->
           M ⊢
-            ⦃ a_typs ((this, t_cls C) :: (params m)) ∧
+            ⦃ a_typs ((result, rtrn m)::(this, t_cls C) :: (params m)) ∧
                 (a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs)) ∧ A ⦄
             (body m)
             ⦃ A ∧ (adapt A (result :: nil)) ⦄ || ⦃ A ⦄) ->

@@ -47,15 +47,17 @@ TODO: Need to discuss below. Clarification. Do the variables in the spec refer t
 i.e. if we overwrite the variable in the method body, but don't modify the original object, is the overwrite reflected in the post?
    *)
 
-  Inductive has_m_spec : module -> asrt -> cls -> mth -> list (var * ty) -> asrt -> asrt -> Prop :=
+  Inductive has_m_spec : module -> asrt -> cls -> mth ->
+                         list (var * ty) -> ty -> asrt -> asrt -> Prop :=
   | mspec : forall M P C ps Q A m mDef CDef pSubst,
       snd M C = Some CDef ->
       c_meths CDef m = Some mDef ->
       map snd ps = map snd (params mDef) ->
       zip (map (fun xC => e_var (fst xC)) ps) (map fst (params mDef)) = Some pSubst ->
-      (* construct the substitution for parameters *)
       In (P, Q, A) (spec mDef) ->
-      has_m_spec M (listSubst P pSubst) C m ps (listSubst Q pSubst) (listSubst A pSubst).
+      has_m_spec
+        M (listSubst P pSubst) C m ps (rtrn mDef)
+        (listSubst Q pSubst) (listSubst A pSubst).
 
   Inductive has_l_spec : module -> l_spec -> Prop :=
   | lspec_base : forall S Cdefs, has_l_spec (S, Cdefs) S
@@ -373,7 +375,14 @@ Because of this, we can preserve the usual assignment rule from HL.
       M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ ->
       M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄
 
-  | h_read_type : forall M e T x, M ⊢ ⦃ a_ (e_typ e T) ⦄ (s_read x e) ⦃ a_ (e_typ (e_ x) T) ⦄.
+  | h_read_type : forall M e T x, M ⊢ ⦃ a_ (e_typ e T) ⦄ (s_read x e) ⦃ a_ (e_typ (e_ x) T) ⦄
+
+  | h_read_prt1 : forall M e1 x e2, exp_not_in e1 x ->
+                               M ⊢ ⦃ a_prt e1 ⦄ (s_read x e2) ⦃ a_prt e1 ⦄
+
+  | h_read_prt2 : forall M e1 x e2 A, M ⊢ A ⊆ a_prt e1  ->
+                                 M ⊢ A ⊆ a_prt e2 ->
+                                 M ⊢ ⦃ A ⦄ (s_read x e2) ⦃ a_prt e1 ⦄.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {
@@ -405,8 +414,8 @@ Because of this, we can preserve the usual assignment rule from HL.
   (* I'm pretty sure hq_types2 is derivable from hq_types1, hq_conseq, and hq_mid
      remove?
    *)
-  | hq_types2 : forall M s x T A,
-      M ⊢ ⦃ a_ (e_typ (e_ x) T) ⦄ s ⦃ a_ (e_typ (e_ x) T) ⦄ || ⦃ A ⦄
+  | hq_types2 : forall M s e T A,
+      M ⊢ ⦃ a_ (e_typ e T) ⦄ s ⦃ a_ (e_typ e T) ⦄ || ⦃ A ⦄
 
   (*)| hq_types2 : forall M A1 s A2 A x T,
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
@@ -455,22 +464,22 @@ Because of this, we can preserve the usual assignment rule from HL.
     realistitcally the invariant should not contain arguments to the method calls???
    *)
 
-  | hq_call_int : forall M A1 C m ys A2 A3 y0 u xs xCs yCs yxs,
-      has_m_spec M A1 C m xCs A2 A3 ->
+  | hq_call_int : forall M A1 C m ys T A2 A3 y0 u xs xCs yCs yxs,
+      has_m_spec M A1 C m xCs T A2 A3 ->
       xs = map fst xCs ->
       zip ys (map snd xCs) = Some yCs ->
       zip (map e_var ys) xs = Some yxs ->
-      M ⊢ ⦃ (a_typs ((y0, t_cls C)::xCs)) ∧
+      M ⊢ ⦃ (a_typs ((result, T)::(y0, t_cls C)::xCs)) ∧
               [e_ y0 /s this](listSubst A1 yxs) ⦄
         s_call u y0 m ys
         ⦃ [e_ u /s result][e_ y0 /s this] (listSubst A2 yxs) ⦄ || ⦃ A3 ⦄
 
-  | hq_call_int_adapt : forall M A1 C m ys A2 A3 y0 u xs xCs yCs yxs,
-      has_m_spec M A1 C m xCs A2 A3 ->
+  | hq_call_int_adapt : forall M A1 C m ys T A2 A3 y0 u xs xCs yCs yxs,
+      has_m_spec M A1 C m xCs T A2 A3 ->
       xs = map fst xCs ->
       zip ys (map snd xCs) = Some yCs ->
       zip (map e_var ys) xs = Some yxs ->
-      M ⊢ ⦃ (a_typs ((y0, t_cls C)::xCs)) ∧
+      M ⊢ ⦃ (a_typs ((result, T)::(y0, t_cls C)::xCs)) ∧
               adapt ([e_ y0 /s this](listSubst A1 yxs)) (y0 :: ys) ⦄
         s_call u y0 m ys
         ⦃ adapt ([e_ u /s result][e_ y0 /s this] (listSubst A2 yxs)) (y0 :: ys) ⦄ || ⦃ A3 ⦄

@@ -628,6 +628,10 @@ e : C
         apply hq_conseq with (A4:=a_ (e_typ (e_ x) T))(A5:=a_ (e_typ (e_ x) T))(A6:=A);
         [apply hq_types2| | |];
         try solve [apply entails_refl]
+    | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ a_ (e_typ ?e ?T) ⦄ || ⦃ ?A ⦄ ] =>
+        apply hq_conseq with (A4:=a_ (e_typ e T))(A5:=a_ (e_typ e T))(A6:=A);
+        [apply hq_types2| | |];
+        try solve [apply entails_refl]
     end.
 
   Ltac by_assumption :=
@@ -718,6 +722,14 @@ e : C
     [apply type_of_accountBalance|];
     assert (HshopAccount : ⟦ acc ↦ t_cls Account ⟧_∈ typeOf_f Mgood Shop);
     [apply type_of_shopAcc|].
+
+  Lemma entails_different_type_neq :
+    forall M e1 e2 T1 T2, T1 <> T2 ->
+                     M ⊢ ((a_ e_typ e1 T1) ∧ (a_ e_typ e2 T2)) ⊆ ¬ (a_ (e_eq e1 e2)).
+  Proof.
+    intros.
+    
+  Admitted.
 
   Lemma I1 :
     spec_sat Mgood S1.
@@ -817,9 +829,41 @@ e : C
         *** (* return false *)
           unfold ret.
           apply hq_mid.
-          apply h_read_prt.
+          admit.
 
         ***
+          match goal with
+          | [|- ?M ⊢ ⦃ ?A1 ⦄ _ ⦃ a_prt_frm ?e ?x ⦄ || ⦃ ?A3 ⦄ ] =>
+              eapply hq_conseq with (A4:=A1)
+                                    (A5:=a_ (e_typ x t_bool) ∧ (a_ (e_typ e (t_cls Key))))
+                                    (A6:=A3)
+          end.
+
+          ****
+            split_post_condition_by_conjunction.
+            by_hq_types2;
+              intros_entails;
+              repeat asrt_sat_auto_destruct_conj;
+              eauto.
+            by_hq_types2;
+              intros_entails;
+              repeat asrt_sat_auto_destruct_conj;
+              eauto.
+            eapply apply_entails;
+              [apply keyHasTypeKey|eauto].
+
+          ****
+            intros_entails;
+              repeat asrt_sat_auto_destruct_conj.
+
+          ****
+            intros_entails;
+              repeat asrt_sat_auto_destruct_conj.
+            eapply apply_entails;
+              [apply entails_prt_bool|asrt_sat_auto_destruct_conj; eauto].
+
+          ****
+            apply entails_refl.
 
       **
         destruct H;
@@ -837,7 +881,7 @@ e : C
         subst;
         simpl.
 
-      **
+      ** (* Account *)
         simpl_types.
         apply destruct_accountMths in H0;
           destruct H0;
@@ -865,7 +909,7 @@ e : C
             ******
               eapply h_strengthen.
 
-              
+
       **
         simpl in *.
         try match goal with
