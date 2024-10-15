@@ -78,7 +78,7 @@ Module Assert.
 
 
   Inductive sat : module -> config -> asrt -> Prop :=
-  | sat_exp : forall M σ e, eval M σ e v_true ->
+  | sat_exp : forall M σ e, eval M σ e (v_true) ->
                        sat M σ (a_exp e)
 
   | sat_and : forall M σ A1 A2, sat M σ A1 ->
@@ -95,7 +95,7 @@ Module Assert.
                        sat M σ (¬ A)
 
   | sat_all : forall M σ C A, (forall α, glob_reachable α σ ->
-                               eval M σ (e_typ (e_val (v_addr α)) (t_cls C)) v_true ->
+                               eval M σ (e_typ (e_val (v_addr α)) (t_cls C)) (v_true) ->
                                sat M σ ([α /s 0] A)) ->
                          sat M σ (a_all C A)
 

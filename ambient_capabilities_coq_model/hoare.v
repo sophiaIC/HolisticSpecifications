@@ -53,7 +53,8 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
       snd M C = Some CDef ->
       c_meths CDef m = Some mDef ->
       map snd ps = map snd (params mDef) ->
-      zip (map (fun xC => e_var (fst xC)) ps) (map fst (params mDef)) = Some pSubst ->
+      zip (map (fun xC => e_var (fst xC)) ps)
+        (map fst (params mDef)) = Some pSubst ->
       In (P, Q, A) (spec mDef) ->
       has_m_spec
         M (listSubst P pSubst) C m ps (rtrn mDef)
@@ -114,7 +115,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     end.
 
   Definition asrt_frm_list {A : Type} (f : A -> asrt)(ys : list A) :=
-    fold_left a_and (map f ys) a_true.
+    fold_left a_and (map f ys) (a_true).
 
 
   Definition prt_frms (e : exp)(ys : list var) :=
@@ -242,6 +243,29 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     | _ => True
     end.
 
+  Fixpoint does_not_assign_to s x :=
+    match s with
+    | s_read y _ => x <> y
+    | s1 ;; s2 => does_not_assign_to s1 x /\ does_not_assign_to s2 x
+    | s_call y _ _ _ => x <> y
+    | s_if _ s1 s2 => does_not_assign_to s1 x /\ does_not_assign_to s2 x
+    | s_hole y => x <> y
+    | s_new y _ => x <> y
+    | _  => True
+    end.
+  Print exp.
+  Fixpoint simple_exp e :=
+    match e with
+    | e_if _ _ _ => False
+    | e_ghost _ _ _ => False
+    | e_eq e1 e2 => simple_exp e1 /\ simple_exp e2
+    | e_fld e' _ => simple_exp e'
+    | e_typ e' _ => simple_exp e'
+    | e_plus e1 e2 => simple_exp e1 /\ simple_exp e2
+    | e_minus e1 e2 => simple_exp e1 /\ simple_exp e2
+    | _ => True
+    end.
+
   Inductive hoare_extension : HoareTriple stmt :=
 
     (*
@@ -344,8 +368,8 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** ----------------- *)
   (** M ⊢ ⦃ [y.f / x] P ⦄  ⦃ P ⦄  *)
 
-  | h_read : forall M x y f P,
-      M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x (e_fld (e_ y) f) ⦃ P ⦄
+  (*)| h_read : forall M x y f P,
+      M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x (e_fld (e_ y) f) ⦃ P ⦄*)
 
   (** M ⊢ ⦃ P ∧ e ⦄ s1 ⦃ Q ⦄ *)
   (** M ⊢ ⦃ P ∧ ¬ e ⦄ s2 ⦃ Q ⦄ *)
@@ -363,12 +387,22 @@ Because of this, we can preserve the usual assignment rule from HL.
   | h_write_prt_frm : forall M w x y z f,
       M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ∧ a_prt_frm (e_ w) (e_ z) ⦄ s_write y f (e_ z) ⦃ a_prt_frm (e_ w) (e_ x) ⦄
 
+  | h_write_prt1 : forall M e1 x f e2,
+      M ⊢ ⦃ a_prt e1 ∧ a_prt e2 ⦄ s_write x f e2 ⦃ a_prt e1 ⦄
+
+  | h_write_prt2 : forall M e x f y,
+      simple_exp e ->
+      M ⊢ ⦃ a_prt e ∧ (¬ a_ (e_eq e (e_fld (e_ x) f))) ⦄ s_write x f y ⦃ a_prt e ⦄
+
 
   (** -----------------------------*)
   (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
 
-  | h_write_prt : forall M x y f z,
-      M ⊢ ⦃ a_prt (e_ x) ⦄ (s_write y f z) ⦃ a_prt (e_ x) ⦄
+  | h_prot1 : forall M e z s,
+      call_free s ->
+      does_not_assign_to s z ->
+      M ⊢ ⦃ a_ (e_eq e (e_ z)) ⦄ s ⦃ a_ (e_eq e (e_ z)) ⦄ ->
+      M ⊢ ⦃ a_prt e ⦄ s ⦃ a_prt e ⦄
 
   | h_seq : forall M A1 A2 A3 s1 s2,
       M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ ->

@@ -32,10 +32,11 @@ Module LanguageDefinition.
   | c_id : nat -> cls.
 
   Inductive var :=
-  | v_id : nat -> var.
+  | v_spec : nat -> var
+  | v_prog : nat -> var.
 
-  Definition this := v_id 0.
-  Definition result := v_id 1.
+  Definition this := v_prog 0.
+  Definition result := v_prog 1.
 
   Inductive mdl :=
   | mdl_id : nat -> mdl.
@@ -59,11 +60,11 @@ Module LanguageDefinition.
   | e_plus : exp -> exp -> exp
   | e_minus : exp -> exp -> exp.
 
-  Definition v_true := (v_bool true).
-  Definition v_false := (v_bool false).
-  Definition e_true := (e_val v_true).
-  Definition e_false := (e_val v_false).
-  Definition e_null := (e_val v_null).
+  Notation "'v_true'" := (v_bool true)(at level 37).
+  Notation "'v_false'" := (v_bool false)(at level 37).
+  Notation "'e_true'" := (e_val (v_bool true))(at level 37).
+  Notation "'e_false'" := (e_val (v_bool false)).
+  Notation "'e_null'" := (e_val v_null).
 
   Notation "'v_' v" := (e_val v)(at level 38).
   Notation "e ∙ f" := (e_fld e f)(at level 38).
@@ -200,39 +201,54 @@ Module LanguageDefinition.
     {
       eqb := fun x1 x2 =>
                match x1, x2 with
-               | v_id n1, v_id n2 => n1 =? n2
+               | v_spec n1, v_spec n2 => n1 =? n2
+               | v_prog n1, v_prog n2 => n1 =? n2
+               | _, _ => false
                end
     }.
+  Next Obligation.
+    intros;
+    split;
+      intros;
+      crush.
+  Defined.
+  Next Obligation.
+    intros;
+    split;
+      intros;
+      crush.
+  Defined.
   Next Obligation.
     intros; destruct a; apply Nat.eqb_refl.
   Defined.
   Next Obligation.
-    intros; destruct a1; destruct a2; apply Nat.eqb_sym.
+    destruct a1, a2; try solve [apply Nat.eqb_sym];
+      auto.
+  Defined.
+  Next Obligation.
+    intros; destruct a1, a2;
+      try solve [crush];
+      try solve [apply Nat.eqb_eq in H;
+                 subst;
+                 auto].
   Defined.
   Next Obligation.
     intros;
       destruct a1;
       destruct a2;
-      apply -> Nat.eqb_eq in H;
-      subst; auto.
-  Defined.
-  Next Obligation.
-    intros;
-      destruct a1;
-      destruct a2;
+      try solve [crush];
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
   Next Obligation.
-    intros;
-      destruct a1;
-      destruct a2;
-      rewrite Nat.eqb_neq;
-      crush.
+    intros; destruct a1; destruct a2;
+      try solve [crush];
+      apply Nat.eqb_neq;
+        crush.
   Defined.
   Next Obligation.
-    destruct a1 as [n];
-      destruct a2 as [m];
+    destruct a1 as [n|n];
+      destruct a2 as [m|m];
       destruct (Nat.eq_dec n m) as [Heq|Hneq];
       subst;
       auto;
@@ -503,8 +519,8 @@ Module LanguageDefinition.
   Notation "A1 '∨' A2" := (a_or A1 A2)(at level 39).
   Definition arr A1 A2 := ¬ A1 ∨ A2.
   Notation "A1 ⟶ A2" :=(arr A1 A2)(at level 40).
-  Definition a_true := (a_ (e_true)).
-  Definition a_false := (a_ (e_false)).
+  Notation "'a_true'" := (a_ (e_true))(at level 37).
+  Notation "'a_false'" := (a_ (e_false))(at level 37).
   Notation "e1 ≠ e2" := (¬ a_ (e_eq e1 e2))(at level 37).
 
   #[global] Program Instance eqbAsrt : Eq asrt :=
@@ -548,8 +564,13 @@ Module LanguageDefinition.
   | S_mth : cls -> mth -> list (var * ty) -> asrt -> asrt -> asrt -> l_spec
   | S_and : l_spec -> l_spec -> l_spec.
 
+  Inductive visibility : Type :=
+  | public
+  | private.
+
   Record methDef := meth{
                         spec : list (asrt * asrt * asrt);
+                        vis : visibility;
                         params : list (var * ty);
                         body : stmt;
                         rtrn : ty

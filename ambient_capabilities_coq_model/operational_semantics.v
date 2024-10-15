@@ -42,20 +42,20 @@ Module OperationalSemantics.
   | eval_class : forall M σ e T α,
       eval M σ e (v_addr α) ->
       typeOf_v σ (v_addr α) T ->
-      eval M σ (e_typ e T) v_true
+      eval M σ (e_typ e T) (v_true)
 
   | eval_eq : forall M σ e1 e2 v,
       eval M σ e1 v ->
       eval M σ e2 v ->
-      eval M σ (e_eq e1 e2) v_true
+      eval M σ (e_eq e1 e2) (v_true)
 
   | eval_if_true : forall M σ e e1 e2 v1,
-      eval M σ e v_true ->
+      eval M σ e (v_true) ->
       eval M σ e1 v1 ->
       eval M σ (e_if e e1 e2) v1
 
   | eval_if_false : forall M σ e e1 e2 v2,
-      eval M σ e v_false ->
+      eval M σ e (v_false) ->
       eval M σ e2 v2 ->
       eval M σ (e_if e e1 e2) v2.
 
@@ -94,7 +94,7 @@ Module OperationalSemantics.
       (* TODO: check e is the correct type *)
       typeOf (frm lcl (s_read x e) ⋅ ψ, χ) x T ->
       eval M (frm lcl (s_read x e) ⋅ ψ, χ) e v ->
-      eval M (frm lcl (s_read x e) ⋅ ψ, χ) (e_typ e T) v_true ->
+      eval M (frm lcl (s_read x e) ⋅ ψ, χ) (e_typ e T) (v_true) ->
       reduction M (frm lcl (s_read x e) ⋅ ψ, χ) (frm (⟦ x ↦ (v, T) ⟧  lcl) s_empty ⋅ ψ, χ)
 
   | r_write : forall M χ x e v f lcl l ψ C flds CDef Tf,
@@ -136,13 +136,13 @@ Module OperationalSemantics.
         (frm (⟦ x ↦ (v, T) ⟧ lcl') s_empty ⋅ ψ, χ)
 
   | r_if1 : forall M χ lcl e s1 s2 ψ,
-      eval M (frm lcl (s_if e s1 s2) ⋅ ψ, χ) e v_true ->
+      eval M (frm lcl (s_if e s1 s2) ⋅ ψ, χ) e (v_true) ->
       reduction M
         (frm lcl (s_if e s1 s2) ⋅ ψ, χ)
         (frm lcl s1 ⋅ ψ, χ)
 
   | r_if2 : forall M χ lcl e s1 s2 ψ,
-      eval M (frm lcl (s_if e s1 s2) ⋅ ψ, χ) e v_false ->
+      eval M (frm lcl (s_if e s1 s2) ⋅ ψ, χ) e (v_false) ->
       reduction M
         (frm lcl (s_if e s1 s2) ⋅ ψ, χ)
         (frm lcl s2 ⋅ ψ, χ)
