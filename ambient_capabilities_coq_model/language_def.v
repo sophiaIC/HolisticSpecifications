@@ -58,7 +58,8 @@ Module LanguageDefinition.
   | e_if : exp -> exp -> exp -> exp
   | e_eq : exp -> exp -> exp
   | e_plus : exp -> exp -> exp
-  | e_minus : exp -> exp -> exp.
+  | e_minus : exp -> exp -> exp
+  | e_lt : exp -> exp -> exp.
 
   Notation "'v_true'" := (v_bool true)(at level 37).
   Notation "'v_false'" := (v_bool false)(at level 37).
@@ -560,7 +561,7 @@ Module LanguageDefinition.
    ***)
 
   Inductive l_spec :=
-  | S_inv : list (var * cls) -> asrt -> l_spec
+  | S_inv : list (var * ty) -> asrt -> l_spec
   | S_mth : cls -> mth -> list (var * ty) -> asrt -> asrt -> asrt -> l_spec
   | S_and : l_spec -> l_spec -> l_spec.
 

@@ -64,7 +64,7 @@ Module SpecSatisfaction.
             ⦃ a_typs ((result, rtrn m)::
                       (this, t_cls C) ::
                       (params m)) ∧
-                (a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs)) ∧ A ⦄
+                (a_typs xCs) ∧ A ⦄
             (body m)
             ⦃ A ∧ (adapt A (result :: nil)) ⦄ || ⦃ A ⦄) ->
       spec_sat M (S_inv xCs A).

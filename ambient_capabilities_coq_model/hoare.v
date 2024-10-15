@@ -240,6 +240,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     | e_eq e1 e2 => exp_not_in e1 x /\ exp_not_in e2 x
     | e_plus e1 e2 => exp_not_in e1 x /\ exp_not_in e2 x
     | e_minus e1 e2 => exp_not_in e1 x /\ exp_not_in e2 x
+    | e_lt e1 e2 => exp_not_in e1 x /\ exp_not_in e2 x
     | _ => True
     end.
 
@@ -263,6 +264,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     | e_typ e' _ => simple_exp e'
     | e_plus e1 e2 => simple_exp e1 /\ simple_exp e2
     | e_minus e1 e2 => simple_exp e1 /\ simple_exp e2
+    | e_lt e1 e2 => simple_exp e1 /\ simple_exp e2
     | _ => True
     end.
 
@@ -416,7 +418,11 @@ Because of this, we can preserve the usual assignment rule from HL.
 
   | h_read_prt2 : forall M e1 x e2 A, M ⊢ A ⊆ a_prt e1  ->
                                  M ⊢ A ⊆ a_prt e2 ->
-                                 M ⊢ ⦃ A ⦄ (s_read x e2) ⦃ a_prt e1 ⦄.
+                                 M ⊢ ⦃ A ⦄ (s_read x e2) ⦃ a_prt e1 ⦄
+
+  | h_or : forall M A1 A2 A3 s, M ⊢ ⦃ A1 ⦄ s ⦃ A3 ⦄ ->
+                           M ⊢ ⦃ A2 ⦄ s ⦃ A3 ⦄ ->
+                           M ⊢ ⦃ A1 ∨ A2 ⦄ s ⦃ A3 ⦄.
 
   #[global] Instance hoare_triple_stmt : HoareTriple stmt :=
     {
@@ -522,7 +528,7 @@ Because of this, we can preserve the usual assignment rule from HL.
       has_l_spec M (S_inv xCs A) ->
       M ⊢
         ⦃ a_extl (e_ y0) ∧
-            a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
+            a_typs xCs ∧
             (adapt A (y0::ys)) ⦄
         s_call u y0 m ys
         ⦃ (adapt A (y0::ys)) ⦄ || ⦃ A ⦄
@@ -531,7 +537,7 @@ Because of this, we can preserve the usual assignment rule from HL.
       has_l_spec M (S_inv xCs A) ->
       M ⊢
         ⦃ a_extl (e_ y0) ∧
-            a_typs (map (fun xC => (fst xC, t_cls (snd xC))) xCs) ∧
+            a_typs xCs ∧
             A ∧
             (adapt A (y0::ys)) ⦄
         s_call u y0 m ys

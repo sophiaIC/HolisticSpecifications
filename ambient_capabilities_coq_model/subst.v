@@ -31,6 +31,9 @@ Module SubstDefn.
           | e_typ e' C => e_typ (sbst' e' n α) C
           | e_ghost e0 g e1 => e_ghost (sbst' e0 n α) g (sbst' e1 n α)
           | e_if e0 e1 e2 => e_if (sbst' e0 n α) (sbst' e1 n α) (sbst' e2 n α)
+          | e_plus e1 e2 => e_plus (sbst' e1 n α) (sbst' e2 n α)
+          | e_minus e1 e2 => e_minus (sbst' e1 n α) (sbst' e2 n α)
+          | e_lt e1 e2 => e_lt (sbst' e1 n α) (sbst' e2 n α)
           | _ => e
           end
     }.
@@ -79,6 +82,9 @@ Module SubstDefn.
           | e_typ e0 C => e_typ (sbst' e0 x e') C
           | e_ghost e0 g e1 => e_ghost (sbst' e0 x e') g (sbst' e1 x e')
           | e_if e0 e1 e2 => e_if (sbst' e0 x e') (sbst' e1 x e') (sbst' e2 x e')
+          | e_plus e1 e2 => e_plus (sbst' e1 x e') (sbst' e2 x e')
+          | e_minus e1 e2 => e_minus (sbst' e1 x e') (sbst' e2 x e')
+          | e_lt e1 e2 => e_lt (sbst' e1 x e') (sbst' e2 x e')
           | _ => e
           end
     }.

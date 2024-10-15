@@ -22,6 +22,7 @@ Module OperationalSemantics.
     | (a, b) :: t => ⟦ a ↦ b ⟧ (list_to_map t)
     end.
 
+  Open Scope Z_scope.
 
   Inductive eval : module -> config -> exp -> val -> Prop :=
   | eval_val : forall M σ v, eval M σ (v_ v) v
@@ -57,7 +58,23 @@ Module OperationalSemantics.
   | eval_if_false : forall M σ e e1 e2 v2,
       eval M σ e (v_false) ->
       eval M σ e2 v2 ->
-      eval M σ (e_if e e1 e2) v2.
+      eval M σ (e_if e e1 e2) v2
+
+  | eval_lt : forall M σ e1 e2 i1 i2,
+        eval M σ e1 (v_int i1) ->
+        eval M σ e2 (v_int i2) ->
+        i1 < i2 ->
+        eval M σ (e_lt e1 e2) (v_true)
+
+  | eval_plus : forall M σ e1 e2 i1 i2,
+      eval M σ e1 (v_int i1) ->
+      eval M σ e2 (v_int i2) ->
+      eval M σ (e_lt e1 e2) (v_int (i1 + i2))
+
+  | eval_minus : forall M σ e1 e2 i1 i2,
+      eval M σ e1 (v_int i1) ->
+      eval M σ e2 (v_int i2) ->
+      eval M σ (e_lt e1 e2) (v_int (i1 - i2)).
 
 
   Fixpoint zip_to_map {A B C : Type}`{Eq A}`{Eq B} (l1 : list A)(l2 : list B)(m : partial_map B C) : option (partial_map A C) :=
@@ -164,6 +181,8 @@ Module OperationalSemantics.
       reduction M
         (frm lcl (s_seq s1 s2) ⋅ ψ, χ)
         (frm lcl (seq s s2) ⋅ ψ, χ).
+
+  Close Scope Z_scope.
 
   Inductive sublist `{A : Type} : list A -> list A -> Prop :=
   | sub_refl : forall l, sublist l l

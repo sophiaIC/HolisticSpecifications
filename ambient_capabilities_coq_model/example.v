@@ -243,7 +243,7 @@ e : C
 
   Definition a := v_spec 11.
 
-  Definition S1 := S_inv ((a, Account)::nil) (a_prt (e_fld (e_ a) key)).
+  Definition S1 := S_inv ((a, t_cls Account)::nil) (a_prt (e_fld (e_ a) key)).
 
   Definition Mgood : module := (S1,
                                  ⟦ Shop ↦ ShopDef ⟧
@@ -372,7 +372,7 @@ e : C
     end.
 
   Lemma sat_excluded_middle :
-    forall M σ A, sat M σ A \/ nsat M σ A.
+    forall M σ A, sat M σ (A ∨ ¬ A).
   Proof.
   Admitted.
 
@@ -394,7 +394,13 @@ e : C
     forall M A, M ⊢ a_true ⊆ (A ∨ ¬ A).
   Admitted.
 
-  
+  Lemma or_and_dist1 :
+    forall M A1 A2 A, M ⊢ (A1 ∨ A2) ∧ A ⊆ (A1 ∧ A) ∨ (A2 ∧ A).
+  Admitted.
+
+  Lemma or_and_dist2 :
+    forall M A1 A2 A, M ⊢ (A1 ∧ A) ∨ (A2 ∧ A) ⊆ (A1 ∨ A2) ∧ A.
+  Admitted.
 
   Lemma entails_unfold :
     forall M A1 A2, M ⊢ A1 ⊆ A2 ->
@@ -422,6 +428,30 @@ e : C
   Qed.
 
   #[global] Hint Resolve entails_refl : assert_db.
+
+  Lemma intro_ex_middle_hoare :
+    forall M A A1 A2 s, M ⊢ ⦃ (A ∨ ¬ A) ∧ A1 ⦄ s ⦃ A2 ⦄ ->
+                   M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄.
+  Proof.
+    intros.
+    eapply h_strengthen;
+      [eassumption|];
+      intros_entails;
+      asrt_sat_auto_destruct_conj;
+      auto.
+    apply sat_excluded_middle.
+  Qed.
+
+  Lemma split_excluded_middle_hoare :
+    forall M A A1 A2 s, M ⊢ ⦃ (A ∧ A1) ∨ (¬ A ∧ A1) ⦄ s ⦃ A2 ⦄ ->
+                   M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄.
+  Proof.
+    intros.
+    apply intro_ex_middle_hoare with (A:=A).
+    eapply h_strengthen;
+      [|apply or_and_dist1];
+      auto.
+  Qed.
 
   Ltac hq_conj_post_conseq :=
     match goal with
@@ -815,7 +845,23 @@ e : C
                repeat asrt_sat_auto_destruct_conj;
                auto].
 
-  Lemma I1 :
+  Lemma entails_eq_trans :
+    forall M e1 e2 e3, M ⊢ a_ (e_eq e1 e2) ∧ a_ (e_eq e2 e3) ⊆ a_ (e_eq e1 e3).
+  Admitted.
+
+  Lemma entails_prt_eq :
+    forall M e1 e2, M ⊢ a_ (e_eq e1 e2) ∧ a_prt e1 ⊆ a_prt e2.
+  Admitted.
+
+  Lemma entails_prt_null :
+    forall M, M ⊢ a_prt e_null ⊆ a_false.
+  Admitted.
+
+  Lemma hoare_false :
+    forall M s A, M ⊢ ⦃ a_false ⦄ s ⦃ A ⦄.
+  Admitted.
+
+  Lemma I2 :
     spec_sat Mgood S1.
   Proof.
     setup_shop.
@@ -1021,19 +1067,43 @@ e : C
 
           apply hq_if.
 
-          ****
-            apply_hq_sequ_with_mid_eq_fst.
+          **** (* true branch, i.e. this.key == null: this.key = k *)
+              match goal with
+              | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
+                  apply hq_sequ with (A2:=A1)
+              end;
+              [|return_false_protects_key].
+              repeat split_post_condition_by_conjunction;
+                try solve [by_hq_types2; by_assumption].
 
-            *****
-              (* true branch, i.e. this.key == null: this.key = k *)
-              admit.
+              apply hq_mid.
+              apply split_excluded_middle_hoare with
+                (A:=a_ e_eq (e_fld (e_ a) key) (e_fld (e_ this) key)).
+              apply h_or.
 
-            *****
+              ***** (* this.key == a.key *)
+                apply h_strengthen with (P1:=a_false);
+                  [apply hoare_false|].
+              intros_entails;
+                repeat asrt_sat_auto_destruct_conj.
+              eapply apply_entails;
+                [eapply entails_prt_null|].
+              eapply apply_entails;
+                [eapply entails_prt_eq|].
+              asrt_sat_auto_destruct_conj; [|eassumption].
+              eapply apply_entails;
+                [eapply entails_eq_trans|].
+              asrt_sat_auto_destruct_conj;
+                eauto.
+              *****
+                eapply h_strengthen;
+                  [apply h_write_prt2; unfold simple_exp; auto|].
+              intros_entails;
+                repeat asrt_sat_auto_destruct_conj.
+
+            ****
               (* false branch, i.e. this.key != null: return false *)
               return_false_protects_key.
-
-          ****
-            return_false_protects_key.
 
       **
         unfold KeyDef in *; simpl in *.
@@ -1042,6 +1112,273 @@ e : C
             inversion H
         end.
 
-  Qed.
+  Admitted.
+
+  Definition b := v_spec 12.
+  
+  Definition S3 := S_inv ((a, t_cls Account)::(b, t_int)::nil) (a_prt (e_fld (e_ a) key) ∧ a_ (e_lt (e_ b) (e_fld (e_ a) balance))). 
+
+
+  Lemma I3 :
+    spec_sat Mgood S3.
+  Proof.
+    setup_shop.
+    apply spec_invariant.
+    intros.
+    apply destruct_Mgood in H;
+      destruct H.
+
+    * (* Shop *)
+      destruct H; subst.
+      apply destruct_shopMths in H0;
+        destruct H0.
+      ** (* buy *)
+        destruct H;
+          subst.
+        simpl.
+        unfold buyBody.
+
+        simpl_types.
+        simpl_conj_hq.
+        unfold simplify_conj;
+          simpl.
+        match goal with
+        | [|- _ ⊢ ⦃ ?A ⦄ _ ⦃ ?Ax ∧ (?Ay ∧ (?Az ∧ ?Aq)) ⦄ || ⦃ ?A' ⦄ ] =>
+            apply hq_conseq with (A4:=A)(A5:=Ax ∧ (Ay ∧ Az))(A6:=A')
+        end;
+        try solve [apply entails_refl];
+        try solve [intros_entails;
+                   repeat asrt_sat_auto_destruct_conj].
+
+        repeat try apply_hq_sequ_with_mid_eq_fst;
+          repeat split_post_condition_by_conjunction;
+          try solve [by_hq_types2; by_assumption];
+
+        try solve [apply hq_mid;
+                   eapply h_strengthen;
+                   [apply h_read_type|];
+                   intros_entails;
+                   repeat asrt_sat_auto_destruct_conj;
+                   eapply apply_entails;
+                   [apply entails_fld_type; eauto|eauto]].
+
+        *** (* itemPrice = item.price *)
+          apply hq_mid.
+          eapply h_strengthen;
+            [apply h_read_prt1|].
+          unfold exp_not_in, itemPrice, a;
+            crush.
+          intros_entails;
+            repeat asrt_sat_auto_destruct_conj;
+            auto.
+        *** (* thisAcc = this.acc *)
+(*          apply hq_mid.
+          eapply h_strengthen;
+            [apply h_read_prt1|].
+          unfold exp_not_in, thisAcc, a;
+            crush.
+          intros_entails;
+            repeat asrt_sat_auto_destruct_conj;
+            auto.*)
+          admit.
+          
+        *** (* oldBalance = thisAcc.balance *)
+          apply hq_mid.
+          eapply h_strengthen;
+            [apply h_read_prt1|].
+          unfold exp_not_in, oldBalance, a;
+            crush.
+          intros_entails;
+            repeat asrt_sat_auto_destruct_conj;
+            auto.
+
+        *** (* tmp = buyer.pay(thisAcc, itemPrice) *)
+          by_call_ext_adapt_strong;
+            try solve [by_assumption].
+          simpl_types.
+          repeat apply entails_conj_split;
+            try solve [by_assumption].
+
+          ****
+            by_assumption.
+            eapply apply_entails;
+              [apply entails_prt_prog_var|].
+            repeat asrt_sat_auto_destruct_conj;
+              auto with assert_db.
+
+          ****
+            by_assumption.
+            eapply apply_entails;
+              [apply entails_prt_intl|].
+            asrt_sat_auto_destruct_conj;
+              eauto.
+            eapply apply_entails;
+              [apply entails_intl_not_extl|];
+              eauto.
+            unfold Mgood;
+              simpl;
+              auto.
+            unfold update, t_update;
+              simpl;
+              crush.
+            auto.
+            eexists; eauto.
+
+          **** (* a.key protected from itemPrice *)
+            by_assumption.
+            eapply apply_entails;
+              [apply entails_prt_int|].
+            repeat asrt_sat_auto_destruct_conj;
+              auto with assert_db.
+            eapply apply_entails;
+              [apply keyHasTypeKey|].
+            auto.
+
+        ***
+          apply hq_if.
+
+          **** (* internal call to this.send *)
+            admit.
+
+          **** (* external call to buyer.tell *)
+            by_call_ext_adapt_strong;
+              try solve [by_assumption].
+            simpl_types.
+            repeat apply entails_conj_split;
+              try solve [by_assumption].
+            by_assumption.
+            eapply apply_entails;
+              [apply entails_prt_prog_var|auto].
+
+        ***
+          return_false_protects_key.
+
+        ***
+          return_false_protects_key.
+
+      ** (* send method*)
+        destruct H;
+          subst.
+        simpl_types.
+        crush.
+
+    *
+      destruct H;
+        destruct H;
+        subst;
+        simpl.
+
+      ** (* Account *)
+        simpl_types.
+        apply destruct_accountMths in H0;
+          destruct H0;
+          destruct H;
+          subst;
+          simpl;
+          simpl_types;
+          simpl_conj_hq.
+
+        *** (* Account::transfer *)
+          unfold simplify_conj;
+            simpl.
+          unfold transferBody.
+
+          apply_hq_sequ_with_mid_eq_fst.
+
+          ****
+            apply hq_if.
+
+            *****
+              match goal with
+              | [|- _ ⊢ ⦃ ?A1 ∧ ?A2 ⦄ _ ⦃ ?A3 ⦄ || ⦃ ?A ⦄ ] =>
+                  apply hq_conseq with (A4:= A2)(A5:=A3)(A6:=A)
+              end;
+            try solve [apply entails_refl];
+            try solve [intros_entails;
+              repeat asrt_sat_auto_destruct_conj;
+              eauto].
+              repeat split_post_condition_by_conjunction;
+                try solve [by_hq_types2; by_assumption].
+
+              apply_hq_sequ_with_mid_eq_fst;
+
+                try solve[
+                repeat split_post_condition_by_conjunction;
+                  try solve [by_hq_types2; by_assumption];
+              eapply hq_mid, h_strengthen;
+                [apply h_write_prt2;
+                 unfold simple_exp; auto|];
+              intros_entails;
+                repeat asrt_sat_auto_destruct_conj;
+              eapply apply_entails;
+                [apply entails_different_type_neq|
+                  asrt_sat_auto_destruct_conj;
+                  [eapply apply_entails;
+                   [apply keyHasTypeKey|auto]
+                  |eapply apply_entails;
+                   [apply balanceHasTypeInt|auto]]];
+                  crush].
+
+              *****
+                repeat split_post_condition_by_conjunction;
+                  try solve [by_hq_types2; by_assumption].
+              return_false_protects_key.
+
+          ****
+            return_false_protects_key.
+
+        *** (* setKey *)
+          unfold simplify_conj;
+            simpl.
+          unfold setKeyBody.
+
+          apply hq_if.
+
+          **** (* true branch, i.e. this.key == null: this.key = k *)
+              match goal with
+              | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
+                  apply hq_sequ with (A2:=A1)
+              end;
+              [|return_false_protects_key].
+              repeat split_post_condition_by_conjunction;
+                try solve [by_hq_types2; by_assumption].
+
+              apply hq_mid.
+              apply split_excluded_middle_hoare with
+                (A:=a_ e_eq (e_fld (e_ a) key) (e_fld (e_ this) key)).
+              apply h_or.
+
+              ***** (* this.key == a.key *)
+                apply h_strengthen with (P1:=a_false);
+                  [apply hoare_false|].
+              intros_entails;
+                repeat asrt_sat_auto_destruct_conj.
+              eapply apply_entails;
+                [eapply entails_prt_null|].
+              eapply apply_entails;
+                [eapply entails_prt_eq|].
+              asrt_sat_auto_destruct_conj; [|eassumption].
+              eapply apply_entails;
+                [eapply entails_eq_trans|].
+              asrt_sat_auto_destruct_conj;
+                eauto.
+              *****
+                eapply h_strengthen;
+                  [apply h_write_prt2; unfold simple_exp; auto|].
+              intros_entails;
+                repeat asrt_sat_auto_destruct_conj.
+
+            ****
+              (* false branch, i.e. this.key != null: return false *)
+              return_false_protects_key.
+
+      **
+        unfold KeyDef in *; simpl in *.
+        match goal with
+        | [ H : ⟦ _ ↦ _ ⟧_∈ (∅) |-_] =>
+            inversion H
+        end.
+
+  Admitted.
 
 End Example.
