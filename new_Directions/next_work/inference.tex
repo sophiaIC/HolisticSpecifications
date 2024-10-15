@@ -4,12 +4,12 @@ satisfies its specification. This is done in three phases.
 
 In the first phase, we develop a logic of triples ${\hproves{M}  {A} {\ stmt\ }{A'} }$,  with % which have 
 the expected meaning, \ie 
-(*) execution of statement $s$ in a state satisfying {the \emph{precondition}}  $A$ will lead to a state satisfying  {the \emph{postcondition}}  $A'$.
+(*) execution of statement $stmt$ in a state satisfying {the \emph{precondition}}  $A$ will lead to a state satisfying  {the \emph{postcondition}}  $A'$.
 These triples only apply to   $stmt$'s  that  do not contain method calls  (even internal) -- this is so, because method calls may contain calls to external methods, and therefore can only be described through quadruples.
-Our triples extend an underlying Hoare logic  (${M \vdash_{ul}  \{A\} {\ s\ } \{A'\} }$) and  introduce new judgements to %  which 
+Our triples extend an underlying Hoare logic  (${M \vdash_{ul}  \{A\} {\ stmt\ } \{A'\} }$) and  introduce new judgements to %  which 
 talk about protection.
 
-In the second phase, we develop a logic of quadruples ${\hprovesN{M}  {A} {\ s\ }{A'} {A''}}$. These promise,  that (*) and  
+In the second phase, we develop a logic of quadruples ${\hprovesN{M}  {A} {\ stmt\ }{A'} {A''}}$. These promise,  that (*) and  
 in addition,   that (**) any intermediate external states reachable during execution of that statement % will
  satisfy the invariant  $A''$.  
 % {We call $A''$ the \midcond.}
@@ -98,6 +98,23 @@ $
 %\\
 %\mbox{\sdN{We had this rule, but I believe  that it is not sound when $y$=$z$, or $x$=$y$}}
 \\ \\
+      {\inferruleSD{\hspace{0.5cm} [\sc{prot-2}]}
+	{ stmt \mbox{ is either $x:=y$ or $x:=y.f$, and $z,z' \txtneq x$ }
+	\\
+	{\hproves{M} 
+						{\ z=e \wedge z=e'\ }
+						{\ stmt }
+						{\ z=e \wedge z=e'\ }
+		 } 
+	}
+	{
+	{\hproves{M} 
+						{\ \protectedFrom{e}{e'}\ }
+						{\ stmt\ }
+						{\ \protectedFrom{e}{e'}}\ }
+	}
+}
+& &
       {\inferruleSD{\hspace{0.5cm} [\sc{prot-3}]}
 	{\sdN{x \txtneq   z	 } }
 	{\hproves{M} 
@@ -106,6 +123,7 @@ $
 						{\ \protectedFrom{x}{z}\ }
 	}
 }
+\\ \\ 
 %
 %\\
 %\\
@@ -120,7 +138,6 @@ $
 %	}
 %}	
 %\\
-& &
         {\inferruleSD{\hspace{0.5cm} [\sc{prot-4}]}
 	{ }
 	{\hproves{M} 
@@ -129,8 +146,8 @@ $
 						{\ \protectedFrom{x}{z} \ }
 	}
 }	
-\\
-\\
+& &
+
         {\inferruleSD{\hspace{0.5cm} [\sc{prot-5}]}
 	{\sdN{y \txtneq   z	 } }
 	{\hproves{M} 
@@ -139,19 +156,19 @@ $
 						{\ \protectedFrom{x}{z} \ }
 	}
 }	
-\\
-\\
-{\inferrule
-	{C \in M}
-	{M \vdash x : C \rightarrow x : \prg{intl}}
-	\quad[\textsc{Intl-M}]
-	}
-& &
-{\inferrule
-	{M \vdash x \neq y \wedge y : \prg{intl} \rightarrow \protectedFrom{x}{y}}
-	{}
-	\quad[\textsc{Prot-Intl}]
-	}
+%\\
+%\\
+%{\inferrule
+%	{C \in M}
+%	{M \vdash x : C \rightarrow x : \prg{intl}}
+%	\quad[\textsc{Intl-M}]
+%	}
+%& &
+%{\inferrule
+%	{M \vdash x \neq y \wedge y : \prg{intl} \rightarrow \protectedFrom{x}{y}}
+%	{}
+%	\quad[\textsc{Prot-Intl}]
+%	}
 \end{array}
 \end{array}
  $
@@ -162,7 +179,7 @@ $
 }}
 
 
-With rule {\sc{embed\_u}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} s \{ A' \}$  whose statement does not contain a method call, and which 
+With rule {\sc{embed\_u}} in Fig. \ref{f:underly},  any assertion $M \vdash_{ul} \{ A \} stmt \{ A' \}$  whose statement does not contain a method call, and which 
 can be proven in the underlying Hoare logic, can also be proven in our logic. %More in \ref{s:types}.
 In \textsc{Prot-1}, we see that  protection of an object $o$ is preserved by internal code which does not call any methods: namely any heap modifications will
 ony affect internal objects, and this will not expose new, unmitigated external access to $o$.
@@ -333,7 +350,7 @@ naming the formal   parameters in the method's pre- and post-condition.
   {\sc{Call\_Int}} is as expected:   we  require the precondition, and guarantee the postcondition and invariant.
 For {\sc{Call\_Int\_Adapt}} we require the adapted pre-condition ($  \PushASLong {(y_0, \overline y)}{A_1'}$  rather than $A_1'$) and also ensure the adapted post-condition ($ \PushASLong {(y_0, \overline y)}{A_2'}$  rather than $A_2'$).
 Remember that $ \PushASLong {(y_0, \overline y)}{A_1}$ at the caller's side guarantees that $A_1$ holds at the start of the call  (after pushing the frame with   $y_0, \overline y$), while  
-$A_2$ at the end of the cal  guarantees that  $ \PushASLong {(y_0, \overline y)}{A_2}$  holds when returning to the caller's   (after popping the called frame)
+$A_2$ at the end of the call  guarantees that  $ \PushASLong {(y_0, \overline y)}{A_2}$  holds when returning to the caller's side  (after popping the called frame)
 -- cf.  lemma \ref{lemma:push:ass:state}.
  {\sc{Call\_Int}} and {\sc{Call\_Int\_Adapt}}  are applicable whether the method is public or private.
 
