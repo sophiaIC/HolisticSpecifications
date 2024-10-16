@@ -544,7 +544,7 @@ Because of this, we can preserve the usual assignment rule from HL.
       M ⊢ ⦃ A4 ⦄ s ⦃ A5 ⦄ || ⦃ A6 ⦄ ->
       M ⊢ A1 ⊆ A4 ->
       M ⊢ A5 ⊆ A2 ->
-      M ⊢ A6 ⊆ A3 ->
+      M ⊢ A3 ⊆ A6 ->
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄
 
   (* change list subst to be subst of 2 lists, and a proof they are the same length, instead of zip?
