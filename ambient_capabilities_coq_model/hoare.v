@@ -450,13 +450,13 @@ Because of this, we can preserve the usual assignment rule from HL.
         (s_read x e)
         ⦃ a_ (e_typ (e_ x) T) ⦄
 
-  | h_read_prt_frm : forall M e1 e2 z1 z2 e x y,
-      ~ In z1 (x::y::nil) ->
-      ~ In z2 (x::y::nil) ->
+  | h_read_prt_frm : forall M e1 e2 e x y,
       e = (e_ y) \/ (exists f, e = (e_fld (e_ y) f)) ->
-      M ⊢ ⦃ a_ e_eq e1 (e_ z1) ∧ a_ e_eq e2 (e_ z2) ⦄
-        s_read x e
-        ⦃ a_ e_eq e2 (e_ z2) ∧ a_ e_eq e2 (e_ z2)⦄ ->
+      (forall z1 z2, ~ In z1 (x::y::nil) ->
+                ~ In z2 (x::y::nil) ->
+                M ⊢ ⦃ a_ e_eq e1 (e_ z1) ∧ a_ e_eq e2 (e_ z2) ⦄
+                  s_read x e
+                  ⦃ a_ e_eq e1 (e_ z1) ∧ a_ e_eq e2 (e_ z2)⦄) ->
       M ⊢ ⦃ a_prt_frm e1 e2 ⦄ s_read x e ⦃ a_prt_frm e1 e2 ⦄
 
  (* | h_read_prt1 : forall M e1 x e2,

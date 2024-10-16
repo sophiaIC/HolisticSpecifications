@@ -752,21 +752,26 @@ e : C
       eauto.
   Qed.
 
-  Lemma entails_prt_prog_var :
+(*  Lemma entails_prt_prog_var :
     forall M x y, M ⊢ (a_prt x) ⊆ (a_prt_frm x (e_ (v_prog y))).
   Proof.
-  Admitted.
+  Admitted.*)
 
   Lemma entails_prt_intl :
     forall M x y C, M ⊢ ((a_ e_typ y (t_cls C)) ∧ ¬ a_extl y) ⊆ a_prt_frm x y.
   Proof.
   Admitted.
 
+  Lemma entails_intl :
+    forall M e C, C ∈ (snd M) ->
+             M ⊢ (a_ (e_typ e (t_cls C))) ⊆ (¬ a_extl e).
+  Admitted.
+(*  
   Lemma entails_intl_not_extl :
     forall M e C, C ∈ (snd M) ->
              M ⊢ (a_ (e_typ e (t_cls C))) ⊆ ¬ a_extl e.
   Proof.
-  Admitted.
+  Admitted.*)
 
   Ltac setup_shop :=
     assert (HitemPrice : ⟦ price ↦ t_int ⟧_∈ typeOf_f Mgood Item);
@@ -925,7 +930,11 @@ e : C
           |try solve [solve_entails]].
 
   Ltac by_UL_hoare_unrelated_var_assgn x e :=
-    apply hq_mid;
+    try (
+        match goal with
+        | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+            apply hq_mid
+        end);
     match goal with
     | [|- context [e_lt ?e1 ?e2] ] =>
         apply h_strengthen with (P1:=a_ e_lt e1 e2)
@@ -975,9 +984,9 @@ e : C
                       ∧ (a_ e_typ (e_ buyer) t_ext
                          ∧ (a_ e_typ (e_ item) (t_cls Item)
                             ∧ (a_ e_typ (e_ a) (t_cls Account)
-                               ∧ a_prt ((e_ a) ∙ key))))))))
-        ⦄ s_call tmp buyer pay (thisAcc :: itemPrice :: nil)
-      ⦃ a_prt ((e_ a) ∙ key) ⦄ || ⦃ a_prt ((e_ a) ∙ key) ⦄.
+                               ∧ (a_prt ((e_ a) ∙ key) ∧ a_prt_frm ((e_ a) ∙ key) (e_ buyer)))))))))
+      ⦄ s_call tmp buyer pay (thisAcc :: itemPrice :: nil) ⦃ a_prt ((e_ a) ∙ key)
+      ⦄ || ⦃ a_prt ((e_ a) ∙ key) ⦄.
   Proof.
 
     (* tmp = buyer.pay(thisAcc, itemPrice) *)
@@ -987,29 +996,18 @@ e : C
       try solve [by_assumption].
 
     ****
-      by_assumption.
-      eapply apply_entails;
-        [apply entails_prt_prog_var|].
-      repeat asrt_sat_auto_destruct_conj;
-        auto with assert_db.
-
-    ****
-      by_assumption.
+      by_assumption;
       eapply apply_entails;
         [apply entails_prt_intl|].
-      asrt_sat_auto_destruct_conj;
-        eauto.
+      repeat asrt_sat_auto_destruct_conj;
+        eauto with assert_db.
       eapply apply_entails;
-        [apply entails_intl_not_extl|];
+        [eapply entails_intl|];
         eauto.
       unfold Mgood;
         simpl;
         auto.
-      unfold update, t_update;
-        simpl;
-        crush.
-      auto.
-      eexists; eauto.
+      eexists; crush.
 
     **** (* a.key protected from itemPrice *)
       by_assumption.
@@ -1023,7 +1021,63 @@ e : C
 
   Qed.
 
-  Lemma buyCallPreserves_abalance :
+(*  Lemma buyCallPreserves_akey_prt_frm_this :
+    Mgood
+    ⊢ ⦃ a_ e_typ (e_ oldBalance) t_int
+        ∧ (a_ e_typ (e_ thisAcc) (t_cls Account)
+           ∧ (a_ e_typ (e_ itemPrice) t_int
+              ∧ (a_ e_typ (e_ result) t_bool
+                 ∧ (a_ e_typ (e_ this) (t_cls Shop)
+                    ∧ (a_ e_typ (e_ buyer) t_ext
+                       ∧ (a_ e_typ (e_ item) (t_cls Item)
+                          ∧ (a_ e_typ (e_ a) (t_cls Account)
+                             ∧ (a_prt ((e_ a) ∙ key)
+                                ∧ (a_prt_frm ((e_ a) ∙ key) (e_ this)
+                                   ∧ (a_prt_frm ((e_ a) ∙ key) (e_ buyer)
+                                      ∧ a_prt_frm ((e_ a) ∙ key) (e_ item)))))))))))
+    ⦄ s_call tmp buyer pay (thisAcc :: itemPrice :: nil) ⦃ a_prt_frm ((e_ a) ∙ key) (e_ this)
+    ⦄ || ⦃ a_prt ((e_ a) ∙ key) ⦄.
+  Proof.
+    
+    (* tmp = buyer.pay(thisAcc, itemPrice) *)
+    by_call_ext_adapt_strong_using S2.
+    simpl_types.
+    repeat apply entails_conj_split;
+      try solve [by_assumption].
+
+    ****
+      by_assumption;
+      eapply apply_entails;
+        [apply entails_prt_intl|].
+      repeat asrt_sat_auto_destruct_conj;
+        eauto with assert_db.
+      eapply apply_entails;
+        [eapply entails_intl|];
+        eauto.
+      unfold Mgood;
+        simpl;
+        auto.
+      eexists; crush.
+
+    **** (* a.key protected from itemPrice *)
+      by_assumption.
+      eapply apply_entails;
+        [apply entails_prt_int|].
+      repeat asrt_sat_auto_destruct_conj;
+        auto with assert_db.
+      eapply apply_entails;
+        [apply keyHasTypeKey|].
+      auto.
+
+    ****
+      intros_entails.
+      repeat asrt_sat_auto_destruct_conj;
+        auto.
+    
+  Qed.*)
+
+
+(*  Lemma buyCallPreserves_abalance :
     Mgood
       ⊢ ⦃ a_ e_typ (e_ oldBalance) t_int ∧
             (a_ e_typ (e_ thisAcc) (t_cls Account) ∧
@@ -1085,7 +1139,7 @@ e : C
         [apply keyHasTypeKey|].
       auto.
 
-  Qed.
+  Qed.*)
 
   Parameter hoare_UL_write_different_field :
     forall M x f y f' e z,
@@ -1136,6 +1190,36 @@ e : C
     apply hoare_UL_write_different_field;
     intro Hcontra; inversion Hcontra.
 
+  Ltac by_prt_frm_preserved_by_unrelated_var_assigment x z f :=
+    apply hq_mid;
+    eapply h_strengthen;
+    [apply h_read_prt_frm with (y:=z); intros|];
+    try solve [solve_entails];
+    try solve [left; auto];
+    try solve [right; eexists; auto];
+    try (
+        match goal with
+        | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+            apply hq_mid
+        end);
+    match goal with
+    | [|- _ ⊢ ⦃ ?A ⦄ _ ⦃ _ ⦄] =>
+        apply h_strengthen
+        with (P1:=[(e_ z) ∙ f /s x] A);
+        [|simpl; auto with assert_db]
+    end;
+    apply h_embed_UL;
+    apply hoare_ul_assgn;
+    intros_entails;
+    repeat asrt_sat_auto_destruct_conj;
+    auto with assert_db.
+
+  Ltac by_prt_frm_preserved_by_unrelated_var_assgn :=
+    match goal with
+    | [|- _ ⊢ ⦃ _ ⦄ s_read ?x (e_fld (e_ ?y) ?f) ⦃ _ ⦄ || ⦃ _ ⦄] =>
+        by_prt_frm_preserved_by_unrelated_var_assigment x y f
+    end.
+
   Parameter entails_eq_fld :
     forall M e1 e2 f, M ⊢ (a_ e_eq e1 e2) ⊆
                    (a_ e_eq (e_fld e1 f) (e_fld e2 f)).
@@ -1163,30 +1247,65 @@ e : C
         simpl_conj_hq.
         unfold simplify_conj;
           simpl.
+        eapply hq_conseq with (A4:=a_ e_typ (e_ result) t_bool
+                                   ∧ (a_ e_typ (e_ this) (t_cls Shop)
+                                      ∧ (a_ e_typ (e_ buyer) t_ext
+                                         ∧ (a_ e_typ (e_ item) (t_cls Item)
+                                            ∧ (a_ e_typ (e_ a) (t_cls Account)
+                                               ∧ (a_prt ((e_ a) ∙ key)
+                                                     ∧ (a_prt_frm ((e_ a) ∙ key) (e_ buyer))))))));
+          [| |apply entails_refl|apply entails_refl];
+          try solve [solve_entails].
         repeat try apply_hq_sequ_with_mid_eq_fst;
           repeat split_post_condition_by_conjunction;
           try solve [by_hq_types2; by_assumption];
 
-        try solve [apply hq_mid;
-                   eapply h_strengthen;
-                   [apply h_read_type|];
-                   solve_entails;
-                   eapply apply_entails;
-                   [apply entails_fld_type; eauto|eauto]].
+          try solve [apply hq_mid;
+                     eapply h_strengthen;
+                     [apply h_read_type|];
+                     solve_entails;
+                     eapply apply_entails;
+                     [apply entails_fld_type; eauto|eauto]];
+
+          (* <a.key> <-\- x is preserved by var assgn that is unrelated to the preservation *)
+          try solve [by_prt_frm_preserved_by_unrelated_var_assgn].
 
         *** (* itemPrice = item.price *)
           unrelated_var_assgn_preserves_prt itemPrice (e_fld (e_ item) price).
 
-        *** (* thisAcc = this.acc *)
+        ***
           unrelated_var_assgn_preserves_prt thisAcc (e_fld (e_ this) acc).
 
         *** (* oldBalance = thisAcc.balance *)
           unrelated_var_assgn_preserves_prt
             oldBalance
-            (e_fld (e_ thisAcc) balance).
+              (e_fld (e_ thisAcc) balance).
 
         *** (* tmp = buyer.pay(thisAcc, itemPrice) *)
           apply buyCallPreserves_akey_prot.
+
+        ***
+          by_call_ext_adapt_strong_using S2;
+            unfold prt_frms, asrt_frm_list; simpl;
+            [|solve_entails].
+          simpl_types.
+          solve_entails.
+
+          eapply apply_entails;
+            [apply entails_prt_intl|].
+          asrt_sat_auto_destruct_conj; eauto.
+          eapply apply_entails;
+            [apply entails_intl; unfold update, t_update, Mgood; simpl; eexists|eauto].
+          crush.
+
+          eapply apply_entails;
+            [apply entails_prt_int|].
+          asrt_sat_auto_destruct_conj; eauto.
+          eapply apply_entails;
+            [apply entails_fld_type|eauto].
+          unfold typeOf_f, Mgood;
+            simpl.
+          eexists; eauto.
 
         ***
           apply hq_if.
@@ -1222,9 +1341,41 @@ e : C
             simpl_types.
             repeat apply entails_conj_split;
               try solve [by_assumption].
-            by_assumption.
-            eapply apply_entails;
-              [apply entails_prt_prog_var|auto].
+
+        ***
+          apply hq_if.
+
+          **** (* internal call to this.send *)
+            match goal with
+            | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ ?A2 ⦄ || ⦃ ?A3 ⦄ ] =>
+                eapply hq_conseq with (A6:=A3);
+                [| | |apply entails_refl]
+            end;
+            [eapply hq_call_int with
+              (A1:=a_ e_typ (e_ a) (t_cls Account) ∧
+                     a_prt ((e_ a) ∙ key))
+              (A2:=a_prt ((e_ a) ∙ key))
+              (A3:=a_prt ((e_ a) ∙ key))
+              (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
+              | |];
+            [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
+              auto;
+              [simpl; eauto|simpl; eauto| | |];
+              try solve [auto]
+            | | | | | ];
+            try solve [simpl; eauto].
+
+            simpl_types;
+              solve_entails.
+
+            simpl; auto with assert_db.
+
+          **** (* external call to buyer.tell *)
+            by_call_ext_adapt_strong_using S2;
+              try solve [by_assumption].
+            simpl_types.
+            repeat apply entails_conj_split;
+              try solve [by_assumption].
 
         ***
           unrelated_var_assgn_preserves_prt result e_false.
