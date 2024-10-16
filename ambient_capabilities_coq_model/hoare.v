@@ -49,16 +49,19 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
 
   Inductive has_m_spec : module -> asrt -> cls -> mth ->
                          list (var * ty) -> ty -> asrt -> asrt -> Prop :=
-  | mspec : forall M P C ps Q A m mDef CDef pSubst,
+  | mspec : forall M P C ps Q A m mDef CDef pSubst
+              pre post inv ret,
       snd M C = Some CDef ->
       c_meths CDef m = Some mDef ->
       map snd ps = map snd (params mDef) ->
       zip (map (fun xC => e_var (fst xC)) ps)
         (map fst (params mDef)) = Some pSubst ->
       In (P, Q, A) (spec mDef) ->
-      has_m_spec
-        M (listSubst P pSubst) C m ps (rtrn mDef)
-        (listSubst Q pSubst) (listSubst A pSubst).
+      pre = listSubst P pSubst ->
+      ret = rtrn mDef ->
+      post = listSubst Q pSubst ->
+      inv = listSubst A pSubst ->
+      has_m_spec M pre C m ps ret post inv.
 
   Inductive has_l_spec : module -> l_spec -> Prop :=
   | lspec_base : forall S Cdefs, has_l_spec (S, Cdefs) S
@@ -244,17 +247,37 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     | _ => True
     end.
 
-  Fixpoint does_not_assign_to s x :=
+  Fixpoint does_not_assign_to_var s x :=
     match s with
     | s_read y _ => x <> y
-    | s1 ;; s2 => does_not_assign_to s1 x /\ does_not_assign_to s2 x
+    | s1 ;; s2 => does_not_assign_to_var s1 x /\
+                   does_not_assign_to_var s2 x
     | s_call y _ _ _ => x <> y
-    | s_if _ s1 s2 => does_not_assign_to s1 x /\ does_not_assign_to s2 x
+    | s_if _ s1 s2 => does_not_assign_to_var s1 x /\
+                       does_not_assign_to_var s2 x
     | s_hole y => x <> y
     | s_new y _ => x <> y
     | _  => True
     end.
-  Print exp.
+
+  (*)Fixpoint does_not_assign_to_fld s x f :=
+    match s with
+    | s_write x' f' e => x = x' /\ f = f'
+    | s1 ;; s2 => does_not_assign_to_fld s1 x f /\
+    end.*)
+
+  (*)Fixpoint does_not_assign_to s e :=
+    match e with
+    | e_var x => does_not_assign_to_var s x
+    | e_fld e0 f =>
+        does_not_assign_to s e0 /\
+          match e0 with
+          | e_fld (e_ x) f => (forall e', s <> s_write x f e')
+          | _ => True
+          end
+    | _ => False
+    end.*)
+
   Fixpoint simple_exp e :=
     match e with
     | e_if _ _ _ => False
@@ -387,38 +410,64 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** M ⊢ ⦃ w prt-frm x ⦄ y := z.f ⦃ w prt-frm x ⦄  *)
 
   | h_write_prt_frm : forall M w x y z f,
-      M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ∧ a_prt_frm (e_ w) (e_ z) ⦄ s_write y f (e_ z) ⦃ a_prt_frm (e_ w) (e_ x) ⦄
+      M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ∧
+              a_prt_frm (e_ w) (e_ z) ⦄
+        s_write y f (e_ z)
+        ⦃ a_prt_frm (e_ w) (e_ x) ⦄
 
   | h_write_prt1 : forall M e1 x f e2,
       M ⊢ ⦃ a_prt e1 ∧ a_prt e2 ⦄ s_write x f e2 ⦃ a_prt e1 ⦄
 
-  | h_write_prt2 : forall M e x f y,
+  (*| h_write_prt2 : forall M e x f y,
       simple_exp e ->
-      M ⊢ ⦃ a_prt e ∧ (¬ a_ (e_eq e (e_fld (e_ x) f))) ⦄ s_write x f y ⦃ a_prt e ⦄
-
+      M ⊢ ⦃ a_prt e ∧ (¬ a_ (e_eq e (e_fld (e_ x) f))) ⦄ s_write x f y ⦃ a_prt e ⦄*)
 
   (** -----------------------------*)
   (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
 
-  | h_prot1 : forall M e z s,
+  | h_prot1 : forall M A e s,
+      Stbl A ->
       call_free s ->
-      does_not_assign_to s z ->
-      M ⊢ ⦃ a_ (e_eq e (e_ z)) ⦄ s ⦃ a_ (e_eq e (e_ z)) ⦄ ->
-      M ⊢ ⦃ a_prt e ⦄ s ⦃ a_prt e ⦄
+      (forall z, does_not_assign_to_var s z ->
+            M ⊢ ⦃ A ∧ a_ (e_eq e (e_ z)) ⦄
+              s
+              ⦃ a_ (e_eq e (e_ z)) ⦄) ->
+      M ⊢ ⦃ A ∧ a_prt e ⦄ s ⦃ a_prt e ⦄
+
+  (*)| h_prot1_variant : forall M e s,
+      call_free s ->
+      does_not_assign_to s e ->
+      (exists x, e = (e_ x) \/ exists f, e = (e_fld (e_ x) f)) ->
+      M ⊢ ⦃ a_prt e ⦄ s ⦃ a_prt e ⦄*)
 
   | h_seq : forall M A1 A2 A3 s1 s2,
       M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ ->
       M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ ->
       M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄
 
-  | h_read_type : forall M e T x, M ⊢ ⦃ a_ (e_typ e T) ⦄ (s_read x e) ⦃ a_ (e_typ (e_ x) T) ⦄
+  | h_read_type : forall M e T x,
+      M ⊢ ⦃ a_ (e_typ e T) ⦄
+        (s_read x e)
+        ⦃ a_ (e_typ (e_ x) T) ⦄
 
-  | h_read_prt1 : forall M e1 x e2, exp_not_in e1 x ->
-                               M ⊢ ⦃ a_prt e1 ⦄ (s_read x e2) ⦃ a_prt e1 ⦄
+  | h_read_prt_frm : forall M e1 e2 z1 z2 e x y,
+      ~ In z1 (x::y::nil) ->
+      ~ In z2 (x::y::nil) ->
+      e = (e_ y) \/ (exists f, e = (e_fld (e_ y) f)) ->
+      M ⊢ ⦃ a_ e_eq e1 (e_ z1) ∧ a_ e_eq e2 (e_ z2) ⦄
+        s_read x e
+        ⦃ a_ e_eq e2 (e_ z2) ∧ a_ e_eq e2 (e_ z2)⦄ ->
+      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ s_read x e ⦃ a_prt_frm e1 e2 ⦄
 
-  | h_read_prt2 : forall M e1 x e2 A, M ⊢ A ⊆ a_prt e1  ->
-                                 M ⊢ A ⊆ a_prt e2 ->
-                                 M ⊢ ⦃ A ⦄ (s_read x e2) ⦃ a_prt e1 ⦄
+ (* | h_read_prt1 : forall M e1 x e2,
+      exp_not_in e1 x ->
+      M ⊢ ⦃ a_prt e1 ⦄ (s_read x e2) ⦃ a_prt e1 ⦄*)
+
+  (*| h_read_prt2 : forall M e1 x e2 A,
+      simple_exp e1 ->
+      M ⊢ A ⊆ a_prt e1  ->
+      M ⊢ A ⊆ a_prt e2 ->
+      M ⊢ ⦃ A ⦄ (s_read x e2) ⦃ a_prt e1 ⦄*)
 
   | h_or : forall M A1 A2 A3 s, M ⊢ ⦃ A1 ⦄ s ⦃ A3 ⦄ ->
                            M ⊢ ⦃ A2 ⦄ s ⦃ A3 ⦄ ->
@@ -448,8 +497,9 @@ Because of this, we can preserve the usual assignment rule from HL.
     (quad M P s Q A) (at level 40, s at level 59).
 
   Inductive hoare_quad : HoareQuadruple stmt :=
-  | hq_mid : forall M A1 s A2 A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ ->
-                            M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄
+  | hq_mid : forall M A1 s A2 A,
+      M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ ->
+      M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄
 
   (* I'm pretty sure hq_types2 is derivable from hq_types1, hq_conseq, and hq_mid
      remove?
@@ -461,17 +511,20 @@ Because of this, we can preserve the usual assignment rule from HL.
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
       M ⊢ ⦃ A1 ∧ (a_ (e_typ (e_ x) T)) ⦄ s ⦃ A2 ∧ (a_ (e_typ (e_ x) T)) ⦄ || ⦃ A ⦄*)
 
-  | hq_combine : forall M A1 s A2 A3 A4 A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
-                                      M ⊢ ⦃ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
-                                      M ⊢ ⦃ A1 ∧ A3 ⦄ s ⦃ A2 ∧ A4 ⦄ || ⦃ A ⦄
+  | hq_combine : forall M A1 s A2 A3 A4 A,
+      M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
+      M ⊢ ⦃ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
+      M ⊢ ⦃ A1 ∧ A3 ⦄ s ⦃ A2 ∧ A4 ⦄ || ⦃ A ⦄
 
-  | hq_sequ : forall M A1 A2 A3 A s1 s2, M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ ->
-                                    M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ ->
-                                    M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄ || ⦃ A ⦄
+  | hq_sequ : forall M A1 A2 A3 A s1 s2,
+      M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ ->
+      M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ ->
+      M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄ || ⦃ A ⦄
 
-  | hq_if : forall M A1 A2 A3 e s1 s2, M ⊢ ⦃ (a_ e) ∧ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
-                                  M ⊢ ⦃ ¬ (a_ e) ∧ A1 ⦄ s2 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
-                                  M ⊢ ⦃ A1 ⦄ s_if e s1 s2 ⦃ A2 ⦄ || ⦃ A3 ⦄
+  | hq_if : forall M A1 A2 A3 e s1 s2,
+      M ⊢ ⦃ (a_ e) ∧ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
+      M ⊢ ⦃ ¬ (a_ e) ∧ A1 ⦄ s2 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
+      M ⊢ ⦃ A1 ⦄ s_if e s1 s2 ⦃ A2 ⦄ || ⦃ A3 ⦄
 
   (*
     I think the invariant portion of the quadruple is in a negative position, not positive.
@@ -487,11 +540,12 @@ Because of this, we can preserve the usual assignment rule from HL.
     invariant at all.
    *)
 
-  | hq_conseq : forall M s A1 A2 A3 A4 A5 A6, M ⊢ ⦃ A4 ⦄ s ⦃ A5 ⦄ || ⦃ A6 ⦄ ->
-                                         M ⊢ A1 ⊆ A4 ->
-                                         M ⊢ A5 ⊆ A2 ->
-                                         M ⊢ A6 ⊆ A3 ->
-                                         M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄
+  | hq_conseq : forall M s A1 A2 A3 A4 A5 A6,
+      M ⊢ ⦃ A4 ⦄ s ⦃ A5 ⦄ || ⦃ A6 ⦄ ->
+      M ⊢ A1 ⊆ A4 ->
+      M ⊢ A5 ⊆ A2 ->
+      M ⊢ A6 ⊆ A3 ->
+      M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄
 
   (* change list subst to be subst of 2 lists, and a proof they are the same length, instead of zip?
      this would allow use of the normal subst notation. Might have to make the proof an implicit
