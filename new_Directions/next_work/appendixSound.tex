@@ -252,6 +252,7 @@ $  \satisfiesD {M} {\triple {A} {stmt} {A'} }  \ \ \Longrightarrow\ \  \satisfie
 
 \end{proof}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Lemmas about protection}
@@ -262,22 +263,51 @@ $  \satisfiesD {M} {\triple {A} {stmt} {A'} }  \ \ \Longrightarrow\ \  \satisfie
 $\LRelevantKO  {\sigma} {k}\ \ \ \triangleq\ \ \  \{ \alpha \mid  \exists i.[ \ k \leq i \leq \depth \sigma \ \wedge \ \alpha \in \LRelevantO  {\RestictTo \sigma i}\ ]$
 \end{definition}
  
+Lemma \ref{exec:rel} guarantees that  program execution reduces the locally reachable objects, unless it allocates new ones.
+That is, any objects locally reachable in the $k$-th frame of the new state ($\sigma'$), are either new, or were locally reachable in the $k$-th frame of the previous state ($\sigma$).
 
 {
-\begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
+\begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$, where $\models \sigma$, and where $k\leq \DepthSt {\sigma}$:
+\label{exec:rel}
 \begin{itemize}
 \item
 $\leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \  \Longrightarrow\ \ 
-  (\LRelevantKO   {\sigma} {k}\ \setminus\   \LRelevantKO {\sigma'} {k}) \cap \sigma = \emptyset$
+  \LRelevantKO   {\sigma'} {k}\cap \sigma   \subseteq\   \LRelevantKO {\sigma} {k}  $
 \item
 $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \  \Longrightarrow\ \ 
-  (\LRelevantKO   {\sigma} {k}\ \setminus\   \LRelevantKO {\sigma'} {k}) \cap \sigma = \emptyset$
+  \LRelevantKO   {\sigma'} {k}\cap \sigma   \subseteq\   \LRelevantKO {\sigma} {k} $
 \end{itemize}
 \end{lemma}
  }
  
+\begin{proof} $~ $
+
+\begin{itemize}
+\item
+If the step is a method call, then the assertion follows by construction.
+If the steps is a   local execution in a method, we proceed by case analysis. If it is an assignment to a local variable, then 
+$\forall k.[\ \LRelevantKO   {\sigma'} {k}= \LRelevantKO   {\sigma} {k}\ ]$.
+If the step is the creation of a new object, then the assertion holds by construction.
+If it it is a field assignment, say, $\sigma'=\sigma[\alpha_1,f \mapsto \alpha_2]$, then we have that 
+$\alpha_1, \alpha_2 \  \LRelevantKO {\sigma} {\DepthSt \sigma}$. 
+And therefore, by Lemma \ref{rel:smaller}, we also have that $\alpha_1, \alpha_2 \  \LRelevantKO {\sigma} {k}$
+All locally reachable objects in $\sigma'$ were either already reachable in $\sigma$ or reachable through $\alpha_2$,
+Therefore, we also have that  $\LRelevantKO   {\sigma'} {k}\subseteq  \LRelevantKO   {\sigma} {k}$
+ And by definition of $\leadstoBounded  {\_}  {\_}  {\_}$, it is not a method return.
+ 
+\item
+By induction on the number of steps in $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma'}$. 
+For the steps that correspond to method calls, the assertion follows by construction.
+For the steps that correspond to local execution in a method, the assertion follows from the bullet above.
+For the steps that correspond to method returns, the assertion follows by lemma \ref{rel:smaller}.
+\end{itemize}
+\end{proof}
+
+Lemma \ref{change:external} guarantees that any change to the contents of an external object can only happen during execution of an external method.
+ 
  {
- \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
+ \begin{lemma} For all $\sigma$, $\sigma'$:
+ \label{change:external}
 \begin{itemize}
 \item
 $\leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \wedge \  \sigma \models \external{\alpha} \ \wedge\  {\interpret{\sigma} {\alpha.f}} \neq {\interpret{\sigma'} {\alpha.f}}
@@ -285,21 +315,23 @@ $\leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \wedge \  \sigma \models 
 \end{itemize}
 \end{lemma}
   } 
-    
+  \begin{proof}
+  Through inspection of the operational semantics in Fig. \ref{f:loo-semantics}, and in particular rule {\sc{Write}}.
+  \end{proof}  
   
  
-   {
- \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
- \label{lemma:notInside:implies}
-\begin{itemize}
-\item
-$ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \ \wedge \ \leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \wedge \  \notSatDAssertFrom M  {\sigma'} k   {\inside{\alpha}}
- \ \ \Longrightarrow\ \ $\\
- $\exists \alpha_o,f.[\  \alpha_0 \in \LRelevantKO  {\sigma} {k} \ \wedge \ M, \sigma' \models \external {\alpha_o} \ \wedge \ \interpret {\sigma'} {\alpha_o.f} = \alpha\  \wedge$\\
-$\strut \hspace{3cm} [ \alpha_o \notin \sigma\ \vee\ \alpha_o \notin \LRelevantKO {\sigma} {k}\ \vee\  \interpret {\sigma} {\alpha_o.f} \neq \alpha\ ]\ \ \ \ \ ] $
-\end{itemize}
-\end{lemma}
-}
+%   {
+% \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
+% \label{lemma:notInside:implies}
+%\begin{itemize}
+%\item
+%$ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \ \wedge \ \leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \wedge \  \notSatDAssertFrom M  {\sigma'} k   {\inside{\alpha}}
+% \ \ \Longrightarrow\ \ $\\
+% $\exists \alpha_o,f.[\  \alpha_0 \in \LRelevantKO  {\sigma} {k} \ \wedge \ M, \sigma' \models \external {\alpha_o} \ \wedge \ \interpret {\sigma'} {\alpha_o.f} = \alpha\  \wedge$\\
+%$\strut \hspace{3cm} [ \alpha_o \notin \sigma\ \vee\ \alpha_o \notin \LRelevantKO {\sigma} {k}\ \vee\  \interpret {\sigma} {\alpha_o.f} \neq \alpha\ ]\ \ \ \ \ ] $
+%\end{itemize}
+%\end{lemma}
+%}
 
 Lemma \ref{lemma:inside:preserved}  guarantees that internal code which does not include method calls preserves absolute protection. 
 It is used in the proof of soundness of the inference rule {\sc{Prot-1}}.
@@ -309,24 +341,55 @@ It is used in the proof of soundness of the inference rule {\sc{Prot-1}}.
  \label{lemma:inside:preserved} 
 \begin{itemize}
 \item
-$ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \ \wedge \ M, \sigma \models \intThis \ \wedge \ \sigma.\prg{cont} \mbox{ contains no method calls } \ \wedge\ \leadstoBounded   {\Mtwo\cdot M}  {\sigma}  {\sigma'}\  \ \ \Longrightarrow\ \ \satDAssertFrom M  {\sigma'} k   {\inside{\alpha}}$
+$ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \, \wedge \,M, \sigma \models \intThis \, \wedge \, \sigma.\prg{cont} \mbox{ contains no method calls } \ \wedge\ \leadstoBounded   {\Mtwo\cdot M}  {\sigma}  {\sigma'}\  \ \ \Longrightarrow\ \ \satDAssertFrom M  {\sigma'} k   {\inside{\alpha}}$
 \item
 $ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \ \wedge \ M, \sigma \models \intThis \ \wedge \ \sigma.\prg{cont}  \mbox{ contains no method calls } \ \wedge\ \leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\  \ \ \Longrightarrow\ \ \satDAssertFrom M  {\sigma'} k   {\inside{\alpha}}$
 \end{itemize}
 \end{lemma}
 }
 
-\subsubsection{Lemmas about relative protection}
+\begin{proof} $~ $
 
-
-  {
- \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
 \begin{itemize}
 \item
-$  M, \sigma  \models    { \protectedFrom \alpha {\alpha_o}}  \ \wedge\   \sigma.\prg{heap}= \sigma'.\prg{heap} \ \ \Longrightarrow\ \  M, \sigma' \models      { \protectedFrom \alpha {\alpha_o}} $
+Because $\sigma.\prg{cont}$   contains no method calls, we also have that $\DepthSt {\sigma'}=\DepthSt {\sigma}$. Let us take
+$m=\DepthSt {\sigma}$.
+
+We continue by contradiction.
+ Assume that $\satDAssertFrom M  {\sigma} k   {\inside{\alpha}}$ and $\notSatDAssertFrom M  {\sigma} k   {\inside{\alpha}}$  
+
+Then:\\
+(*)\ $\forall f.\forall i\in [k..m].\forall \alpha_o\in  \LRelevantKO {\sigma} {i}.[\ M, \sigma \models \external {\alpha_o} \Rightarrow \interpret {\sigma} {\alpha_o.f} \neq \alpha\ \wedge \alpha_o \neq \alpha \ ] $.
+\\
+(**) $\exists f.\exists  j\in [k..m].\exists \alpha_o\in  \LRelevantKO {\sigma'} {j}.[\ M, \sigma' \models \external {\alpha_o} \wedge \interpret {\sigma'} {\alpha_o.f} = \alpha\ \vee \alpha_o = \alpha\ ] $
+\\
+We proceed by cases
+\begin{description}
+\item{1st Case} $\alpha_o \notin  \sigma$, \ie $\alpha_o$ is a new object.
+  Then, by our operational semantics, it cannot have a field pointing to an already existing object ($\alpha$), nor can it be equal with $\alpha$. Contradiction.
+\item{2nd Case}  $\alpha_o \in  \sigma$. Then, by Lemma \ref{exec:rel}, we obtain that $\alpha_o \in \LRelevantKO {\sigma} {j}$.
+Therefore, using (*), we obtain that $\interpret {\sigma} {\alpha_o.f} \neq \alpha$, and therefore 
+$ \interpret {\sigma} {\alpha_o.f} \neq \interpret {\sigma'} {\alpha_o.f}$.
+By lemma \ref{change:external}, we obtain $M, \sigma \models \extThis$. Contradiction!
+\end{description}
+
+\item
+By induction on the   number of steps, and using the bullet above.
 \end{itemize}
-\end{lemma}
-}
+
+\end{proof}
+
+\subsubsection{Lemmas about relative protection}
+
+% NOT TRUE, and not used
+%  {
+% \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
+%\begin{itemize}
+%\item
+%$  M, \sigma  \models    { \protectedFrom \alpha {\alpha_o}}  \ \wedge\   \sigma.\prg{heap}= \sigma'.\prg{heap} \ \ \Longrightarrow\ \  M, \sigma' \models      { \protectedFrom \alpha {\alpha_o}} $
+%\end{itemize}
+%\end{lemma}
+%}
 
 {
  \begin{lemma} For all $\sigma$,  and $\alpha$, $\alpha_o$, $\alpha_1$, $\alpha_2$:
@@ -371,13 +434,16 @@ This, together with   Lemma \ref{l:shallow:scoped}, part \ref{shallow:to:scoped}
 $\satisfiesD {M} {\triple {A} {stmt} {A'} }$. 
 By the assumption of {\sc{extend}}, $stmt$ does not contain any method call. Rest follows by lemma \ref{l:no:call}.
 
+\item[{\sc{Prot-New}}] By operational semantics, no field of another object will point to $u$, and therefore $u$ is protected, and protected from all variables $x$.
+
+\item[{\sc{Prot-1}}] by Lemma \ref{lemma:inside:preserved}.
+
+\item[{\sc{Prot-3}}] by Lemma \ref{l:prtFrom}.
+
 \item[{\sc{types-1}}] 
 
 Follows from type system, the assumption of {\sc{types-1}} and lemma \ref{l:no:call}.
 
-\item[{\sc{Prot-1}}] by Lemma \ref{lemma:inside:preserved}.
-
-\item[{\sc{Prot-4}}] by Lemma \ref{l:prtFrom}
 
 \end{description}
 \noindent
