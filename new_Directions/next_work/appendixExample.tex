@@ -8,25 +8,26 @@ In Section \ref{s:outline} we introduced a \verb|Shop| that allows clients to ma
 \verb|buy| method.
 The body if this method  includes a method call to an unknown external object (\verb|buyer.pay(...)|).
 
-In this section  we use our Hoare logic from Section \ref{sect:proofSystem} to \sdN{outline the proof} that the \verb|buy| method
+In this section  we use our Hoare logic from Section \ref{sect:proofSystem} to {outline the proof} that the \verb|buy| method
 does not expose the \verb|Shop|'s  \verb|Account|, its \verb|Key|, or allow the \verb|Account|'s balance to be illicitly modified. 
+
 More generally,   given  the following scoped invariants, \\  
 $\strut  \SPSP  S_2\ \  \triangleq \ \ \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}}} $ 
  \\
 $\strut  \SPSP  S_3\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},\prg{b}:\prg{int} } {\inside{\prg{a.key}} \wedge \prg{a.\balance} \geq \prg{b} } $ 
 \\
- we \sdN{outline the proof} that $M_{good} \vdash S_2 \wedge S_3$.
-\sdN{We  also show why $M_{bad} \not\vdash S_2$.}
+ we {outline the proof} that $M_{good} \vdash S_2$.
+{We  also show why $M_{bad} \not\vdash S_2$.}
 
-\sdN{We first extend the semantics and the logic to deal with scalars (\S \ref{s:app:scalars}). 
+{We first extend the semantics and the logic to deal with scalars (\S \ref{s:app:scalars}). 
 We then rewrite the code of $M_{good}$ so that it adheres to the syntax as defined in Fig. \ref{f:loo-syntax} (\S \ref{s:app:syntax:transform}). 
-After that, we outline the proofs (\S \ref{s:app:example:proofs}) -- these proofs have been mechanized in Coq, and can be found in the supplemental material \red{xxxx}.
-Finally, we discuss why $M_{bad} \not\vdash S_2$ (\S ref{s:app:example:why}).}
+After that, we outline the proofs (\S \ref{s:app:example:proofs}) -- these proofs have been mechanized in Coq, and can be found in the supplemental material. %\red{xxxx}.
+Finally, we discuss why $M_{bad} \not\vdash S_2$ (\S \ref{s:app:example:why}).}
 
 \subsection{Extend the semantics and Hoare logic to accommodate scalars and conditionals}
 \label{s:app:scalars}
 
-\sdN{We extend the notion of protection to also allow it to apply to scalars. }
+{We extend the notion of protection to also allow it to apply to scalars. }
 
 \begin{definition}[Satisfaction 
 of Assertions  -- Protected From]
@@ -38,7 +39,7 @@ extending the definition of Def
 We define  $\satisfiesA{M}{\sigma}{\protectedFrom{{\gamma}} {{\gamma_{o}}}} $ as:
 \begin{enumerate}
 \item
-\label{cProtected}
+\label{cProtectedNew}
  $\satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}   \ \ \ \triangleq $ 
   \begin{itemize}
  \item
@@ -60,8 +61,8 @@ $\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}} \ \ \ \triangleq $ \\
  \end{enumerate}
  \end{definition} 
 
-\sdN{The definition from above gives rise to further cases of  protection; we supplement the triples from 
-Fig. \ref{f:protection} with some further inference rules, given in in Fig. \ref{f:protection:conseq}.}
+{The definition from above gives rise to further cases of  protection; we supplement the triples from 
+Fig. \ref{f:protection} with some further inference rules, given   in Fig. \ref{f:protection:conseq}.}
 % SD: is the below of importance?
 % to reason about protection apart from a Hoare logic. 
 % I think the below follows. So I have chopped it
@@ -109,7 +110,7 @@ Fig. \ref{f:protection} with some further inference rules, given in in Fig. \ref
 \label{f:protection:conseq:ext}
 \end{figure}
 
-We also introduce a rule for conditionals in Fig. \ref{f:if}, \sdN{where we expect the obvious syntax and semantics for $Cond$}
+We also introduce a rule for conditionals in Fig. \ref{f:if}, {where we expect the obvious syntax and semantics for $Cond$}
 
 \begin{figure}[htb]
 $$
@@ -146,9 +147,10 @@ $$
 \subsection{Expressing the \prg{Shop} example in the syntax from Fig. \ref{f:loo-syntax}}
 \label{s:app:syntax:transform}
 
-\sdN{
+{
 We now express our example in the syntax of Fig. \ref{f:loo-syntax}. 
-For this, we  add a return type to each of the methods; We add an explicit assignment to the variable \prg{res}: and We   add a temporary variable \prg{tmp} to which we assign the result of our \prg{void} methods.
+For this, we  add a return type to each of the methods; 
+We turn all local variables to parameter; We add an explicit assignment to the variable \prg{res}: and We   add a temporary variable \prg{tmp} to which we assign the result of our \prg{void} methods.
 For simplicity, we allow %sequences of field reads, \eg \prg{this.accnt.blnce} rather than using   temporaty variables, as 
 %in \prg{tmp1} := \prg{this.accn};  \prg{tmp2} := \prg{tmp1.blnce}. We also allow 
 the shorthands \prg{+=} and \prg{-=}.
@@ -163,7 +165,8 @@ module M$_{good}$
     field invntry : Inventory, 
     field clients: ..
   
-    public method buy(buyer:external, anItem:Item) : int
+    public method buy(buyer:external, anItem:Item, price: int, 
+            myAccnt: Account, oldBalance: int, newBalance: int, tmp:int) : int
       int price := anItem.price;
       Account myAccnt := this.accnt;
       int oldBalance := myAccnt.blnce;
@@ -199,7 +202,7 @@ module M$_{good}$
 % I removed class Key
 % it does not have to belong to c=the module
 
-\subsection{Demonstrating that $M_{good} \vdash S_2 \wedge S_3$}
+\subsection{Demonstrating that $M_{good} \vdash S_2 $}
  \label{s:app:example:proofs}
  
 For brevity we only show that \verb|buy| satisfies our scoped invariants, as the all other methods of 
@@ -210,7 +213,7 @@ the specification. In phase 2 we use Hoare quadruples to prove external calls ad
 to the specification, and finally in phase 3 we use raise the results from phase 1 and 2 to proved
 the entire module satisfies the specification.
 
-\sdN{ To write our proofs more succinctly, we will use \prg{ClassId}::\prg{Methodid}.\prg{body} as a shorthand for the method body of \prg{Methodid} defined in \prg{ClassId}.}
+{ To write our proofs more succinctly, we will use \prg{ClassId}::\prg{Methodid}.\prg{body} as a shorthand for the method body of \prg{Methodid} defined in \prg{ClassId}.}
 
  \subsubsection{Proof outline for $M_{good} \vdash S_2$}
 
@@ -227,140 +230,134 @@ and apply  \textsc{Invariant} from Fig. \ref{f:wf}.
 From this we are left with a subgoal for each method $m$ in  class $C$ with parameters $\overline{y:D}$ in the public interface of $M_{good}$ (we denote the body of such a method as \prg{C}::\prg{m}.\prg{body}):
 \small
 \begin{align*}
-M_{good} \vdash
+M_{good} \vdash & \\
 		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
-		   {\inside{\prg{a.key}}}\} \\
-		& \prg{C}::\prg{m}.\prg{body}\ \\
-		& \{\ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}\ \}\ ||\ \{\ {\inside{\prg{a.key}}} \ 			\} 
+		   {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {\prg{this},\overline y} \  \} \\
+		& \prg{C}::\prg{m}.\prg{body}\  \\
+		&
+                   \{\ {\inside{\prg{a.key}}}\ \wedge\ \ \protectedFrom {\prg{a.key}} {\prg{res}}   \ \}\ ||\ \{\ {\inside{\prg{a.key} } } \ \} \\
 \end{align*}
 \normalsize
-\sdN{Thus, we need to prove the following three Hoare quadruples:}
+{Thus, we need to prove   three Hoare quadruples:}
+    
+%
+%\noindent
+%For   \prg{buy} in the \prg{Shop} class we need to prove:
+%\small
+%\begin{align*}
+%\text{(1)}  \ \ \ \ M_{good} \vdash 
+%		&	\{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, 
+%				{\inside{\prg{a.key}}} \\
+%		& \ \ \ \ \prg{myAccnt: Account, oldBalance: int, newBalance: int, tmp:int} \ \wedge \\
+%		& \ \ \ \  {\protectedFrom { \prg{myAccnt: Account, oldBalance: int, newBalance: int, tmp:int} } {\inside{\prg{a.key}}}}  \} \\
+%		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
+%		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+%		   \{ {\inside{\prg{a.key}}} \}
+%\end{align*}
+%
+%And similar for \prg{transfer} and \prg{set}.
+%%\normalsize
+%%For \prg{transfer} in the \prg{Account} class we need to prove:
+%%\small
+%%\begin{align*}
+%%\text{(2)}  \ \ \ \ M_{good} \vdash 
+%%		&	\{  \prg{this}:\prg{Account}, \prg{dest} : \prg{Account}, 
+%%			\prg{key'} : \prg{Key},\, \prg{amt}:\prg{int},\, \prg{a}:\prg{Account}\,
+%%			\wedge\,{\inside{\prg{a.key}}} \} \\
+%%		&\SPT \prg{Account}::\prg{transfer}.\prg{body}\ \\  
+%%		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+%%		   \{ {\inside{\prg{a.key}}} \}
+%%\end{align*}
+%%\normalsize
+%%For \prg{set} in the \prg{Account} class we need to prove
+%%\small
+%%\begin{align*}
+%%\text{(3)}  \ \ \ \ M_{good} \vdash 
+%%		&	\{  \prg{this}:\prg{Account},\,
+%%			\prg{key'} : \prg{Key},\, \prg{a}:\prg{Account}\,
+%%			\wedge\,{\inside{\prg{a.key}}} \} \\
+%%		& \SPT \prg{Account}::\prg{set}.\prg{body}\ \\  
+%%		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+%%		   \{ {\inside{\prg{a.key}}} \}
+%%\end{align*}
+%%\normalsize
+%
+%% {We will only prove (1), as the proofs of (2) and (3) are simpler.} 
+%{We prove (1) in 
 
-\noindent
-For   \prg{buy} in the \prg{Shop} class we need to prove:
-\small
-\begin{align*}
-\text{(1)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, 
-				{\inside{\prg{a.key}}} \} \\
-		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
-		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
-		   \{ {\inside{\prg{a.key}}} \}
-\end{align*}
-\normalsize
-For \prg{transfer} in the \prg{Account} class we need to prove:
-\small
-\begin{align*}
-\text{(2)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \prg{this}:\prg{Account}, \prg{dest} : \prg{Account}, 
-			\prg{key'} : \prg{Key},\, \prg{amt}:\prg{int},\, \prg{a}:\prg{Account}\,
-			\wedge\,{\inside{\prg{a.key}}} \} \\
-		&\SPT \prg{Account}::\prg{transfer}.\prg{body}\ \\  
-		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
-		   \{ {\inside{\prg{a.key}}} \}
-\end{align*}
-\normalsize
-For \prg{set} in the \prg{Account} class we need to prove
-\small
-\begin{align*}
-\text{(3)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \prg{this}:\prg{Account},\,
-			\prg{key'} : \prg{Key},\, \prg{a}:\prg{Account}\,
-			\wedge\,{\inside{\prg{a.key}}} \} \\
-		& \SPT \prg{Account}::\prg{set}.\prg{body}\ \\  
-		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
-		   \{ {\inside{\prg{a.key}}} \}
-\end{align*}
-\normalsize
-
-\sdN{We will only prove (1), as the proofs of (2) and (3) are simpler.} 
-\sdN{We prove (1) in Lemma \ref{l:sub:one}}
+We outline the proof for \prg{buy} in Lemma \ref{l:sub:one}.
 
 \end{proofO}
+
+\newcommand{\Aparams}{\prg{A}_{params}}
+\newcommand{\Alocals}{\prg{A}_{dcls}}
+\newcommand{\Ids}{\prg{X}_{dcls}}
+\newcommand{\stmtsP}{\prg{stmts}_{10,11,12}}
+\newcommand{\step}[1]{ \vspace{.1cm} \noindent {\textbf{#1}}}
 
 \begin{lemma}
 \label{l:sub:one}
  
 \begin{align*}
 \text{(1)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account}\,\wedge\, 
-				{\inside{\prg{a.key}}} \} \\
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Ids}  \  \} \\
 		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
 		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
- 
+where we are using the shorthands\\
+ $ \SPT  \Aparams\ \triangleq \  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{price} : \prg{int}$.\\
+  $ \SPT  \Alocals\ \triangleq \  \Aparams,  \prg{myAccnt} : \prg{Account},\, \prg{oldBalance}:  \prg{int},  \prg{newBalance}:  \prg{int},  \prg{tmp}:  \prg{int}$.\\
+   $ \SPT  \Ids\ \triangleq \   \prg{this}, \prg{buyer}, \prg{anItem}$.\\
+
 \end{lemma}
 
 \begin{proofO}
-\newcommand{\Aparams}{\prg{A}_{dcls}}
-\newcommand{\Alocals}{\prg{A}_{dcls,lcls}}
-\newcommand{\stmtsP}{\prg{stmts}_{9,10,11}}
-\newcommand{\step}[1]{ \vspace{.1cm} \noindent {\textbf{#1}}}
-
-That is, want to prove
 
 
- 
-\begin{align*}
-\text{(1?)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Aparams\  \wedge\ {\inside{\prg{a.key}}} \} \\
-		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
-		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
-		   \{ {\inside{\prg{a.key}}} \}
-\end{align*}
+\step{1st Step: proving statements 10, 11, 12}
 
-while using the shorthands\\
- $ \SPT  \Aparams\ \triangleq \  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{price} : \prg{int}$.\\
-  $ \SPT  \Alocals\ \triangleq \  \Aparams, \prg{price} : \prg{int}, \prg{myAccnt} : \prg{Account},\, \prg{oldBalance}:: \prg{int}$.\\
- We also use the shorthand $\stmtsP$ for the statements on lines 9, 10, 11 of the code.
- 
-
-
-
-\step{1st Step: proving statements 9,10,11}
-
-We apply the underlying Hoare logic and prove that the statements on lines do not affect the value of \prg{a.key}, ie that for a $n\notin \{ \prg{price}, \prg{myAccnt}, \prg{oldBalance} \}$, we have 
+We apply the underlying Hoare logic and prove that the statements on lines 10, 11, 12 do not affect the value of \prg{a.key}, ie that for a $z\notin \{ \prg{price}, \prg{myAccnt}, \prg{oldBalance} \}$, we have 
 
 \begin{align*}
 \text{(10)}  \ \ \ \ {M_{good} \vdash_{ul}} 
-		&	\{  \ \Aparams\  \wedge\ z=\prg{a.key} \} \\
+		&	\{  \ \Alocals\  \wedge\ z=\prg{a.key} \} \\
 		&   \SPT \prg{price:=anItem.price}; \\  
 		&   \SPT \prg{myAccnt:=this.accnt}; \\  
                  &   \SPT \prg{oldBalance := myAccnt.blnce};\\
 		& \{ z=\prg{a.key} \}
 \end{align*}
 
-We then apply {\sc{Embed\_UL}}, and {\sc{Prot-1}} on (10) and use the shorthand $\stmtsP$, and obtain: 
+We then apply {\sc{Embed\_UL}}, {\sc{Prot-1}} and {\sc{Prot-2}} and {\sc{Combine}} and and {\sc{Types-2}} on (10) and use the shorthand $\stmtsP$ for the statements on lines 10, 11 and 12, and obtain: 
 \\
 \begin{align*}
 \text{(11)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Aparams\  \wedge\ {\inside{\prg{a.key}}}  \} \\
+		&	\{  \ \Alocals\  \wedge\ {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}  \} \\
 		& \SPT \stmtsP\ \\  
-		& \{ \ {\inside{\prg{a.key}}}\ \   \}
+		& \{ \ {\inside{\prg{a.key}}}  \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}   \}
 \end{align*}
 
 
 
-We apply  {\sc{Mid}},  and {\sc{Types-2}}\footnote{\red{do we need a rule that takes declarations of local variables from statements}}, on (11) and obtain 
+We apply  {\sc{Mid}}  on (11) and obtain 
 \begin{align*}
 \text{(12)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Aparams\  \wedge\ {\inside{\prg{a.key}}}  \} \\
+		&	\{  \ \Alocals\, \wedge\, \protectedFrom {\prg{a.key}} {\prg{buyer}}\  \} \\
 		& \SPT \stmtsP\ \\  
-		& \{ \ \Aparams\ \wedge \  {\inside{\prg{a.key}}} \ \} \ \ || \\
+		& \{ \ \Aparams\ \wedge \  {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}  \ \} \ \ || \\
 		& \{ \ {\inside{\prg{a.key}}}\  \}
 \end{align*}
 
 \step{2nd Step: Proving the External Call}
 
-Now, we want to prove 
+ 
 
 We now need to prove that the external method call \prg{buyer.pay(this.accnt, price)} protects the \prg{key}. i.e.
 %\small
 \begin{align*}
-\text{(20?)} \ \ \ M_{good} \vdash & \{ \ \Alocals \   \wedge\    {\inside{\prg{a.key}}}\  \} \\
+\text{(20?)} \ \ \ M_{good} \vdash & \{ \ \Alocals \   \wedge\    {\inside{\prg{a.key}}},\, \wedge\, \protectedFrom {\prg{a.key}} {\prg{buyer}}  \} \\
 		  		& \SPT  \prg{tmp := buyer.pay(myAccnt, price)}\ \\  
-		  		& \{ \ \ \Aparams \ \wedge\ {\inside{\prg{a.key}}} \ \} \ \ \  || \ \ \  \\
+		  		& \{ \ \ \Aparams \ \wedge\ {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}} \} \ \ \  || \ \ \  \\
 		  		&   \{ \   {\inside{\prg{a.key}}}\  \}
 \end{align*}
 \normalsize
@@ -380,45 +377,17 @@ We use that $M \vdash \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}
 \end{align*}
 \normalsize 
  
-In order to obtain (20?) out of (21), we need to be able to deduce that\\
+In order to obtain (20?) out of (21), we apply \textsc{Prot-Intl} and \textsc{Prot-Int}$_1$,   which gives us\\
 $
 \begin{array}{llll}
-& (22?) & & M_{good} \vdash \Alocals \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{buyer}} 
+& (23) & & M_{good} \vdash \Alocals \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{myAccnt}} 
 \\
-& (23?) & & M_{good} \vdash \Alocals \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{myAccnt}} 
-\\
-& (24?) & & M_{good} \vdash \Alocals \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{price}} 
+& (24) & & M_{good} \vdash \Alocals \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{price}} 
 \end{array}
 $
 
-\red{We obtain (22?) ????}. 
-We obtain (23?) and (24?) out of \textsc{Prot-Intl} and \textsc{Prot-Int}$_1$. 
-We apply (22?), (23?), (24?) and \textsc{Consequ} on (21), and obtain
+We apply {\textsc{Consequ}} on (23), (24) and (21) and obtain (20)!
 
-\begin{align*}
-\text{(25)} \ \ \ M_{good} \vdash & \{ \ \Alocals \   \wedge\    {\inside{\prg{a.key}}}\  \} \\
-		  		& \SPT  \prg{tmp := buyer.pay(myAccnt, price)}\ \\  
-		  		& \{ \ \   {\inside{\prg{a.key}}} \ \} \ \ \  || \ \ \  \\
-		  		&   \{ \   {\inside{\prg{a.key}}}\  \}
-\end{align*}
-\normalsize
-
-We apply \textsc{Types-2} and obtain
-\begin{align*}
-\text{(26)} \ \ \ M_{good} \vdash & \{ \ \Alocals \  \  \} \\
-		  		& \SPT  \prg{tmp := buyer.pay(myAccnt, price)}\ \\  
-		  		& \{ \ \   \Alocals  \ \} \ \ \  || \ \ \  \\
-		  		&   \{ \  true \  \}
-\end{align*}
-\normalsize
-
-We apply \textsc{Combine} on (25) and (26) and obtain
-\begin{align*}
-\text{(26)} \ \ \ M_{good} \vdash & \{ \ \Alocals \   \wedge\    {\inside{\prg{a.key}}}\  \} \\
-		  		& \SPT  \prg{tmp := buyer.pay(myAccnt, price)}\ \\  
-		  		& \{ \ \Alocals \   \wedge\    {\inside{\prg{a.key}}}\  \}\ \ \  || \ \ \  \\
-		  		&    \{ \   {\inside{\prg{a.key}}}\  \}
-\end{align*}
 \normalsize
 
 
@@ -467,7 +436,7 @@ We apply \textsc{Combine} on (25) and (26) and obtain
 %		  		& \{ {\inside{\prg{a.key}}} \}
 %\end{align*}
 %\normalsize
-%This can easily be discharged \sdN{using   {\sc{If\_Rule}}}, giving the following two proof obligations:
+%This can easily be discharged {using   {\sc{If\_Rule}}}, giving the following two proof obligations:
 %\small
 %\begin{align*}
 %\text{(7)}  \ \ \ \ M_{good} \vdash & \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{this.accnt}:\prg{Account}\\
@@ -603,7 +572,7 @@ We apply \textsc{Combine} on (25) and (26) and obtain
 %%		 & \prg{buyer.(this.accnt, price)} \ \{ \inside{\prg{a.key}} \} \ \ \  || \ \ \  \{ \inside{\prg{a.key}} \}
 %%
 %%\normalsize
-%\sdN{Finally we can show that 
+%{Finally we can show that 
 %\small
 %\begin{align*}
 %\text{(9)}  \ \ \ \  M_{good} \vdash &  \{ \  {\inside{\prg{a.key}} \ } \\
@@ -622,7 +591,7 @@ We apply \textsc{Combine} on (25) and (26) and obtain
 %We combine (9b) and (9c), apply   {\sc{Combine}}, and obtain (9)
 %}
 %
-%\sdN{We combine the earlier steps\footnote{unfortunately they do not all have names, and some are nested, \ie we are not meant to apply them}, use the fact that $\protectedFrom {\prg{a.key}} {\prg{res}}$=${\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}$, apply rules {\sc{Sequ}} and {\sc{Consequ}}, and have the proof of (1)}
+%{We combine the earlier steps\footnote{unfortunately they do not all have names, and some are nested, \ie we are not meant to apply them}, use the fact that $\protectedFrom {\prg{a.key}} {\prg{res}}$=${\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}$, apply rules {\sc{Sequ}} and {\sc{Consequ}}, and have the proof of (1)}
 %%\text{(10)}  \ \ \ \ M_{good} \vdash & zz \\
 %%%  \{  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{this.accnt}:\prg{Account} \\
 %%%				& \prg{price} : \prg{int},\,  \wedge\,    {\inside{\prg{a.key}}}\ \wedge\ 
@@ -653,17 +622,13 @@ We apply \textsc{Combine} on (25) and (26) and obtain
 %
 \end{proofO}
 
-\subsubsection{Demonstrating that $M_{good} \vdash S_4$}
-
-\red{TODO}
-
-
+ 
 
 %\begin{lemma}
 %$M_{good} \vdash S_3$
 %\end{lemma}
 %
-%\sdN{This proof is similar to the one in the previous section}
+%{This proof is similar to the one in the previous section}
 %
 %\begin{proofO}
 %As in Lemma \ref{lemma:exampleKeyProtect}, we construct our proof tree using a top down approach.  That is, we start with our goal

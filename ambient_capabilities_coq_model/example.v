@@ -140,6 +140,8 @@ e : C
 
   Definition a := v_spec 11.
 
+  Definition b := v_spec 12.
+
   (*
     itemPrice = item.price
     thisAcc = this.acc
@@ -247,9 +249,11 @@ e : C
 
   (* Shop Specifications *)
 
-  Definition S1 := S_inv ((a, t_cls Account)::nil) (a_prt (e_fld (e_ a) key)).
+  Definition S2 := S_inv ((a, t_cls Account)::nil) (a_prt (e_fld (e_ a) key)).
 
-  Definition Mgood : module := (S1,
+  Definition S3 := S_inv ((a, t_cls Account)::(b, t_int)::nil) (a_prt (e_fld (e_ a) key) ∧ a_ (e_lt (e_ b) (e_fld (e_ a) balance))). 
+
+  Definition Mgood : module := (S_and S2 S3,
                                  ⟦ Shop ↦ ShopDef ⟧
                                    ⟦ Account ↦ AccountDef ⟧
                                    ⟦ Key ↦ KeyDef ⟧
@@ -686,8 +690,15 @@ e : C
        intros_entails; repeat asrt_sat_auto_destruct_conj; auto with assert_db
     end.
 
-  Ltac by_call_ext_adapt_strong :=
-    try (eapply hq_conseq; [apply hq_call_ext_adapt_strong, lspec_base| | | ];
+  Ltac has_spec S :=
+    match S with
+    | S2 => apply lspec_and1, lspec_base
+    | S3 => apply lspec_and2, lspec_base
+    end.
+
+  Ltac by_call_ext_adapt_strong_using S :=
+    try (eapply hq_conseq; [apply hq_call_ext_adapt_strong;
+                           has_spec S| | | ];
          simpl;
          try solve [auto with assert_db; by_assumption]).
 
@@ -885,29 +896,52 @@ e : C
     repeat asrt_sat_auto_destruct_conj;
     auto with assert_db.
 
-  Ltac unrelated_var_assgn x e :=
-          apply hq_mid;
-            eapply h_strengthen;
+  Ltac unrelated_var_assgn_preserves_prt x e :=
+          try (
+              match goal with
+              | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+                  apply hq_mid
+              end);
+          eapply h_strengthen;
           [apply h_prot1 with (A:=a_true);
-            crush;
-            match goal with
-            | [|- _ ⊢ ⦃ _ ∧ ?A ⦄ _ ⦃ _ ⦄ ] =>
-                apply h_strengthen with (P1:=A);
-                [|]
-            end;
-            try solve [solve_entails];
-          match goal with
-          | [|- _ ⊢ ⦃ ?A ⦄ _ ⦃ _ ⦄] =>
-              apply h_strengthen
-              with (P1:=[e /s x] A);
-              [|simpl; auto with assert_db]
-          end;
-          apply h_embed_UL;
-          apply hoare_ul_assgn;
-          intros_entails;
-          repeat asrt_sat_auto_destruct_conj;
-          auto with assert_db
+           crush;
+           match goal with
+           | [|- _ ⊢ ⦃ _ ∧ ?A ⦄ _ ⦃ _ ⦄ ] =>
+               apply h_strengthen with (P1:=A);
+               [|]
+           end;
+           try solve [solve_entails];
+           match goal with
+           | [|- _ ⊢ ⦃ ?A ⦄ _ ⦃ _ ⦄] =>
+               apply h_strengthen
+               with (P1:=[e /s x] A);
+               [|simpl; auto with assert_db]
+           end;
+           apply h_embed_UL;
+           apply hoare_ul_assgn;
+           intros_entails;
+           repeat asrt_sat_auto_destruct_conj;
+           auto with assert_db
           |try solve [solve_entails]].
+
+  Ltac by_UL_hoare_unrelated_var_assgn x e :=
+    apply hq_mid;
+    match goal with
+    | [|- context [e_lt ?e1 ?e2] ] =>
+        apply h_strengthen with (P1:=a_ e_lt e1 e2)
+    end;
+    try solve [solve_entails];
+    match goal with
+    | [|- _ ⊢ ⦃ ?A ⦄ _ ⦃ _ ⦄] =>
+        apply h_strengthen
+        with (P1:=[e /s x] A);
+        [|simpl; auto with assert_db]
+    end;
+    apply h_embed_UL;
+    apply hoare_ul_assgn;
+    intros_entails;
+    repeat asrt_sat_auto_destruct_conj;
+    auto with assert_db.
 
   (*Lemma itemPriceAssgnPreserves_akey_prot :
     Mgood
@@ -947,10 +981,71 @@ e : C
   Proof.
 
     (* tmp = buyer.pay(thisAcc, itemPrice) *)
-
-
-    by_call_ext_adapt_strong;
+    by_call_ext_adapt_strong_using S2.
+    simpl_types.
+    repeat apply entails_conj_split;
       try solve [by_assumption].
+
+    ****
+      by_assumption.
+      eapply apply_entails;
+        [apply entails_prt_prog_var|].
+      repeat asrt_sat_auto_destruct_conj;
+        auto with assert_db.
+
+    ****
+      by_assumption.
+      eapply apply_entails;
+        [apply entails_prt_intl|].
+      asrt_sat_auto_destruct_conj;
+        eauto.
+      eapply apply_entails;
+        [apply entails_intl_not_extl|];
+        eauto.
+      unfold Mgood;
+        simpl;
+        auto.
+      unfold update, t_update;
+        simpl;
+        crush.
+      auto.
+      eexists; eauto.
+
+    **** (* a.key protected from itemPrice *)
+      by_assumption.
+      eapply apply_entails;
+        [apply entails_prt_int|].
+      repeat asrt_sat_auto_destruct_conj;
+        auto with assert_db.
+      eapply apply_entails;
+        [apply keyHasTypeKey|].
+      auto.
+
+  Qed.
+
+  Lemma buyCallPreserves_abalance :
+    Mgood
+      ⊢ ⦃ a_ e_typ (e_ oldBalance) t_int ∧
+            (a_ e_typ (e_ thisAcc) (t_cls Account) ∧
+               (a_ e_typ (e_ itemPrice) t_int ∧
+                  (a_ e_typ (e_ result) t_bool ∧
+                     (a_ e_typ (e_ this) (t_cls Shop) ∧
+                        (a_ e_typ (e_ buyer) t_ext ∧
+                           (a_ e_typ (e_ item) (t_cls Item) ∧
+                              (a_ e_typ (e_ a) (t_cls Account) ∧
+                                 (a_ e_typ (e_ b) t_int ∧
+                                    (a_prt ((e_ a) ∙ key) ∧
+                                       a_ (e_lt
+                                             (e_ b)
+                                             ((e_ a) ∙ balance)))))))))))⦄
+      s_call tmp buyer pay (thisAcc :: itemPrice :: nil)
+      ⦃ a_ e_lt (e_ b) ((e_ a) ∙ balance) ⦄
+    || ⦃ a_prt ((e_ a) ∙ key)
+            ∧ a_ e_lt (e_ b) ((e_ a) ∙ balance) ⦄.
+  Proof.
+
+    by_call_ext_adapt_strong_using S3.
+
     simpl_types.
     repeat apply entails_conj_split;
       try solve [by_assumption].
@@ -1046,7 +1141,7 @@ e : C
                    (a_ e_eq (e_fld e1 f) (e_fld e2 f)).
 
   Lemma I2 :
-    spec_sat Mgood S1.
+    spec_sat Mgood S2.
   Proof.
     setup_shop.
     apply spec_invariant.
@@ -1080,13 +1175,13 @@ e : C
                    [apply entails_fld_type; eauto|eauto]].
 
         *** (* itemPrice = item.price *)
-          unrelated_var_assgn itemPrice (e_fld (e_ item) price).
+          unrelated_var_assgn_preserves_prt itemPrice (e_fld (e_ item) price).
 
         *** (* thisAcc = this.acc *)
-          unrelated_var_assgn thisAcc (e_fld (e_ this) acc).
+          unrelated_var_assgn_preserves_prt thisAcc (e_fld (e_ this) acc).
 
         *** (* oldBalance = thisAcc.balance *)
-          unrelated_var_assgn
+          unrelated_var_assgn_preserves_prt
             oldBalance
             (e_fld (e_ thisAcc) balance).
 
@@ -1122,7 +1217,7 @@ e : C
             simpl; auto with assert_db.
 
           **** (* external call to buyer.tell *)
-            by_call_ext_adapt_strong;
+            by_call_ext_adapt_strong_using S2;
               try solve [by_assumption].
             simpl_types.
             repeat apply entails_conj_split;
@@ -1132,7 +1227,7 @@ e : C
               [apply entails_prt_prog_var|auto].
 
         ***
-          unrelated_var_assgn result e_false.
+          unrelated_var_assgn_preserves_prt result e_false.
 
         ***
           return_false_protects_key.
@@ -1265,10 +1360,6 @@ e : C
         end.
   Qed.
 
-  Definition b := v_spec 12.
-  
-  Definition S3 := S_inv ((a, t_cls Account)::(b, t_int)::nil) (a_prt (e_fld (e_ a) key) ∧ a_ (e_lt (e_ b) (e_fld (e_ a) balance))). 
-
 
   Lemma I3 :
     spec_sat Mgood S3.
@@ -1304,19 +1395,41 @@ e : C
                    eapply apply_entails;
                    [apply entails_fld_type; eauto|eauto]].
 
-        *** (* itemPrice = item.price *)
-          unrelated_var_assgn itemPrice (e_fld (e_ item) price).
+        *** (* itemPrice = item.price: <a.key> *)
+          unrelated_var_assgn_preserves_prt itemPrice (e_fld (e_ item) price).
+
+        *** (* itemPrice = item.price: b < a.balance *)
+          by_UL_hoare_unrelated_var_assgn
+            itemPrice
+            (e_fld (e_ item) price).
 
         *** (* thisAcc = this.acc *)
-          unrelated_var_assgn thisAcc (e_fld (e_ this) acc).
+          unrelated_var_assgn_preserves_prt
+            thisAcc (e_fld (e_ this) acc).
+
+        *** (* thisAcc = this.acc: b < a.balance *)
+          by_UL_hoare_unrelated_var_assgn
+            thisAcc (e_fld (e_ this) acc).
 
         *** (* oldBalance = thisAcc.balance *)
-          unrelated_var_assgn
+          unrelated_var_assgn_preserves_prt
+            oldBalance
+            (e_fld (e_ thisAcc) balance).
+
+        *** (* oldBalance = thisAcc.balance: b < a.balance *)
+          by_UL_hoare_unrelated_var_assgn
             oldBalance
             (e_fld (e_ thisAcc) balance).
 
         *** (* tmp = buyer.pay(thisAcc, itemPrice) *)
-          apply buyCallPreserves_akey_prot.
+          eapply hq_conseq;
+            [apply buyCallPreserves_akey_prot| | | ];
+            try solve [solve_entails].
+
+        *** (* tmp = buyer.pay(thisAcc, itemPrice): b < a.balance *)
+          eapply hq_conseq;
+            [apply buyCallPreserves_abalance| | | ];
+            try solve [solve_entails].
 
         ***
           apply hq_if.
@@ -1325,7 +1438,7 @@ e : C
             admit.
 
           **** (* external call to buyer.tell *)
-            by_call_ext_adapt_strong;
+            by_call_ext_adapt_strong_using S2;
               try solve [by_assumption].
             simpl_types.
             repeat apply entails_conj_split;
@@ -1335,10 +1448,32 @@ e : C
               [apply entails_prt_prog_var|auto].
 
         ***
-          unrelated_var_assgn result e_false.
+          apply hq_if.
+
+          **** (* internal call to this.send *)
+            admit.
+
+          **** (* external call to buyer.tell *)
+            by_call_ext_adapt_strong_using S3;
+              try solve [by_assumption].
+            simpl_types.
+            repeat apply entails_conj_split;
+              try solve [by_assumption].
+            by_assumption.
+            eapply apply_entails;
+              [apply entails_prt_prog_var|auto].
+
+        ***
+          unrelated_var_assgn_preserves_prt result e_false.
+
+        *** 
+          admit.
 
         ***
           return_false_protects_key.
+
+        ***
+          admit.
 
       ** (* send method: private method not considered *)
         destruct H;
