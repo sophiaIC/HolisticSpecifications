@@ -65,11 +65,11 @@ Implementations of such a class  appear in the next section.
 module M$_{shop}$
   ...   
   class Shop
-    field accnt:Account, invntry:Inventory, clients:[external]      
+    field accnt:Account, invntry:Inventory, clients:external      
     public method buy(buyer:external, anItem:Item)
       int price = anItem.price
       int oldBlnce = this.accnt.blnce
-      buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}!$
+      buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}$
       if (this.accnt.blnce == oldBlnce+price)  
          this.send(buyer,anItem)
       else
@@ -80,7 +80,7 @@ module M$_{shop}$
  
 
 The critical point is the external call on line 8,   {where the \prg{Shop} asks the \prg{buyer} to pay the price of that item,
-by calling  \prg{pay} on \prg{buyer} and passing its account as an argument.
+by calling  \prg{pay} on \prg{buyer} and passing the \prg{Shop} account as an argument.
 As \prg{buyer} is an external object, the module \Mshop has no method specification for \prg{pay}, and no 
 certainty about what its implementation %knowledge of what the implementation of \prg{pay} 
 might do. 
@@ -105,15 +105,15 @@ Can \prg{Shop}  be certain?}
 %$\strut \ \ \ \ \ \ \ \ \ \ \ $ object causing the withdrawal can eventually get access to the account's \password, \ \ \  {\emph{then}} \\
 %$\strut \ \ \ (C)\ \ $ The external  call on line 8 will not cause a reduction in the shop's account's balance.
 \begin{enumerate}[(A)]
-\item   If prior to the call of  \prg{buy}, the \prg{buyer}  has no (eventual) access to the account's \password, \ \ \ \  \ \  and
+\item   If prior to the call of  \prg{buy}, the \prg{buyer}  has no eventual access to the account's \password, \ \ \ \emph{----} and
 \item  If \Mshop ensures that a) access to keys is not leaked to external objects, 
-and b) funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password,\ \ \ \  \ \ \  then 
+and b) funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password, \ \ \ \emph{----} then
 \item  The external  call on line 8 will not result  in a decrease in the shop's account balance.
 \end{enumerate}
 
 %\vspace{.3cm}
 \noindent
-The remit of this paper is to provide specification and verification tools that support arguments like the one above. In that example, we relied on two yet-to-be-defined concepts: (A) ``eventual access'' and (B) \tamed effects (e.g., no money withdrawn unless certain conditions are met).
+The remit of this paper is to provide specification and verification tools that support arguments like the one above. In that example, we relied on two yet-to-be-defined concepts: (1) ``eventual access'' and (2) \tamed effects (e.g., no money withdrawn unless certain conditions are met).
 %We need to define these concepts, and develop Hoare Logics for reasoning.
 Therefore, we need to address the following three challenges: 
 \begin{description}
@@ -148,7 +148,7 @@ Fig.  \ref{fig:ProtectedBoth}.  %
 
  \begin{description}
 \item[Protection] Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
- if the penultimate object on any path from $o$ to $o'$  is internal.
+ if the penultimate object on \se{every} path from $o$ to $o'$  is internal.
 Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. %More in 
 -- \cf \susan{Def. \ref{def:chainmail-protection-from}}. % and 
 
@@ -160,7 +160,7 @@ Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is pr
 
 If the  internal module  never passes $o$ to any external object (\ie never leaks $o$,) then if $o$ is protected from $o_e$ now, it will remain protected from $o_e$,
 and if $o$ is protected now, it will remain protected.
-Going back to the original question, if $o_e$ is protected from all locally accessible external objects, effect  $E$ is guaranteed not to occur.
+Going back to the original question, if $o_e$ is protected from all locally accessible external objects, effect  $E$ is guaranteed not to occur, \se{unless caused by internal code}.
 
 \begin{figure}[tbh]
 \begin{tabular}{|c|c|c|}
