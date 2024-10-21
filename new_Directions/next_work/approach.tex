@@ -3,7 +3,7 @@
 \renewcommand{\password}{key\xspace}
 
 We introduce the problem  through an example, and outline our
-approach.  We work with a  small, class-based object-oriented language similar to Joe-E \cite{JoeE} with modules,   module-private fields
+approach.  We work with a  small, class-based object-oriented, \se{sequential} language similar to Joe-E \cite{JoeE} with modules,   module-private fields
 ({accessible} only from   methods {from} the same module),
 % not that central, we dicuss this later %initalised by a class's implicit constructor, 
 and unforgeable, un-enumerable addresses.
@@ -50,7 +50,7 @@ so long as they {are reestablished} before (re)entry to an external module.
 \label{sec:shop}
 
 The challenge when calling a method on an external object, is that we have no specification for that method. 
- For illustration, consider the following, internal, module \Mshop, and assume that it includes the classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
+ For illustration, consider the following, internal, module \Mshop, which also includes the classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
 Classes  {\prg{Inventory} and \prg{Item} have the expected functionality. 
 \prg{Account}s hold a balance and have a \password. 
 With access to an \prg{Account}, %'s address, 
@@ -65,11 +65,11 @@ Implementations of such a class  appear in the next section.
 module M$_{shop}$
   ...   
   class Shop
-    field accnt:Account, invntry:Inventory, clients:[external]      
+    field accnt:Account, invntry:Inventory, clients:external      
     public method buy(buyer:external, anItem:Item)
       int price = anItem.price
       int oldBlnce = this.accnt.blnce
-      buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}!$
+      buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}$
       if (this.accnt.blnce == oldBlnce+price)  
          this.send(buyer,anItem)
       else
@@ -80,7 +80,7 @@ module M$_{shop}$
  
 
 The critical point is the external call on line 8,   {where the \prg{Shop} asks the \prg{buyer} to pay the price of that item,
-by calling  \prg{pay} on \prg{buyer} and passing its account as an argument.
+by calling  \prg{pay} on \prg{buyer} and passing the \prg{Shop} account as an argument.
 As \prg{buyer} is an external object, the module \Mshop has no method specification for \prg{pay}, and no 
 certainty about what its implementation %knowledge of what the implementation of \prg{pay} 
 might do. 
@@ -105,15 +105,15 @@ Can \prg{Shop}  be certain?}
 %$\strut \ \ \ \ \ \ \ \ \ \ \ $ object causing the withdrawal can eventually get access to the account's \password, \ \ \  {\emph{then}} \\
 %$\strut \ \ \ (C)\ \ $ The external  call on line 8 will not cause a reduction in the shop's account's balance.
 \begin{enumerate}[(A)]
-\item   If prior to the call of  \prg{buy}, the \prg{buyer}  has no (eventual) access to the account's \password, \ \ \ \  \ \  and
+\item   If prior to the call of  \prg{buy}, the \prg{buyer}  has no eventual access to the account's \password, \ \ \ \emph{----} and
 \item  If \Mshop ensures that a) access to keys is not leaked to external objects, 
-and b) funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password,\ \ \ \  \ \ \  then 
+and b) funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password, \ \ \ \emph{----} then
 \item  The external  call on line 8 will not result  in a decrease in the shop's account balance.
 \end{enumerate}
 
 %\vspace{.3cm}
 \noindent
-The remit of this paper is to provide specification and verification tools that support arguments like the one above. In that example, we relied on two yet-to-be-defined concepts: (A) ``eventual access'' and (B) \tamed effects (e.g., no money withdrawn unless certain conditions are met).
+The remit of this paper is to provide specification and verification tools that support arguments like the one above. In that example, we relied on two yet-to-be-defined concepts: (1) ``eventual access'' and (2) \tamed effects (e.g., no money withdrawn unless certain conditions are met).
 %We need to define these concepts, and develop Hoare Logics for reasoning.
 Therefore, we need to address the following three challenges: 
 \begin{description}
@@ -148,7 +148,7 @@ Fig.  \ref{fig:ProtectedBoth}.  %
 
  \begin{description}
 \item[Protection] Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
- if the penultimate object on any path from $o$ to $o'$  is internal.
+ if the penultimate object on \se{every} path from $o$ to $o'$  is internal.
 Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. %More in 
 -- \cf \susan{Def. \ref{def:chainmail-protection-from}}. % and 
 
@@ -160,7 +160,7 @@ Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is pr
 
 If the  internal module  never passes $o$ to any external object (\ie never leaks $o$,) then if $o$ is protected from $o_e$ now, it will remain protected from $o_e$,
 and if $o$ is protected now, it will remain protected.
-Going back to the original question, if $o_e$ is protected from all locally accessible external objects, effect  $E$ is guaranteed not to occur.
+Going back to the original question, if $o_e$ is protected from all locally accessible external objects, effect  $E$ is guaranteed not to occur, \se{unless caused by internal code}.
 
 \begin{figure}[tbh]
 \begin{tabular}{|c|c|c|}
@@ -202,7 +202,7 @@ are protected from $o_2$.
 \subsection{2$^{nd}$ Challenge: Specification of tamed effects}
 \label{sect:approach:scoped}
 How can we express the guarantee that effects are \tamed?  
- In particular, when such effects can be the outcome of the execution of more than one method? 
+ In particular, when effects can be the outcome of the execution of more than one method? 
  Traditional,  {per-method} PRE/POST conditions {cannot guarantee} %specifications cannot express guarantees
   that two or more of our methods won't interact to produce an untamed effect. 
 We build on the concept of history invariants \cite{liskov94behavioral,usinghistory,Cohen10} and define
@@ -320,7 +320,7 @@ public method set(key',key'':Key)
 \end{minipage} 
 \end{tabular}
 
-{Thus, in all three modules, the key is an object capability which \emph{enables} the withdrawal of the money. 
+{Thus, in all three modules, the key is a capability which \emph{enables} the withdrawal of the money. 
 Moreover, in $\ModA$ and $\ModC$, the key
 {is a capability} used to  \emph{tame} withdrawal of money, preventing those without it from getting the money from the account.}
 Crucially,  in $\ModB$ the key \emph{does not tame} withdrawal of money.
@@ -336,7 +336,7 @@ $\ \strut \hspace{.01in} $ \prg{an\_account.set(42); an\_account.transfer(rogue\
 Even though % the method 
 \prg{transfer} in  \ModB is ``safe'' when considered in isolation, it is not safe when considered in conjunction with other methods from the same module. 
 
-Modules $\ModA$ and $\ModC$ satisfy $S_2$ and $S_3$, while $\ModB$ satisfies neither $S_2$ nor $S_3$. No module satisfies $S_1$. 
+Modules $\ModA$ and $\ModC$ satisfy $S_2$ and $S_3$, while $\ModB$ satisfies neither. No module can satisfy $S_1$. 
 \end{example}
  
 \forget{% for the time being at least
@@ -540,7 +540,7 @@ A method preserves an assertion   if it preserves it   from pre- to  post-states
 \subsection*{Summary}
 
 In our threat model, external objects can execute arbitrary code, invoke any public internal methods,  potentially access any other external object, and may collude with one another in any conceivable way.
-Our specifications are conditional: they do not guarantee that certain effects will never occur, but they ensure that specific effects will only happen if certain conditions were met prior to the execution of the external code.
+Our specifications are conditional: they do not guarantee that specific effects will never occur, but they ensure that certaon effects will only happen if specific conditions were met prior to the execution of the external code.
  
 The key ingredients of our work are: a) the concepts of protection ($\protectedFrom {x} {y}$ and $\inside {x}$), b) \scoped invariants (${\TwoStatesN {\overline {x:D}} {A}}$), and c) the adaptation operator ($\FIXSymbolA$).
 In the remaining sections, we discuss all this in more detail.
