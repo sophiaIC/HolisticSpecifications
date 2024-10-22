@@ -98,6 +98,7 @@ Fig. \ref{f:protection} with some further inference rules, given   in Fig. \ref{
 	{M \vdash x : \prg{str} \rightarrow \protectedFrom{y}{x} }
 	{}
 	\quad[\textsc{Prot-Str}_1]
+	\and
 %	\and
 %\inferrule
 %	{M \vdash x : \prg{str} \rightarrow \neg \protectedFrom{x}{y}}
@@ -108,12 +109,19 @@ Fig. \ref{f:protection} with some further inference rules, given   in Fig. \ref{
 %	{M \vdash x \neq y \wedge y : \prg{intl} \rightarrow \protectedFrom{x}{y}}
 %	{}
 %	\quad[\textsc{Prot-Intl}]
+%\sdN{
+\inferrule
+	{M \vdash  \protectedFrom{e}{e'}   \rightarrow e\neq e'} 
+	{}
+	\quad[\textsc{Prot-Neq]}
+% }
 \end{mathpar}
 \caption{Extended Consequence Rules for Protection that include rules for protection involving scalars.}
 \label{f:protection:conseq:ext}
 \end{figure}
 
 We also introduce a rule for conditionals in Fig. \ref{f:if}, {where we expect the obvious syntax and semantics for $Cond$}
+\sdN{and an absurd rule}
 
 \begin{figure}[htb]
 $$
@@ -132,9 +140,8 @@ $$
  		{\ A' \ }
 		{\ A'' \ }	
 	\end{array}
-	}	 
- 	{  
-	
+	}	
+ 	{  	
 	\hprovesN {M}   
 		{\  A \  }
 		{\  \prg{if}\ Cond\ \prg{then}\ stmt_1\ \prg{else}\ stmt_2 \ \ }
@@ -143,6 +150,52 @@ $$
 }
 $$
 \caption{Hoare Quadruple  for conditionals}
+\label{f:if}
+\end{figure}
+
+
+\begin{figure}[htb]
+$$
+\begin{array}{lcl}
+\sdN{
+\inferruleSD{\hspace{0.5cm} [\sc{Absurd}]}
+	{	
+	}	 
+ 	{  	
+	\hprovesN {M}   
+		{\  false \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+}
+} & &
+\sdN{
+\inferruleSD{\hspace{0.5cm} [\sc{Cases}]}
+	{ \begin{array}{l}
+	\hprovesN {M}   
+		{\  A \wedge A_{1}  \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+		\\
+		\hprovesN {M}   
+		{\   A \wedge A_{2} \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+	\end{array}	
+	}	 
+ 	{  	
+	\hprovesN {M}   
+		{\  A \wedge (A_1 \vee A_2) \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+}
+}
+\end{array}
+$$
+\caption{More Substructural Hoare Quadruples}
 \label{f:if}
 \end{figure}
 
@@ -394,6 +447,9 @@ We apply {\textsc{Consequ}} on (23), (24) and (21) and obtain (20)!
 \normalsize
 
 
+
+
+
  %
 %By the \textsc{Consequ} in Fig. \ref{f:substructural}\footnote{\red{I do not understand the argument here. It feels as if you applied \textsc{Consequ} on the earlier step, but you have not yet proven that step. }}
 % and \textsc{Prot$_1$} in Fig. \ref{f:protection:conseq:ext} , we have
@@ -625,7 +681,125 @@ We apply {\textsc{Consequ}} on (23), (24) and (21) and obtain (20)!
 %
 \end{proofO}
 
+\subsection{Proving method \prg{set} from $M_{better}$}
+
+We want to prove that this public method satisfies the specification  $S_2$, namely
+
+\begin{lemma}
+\label{l:satisfies:Mbetter:pec2}
  
+\begin{align*}
+\text{(30)}  \ \ \ \ M_{better} \vdash 
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams}  \  \} \\
+		& \SPT   \prg{if (this.key==key') then }\\
+		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
+	        & \SPT   \prg{else }\\
+		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
+		& \SPT \prg{res:=0} \\
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+where we are using the shorthands\\
+ $ \SPT  \Aparams\ \triangleq \  \prg{this}:\prg{Account}, \prg{key'} : \prg{Key}, \prg{key''} : \prg{Key}$.\\
+   $ \SPT  \Alocals\ \triangleq \    \prg{a}:\prg{Account}, \ \Aparams, $.\\
+%   $ \SPT  \Ids\ \triangleq \   \prg{this}, \prg{buyer}, \prg{anItem}$.\\
+
+\end{lemma}
+
+\begin{proofO}
+
+We will use the  {\sc{Sequnece}} rule, and we want to prove
+\\
+\begin{align*}
+\text{(31?)}  \ \ \ \ M_{better} \vdash 
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \  \} \\
+		& \SPT   \prg{if (this.key==key') then }\\
+		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
+	        & \SPT   \prg{else }\\
+		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
+		& \{ \ \Alocals\,\wedge\ {\inside{\prg{a.key}}}\    \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+and that
+\begin{align*}
+\text{(32?)}  \ \ \ \ M_{better} \vdash
+          &  \{ \ \Alocals\,\wedge\{\inside{\prg{a.key}}\  \}  \\
+		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+
+(32?) follows   from the types, and {\sc{Prot-Int}}$_1$, the fact that \prg{a.key} did not change, and  \sdN{ {\sc{Prot-1}}}.
+
+\vspace{.5cm}
+Wenow  want to  prove (31?). For this, will apply the {\sc{If-Rule}}. That is, we need to prove that
+
+\begin{align*}
+\text{(31a?)}  \ \ \ \ M_{better} \vdash 
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,  \prg{this.key==key'}\  \} \\
+		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
+		& \{ {\inside{\prg{a.key}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+ 
+and that
+ 
+\begin{align*}
+\text{(31b?)}  \ \ \ \ M_{better} \vdash 
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,  \prg{this.key}\neq\prg{key'}\  \} \\
+		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
+		& \{ {\inside{\prg{a.key}}}\   \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+
+(31b?) follows easily from  the fact that \prg{a.key} did not change, and  {\sc{Prot-1}}.
+
+\vspace{.5cm}
+We look at the proof of (31a?).  We will apply the {\sc{Cases}} rule, and distinguish on whether \prg{a.key}==\prg{this.key}. That is, we want to prove that\\
+\small{
+\begin{align*}
+\text{(31aa?)}  \ \ \ \ M_{better} \vdash 
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,  \prg{this.key==key'}\ \wedge \prg{this.key==a.key}  \} \\
+			& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
+	       	& \{ {\inside{\prg{a.key}}}\   \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+}
+\\
+and that
+\\
+\small{
+\begin{align*}
+\text{(31ab?)}  \ \ \ \ M_{better} \vdash 
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,   \,  \prg{this.key==key'}\   \prg{this.key}\neq\prg{a.key'}\  \} \\
+		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
+		& \{ {\inside{\prg{a.key}}}\   \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+}
+\vspace{.2cm}
+We can prove (31aa?) through application of {\sc{Absurd}}, {\sc{ProtNeq}}, and {\sc{Consequ}}, as follows
+
+\begin{align*}
+\text{(31c)}  \ \ \ \ M_{better} \vdash 
+		&	\{  \ false  \} \\
+		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
+		& \{ {\inside{\prg{a.key}}}\   \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+
+By  {\sc{ProtNeq}}, we have $M_{better} \vdash  \protectedFrom {\prg{a.key}} {\prg{key'}} \, \longrightarrow\, {\prg{a.key}}\neq {\prg{key'}}$, and therefore obtain
+
+\begin{align*}
+\text{(31d)}  \ \ \ \ M_{better} \vdash  ... \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \, \prg{this.key}==\prg{a.key}\, \wedge\,  \prg{this.key}==\prg{key'}\ \longrightarrow \ false 
+\end{align*}
+
+We apply  {\sc{Consequ}} on (31c) and (31d) and obtain (31aa?).
+
+\vspace{.5cm}
+We can prove (31ab?) by proving that \prg{this.key}$\neq$\prg{a.key} implies that $\prg{this}\neq a$, which again implies that the assignment \prg{this.key := ... } leaves the value of \prg{a.key} unmodified. We apply {\sc{Prot-1}}, and are done.
+
+\end{proofO} 
 
 %\begin{lemma}
 %$M_{good} \vdash S_3$
