@@ -176,9 +176,12 @@ e : C
   Parameter sendBody : stmt.
 
   Definition sendDef := meth ((a_ (e_typ (e_ a) (t_cls Account)) ∧
-                              (a_prt ((e_ a) ∙ key)),
+                                 (a_prt ((e_ a) ∙ key)),
                                 a_prt ((e_ a) ∙ key),
                                 a_prt ((e_ a) ∙ key)) ::
+                                (a_prt_frm ((e_ a) ∙ key) (e_ buyer),
+                                  a_prt_frm ((e_ a) ∙ key) (e_ buyer),
+                                  a_prt_frm ((e_ a) ∙ key) (e_ buyer)) ::
                                 nil)
                           private
                           ((buyer, t_ext) ::
