@@ -304,11 +304,6 @@ e : C
   Proof.
   Admitted.
 
-  Lemma post_true :
-    forall M A s, M ⊢ ⦃ A ⦄ s ⦃ a_true ⦄.
-  Proof.
-  Admitted.
-
   Lemma apply_entails :
     forall M σ A1 A2, M ⊢ A1 ⊆ A2 ->
                  sat M σ A1 ->
@@ -994,7 +989,7 @@ e : C
 
     (* tmp = buyer.pay(thisAcc, itemPrice) *)
     by_call_ext_adapt_strong_using S2.
-    simpl_types.
+    simpl_types;
     repeat apply entails_conj_split;
       try solve [by_assumption].
 
