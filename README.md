@@ -5,6 +5,16 @@ Our work on Holistic Specifications
 
 The Coq model implements Chainmail mostly as described, however, it differs from the formalisation in the paper in a few noticable ways. These differences are outlined here, along with any other parts of the model which may need some explanation.
 
+### Building the Coq Sources
+There are several coq models associated with Chainmail, each associated with a different aspect of the project. To compile a coq model, within a root directory of that coq model, first run:
+
+`coq_makefile -f _CoqProject -o CoqMakefile`
+
+followed by:
+
+`make`
+
+
 ### Quantified variables
 
 In the paper, quantifiers precede the name by which that variable should be refered in the quantified expression. However, in the model, no names are provided, and quantified variables are refered to through De Bruijn indices. This greatly simplifies the encoding, allowing for the model to be much simpler, without any meaningful difference in how the model works, since there exists a isomorphism between terms with named quantified variables and terms using De Bruijn indices. These quantified variables can be refered to in `_hole` constructors, where the `nat` refers to the index. <!-- TODO Julian, which way round did you end up doing the indices, there was a point about this earlier? -->
