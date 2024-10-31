@@ -1,5 +1,15 @@
 \newcommand{\SPT}{~ \strut \hspace{.9cm}}
-
+\newcommand{\Aparams}{\prg{A}_{prms}}
+\newcommand{\Alocals}{\prg{A}_{dcls}}
+\newcommand{\Ids}{\prg{Id}_{dcls}}
+\newcommand{\Aparamstr}{\prg{A}_{prms,tr}}
+\newcommand{\Alocalstr}{\prg{A}_{dcls,tr}}
+\newcommand{\Idstr}{\prg{Id}_{dcls,tr}}
+\newcommand{\Aparamsset}{\prg{A}_{prms,set}}
+\newcommand{\Alocalsset}{\prg{A}_{dcls,set}}
+\newcommand{\Idsset}{\prg{Id}_{dcls,set}}
+\newcommand{\stmtsP}{\prg{stmts}_{10,11,12}}
+\newcommand{\step}[1]{ \vspace{.1cm} \noindent {\textbf{#1}}}
 \section{  {Proving \Tamed Effects for the Shop/Account Example}}
 
 \label{s:app:example}
@@ -35,8 +45,7 @@ Finally, we discuss why $M_{bad} \not\vdash S_2$ (\S \ref{s:app:example:why}).}
 
 {We extend the notion of protection to also allow it to apply to scalars. }
 
-\begin{definition}[Satisfaction 
-of Assertions  -- Protected From]
+\begin{definition}[Satisfaction  of Assertions  -- Protected From]
 \label{def:chainmail-protection-from-ext}
 extending the definition of Def 
 \ref{def:chainmail-protection-from}. We use $\alpha$ to range over addresses, $\beta$  to range over scalars, and   $\gamma$ to range over addresses or scalars.
@@ -191,7 +200,7 @@ the shorthands \prg{+=} and \prg{-=}.
 And we also allow definition of local variables, \eg  \prg{int price := ..} }
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
-module M$_{fine}$
+module M$_{good}$
   ...   
   class Shop
     field accnt : Account, 
@@ -235,23 +244,23 @@ module M$_{fine}$
 % I removed class Key
 % it does not have to belong to c=the module
 
+\noindent
 Remember that $M_{fine}$ is identical to $M_{good}$, except for the method \prg{set}. We describe the module below.
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
-module M$_{good}$
+module M$_{fine}$
   ...   
   class Shop
-     ...  $\mbox{as in } M_{good}$
+     ...  $ as in M_{good}$
   class Account
     field blnce : int 
     field key : Key
     
     public method transfer(dest:Account, key':Key, amt:int) :int
        ...  $\mbox{as in } M_{good}$
-
 	  
      public method set(key':Key, k'':Key) : int
-      if (this.key==kay')  then
+      if (this.key==key')  then
       		this.key:=key''
       else 
         res := 0
@@ -263,52 +272,131 @@ module M$_{good}$
  
 For brevity we only show that \verb|buy| satisfies our scoped invariants, as the all other methods of 
 the \verb|M|$_{good}$ interface are relatively simple, and do not make any external calls. 
-Our approach follows the 3 phases outlined in Section \ref{sect:proofSystem}. That is, in
-phase 1 we use more an assumed underlying Hoare logic and more traditional Hoare triples to prove the adherence of internal code to
-the specification. In phase 2 we use Hoare quadruples to prove external calls adhere
-to the specification, and finally in phase 3 we use raise the results from phase 1 and 2 to proved
-the entire module satisfies the specification.
+%Our approach follows the 3 phases outlined in Section \ref{sect:proofSystem}. That is, in
+%phase 1 we use more an assumed underlying Hoare logic and more traditional Hoare triples to prove the adherence of internal code to
+%the specification. In phase 2 we use Hoare quadruples to prove external calls adhere
+%to the specification, and finally in phase 3 we use raise the results from phase 1 and 2 to proved
+%the entire module satisfies the specification.
 
 { To write our proofs more succinctly, we will use \prg{ClassId}::\prg{Methodid}.\prg{body} as a shorthand for the method body of \prg{Methodid} defined in \prg{ClassId}.}
 
- \subsubsection{Proof outline for $M_{good} \vdash S_2$}
+ \subsubsection{Proof outline for $M_{good} \vdash S_2$, and for $M_{fine} \vdash S_2$}
 
 
 
 \begin{lemma}
 \label{lemma:exampleKeyProtect}
+\label{l:Mgood:S2}
 $M_{good} \vdash S_2$
 \end{lemma}
 \begin{proofO}
-We construct our proof tree using a top down approach.  That is, we start with our goal
+%We construct our proof tree using a top down approach.  
+In order to prove that 
 $$M_{good} \vdash \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{\prg{a.key}}}}$$
-and apply  \textsc{Invariant} from Fig. \ref{f:wf}.
-From this we are left with a subgoal for each method $m$ in  class $C$ with parameters $\overline{y:D}$ in the public interface of $M_{good}$ (we denote the body of such a method as \prg{C}::\prg{m}.\prg{body}):
-\small
+we have to apply  \textsc{Invariant} from Fig. \ref{f:wf}.
+This leaves us with four subgoals, one for each method defined in class \prg{Account} or
+ \prg{Shop}.
+ That is, for each  class $C$  in $M_{good}$, and each method $m$ in $C$, with parameters $\overline{y:D}$ in the public interface of $M_{good}$, we have to prove that
+ \small
 \begin{align*}
 M_{good} \vdash & \\
 		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
-		   {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {\prg{this},\overline y} \  \} \\
+		             {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {(\prg{this},\overline y)} \  \} \\
 		& \prg{C}::\prg{m}.\prg{body}\  \\
 		&
                    \{\ {\inside{\prg{a.key}}}\ \wedge\ \ \protectedFrom {\prg{a.key}} {\prg{res}}   \ \}\ ||\ \{\ {\inside{\prg{a.key} } } \ \} \\
 \end{align*}
-\normalsize
-{Thus, we need to prove   three Hoare quadruples:}
-    
 
-We outline the proof for \prg{buy} in Lemma \ref{l:sub:one}.
+
+\normalsize
+Thus, we need to prove   three Hoare quadruples, namely one for \prg{Shop::buy}, one for  \prg{Account::transfer}, and one for  \prg{Account::set}.
+
+ \small{
+\begin{align*}
+M_{good} \vdash & \\
+		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
+		             {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {(\prg{this},\overline y)} \  \} \\
+		& \prg{C}::\prg{m}.\prg{body}\  \\
+		&
+                   \{\ {\inside{\prg{a.key}}}\ \wedge\ \ \protectedFrom {\prg{a.key}} {\prg{res}}   \ \}\ ||\ \{\ {\inside{\prg{a.key} } } \ \} \\
+\end{align*}
+}
+
+
+We do not prove anything for  \prg{Shop::send}, because we do not have a method body for it, and because it will have     
+
+We outline the proof for \prg{Shop::buy} in Lemma \ref{l:sub:one} in \S{s:buy:sat}.
+%, and the proof for \prg{Account::set} from module $M_{fine}$  in Lemma \ref{l:set:sat} in \S{s:set:sat}.
 
 \end{proofO}
 
-\newcommand{\Aparams}{\prg{A}_{params}}
-\newcommand{\Alocals}{\prg{A}_{dcls}}
-\newcommand{\Ids}{\prg{X}_{dcls}}
-\newcommand{\stmtsP}{\prg{stmts}_{10,11,12}}
-\newcommand{\step}[1]{ \vspace{.1cm} \noindent {\textbf{#1}}}
+We also want to prove that $M_{fine}$ satisfies the specification $S_2$.
 
 \begin{lemma}
-\label{l:sub:one}
+\label{l:Mfine:S2}
+$M_{fine} \vdash S_2$
+\end{lemma}
+\begin{proofO}
+%We construct our proof tree using a top down approach.  
+The proof of
+$$M_{fine} \vdash \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{\prg{a.key}}}}$$
+goes along similar lines to the proof of lemma \ref{l:Mgood:S2}.
+This leaves us further subgoals, one for each method defined in class \prg{Account} or
+ \prg{Shop}.
+ That is, for each  class $C$  in $M_{good}$, and each method $m$ in $C$, with parameters $\overline{y:D}$ in the public interface of $M_{good}$, we have to prove that
+
+ \small
+\begin{align*}
+M_{good} \vdash & \\
+		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
+		             {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {(\prg{this},\overline y)} \  \} \\
+		& \prg{C}::\prg{m}.\prg{body}\  \\
+		&
+                   \{\ {\inside{\prg{a.key}}}\ \wedge\ \ \protectedFrom {\prg{a.key}} {\prg{res}}   \ \}\ ||\ \{\ {\inside{\prg{a.key} } } \ \} \\
+\end{align*}
+
+Thus, we need to prove   three Hoare quadruples: One for \prg{Shop::buy}, one for  \prg{Account::transfer}, and one for  \prg{Account::set}. That is:
+ \small
+\begin{align*}
+\text{(1)}  \ \ \ \ M_{good} \vdash 
+		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Ids}  \  \} \\
+		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\\
+\text{(2)}  \ \ \ \ M_{good} \vdash 
+		&	\{  \ \Alocalstr\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idstr}  \  \} \\
+		& \SPT \prg{Account}::\prg{transfer}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\end{align*}
+
+
+\normalsize
+where we are using the shorthands\\
+ \small
+\begin{align*}
+  \Aparams\ \triangleq \  &  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{price} : \prg{int}$.\\
+ \Alocals\ \triangleq \ &  \Aparams,  \prg{myAccnt} : \prg{Account},\, \prg{oldBalance}:  \prg{int},  \prg{newBalance}:  \prg{int},  \prg{tmp}:  \prg{int}$.\\
+ \Ids\ \triangleq \  &  \prg{this}, \prg{buyer}, \prg{anItem}$.\\
+\end{align*}
+ 
+\normalsize
+
+We do not prove anything for  \prg{Shop::send}, because we do not have a method body for it, and because it will have     
+
+We outline the proof (1) for \prg{Shop::buy} in Lemma \ref{l:sub:one} in \S{s:buy:sat}.
+%, and the proof for \prg{Account::set} from module $M_{fine}$  in Lemma \ref{l:set:sat} in \S{s:set:sat}.
+
+\end{proofO}
+
+
+
+\subsection{Proving that \prg{Shop::buy} from $M_{good}$ satisfies $S_2$.
+\label{s:buy:sat}
+
+\begin{lemma}
+\label{l:buy:sat}
  
 \begin{align*}
 \text{(1)}  \ \ \ \ M_{good} \vdash 
@@ -317,10 +405,6 @@ We outline the proof for \prg{buy} in Lemma \ref{l:sub:one}.
 		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
-where we are using the shorthands\\
- $ \SPT  \Aparams\ \triangleq \  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{price} : \prg{int}$.\\
-  $ \SPT  \Alocals\ \triangleq \  \Aparams,  \prg{myAccnt} : \prg{Account},\, \prg{oldBalance}:  \prg{int},  \prg{newBalance}:  \prg{int},  \prg{tmp}:  \prg{int}$.\\
-   $ \SPT  \Ids\ \triangleq \   \prg{this}, \prg{buyer}, \prg{anItem}$.\\
 
 \end{lemma}
 
@@ -405,22 +489,37 @@ We apply {\textsc{Consequ}} on (23), (24) and (21) and obtain (20)!
 \end{proofO}
 
 \subsection{Proving method \prg{set} from $M_{fine}$}
+\label{s:set:sat}
+ 
 
 We want to prove that this public method satisfies the specification  $S_2$, namely
 
 \begin{lemma}
+\label{l:set:sat}
 \label{l:satisfies:Mfine:pec2}
  
 \begin{align*}
 \text{(30)}  \ \ \ \ M_{fine} \vdash 
 		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams}  \  \} \\
+%	Latex experiment; does not work 
+%	&
+%		\mbox{\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+%      if (this.key==key') then
+%        this.blnce-=amt;
+%        dest.blnce+=amt
+%      else
+%        res := 0
+%      res := 0
+%\end{lstlisting}
+%}
+%\\
 		& \SPT   \prg{if (this.key==key') then }\\
 		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
 	        & \SPT   \prg{else }\\
 		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
 		& \SPT \prg{res:=0} \\
-		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
-		   \{ {\inside{\prg{a.key}}} \}
+& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+	   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 where we are using the shorthands\\
  $ \SPT  \Aparams\ \triangleq \  \prg{this}:\prg{Account}, \prg{key'} : \prg{Key}, \prg{key''} : \prg{Key}$.\\
@@ -519,7 +618,7 @@ By  {\sc{ProtNeq}}, we have $M_{fine} \vdash  \protectedFrom {\prg{a.key}} {\prg
 We apply  {\sc{Consequ}} on (31c) and (31d) and obtain (31aa?).
 
 \vspace{.5cm}
-We can prove (31ab?) by proving that \prg{this.key}$\neq$\prg{a.key} implies that $\prg{this}\neq a$, which again implies that the assignment \prg{this.key := ... } leaves the value of \prg{a.key} unmodified. We apply {\sc{Prot-1}}, and are done.
+We can prove (31ab?) by proving that \prg{this.key}$\neq$\prg{a.key} implies that $\prg{this}\neq \prg{a}$ (by the underlying Hoare logic), which again implies that the assignment \prg{this.key := ... } leaves the value of \prg{a.key} unmodified. We apply {\sc{Prot-1}}, and are done.
 
 \end{proofO} 
 
