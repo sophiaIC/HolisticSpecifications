@@ -1,15 +1,18 @@
 \newcommand{\SPT}{~ \strut \hspace{.9cm}}
-\newcommand{\Aparams}{\prg{A}_{prms}}
-\newcommand{\Alocals}{\prg{A}_{dcls}}
-\newcommand{\Ids}{\prg{Id}_{dcls}}
-\newcommand{\Aparamstr}{\prg{A}_{prms,tr}}
-\newcommand{\Alocalstr}{\prg{A}_{dcls,tr}}
-\newcommand{\Idstr}{\prg{Id}_{dcls,tr}}
-\newcommand{\Aparamsset}{\prg{A}_{prms,set}}
-\newcommand{\Alocalsset}{\prg{A}_{dcls,set}}
-\newcommand{\Idsset}{\prg{Id}_{dcls,set}}
+%\newcommand{\Aparams}{\prg{A}_{prms}}
+\newcommand{\Alocals}{\prg{A}_{buy}}
+\newcommand{\Alocalsb}{\prg{A}_{1}}
+\newcommand{\Ids}{\prg{Ids}_{buy}}
+%\newcommand{\Aparamstr}{\prg{A}_{prmsT}}
+\newcommand{\Alocalstr}{\prg{A}_{trns}}
+\newcommand{\Idstr}{\prg{Ids}_{trns}}
+%\newcommand{\Aparamsset}{\prg{A}_{prmsS}}
+\newcommand{\Alocalsset}{\prg{A}_{set}}
+\newcommand{\Alocalssets}{\prg{A}_{2}}
+\newcommand{\Idsset}{\prg{Ids}_{set}}
 \newcommand{\stmtsP}{\prg{stmts}_{10,11,12}}
 \newcommand{\step}[1]{ \vspace{.1cm} \noindent {\textbf{#1}}}
+
 \section{  {Proving \Tamed Effects for the Shop/Account Example}}
 
 \label{s:app:example}
@@ -209,11 +212,11 @@ module M$_{good}$
   
     public method buy(buyer:external, anItem:Item, price: int, 
             myAccnt: Account, oldBalance: int, newBalance: int, tmp:int) : int
-      int price := anItem.price;
-      Account myAccnt := this.accnt;
-      int oldBalance := myAccnt.blnce;
+      price := anItem.price;
+      myAccnt := this.accnt;
+      oldBalance := myAccnt.blnce;
       tmp := buyer.pay(myAccnt, price)     // $\red{\mbox{external\ call}}!$
-      int newBalance := myAccnt.blnce;
+      newBalance := myAccnt.blnce;
       if (newBalance == oldBalance+price) then
           tmp := this.send(buyer,anItem)
       else
@@ -267,7 +270,7 @@ module M$_{fine}$
       res := 0
 \end{lstlisting}
 
-\subsection{Demonstrating that $M_{good} \vdash S_2 $}
+\subsection{Demonstrating that $M_{good} \vdash S_2$, and that $M_{fine} \vdash S_2$}
  \label{s:app:example:proofs}
  
 For brevity we only show that \verb|buy| satisfies our scoped invariants, as the all other methods of 
@@ -278,11 +281,9 @@ the \verb|M|$_{good}$ interface are relatively simple, and do not make any exter
 %to the specification, and finally in phase 3 we use raise the results from phase 1 and 2 to proved
 %the entire module satisfies the specification.
 
-{ To write our proofs more succinctly, we will use \prg{ClassId}::\prg{Methodid}.\prg{body} as a shorthand for the method body of \prg{Methodid} defined in \prg{ClassId}.}
+{ To write our proofs more succinctly, we will use \prg{ClassId}::\prg{methId}.\prg{body} as a shorthand for the method body of \prg{methId} defined in \prg{ClassId}.}
 
- \subsubsection{Proof outline for $M_{good} \vdash S_2$, and for $M_{fine} \vdash S_2$}
-
-
+  
 
 \begin{lemma}
 \label{lemma:exampleKeyProtect}
@@ -294,38 +295,62 @@ $M_{good} \vdash S_2$
 In order to prove that 
 $$M_{good} \vdash \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{\prg{a.key}}}}$$
 we have to apply  \textsc{Invariant} from Fig. \ref{f:wf}.
-This leaves us with four subgoals, one for each method defined in class \prg{Account} or
- \prg{Shop}.
- That is, for each  class $C$  in $M_{good}$, and each method $m$ in $C$, with parameters $\overline{y:D}$ in the public interface of $M_{good}$, we have to prove that
+ That is, for each  class $C$  defined in $M_{good}$, and for each public method $m$ in $C$, with parameters $\overline{y:D}$, we have to prove that
  \small
 \begin{align*}
-M_{good} \vdash & \\
-		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
+M_{good}\ \vdash \ \ &   \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
 		             {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {(\prg{this},\overline y)} \  \} \\
-		& \prg{C}::\prg{m}.\prg{body}\  \\
+		& \SPT  \prg{C}::\prg{m}.\prg{body}\  \\
 		&
                    \{\ {\inside{\prg{a.key}}}\ \wedge\ \ \protectedFrom {\prg{a.key}} {\prg{res}}   \ \}\ ||\ \{\ {\inside{\prg{a.key} } } \ \} \\
 \end{align*}
 
 
 \normalsize
-Thus, we need to prove   three Hoare quadruples, namely one for \prg{Shop::buy}, one for  \prg{Account::transfer}, and one for  \prg{Account::set}.
-
- \small{
+Thus, we need to prove  three Hoare quadruples: one for \prg{Shop::buy}, one for  \prg{Account::transfer}, and one for  \prg{Account::set}.  That is, we have to prove that
+ \small
 \begin{align*}
-M_{good} \vdash & \\
-		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
-		             {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {(\prg{this},\overline y)} \  \} \\
-		& \prg{C}::\prg{m}.\prg{body}\  \\
-		&
-                   \{\ {\inside{\prg{a.key}}}\ \wedge\ \ \protectedFrom {\prg{a.key}} {\prg{res}}   \ \}\ ||\ \{\ {\inside{\prg{a.key} } } \ \} \\
+\text{(1?)}  \ \ \ \ M_{good}\ \vdash  \  \ 
+		&	\{  \ \Alocals, \, \prg{a}:\prg{Account} \, \wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Ids}  \  \} \\
+		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\\
+\text{(2?)}  \ \ \ \ M_{good} \vdash \ 
+		&	\{  \ \Alocalstr, \, \prg{a}:\prg{Account}\, \wedge\,  {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idstr}  \  \} \\
+		& \SPT \prg{Account}::\prg{transfer}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\\
+\text{(3?)}  \ \ \ \ M_{good} \vdash \ 
+		&	\{  \ \Alocalsset, \, \prg{a}:\prg{Account}\, \wedge\,  {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset}  \  \} \\
+		& \SPT \prg{Account}::\prg{set}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
-}
+\normalsize
+where we are using ? to indicate that this needs to be proven, and 
+where we are using the shorthands\\
+\small
+$
+\begin{array}{c}
+\begin{array}{lcl}
+ \Alocals\ &  \triangleq   \  &   \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{price} : \prg{int},  \\
+&  & \prg{myAccnt} : \prg{Account},\, \prg{oldBalance}:  \prg{int},  \prg{newBalance}:  \prg{int},  \prg{tmp}:  \prg{int}.\\
+  \Ids\ &   \triangleq   & \prg{this},  \prg{buyer}, \prg{anItem}, \prg{price}, \prg{myAccnt},\, \prg{oldBalance},\  \prg{newBalance},  \prg{tmp}.\\ 
+\Alocalstr\  & \triangleq \  &   \prg{this}:\prg{Account}, \prg{dest} : \prg{Account}, \prg{key'} : \prg{Key}. \\
+  \Idstr\  &  \triangleq  & \prg{this},\, \prg{dest} ,\, \prg{key'}. \\
+  \Alocalsset\  & \triangleq \  &   \prg{this}:\prg{Account}, \, \prg{key'} : \prg{Key},\, \prg{key''} : \prg{Key}.\\
+    \Idsset\  &  \triangleq  & \prg{this},\, \prg{key'} ,\, \prg{key''}. \\
+\end{array}
+\end{array}
+$
+\normalsize
 
+We do not need to prove anything for  \prg{Shop::send}, because it is a private method. But we will use its specification, and we will need, or course, to prove that  \prg{Shop::send} sarisfies that specification.
+\red{Actually,  a better way to think about this is if we are proving that $M_{good} \vdash S_2 \wedge S_4$ where $S_4$ is the specification of \prg{Shop::send}.}
 
-We do not prove anything for  \prg{Shop::send}, because we do not have a method body for it, and because it will have     
-
-We outline the proof for \prg{Shop::buy} in Lemma \ref{l:sub:one} in \S{s:buy:sat}.
+We outline the proof of (1?) in Lemma \ref{l:sub:one} in \S \ref{s:buy:sat}.
 %, and the proof for \prg{Account::set} from module $M_{fine}$  in Lemma \ref{l:set:sat} in \S{s:set:sat}.
 
 \end{proofO}
@@ -341,58 +366,39 @@ $M_{fine} \vdash S_2$
 The proof of
 $$M_{fine} \vdash \TwoStatesN {\prg{a}:\prg{Account}}  {\inside{\prg{\prg{a.key}}}}$$
 goes along similar lines to the proof of lemma \ref{l:Mgood:S2}.
-This leaves us further subgoals, one for each method defined in class \prg{Account} or
- \prg{Shop}.
- That is, for each  class $C$  in $M_{good}$, and each method $m$ in $C$, with parameters $\overline{y:D}$ in the public interface of $M_{good}$, we have to prove that
-
+Thus, we need to prove the following  three Hoare quadruples: 
  \small
 \begin{align*}
-M_{good} \vdash & \\
-		& \{ \ \prg{this}:\prg{C},\, \overline{y:D},\, \prg{a}:\prg{Account}\, \wedge\,
-		             {\inside{\prg{a.key}}}\ \wedge\       \protectedFrom {\prg{a.key}} {(\prg{this},\overline y)} \  \} \\
-		& \prg{C}::\prg{m}.\prg{body}\  \\
-		&
-                   \{\ {\inside{\prg{a.key}}}\ \wedge\ \ \protectedFrom {\prg{a.key}} {\prg{res}}   \ \}\ ||\ \{\ {\inside{\prg{a.key} } } \ \} \\
-\end{align*}
-
-Thus, we need to prove   three Hoare quadruples: One for \prg{Shop::buy}, one for  \prg{Account::transfer}, and one for  \prg{Account::set}. That is:
- \small
-\begin{align*}
-\text{(1)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Ids}  \  \} \\
+\text{(4?)}  \ \ \ \ M_{fine}\ \vdash  \  \ 
+		&	\{  \ \Alocals, \, \prg{a}:\prg{Account} \, \wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Ids}  \  \} \\
 		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
 		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \\
-\text{(2)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Alocalstr\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idstr}  \  \} \\
+\text{(5?)}  \ \ \ \ M_{fine} \vdash \ 
+		&	\{  \ \Alocalstr, \, \prg{a}:\prg{Account}\, \wedge\,  {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idstr}  \  \} \\
 		& \SPT \prg{Account}::\prg{transfer}.\prg{body}\ \\  
+		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
+		   \{ {\inside{\prg{a.key}}} \}
+\\
+\text{(6?)}  \ \ \ \ M_{fine} \vdash \ 
+		&	\{  \ \Alocalsset, \, \prg{a}:\prg{Account}\, \wedge\,  {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset}  \  \} \\
+		& \SPT \prg{Account}::\prg{set}.\prg{body}\ \\  
 		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 
-
-\normalsize
-where we are using the shorthands\\
- \small
-\begin{align*}
-  \Aparams\ \triangleq \  &  \prg{this}:\prg{Shop}, \prg{buyer} : \prg{external}, \prg{anItem} : \prg{Item},\, \prg{a}:\prg{Account},\, \prg{price} : \prg{int}$.\\
- \Alocals\ \triangleq \ &  \Aparams,  \prg{myAccnt} : \prg{Account},\, \prg{oldBalance}:  \prg{int},  \prg{newBalance}:  \prg{int},  \prg{tmp}:  \prg{int}$.\\
- \Ids\ \triangleq \  &  \prg{this}, \prg{buyer}, \prg{anItem}$.\\
-\end{align*}
  
 \normalsize
 
-We do not prove anything for  \prg{Shop::send}, because we do not have a method body for it, and because it will have     
-
-We outline the proof (1) for \prg{Shop::buy} in Lemma \ref{l:sub:one} in \S{s:buy:sat}.
-%, and the proof for \prg{Account::set} from module $M_{fine}$  in Lemma \ref{l:set:sat} in \S{s:set:sat}.
+The proof of (4?) is identical to that of (1?); the proof of (5?) is identical to that of (2?). 
+We outline the proof (6?)    in Lemma \ref{l:set:sat} in \S{s:set:sat}.
 
 \end{proofO}
 
 
 
-\subsection{Proving that \prg{Shop::buy} from $M_{good}$ satisfies $S_2$.
+\subsection{Proving that \prg{Shop::buy} from $M_{good}$ satisfies $S_2$}
 \label{s:buy:sat}
 
 \begin{lemma}
@@ -400,7 +406,7 @@ We outline the proof (1) for \prg{Shop::buy} in Lemma \ref{l:sub:one} in \S{s:bu
  
 \begin{align*}
 \text{(1)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Ids}  \  \} \\
+		&	\{  \ \Alocals\,\prg{a}:\prg{Account}\ \wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Ids}  \  \} \\
 		& \SPT \prg{Shop}::\prg{buy}.\prg{body}\ \\  
 		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
@@ -409,7 +415,8 @@ We outline the proof (1) for \prg{Shop::buy} in Lemma \ref{l:sub:one} in \S{s:bu
 \end{lemma}
 
 \begin{proofO}
-
+We will use the shorthand $\Alocalsb \triangleq \Alocals, \,\prg{a}:\prg{Account}$.
+We will split the proof into 1) proving that statements 10, 11, 12 preserve the protection of \prg{a.key} from the \prg{buyer}, 2) proving that the external call 
 
 \step{1st Step: proving statements 10, 11, 12}
 
@@ -417,7 +424,7 @@ We apply the underlying Hoare logic and prove that the statements on lines 10, 1
 
 \begin{align*}
 \text{(10)}  \ \ \ \ {M_{good} \vdash_{ul}} 
-		&	\{  \ \Alocals\  \wedge\ z=\prg{a.key} \} \\
+		&	\{  \ \Alocalsb\  \wedge\ z=\prg{a.key} \} \\
 		&   \SPT \prg{price:=anItem.price}; \\  
 		&   \SPT \prg{myAccnt:=this.accnt}; \\  
                  &   \SPT \prg{oldBalance := myAccnt.blnce};\\
@@ -428,7 +435,7 @@ We then apply {\sc{Embed\_UL}}, {\sc{Prot-1}} and {\sc{Prot-2}} and {\sc{Combine
 \\
 \begin{align*}
 \text{(11)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Alocals\  \wedge\ {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}  \} \\
+		&	\{  \ \Alocalsb\  \wedge\ {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}  \} \\
 		& \SPT \stmtsP\ \\  
 		& \{ \ {\inside{\prg{a.key}}}  \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}   \}
 \end{align*}
@@ -438,9 +445,9 @@ We then apply {\sc{Embed\_UL}}, {\sc{Prot-1}} and {\sc{Prot-2}} and {\sc{Combine
 We apply  {\sc{Mid}}  on (11) and obtain 
 \begin{align*}
 \text{(12)}  \ \ \ \ M_{good} \vdash 
-		&	\{  \ \Alocals\, \wedge\, \protectedFrom {\prg{a.key}} {\prg{buyer}}\  \} \\
+		&	\{  \ \Alocalsb\, \wedge\, \protectedFrom {\prg{a.key}} {\prg{buyer}}\  \} \\
 		& \SPT \stmtsP\ \\  
-		& \{ \ \Aparams\ \wedge \  {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}  \ \} \ \ || \\
+		& \{ \ \Alocalsb\, \wedge \  {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}}  \ \} \ \ || \\
 		& \{ \ {\inside{\prg{a.key}}}\  \}
 \end{align*}
 
@@ -451,9 +458,9 @@ We apply  {\sc{Mid}}  on (11) and obtain
 We now need to prove that the external method call \prg{buyer.pay(this.accnt, price)} protects the \prg{key}. i.e.
 %\small
 \begin{align*}
-\text{(20?)} \ \ \ M_{good} \vdash & \{ \ \Alocals \   \wedge\    {\inside{\prg{a.key}}},\, \wedge\, \protectedFrom {\prg{a.key}} {\prg{buyer}}  \} \\
+\text{(13?)} \ \ \ M_{good} \vdash & \{ \ \Alocalsb \   \wedge\    {\inside{\prg{a.key}}},\, \wedge\, \protectedFrom {\prg{a.key}} {\prg{buyer}}  \} \\
 		  		& \SPT  \prg{tmp := buyer.pay(myAccnt, price)}\ \\  
-		  		& \{ \ \ \Aparams \ \wedge\ {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}} \} \ \ \  || \ \ \  \\
+		  		& \{ \ \ \ \Alocalsb \ \wedge\ {\inside{\prg{a.key}}} \, \wedge\, \protectedFrom{\prg{buyer}} {\prg{a.key}} \} \ \ \  || \ \ \  \\
 		  		&   \{ \   {\inside{\prg{a.key}}}\  \}
 \end{align*}
 \normalsize
@@ -463,7 +470,7 @@ We use that $M \vdash \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}
  \\
  \small
 \begin{align*}
-\text{(21)} \ \ \ M_{good} \vdash & \{ \ \prg{buyer}:\prg{external},\,  {\inside{\prg{a.key}}} \, \wedge\, 
+\text{(14)} \ \ \ M_{good} \vdash & \{ \ \prg{buyer}:\prg{external},\,  {\inside{\prg{a.key}}} \, \wedge\, 
 \protectedFrom {\prg{a.key}} {(\prg{buyer},\prg{myAccnt},\prg{price})} \  \} \\
 		  		& \SPT  \prg{tmp := buyer.pay(myAccnt, price)}\ \\  
 		  		& \{ \ \inside{\prg{a.key}} \, \wedge\, 
@@ -472,16 +479,16 @@ We use that $M \vdash \TwoStatesN  {\prg{a}:\prg{Account}}  {\inside{\prg{a.key}
 \end{align*}
 \normalsize 
  
-In order to obtain (20?) out of (21), we apply \textsc{Prot-Intl} and \textsc{Prot-Int}$_1$,   which gives us\\
+In order to obtain (13?) out of (14), we apply \textsc{Prot-Intl} and \textsc{Prot-Int}$_1$,   which gives us\\
 $
 \begin{array}{llll}
-& (23) & & M_{good} \vdash \Alocals \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{myAccnt}} 
+& (15) & & M_{good} \vdash \Alocalsb \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{myAccnt}} 
 \\
-& (24) & & M_{good} \vdash \Alocals \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{price}} 
+& (16) & & M_{good} \vdash \Alocalsb \wedge  {\inside{\prg{a.key}}}  \longrightarrow \protectedFrom {\prg{a.key}} {\prg{price}} 
 \end{array}
 $
 
-We apply {\textsc{Consequ}} on (23), (24) and (21) and obtain (20)!
+We apply {\textsc{Consequ}} on (15), (16) and (14) and obtain (13)!
 
 \normalsize
 
@@ -499,8 +506,8 @@ We want to prove that this public method satisfies the specification  $S_2$, nam
 \label{l:satisfies:Mfine:pec2}
  
 \begin{align*}
-\text{(30)}  \ \ \ \ M_{fine} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams}  \  \} \\
+\text{(6)}  \ \ \ \ M_{fine} \vdash 
+		&	\{  \ \Alocalsset\ \wedge\  {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset}  \  \} \\
 %	Latex experiment; does not work 
 %	&
 %		\mbox{\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
@@ -521,43 +528,43 @@ We want to prove that this public method satisfies the specification  $S_2$, nam
 & \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 	   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
-where we are using the shorthands\\
- $ \SPT  \Aparams\ \triangleq \  \prg{this}:\prg{Account}, \prg{key'} : \prg{Key}, \prg{key''} : \prg{Key}$.\\
-   $ \SPT  \Alocals\ \triangleq \    \prg{a}:\prg{Account}, \ \Aparams, $.\\
 
 \end{lemma}
 
 \begin{proofO}
+We will be  using the shorthand 
+ $\SPT  \Alocalssets\ \triangleq \  \prg{a}:\prg{Account},\  \Alocalsset$.\\
 
-We will use the  {\sc{Sequnece}} rule, and we want to prove
+
+To prove (6), we will use the  {\sc{Sequence}} rule, and we want to prove
 \\
 \begin{align*}
-\text{(31?)}  \ \ \ \ M_{fine} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \  \} \\
+\text{(61?)}  \ \ \ \ M_{fine} \vdash 
+		&	\{  \ \Alocalssets\ \wedge\  {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset} \  \} \\
 		& \SPT   \prg{if (this.key==key') then }\\
 		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
 	        & \SPT   \prg{else }\\
 		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
-		& \{ \ \Alocals\,\wedge\ {\inside{\prg{a.key}}}\    \} \ \ \  || \ \ \ 
+		& \{ \ \Alocalssets\,\wedge\ {\inside{\prg{a.key}}}\    \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 and that
 \begin{align*}
-\text{(32?)}  \ \ \ \ M_{fine} \vdash
-          &  \{ \ \Alocals\,\wedge\{\inside{\prg{a.key}}\  \}  \\
+\text{(62?)}  \ \ \ \ M_{fine} \vdash
+          &  \{ \ \Alocalssets\,\wedge \inside{\prg{a.key}} \  \}  \\
 		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
 		& \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}} {\inside{\prg{a.key}}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 
-(32?) follows   from the types, and {\sc{Prot-Int}}$_1$, the fact that \prg{a.key} did not change, and  \sdN{ {\sc{Prot-1}}}.
+(62?) follows   from the types, and {\sc{Prot-Int}}$_1$, the fact that \prg{a.key} did not change, and  \sdN{ {\sc{Prot-1}}}.
 
 \vspace{.5cm}
-Wenow  want to  prove (31?). For this, will apply the {\sc{If-Rule}}. That is, we need to prove that
+Wenow  want to  prove (61?). For this, will apply the {\sc{If-Rule}}. That is, we need to prove that
 
 \begin{align*}
-\text{(31a?)}  \ \ \ \ M_{fine} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,  \prg{this.key==key'}\  \} \\
+\text{(61a?)}  \ \ \ \ M_{fine} \vdash 
+		&	\{  \ \Alocalssets\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset} \, \wedge  \,  \prg{this.key}=\prg{key'}\  \} \\
 		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
 		& \{ {\inside{\prg{a.key}}}  \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
@@ -566,21 +573,21 @@ Wenow  want to  prove (31?). For this, will apply the {\sc{If-Rule}}. That is, w
 and that
  
 \begin{align*}
-\text{(31b?)}  \ \ \ \ M_{fine} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,  \prg{this.key}\neq\prg{key'}\  \} \\
+\text{(61b?)}  \ \ \ \ M_{fine} \vdash 
+		&	\{  \ \Alocalssets\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset} \, \wedge  \,  \prg{this.key}\neq\prg{key'}\  \} \\
 		& \SPT\SPT   \SPT\SPT  \prg{res:=0} \\
 		& \{ {\inside{\prg{a.key}}}\   \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 
-(31b?) follows easily from  the fact that \prg{a.key} did not change, and  {\sc{Prot-1}}.
+(61b?) follows easily from  the fact that \prg{a.key} did not change, and  {\sc{Prot-1}}.
 
 \vspace{.5cm}
-We look at the proof of (31a?).  We will apply the {\sc{Cases}} rule, and distinguish on whether \prg{a.key}==\prg{this.key}. That is, we want to prove that\\
+We look at the proof of (61a?).  We will apply the {\sc{Cases}} rule, and distinguish on whether \prg{a.key}=\prg{this.key}. That is, we want to prove that\\
 \small{
 \begin{align*}
-\text{(31aa?)}  \ \ \ \ M_{fine} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,  \prg{this.key==key'}\ \wedge \prg{this.key==a.key}  \} \\
+\text{(61aa?)}  \ \ \ \ M_{fine} \vdash 
+		&	\{  \ \Alocalssets\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset} \, \wedge  \,  \prg{this.key}=\prg{key'}\ \wedge\ \prg{this.key}=\prg{a.key}  \} \\
 			& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
 	       	& \{ {\inside{\prg{a.key}}}\   \} \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
@@ -591,18 +598,19 @@ and that
 \\
 \small{
 \begin{align*}
-\text{(31ab?)}  \ \ \ \ M_{fine} \vdash 
-		&	\{  \ \Alocals\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \,   \,  \prg{this.key==key'}\   \prg{this.key}\neq\prg{a.key'}\  \} \\
+\text{(61ab?)}  \ \ \ \ M_{fine} \vdash 
+		&	\{  \ \Alocalssets\,\wedge\, {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {\Idsset} \, \wedge  \,   \,  \prg{this.key}=\prg{key'}\   \prg{this.key}\neq\prg{a.key'}\  \} \\
 		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
 		& \{ {\inside{\prg{a.key}}}\   \ \ \  || \ \ \ 
 		   \{ {\inside{\prg{a.key}}} \}
 \end{align*}
 }
 \vspace{.2cm}
-We can prove (31aa?) through application of {\sc{Absurd}}, {\sc{ProtNeq}}, and {\sc{Consequ}}, as follows
+\normalsize
+We can prove (61aa?) through application of {\sc{Absurd}}, {\sc{ProtNeq}}, and {\sc{Consequ}}, as follows
 
 \begin{align*}
-\text{(31c)}  \ \ \ \ M_{fine} \vdash 
+\text{(61c)}  \ \ \ \ M_{fine} \vdash 
 		&	\{  \ false  \} \\
 		& \SPT \SPT   \SPT\SPT  \prg{this.key:=key''} \\
 		& \{ {\inside{\prg{a.key}}}\   \} \ \ \  || \ \ \ 
@@ -612,13 +620,13 @@ We can prove (31aa?) through application of {\sc{Absurd}}, {\sc{ProtNeq}}, and {
 By  {\sc{ProtNeq}}, we have $M_{fine} \vdash  \protectedFrom {\prg{a.key}} {\prg{key'}} \, \longrightarrow\, {\prg{a.key}}\neq {\prg{key'}}$, and therefore obtain
 
 \begin{align*}
-\text{(31d)}  \ \ \ \ M_{fine} \vdash  ... \wedge \, \protectedFrom {\prg{a.key}} {\Aparams} \, \wedge  \, \prg{this.key}==\prg{a.key}\, \wedge\,  \prg{this.key}==\prg{key'}\ \longrightarrow \ false 
+\text{(61d)}  \ \ \ \ M_{fine} \vdash  ... \wedge \, \protectedFrom {\prg{a.key}} {\Idsset} \, \wedge  \, \prg{this.key}=\prg{a.key}\, \wedge\,  \prg{this.key}=\prg{key'}\ \longrightarrow \ false 
 \end{align*}
 
-We apply  {\sc{Consequ}} on (31c) and (31d) and obtain (31aa?).
+We apply  {\sc{Consequ}} on (61c) and (61d) and obtain (61aa?).
 
 \vspace{.5cm}
-We can prove (31ab?) by proving that \prg{this.key}$\neq$\prg{a.key} implies that $\prg{this}\neq \prg{a}$ (by the underlying Hoare logic), which again implies that the assignment \prg{this.key := ... } leaves the value of \prg{a.key} unmodified. We apply {\sc{Prot-1}}, and are done.
+We can prove (61ab?) by proving that \prg{this.key}$\neq$\prg{a.key} implies that $\prg{this}\neq \prg{a}$ (by the underlying Hoare logic), which again implies that the assignment \prg{this.key := ... } leaves the value of \prg{a.key} unmodified. We apply {\sc{Prot-1}}, and are done.
 
 \end{proofO} 
 
