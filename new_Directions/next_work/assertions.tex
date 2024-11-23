@@ -67,8 +67,6 @@ a ghost function.
 \cf Def. \ref{def:chainmail-semantics}.(\ref{quant1}), {when the local map changes \eg upon call and return, and in general,} for two-state invariants, \cf Def. \ref{def:necessity-semantics}.(2).}
 \notesep The syntax does  not distinguish between fields and ghost fields. For instance, $\prg{a}.\prg{\balance}$ may, in some modules (\eg in \ModA), be a field lookup, while in others (e.g. when the balance is defined though an entry in a lookup table) may involve executing a ghost function. 
 % -  $\external {\re}$ is short for $\neg \internal {\re}$. We use these forms freely in the subsequent text without further definition.
-%\kjx{These NOTES seem to make heavy work of mostly trivial points
-%{{SD: WIll work on that}}
 % \footnoteSD{{\textbf{NOTE for us} It also allows assertions like $a1.passwd \neq a2.passwd$, whereas in the past we would have written as $\exists x,y.[\ a1.passwd=x \wedge  a2.passwd=y \wedge x\neq y\ ]$.}} \footnoteSD{{TODO compare with oopsla }}
 }
 
@@ -83,7 +81,6 @@ Forms such as $A \rightarrow A'$,  $A \vee A'$, and $\exists x:C.A$  can be enco
 
 
 
-%\begin{definition}[Satisfaction  of Assertions by module and  state] 
 \label{def:chainmail-semantics-all}
 \label{def:chainmail-semantics}
 \noindent
@@ -92,7 +89,6 @@ Satisfaction  of Assertions by a module and a state is expressed  through \ $\sa
  {$M$} is used % might need to 
  to look up the definitions of ghost fields, and to find class definitions to determine whether an object is  external.
  
-%\end{definition}
 \footnoteSD{say why we split the def into three defs.} 
 \noindent
 %\textbf{NOTE}  
@@ -106,7 +102,6 @@ Satisfaction  of Assertions by a module and a state is expressed  through \ $\sa
 -- first part}
 \label{sect:semantics:assert:standard}
 
-% An illustration of the concept of reachable appears in the next subsection, in Fig. \ref{fig:Relevant}.
 To determine satisfaction of an expression, we    use the evaluation relation, $\eval{M}{\sigma}{e}{v}$,
 which says that the expression $e$ evaluates
 to value $v$ in the context of state $\sigma$ and module $M$.
@@ -140,7 +135,6 @@ $\satisfiesA{M}{\sigma}{\neg A}\ \ \ \triangleq \ \ \   {M},{\sigma}\not\models{
 $\satisfiesA{M}{\sigma}{A_1\ \wedge\ A_2}\ \ \ \triangleq \ \ \   \satisfiesA{M}{\sigma}{A_1} \   \wedge \ \satisfiesA{M}{\sigma}{A_2}$
 %\item
 %$\satisfiesA{M}{\sigma}{A_1\ \vee\ A_2}\ \ \ \triangleq \ \ \   \satisfiesA{M}{\sigma}{A_1}\   \vee \ \satisfiesA{M}{\sigma}{A_2}$
-
 \item
 \label{quant1}
 $\satisfiesA{M}{\sigma}{\all{x:C}{A}} \ \ \ \triangleq \ \ \   
@@ -184,11 +178,18 @@ Given this, it becomes essential to determine whether eventual access exists in 
 Unfortunately, this determination is undecidable, as it depends not only on the current object graph but also on the program code being executed.
 
 In this work, we over-approximate lack of eventual access through a combination of two properties: one pertaining to the state, and the other to the internal code. 
-The state-related property is that   $o$ is \emph{protected} if, on any path from a locally reachable object to $o$, the penultimate object  is internal. 
-The program-related property is that it preserves the protection of object $o$.
+The  property pertaining to the state is $\satisfiesA{M}{\sigma} {\inside {\alpha}}$, \ie that   $\alpha$ is \emph{protected},
+\ie that   \sdNew{no locally reachable external objects have direct access to $o$.}
+% on any path from a locally reachable object to $o$, the penultimate object  is internal. 
+The  property pertaining to the program is that it preserves the protection of   $o$.
+%
+We can see that if $o$ is protected and the internal code preserves its protection, then no external object can gain eventual access to $o$.
 
-It is straightforward to see that if $o$ is protected and the internal code preserves its protection, then no external object can gain eventual access to $o$.
-We now define ``protected'':
+To define ``protected'', \sdNew{we first defne  "has no direct access to",  
+formally $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}}$: This requires that
+$\alpha_o$ has no field pointing to $\alpha$, and   that if $\alpha_o$ is the current receiver then $\alpha$ in not a local variable.
+Namely,   object $\alpha_{o}$ has direct access to   object $\alpha$ either because $\alpha_{o}$ has $\alpha$ in its fields, or because $\alpha_o$'s is the currently active object, and $\alpha$ is on the current top frame.
+}\footnote{Mark Miller quote here?}
 
 
 %\citet{OOPSLA22} develop the contrapositive: ``lack of eventualpermission to the relevant capability implies that the given effect will {not} take place''.
@@ -211,6 +212,13 @@ of Assertions  -- Protection]
  \label{def:chainmail-protection}
 -- continuing definitions in \ref{def:chainmail-semantics}:
 \begin{enumerate}
+%\item
+%\label{dirAccess}
+%\sdNew{ $\satisfiesA{M}{\sigma}{\accessedBy {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
+%[\  \ \exists f.  \interpret {\sigma} {\alpha_o.f} = \alpha  \ \vee\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \wedge \exists x\in dom(\sigma). \interpret {\sigma} x = \alpha ) \ \ ] $}
+\item
+\sdNew{ $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
+[\  \ \forall f.  \interpret {\sigma} {\alpha_o.f} \neq \alpha  \ \wedge\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \Rightarrow \ \forall x\in dom(\sigma). \interpret {\sigma} x \neq \alpha ) \ \ ] $}
 \item
 \label{cProtected}
  $\satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}   \ \ \ \triangleq $ 
@@ -219,27 +227,31 @@ of Assertions  -- Protection]
 $\alpha\neq \alpha_0$,
  \ \ \ \  and% \\
  \item
-$\forall n\in\mathbb{N}. \forall f_1,...f_n..
-[\ \ \interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha \ \ \  \Longrightarrow \ \ \  \satisfiesA{M}{\sigma}{ {\interpret{\sigma}{\alpha_{o}.f_1...f_{n-1}}}:C} \ \wedge \ C\in M\ \ ]$
+\sdNew{$\forall \alpha' \in {\Relevant {\alpha_o} {\sigma}}.[\  \satisfiesA{M}{\sigma}{\external {\alpha'}} 
+\ \ \Longrightarrow \ \  
+ \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'} } \ ] $}.
+% {M},{\sigma}\not\models{A}{\accessedBy  {\re}{\alpha}} ] $}
 \end{enumerate}
-\item
-$\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}} \ \ \ \triangleq 
-% $ \\ $ 
-\ \ \ \exists \alpha, \alpha_{o}. [\  \ \eval{M}{\sigma}{{\re}}{\alpha}\ \wedge \eval{M}{\sigma}{{\re_0}}{\alpha_0} \  \wedge \ 
-  \satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}
- \ \  ]$
 \item
 \label{sect:semantics:assert:prt}
-$\satisfiesA{M}{\sigma} {\inside {\re}}  \ \ \ \ \triangleq $ 
-\begin{enumerate}
-\item
-{$\forall \alpha.[\ \alpha \in \LRelevantO   {\sigma}\ \wedge\ { \satisfiesA{M}{\sigma}{\external \alpha}} \ \ \Longrightarrow \ \  \satisfiesA{M}{\sigma}{\protectedFrom{\re} {{\alpha}}}\ ] $}, \ \ \ and 
-\item
-$\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
-\end{enumerate}
+$\satisfiesA{M}{\sigma} {\inside {\alpha}}  \ \ \ \triangleq \ \ \    
+%\begin{enumerate}
+%\item
+\sdNew{\forall \alpha' \in \LRelevantO  {\sigma}.[\ { \satisfiesA{M}{\sigma}{\external {\alpha'}}} \ \ \Longrightarrow \ \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'}}\ ]}$.
+%{M},{\sigma}\not\models }{\accessedBy  {\re}{\alpha}} ] $}
+%, \ \ \ and 
+%\item
+%$\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
+%  \end{enumerate}
+
 \end{enumerate}
  \end{definition} 
- 
+
+Moreover,  
+$\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$ means that 
+$\exists \alpha, \alpha_{o}. [\  \eval{M}{\sigma}{{\re}}{\alpha}\ \wedge\ \eval{M}{\sigma}{{\re_0}}{\alpha_0} \  \wedge \ 
+  \satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}\   ]$, and  $\satisfiesA{M}{\sigma}{\inside{\re}}$ means that
+ $\exists \alpha. [\   \eval{M}{\sigma}{{\re}}{\alpha}\ \wedge \   \satisfiesA{M}{\sigma}{\inside{\alpha}} \  ]$. 
 
 % \vspace{.5cm}
 \footnoteSD{JAMES' comment: If is possible that ``we'' do not know the complete heap (eg we only know about the green stuff.) how do we know whether an object is protected. The answer is that we do not know that it is protected, but we do know that our code guarnartees poreservation of protectedness.
@@ -311,12 +323,10 @@ protected  in $\sigma_3$  % with top frame $\phi_2$ &
 
 %Note that $o_8$ is not protected from $o_2$ because there is a path from $o_2$ to $0_8$ which only traverses external objects. Note also, that even though $o_9$ is external, it is protected from $o_7$.
 Note   $o_6$ is not protected from $o_2$. 
-Even through $o_3$ is internal, and is on the path %there are some internal objects on the path
- from $o_2$ to $o_6$, %in our current model, 
-% these objects cannot % are not sufficient to 
-% prevent eventual, unmitigated access of $o_2$ to $o_6$
-it is not the penultimate object on that path. Therefore,  $o_2$ can make a call to $o_3$, and then this call can  return $o_5$. Once $o_2$ has access to $o_5$, it can also get access to $o_6$. 
-The example justifies why we require that the \emph{penultimate} object is internal.
+\sdNew{Namely, $o_5$ is reachable from $o_2$, is external, and has direct access to $o_6$.}
+
+
+
 
 
 % \vspace{.1in}
@@ -357,7 +367,7 @@ In the third row of   Figure \ref{fig:Protected} we show three states:
 %Fig. 
 %In Fig.  \ref{gig:Protected} 
 We also   highlight the protected objects with a yellow halo.
- Note that $o_3$ is protected in $\sigma_2$, but is not protected in $\sigma_3$. This is so, because $\interpret {\sigma_3} {\prg{this}}$  is external, and  $o_3$ is an argument to the call. As a result, during the call, $o_7$ may obtain unmitigated access to $o_3$. 
+ Note that $o_3$ is protected in $\sigma_2$, but is not protected in $\sigma_3$. This is so, because $\interpret {\sigma_3} {\prg{this}}$  is external, and  $o_3$ is an argument to the call. As a result, during the call, $o_7$ may obtain direct access to $o_3$. 
 
 %\begin{praise}{for protection}
 \subsubsection*{Discussion} 
@@ -385,7 +395,7 @@ restrictive) than most of these approaches,
  although more restrictive than the ideal ``lack of eventual access''. 
 \footnoteSD{ HER WHAT IT USED TO SAY:
 the contrapositive ideal that lack of eventual access ensures
-lack of effect. Note that ``cannot get unmitigated access'' does not generally imply ``is
+lack of effect. Note that ``cannot get direct access'' does not generally imply ``is
 protected''. 
 }
 
@@ -400,6 +410,14 @@ One can  see that protection and protection preservation are sufficient but not 
 One can  see that protection together with protection preservation are sufficient 
 %but not necessary conditions 
 for lack of eventual access. On the other hand, protection without protection preservation is not sufficient.
+
+\sdNew{An alternative definition might consider $\alpha$ as protected, 
+if   any path from the frame to $\alpha$ goes through at least one internal object.
+With this definition, $o_6$ would be protected in $\sigma_2$.
+However,  $o_2$ can make a call to $o_3$, and  this call could  return $o_5$. 
+Once $o_2$ has direct access to $o_5$, it can also get direct access to $o_6$. 
+The example justifies our current definition. %why we require that the \emph{penultimate} object is internal.
+}
 
 %Protection --- \sdN{objects to which external objects may not get %which objects can get 
 %unmediated access} % to which other objects 
@@ -433,7 +451,7 @@ for lack of eventual access. On the other hand, protection without protection pr
 % \sdN{although more restrictive than the ideal "lack of eventual permission"}. 
 %\footnoteSD{ HER WHAT IT USED TO SAY:
 %the contrapositive ideal that lack of eventual permission ensures
-%lack of effect. Note that ``cannot get unmitigated access'' does not generally imply ``is
+%lack of effect. Note that ``cannot get direct access'' does not generally imply ``is
 %protected''
 
 
