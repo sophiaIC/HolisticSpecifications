@@ -5,7 +5,6 @@
 We introduce the problem  through an example, and outline our
 approach.  We work with a  small, class-based object-oriented, \se{sequential} language similar to Joe-E \cite{JoeE} with modules,   module-private fields
 ({accessible} only from   methods {from} the same module),
-% not that central, we dicuss this later %initalised by a class's implicit constructor, 
 and unforgeable, un-enumerable addresses.
 We distinguish between  \emph{\internalO}
 objects --- instances of our internal module $M$'s classes ---
@@ -15,11 +14,8 @@ and \emph{\externalO} objects defined in
   module,  while \prg{public}  methods  may be  by \emph{any}
   object with a reference to the method receiver, {and with
   actual arguments of  dynamic types that match} the declared formal parameter types.} 
-% SD dropped
-% Our model of execution is entirely unsurprising with a stack, a heap, and states.
 \footnote{As in Joe-E, we leverage  module-based privacy to restrict propagation of capabilities, and reduce the need for reference monitors etc, \cf Sect 3 in  \cite{JoeE}.}   
 
-% \subsubsection{Internal and external modules, objects, and states}
  \label{s:concepts}
 
 We are concerned with guarantees made in an \emph{open} setting; that
@@ -38,14 +34,10 @@ cooperative approaches such as rely/guarantee
 \cite{relyGuarantee-HayesJones-setss2017,relyGuarantee-vanStaden-mpc2015}.}.
 The internal module may break these guarantees temporarily,
 so long as they {are reestablished} before (re)entry to an external module.
+  
  
 
-% \kjx{haven't mentioned states yet, so this is too early --- We also distinguish between
-%      \emph{\internalC} and   \emph{\externalC} states - those whose receiver is internal or external respectively. }
- 
- 
-
-\subsection*{\prg{Shop} -- illustrating tamed effects} % Reason about external calls (using protection)}
+\subsection*{\prg{Shop} -- illustrating tamed effects}  
 \label{sec:how}
 \label{sec:shop}
 
@@ -53,8 +45,7 @@ The challenge when calling a method on an external object, is that we have no sp
  For illustration, consider the following, internal, module \Mshop, which also includes the classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
 Classes  {\prg{Inventory} and \prg{Item} have the expected functionality. 
 \prg{Account}s hold a balance and have a \password. 
-With access to an \prg{Account}, %'s address, 
-one  can pay money into it, 
+With access to an \prg{Account},  one  can pay money into it, 
 and with access to an account  and its \password, one can withdraw money from it.
 Implementations of such a class  appear in the next section.
 }
@@ -69,7 +60,7 @@ module M$_{shop}$
     public method buy(buyer:external, anItem:Item)
       int price = anItem.price
       int oldBlnce = this.accnt.blnce
-      buyer.pay(this.accnt, price)     // $\red{\mbox{external\ call}}$
+      buyer.pay(this.accnt, price)     // $\sdNew{\mbox{external\ call}}$
       if (this.accnt.blnce == oldBlnce+price)  
          this.send(buyer,anItem)
       else
@@ -138,30 +129,53 @@ Therefore, we need to address the following three challenges:
 \subsection{1$^{st}$ Challenge: eventual access} 
 
 
-Assume we have a guarantee that no external object $o_e$ can cause an effect $E$ unless it has direct access to the capability object $o_{cap}$. To ensure $o_e$ will not cause $E$, we must ensure that $o_e$ not only lacks access now but also cannot gain access in the future.  We call this  ``lack of eventual access.''
-
-We approximate ``lack of eventual access'' through \emph{protection}, defined below, and illustrated in %illustrated in Figure
-Fig.  \ref{fig:ProtectedBoth}.  %
-%We propose the concept of \emph{protection} to describe absence of eventual access. 
-%%An object $o$ is  \emph{protected} if external objects cannot directly access $o$ unless this access is granted by an internal object.
-%An object   is   \emph{protected} if it remains inaccessible to external objects unless an internal object explicitly grants access.
+Assume % we have a guarantee 
+that  %no external object % $o_e$  %can cause 
+an effect $E$ can only be caused by  some   external object which has direct access to the capability object $o_{cap}$. 
+Then, if \sdNew{no currently reachable external object has, or can eventually obtain direct access  to $o_{cap}$,  then $E$ is guaranteed not to happen.}
+%
+%
+%to ensure that $E$ will not happen, \sdNew{it is sufficient}  ensure for all object \sdNew{not only} that $o_e$ has no access now but also that it cannot gain access in the future - we %call this 
+%\sdNew{say that $o_e$ ``{has no \emph{eventual} access}'' to $o_{cap}$.}
+ %
+\sdNew{ We approximate ``\sdNew{no } eventual access'' through \emph{protection}, and its preservation.}
+%  defined below, and illustrated in  Fig.  \ref{fig:ProtectedBoth}.  %
+% \sdNew{Formally:} %We formalize the lack of access to as:}
 
  \begin{description}
-\item[Protection] Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
- if the penultimate object on \se{every} path from $o$ to $o'$  is internal.
-Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$, if $o$ is protected from all external objects transitively accessible from the currently executing method call. %More in 
--- \cf \susan{Def. \ref{def:chainmail-protection-from}}. % and 
-
+\item[Protection] 
+%Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
+%% if the penultimate object on \se{every} path from $o$ to $o'$  is internal.
+%\sdNew{if no external object transitively accessible from $o$ has direct access to $o'$.}
+Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$,  
+\sdNew{if no external object transitively accessible from the top frame (the frame of the currently executing method call) has direct access to $o$.}
+%$o$ is protected from all external objects transitively accessible from the currently executing method call. %More in 
+%-- \cf\, {Def. \ref{def:chainmail-protection-from}.}  
+\\
+Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
+% if the penultimate object on \se{every} path from $o$ to $o'$  is internal.
+\sdNew{if no external object transitively accessible from $o$ has direct access to $o'$.}
+More in {Def. \ref{def:chainmail-protection-from}.}  
  \end{description}
  
  % if $o'$ cannot obtain direct access to $o$ unless an internal object affords that access. %to $o$. 
 
  %{Program execution may turn protected objects to un-protected, but this may only be caused by execution of an internal method -- hence only internal objects can afford that access.}
 
-If the  internal module  never passes $o$ to any external object (\ie never leaks $o$) then if $o$ is protected from $o_e$ now, it will remain protected from $o_e$,
-and if $o$ is protected now, it will remain protected.
-Going back to the original question, if $o_e$ is protected from all locally accessible external objects, effect  $E$ is guaranteed not to occur, \se{unless caused by internal code}.
+If the  internal module  never passes $o$ to  external objects (\ie never leaks $o$) and  $o$ is protected, then it will remain protected.  
+%
+%
+%from $o_e$ now, it will remain protected from $o_e$,
+%and if $o$ is protected now, it will remain protected.
+Going back to the original question, if $o_{cap}$ is protected, \sdNew{and $o_{cap}$ is never leaked to external objects}, 
+then % from all locally accessible external objects, 
+ effect  $E$ is guaranteed not to occur. % , \se{unless caused by internal code}.
 
+%Protection  thus depends on the heap topology as well as on the contents of the top frame -- \eg~
+%\cf Fig. \ref{fig:ProtectedBoth}. %  object $o_7$ is not protected in the middle pane, but is protected in the right pane.
+%For our work we also need a relative concept of protection:
+
+ 
 \begin{figure}[tbh]
 \begin{tabular}{|c|c|c|}
 \hline
@@ -192,7 +206,7 @@ protected  with top frame $\phi_2$
 are protected from $o_2$. 
  The middle pane {shows the same heap and a stack with frame  $\phi_1$} whose receiver,   \prg{this},  points to $o_1$. Here 
  $o_1$, $o_2$, $o_4$, $o_5$ and $o_9$  are protected. 
- The right pane {shows the same configuration, but after pushing frame  $\phi_2$}, whose receiver,  \prg{this},  and local variable, \prg{x}, point to $o_3$ and  $o_7$, respectively.
+ The right pane {shows the configuration after pushing frame  $\phi_2$}, whose receiver,  \prg{this},  and local variable, \prg{x}, point to $o_3$ and  $o_7$, respectively.
  Here $o_3$ and $o_7$ are protected, in addition  to  the objects protected in the previous pane.
 }
    \label{fig:ProtectedBoth}
@@ -243,19 +257,26 @@ $\strut  \SPSP\ \ \   S_3\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},
 %$\strut \SPSP  S_3$:\   the balance does not decrease unless there is unprotected access to the key.  
 %
 \end{example} 
-
-
- 
  \vspace{.05cm}
 
  
 \noindent
-{\textbf{\sdN{Scoped invariants are} \emph{conditional}}:}  They ensure that assertions are \emph{preserved}, but unlike object invariants, they do not guarantee that they always hold.
+\sdNew{This example illustrates two crucial properties. Namely, our   invariants are 
+
+% {\textbf{\sdN{Scoped invariants are} \emph{conditional}}:} 
+{$\bullet$ \textbf{\emph{Conditional}}:}  They ensure that assertions are \emph{preserved}, but unlike object invariants, they do not guarantee that they always hold.
 \ \Eg   \prg{buy} cannot assume $\inside{a.\prg{key}}$ holds on entry, but   guarantees that if it holds on entry, then  it will still hold on exit.
 
+{$\bullet$ \textbf{\emph{Scoped}}:}  They ensure that invariants are preserved during execution of a certain method, but \emph{not} after completion of that method.
+In fact, it is \emph{expected} that at some point after completion the invariant will not hold:
+\ \Eg   even in  $\inside{a.\prg{key}}$ holds currently, it is expected that some external object accessible 
+from a  frame deeper down in the current stack will have direct access to ${a.\prg{key}}$ -- if this were not so, then $a$ would not be usable for payments. 
+Therefore, at some future point, after enough frames have been popped from the stack, 
+$\inside{a.\prg{key}}$ will no longer hold. 
+ }
  
  \begin{example}
- We   use the features from the previous section to specify methods. 
+ We   now use the features from the previous section to specify methods. 
 
 {\sprepostShort
 		{\strut \ \ \ \ S_4} 
@@ -363,7 +384,7 @@ module with  accounts which have a % {\textit{implementation}} of a bank account
 
 
   
-  \subsection{3$^{rd}$ Challenge:  A Hoare logic} %  for external calls} %  (using scoped invariants)}
+  \subsection{3$^{rd}$ Challenge:  A Hoare logic}  
  \label{sec:howThird}
 
 
@@ -542,8 +563,13 @@ A method preserves an assertion   if it preserves it   from pre- to  post-states
 
 In our threat model, external objects can execute arbitrary code, invoke any public internal methods,  potentially access any other external object, and may collude with one another in any conceivable way.
 Our specifications are conditional: they do not guarantee that specific effects will never occur, but they ensure that certain effects will only happen if specific conditions were met prior to the execution of the external code.
+
+ \sdNew{The conditional, and scoped nature of our invariants might raise the question of whether they are useful. 
+ Indeed, they do not give the guarantee that something good does hold. 
+ Nevertheless, they do give the guarantee that something good does not get broken.
+ }
  
-The key ingredients of our work are: a) the concepts of protection ($\protectedFrom {x} {y}$ and $\inside {x}$), b) \scoped invariants (${\TwoStatesN {\overline {x:D}} {A}}$), and c) the adaptation operator ($\FIXSymbolA$).
+The key ingredients of our work are: a) the concepts of protection ( $\inside {x}$) and $\protectedFrom {x} {y}$), b) \scoped invariants (${\TwoStatesN {\overline {x:D}} {A}}$), and c) the adaptation operator ($\FIXSymbolA$).
 In the remaining sections, we discuss all this in more detail.
 
 % \vspace{0.1cm}
