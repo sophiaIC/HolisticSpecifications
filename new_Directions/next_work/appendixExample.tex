@@ -597,7 +597,7 @@ and that
 (62?) follows   from the types, and {\sc{Prot-Int}}$_1$, the fact that \prg{a.key} did not change, and  \sdN{ {\sc{Prot-1}}}.
 
 \vspace{.5cm}
-Wenow  want to  prove (61?). For this, will apply the {\sc{If-Rule}}. That is, we need to prove that
+We now  want to  prove (61?). For this, will apply the {\sc{If-Rule}}. That is, we need to prove that
 
 \begin{align*}
 \text{(63?)}  \ \ \ \ M_{fine} \vdash 
@@ -667,4 +667,53 @@ We can prove (66?) by proving that \prg{this.key}$\neq$\prg{a.key} implies that 
 
 \end{proofO} 
 
+\subsection{Showing that $M_{bad}$ does not satisfy $S_2$}
+
+$M_{bad}$ does not satisfy $S_3$. We can argue this semantically (as in \S \ref{s:bad:not:S2}), and also in terms of the proof system (as in \ref{s:bad:not:S2:proof}).
+
+
+\subsubsection{$M_{bad}\nvDash S_2$}
+\label{s:bad:not:S2}
+ The reason is that $M_{bad}$ exports the public method \prg{set}, which updates the key without any checks. 
+So, it could start in a state where the key of the account was protected, and then update it to something not protected.
+
+
+In more detail: Take any state $\sigma$, where $M_{bad},\sigma \models a_0:\prg{Account}, k_0:\prg{Key} \wedge \inside{a_0.\prg{key}}$. 
+Assume also that $M_{bad},\sigma \models \extThis$.  
+Finally, assume that the continuation in $\sigma$ consists of $a_0.\prg{set}(k_0)$.
+Then we obtain that $M_{bad}, \sigma \leadsto^* \sigma'$, where $\sigma'=\sigma[a_0.\prg{key}\mapsto k_0]$.
+We also  have that $M_{bad},\sigma' \models \extThis$, and because $k_0$ is a local variable, we also have that $M_{bad},\sigma' \nvDash \inside{k_0}$.
+Moreover, $M_{bad}, \sigma' \models a_0.\prg{krey}=k_0 $.
+Therefore, $M_{bad},\sigma' \nvDash \inside{a_0.\prg{key}}$.
+
+\subsubsection{$M_{bad}  \nvdash S_2$}
+\label{s:bad:not:S2:proof}
+
+In order to prove that $M_{bad}  \vdash S_2$, we would have needed to prove, among other things,  that \prg{set} satisfied $S_2$, which means proving that
+
+\small{
+\begin{align*}
+\text{(ERR\_1?)}  \ \ \ \ M_{bad}\ \vdash \ 
+		&	\{  \ \prg{this}:\prg{Account}, \prg{k'}:\prg{Key}, a:\prg{Account}\, \wedge\, \inside{a.\prg{key}}  \, \wedge \, \protectedFrom {\prg{a.key}} { \{\prg{this},\prg{k'}\} }\   \} \\
+			& \SPT \SPT   \SPT\SPT  \prg{this.key:=k'}; \\
+			& \SPT \SPT   \SPT\SPT \prg{res}:=0 \\ 
+	       	& \{ \  \inside{a.\prg{key}}  \, \wedge \, \protectedFrom {a.\prg{key}} {\prg{res}} \   \} \ \ \  || \ \ \ 
+		   \{ ... \}
+\end{align*}
+}
+
+However, we cannot  establish $\text{(ERR\_1?)}$.
+Namely, when we  take the case where $\prg{this}=a$,  we would need to establish, that
+
+\small{
+\begin{align*}
+\text{(ERR\_2?)}  \ \ \ \ M_{bad}\ \vdash \ 
+		&	\{  \ \prg{this}:\prg{Account}, \prg{k'}:\prg{Key}\, \wedge\, \inside{\prg{this}.\prg{key}}  \, \wedge \, \protectedFrom {\prg{this.key}} { \{\prg{this},\prg{k'}\} }\   \} \\
+			& \SPT \SPT   \SPT\SPT  \prg{this.key:=k'}  \\
+	       	& \{ \inside{\prg{this}.\prg{key}}  \, \wedge \, ... \   \} \ \ \  || \ \ \ 
+		   \{ ... \}
+\end{align*}
+} 
+
+And there is no way to prove $\text{(ERR\_2?)}$. In fact, $\text{(ERR\_2?)}$  is not sound, for the reasons outlined in \S \ref{s:bad:not:S2}.
 
