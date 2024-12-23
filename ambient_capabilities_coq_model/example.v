@@ -167,11 +167,11 @@ e : C
 
   (* TODO: method specs on buy *)
   Definition buyDef := meth nil
-                            public
-                            ((buyer, t_ext)::
-                               (item, t_cls Item) :: nil)
-                            buyBody
-                            t_bool.
+                         public
+                         ((buyer, t_ext)::
+                            (item, t_cls Item) :: nil)
+                         buyBody
+                         t_bool.
 
   Parameter sendBody : stmt.
 
@@ -179,9 +179,10 @@ e : C
                                  (a_prt ((e_ a) ∙ key)),
                                 a_prt ((e_ a) ∙ key),
                                 a_prt ((e_ a) ∙ key)) ::
-                                (a_prt_frm ((e_ a) ∙ key) (e_ buyer),
+                                ((a_ (e_typ (e_ a) (t_cls Account))) ∧
+                                   (a_prt_frm ((e_ a) ∙ key) (e_ buyer)),
                                   a_prt_frm ((e_ a) ∙ key) (e_ buyer),
-                                  a_prt_frm ((e_ a) ∙ key) (e_ buyer)) ::
+                                  a_prt ((e_ a) ∙ key)) ::
                                 nil)
                           private
                           ((buyer, t_ext) ::
@@ -1320,18 +1321,17 @@ e : C
               (A2:=a_prt ((e_ a) ∙ key))
               (A3:=a_prt ((e_ a) ∙ key))
               (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
-              | |];
+            | |];
+
             [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
-              auto;
-              [simpl; eauto|simpl; eauto| | |];
-              try solve [auto]
+              try solve [apply in_eq];
+              try solve [simpl; eauto];
+              simpl
             | | | | | ];
-            try solve [simpl; eauto].
 
-            simpl_types;
-              solve_entails.
+            try solve [simpl; eauto];
 
-            simpl; auto with assert_db.
+            try solve [simpl_types; solve_entails].
 
           **** (* external call to buyer.tell *)
             by_call_ext_adapt_strong_using S2;
@@ -1351,15 +1351,48 @@ e : C
             end;
             [eapply hq_call_int with
               (A1:=a_ e_typ (e_ a) (t_cls Account) ∧
+                     a_prt_frm ((e_ a) ∙ key) (e_ buyer))
+              (A2:=a_prt_frm ((e_ a) ∙ key) (e_ buyer))
+              (A3:=a_prt ((e_ a) ∙ key))
+              (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
+            | |];
+
+            [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
+             try solve [apply in_cons, in_eq];
+             try solve [auto];
+             try solve [simpl; eauto]
+            | | | | | ];
+
+            try solve [simpl; eauto];
+            try solve [simpl_types; solve_entails].
+
+          **** (* external call to buyer.tell *)
+            by_call_ext_adapt_strong_using S2;
+              try solve [by_assumption];
+              simpl.
+            simpl_types.
+            repeat apply entails_conj_split;
+              try solve [by_assumption].
+            unfold prt_frms, asrt_frm_list; simpl.
+            try solve [solve_entails].
+
+
+(*            match goal with
+            | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ ?A2 ⦄ || ⦃ ?A3 ⦄ ] =>
+                eapply hq_conseq with (A6:=A3);
+                [| | |apply entails_refl]
+            end;
+            [eapply hq_call_int with
+              (A1:=a_ e_typ (e_ a) (t_cls Account) ∧
                      a_prt ((e_ a) ∙ key))
               (A2:=a_prt ((e_ a) ∙ key))
               (A3:=a_prt ((e_ a) ∙ key))
               (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
-              | |];
+            | |];
             [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
-              auto;
-              [simpl; eauto|simpl; eauto| | |];
-              try solve [auto]
+             auto;
+             [simpl; eauto|simpl; eauto| | |];
+             try solve [auto]
             | | | | | ];
             try solve [simpl; eauto].
 
@@ -1373,7 +1406,7 @@ e : C
               try solve [by_assumption].
             simpl_types.
             repeat apply entails_conj_split;
-              try solve [by_assumption].
+              try solve [by_assumption].*)
 
         ***
           unrelated_var_assgn_preserves_prt result e_false.
@@ -1414,6 +1447,14 @@ e : C
             apply hq_if.
 
             *****
+              admit.
+
+            *****
+              admit.
+
+           (*  incomplete transfer if proof:
+
+*****
               match goal with
               | [|- _ ⊢ ⦃ ?A1 ∧ ?A2 ⦄ _ ⦃ ?A3 ⦄ || ⦃ ?A ⦄ ] =>
                   apply hq_conseq with (A4:= A2)(A5:=A3)(A6:=A)
@@ -1431,13 +1472,25 @@ e : C
                 repeat split_post_condition_by_conjunction;
                   try solve [by_hq_types2; by_assumption].
               by_UL_hoare_write_unrelated_field.
+              admit.
+              admit.
+              admit.
               ******
                 by_UL_hoare_write_unrelated_field.
+
+              ******
+                admit.
+
+              ******
+                admit.
+
+              ******
+                admit.
 
               *****
                 repeat split_post_condition_by_conjunction;
                   try solve [by_hq_types2; by_assumption].
-              return_false_protects_key.
+              return_false_protects_key.*)
 
           ****
             return_false_protects_key.
