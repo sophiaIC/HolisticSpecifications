@@ -1,207 +1,200 @@
+%\se{You use 'some effects' as the opposite of 'uncertain/unknown effects'. I think the effects shouldn't be some effects, but certain effects or specific effects. Some has the feel of randomness (but who knows which) which isn't meant}
+%kjx fixed
+
+\newenvironment{customquote}
+  {\vspace{-0.5em} % Reduce vertical space before
+   \begin{list}{}%
+     {\setlength{\leftmargin}{2em} % Adjust left margin
+      \setlength{\rightmargin}{0em}} % No right margin
+     \item[]}
+  {\end{list}
+   \vspace{-0.5em}}
+
+
 \section{Introduction}
 \label{s:intro}
 
+\paragraph{External calls}
 
-\paragraph{Uncertainty in Intertwined code} In today's complex software, internal, trusted, code  is tightly intertwined  with external, untrusted, code:
-External, unverified, untrusted code may call functions from the internal code.
-And internal, trusted code may call functions from the  external  code.
-This tight intertwining   introduces a high degree of uncertainty.
+In today's complex software, internal, trusted, code  is tightly intertwined  with external, untrusted, code: external code
+calls into internal code, internal code calls
+out to external code  and external code  even calls back  into internal code --- all within the same call chain.
 
-To  reduce  that uncertainty, programmers employ  
-\emph{encapsulation  features}
- (\eg   modules, private fields and methods, ownership types, memory safety, capability safety,  etc, \cite{private}),
-and \emph{encapsulation  programming patterns} (\eg wrappers, proxies, membranes, object capabilities etc, \cite{mebranes}).
-Such  features and patterns were first introduced in the 70s, and widely improved, employed, and studied since.\footnote{AUTHORS: careful, though; they were studied in a less adversary situation -- there was little worry of the untrusted code, Can we say this?}
 
-Encapsulation features have been  used in   verification of internal, non-intertwined code  \cite{Muller, Leino}.
-Verification of code employing such  features to help reduce the uncertainty in intertwined code
-has only recently  been studied \cite{xxx} -- Dreyer, Devriese, Mackay,  
+This paper addresses reasoning about \emph{external calls} --- when
+trusted internal code calls out to untrusted, unknown external code.
+This reasoning is hard because by ``external code'' we mean untrusted
+code where we don't have a specification.
+External code may even have been written by an attacker trying to subvert or destroy the whole system.  
+%Worse still, external code can call back into internal code as part of the same call chain. SUSAN:said in the paragraph before.
+\forget{
+External code may be written years or decades after the core 
+trusted system was released --- software plugins for audio and video
+editors have lasted for more than thirty years, and new
+trusted retrocomputing hosts (``emulators'')
+can run code for machines back to the Manchester 
+Baby \cite{MAME-SSEM}, where source code is long lost in the bits of
+history \cite{Smalltalk-bits}.
+ }
+ 
 
-%The subject of this work is the specification  and verification of properties of internal code which 
-% reduces the uncertainty 
-% through the 
-%employs objects capabilities to reduce the uncertainty when intertwined with external, unknown code. 
-%
-In this paper, we address the reasoning about the effects of  \emph{open calls}\footnote{Do we call them open or external?} 
-\ie  internal code which contains calls to external, untrusted functions.
-Such open calls may have effects on the state of the internal code. 
-Reasoning about  open calls poses two challenges:  
-We do not have a specification of the called method. 
-And the external code may have any number of effects, and in particular may call back into the internal code.
+\vspace*{1mm}
 
-\vspace{.1cm}
 
-\begin{tabular}{lll}
-\begin{minipage}{.5\textwidth}
-The code sketch to the right  illustrates the point:  An internal, trusted module $M_{intl}$  has methods \prg{m1} and \prg{m2}.
-Parameter  \prg{untrs} % in \prg{m2} 
- is an external object. 
-The open call on line  6 is the challenge:
-What effects can it have?
-What % happens 
-if that call later on calls back into $M_{intl}$, \eg  calls  \prg{m1}?
+\noindent
+\begin{flushleft}
+\begin{tabular}{@{}lll@{}}
+  \begin{minipage}{.45\textwidth}
+    In this code sketch, 
+%  The code sketch to the right illustrates the problem.
+%  While
+    the internal module,  $M_{intl}$, has two  methods. %,  \prg{m1}  and \prg{m2}. 
+    %contains only trusted code, but
+ %   code is trusted,
+  Method \prg{m2} takes an untrusted parameter \prg{untrst},
+  %and % then 
+  at line 6 it  calls an unknown external method \prg{unkn}   passing itself as an argument. 
+  The challenge is: % What can that method call do?
+   What effects will  that method call have?
+What  if  \prg{untrst}   calls back into $M_{intl}$? %, \eg  by calling  \prg{m1}? -- chpped as obvious how. and shorter.
 \end{minipage}
-& \ \  &
-\begin{minipage}{.4\textwidth}
+& \ \  \   &
+\begin{minipage}{.45\textwidth}
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 module $M_{intl}$        
   method m1 ..
     ...  $\mbox{trusted code}$ ...  
-  method m2(untrs:external) 
+  method m2(untrst:external) 
     ... $\mbox{trusted code}$ ...
-    untrs.unkn(this)  // open call    
+    untrst.unkn(this) //external call    
     ... $\mbox{trusted code}$ ...
 \end{lstlisting}
 \end{minipage}
 \end{tabular}
+\end{flushleft}
+
+
+
+ \paragraph{External calls  need not have  arbitrary   effects} 
+If the programming language supports encapsulation (\eg no address forging, private
+ fields, %, ownership, no direct memory access 
+ \etc) then internal modules can be  written \emph{defensively} %\cite{MillerPhD}, 
+so  that effects are
+
+ \begin{customquote}
+\emph{Precluded}, \ie  guaranteed to \emph{never happen}.
+  E.g., a  correct  %defensive 
+ implementation of the DAO  \cite{Dao} can ensure that  
+ the DAO's balance  never falls below the sum of the balances of its subsidiary accounts.
+
+% or
+
+ \emph{Limited}, \ie  they  \emph{may happen}, but %are guaranteed to happen
+  \emph{only if} the external 
+code  uses  certain \emph{object  capabilities}.
+E.g., while the DAO does not preclude that a signatory's balance will decrease, it  does ensure that the balance decreases only if the
+code causing this reduction used  the signatory itself.
+ 
+ \end{customquote}
+ 
+ \vspace{.1cm}
+ 
+\noindent
+Reasoning about precluded effects %guaranteed to never happen 
+has been studied in the context of object invariants   \cite{staticsfull,DrossoFrancaMuellerSummers08,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06}. 
+Reasoning about effects limited  through capabilities is the remit of this paper.
+  
+%  While the literature has explored external calls \cite{vanproving,cerise-jacm2024,vmsl-pldi2023,ddd}, ``robust safety'' \cite{gordonJefferyRobustSafety,robustSafetyPatrignani,abate2019journey}, \etc, to our knowledge, there is no widely accepted term limiting the range of effects resulting from external calls.
+ 
 
 
  
-
-\paragraph{\Tamed effects}
-%{\textbf
-{Our remit
- is not to rule out effects caused by external objects, % at the open call,  
- but to {\tame} them:}
- %}
-\footnote{AUTHORS: Do we like the term \tame? Can we think if a better one? t I do not like "conditional effects".  Guarded effects? Reduced effects?
-An advantage of "tamed" is that it is a short word.}
-We propose the term \emph{\tamed  effect} to describe an  effect which may be caused by an external object, but only if that external objects satisfies
- certain conditions specific to that effect.
-\footnote{AUTHORS: I think this is key.}
-For instance, an external object may cause the reduction of the balance of a bank account, 
-but only if the causing object is in procession of the corresponding credentials.
  
+\paragraph{The Object Capabiltiy Model} \red{James to improve this paragraph}
+Object Capability Model (OCAP)  \cite{MillerPhD}  is a security model   based on the concept of capabilities, which  
+Capabilities are transferable rights that allow the performance of one or more operations on a specific object. 
+Capabilities are unforgeable and can be obtained only through creation of the corresponding object, or through receipt of a message.
+Capabiities are {\emph{necessary}} conditions for causing effects; callers can only produce effects if they possess the required capabilities. 
+For example, a signatory can withdraw funds from a DAO only if they hold a ``withdraw'' capability for that specific account within that particular DAO.  
 
-%The subject of this paper is how to characterize the possible effects at the point of the open call.
+Languages like E, subsets of JavaScript (CITE SES), Caja, Wyvern, Rholang,  implement OCAP principles. CITE-CITE-CITE
 
-\paragraph{Program Development for \tamed effects} %To \emph{develop} programs with \tamed effects, programmers have to employ
-needs to employ 
- encapsulation features and \emph{encapsulated properties}.
- \footnote{We use the term encapsulated property for a property which can only invaliated through through one or more calls to a module's public methods}
-\footnote{AUTHORS: All terms used in this section have been used with many different meanings. 
-We must warn the reader that we use our own meanings here. 
-Do not know where to say that.}
-Using these, the programmer can preserve the module's internal invariants  even in the presence of open calls,
-can rule out some effects altogether (\eg it is impossible for an account's balance to be negative), and
-can ensure that effects are tamed.
- %
- Often  programmers  \tame  effects by  following the object capability model (OCAP)\cite{Miller}, where  
- capabilities are transferable rights to perform one or more operations on a given object.
-Thus, capabilities \emph{enable} and  \emph{guard} effects:   
-callers can make the effect   happen, if and only if they have access to the corresponding capability.
+
+\paragraph{Reasoning with Capabilties}
+%In this paper we demonstrate how to reason about  code which \tames effects,
+%{including those \tamed by capabilities.}  
+%We can specify effects to be \tamed, 
+%and then we can \emph{prove} that a module has indeed \tamed the effects we've specified.
+%
+ Recent work has developed logics to prove properties of programs employing object capabilities.
+\citet{ddd} develop a logic to prove that code employing object
+capabilities for encapsulation preserves invariants for
+intertwined code, but without external calls. 
+\forget{Relying on techniques from separation logic, they intend their proofs e.g.\ to support library components that can be reused in different contexts.}
+\forget{--- which is implicitly support in our distinction between external and internal code.
+ \footnote{\red{TO CHECK}\kjx{I have looked at it - good enough for
+ me.}}}
+  \citet{dd} \forget{work with Kripke logical relations describing program semantics, which} can describe and verify invariants
+about multi-object structures and the availability and exercise of object capabilities.  %\citeauthor{dd} 
+% They propose and solve several
+% problems involving external calls. 
+\forget{,  but require proofs specific to each individual problem, rather than a systematic Hoare logic.}
+ Similarly,
+{\citet{vmsl-pldi2023} propose a separation logic to support formal modular reasoning about communicating VMs, including in the presence of unknown VMs.
+\citet{irisWasm23} specify WASM modules, %and compose them in a simple target language, 
+and prove that adversarial code  can only affect other modules through the functions} that they explicitly export. 
+%Since external calls may in turn call any number of internal, public methods, 
+%it is crucial  to prove that \taming of effects is preserved by the module's 
+%\emph{emergent} behaviour, \ie any intertwining of external code with calls to internal, public methods.
+\citet{CassezFQ24}  handle external calls by replacing them through an unbounded number of calls to the module's public methods.
  
- 
-% \vspace{.1cm}
-\paragraph{Specification and Verification  for \tamed effects} But how to specify such \tamed effects? How to \emph{prove} that a program's effects are, indeed, \tamed?
-And can these proofs be  through Hoare logic, rather than   per-case, tailor-made?
- 
-Recent work has developed logics to prove properties of programs employing object capabilities.\footnote{albeit not necessarily with a focus on \tamed effects.}
-Dreyer OOPSLA'18 develop a logic to prove that   code employing object capabilities as encapsulation features preserve invariants for intertwined code, but in the absence of open calls. 
- \footnote{\red{TO CHECK}}.
-Devriese - 17? also develop xx logic for object capabilties and code invariants, they propose interesting problems for open calls, 
-but can only prove these properties through tailor-made proofs rather than Hoare logics.
-Birkedahl-PLDI'23 xxx The paper includes a property of an open call, but again through a tailor-made proof, and not as a Hoare logic.
-
-
-Since open calls may in turn call any number of internal, public methods, 
-it is crucial  to prove that \taming of effects is preserved by the module's 
-\emph{emergent} behaviour, \ie any intertwining of external code with calls to internal, public methods.
-\footnote{Properties which rely on the type system, are of course preserved, but what about more semantic properties?}
-xxx-OOPSLA-22-workshop does this by replacing the open call though an unbounded number of calls to the module's public method.
- FASE instead proposes holistic specifications to describe   module's emergent behaviour. 
- OOPLSA'22 proposes a xxx-specification language for a module's emergent behaviour, and  tailor-made Hoare logic to prove that modules which do not contain open call adhere to such specifications.
-%They propose a taylor-made proof for an open call.
-
-
-
+ The approaches above %, with partical exception of  \cite{{FASE,OOPSLA22} 
+ do not aim to support indirect, eventual access to capabilities.
+\citet{FASE} and \citet{OOPSLA22} do describe such access; %concentrate on access to capabilities;
+  the former proposes  ``holistic specifications'' to describe a module's emergent behaviour. 
+and the latter develops 
+a tailor-made logic to prove that modules which do not contain external calls adhere to such specifications.
+%They propose a tailor-made proof for an external call.
 %We argue that in order to \emph{prove} that effects are \tamed,
 %we need a way to specify the conditions necessary for that effect, 
 %and a way to prove that the   module in its entirety preserves this \taming.
 %In order to prove that the module in its entirety preserves this \taming, 
 % \vspace{.2cm} 
-% Thus, no work so far has tackled Hoare logics which support open calls as well as \tamed effects.
+% Thus, no work so far has tackled Hoare logics which support external calls as well as \tamed effects.
+%
+%\vspace{.03cm}
+%
+%Other than this, 
+%\sdN{To} reason about the effects of specific external calls,
+%the systems above \sdN{would} rely on problem-specific, custom-made proofs rather than a Hoare logic.
+Rather than relying on problem-specific, custom-made proofs, we propose a Hoare logic that addresses access to capabilities, external calls, and the module's \tamed effects.
 
-\paragraph{This paper proposes} % In this paper we propose 
-1) a specification language to to describe  \taming of effects for  programs which employ the OCAP model, 
- 2)  a Hoare logic of quadruples which can reason about open calls and prove that module's emergent behaviour indeed \tames the effects as specified.
-%Our specifications reflect modules' emergent behaviour,
-% We also develop  Hoare logics to reason about modules containing open calls.
+  
+\paragraph{This paper's contributions} % In this paper we propose 
+{(1) assertions to describe   access to capabilities}, 
+(2) a specification language to effects limited through capabilties.
+3) a Hoare logic to reason about external calls and to prove that modules satisfy their %\tamed effects 
+specifications,
+4)  proof of soundness,
+5) a worked illustrative example {with a mechanised proof in Coq}.
+ 
 
- \vspace{.8cm}
- \red{I want to also make these points, but do not know where. The points are overlapping,  and need  polishing:} 
- \begin{enumerate}
- \item
- \Tamed effects are essential when reasoning about intertwined code, but have not yet been widely studied -- esp. the competition has not crystalliuzed their need. We have, but have not given them a name. Perhaps the tamed effects should appear even earlier?
- \item
-\Tamed effects rely on conditions which are not under the control of the module. 
-For example, the module may require that the credentials are shown before it reduces the balance, but it cannot control which external objects have access to the credentials. 
-\item
-\label{reduced}
-The competition's effects  are not flexible enough. 
-They rely on only exposing a reduced version of the module's interface:
-For example, Birkedahl'22   prove -- by  hand -- that the stack's depth with remain the same, but only because the interface of their module does not expose a \prg{pop} method. 
-Such an assumption is too strong. 
-A module which did not support methods to reduce the stack are not as interesting or useful ... \red{here would be better to talk of balance and accounts}.
-What we want to have is modules with a rich interface, which expose different parts  of their interface to different external objects.
-\item
-One might think that it is possible to ensure that access to an object only goes through a reduced interface (as in point  \ref{reduced}).
-Namely, an internal object $o_1$ may create a proxy object $o_2$ to itself, which only exposes the reduced interface, and then pass $o_2$ as  argument to an external object $o_3$ .
-However, this does not guarantee that $o_3$ does not have a different route to $o_1$, which does not pass through the proxy $o_2$
-\item
-\Tamed effects \emph{have} to be hypothetical. \footnote{ (or context-dependent)}.  
-Some external objects will have access to the capability, and others will not. 
-We can gaurantee that without the relevant capability the effect will not happen, and also the capabilities will not be leaked. 
-But we can never guarantee that the capability is not present.
-\item
-In the context of OCAP, we need to reflect not only whether an external object has direct access (through a field, aor method  argumet) to the capability, but also, whether an external object may eventually obtain  direct access to the capability,
-% Eg they say that the interface does not provide a method to reduce the balance; then the reduction will not happen.
-\item
-\Tamed effects should take emergent behaviour into account. 
-They should hold over any number of execution steps, and not just over one particular method call. 
-For example \tamed effects should preclude  a module which does require the credentials in order to reduce the balance, but leaks the credentials. Therefore, per-method specifications are not sufficient.
-\end{enumerate}
+ \paragraph{Structure of this paper}
+Sect.\ \ref{s:outline}   outlines the main ingredients of our approach in terms of an \sdN{example}.
+% shopped to not get a page break:, and explains the main contributions.
+Sect.\ \ref{sect:underlying} outlines a simple object-oriented language used for our work. 
+ Sect. \ref{s:auxiliary}  {contains essential concepts for our study}.
+Sect.\ \ref{s:assertions} and 
+ Sect \ref{sect:spec}  give syntax and semantics of assertions, and  specifications,
+{while Sect. \ref{s:preserve} discusses preservation of satisfaction of assertions.}
+Sect.\ \ref{sect:proofSystem} develops Hoare triples and quadruples to prove external calls, and that a module adheres to its \tamed effects specifications.
+Sect.\ \ref{sect:sound:proofSystem} outlines \sdN{our} proof of soundness of
+the Hoare logic. 
+Sect.\ \ref{sect:example:proof:short} summarises  the Coq proof
+  of  our running example (the source code will be submitted as an artefact). 
+  %Sect.\ \ref{sect:related} discusses related
+%work and
+ Sect.\ \ref{sect:conclusion} concludes with related work. 
+Fuller technical details can be found in the appendices in the accompanying materials. 
 
-%\red{TODO} Explain OCAP; introduce the challenge of the open word; reasoning and works by Devries, Birkedahl, Vechev, and ours.
-%Include in that in OCAPs the capabilities act as guards. 
-%That this has been tackled in FASE/OOPSLA'22 and gets better tackled here
-%Also the difference between necessary and sufficient.
-%And relation to POPL'23 paper; perhaps also some of recent work by Toby 
-
-%Overall structure -- I do not know in what  order though.
-%
-%1) In today's complex world,  internal calls external and external calls internal
-%
-%2) To mitigate the risk, we introduced encapsulation ... ownership, private, etc etc 
-%
-%
-%3) The OCAP model proposes capabilties .... def from OCAP. This means that capabilty is enabler -- sufficient condtion, 
-%
-%4)  However, a better understanding is that capability is guard, ie necessary condition. This has been recognized at OOPSLA 2022.
-%
-%
-%5) We need to develop robust software, so that external calls do not do not have unwarranted effects ( check what term do Birkedahl et al use ).
-%
-%6) When we reason about open calls we can consider all possible calls back into the nmodule (2022 work), or even better 
-%  have a spec of the complete module. OOSPLA did the spec but could not do the reasoning. 
-%
-%7) Emergent behaviour; to describe this, we need specs about complete module. Earlier work in that vein: two state invariants from the 02's. , temporal loghics, and FASE, OOPSLA
-%-- competititon does not do.
-
-
-
-%reason in the open world is not only about preservation of simple invariants; it is about reasoning about possible effects. These are reduced/increased through the availability of capabilities.
-%
-%The "others" tackle the problem of the ambient authority in a 1-step manner, eg there is a module, and if it exports a capability this capability may be used. For example, xxxx 
-%
-%FASE/OOPSLA support unrestricted ambient authority, but not the reasoning part. For example, xxxx
-%
-%In this paper, we support unrestricted ambient authority, and also reasoning. We are inspired by the work in FASE/OOSPLA, but with the following differences
-%
-%1) replace the temporal operators of FASE/necessity operators of oopsla by 2-state spec-s 
-%
-%2) when reasoning about a module's adherence to a 2-state spec, replace the xxx rules from OOPSLA by just one rule -- inspired by Infeasibility logic
-%
-%3) add one Hoare logic rule to reason about calls to external call; and add Hoare logic rules that reason about the accessibility of objects from other objects
-
-
+ 

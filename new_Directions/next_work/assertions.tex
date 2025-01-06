@@ -1,10 +1,10 @@
 \label{sub:SpecO}
 
 
-Our assertions can be %\AssertLang, 
- standard  as well as \emph{object-capability}. 
- The  standard assertions  include the values of fields, implication, quantification etc, as well as ghost fields; the latter can represent user-defined predicates. 
-The  object capability assertions express restrictions of an object's eventual authority on some other object.
+Our assertions are  %\AssertLang, 
+ standard  or  \emph{object-capability}. 
+ Standard assertions assert properties of the values of fields, implication, quantification etc, as well as ghost fields  which represent user-defined predicates. 
+The  object capability assertions express restrictions of  objects' eventual authority on other objects.
 
 \begin{definition}
 \label{def:assert:syntax}
@@ -185,26 +185,21 @@ The  property pertaining to the program is that it preserves the protection of  
 %
 We can see that if $o$ is protected and the internal code preserves its protection, then no external object can gain eventual access to $o$.
 
-To define ``protected'', \sdNew{we first defne  "has no direct access to",  
-formally $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}}$: This requires that
-$\alpha_o$ has no field pointing to $\alpha$, and   that if $\alpha_o$ is the current receiver then $\alpha$ in not a local variable.
-Namely,   object $\alpha_{o}$ has direct access to   object $\alpha$ either because $\alpha_{o}$ has $\alpha$ in its fields, or because $\alpha_o$'s is the currently active object, and $\alpha$ is on the current top frame.
-}\footnote{Mark Miller quote here?}
+\red{We first define what it means for an object  to be protected from another object, $\protectedFrom{{\alpha}} {{\alpha_{o}}}$: 
+The two objects must not be equal, and no external object reachable from $a_o$ has a field pointing to  $\alpha$.
+This definition ensures  that any path leading from $\alpha_o$ to $\alpha$ should lead through an internal object.
+}
+
+\red{
+We then define what it means for an object  to be protected,  $\inside{{\alpha}}$:
+This requires that if the current receiver is external, then none of the arguments is $\alpha$, and 
+that  no external object reachable from any of the arguments has a field pointing to $\alpha$.
+This definition ensures that external objects reachable from the current receiver or arguments have direct access to $\alpha$ -- such direct access
+ is either through a field, or by virtue of the receiver having acces to all the arguments.
+}
 
 
-%\citet{OOPSLA22} develop the contrapositive: ``lack of eventualpermission to the relevant capability implies that the given effect will {not} take place''.
-
-%A precise characterization of eventual permission is undecidable, but we approximate it through the concept of \textbf{\emph{protection}}:
-%{An object $o$ is \emph{protected  from} another object $o'$, if $o'$ can obtain direct access to   $o$ only if 
-%$o$ is \emph{introduced} to some external object $o_e$ by some internal object $o_i$ -- where $o'$ and $o_e$, and also $o$ and $o_i$ may be different.  
-%We  use ``introduce'' following \citet{MillerPhD}, where $o$ is is ``introduced'' to $o'$ by $o''$, iff either $o''$ sends to $o'$ a message containing $o$, 
-%or $o'$ calls $o''$, and $o''$ eventually returns  $o$ as the result of that call.}
-% 
-%We now introduce % the concept of 
-%(absolute) protection.
-%An object is protected, if it is protected from all locally reachable {external} objects. This can also be understood as 
-%``protected from the top frame''. \footnoteSD{TODO: motivate; many external objects, no matter which one has unprotected access to an object }
-
+ 
 \begin{definition}[Satisfaction 
 of Assertions  -- Protection] 
 \label{def:chainmail-protection-from}
@@ -212,46 +207,93 @@ of Assertions  -- Protection]
  \label{def:chainmail-protection}
 -- continuing definitions in \ref{def:chainmail-semantics}:
 \begin{enumerate}
-%\item
-%\label{dirAccess}
-%\sdNew{ $\satisfiesA{M}{\sigma}{\accessedBy {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
-%[\  \ \exists f.  \interpret {\sigma} {\alpha_o.f} = \alpha  \ \vee\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \wedge \exists x\in dom(\sigma). \interpret {\sigma} x = \alpha ) \ \ ] $}
-\item
-\sdNew{ $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
-[\  \ \forall f.  \interpret {\sigma} {\alpha_o.f} \neq \alpha  \ \wedge\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \Rightarrow \ \forall x\in dom(\sigma). \interpret {\sigma} x \neq \alpha ) \ \ ] $}
 \item
 \label{cProtected}
  $\satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}   \ \ \ \triangleq $ 
   \begin{enumerate}
  \item
 $\alpha\neq \alpha_0$,
- \ \ \ \  and% \\
+ % \ \ \ \  and 
  \item
-\sdNew{$\forall \alpha' \in {\Relevant {\alpha_o} {\sigma}}.[\  \satisfiesA{M}{\sigma}{\external {\alpha'}} 
+$\forall \alpha'.\forall f.[\ \alpha' \in {\Relevant {\alpha_o} {\sigma}} \wedge\   \satisfiesA{M}{\sigma}{\external {\alpha'}} 
 \ \ \Longrightarrow \ \  
- \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'} } \ ] $}.
-% {M},{\sigma}\not\models{A}{\accessedBy  {\re}{\alpha}} ] $}
+  \interpret {\sigma} {\alpha_o.f} \neq \alpha     \ ] $.
 \end{enumerate}
 \item
 \label{sect:semantics:assert:prt}
-$\satisfiesA{M}{\sigma} {\inside {\alpha}}  \ \ \ \triangleq \ \ \    
-%\begin{enumerate}
-%\item
-\sdNew{\forall \alpha' \in \LRelevantO  {\sigma}.[\ { \satisfiesA{M}{\sigma}{\external {\alpha'}}} \ \ \Longrightarrow \ \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'}}\ ]}$.
-%{M},{\sigma}\not\models }{\accessedBy  {\re}{\alpha}} ] $}
-%, \ \ \ and 
-%\item
-%$\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
-%  \end{enumerate}
-
+$\satisfiesA{M}{\sigma} {\inside {\alpha}}  \ \ \ \triangleq \ \ \   $
+ \begin{enumerate}
+\item
+ $\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \alpha}$,
+ \item
+$\forall \alpha'.\forall f.[\ \alpha' \in {\LRelevantO {\sigma}} \wedge\   \satisfiesA{M}{\sigma}{\external {\alpha'}} 
+\ \ \Longrightarrow \ \  
+  \interpret {\sigma} {\alpha_o.f} \neq \alpha     \ ] $.
+  \end{enumerate}
 \end{enumerate}
- \end{definition} 
-
 Moreover,  
-$\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$ means that 
+$\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$ $ \triangleq$
 $\exists \alpha, \alpha_{o}. [\  \eval{M}{\sigma}{{\re}}{\alpha}\ \wedge\ \eval{M}{\sigma}{{\re_0}}{\alpha_0} \  \wedge \ 
-  \satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}\   ]$, and  $\satisfiesA{M}{\sigma}{\inside{\re}}$ means that
+  \satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}\   ]$, and   \\ $\satisfiesA{M}{\sigma}{\inside{\re}}$  $\triangleq$
  $\exists \alpha. [\   \eval{M}{\sigma}{{\re}}{\alpha}\ \wedge \   \satisfiesA{M}{\sigma}{\inside{\alpha}} \  ]$. 
+
+ \end{definition} 
+ 
+ \red{Thus,  $\protectedFrom{{\alpha}} {{\alpha_{o}}}$ ensures that $\alpha_o$ will get access to $\alpha$ only if an internal object grants that access.
+Similarly, $\inside \alpha$ ensures that during execution of the current method, no external object will get direct access to $\alpha$ unless some internal object grants that access.
+ }
+
+% \footnote{The below is the old definition, but it is wrong
+%  
+%% To define ``protected'', \sdNew{we first defne  "has no direct access to",  
+%%formally $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}}$: This requires that
+%%$\alpha_o$ has no field pointing to $\alpha$, and   that if $\alpha_o$ is the current receiver then $\alpha$ in not a local variable.
+%%Namely,   object $\alpha_{o}$ has direct access to   object $\alpha$ either because $\alpha_{o}$ has $\alpha$ in its fields, or because $\alpha_o$'s is the currently active object, and $\alpha$ is on the current top frame.
+%%}\footnote{Mark Miller quote here?}
+% 
+%\begin{definition}[Satisfaction 
+%of Assertions  -- Protection] 
+%\label{def:chainmail-protection-from}
+%\label{sect:semantics:assert:prtFrom}
+% \label{def:chainmail-protection}
+%-- continuing definitions in \ref{def:chainmail-semantics}:
+%\begin{enumerate}
+%%\item
+%%\label{dirAccess}
+%%\sdNew{ $\satisfiesA{M}{\sigma}{\accessedBy {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
+%%[\  \ \exists f.  \interpret {\sigma} {\alpha_o.f} = \alpha  \ \vee\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \wedge \exists x\in dom(\sigma). \interpret {\sigma} x = \alpha ) \ \ ] $}
+%\item
+%\sdNew{ $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
+%[\  \ \forall f.  \interpret {\sigma} {\alpha_o.f} \neq \alpha  \ \wedge\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \Rightarrow \ \forall x\in dom(\sigma). \interpret {\sigma} x \neq \alpha ) \ \ ] $}
+%\item
+%\label{cProtected}
+% $\satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}   \ \ \ \triangleq $ 
+%  \begin{enumerate}
+% \item
+%$\alpha\neq \alpha_0$,
+% \ \ \ \  and% \\
+% \item
+%\sdNew{$\forall \alpha' \in {\Relevant {\alpha_o} {\sigma}}.[\  \satisfiesA{M}{\sigma}{\external {\alpha'}} 
+%\ \ \Longrightarrow \ \  
+% \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'} } \ ] $}.
+%% {M},{\sigma}\not\models{A}{\accessedBy  {\re}{\alpha}} ] $}
+%\end{enumerate}
+%\item
+%\label{sect:semantics:assert:prt}
+%$\satisfiesA{M}{\sigma} {\inside {\alpha}}  \ \ \ \triangleq \ \ \    
+%%\begin{enumerate}
+%%\item
+%\sdNew{\forall \alpha' \in \LRelevantO  {\sigma}.[\ { \satisfiesA{M}{\sigma}{\external {\alpha'}}} \ \ \Longrightarrow \ \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'}}\ ]}$.
+%%{M},{\sigma}\not\models }{\accessedBy  {\re}{\alpha}} ] $}
+%%, \ \ \ and 
+%%\item
+%%$\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
+%%  \end{enumerate}
+%
+%\end{enumerate}
+% \end{definition} 
+%}
+
 
 % \vspace{.5cm}
 \footnoteSD{JAMES' comment: If is possible that ``we'' do not know the complete heap (eg we only know about the green stuff.) how do we know whether an object is protected. The answer is that we do not know that it is protected, but we do know that our code guarnartees poreservation of protectedness.
