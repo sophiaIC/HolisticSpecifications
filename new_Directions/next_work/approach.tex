@@ -3,13 +3,13 @@
 \renewcommand{\password}{key\xspace}
 
 We introduce the problem  through an example, and outline our
-approach.  We work with a  small, class-based object-oriented, \se{sequential} language similar to Joe-E \cite{JoeE} with modules,   module-private fields
+approach.  We work with a  small, class-based object-oriented, sequential language similar to Joe-E \cite{JoeE} with modules,   module-private fields
 ({accessible} only from   methods {from} the same module),
 and unforgeable, un-enumerable addresses.
 We distinguish between  \emph{\internalO}
 objects --- instances of our internal module $M$'s classes ---
 and \emph{\externalO} objects defined in
-\emph{any} number of external modules $\overline M$.~ 
+\emph{any} number of external modules $\overline M$\footnote{We use the notation $\overline z$ for a sequence of $z$, \ie for $z_1,z_2,...z_n$ }.~ 
 {\prg{Private} methods  {may only be} called by objects of the same
   module,  while \prg{public}  methods  may be  by \emph{any}
   object with a reference to the method receiver, {and with
@@ -18,36 +18,43 @@ and \emph{\externalO} objects defined in
 
  \label{s:concepts}
 
-We are concerned with guarantees made in an \emph{open} setting; that
-is, our internal module
+We are concerned with guarantees made in an \emph{open} setting; % thatis, 
+Our internal module
 $M$ must be programmed so that 
-its execution, together with any external modules $\overline M$
-will satisfy these guarantees.
-$M$ must ensure these guarantees are satisfied
-whenever the
-$\overline M$  \emph{\externalM} modules are executing,
-yet without relying on any assumptions about $\overline M$'s code
-(beyond the programming language's semantics)%
+  execution of $M$  together with \emph{any} unknown, arbitrary, external modules $\overline M$
+% it was "its execution, together ... "SD thinks that the comma  was misleading
+will satisfy these guarantees --
+%$M$ must ensure these guarantees are satisfied
+%These guarantees must  satisfied
+%whenever the
+% $\overline M$  \emph{\externalM} modules are executing,
+%yet 
+without relying on any assumptions about $\overline M$'s code
+(beyond the programming language's semantics) 
 \footnote{
 This is a critical distinction from e.g.\
 cooperative approaches such as rely/guarantee
 \cite{relyGuarantee-HayesJones-setss2017,relyGuarantee-vanStaden-mpc2015}.}.
-The internal module may break these guarantees temporarily,
-so long as they {are reestablished} before (re)entry to an external module.
+% SD chopped the next sentence. I think  the uninformed reader will be surpised, and the knowledgeable reader will find out soon enough
+% The internal module may break these guarantees temporarily,
+% so long as they {are reestablished} before (re)entry to an external module.
   
  
 
-\subsection*{\prg{Shop} -- illustrating tamed effects}  
+\subsection*{\prg{Shop} -- illustrating limited effects}  
 \label{sec:how}
 \label{sec:shop}
 
-The challenge when calling a method on an external object, is that we have no specification for that method. 
- For illustration, consider the following, internal, module \Mshop, which also includes the classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
+% I think we can skip the next sentence3. We said it all earlier, and will say it again later
+%The challenge when calling a method on an external object, is that we have no specification for that method. 
+% For illustration, 
+Consider the following, internal, module \Mshop, % which also includes the 
+containing classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
 Classes  {\prg{Inventory} and \prg{Item} have the expected functionality. 
 \prg{Account}s hold a balance and have a \password. 
-With access to an \prg{Account},  one  can pay money into it, 
-and with access to an account  and its \password, one can withdraw money from it.
-Implementations of such a class  appear in the next section.
+Access to an \prg{Account},  allows one  to pay money into it, 
+and  access to an account  and its \password, allows one to withdraw money from it.
+% Implementations of such a class  appear in the next section.
 }
  \prg{Shop}  has  a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object. 
  % SD chopped  with a method { \prg{pay}.}} 
@@ -60,7 +67,7 @@ module M$_{shop}$
     public method buy(buyer:external, anItem:Item)
       int price = anItem.price
       int oldBlnce = this.accnt.blnce
-      buyer.pay(this.accnt, price)     // $\sdNew{\mbox{external\ call}}$
+      $\red{\mbox{buyer.pay(this.accnt, price)}}$      
       if (this.accnt.blnce == oldBlnce+price)  
          this.send(buyer,anItem)
       else
@@ -69,9 +76,11 @@ module M$_{shop}$
        ...         
 \end{lstlisting}
  
+ 
 
 The critical point is the external call on line 8,   {where the \prg{Shop} asks the \prg{buyer} to pay the price of that item,
-by calling  \prg{pay} on \prg{buyer} and passing the \prg{Shop} account as an argument.
+by calling  \prg{pay} on \prg{buyer} and passing the \prg{Shop}'s account as an argument.
+% somebody had written " \prg{Shop}'s account" but SD thinks it has to be  \prg{Shop}'s account
 As \prg{buyer} is an external object, the module \Mshop has no method specification for \prg{pay}, and no 
 certainty about what its implementation %knowledge of what the implementation of \prg{pay} 
 might do. 
@@ -79,16 +88,22 @@ might do.
 }
 
 {What are the possible effects of that external call?}
-{The \prg{Shop} hopes, but cannot be sure, that at line 9  it  will have received money; but 
+{The \prg{Shop} hopes, % but cannot be sure,
+ that at line 9  it  will have received money; but 
 it wants to be certain  that the \prg{buyer} cannot use this opportunity to access the 
 shop's account to drain its money.
-Can \prg{Shop}  be certain?}
+
+Can \prg{Shop}  be certain?} Indeed, if
 
 \vspace{.05cm}
 \begin{enumerate}[(A)]
-\item   If prior to the call of  \prg{buy}, the \prg{buyer}  has no eventual access to the account's \password, \ \ \ \emph{----} and
-\item  If \Mshop ensures that a) access to keys is not leaked to external objects, 
-and b) funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password, \ \ \ \emph{----} then
+\item   Prior to the call of  \prg{buy}, the \prg{buyer}  has no eventual access to the account's \password, \ \ \ \emph{----} and
+\item  \Mshop ensures that 
+\begin{enumerate}[(a)]
+\item access to keys is not leaked to external objects, \ \ \ \emph{----} and
+\item    that  funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password,
+\end{enumerate}
+\ \  \ \ \ \emph{----} then
 \item  The external  call on line 8 will not result  in a decrease in the shop's account balance.
 \end{enumerate}
 
@@ -96,16 +111,32 @@ and b) funds cannot be withdrawn unless the external entity responsible for the 
 
 %\vspace{.3cm}
 \noindent
-The remit of this paper is to provide specification and verification tools that support arguments like the one above. In our example, we relied on two yet-to-be-defined concepts: (1) ``eventual access'' and (2) \tamed effects (e.g., no money withdrawn unless certain conditions are met).
-Therefore, we need to address the following three challenges: 
-\begin{description}
-\item[\ \ \ \ \  1$^{st}$ Challenge] The specification   of ``eventual  access''. 
+The remit of this paper is to provide specification and verification tools that support arguments like the one above.
+This raised the following three questions: 1$^{st}$ \ A specification language which describes access to capabilities and limited effects,\ 
+2$^{nd}$: A  Hoare Logic for adherence to such specifications, ' 3$^{rd}$    A  Hoare Logic for external calls.
 
-\item[\ \ \ \ \   2$^{nd}$ Challenge] The specification of tamed effects, 
-
-\item[\ \ \ \ \  3$^{rd}$ Challenge] A  Hoare Logic for external calls, and for adherence to tamed effect specifications.
-\end{description}
+%\begin{description}
+%\item[\ \ \ \ \  1$^{st}$ Remit:]  \ A specification language which describes access to capabilities and limited effects,
 %
+%\item[\ \ \ \ \   2$^{nd}$ Remit:]  A  Hoare Logic for adherence to such specifications,
+%
+%\item[\ \ \ \ \  3$^{rd}$ Remit:]  A  Hoare Logic for external calls.
+%\end{description}
+
+%We continue our example with three versions of the module, some of which satisfy (B) from above, and some of which do not
+
+% In our example, we relied on two yet-to-be-defined concepts: (1) ``eventual access'' and (2) limited effects (e.g., no money withdrawn unless certain conditions are met).
+%Therefore, we need to address the following three challenges: 
+%\begin{description}
+%\item[\ \ \ \ \  1$^{st}$ Challenge] The specification   of ``eventual  access''. 
+%
+%\item[\ \ \ \ \   2$^{nd}$ Challenge] The specification of limited effects, 
+%
+%\item[\ \ \ \ \  3$^{rd}$ Challenge] A  Hoare Logic for external calls, and for adherence to limited effect specifications.
+%\end{description}
+
+
+
 %\vspace{.2cm}
 %\noindent
 % \textbf{NOTE}  \sdN{Replacing the argument by a wrapper to the account which allows payments but forbids withdrawals,    would be ineffectual in \taming} the  effects on line 9. 
@@ -117,21 +148,52 @@ Therefore, we need to address the following three challenges:
 %Does this make sense? Shall we drop that point?}
  
  
-\subsection{1$^{st}$ Challenge: eventual access} 
+\subsection{1$^{st}$ Question: Specification Language} 
+
+We want to give a formal meaning to the guarantee that for some effect, $E$, and an object $o_c$ which is the capability for $E$:
+ \begin{quote}
+(*)   \ \ \ \ \ $E$ can be caused only  by external objects calling methods on internal objects, \\
+$\strut \ $ \ \ \ \ \  \ \ \ and only if the causing object has access  to $o_c$.   
+ \end{quote}
+
+\noindent 
+The first task is to describe that effect  $E$ took place. We can do that by finding some aseertion $A$ which is invalidated by $E$. Then, (*) can be described by something like:
+ \begin{quote}
+(**) \ \ \ $A$ holds \ \  and \ \   no external access to  $o_c$ \ \ \ implies \ \  \ $A$ holds in the future.
+ \end{quote}
+
+\noindent 
+We now need to determine the meaning of "no external access to  $o_c$", and of "$A$ in the future.
+
+In a first attempt we could say that "no external access to  $o_c$" means  that no external object exists, nor will any external objects be created.
+% \begin{customquote}
+%(V1) \ \ \ $A\ \wedge\ $  no external access to  $o_c$ \ \ is an invariant.
+% \end{quote}
+ However, this is too strong; it defines away the problem we are aiming to solve.
+
+In a second attempt, we could say that "no external access to  $o_c$" means that no external object has access to $o_c$, nor will ever get access to $o_c$. This is also too strong, as it would preclude $E$ from ever happening, while our remit is that $E$ may happen but only under certain conditions. 
+
+This discussion indicates that the lack of external access to $o_c$ is not a global property, and that the future in which  $A$ will hold is not be permanent. 
+Instead,  they are both defined from the viewpoint of the current point of execution.
+The current point of execution is characterized by the activation frames\footnote{An activation frame, or frame for short. consists of a variable map and a continuation -- the statements that remain to be executed.} on the call stack, and the heap. 
+We are interested in external objects reachable from the current frame\footnote{the frame corresponding to the currently executing methof}, and  in the future states scoped by the current frame.
+ 
+And so we have: 
+ \begin{quote}
+(***)     $A$ holds \  and \  no external objects \emph{reachable from current frame}  have access to $o_c$, \\  
+$\strut \ $ \ \ \ \  and\   no  internal objects pass $o_c$ to external objects,  \\
+$\strut \ $ \ \ \ \      implies   \\
+$\strut \ $ \ \ \ \ $A$ holds in  \emph{the future scoped} from the current frame.  
+ \end{quote}  
+
+We formalize "no external objects  reachable from the current frame have access" through the concept of \emph{protection}, 
+and "the future scoped from the current frame" through  the concept of \emph{scoped invariants}. 
+We discuss these concepts in more detail in \S \ref{sect:approach:protection}, and \ref{sect:approach:scoped}
 
 
-Assume % we have a guarantee 
-that  %no external object % $o_e$  %can cause 
-an effect $E$ can only be caused by  some   external object which has direct access to the capability object $o_{cap}$. 
-Then, if \sdNew{no currently reachable external object has, or can eventually obtain direct access  to $o_{cap}$,  then $E$ is guaranteed not to happen.}
-%
-%
-%to ensure that $E$ will not happen, \sdNew{it is sufficient}  ensure for all object \sdNew{not only} that $o_e$ has no access now but also that it cannot gain access in the future - we %call this 
-%\sdNew{say that $o_e$ ``{has no \emph{eventual} access}'' to $o_{cap}$.}
- %
-\sdNew{ We approximate ``\sdNew{no } eventual access'' through \emph{protection}, and its preservation.}
-%  defined below, and illustrated in  Fig.  \ref{fig:ProtectedBoth}.  %
-% \sdNew{Formally:} %We formalize the lack of access to as:}
+\subsubsection{Protection}
+\label{sect:approach:protection}
+
 
  \begin{description}
 \item[Protection] 
@@ -139,26 +201,22 @@ Then, if \sdNew{no currently reachable external object has, or can eventually ob
 %% if the penultimate object on \se{every} path from $o$ to $o'$  is internal.
 %\sdNew{if no external object transitively accessible from $o$ has direct access to $o'$.}
 Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$,  
-\sdNew{if no external object transitively accessible from the top frame (the frame of the currently executing method call) has direct access to $o$.}
+if no external object transitively accessible from the current frame\footnote{An object is transitively accessible from a frame if
+ there exists a sequence of field accesses leading from one of the variables in the frame  to that object.} 
+has direct access to $o$. 
 \\
 Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
-\sdNew{if no external object transitively accessible from $o'$ has direct access to $o'$.}
-More in {Def. \ref{def:chainmail-protection-from}.}  
+if no external object transitively accessible from $o'$ has direct access to $o'$.
+More in Def. \ref{def:chainmail-protection-from}.  
  \end{description}
  
+%\noindent
+%Protection  thus depends on the heap topology as well as on the contents of the current frame -- \eg~
+%  Fig. \ref{fig:ProtectedBoth}. 
 
-If the  internal module  never passes $o$ to  external objects (\ie never leaks $o$) and  $o$ is protected, then it will remain protected.  
-%
-%
-%from $o_e$ now, it will remain protected from $o_e$,
-%and if $o$ is protected now, it will remain protected.
-Going back to the original question, if $o_{cap}$ is protected, \sdNew{and $o_{cap}$ is never leaked to external objects}, 
-then % from all locally accessible external objects, 
- effect  $E$ is guaranteed not to occur. % , \se{unless caused by internal code}.
-
-%Protection  thus depends on the heap topology as well as on the contents of the top frame -- \eg~
+%Protection  thus depends on the heap topology as well as on the contents of the current frame -- \eg~
 %\cf Fig. \ref{fig:ProtectedBoth}. %  object $o_7$ is not protected in the middle pane, but is protected in the right pane.
-%For our work we also need a relative concept of protection:
+
 
  
 \begin{figure}[tbh]
@@ -179,13 +237,13 @@ then % from all locally accessible external objects,
 \hline
 protected from object $o_2$
 &
-protected  with top frame $\phi_1$
+protected  with current frame $\phi_1$
 &
-protected  with top frame $\phi_2$
+protected  with current frame $\phi_2$
 \\
 \hline \hline
 \end{tabular}
-\caption{Protected from and Protected. Pink and green squares are external and internal objects, respectively. Connecting straight arrows  indicate fields. Blue boxes are frames on the stack. Protected objects are  highlighted in yellow. 
+\caption{\textit{Protected from and Protected}. Pink and green squares are external and internal objects, respectively. Connecting straight arrows  indicate fields. Blue boxes are frames on the stack. Protected objects are  highlighted in yellow. 
  The left pane shows a heap with objects $o_1$-$o_9$.
  Here  $o_1$, $o_4$, $o_5$ and $o_9$ 
 are protected from $o_2$. 
@@ -197,28 +255,68 @@ are protected from $o_2$.
    \label{fig:ProtectedBoth}
  \end{figure}
  
+If the  internal module  never passes $o$ to  external objects (\ie never leaks $o$) and  $o$ is protected, then $o$ will remain protected during execution of the current method and all the methods \emph{it} calls.
+However, it need not be protected during execution of the method calling the current method, nor after termination of the current method.   
+This discussion leads us to  scoped invariants.
+%Going back to the original question, if $o_{c}$ is protected,  and $o_{c}$ is never leaked to external objects, 
+%then  effect  $E$ is guaranteed not to occur. % , \se{unless caused by internal code}.
 
-\subsection{2$^{nd}$ Challenge: Specification of tamed effects}
+\subsubsection{Scoped Invariants}
+%\subsection{2$^{nd}$ Challenge: Specification of limited effects}
+
 \label{sect:approach:scoped}
-How can we express the guarantee that effects are \tamed?  
- In particular, when effects can be the outcome of the execution of more than one method? 
- Traditional,  {per-method} PRE/POST conditions {cannot guarantee} %specifications cannot express guarantees
-  that two or more of our methods won't interact to produce an untamed effect. 
-We build on the concept of history invariants \cite{liskov94behavioral,usinghistory,Cohen10} and define
+%How can we express the guarantee that effects are limited?  
+% In particular, when effects can be the outcome of the execution of more than one method? 
+% Traditional,  {per-method} PRE/POST conditions {cannot guarantee} %specifications cannot express guarantees
+%  that two or more of our methods won't interact to produce an unlimited effect. 
+We build on the concept of history invariants \cite{liskov94behavioral,usinghistory,Cohen10} and define:
 
 \begin{description}
 \item[{Scoped invariants}]  
 {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if a {state} $\sigma$ 
  has objects $\overline x$ of class $\overline C$, and satisfies $A$, then all $\sigma$'s \emph{scoped  future  states} will  {also} satisfy  {$A$}. 
-The scoped future contains all % \sdN{future} 
- states which can be reached through any steps, including further method calls and returns, but stopping before returning  from the call active in $\sigma$ \footnote{{Here lies the difference to history invariants, which consider \emph{all} future states, including returning from the call active in $\sigma$.}}  --  \cf Def  \ref{def:shallow:term}.
-{For} $\sigma$ and its scoped future   we only consider external states -- \cf Def \ref{def:necessity-semantics}.
+The scoped future contains all  states which can be reached through any steps, including further method calls and returns, but stopping before returning  from the call active in $\sigma$ \footnote{{Here lies the difference to history invariants, which consider \emph{all} future states, including returning from the call active in $\sigma$.}}  --  \cf Def  \ref{def:shallow:term}.
+{For} $\sigma$ and its scoped future   we only consider external states\footnote{States with external receivers, \ie which execute external code} -- \cf Def \ref{def:necessity-semantics}.
 \end{description}
 
+
+ \begin{figure}[htb]
+\begin{tabular}{|c|}
+\hline  % \\
+\resizebox{6.6cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/preserves2.png}, 
+}
+\\
+\hline
+%% \\
+%\begin{tabular}{lcl}
+%% not that interesting, chopped
+%% $\leadstoBoundedStar {...} {\sigma_6}   {\sigma_9} $ & &  $A_0$ guaranteed to be preserved from $\sigma_6$ to $\sigma_9$.\\
+%$\leadstoBoundedStar {...} {\sigma_6}   {\sigma_{13}} $ & &   $A_0$ guaranteed to be preserved from $\sigma_6$ to $\sigma_{13}$.\\
+%$\leadstoBoundedStar {...} {\sigma_6}   {\sigma_{19}} $, \ \   $..,\sigma_{19}\not \models {\extThis} $ & &   $A_0$ \emph{not} guaranteed to be preserved from $\sigma_6$ to $\sigma_{19}$.\\
+%$\leadstoBoundedStar {...} {\sigma_6}  {\sigma_{20}} $  \ \   & &  $A_0$  guaranteed to be preserved from $\sigma_6$ to $\sigma_{20}$.\\
+%$\notLeadstoBoundedStar {...} {\sigma_8}  {\sigma_{20}} $  \ \   & &  $A_0$  \emph{not} guaranteed to be preserved from $\sigma_8$ to $\sigma_{20}$. \\
+%\hline
+%\end{tabular}
+\end{tabular}
+   \caption{\textit{Illustrating  scoped invariants}.
+Green and pink  disks represent  internal and external states.
+Horizontal arrows represent execution within the same method; up-arrows represent method calls; down-arrows represent method returns.
+% \\
+\ \ \ \  Thus, the scoped future of $\sigma_6$ includes all states in the diagram, and the scoped future of $\sigma_8$ consists of $\sigma_9$, $\sigma_{10}$,  $\sigma_{11}$,  $\sigma_{12}$,   $\sigma_{13}$,  
+and $\sigma_{14}$, and does not include, \eg,  $\sigma_{15}$, or $\sigma_{19}$.
+\\
+The invariant   ${\TwoStatesN {\overline {x:C}} {A_0}}$   guarantees that $A_0$ will be preserved from $\sigma_8$ to $\sigma_{13}$,
+ but \emph{not} from  $\sigma_8$ to $\sigma_{15}$, or $\sigma_{19}$.
+ It also guarantees that $A_0$ will be preserved from $\sigma_6$ to $\sigma_{17}$,
+but \emph{not} from  $\sigma_6$ to $\sigma_{11}$, as $\sigma_{11}$ is an internal state.
+}
+ \label{fig:illusrPreserve} 
+ \end{figure}
+
+\subsubsection{Examples}    
     
 \label{s:bank}
-
-
 
 \begin{example}
 \label{s:bankSpecEx}
@@ -242,23 +340,27 @@ $\strut  \SPSP\ \ \   S_3\ \  \triangleq \ \ \TwoStatesN{ \prg{a}:\prg{Account},
 %$\strut \SPSP  S_3$:\   the balance does not decrease unless there is unprotected access to the key.  
 %
 \end{example} 
- \vspace{.05cm}
+ \vspace{.005cm}
 
  
 \noindent
-\sdNew{This example illustrates two crucial properties. Namely, our   invariants are 
+This example illustrates two crucial properties. Namely, our   invariants are 
 
 % {\textbf{\sdN{Scoped invariants are} \emph{conditional}}:} 
-{$\bullet$ \textbf{\emph{Conditional}}:}  They ensure that assertions are \emph{preserved}, but unlike object invariants, they do not guarantee that they always hold.
+\noindent
+%{$\bullet$}
+\emph{Conditional}:   They ensure that assertions are \emph{preserved}, but unlike object invariants, they do not guarantee that they always hold.
 \ \Eg   \prg{buy} cannot assume $\inside{a.\prg{key}}$ holds on entry, but   guarantees that if it holds on entry, then  it will still hold on exit.
 
-{$\bullet$ \textbf{\emph{Scoped}}:}  They ensure that invariants are preserved during execution of a certain method, but \emph{not} after completion of that method.
+\noindent
+%{$\bullet$}
+\emph{Scoped}:     They ensure that invariants are preserved during execution of a certain method, but \emph{not} after completion of that method.
 In fact, it is \emph{expected} that at some point after completion the invariant will not hold:
 \ \Eg   even in  $\inside{a.\prg{key}}$ holds currently, it is expected that some external object accessible 
 from a  frame deeper down in the current stack will have direct access to ${a.\prg{key}}$ -- if this were not so, then $a$ would not be usable for payments. 
 Therefore, at some future point, after enough frames have been popped from the stack, 
 $\inside{a.\prg{key}}$ will no longer hold. 
- }
+
  
  \begin{example}
  We   now use the features from the previous section to specify methods. 
@@ -271,13 +373,13 @@ $\inside{a.\prg{key}}$ will no longer hold.
 		{ 
 		  %\protectedFrom{\prg{this}.\prg{\myAccount}.\prg{key}} {\prg{buyer}} \wedge 
 		  \prg{this}.\prg{\myAccount}.\prg{\balance}\geq b
-		 }
-}
+		} 
+		}
 
 \noindent
 $S_4$  guarantees that if the % account's 
 key was protected from \prg{buyer} before the call, then the balance will not decrease. %SD is shorter, but I hope ckear eniugh  \prg{buy} will not decrease the %shop's account  balance. 
-\footnote{\sdred{We ignore the ... for the time being.}}
+\footnote{We ignore the ... for the time being.}
  It does \emph{not} guarantee \prg{buy} will only be called when $\protectedFrom{\prg{this}.\prg{\myAccount}.\prg{key}} {\prg{buyer}}$ holds: 
 as a  public method,  \prg{buy}  can be invoked by external code that ignores all specifications.
 \end{example}
@@ -378,7 +480,7 @@ module with  accounts which have a % {\textit{implementation}} of a bank account
  
 We now move to the  verification of $S_4$. 
 The challenge is how to reason  about the external call on line 8 (from \prg{buy} in \prg{Shop}). %, even though we do not have a specification for \prg{pay}
-% the  {called method}, we know that the effects of the call are tamed according to the module's scoped invariants. 
+% the  {called method}, we know that the effects of the call are limited according to the module's scoped invariants. 
 % SD BELOW is wrong. left just in case we want to adapt ir.
 % That is expressed in the  simplified Hoare rule below -- \cf. Fig.\ref{f:external:calls}. 
 % 
