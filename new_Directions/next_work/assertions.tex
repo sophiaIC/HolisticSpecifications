@@ -161,42 +161,37 @@ Note that while execution takes place in the context of one or more modules, $\M
 \subsection{Semantics of Assertions - second part}  
 
 \label{sect:protect}
-\forget{
-In the object capabilities model \cite{MillerPhD}, \emph{permission} 
--- i.e.,  access to a capability -- is a necessary precondition  for producing a given effect;  as explressed by the principle that ``authority (to cause an effect) implies eventual permission'' \cite{permissionAuthority}.
-As   in \S \ref{sec:shop}, and also \cite{OOPSLA22}, if no external object holds eventual permission to a given capability, then the corresponding effect cannot occur.
- Specifically,  we say that $o$ \emph{has eventual permission to} $o'$, to mean  that $o$ either currently has or will acquire direct access to $o'$ in the future \cite{permissionAuthority}.
-}
-In the object capabilities model \cite{MillerPhD}, \emph{access} to a capability (called a \emph{permission} in \cite{MillerPhD}
- is a necessary precondition  for producing a given effect;  as expressed by the principle that ``authority (to cause an effect) implies eventual permission'' \cite{permissionAuthority}.
-As   in \S \ref{sec:shop}, and also \cite{OOPSLA22}, if no external object has eventual access for a given capability, then the corresponding effect cannot occur.
- Specifically,  we say that $o$ \emph{has eventual access to} $o'$, to mean  that $o$ either currently has or will acquire direct access to $o'$ in the future \cite{permissionAuthority}.
-
-
-
-Given this, it becomes essential to determine whether eventual access exists in a given state. 
-Unfortunately, this determination is undecidable, as it depends not only on the current object graph but also on the program code being executed.
-
-In this work, we over-approximate lack of eventual access through a combination of two properties: one pertaining to the state, and the other to the internal code. 
-The  property pertaining to the state is $\satisfiesA{M}{\sigma} {\inside {\alpha}}$, \ie that   $\alpha$ is \emph{protected},
-\ie that   \sdNew{no locally reachable external objects have direct access to $o$.}
-% on any path from a locally reachable object to $o$, the penultimate object  is internal. 
-The  property pertaining to the program is that it preserves the protection of   $o$.
+% Long motivation.
+% However the motivation from sect 2 shoud be sufficient
+%In the object capabilities model \cite{MillerPhD}, \emph{access} to a capability (called a \emph{permission} in \cite{MillerPhD}
+% is a necessary precondition  for producing a given effect;  as expressed by the principle that ``authority (to cause an effect) implies eventual permission'' \cite{permissionAuthority}.
+%As   in \S \ref{sec:shop}, and also \cite{OOPSLA22}, if no external object has eventual access for a given capability, then the corresponding effect cannot occur.
+% Specifically,  we say that $o$ \emph{has eventual access to} $o'$, to mean  that $o$ either currently has or will acquire direct access to $o'$ in the future \cite{permissionAuthority}.
 %
-We can see that if $o$ is protected and the internal code preserves its protection, then no external object can gain eventual access to $o$.
+%
+%
+%Given this, it becomes essential to determine whether eventual access exists in a given state. 
+%Unfortunately, this determination is undecidable, as it depends not only on the current object graph but also on the program code being executed.
+%
+%In this work, we over-approximate lack of eventual access through a combination of two properties: one pertaining to the state, and the other to the internal code. 
+%The  property pertaining to the state is $\satisfiesA{M}{\sigma} {\inside {\alpha}}$, \ie that   $\alpha$ is \emph{protected},
+%\ie that   {no locally reachable external objects have direct access to $o$.}
+%% on any path from a locally reachable object to $o$, the penultimate object  is internal. 
+%The  property pertaining to the program is that it preserves the protection of   $o$.
+%%
+%We can see that if $o$ is protected and the internal code preserves its protection, then no external object can gain eventual access to $o$.
 
-\red{We first define what it means for an object  to be protected from another object, $\protectedFrom{{\alpha}} {{\alpha_{o}}}$: 
-The two objects must not be equal, and no external object reachable from $a_o$ has a field pointing to  $\alpha$.
-This definition ensures  that any path leading from $\alpha_o$ to $\alpha$ should lead through an internal object.
-}
+In \S \ref{sect:approach:protection} we discussed the importance of a guarantee that there will be no external access to a capability, and how this can be modelled through the concept of protection. We  s formalize this concept   in Def. \ref{def:chainmail-protection-from}.
 
-\red{
-We then define what it means for an object  to be protected,  $\inside{{\alpha}}$:
-This requires that if the current receiver is external, then none of the arguments is $\alpha$, and 
-that  no external object reachable from any of the arguments has a field pointing to $\alpha$.
-This definition ensures that external objects reachable from the current receiver or arguments have direct access to $\alpha$ -- such direct access
- is either through a field, or by virtue of the receiver having acces to all the arguments.
-}
+ An object is protected from another object, $\protectedFrom{{\alpha}} {{\alpha_{o}}}$, is 
+the two objects are not equal, and no external object reachable from $a_o$ has a field pointing to  $\alpha$.
+This ensures  that any path leading from $\alpha_o$ to $\alpha$ also leads through an internal object.
+ 
+
+An object is protected,  $\inside{{\alpha}}$,  if no external object reachable from any of the current frame's arguments has a field pointing to $\alpha$, and if the receiver is external, then   $\alpha$ is not the value of any parameter.  
+This  ensures that external objects reachable from the current receiver or arguments have direct access to $\alpha$ -- such direct access
+ is either through a field, or by virtue of the receiver having access to all the arguments.
+ 
 
 
  
@@ -239,13 +234,15 @@ $\exists \alpha, \alpha_{o}. [\  \eval{M}{\sigma}{{\re}}{\alpha}\ \wedge\ \eval{
 
  \end{definition} 
  
- \red{Thus,  $\protectedFrom{{\alpha}} {{\alpha_{o}}}$ ensures that $\alpha_o$ will get access to $\alpha$ only if an internal object grants that access.
+ {Thus,  $\protectedFrom{{\alpha}} {{\alpha_{o}}}$ ensures that $\alpha_o$ will get access to $\alpha$ only if another object 
+ % an internal object 
+ grants that access.
 Similarly, $\inside \alpha$ ensures that during execution of the current method, no external object will get direct access to $\alpha$ unless some internal object grants that access.
- }
+ }\footnote{This is in line with the motto "only connectivity begets connectivity" from \cite{MillerPhD}.}
 
 % \footnote{The below is the old definition, but it is wrong
 %  
-%% To define ``protected'', \sdNew{we first defne  "has no direct access to",  
+%% To define ``protected'', {we first defne  "has no direct access to",  
 %%formally $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}}$: This requires that
 %%$\alpha_o$ has no field pointing to $\alpha$, and   that if $\alpha_o$ is the current receiver then $\alpha$ in not a local variable.
 %%Namely,   object $\alpha_{o}$ has direct access to   object $\alpha$ either because $\alpha_{o}$ has $\alpha$ in its fields, or because $\alpha_o$'s is the currently active object, and $\alpha$ is on the current top frame.
@@ -260,10 +257,10 @@ Similarly, $\inside \alpha$ ensures that during execution of the current method,
 %\begin{enumerate}
 %%\item
 %%\label{dirAccess}
-%%\sdNew{ $\satisfiesA{M}{\sigma}{\accessedBy {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
+%%{ $\satisfiesA{M}{\sigma}{\accessedBy {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
 %%[\  \ \exists f.  \interpret {\sigma} {\alpha_o.f} = \alpha  \ \vee\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \wedge \exists x\in dom(\sigma). \interpret {\sigma} x = \alpha ) \ \ ] $}
 %\item
-%\sdNew{ $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
+%{ $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
 %[\  \ \forall f.  \interpret {\sigma} {\alpha_o.f} \neq \alpha  \ \wedge\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \Rightarrow \ \forall x\in dom(\sigma). \interpret {\sigma} x \neq \alpha ) \ \ ] $}
 %\item
 %\label{cProtected}
@@ -273,7 +270,7 @@ Similarly, $\inside \alpha$ ensures that during execution of the current method,
 %$\alpha\neq \alpha_0$,
 % \ \ \ \  and% \\
 % \item
-%\sdNew{$\forall \alpha' \in {\Relevant {\alpha_o} {\sigma}}.[\  \satisfiesA{M}{\sigma}{\external {\alpha'}} 
+%{$\forall \alpha' \in {\Relevant {\alpha_o} {\sigma}}.[\  \satisfiesA{M}{\sigma}{\external {\alpha'}} 
 %\ \ \Longrightarrow \ \  
 % \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'} } \ ] $}.
 %% {M},{\sigma}\not\models{A}{\accessedBy  {\re}{\alpha}} ] $}
@@ -283,7 +280,7 @@ Similarly, $\inside \alpha$ ensures that during execution of the current method,
 %$\satisfiesA{M}{\sigma} {\inside {\alpha}}  \ \ \ \triangleq \ \ \    
 %%\begin{enumerate}
 %%\item
-%\sdNew{\forall \alpha' \in \LRelevantO  {\sigma}.[\ { \satisfiesA{M}{\sigma}{\external {\alpha'}}} \ \ \Longrightarrow \ \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'}}\ ]}$.
+%{\forall \alpha' \in \LRelevantO  {\sigma}.[\ { \satisfiesA{M}{\sigma}{\external {\alpha'}}} \ \ \Longrightarrow \ \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'}}\ ]}$.
 %%{M},{\sigma}\not\models }{\accessedBy  {\re}{\alpha}} ] $}
 %%, \ \ \ and 
 %%\item
@@ -312,6 +309,7 @@ such an example in Section \ref{s:examples}.
 Figure \ref{fig:ProtectedFrom} illustrates ``protected from'' and ``protected''. % protection from other objects. 
 Pink and green indicate external and internal objects respectively.
 \sd{In the first row  we  highlight in yellow} the objects protected from other objects. Thus, all objects except $o_6$ are protected from $o_5$ (left pane);\ all objects expect $o_8$ are protected from $o_7$ (middle pane);\ and all objects except $o_3$, $o_6$, $o_7$, and $o_8$ are protected from $o_2$ (right pane). 
+Note  that $o_6$ is not protected from $o_2$, because  $o_5$ is reachable from $o_2$, is external, and has direct access to $o_6$.}
 
 
 \begin{figure}[tbh]
@@ -364,8 +362,6 @@ protected  in $\sigma_3$  % with top frame $\phi_2$ &
  
 
 %Note that $o_8$ is not protected from $o_2$ because there is a path from $o_2$ to $0_8$ which only traverses external objects. Note also, that even though $o_9$ is external, it is protected from $o_7$.
-Note   $o_6$ is not protected from $o_2$. 
-\sdNew{Namely, $o_5$ is reachable from $o_2$, is external, and has direct access to $o_6$.}
 
 
 
@@ -453,7 +449,7 @@ One can  see that protection together with protection preservation are sufficien
 %but not necessary conditions 
 for lack of eventual access. On the other hand, protection without protection preservation is not sufficient.
 
-\sdNew{An alternative definition might consider $\alpha$ as protected, 
+{An alternative definition might consider $\alpha$ as protected, 
 if   any path from the frame to $\alpha$ goes through at least one internal object.
 With this definition, $o_6$ would be protected in $\sigma_2$.
 However,  $o_2$ can make a call to $o_3$, and  this call could  return $o_5$. 
