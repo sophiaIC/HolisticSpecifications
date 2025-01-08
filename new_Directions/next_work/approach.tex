@@ -143,8 +143,7 @@ This raised the following three questions:\  1$^{st}$:  A specification language
 %\vspace{.2cm}
 %\noindent
 % \textbf{NOTE}  \sdN{Replacing the argument by a wrapper to the account which allows payments but forbids withdrawals,    would be ineffectual in \taming} the  effects on line 9. 
-%What  if the % nece\tame the effects because
-% \prg{buyer} had access to the account and its \password  \emph{before} the call to \prg{pay}? 
+%What  if the   \prg{buyer} had access to the account and its \password  \emph{before} the call to \prg{pay}? 
 %\se{I don't understand the point here. Are you saying a wrapper might prevent a buyer who has legitimate access to an account from getting it?}
 %\sdN{SD: The point I am trying to make is that: \  if before the call to \prg{pay}, the \prg{buyer} had access to the account and its keyword, and when we call \prg{pay} instead of 
 %\prg{this.accnt} we pass the wrapper, then the \prg{buyer} would still be able to steal money from \prg{this.accnt}.
@@ -176,7 +175,7 @@ and only if the causing object has access  to $o_c$.
 % \end{quote}
 
 \noindent 
-The first task is to describe that effect  $E$ took place. We can do that by finding some aseertion $A$ which is invalidated by $E$. Then, (*) can be described by something like:
+The first task is to describe that effect  $E$ took place: if we  find  some assertion $A$ which is invalidated by $E$, then, (*) can be described by something like:
 
 \vspace{.1cm}
 
@@ -194,19 +193,17 @@ If $A$ holds, \  and \     no external access to  $o_c$ \ \ \ \ then\  \ \  \ $A
 
 
 \noindent 
-We now need to determine the meaning of "no external access to  $o_c$", and of "$A$ in the future.
+We next make more precise that "no external access to  $o_c$", and that "$A$ holds in the future".
 
-In a first attempt we could say that "no external access to  $o_c$" means  that no external object exists, nor will any external objects be created.
-% \begin{customquote}
-%(V1) \ \ \ $A\ \wedge\ $  no external access to  $o_c$ \ \ is an invariant.
-% \end{quote}
+In a first attempt, we could say that "no external access to  $o_c$" means  that no external object exists, nor will any external objects be created.
  However, this is too strong; it defines away the problem we are aiming to solve.
 
 In a second attempt, we could say that "no external access to  $o_c$" means that no external object has access to $o_c$, nor will ever get access to $o_c$. This is also too strong, as it would preclude $E$ from ever happening, while our remit is that $E$ may happen but only under certain conditions. 
 
 This discussion indicates that the lack of external access to $o_c$ is not a global property, and that the future in which  $A$ will hold is not be permanent. 
-Instead,  they are both defined from the viewpoint of the current point of execution.
-The current point of execution is characterized by the activation frames\footnote{An activation frame, or frame for short. consists of a variable map and a continuation -- the statements that remain to be executed.} on the call stack, and the heap. 
+
+Instead, they are both defined \emph{from the perspective of the current point of execution}.
+The latter is characterized by the activation frames\footnote{Activation frame, or frames for short. consist of a variable map and a continuation -- the statements remaining to be executed.} on the call stack, and the heap. 
 We are interested in external objects reachable from the current frame\footnote{the frame corresponding to the currently executing method}, and  in the future states scoped by the current frame: 
 
 \vspace{.1cm}
@@ -223,12 +220,12 @@ We are interested in external objects reachable from the current frame\footnote{
 \end{flushleft}
 \end{minipage}
 
-\vspace{.1cm}
+\vspace{.2cm}
  
-
+\noindent 
 We formalize "no external objects  reachable from the current frame have access" through the concept of \emph{protection}, 
 and "the future scoped from the current frame" through  the concept of \emph{scoped invariants}. 
-We discuss these concepts in more detail in \S \ref{sect:approach:protection}, and \ref{sect:approach:scoped}
+We discuss these concepts in more detail in \S \ref{sect:approach:protection}, and \S \ref{sect:approach:scoped}
 
 
 \subsubsection{Protection}
@@ -247,7 +244,7 @@ has direct access to $o$.
 \\
 Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
 if no external object transitively accessible from $o'$ has direct access to $o'$.
-More in Def. \ref{def:chainmail-protection-from}.  
+More in Def. \ref{def:chainmail-protection-from} and Fig. \ref{fig:ProtectedBoth}.   
  \end{description}
  
 %\noindent
@@ -460,12 +457,13 @@ public method set(key',key'':Key)
 \end{minipage} 
 \end{tabular}
 
-{Thus, in all three modules, the key is a capability which \emph{enables} the withdrawal of the money. 
-Moreover, in $\ModA$ and $\ModC$, the key
-{is a capability} used to  \emph{tame} withdrawal of money, preventing those without it from getting the money from the account.}
-Crucially,  in $\ModB$ the key \emph{does not tame} withdrawal of money.
+Thus, in all three modules, the key is a capability which \emph{enables} the withdrawal of the money. 
+Moreover, in $\ModA$ and $\ModC$, the key capability
+%{is a capability} used to  \emph{tame} withdrawal of money, 
+is a necessary precondition for withdrawal of money, while in % preventing those without it from getting the money from the account.}
+ in $\ModB$ it is not. % the key \emph{does not tame} withdrawal of money.
 Using $\ModB$, it is possible to start in a state where the account's key is unknown, modify the key, and then withdraw the money. 
-Code  {such as}
+Code   such as 
 \\ 
 $\ \strut \hspace{.2in} $ \prg{k=new Key;  acc.set(k); acc.transfer(rogue\_accnt,k,1000)} 
 \\ 
@@ -508,15 +506,16 @@ module with  accounts which have a % {\textit{implementation}} of a bank account
  \label{sec:howSecond}
 
 Our scoped invariants give rise to a Hoare logic of quadruples, rather than the classical triples.
-Namely, 
-  {$\TwoStatesN  {\overline{x:C}}  {A}$} expresses that if an external {state} $\sigma$ 
-% with objects $\overline x$ of class $\overline C$ 
+Specifically, \\
+  $\strut \ \hspace{4cm} {\TwoStatesN  {\overline{x:C}}  {A}}$\\
+ asserts that if an external {state} $\sigma$ 
  satisfies $\overline {x:A} \wedge C$, then all its \emph{scoped} external future  states will  {also} satisfy  {$A$}. 
-\Eg if $\sigma$ was an external state executing a call to \prg{Shop::buy}, then a \emph{scoped} external future  state
- could be an external state reachable  after the return from \prg{Shop::buy}, but could also be reachable
-during execution of the external call \prg{pay}.
-This means that we are also interested in the states the external states reachable \emph{during} execution of  statements. 
-To accommodate this, we extend   traditional Hoare triples to quadruples of  form\\
+For example, if $\sigma$ was an external state executing a call to \prg{Shop::buy}, then a \emph{scoped} external future  state
+ %could be the external state  after  return from \prg{Shop::buy}, or 
+ could be reachable during execution of the   call \prg{pay}.
+This implies that we consider not only states at termination but also external states reachable
+ \emph{during} execution of  statements. 
+To  capture this, we extend   traditional Hoare triples to quadruples of  form\\
  $\strut \ \hspace{4cm} \quadruple {A} {\, stmt\, }{A'} {A''}$\\  
  promising that if a state satisfies $A$ and executes $stmt$, any terminating state will satisfy $A'$, and 
  and  any intermediate external states reachable during execution of $stmt$ satisfy    $A''$ -- \cf Def. \ref{def:hoare:sem}.
@@ -528,11 +527,11 @@ $ M \vdash_{ul} \{ \ A\ \} {\ stmt\ }\{\ A'\ \} $,
 which does not {have} the concept of protection, nor deals with external calls.
 We then extend this logic through  
 substructural rules,   rules about protection,  an embedding into our quadruples, and rules about external calls.
-For the former see the following, slightly simplified, rules and 
+We show some  slightly simplified, rules below -- more in 
 % and allow method specifications which also talk about intermediate external states.
 % We  extend it through   substructural rules,  and  
- \cf Figs. \ref{f:underly} -  \ref{f:calls}.
- We discuss the latter in \S \ref{sec:howThird}.
+ Figs. \ref{f:underly} -  \ref{f:calls}.
+ We discuss external calls in \S \ref{sec:howThird}.
 % and some such rules below.
 
 
@@ -640,22 +639,31 @@ $  \{\  \ \  {\prg{this.\myAccount.\balance}} \geq  b \  \  \}\ .... $
 \end{flushleft}
 \end{minipage}
  
-The intuitive reasoning is as follows: if the shop's account's key is protected from \prg{buyer} (\ (A ) from earlier\ ), and the module satisfies $S_3$ (\ (B) from earlier\ ), then after the call, the account's balance will not decrease  (\ (C )from earlier\ ).
+ \vspace{.05cm}
+Intuitively, if the shop's account's key is protected from \prg{buyer}, % (\ (A) from earlier\ ), 
+ and the module satisfies $S_3$,  %(\ (B) from earlier\ ), 
+ then after the call, the account's balance will not decrease.\footnote{This argument corresponds to (A) and (B) imply (C) from earlier on page 3.} %  (\ (C) from earlier\ ).
 %
-However, application of $S_3$ is not straightforward. 
-%While $S_3$ preserves ${\inside{\prg{a.key}}} \wedge ...$,
-%Application of $S_3$ 
-It requires ${\inside{\prg{a.key}}} \wedge ...$,  but  the call's precondition only guarantees $\protectedFrom{\prg{this.\myAccount.key}}{\prg{buyer}}$. 
+However, % application of $S_3$ is not straightforward. 
+to apply $S_3$, we   need to know  ${\inside{\prg{a.key}}} $,  but  the call's precondition only has $\protectedFrom{\prg{this.\myAccount.key}}{\prg{buyer}}$. 
 %To apply $S_3$, we would need to know ${\inside{\prg{this.\myAccount.key}}}$, but we only know $\protectedFrom{\prg{this.\myAccount.key}}{\prg{buyer}}$.
 
 
 %, while we  need the stronger property  ${\inside {\prg{this.\myAccount.key}}}$. 
 
-While we do not know whether \prg{a.key} is protected during  execution of \prg{buy}\footnote{For instance, one of the clients may have access to it.}, we can be certain it is protected during execution of \prg{pay}.  This is so, because the objects accessible during \prg{pay} are those visible from its arguments (\ie \prg{buyer} and \prg{price}).
+Nevertheless, we \emph{can} apply $S_3$: While we do not know whether 
+${\inside{\prg{a.key}}}$ holds  %\prg{a.key} is protected 
+during  execution of \prg{buy}\footnote{For instance, one of the clients may have access to it.}, we can be certain 
+% it is protected 
+that it holds during execution of \prg{pay}.  This is so, because $\protectedFrom{\prg{this.\myAccount.key}}{\prg{buyer}}$
+and because the objects accessible during \prg{pay} are those visible from its arguments (\ie \prg{buyer} and \prg{price}).
 % \footnote{Generally, more objects are protected from the viewpoint of the \sue{callee} than from that of the caller -- \cf  Fig. \ref{fig},}
 
 %To express this difference, 
-We define the adaptation operator $\FIXSymbolA$, which translates an assertion from the viewpoint of the callee (the called function) to that of the caller. 
+In general,   if $\protectedFrom{\prg{x}}{\prg{y}}$ at call, and if the call's arguments satisfy some further properties, then
+$\inside {x}$ in the call.
+%To express this, we define 
+We express this through the adaptation operator $\FIXSymbolA$, which translates an assertion from the viewpoint of the callee (the called function) to that of the caller. 
 Specifically, $\PushAS y A$ ensures that $A$ holds when the variables $\overline{y}$ (where $\overline{y}$ stands for $y_1, ..., y_n$) have been pushed onto a new frame -- see Lemma \ref{lemma:push:ass:state}.
  {Below  a  Hoare logic rule  dealing with external calls - \cf. Fig.\ref{f:external:calls}.} % where $\overline y$ stands for $y_1$,,, $y_n$ -
  
@@ -678,20 +686,19 @@ $
 \end{flushleft}
 \end{minipage}
 
- \noindent
-We take   $y_0 \triangleq \prg{buyer}$,\  $\overline {x : D}\triangleq \prg{a}:\prg{Account},\prg{b}:\prg{int}$, 
+\vspace{.05cm}
+%  \noindent
+To prove  \textbf{(1)},  we take  $y_0 \triangleq \prg{buyer}$,\  $\overline {x : D}\triangleq \prg{a}:\prg{Account},\prg{b}:\prg{int}$, 
 \ $A \triangleq  \inside{\prg{a.\pwd}}\wedge \prg{a.\balance}\geq \prg{b}$, \ 
 $m \triangleq \prg{pay}$,\ and $\overline {y} \triangleq \prg{this.accnt},\prg{price}$. 
-\\
+% \\
 Moreover, $\PushAS y {\inside \re} = \protectedFrom \re {\overline{y}}$ for any term $\re$ and variables $\overline y$ 
 -- see  Def. \ref{def:push}.
 Therefore:\\
-   {\small{$\strut \ \ \ \PushASLong {\{\prg{buyer},\prg{this.\myAccount},\prg{price}\}}  {(\inside {\prg{this.\myAccount.key}})}$}} \ = 
-    \begin{flushright}
- {\small{$\strut \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \   \protectedFrom {\prg{this.\myAccount.key}} {(\prg{buyer},\prg{this.\myAccount},\prg{price})}$}}.
- \end{flushright}
- 
- \noindent
+   {\small{$\strut \ \ \ \PushASLong {\{\prg{buyer},\prg{this.\myAccount},\prg{price}\}}  {(\inside {\prg{this.\myAccount.key}})}$}} \ = \\
+%    \begin{flushright}
+ {\small{$\strut \ \hspace{5.5cm}  \protectedFrom {\prg{this.\myAccount.key}} {(\prg{buyer},\prg{this.\myAccount},\prg{price})}$}}.\\
+% \end{flushright}
  The type information gives us that:\\
   {\small{$\strut \ \ \ \protectedFrom {\prg{this.\myAccount.key}} {\prg{this.\myAccount}}\ = true \ =  \protectedFrom {\prg{this.\myAccount.key}} {\prg{price}}$}}\\
   Hence\\
