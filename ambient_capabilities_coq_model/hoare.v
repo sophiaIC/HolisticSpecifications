@@ -478,6 +478,14 @@ Because of this, we can preserve the usual assignment rule from HL.
       triple := hoare_extension
     }.
 
+  (*
+triple:
+    -----------------------
+    {A1} s {A2}
+quad:
+    {} s {} || {}
+   *)
+
   (*Inductive hoare_stmts : HoareTriple stmts :=
   | h_stmt : forall M s P Q, M ⊢ ⦃ P ⦄ s ⦃ Q ⦄ ->
                         M ⊢ ⦃ P ⦄ s_stmt s ⦃ Q ⦄

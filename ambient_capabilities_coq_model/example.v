@@ -312,9 +312,10 @@ e : C
   Proof.
   Admitted.
 
-  Lemma entails_fld_type :
+   Lemma entails_fld_type :
     forall M C f T, typeOf_f M C f = Some T ->
-               forall e, M ⊢ (a_ (e_typ e (t_cls C))) ⊆ (a_ (e_typ (e_fld e f) T)).
+               forall e, M ⊢ (a_ (e_typ e (t_cls C))) ⊆
+                           (a_ (e_typ (e_fld e f) T)).
   Proof.
 
   Admitted.
@@ -1223,161 +1224,166 @@ e : C
     forall M e1 e2 f, M ⊢ (a_ e_eq e1 e2) ⊆
                    (a_ e_eq (e_fld e1 f) (e_fld e2 f)).
 
-  Lemma I2 :
-    spec_sat Mgood S2.
+  Lemma Shop_sat_I2 :
+    forall m mDef, ⟦ m ↦ mDef ⟧_∈ c_meths ShopDef ->
+                   vis mDef = public ->
+                   Mgood ⊢ ⦃ ((a_typs ((result, rtrn mDef) ::
+                                         (this, t_cls Shop) ::
+                                         params mDef) ∧
+                                 a_typs ((a, t_cls Account) :: nil)) ∧
+                                a_prt ((e_ a) ∙ key)) ∧
+                               adapt (a_prt ((e_ a) ∙ key)) (this :: map fst (params mDef)) ⦄
+                     body mDef
+                     ⦃ a_prt ((e_ a) ∙ key) ∧ adapt (a_prt ((e_ a) ∙ key)) (result :: nil) ⦄
+                   || ⦃ a_prt ((e_ a) ∙ key) ⦄.
   Proof.
     setup_shop.
-    apply spec_invariant.
     intros.
-    apply destruct_Mgood in H;
+    (* Shop *)
+    apply destruct_shopMths in H;
       destruct H.
+    * (* buy *)
+      destruct H;
+        subst.
+      simpl.
+      unfold buyBody.
 
-    * (* Shop *)
-      destruct H; subst.
-      apply destruct_shopMths in H0;
-        destruct H0.
-      ** (* buy *)
-        destruct H;
-          subst.
+      simpl_types.
+      simpl_conj_hq.
+      unfold simplify_conj;
         simpl.
-        unfold buyBody.
+      eapply hq_conseq with (A4:=a_ e_typ (e_ result) t_bool
+                                 ∧ (a_ e_typ (e_ this) (t_cls Shop)
+                                    ∧ (a_ e_typ (e_ buyer) t_ext
+                                       ∧ (a_ e_typ (e_ item) (t_cls Item)
+                                          ∧ (a_ e_typ (e_ a) (t_cls Account)
+                                             ∧ (a_prt ((e_ a) ∙ key)
+                                                ∧ (a_prt_frm ((e_ a) ∙ key) (e_ buyer))))))));
+        [| |apply entails_refl|apply entails_refl];
+        try solve [solve_entails].
+      repeat try apply_hq_sequ_with_mid_eq_fst;
+        repeat split_post_condition_by_conjunction;
+        try solve [by_hq_types2; by_assumption];
 
+        try solve [apply hq_mid;
+                   eapply h_strengthen;
+                   [apply h_read_type|];
+                   solve_entails;
+                   eapply apply_entails;
+                   [apply entails_fld_type; eauto|eauto]];
+
+        (* <a.key> <-\- x is preserved by var assgn that is unrelated to the preservation *)
+        try solve [by_prt_frm_preserved_by_unrelated_var_assgn].
+
+      ** (* itemPrice = item.price *)
+        unrelated_var_assgn_preserves_prt itemPrice (e_fld (e_ item) price).
+
+      **
+        unrelated_var_assgn_preserves_prt thisAcc (e_fld (e_ this) acc).
+
+      ** (* oldBalance = thisAcc.balance *)
+        unrelated_var_assgn_preserves_prt
+          oldBalance
+            (e_fld (e_ thisAcc) balance).
+
+      ** (* tmp = buyer.pay(thisAcc, itemPrice) *)
+        apply buyCallPreserves_akey_prot.
+
+      **
+        by_call_ext_adapt_strong_using S2;
+          unfold prt_frms, asrt_frm_list; simpl;
+          [|solve_entails].
         simpl_types.
-        simpl_conj_hq.
-        unfold simplify_conj;
+        solve_entails.
+
+        eapply apply_entails;
+          [apply entails_prt_intl|].
+        asrt_sat_auto_destruct_conj; eauto.
+        eapply apply_entails;
+          [apply entails_intl; unfold update, t_update, Mgood; simpl; eexists|eauto].
+        crush.
+
+        eapply apply_entails;
+          [apply entails_prt_int|].
+        asrt_sat_auto_destruct_conj; eauto.
+        eapply apply_entails;
+          [apply entails_fld_type|eauto].
+        unfold typeOf_f, Mgood;
           simpl.
-        eapply hq_conseq with (A4:=a_ e_typ (e_ result) t_bool
-                                   ∧ (a_ e_typ (e_ this) (t_cls Shop)
-                                      ∧ (a_ e_typ (e_ buyer) t_ext
-                                         ∧ (a_ e_typ (e_ item) (t_cls Item)
-                                            ∧ (a_ e_typ (e_ a) (t_cls Account)
-                                               ∧ (a_prt ((e_ a) ∙ key)
-                                                     ∧ (a_prt_frm ((e_ a) ∙ key) (e_ buyer))))))));
-          [| |apply entails_refl|apply entails_refl];
-          try solve [solve_entails].
-        repeat try apply_hq_sequ_with_mid_eq_fst;
-          repeat split_post_condition_by_conjunction;
-          try solve [by_hq_types2; by_assumption];
+        eexists; eauto.
 
-          try solve [apply hq_mid;
-                     eapply h_strengthen;
-                     [apply h_read_type|];
-                     solve_entails;
-                     eapply apply_entails;
-                     [apply entails_fld_type; eauto|eauto]];
+      **
+        apply hq_if.
 
-          (* <a.key> <-\- x is preserved by var assgn that is unrelated to the preservation *)
-          try solve [by_prt_frm_preserved_by_unrelated_var_assgn].
+        *** (* internal call to this.send *)
+          match goal with
+          | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ ?A2 ⦄ || ⦃ ?A3 ⦄ ] =>
+              eapply hq_conseq with (A6:=A3);
+              [| | |apply entails_refl]
+          end;
+          [eapply hq_call_int with
+            (A1:=a_ e_typ (e_ a) (t_cls Account) ∧
+                   a_prt ((e_ a) ∙ key))
+            (A2:=a_prt ((e_ a) ∙ key))
+            (A3:=a_prt ((e_ a) ∙ key))
+            (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
+          | |];
 
-        *** (* itemPrice = item.price *)
-          unrelated_var_assgn_preserves_prt itemPrice (e_fld (e_ item) price).
+          [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
+           try solve [apply in_eq];
+           try solve [simpl; eauto];
+           simpl
+          | | | | | ];
 
-        ***
-          unrelated_var_assgn_preserves_prt thisAcc (e_fld (e_ this) acc).
+          try solve [simpl; eauto];
 
-        *** (* oldBalance = thisAcc.balance *)
-          unrelated_var_assgn_preserves_prt
-            oldBalance
-              (e_fld (e_ thisAcc) balance).
+          try solve [simpl_types; solve_entails].
 
-        *** (* tmp = buyer.pay(thisAcc, itemPrice) *)
-          apply buyCallPreserves_akey_prot.
-
-        ***
+        *** (* external call to buyer.tell *)
           by_call_ext_adapt_strong_using S2;
-            unfold prt_frms, asrt_frm_list; simpl;
-            [|solve_entails].
+            try solve [by_assumption].
           simpl_types.
-          solve_entails.
+          repeat apply entails_conj_split;
+            try solve [by_assumption].
 
-          eapply apply_entails;
-            [apply entails_prt_intl|].
-          asrt_sat_auto_destruct_conj; eauto.
-          eapply apply_entails;
-            [apply entails_intl; unfold update, t_update, Mgood; simpl; eexists|eauto].
-          crush.
+      **
+        apply hq_if.
 
-          eapply apply_entails;
-            [apply entails_prt_int|].
-          asrt_sat_auto_destruct_conj; eauto.
-          eapply apply_entails;
-            [apply entails_fld_type|eauto].
-          unfold typeOf_f, Mgood;
+        *** (* internal call to this.send *)
+          match goal with
+          | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ ?A2 ⦄ || ⦃ ?A3 ⦄ ] =>
+              eapply hq_conseq with (A6:=A3);
+              [| | |apply entails_refl]
+          end;
+          [eapply hq_call_int with
+            (A1:=a_ e_typ (e_ a) (t_cls Account) ∧
+                   a_prt_frm ((e_ a) ∙ key) (e_ buyer))
+            (A2:=a_prt_frm ((e_ a) ∙ key) (e_ buyer))
+            (A3:=a_prt ((e_ a) ∙ key))
+            (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
+          | |];
+
+          [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
+           try solve [apply in_cons, in_eq];
+           try solve [auto];
+           try solve [simpl; eauto]
+          | | | | | ];
+
+          try solve [simpl; eauto];
+          try solve [simpl_types; solve_entails].
+
+        *** (* external call to buyer.tell *)
+          by_call_ext_adapt_strong_using S2;
+            try solve [by_assumption];
             simpl.
-          eexists; eauto.
-
-        ***
-          apply hq_if.
-
-          **** (* internal call to this.send *)
-            match goal with
-            | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ ?A2 ⦄ || ⦃ ?A3 ⦄ ] =>
-                eapply hq_conseq with (A6:=A3);
-                [| | |apply entails_refl]
-            end;
-            [eapply hq_call_int with
-              (A1:=a_ e_typ (e_ a) (t_cls Account) ∧
-                     a_prt ((e_ a) ∙ key))
-              (A2:=a_prt ((e_ a) ∙ key))
-              (A3:=a_prt ((e_ a) ∙ key))
-              (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
-            | |];
-
-            [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
-              try solve [apply in_eq];
-              try solve [simpl; eauto];
-              simpl
-            | | | | | ];
-
-            try solve [simpl; eauto];
-
-            try solve [simpl_types; solve_entails].
-
-          **** (* external call to buyer.tell *)
-            by_call_ext_adapt_strong_using S2;
-              try solve [by_assumption].
-            simpl_types.
-            repeat apply entails_conj_split;
-              try solve [by_assumption].
-
-        ***
-          apply hq_if.
-
-          **** (* internal call to this.send *)
-            match goal with
-            | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ ?A2 ⦄ || ⦃ ?A3 ⦄ ] =>
-                eapply hq_conseq with (A6:=A3);
-                [| | |apply entails_refl]
-            end;
-            [eapply hq_call_int with
-              (A1:=a_ e_typ (e_ a) (t_cls Account) ∧
-                     a_prt_frm ((e_ a) ∙ key) (e_ buyer))
-              (A2:=a_prt_frm ((e_ a) ∙ key) (e_ buyer))
-              (A3:=a_prt ((e_ a) ∙ key))
-              (C:=Shop)(xCs:=params sendDef)(T:=rtrn sendDef)
-            | |];
-
-            [eapply mspec with (mDef:=sendDef)(CDef:=ShopDef);
-             try solve [apply in_cons, in_eq];
-             try solve [auto];
-             try solve [simpl; eauto]
-            | | | | | ];
-
-            try solve [simpl; eauto];
-            try solve [simpl_types; solve_entails].
-
-          **** (* external call to buyer.tell *)
-            by_call_ext_adapt_strong_using S2;
-              try solve [by_assumption];
-              simpl.
-            simpl_types.
-            repeat apply entails_conj_split;
-              try solve [by_assumption].
-            unfold prt_frms, asrt_frm_list; simpl.
-            try solve [solve_entails].
+          simpl_types.
+          repeat apply entails_conj_split;
+            try solve [by_assumption].
+          unfold prt_frms, asrt_frm_list; simpl.
+          try solve [solve_entails].
 
 
-(*            match goal with
+      (*            match goal with
             | [|- _ ⊢ ⦃ _ ⦄ _ ⦃ ?A2 ⦄ || ⦃ ?A3 ⦄ ] =>
                 eapply hq_conseq with (A6:=A3);
                 [| | |apply entails_refl]
@@ -1408,51 +1414,84 @@ e : C
             repeat apply entails_conj_split;
               try solve [by_assumption].*)
 
-        ***
-          unrelated_var_assgn_preserves_prt result e_false.
+      **
+        unrelated_var_assgn_preserves_prt result e_false.
 
-        ***
-          return_false_protects_key.
+      **
+        return_false_protects_key.
 
-      ** (* send method: private method not considered *)
-        destruct H;
-          subst.
-        simpl_types.
-        crush.
+    * (* send method: private method not considered *)
+      destruct H;
+        subst.
+      simpl_types.
+      crush.
+  Qed.
+
+  Lemma Account_sat_I2 :
+    forall m mDef,
+      ⟦ m ↦ mDef ⟧_∈ c_meths AccountDef ->
+      vis mDef = public ->
+      Mgood ⊢ ⦃ ((a_typs ((result, rtrn mDef) ::
+                            (this, t_cls Account) ::
+                            params mDef) ∧
+                    a_typs ((a, t_cls Account) :: nil)) ∧
+                   a_prt ((e_ a) ∙ key)) ∧
+                  adapt (a_prt ((e_ a) ∙ key)) (this :: map fst (params mDef)) ⦄
+        body mDef
+        ⦃ a_prt ((e_ a) ∙ key) ∧ adapt (a_prt ((e_ a) ∙ key)) (result :: nil) ⦄
+      || ⦃ a_prt ((e_ a) ∙ key) ⦄.
+  Proof.
+    intros.
+    setup_shop.
+
+    simpl_types.
+    apply destruct_accountMths in H;
+      repeat destruct H;
+      subst;
+      simpl;
+      simpl_types;
+      simpl_conj_hq.
 
     *
-      destruct H;
-        destruct H;
-        subst;
+      (* Account::transfer *)
+      unfold simplify_conj;
         simpl.
+      unfold transferBody.
 
-      ** (* Account *)
-        simpl_types.
-        apply destruct_accountMths in H0;
-          destruct H0;
-          destruct H;
-          subst;
-          simpl;
-          simpl_types;
-          simpl_conj_hq.
+      apply_hq_sequ_with_mid_eq_fst.
 
-        *** (* Account::transfer *)
-          unfold simplify_conj;
-            simpl.
-          unfold transferBody.
+      **
+        apply hq_if.
 
+        ***
+          apply hq_mid.
+          apply h_prot1.
+          eapply hq_conseq;
+            [ |apply conj_entails_right | | ];
+            try solve [apply entails_refl].
           apply_hq_sequ_with_mid_eq_fst.
 
           ****
-            apply hq_if.
+            repeat split_post_condition_by_conjunction;
+              try solve [by_hq_types2; by_assumption].
 
             *****
-              admit.
+              eapply hq_conseq;
+                [
+                |
+                | |];
+                try solve [apply entails_refl].
+              apply hq_mid.
+            aply 
+              apply h_prot1.
+              apply hq_mid.
+            eapply h_strengthen.
+            apply h_prot1.
 
-            *****
-              admit.
+        ***
+          admit.
 
-           (*  incomplete transfer if proof:
+      (*  incomplete transfer if proof:
 
 *****
               match goal with
@@ -1492,74 +1531,129 @@ e : C
                   try solve [by_hq_types2; by_assumption].
               return_false_protects_key.*)
 
-          ****
-            return_false_protects_key.
+      **
+        return_false_protects_key.
 
-        *** (* setKey *)
-          unfold simplify_conj;
-            simpl.
-          unfold setKeyBody.
+    * (* setKey *)
+      unfold simplify_conj;
+        simpl.
+      unfold setKeyBody.
 
-          apply hq_if.
+      apply hq_if.
 
-          **** (* true branch, i.e. this.key == null: this.key = k *)
-              match goal with
-              | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
-                  apply hq_sequ with (A2:=A1)
-              end;
-              [|return_false_protects_key].
-              repeat split_post_condition_by_conjunction;
-                try solve [by_hq_types2; by_assumption].
+      ** (* true branch, i.e. this.key == null: this.key = k *)
+        match goal with
+        | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
+            apply hq_sequ with (A2:=A1)
+        end;
+        [|return_false_protects_key].
+        repeat split_post_condition_by_conjunction;
+          try solve [by_hq_types2; by_assumption].
 
-              apply hq_mid.
-              eapply h_strengthen with
-                (P1:=(a_ (e_eq (e_fld (e_ this) key) e_null)) ∧
-                       (a_prt (e_fld (e_ a) key)));
-                try solve [intros_entails;
-                           repeat asrt_sat_auto_destruct_conj;
-                           auto].
+        apply hq_mid.
+        eapply h_strengthen with
+          (P1:=(a_ (e_eq (e_fld (e_ this) key) e_null)) ∧
+                 (a_prt (e_fld (e_ a) key)));
+          try solve [intros_entails;
+                     repeat asrt_sat_auto_destruct_conj;
+                     auto].
 
-              apply split_excluded_middle_hoare with
-                (A:=a_ e_eq (e_ a) (e_ this)).
-              apply h_or.
+        apply split_excluded_middle_hoare with
+          (A:=a_ e_eq (e_ a) (e_ this)).
+        apply h_or.
 
-              ***** (* this.key == a.key *)
-                apply h_strengthen with (P1:=a_false);
-                  [apply hoare_false|].
-              intros_entails;
-                repeat asrt_sat_auto_destruct_conj.
-              eapply apply_entails;
-                [eapply entails_prt_null|].
-              eapply apply_entails;
-                [eapply entails_prt_eq|].
-              asrt_sat_auto_destruct_conj; [|eassumption].
-              eapply apply_entails;
-                [eapply entails_eq_trans|].
-              asrt_sat_auto_destruct_conj;
-                eauto.
-              eapply apply_entails;
-                [apply entails_eq_fld|auto].
+        *** (* this.key == a.key *)
+          apply h_strengthen with (P1:=a_false);
+            [apply hoare_false|].
+        intros_entails;
+          repeat asrt_sat_auto_destruct_conj.
+        eapply apply_entails;
+          [eapply entails_prt_null|].
+        eapply apply_entails;
+          [eapply entails_prt_eq|].
+        asrt_sat_auto_destruct_conj; [|eassumption].
+        eapply apply_entails;
+          [eapply entails_eq_trans|].
+        asrt_sat_auto_destruct_conj;
+          eauto.
+        eapply apply_entails;
+          [apply entails_eq_fld|auto].
 
-              *****
-                eapply h_strengthen with
-                  (P1:=(e_ a) ≠ (e_ this) ∧ (a_prt ((e_ a) ∙ key)));
-                  try solve [solve_entails].
-                apply h_prot1;
-                  try solve [crush].
-                intros.
-                apply h_embed_UL.
-                apply hoare_UL_write_different_object.
+        ***
+          eapply h_strengthen with
+            (P1:=(e_ a) ≠ (e_ this) ∧ (a_prt ((e_ a) ∙ key)));
+            try solve [solve_entails].
+        apply h_prot1;
+          try solve [crush].
+        intros.
+        apply h_embed_UL.
+        apply hoare_UL_write_different_object.
 
-          ****
-            (* false branch, i.e. this.key != null: return false *)
-            return_false_protects_key.
+        ***
+          admit.
+
+        ***
+          admit.
+
+    **
+      (* false branch, i.e. this.key != null: return false *)
+      return_false_protects_key.
+  Admitted.
+
+  Lemma Key_sat_I2 :
+    forall m mDef,
+      ⟦ m ↦ mDef ⟧_∈ c_meths KeyDef ->
+      vis mDef = public ->
+      Mgood ⊢ ⦃ ((a_typs ((result, rtrn mDef) ::
+                            (this, t_cls Key) ::
+                            params mDef) ∧
+                    a_typs ((a, t_cls Account) :: nil)) ∧
+                   a_prt ((e_ a) ∙ key)) ∧
+                  adapt (a_prt ((e_ a) ∙ key)) (this :: map fst (params mDef)) ⦄
+        body mDef
+        ⦃ a_prt ((e_ a) ∙ key) ∧ adapt (a_prt ((e_ a) ∙ key)) (result :: nil) ⦄
+      || ⦃ a_prt ((e_ a) ∙ key) ⦄.
+  Proof.
+    intros;
+      setup_shop.
+    unfold KeyDef in *; simpl in *.
+    match goal with
+    | [ H : ⟦ _ ↦ _ ⟧_∈ (∅) |-_] =>
+        inversion H
+    end.
+  Qed.
+
+  Lemma I2 :
+    spec_sat Mgood S2.
+  Proof.
+    setup_shop.
+    apply spec_invariant.
+    intros.
+    apply destruct_Mgood in H;
+      destruct H.
+
+    *
+      (* Shop *)
+      destruct H; subst.
+      eapply Shop_sat_I2;
+        eauto.
+
+    *
+      (* Account \/ Key*)
+      destruct H;
+        destruct H;
+        subst;
+        simpl.
 
       **
-        unfold KeyDef in *; simpl in *.
-        match goal with
-        | [ H : ⟦ _ ↦ _ ⟧_∈ (∅) |-_] =>
-            inversion H
-        end.
+        (* Account *)
+        eapply Account_sat_I2;
+          eauto.
+
+      **
+        (* Key *)
+        eapply Key_sat_I2;
+          eauto.
   Qed.
 
 
@@ -1590,12 +1684,12 @@ e : C
           repeat split_post_condition_by_conjunction;
           try solve [by_hq_types2; by_assumption];
 
-        try solve [apply hq_mid;
-                   eapply h_strengthen;
-                   [apply h_read_type|];
-                   solve_entails;
-                   eapply apply_entails;
-                   [apply entails_fld_type; eauto|eauto]].
+          try solve [apply hq_mid;
+                     eapply h_strengthen;
+                     [apply h_read_type|];
+                     solve_entails;
+                     eapply apply_entails;
+                     [apply entails_fld_type; eauto|eauto]].
 
         *** (* itemPrice = item.price: <a.key> *)
           unrelated_var_assgn_preserves_prt itemPrice (e_fld (e_ item) price).
@@ -1603,7 +1697,7 @@ e : C
         *** (* itemPrice = item.price: b < a.balance *)
           by_UL_hoare_unrelated_var_assgn
             itemPrice
-            (e_fld (e_ item) price).
+              (e_fld (e_ item) price).
 
         *** (* thisAcc = this.acc *)
           unrelated_var_assgn_preserves_prt
@@ -1616,12 +1710,12 @@ e : C
         *** (* oldBalance = thisAcc.balance *)
           unrelated_var_assgn_preserves_prt
             oldBalance
-            (e_fld (e_ thisAcc) balance).
+              (e_fld (e_ thisAcc) balance).
 
         *** (* oldBalance = thisAcc.balance: b < a.balance *)
           by_UL_hoare_unrelated_var_assgn
             oldBalance
-            (e_fld (e_ thisAcc) balance).
+              (e_fld (e_ thisAcc) balance).
 
         *** (* tmp = buyer.pay(thisAcc, itemPrice) *)
           eapply hq_conseq;
@@ -1716,24 +1810,24 @@ e : C
               end;
             try solve [apply entails_refl];
             try solve [intros_entails;
-              repeat asrt_sat_auto_destruct_conj;
-              eauto].
+                       repeat asrt_sat_auto_destruct_conj;
+                       eauto].
+            repeat split_post_condition_by_conjunction;
+              try solve [by_hq_types2; by_assumption].
+
+            apply_hq_sequ_with_mid_eq_fst.
+
+            ******
               repeat split_post_condition_by_conjunction;
                 try solve [by_hq_types2; by_assumption].
-
-              apply_hq_sequ_with_mid_eq_fst.
-
-              ******
-                repeat split_post_condition_by_conjunction;
-                  try solve [by_hq_types2; by_assumption].
+            by_UL_hoare_write_unrelated_field.
+            ******
               by_UL_hoare_write_unrelated_field.
-              ******
-                by_UL_hoare_write_unrelated_field.
 
-              *****
-                repeat split_post_condition_by_conjunction;
-                  try solve [by_hq_types2; by_assumption].
-              return_false_protects_key.
+            *****
+              repeat split_post_condition_by_conjunction;
+                try solve [by_hq_types2; by_assumption].
+            return_false_protects_key.
 
           ****
             return_false_protects_key.
@@ -1746,52 +1840,52 @@ e : C
           apply hq_if.
 
           **** (* true branch, i.e. this.key == null: this.key = k *)
-              match goal with
-              | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
-                  apply hq_sequ with (A2:=A1)
-              end;
-              [|return_false_protects_key].
-              repeat split_post_condition_by_conjunction;
-                try solve [by_hq_types2; by_assumption].
+            match goal with
+            | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
+                apply hq_sequ with (A2:=A1)
+            end;
+            [|return_false_protects_key].
+            repeat split_post_condition_by_conjunction;
+              try solve [by_hq_types2; by_assumption].
 
-              apply hq_mid.
+            apply hq_mid.
+            eapply h_strengthen with
+              (P1:=(a_ (e_eq (e_fld (e_ this) key) e_null)) ∧
+                     (a_prt (e_fld (e_ a) key)));
+              try solve [intros_entails;
+                         repeat asrt_sat_auto_destruct_conj;
+                         auto].
+
+            apply split_excluded_middle_hoare with
+              (A:=a_ e_eq (e_ a) (e_ this)).
+            apply h_or.
+
+            ***** (* this.key == a.key *)
+              apply h_strengthen with (P1:=a_false);
+                [apply hoare_false|].
+            intros_entails;
+              repeat asrt_sat_auto_destruct_conj.
+            eapply apply_entails;
+              [eapply entails_prt_null|].
+            eapply apply_entails;
+              [eapply entails_prt_eq|].
+            asrt_sat_auto_destruct_conj; [|eassumption].
+            eapply apply_entails;
+              [eapply entails_eq_trans|].
+            asrt_sat_auto_destruct_conj;
+              eauto.
+            eapply apply_entails;
+              [apply entails_eq_fld|auto].
+
+            *****
               eapply h_strengthen with
-                (P1:=(a_ (e_eq (e_fld (e_ this) key) e_null)) ∧
-                       (a_prt (e_fld (e_ a) key)));
-                try solve [intros_entails;
-                           repeat asrt_sat_auto_destruct_conj;
-                           auto].
-
-              apply split_excluded_middle_hoare with
-                (A:=a_ e_eq (e_ a) (e_ this)).
-              apply h_or.
-
-              ***** (* this.key == a.key *)
-                apply h_strengthen with (P1:=a_false);
-                  [apply hoare_false|].
-              intros_entails;
-                repeat asrt_sat_auto_destruct_conj.
-              eapply apply_entails;
-                [eapply entails_prt_null|].
-              eapply apply_entails;
-                [eapply entails_prt_eq|].
-              asrt_sat_auto_destruct_conj; [|eassumption].
-              eapply apply_entails;
-                [eapply entails_eq_trans|].
-              asrt_sat_auto_destruct_conj;
-                eauto.
-              eapply apply_entails;
-                [apply entails_eq_fld|auto].
-
-              *****
-                eapply h_strengthen with
-                  (P1:=(e_ a) ≠ (e_ this) ∧ (a_prt ((e_ a) ∙ key)));
-                  try solve [solve_entails].
-                apply h_prot1;
-                  try solve [crush].
-                intros.
-                apply h_embed_UL.
-                apply hoare_UL_write_different_object.
+                (P1:=(e_ a) ≠ (e_ this) ∧ (a_prt ((e_ a) ∙ key)));
+                try solve [solve_entails].
+            apply h_prot1;
+              try solve [crush].
+            intros.
+            apply h_embed_UL.
+            apply hoare_UL_write_different_object.
 
           ****
             (* false branch, i.e. this.key != null: return false *)
