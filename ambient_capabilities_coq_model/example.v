@@ -1540,11 +1540,31 @@ e : C
 
   Ltac by_prt_frm_bool :=
     match goal with
-    | [|- _ ⦃ context ⦄ _ ⦃ a_prt_frm ?o ?b ⦄ =>
-         conseq_post ()
-           entails_prt_bool
-       end.
+    | [ |- _ ⊢ ⦃ _ ⦄ _ ⦃ a_prt_frm (?o ∙ key) ?b ⦄ ] =>
+        match goal with
+        | |- context [e_typ b t_bool] =>
+            conseq_post ((a_ (e_typ (o ∙ key) (t_cls Key))) ∧ (a_ (e_typ b t_bool)));
+            [|solve [apply entails_prt_bool]];
+            repeat split_post_condition_by_conjunction;
+            try solve [by_hq_types2; by_assumption];
+            conseq_post (a_ (e_typ o (t_cls Account)));
+            [|apply keyHasTypeKey];
+            by_hq_types2; by_assumption
+        end
+    | [ |- _ ⊢ ⦃ _ ⦄ _ ⦃ a_prt_frm (?o ∙ key) ?b ⦄ || ⦃ _ ⦄ ] =>
+        match goal with
+        | |- context [e_typ b t_bool] =>
+            conseq_post ((a_ (e_typ (o ∙ key) (t_cls Key))) ∧ (a_ (e_typ b t_bool)));
+            [|solve [apply entails_prt_bool]];
+            repeat split_post_condition_by_conjunction;
+            try solve [by_hq_types2; by_assumption];
+            conseq_post (a_ (e_typ o (t_cls Account)));
+            [|apply keyHasTypeKey];
+            by_hq_types2; by_assumption
+        end
+    end.
 
+(*  (a_ (e_typ e1 (t_cls C))) ∧ (a_ (e_typ e2 t_bool)) ⊆ (a_prt_frm e1 e2)*)
 
   Lemma Account_sat_I2 :
     forall m mDef,
@@ -1646,123 +1666,7 @@ e : C
             try solve [by_hq_types2; by_assumption].
 
         ***
-          conseq_post ().
-          conseq_post (a_true);
-            hoare_post_true.
-
-          unfold ret.
-          apply hq_mid.
-          eapply h_strengthen.
-          eapply h_prot2 with (x:=result).
-
-          econseq_pre.
-          apply hq_mid.
-          eapply h_prot2.
-          return_false_protects_key.
-          intros_entails.
-          repeat asrt_sat_auto_destruct_conj.
-          try solve [intros_entails;
-                     repeat asrt_sat_auto_destruct_conj;
-                     eauto].
-          intros_entails.
-
-          ****
-
-        admit.
-        return_false_protects_key.
-
-        ***
-          apply_hq_sequ_with_mid_eq_fst.
-          apply h_prot1.
-
-          eauto with hoare_db.
-
-          unfold call_free.
-          simpl.
-          auto.
-      apply 
-
-      admit.
-
-      return_false_protects_key.
-      apply h_prot1.
-
-
-      apply_hq_sequ_with_mid_eq_fst.
-
-      **
-        apply hq_if.
-
-        ***
-          apply hq_mid.
-          apply h_prot1.
-          eapply hq_conseq;
-            [ |apply conj_entails_right | | ];
-            try solve [apply entails_refl].
-          apply_hq_sequ_with_mid_eq_fst.
-
-          ****
-            repeat split_post_condition_by_conjunction;
-              try solve [by_hq_types2; by_assumption].
-
-            *****
-              eapply hq_conseq;
-                [
-                |
-                | |];
-                try solve [apply entails_refl].
-              apply hq_mid.
-            aply 
-              apply h_prot1.
-              apply hq_mid.
-            eapply h_strengthen.
-            apply h_prot1.
-
-        ***
-          admit.
-
-      (*  incomplete transfer if proof:
-
-*****
-              match goal with
-              | [|- _ ⊢ ⦃ ?A1 ∧ ?A2 ⦄ _ ⦃ ?A3 ⦄ || ⦃ ?A ⦄ ] =>
-                  apply hq_conseq with (A4:= A2)(A5:=A3)(A6:=A)
-              end;
-            try solve [apply entails_refl];
-            try solve [intros_entails;
-              repeat asrt_sat_auto_destruct_conj;
-              eauto].
-              repeat split_post_condition_by_conjunction;
-                try solve [by_hq_types2; by_assumption].
-
-              apply_hq_sequ_with_mid_eq_fst.
-
-              ******
-                repeat split_post_condition_by_conjunction;
-                  try solve [by_hq_types2; by_assumption].
-              by_UL_hoare_write_unrelated_field.
-              admit.
-              admit.
-              admit.
-              ******
-                by_UL_hoare_write_unrelated_field.
-
-              ******
-                admit.
-
-              ******
-                admit.
-
-              ******
-                admit.
-
-              *****
-                repeat split_post_condition_by_conjunction;
-                  try solve [by_hq_types2; by_assumption].
-              return_false_protects_key.*)
-
-      **
-        return_false_protects_key.
+          by_prt_frm_bool.
 
     * (* setKey *)
       unfold simplify_conj;
@@ -1772,6 +1676,8 @@ e : C
       apply hq_if.
 
       ** (* true branch, i.e. this.key == null: this.key = k *)
+        drop_right_of_conj.
+        drop_right_of_conj.
         match goal with
         | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
             apply hq_sequ with (A2:=A1)
@@ -1792,7 +1698,7 @@ e : C
           (A:=a_ e_eq (e_ a) (e_ this)).
         apply h_or.
 
-        *** (* this.key == a.key *)
+        *** (* a == this *)
           apply h_strengthen with (P1:=a_false);
             [apply hoare_false|].
         intros_entails;
@@ -1809,7 +1715,7 @@ e : C
         eapply apply_entails;
           [apply entails_eq_fld|auto].
 
-        ***
+        *** (* a <> this  *)
           eapply h_strengthen with
             (P1:=(e_ a) ≠ (e_ this) ∧ (a_prt ((e_ a) ∙ key)));
             try solve [solve_entails].
@@ -1819,16 +1725,10 @@ e : C
         apply h_embed_UL.
         apply hoare_UL_write_different_object.
 
-        ***
-          admit.
-
-        ***
-          admit.
-
-    **
+      **
       (* false branch, i.e. this.key != null: return false *)
       return_false_protects_key.
-  Admitted.
+  Qed.
 
   Lemma Key_sat_I2 :
     forall m mDef,
@@ -1885,7 +1785,6 @@ e : C
         eapply Key_sat_I2;
           eauto.
   Qed.
-
 
   Lemma I3 :
     spec_sat Mgood S3.

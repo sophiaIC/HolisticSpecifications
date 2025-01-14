@@ -498,7 +498,7 @@ Because of this, we can preserve the usual assignment rule from HL.
 
   | h_prot4 : forall M x y y' f z,
       M ⊢ ⦃ a_prt_frm (e_ x) (e_ z) ∧ a_prt_frm (e_ x) (e_ y') ⦄
-        (s_write x f y)
+        (s_write y f (e_ y'))
         ⦃ a_prt_frm (e_ x) (e_ z) ⦄
 
   | h_seq : forall M A1 A2 A3 s1 s2,
