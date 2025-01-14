@@ -484,15 +484,27 @@ e : C
     repeat try (eapply entails_trans; [solve [apply entails_assoc1] |]);
     repeat try (eapply entails_trans; [|solve [apply entails_assoc2]]).
 
-  Lemma hq_conj_assoc1 :
+  Lemma hq_conj_assoc1_pre :
     forall M A1 A2 A3 A4 s A, M ⊢ ⦃ A1 ∧ (A2 ∧ A3) ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
                          M ⊢ ⦃ (A1 ∧ A2) ∧ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄.
   Proof.
   Admitted.
 
-  Lemma hq_conj_assoc2 :
+  Lemma hq_conj_assoc2_post :
     forall M A1 A2 A3 A4 s A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ∧ (A3 ∧ A4) ⦄ || ⦃ A ⦄ ->
                          M ⊢ ⦃ A1 ⦄ s ⦃ (A2 ∧ A3) ∧ A4 ⦄ || ⦃ A ⦄.
+  Proof.
+  Admitted.
+
+  Lemma hq_conj_assoc2_pre :
+    forall M A1 A2 A3 A4 s A, M ⊢ ⦃ (A1 ∧ A2) ∧ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
+                         M ⊢ ⦃ A1 ∧ (A2 ∧ A3) ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄.
+  Proof.
+  Admitted.
+
+  Lemma hq_conj_assoc1_post :
+    forall M A1 A2 A3 A4 s A, M ⊢ ⦃ A1 ⦄ s ⦃ (A2 ∧ A3) ∧ A4 ⦄ || ⦃ A ⦄ ->
+                         M ⊢ ⦃ A1 ⦄ s ⦃ A2 ∧ (A3 ∧ A4) ⦄ || ⦃ A ⦄.
   Proof.
   Admitted.
 
@@ -599,8 +611,8 @@ e : C
 
 
   Ltac simpl_conj_hq :=
-    repeat apply hq_conj_assoc1;
-    repeat apply hq_conj_assoc2;
+    repeat apply hq_conj_assoc1_pre;
+    repeat apply hq_conj_assoc2_post;
     apply rewrite_hq_conj_simpl1;
     apply rewrite_hq_conj_simpl2.
 
@@ -1427,6 +1439,113 @@ e : C
       crush.
   Qed.
 
+  Ltac conseq_pre A :=
+    match goal with
+      [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+        eapply hq_conseq with (A4:=A);
+        [
+        |
+        |apply entails_refl
+        |apply entails_refl]
+    end.
+
+  Ltac econseq_pre :=
+    match goal with
+      [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+        eapply hq_conseq;
+        [
+        |
+        |apply entails_refl
+        |apply entails_refl]
+    end.
+
+  Ltac conseq_post A :=
+    match goal with
+      [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+        eapply hq_conseq with (A5:=A);
+        [
+        |apply entails_refl
+        |
+        |apply entails_refl]
+    end.
+
+  Ltac econseq_post :=
+    match goal with
+      [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+        eapply hq_conseq;
+        [
+        |apply entails_refl
+        |
+        |apply entails_refl]
+    end.
+
+  Ltac conseq_inv A :=
+    match goal with
+      [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+        eapply hq_conseq with (A6:=A);
+        [
+        |apply entails_refl
+        |apply entails_refl
+        |]
+    end.
+
+  Ltac econseq_inv :=
+    match goal with
+      [|- _ ⊢ ⦃ _ ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄] =>
+        eapply hq_conseq;
+        [
+        |apply entails_refl
+        |apply entails_refl
+        |]
+    end.
+
+  Ltac hq_conj_assoc_left_rewrite :=
+    match goal with
+    | [ |- _ ⊢ ⦃ ?A1 ∧ (?A2 ∧ ?A3) ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
+        apply hq_conj_assoc2_pre
+    end.
+
+  Ltac hq_conj_assoc_right_rewrite :=
+    match goal with
+    | [ |- _ ⊢ ⦃ (?A1 ∧ ?A2) ∧ ?A3 ⦄ _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
+        apply hq_conj_assoc1_pre
+    end.
+
+  Ltac drop_right_of_conj :=
+    repeat hq_conj_assoc_left_rewrite;
+    econseq_pre;
+    [|apply conj_entails_left];
+    repeat hq_conj_assoc_right_rewrite.
+
+  Parameter UL_post_true :
+    forall M A s, hoare_base M A s (a_true).
+
+  Lemma hoare_triple_post_true :
+    forall M A s, M ⊢ ⦃ A ⦄ s ⦃ a_true ⦄.
+  Proof.
+    intros;
+      apply h_embed_UL, UL_post_true.
+  Qed.
+
+  Lemma hoare_quad_post_true :
+    forall M A1 A2 s, M ⊢ ⦃ A1 ⦄ s ⦃ a_true ⦄ || ⦃ A2 ⦄.
+  Proof.
+    intros; apply hq_mid, hoare_triple_post_true.
+  Qed.
+
+  Ltac hoare_post_true :=
+    try solve [apply UL_post_true];
+    try solve [apply hoare_triple_post_true];
+    try solve [apply hoare_quad_post_true].
+
+  Ltac by_prt_frm_bool :=
+    match goal with
+    | [|- _ ⦃ context ⦄ _ ⦃ a_prt_frm ?o ?b ⦄ =>
+         conseq_post ()
+           entails_prt_bool
+       end.
+
+
   Lemma Account_sat_I2 :
     forall m mDef,
       ⟦ m ↦ mDef ⟧_∈ c_meths AccountDef ->
@@ -1457,6 +1576,117 @@ e : C
       unfold simplify_conj;
         simpl.
       unfold transferBody.
+      repeat split_post_condition_by_conjunction.
+ (*     drop_right_of_conj.
+      drop_right_of_conj.
+      apply_hq_sequ_with_mid_eq_fst.*)
+
+      **
+        conseq_pre (a_prt ((e_ a) ∙ key));
+
+          try solve [intros_entails;
+                     repeat asrt_sat_auto_destruct_conj;
+                     eauto;
+                     try solve [apply sat_true]].
+        apply_hq_sequ_with_mid_eq_fst.
+
+        ***
+          apply hq_mid.
+          by_h_prot1_normal.
+
+          apply h_if.
+
+          ****
+            eapply h_strengthen;
+              [|apply conj_entails_left].
+            apply_hq_sequ_with_mid_eq_fst;
+              try solve [
+                  apply h_embed_UL;
+                  apply hoare_UL_write_different_field;
+                  unfold key, balance;
+                  crush].
+
+          ****
+            match goal with
+            | [|- _ ⊢ ⦃ ?A ∧ _ ⦄ _ ⦃ _ ⦄] =>
+                apply h_strengthen
+                with (P1:=[e_false /s result] A);
+                [|try solve [intros_entails;
+                             repeat asrt_sat_auto_destruct_conj;
+                             auto]]
+            end.
+            apply h_embed_UL.
+            apply hoare_ul_assgn.
+
+
+        ***
+          apply hq_mid.
+
+          match goal with
+          | [|- _ ⊢ ⦃ ?A ⦄ _ ⦃ _ ⦄] =>
+              apply h_strengthen
+              with (P1:=[e_false /s result] A);
+              [|try solve [intros_entails;
+                           repeat asrt_sat_auto_destruct_conj;
+                           auto]]
+          end.
+          apply h_embed_UL.
+          apply hoare_ul_assgn.
+
+      **
+        drop_right_of_conj.
+        drop_right_of_conj.
+        drop_right_of_conj.
+        drop_right_of_conj.
+
+        apply_hq_sequ_with_mid_eq_fst.
+
+        ***
+          repeat split_post_condition_by_conjunction;
+            try solve [by_hq_types2; by_assumption].
+
+        ***
+          conseq_post ().
+          conseq_post (a_true);
+            hoare_post_true.
+
+          unfold ret.
+          apply hq_mid.
+          eapply h_strengthen.
+          eapply h_prot2 with (x:=result).
+
+          econseq_pre.
+          apply hq_mid.
+          eapply h_prot2.
+          return_false_protects_key.
+          intros_entails.
+          repeat asrt_sat_auto_destruct_conj.
+          try solve [intros_entails;
+                     repeat asrt_sat_auto_destruct_conj;
+                     eauto].
+          intros_entails.
+
+          ****
+
+        admit.
+        return_false_protects_key.
+
+        ***
+          apply_hq_sequ_with_mid_eq_fst.
+          apply h_prot1.
+
+          eauto with hoare_db.
+
+          unfold call_free.
+          simpl.
+          auto.
+      apply 
+
+      admit.
+
+      return_false_protects_key.
+      apply h_prot1.
+
 
       apply_hq_sequ_with_mid_eq_fst.
 

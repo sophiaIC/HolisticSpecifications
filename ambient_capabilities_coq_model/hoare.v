@@ -425,6 +425,24 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** -----------------------------*)
   (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
 
+  (*
+  | h_prot1 : forall M e s,
+      call_free s ->
+      (forall z, does_not_assign_to_var s z ->
+            M ⊢ ⦃ a_ (e_eq e (e_ z)) ⦄
+              s
+              ⦃ a_ (e_eq e (e_ z)) ⦄) ->
+      M ⊢ ⦃ a_prt e ⦄ s ⦃ a_prt e ⦄
+*)
+
+  (*
+    NOTE: Meeting on 9/1/25 we discussed the presence of A in the rule below.
+    I could not remember why I introduced it. I now recall that the reason was
+    that I sometimes want to introduce knowledge that some specific variable
+    "k" is not assigned to in s. I'm still not entirely sure, but I think this
+    comes up in the proof of Account::set. I will think more about this...
+   *)
+
   | h_prot1 : forall M A e s,
       Stbl A ->
       call_free s ->
@@ -439,6 +457,49 @@ Because of this, we can preserve the usual assignment rule from HL.
       does_not_assign_to s e ->
       (exists x, e = (e_ x) \/ exists f, e = (e_fld (e_ x) f)) ->
       M ⊢ ⦃ a_prt e ⦄ s ⦃ a_prt e ⦄*)
+
+  (*
+    i think there is a possible error in h_prot2.
+    for e = z and e' = z',
+    it is always true that:
+    M ⊢ ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄
+        s
+        ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄
+    I don't know that this invalidates the rule ...
+    In fact I don't know that the above premise is
+    required for the rule.
+    As long as z <> x and z' <> x, then there
+    should be no change to any protection as neither
+    statements
+      x := y or
+      x := y.f
+    modify any field mappings or the
+    identities of z or z'
+    further, I don't know why we have restricted s.
+    what is wrong with
+    s = (x := e'')?
+   *)
+
+  | h_prot2 : forall M x z z' e e' e'' s,
+      (*((s = s_read x e'') \/ (s = s_read x e'') ->*)
+      z <> x -> z' <> x ->
+      M ⊢ ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄
+        s_read x e''
+        ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄ ->
+      M ⊢ ⦃ a_prt_frm e e' ⦄ s ⦃ a_prt_frm e e' ⦄
+
+(*  | h_prot2 : forall M x y f z z' e e' e'' s,
+      (*((s = s_read x e'') \/ (s = s_read x e'') ->*)
+      z <> x -> z' <> x ->
+      M ⊢ ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄
+        s_read x e''
+        ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄ ->
+      M ⊢ ⦃ a_prt_frm e e' ⦄ s ⦃ a_prt_frm e e' ⦄*)
+
+  | h_prot4 : forall M x y y' f z,
+      M ⊢ ⦃ a_prt_frm (e_ x) (e_ z) ∧ a_prt_frm (e_ x) (e_ y') ⦄
+        (s_write x f y)
+        ⦃ a_prt_frm (e_ x) (e_ z) ⦄
 
   | h_seq : forall M A1 A2 A3 s1 s2,
       M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ ->
