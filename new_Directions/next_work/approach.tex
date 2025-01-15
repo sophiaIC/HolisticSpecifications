@@ -80,8 +80,40 @@ module M$_{shop}$
 \end{lstlisting}
  
  
+\noindent
+\begin{flushleft}
+\begin{tabular}{@{}lll@{}}
+  \begin{minipage}{.65\textwidth}
 
-The critical point is the external call on line 8,   {where the \prg{Shop} asks the \prg{buyer} to pay the price of that item,
+We illustrate the situation through an example of a heap snippet. Red and green squares are external and internal objects, respectively. 
+Each object has a unique number, followed by an abbreviation of its class, \eg $o_1$ has class \prg{Shop}, $o_1$ has class \prg{Inventory}, while 
+$o_5$ and $o_7$ are external. 
+
+Curved arrows between objects indicate field values. For example, $o_1$ has three fields, pointing to 
+$o_4$, $o_5$ and $o_2$.
+
+Fields denote direct access. The transitive closure of direct access gives indirect (or transitive) access. Thus $o_1$ has direct access to $o_4$, and indirect access to $o_6$.
+
+Object $o_6$ is the key to the account $o_4$, and represents the capability that allows withdrawal. We highlight this through a dark outline to the object.
+
+
+\end{minipage}
+& \ \  \   &
+\begin{minipage}{.32\textwidth}
+%\begin{figure}
+% I wanrted a figure here, but it went soemwhere else
+\resizebox{3.2cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/ShopA.png}
+} 
+%\caption{A Heap}
+%\label{f:heap}
+%\end{figure}
+\end{minipage}
+\end{tabular}
+\end{flushleft}
+
+
+The critical point in our code is the external call on line 8,   {where the \prg{Shop} asks the \prg{buyer} to pay the price of that item,
 by calling  \prg{pay} on \prg{buyer} and passing the \prg{Shop}'s account as an argument.
 % somebody had written " \prg{Shop}'s account" but SD thinks it has to be  \prg{Shop}'s account
 As \prg{buyer} is an external object, the module \Mshop has no method specification for \prg{pay}, and no 
@@ -150,7 +182,7 @@ This gives rise to the following three challenges:\  1$^{st}$:  A specification 
 %Does this make sense? Shall we drop that point?}
  
  
-\subsection{1$^{st}$ Question: Specification Language} 
+\subsection{1$^{st}$ Challenge: Specification Language} 
 
 We want to give a formal meaning to the guarantee that for some effect, $E$, and an object $o_c$ which is the capability for $E$:
 
@@ -255,32 +287,37 @@ More in Def. \ref{def:chainmail-protection-from} and Fig. \ref{fig:ProtectedBoth
 %\cf Fig. \ref{fig:ProtectedBoth}. %  object $o_7$ is not protected in the middle pane, but is protected in the right pane.
 
 
- 
 \begin{figure}[tbh]
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{lc|c|c|c|}
 \hline
-\resizebox{3.5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/prfC.png}
+\resizebox{2.0cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/ShopA.png}
 } 
 &
-\resizebox{4.5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/prtFirst.png}
+\resizebox{3,5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/ShopB.png}
+} 
+&
+\resizebox{3,5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/ShopC.png}
 }
 &
-\resizebox{4.5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/prtSecond.png}
+\resizebox{3.5cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/ShopD.png}
 }
 \\
 \hline
-protected from object $o_2$
+heap $h$
 &
-protected  with current frame $\phi_1$
+$\sigma_1$, top frame $\phi_1$ % protected from object $o_2$
 &
-protected  with current frame $\phi_2$
+$\sigma_2$, top frame $\phi_1$
+&
+$\sigma_3$, top frame $\phi_3$
 \\
 \hline \hline
 \end{tabular}
-\caption{\textit{Protected from and Protected}. Pink and green squares are external and internal objects, respectively. Connecting straight arrows  indicate fields. Blue boxes are frames on the stack. Protected objects are  highlighted in yellow. 
+\caption{\textit{Protected from and Protected}. 
  The left pane shows a heap with objects $o_1$-$o_9$.
  Here  $o_1$, $o_4$, $o_5$ and $o_9$ 
 are protected from $o_2$. 
@@ -291,6 +328,43 @@ are protected from $o_2$.
 }
    \label{fig:ProtectedBoth}
  \end{figure}
+
+ 
+%\begin{figure}[tbh]
+%\begin{tabular}{|c|c|c|}
+%\hline
+%\resizebox{3.5cm}{!}{
+%\includegraphics[width=\linewidth]{diagrams/prfC.png}
+%} 
+%&
+%\resizebox{4.5cm}{!}{
+%\includegraphics[width=\linewidth]{diagrams/prtFirst.png}
+%}
+%&
+%\resizebox{4.5cm}{!}{
+%\includegraphics[width=\linewidth]{diagrams/prtSecond.png}
+%}
+%\\
+%\hline
+%protected from object $o_2$
+%&
+%protected  with current frame $\phi_1$
+%&
+%protected  with current frame $\phi_2$
+%\\
+%\hline \hline
+%\end{tabular}
+%\caption{\textit{Protected from and Protected}. Pink and green squares are external and internal objects, respectively. Connecting straight arrows  indicate fields. Blue boxes are frames on the stack. Protected objects are  highlighted in yellow. 
+% The left pane shows a heap with objects $o_1$-$o_9$.
+% Here  $o_1$, $o_4$, $o_5$ and $o_9$ 
+%are protected from $o_2$. 
+% The middle pane {shows the same heap and a stack with frame  $\phi_1$} whose receiver,   \prg{this},  points to $o_1$. Here 
+% $o_1$, $o_2$, $o_4$, $o_5$ and $o_9$  are protected. 
+% The right pane {shows the configuration after pushing frame  $\phi_2$}, whose receiver,  \prg{this},  and local variable, \prg{x}, point to $o_3$ and  $o_7$, respectively.
+% Here $o_3$ and $o_7$ are protected, in addition  to  the objects protected in the previous pane.
+%}
+%   \label{fig:ProtectedBoth}
+% \end{figure}
  
 If the  internal module  never passes $o$ to  external objects (\ie never leaks $o$) and  $o$ is protected, then $o$ will remain protected during execution of the current method and all the methods \emph{it} calls.
 However, it need not be protected during execution of the method calling the current method, nor after termination of the current method.   
@@ -496,7 +570,7 @@ module with  accounts which have a % {\textit{implementation}} of a bank account
 
 
   
-  \subsection{2$^{nd}$ Question:  A Hoare logic for adherence to specifications}  
+  \subsection{2$^{nd}$ Challenge:  A Hoare logic for adherence to specifications}  
  \label{sec:howSecond}
 
 Our scoped invariants require Hoare   quadruples, rather than the classical triples.
@@ -600,7 +674,7 @@ the    body of \prg{buy}.
  
  \vspace{.1cm}
  
-   \subsection{3$^{rd}$ Question:  A Hoare logic for external calls}  
+   \subsection{3$^{rd}$ Challenge:  A Hoare logic for external calls}  
  \label{sec:howThird}
  
 We consider  the  verification of $S_4$. 
