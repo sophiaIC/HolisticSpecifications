@@ -127,16 +127,29 @@ For program state $\sigma$,  modules $\Mtwo$, and variables $x$ and $y$, we defo
 $$\Same {x} {y} {\sigma}{\Mtwo}\ \triangleq\ \exists C, C', M[ \ M\in \Mtwo \wedge C, C'\in M \wedge  \class{\sigma}{x}=C \wedge \class{\sigma}{y} =C'\ ]$$
 \end{definition}
 
+As we already said in \S \ref{s:underlying}, we forbid assignments to a method's parameters. 
+To do that, the following function retiurns the  identifiers of the formal parameters of the currently active method.
+
+
+\label{def:params}
+\begin{definition}
+For program state $\sigma$:
+
+$\Formals \sigma \Mtwo \ \ \triangleq \ \  \overline x \ \ \ \mbox{such that} \ \  \  \exists \overline {\phi}\,\phi_k, \phi_{k+1}.[   \ \ \sigma = ((\overline {\phi}\cdot{\phi_k}\cdot{\phi_{k+1}}\,, \chi) 
+ \ \wedge$\\
+$\strut \hspace{3cm}  \phi_k.\prg{cont}=\_:=y_0.m(\_); \_ \    \wedge\ \meth{\Mtwo} {\class{(\phi_{k+1},\chi)}  {\prg{this} } } {m} = p \ C::m(\overline{x : \_}){:\_}\{\_\} \ \}
+$
+\end{definition}
+
+
+
 Finally, we define well-formed states, $\models \sigma$, which guarantee  that for all frames  on the stack of $\sigma$, any the actual parameter of any caller frame have the same values as the formal parameters in the callee frame
 \begin{definition}[Well-formed state]
 \label{def:wf:state}
 For program state $\sigma$:
 
-$\models \sigma \ \ \triangleq \ \  \forall \overline {\phi}, \overline {\phi'}, {\phi_k}, {\phi_{k+1}}, stmt $\\
-$\strut \hspace{2cm}  [\ \sigma = ((\overline {\phi}\cdot{\phi_k}\cdot{\phi_{k+1}}\cdot{\overline {\phi'}}), \chi) \wedge \phi_k.\prg{cont}=z:=y_0.m(y_1,...y_n); stmt \ \Longrightarrow \ 
-$
-\\
-$\strut \hspace{3cm} \interpret {\phi_k} {y_0} = \interpret {\phi_{k+1}} {\prg{this}} \ \wedge \  \exists y_1',...y_n'.\forall j\in [1..n].\ [ \interpret {\phi_k} {y_j} = \interpret {\phi_{k+1}} {y_j'} \ ]$
+$\models \sigma \ \ \triangleq \ \  \forall \overline {\phi}, \overline {\phi'}, {\phi_k}, {\phi_{k+1}}.  [\ \sigma = ((\overline {\phi}\cdot{\phi_k}\cdot{\phi_{k+1}}\cdot{\overline {\phi'}}), \chi) \ \wedge\ \phi_k.\prg{cont}=z:=y_0.m(y_1,...y_n); stmt \ \Longrightarrow $\\
+ $\strut \hspace{3cm}  \exists x_1,.. x_n..[\  \Formals {\RestictTo  \sigma {k+1}} {\Mtwo}} \Mtwo =  x_1,.. x_n \ \wedge \ \forall j\in [1..n][\  \interpret {\phi_k} {y_j} = \interpret {\phi_{k+1}} {x_j} \ ] \ ] \ \ \ ] $
 \end{definition}
 
 Fig. \ref{f:loo-semantics} gives the operational semantics of \LangOO. 
@@ -153,9 +166,9 @@ are restricted to the class that the field belongs to,
 \infer
 	{
 	   {\phi_n}(\prg{cont})  \txteq   u := y_0.m(\overline{y}); s \\
-    \meth{\Mtwo}{\class{(\phi,\chi)}{y}}{m} = p \ C::m(\overline{x : T}){:T}\{s'\}\\
-        	{{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {\sigma_1}{\Mtwo} }} \\
-	\phi'_{n+1}= {  (\  \prg{this}\, \mapsto\, \interpret{\phi}{y_0},\overline{x\, \mapsto\, \interpret{\phi}{y}}; \ s' \ ) } 
+    \meth{\Mtwo}{\class{(\phi_n,\chi)}{y_0}}{m} = p \ C::m(\overline{x : T}){:T}\{s'\}\\
+        	{{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {(\phi_n,\chi)}{\Mtwo} }} \\
+	\phi_{n+1}= {  (\  \prg{this}\, \mapsto\, \interpret{\phi_n}{y_0},\overline{x\, \mapsto\, \interpret{\phi_n}{y}}; \ s' \ ) } 
 	% \\   \sigma_2 = {(\overline{\phi}\cdot\phi\cdot\phi'},\chi)\\
 	}
 	{\exec{\Mtwo}{ ( {\overline{\phi}\cdot\phi_n},  \chi) }{{(\overline{\phi}\cdot\phi_n\cdot\phi_{n+1}},\chi)}}
@@ -188,7 +201,7 @@ are restricted to the class that the field belongs to,
 	{
 	\sigma_1 (\prg{cont})  \txteq  x.f := y; s \\
 	\Same {\prg{this}}  {x}  {\sigma_1} {\Mtwo}\\
-	\sigma_2 = \sigma[\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ][\prg{cont}\mapsto s]	
+	\sigma_2 = \sigma_1[\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ][\prg{cont}\mapsto s]	
 	}
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	{}
@@ -197,7 +210,7 @@ are restricted to the class that the field belongs to,
 \infer
 	{
 	\sigma_1(\prg{cont})\  \txteq\  x := {\prg{new}\ C }; s \\
-	fields(C)=\overline{f} \\
+	fields(\Mtwo,C)=\overline{f} \\
 	{\overline v}   \mbox{ initial values for } \overline f\\
 	\alpha \mbox{ fresh in } \sigma_1 \\
 	% \phi' = \{\prg{local}:=[\prg{this} \mapsto \alpha],\overline{[p_i \mapsto \lfloor z_i \rfloor_{\sigma_1}}], \prg{cont} := s'\}\\
