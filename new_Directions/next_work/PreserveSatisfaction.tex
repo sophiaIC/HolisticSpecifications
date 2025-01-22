@@ -30,19 +30,21 @@ We now move to assertion preservation across method call and return. % (Sect \re
 \label{s:preserve:call:ret}
 In most program logics, satisfaction of  variable-free assertions  is preserved when pushing/popping frames
 -- \ie immediately after entering a method or  returning from it.
-This, however, is not   the case for our assertions, where whether $\alpha$ is protected, \ie whether   $\inside {\alpha}$ holds, depends on the heap as well as the set of objects reachable from the top frame;
-the latter  changes when the frame changes.
+This, however, is not   the case for our assertions, where protection depends not only of the heap but also 
+on the mapping from the top frame. % set of objects reachable from the top frame.
+% whether $\alpha$ is protected, \ie whether   $\inside {\alpha}$ holds, depends on the heap as well as the set of objects reachable from the top frame;
+% the latter  changes when the frame changes.
 This is shown, \eg in  Fig. \ref{fig:Protected} where 
-$\sigma_1 \not\models \inside {o_3}$, then $\sigma_2 \models \inside {o_3}$, and then $\sigma_3  \not\models \inside {o_3}$
- %$o_3$ was not protected with top frame $\phi_1$,  
-%became protected when we pushed the frame $\phi_2$,  and again, is no longer protected when we push $\phi_3$ on the stack. 
-
+$\sigma_2 \not\models \inside {o_6}$, but after pushing a frame , we have $\sigma_3  \models \inside {o_6}$.
+%$\sigma_1 \not\models \inside {o_3}$, then $\sigma_2 \models \inside {o_3}$, and then $\sigma_3  \not\models \inside {o_3}$
+ 
  
 
 %Nevertheless,  
 {Assertions} which do  not contain  $\inside {\_}$, called   $\Stable {\_}$, are preserved when pushing/popping  frames.  
-{Less strictly}, assertions which do  not contain $\inside {\_}$ in \emph{negative} positions, called $\Pos {\_}$,  are preserved when pushing  {internal} frames provided that the range of the new frame contains locally reachable addresses -- 
-\cf  Defs   in \A\ \ref{app:preserve} and Lemma \ref{l:stbl:preserves}.
+{Less strictly}, assertions which do  not contain $\inside {\_}$ in \emph{negative} positions, called $\Pos {\_}$,  are preserved when pushing  {internal} frames provided that the range of the new frame contains locally reachable addresses.
+These properties are stated in Lemma \ref{l:stbl:preserves} --
+\cf    \A\ \ref{app:preserve} for full definitions and proofs. 
 
 \begin{lemma}
 For all  states $\sigma$, frames $\phi$,   all assertions $A$ with  $\fv(A)=\emptyset $
@@ -61,7 +63,7 @@ $\  \ \Longrightarrow \  \ M,{\PushSLong \phi \sigma} \models A\ $
 \end{lemma}
 
 
-While $Stb^+$ assertions \emph{are} preserved  when pushing  internal frames,   they  are \emph{not} necessarily preserved when pushing  external frames   (\cf  Ex. \ref{push:does:not:preserve}), \emph{nor} when popping frames   (\cf Ex. \ref{ex:motivate:scoped}). 
+While $Stb^+$ assertions \emph{are} preserved  when pushing  internal frames,   they  are \emph{not} necessarily preserved when pushing  external frames   (\cf  Ex. \ref{push:does:not:preserve}), \emph{nor} when popping frames   (\cf Ex. \ref{ex:pop:does:not:preserve}). 
 
  
 \begin{example}[$Stb^+$  not always preserved by External Push]
@@ -69,24 +71,16 @@ While $Stb^+$ assertions \emph{are} preserved  when pushing  internal frames,   
 %In    Fig. \ref{fig:Protected}, where $\sigma_2$ by pushing external frame onto $\sigma_1$, and 
 %$\sigma_1 \models \inside {o_3}$ but $\sigma_2 \not\models \inside {o_3}$.
 % Bad syntax above, but fits in one line
-In    Fig. \ref{fig:Protected}, where $\sigma_3$ emerges by pushing an external frame onto $ \sigma_2$’s stack we have $\sigma_2 \models \inside {o_3}$ and $\sigma_3 \not\models \inside {o_3}$ 
+In Fig. \ref{fig:Protected} we have $\sigma_2 \models \inside {o_4}$, but when pushing   frame $\phi_3$ with an external receiver 
+ and $o_4$ as argument,  we have $\sigma_3 \not\models \inside {o_4}$.
+%   $\sigma_3$ emerges by pushing an external frame onto $ \sigma_2$’s stack we have $\sigma_2 \models \inside {o_3}$ and $\sigma_3 \not\models \inside {o_3}$ 
 \end{example}
  
 
-\begin{example}[$Stb^+$ not always preserved by Method Return]
-\label{ex:motivate:scoped}
-Assume state $\sigma_a$, such that $\interpret {\sigma_a} {\prg{this}}=o_1$, $\interpret {\sigma} {\prg{this}.f}=o_2$, $\interpret {\sigma} {x}=o_3$, $\interpret {\sigma} {x.f}=o_2$,  
-and $\interpret {\sigma} {x.g}=o_4$, where $o_2$ is external and all other objects are internal. 
-We then have $..,\sigma_a \models  \inside {o_4}$.
-Assume %that
- the continuation of $\sigma_a$   consists of a method $x.m()$. Then,
-upon entry to that method, when we push the new frame, we have  state $\sigma_b$, which also satisfies $..,\sigma_b \models  \inside {o_4}$.
-Assume % that
- the   body of $m$ is $\prg{this}.f.m1(\prg{this}.g); \prg{this}.f := \prg{this};  \prg{this}.g := \prg{this}$, and % that 
- the external method $m1$ stores in the 
-receiver a reference to the argument.
-Then, at the end of method execution, and before popping the stack, we have   state $\sigma_c$, which also satisfies $..,\sigma_c \models  \inside {o_4}$.
-However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \not\models  \inside {o_4}$.
+\begin{example}[$Stb^+$ not always preserved by Pop]
+\label{ex:pop:does:not:preserve}
+Take Fig. \ref{fig:Protected} again: Returning from $\sigma_3$ would give 
+$\sigma_2$. And we have $\sigma_3 \models \inside {o_6}$, but after method return we have  $\sigma_2 \not\models \inside {o_6}$.
 \end{example}
 
 
@@ -94,7 +88,7 @@ However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \n
 {We work with  $Stb^+$  assertions   (the  $Stbl$ requirement is too strong). 
 But  we need to address the lack of preservation of $Stb^+$ assertions  {for external method calls and returns}.
  %,  makes it difficult to  ensure certain (perhaps weaker) assertions hold when entering   or returning from a method. 
-We do the former   through    \emph{adaptation}   ($\FIXSymbolA$ in Sect \ref{s:viewAndProtect}), and the latter through  
+We do the former   through    \emph{adaptation}   ($\pushSymbolInText$ in Sect \ref{s:viewAndProtect}), and the latter through  
 \emph{\scoped satisfaction} (\S \ref{s:scoped:valid}).
   }
    
@@ -104,11 +98,11 @@ We do the former   through    \emph{adaptation}   ($\FIXSymbolA$ in Sect \ref{s:
  
  As we discussed in \S  \ref{sec:howThird} it is possible for an assertion  not to be satisfied at the caller
 but to be  satisfied at the called viewpoint {(the callee)}. %:  right before a method call, $A$ might not be satisfied,
-We define the operator $\FIXSymbolA$ which  translates an assertion from the viewpoint of the callee, to that of the caller.
+We define the operator $\pushSymbolInText$ which  translates an assertion from the viewpoint of the callee, to that of the caller.
 
 \begin{definition}
 \label{def:push}
-[The $\FIXSymbolA$  operator]  
+[The $\pushSymbolInText$  operator]  
 
 $
 \begin{array}{c}
@@ -142,7 +136,7 @@ For $\re$ to be {protected at  the} callee, it should be protected from all the 
 \ie  $\protectedFrom {\re} {\overline {y}}$. 
 The notation $\protectedFrom {\re} {\overline {y}}$   stands for $\protectedFrom \re {y_0}\  \wedge\  ...  \wedge \protectedFrom \re {y_n}$, assuming that $\overline y$=${y_0, ... y_n}$.
 
-Lemma \ref{lemma:push:ass:state}  states that  $\FIXSymbolA$ indeed adapts assertions from the callee to the caller.
+Lemma \ref{lemma:push:ass:state}  states that  $\pushSymbolInText$ indeed adapts assertions from the callee to the caller.
 It is the counterpart to the states' operator $\pushSymbol$:
 A caller   $\sigma$ satisfies  $\PushAS y A$, if and only if the callee   ($\PushASLong {\phi} {\sigma}$) 
 %% The below was fine when we had a more detailed version
@@ -171,7 +165,7 @@ $M, \sigma \models \PushAS  {y} {A}\ \  \ \ \ \ \  \ \ \    \Longrightarrow  \ \
 \end{lemma}
 
 
-Moreover, $\FIXSymbolA$ turns an assertion into a stable assertion (Lemma \ref{l:push:stbl}), and {in internal states, an assertion implies its adapted version (Lemma \ref{lemma:internal:adapted}).}
+Moreover, $\pushSymbolInText$ turns an assertion into a stable assertion (Lemma \ref{l:push:stbl}), and {in internal states, an assertion implies its adapted version (Lemma \ref{lemma:internal:adapted}).}
 
 \begin{lemma}
 For all    assertions $A$ : \ \ \ \ \  $\Stable{ \PushAS y A}$

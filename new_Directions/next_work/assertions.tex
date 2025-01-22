@@ -181,15 +181,16 @@ Note that while execution takes place in the context of one or more modules, $\M
 %%
 %We can see that if $o$ is protected and the internal code preserves its protection, then no external object can gain eventual access to $o$.
 
-In \S \ref{sect:approach:protection} we discussed the importance of a guarantee that there will be no external access to a capability, and how this can be modelled through the concept of protection. We  s formalize this concept   in Def. \ref{def:chainmail-protection-from}.
+In \S \ref{sect:approach:protection} we % discussed the importance of a guarantee that there will be no external access to a capability, and how this can be modelled 
+introduced protection -- we will now formalize this concept. % in Def. \ref{def:chainmail-protection-from}.
 
- An object is protected from another object, $\protectedFrom{{\alpha}} {{\alpha_{o}}}$, is 
+ An object is protected from another object, $\protectedFrom{{\alpha}} {{\alpha_{o}}}$, if 
 the two objects are not equal, and no external object reachable from $a_o$ has a field pointing to  $\alpha$.
 This ensures  that any path leading from $\alpha_o$ to $\alpha$ also leads through an internal object.
  
 
 An object is protected,  $\inside{{\alpha}}$,  if no external object reachable from any of the current frame's arguments has a field pointing to $\alpha$, and if the receiver is external, then   $\alpha$ is not the value of any parameter.  
-This  ensures that external objects reachable from the current receiver or arguments have direct access to $\alpha$ -- such direct access
+This  ensures that no external objects reachable from the current receiver or arguments have direct access to $\alpha$ -- such direct access
  is either through a field, or by virtue of the receiver having access to all the arguments.
  
 
@@ -234,89 +235,25 @@ $\exists \alpha, \alpha_{o}. [\  \eval{M}{\sigma}{{\re}}{\alpha}\ \wedge\ \eval{
 
  \end{definition} 
  
- {Thus,  $\protectedFrom{{\alpha}} {{\alpha_{o}}}$ ensures that $\alpha_o$ will get access to $\alpha$ only if another object 
+ We illustrate "protected" and "protected from" in Fig.  \ref{fig:ProtectedBoth} in \S \ref{s:outline},
+and    Fig.  \ref{fig:ProtectedFrom} in App. \ref{appendix:assertions}.
+%
+In general,  $\protectedFrom{{\alpha}} {{\alpha_{o}}}$ ensures that $\alpha_o$ will get access to $\alpha$ only if another object 
  % an internal object 
  grants that access.
 Similarly, $\inside \alpha$ ensures that during execution of the current method, no external object will get direct access to $\alpha$ unless some internal object grants that access.
- }\footnote{This is in line with the motto "only connectivity begets connectivity" from \cite{MillerPhD}.}
+\footnote{This is in line with the motto "only connectivity begets connectivity" from \cite{MillerPhD}.}
+Thus, protection together with protection preservation  (\ie no internal object gives access) guarantee
+%are sufficient but not necessary conditions for 
+lack of eventual external access.  
 
-% \footnote{The below is the old definition, but it is wrong
-%  
-%% To define ``protected'', {we first defne  "has no direct access to",  
-%%formally $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}}$: This requires that
-%%$\alpha_o$ has no field pointing to $\alpha$, and   that if $\alpha_o$ is the current receiver then $\alpha$ in not a local variable.
-%%Namely,   object $\alpha_{o}$ has direct access to   object $\alpha$ either because $\alpha_{o}$ has $\alpha$ in its fields, or because $\alpha_o$'s is the currently active object, and $\alpha$ is on the current top frame.
-%%}\footnote{Mark Miller quote here?}
-% 
-%\begin{definition}[Satisfaction 
-%of Assertions  -- Protection] 
-%\label{def:chainmail-protection-from}
-%\label{sect:semantics:assert:prtFrom}
-% \label{def:chainmail-protection}
-%-- continuing definitions in \ref{def:chainmail-semantics}:
-%\begin{enumerate}
-%%\item
-%%\label{dirAccess}
-%%{ $\satisfiesA{M}{\sigma}{\accessedBy {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
-%%[\  \ \exists f.  \interpret {\sigma} {\alpha_o.f} = \alpha  \ \vee\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \wedge \exists x\in dom(\sigma). \interpret {\sigma} x = \alpha ) \ \ ] $}
-%\item
-%{ $\satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha_{o}}} \ \ \triangleq \ \  
-%[\  \ \forall f.  \interpret {\sigma} {\alpha_o.f} \neq \alpha  \ \wedge\  (\interpret {\sigma} {\prg{this}}=\alpha_o \ \Rightarrow \ \forall x\in dom(\sigma). \interpret {\sigma} x \neq \alpha ) \ \ ] $}
-%\item
-%\label{cProtected}
-% $\satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}   \ \ \ \triangleq $ 
-%  \begin{enumerate}
-% \item
-%$\alpha\neq \alpha_0$,
-% \ \ \ \  and% \\
-% \item
-%{$\forall \alpha' \in {\Relevant {\alpha_o} {\sigma}}.[\  \satisfiesA{M}{\sigma}{\external {\alpha'}} 
-%\ \ \Longrightarrow \ \  
-% \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'} } \ ] $}.
-%% {M},{\sigma}\not\models{A}{\accessedBy  {\re}{\alpha}} ] $}
-%\end{enumerate}
-%\item
-%\label{sect:semantics:assert:prt}
-%$\satisfiesA{M}{\sigma} {\inside {\alpha}}  \ \ \ \triangleq \ \ \    
-%%\begin{enumerate}
-%%\item
-%{\forall \alpha' \in \LRelevantO  {\sigma}.[\ { \satisfiesA{M}{\sigma}{\external {\alpha'}}} \ \ \Longrightarrow \ \satisfiesA{M}{\sigma}{\noDirAccess {\alpha}{\alpha'}}\ ]}$.
-%%{M},{\sigma}\not\models }{\accessedBy  {\re}{\alpha}} ] $}
-%%, \ \ \ and 
-%%\item
-%%$\satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesA{M}{\sigma}{x\neq \re}$
-%%  \end{enumerate}
-%
-%\end{enumerate}
-% \end{definition} 
-%}
-
-
-% \vspace{.5cm}
+ 
 \footnoteSD{JAMES' comment: If is possible that ``we'' do not know the complete heap (eg we only know about the green stuff.) how do we know whether an object is protected. The answer is that we do not know that it is protected, but we do know that our code guarnartees poreservation of protectedness.
-%Nevertheless, if the objects are ``robust'' then we can prove that some properties will be preserved. 
-}
-\footnoteSD{
-OLD COMMENTS: ${\inside {\_}}$  is central to thinking about capabilities. For example, the balance of an account whose
-  password is  encapsulated/protected?  will not decrease in the next step.
-  Often, API implementations contain objects whose capabilities, while  crucial for the implementation, if exposed,
-would break the intended guarantees of the API. Such objects need to remain confined - see
-such an example in Section \ref{s:examples}. 
-}
-\footnoteSD{{\textbf{TODO} make the connection with domination}}
-\footnoteSD{SD Can we think of a better name than protection? \kjx{encapsulation}{No, encapsulation not good}}
-
-We illustrate "protected" and "protected from" in Fig.  \ref{fig:ProtectedBoth} in \S \ref{s:outline},
-and    Fig.  \ref{fig:ProtectedFrom} in App. \ref{appendix:assertions}.
- 
-%We now introduce % the concept of 
-%(absolute) protection.
-%An object is protected, if it is protected from all locally reachable {external} objects. This can also be understood as 
-%``protected from the top frame''. \footnoteSD{TODO: motivate; many external objects, no matter which one has unprotected access to an object }
- 
+}  
  
  \subsubsection*{Discussion} 
-Lack of eventual access is a central concept in the verification of code with calls to and callbacks  from untrusted code.
+Lack of  eventual 
+direct access is a central concept in the verification of code with calls to and callbacks  from untrusted code.
 % ARGHHH a joke citatiion? \cite{praiseYou}.   
 %Unmediated access is essentially \citet{MillerPhD}'s permission: that we have a ``first
 %class'' reference to the capability; that we can call any 
@@ -338,23 +275,11 @@ Iris \cite{iris-wasm-pldi2023,cerise-jacm2024},
 In general, protection is applicable in more situations (i.e.\ is less
 restrictive) than most of these approaches,
  although more restrictive than the ideal ``lack of eventual access''. 
-\footnoteSD{ HER WHAT IT USED TO SAY:
-the contrapositive ideal that lack of eventual access ensures
-lack of effect. Note that ``cannot get direct access'' does not generally imply ``is
-protected''. 
+\footnoteSD{ HER WHAT IT USED TO SAY: the contrapositive ideal that lack of eventual access ensures
+lack of effect. Note that ``cannot get direct access'' does not generally imply ``is protected''. 
 }
 
-\forget{
-One can  see that protection and protection preservation are sufficient but not necessary conditions for lack of eventual access, and that, on the other hand, protection without preservation of protection does not imply lack of eventual access.
-%making it a more positive statement
 
-susan---
-One can  see that protection and protection preservation are sufficient but not necessary conditions for lack of eventual access. Without preservation of protection there may be access in the future.
-}
-
-One can  see that protection together with protection preservation are sufficient 
-%but not necessary conditions 
-for lack of eventual access. On the other hand, protection without protection preservation is not sufficient.
 
 
 
@@ -378,9 +303,6 @@ The example justifies our current definition.
 \end{minipage}
 \end{tabular}
 \end{flushleft}
-
-
-
 
 
 %Protection --- \sdN{objects to which external objects may not get %which objects can get 
