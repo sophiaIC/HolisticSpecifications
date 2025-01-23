@@ -45,6 +45,80 @@ Def. \ref{f:holistic-wff}  describes well-formedness of specifications, $\vdash 
 %  $\strut \hspace{1cm}\wedge\  \Pos A\, \wedge\, \Pos {A'}\, \wedge \,\Pos {A''}\, \wedge  \,  M \vdash \encaps  {\overline {x: C'} \wedge A''}\ \ \  ]$ \\
 %  $\strut \ \   \vdash S\, \wedge \, S' \ \ \triangleq \ \  \vdash S\, \wedge\, \vdash S'  $.  
 
+ 
+
+
+
+\label{ssect:sem}
+% \subsection{Specifications Semantics}
+ 
+\footnoteSD{TODO motivate;
+Here what we had: As discussed in \S \ref{s:approach}, 
+{open world specifications need to be able to provide}
+guarantees which hold
+during execution of an internal, 
+known, trusted module $M$ when linked together with any
+unknown, untrusted, module $M_{ext}$. These guarantees need only hold 
+when the external module is executing; we are not concerned if they are
+temporarily broken by the internal module. Therefore, we are only interested in states where the
+executing object (\prg{this}) is an external object. 
+To express our focus on external states, we define the  \emph{external states semantics}, of the form 
+$\reduction{M_{ext}}{M}{\sigma}{\sigma'}$, where $M_{ext}$ is the external
+module, and $M$ is the internal module, and where we
+collapse all internal steps into one single step.
+}
+  
+To give the semantics of specification we first define ${\satAssertQuadruple  \Mtwo  M     {A} \sigma {A'} {A''} }$.
+It says that   if $\sigma$ satisfies $A$, then any terminating execution of its continuation (${\leadstoBoundedStarFin { \Mtwo\madd M}{\sigma}  {\sigma'} }$) will satisfy $A'$, and
+ any intermediate reachable external state (here $\sigma''$) will satisfy $A''$. 
+In  $A'$, we replace $A$'s free variables by their denotation in $\sigma$.
+
+ 
+\begin{definition} \label{def:hoare:sem}
+For modules $\Mtwo$, $M$, state $\sigma$, and assertions $A$, $A'$ and  $A''$, we define:
+\begin{itemize}
+\item
+$ {\satAssertQuadruple  \Mtwo  M     {A} \sigma {A'} {A''} } \ \ \triangleq \ \ \forall \overline{z}, \overline{w}, \sigma',\sigma''.[
+$  \\
+$\strut \hspace{.2cm} M,  \sigma \models  {A}  
+  \  \ \Longrightarrow$\\
+ $\strut   \ \ \ \  \  \ \ \ \   [ \ \ \  {\leadstoBoundedStarFin { \Mtwo\madd M}{\sigma}  {\sigma'} }\ \ \Longrightarrow\ \   M,  \sigma' \models  \sdN{A'}  
+ \ \ \ \  ] \ \ \ \wedge$\\
+ $\strut   \ \ \ \  \  \ \ \ \   [ \ \  \ {\leadstoBoundedStar  {\Mtwo\madd M}{\sigma}  {\sigma''} }\ \  \ \Longrightarrow\   \   M,  \sigma'' \models  {(\extThis \rightarrow A''[\sdN{\overline{\interpret \sigma z/z}}])}\ \ \  ] $\\
+ $\strut \hspace{.2cm}$ where  $ \overline z=\fv(A)  \ \ \ ]$ %\ \ \ \  \ \ \ \  \ \  \ \ \ \  \ \ \ \ ]$
+\end{itemize} 
+\end{definition}
+
+We now give semantics to specifications: 
+ $\satisfies{M}{\TwoStatesN {\overline {x:C}} {A}}$ 
+guarantees  that if an external state $\sigma$ satisfies $A$, then all future external states reachable from $\sigma$—including nested method calls and returns but  {\emph{stopping} before}  the return from the active call in $\sigma$—will also satisfy $A$. 
+ And  $\satisfies{M} { \mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3} }$ says that scoped execution of a call to $m$ from $D$   in  states satisfying $A_1$ leads to final states satisfying $A_2$ (if it terminates),
+ and to intermediate internal states satisfying $A_3$.
+
+\begin{definition}  [Semantics of  Specifications]
+We define $\satisfies{M}{{S}}$ by cases over$S$: % the three possible syntactic forms.
+
+\label{def:necessity-semantics}
+
+\begin{enumerate}
+ \item
+ $\satisfies{M}{\TwoStatesN {\overline {x:C}} {A}} \ \  \ \triangleq   \ \ \ {\forall   \Mtwo,  \sigma.[\ {\satAssertQuadruple  \Mtwo  M    {\extThis \wedge \overline {x:C} \wedge A} \sigma {A} {A} }\ ].}$
+  \item
+ $\satisfies{M} { \mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3} }\  \ \ \   \triangleq    \ \ \ \forall   \Mtwo,  \sigma.[\ $    \\
+$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \   { \forall   y_0,\overline y, \sigma[ \ \ \ \sigma.\prg{cont}\txteq {u:=y_0.m(y_1,..y_n)} \ \ \Longrightarrow \ \ 
+\satisfies  {M} {\quadruple  {A_1'} }   {\sigma}   {A_2' } {A_3' }  \  \ \  ]} $  \\
+$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \  \mbox{where}$\\
+$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \   A_1' \triangleq   y_0:D,{\overline {y:D}}   \wedge   A[y_0/\prg{this}],\  \  A_2' \triangleq A_2[u/res,y_0/\prg{this}],\ \ A_3' \triangleq A_3  \  ]$  
+ \item
+ $\satisfies{M}{S\, \wedge\, S'}$\ \ \  \ \ \  $\triangleq$  \  \ \  \   $\satisfies{M}{S}\ \wedge \ \satisfies{M}{S'}$
+\end{enumerate}
+\end{definition}
+
+ We   illustrated  the meaning of ${\TwoStatesN {\overline {x:C}} {A}}$ in \S \ref{sect:approach:scoped} in Fig. \ref{fig:illusrPreserve}. 
+ We have that $M_{good} \models S_2 \wedge S_3 \wedge S_4$, and  $M_{fine} \models S_2 \wedge S_3 \wedge S_4$,
+ while $M_{bad} \not\models S_2$.
+We continue with some examples -- more can be found in \A ~\ref{app:spec}.
+
 {
  \begin{example}[Scoped Invariants]
  \label{example:twostate}
@@ -56,6 +130,8 @@ $\strut \ \ \ \ \ \ \ \ S_5$ & $\triangleq$   & ${\TwoStatesN {\prg{a}:\prg{Acco
  \end{example} 
  }
 
+
+ 
  \begin{example}[Method Specifications]
  \label{example:mprepostl}
  A specification for method \prg{buy} appeared in \S\ref{sec:howThird}. 
@@ -89,93 +165,70 @@ In that sense, $a$ and $a'$ are universally quantified; a call of \prg{set} will
 % $S_9$ guarantees that any call of \prg{set} will preserve protractedness for all
 
 \end{example}
+
+
+
+
+
+\paragraph{Discussion: Comparison with Object and History Invarinats}  Our scoped invariants y are similar to, but different from, history invariants as well as object invariants  -- neither of the latter two provides what we need. 
+Below, we compare in some more detail:
+
+\vspace{-.3cm}
  
+\noindent
+\begin{flushleft}
+\begin{tabular}{@{}lr@{}}
+  \begin{minipage}{.85\textwidth}
+   For example, let $\sigma_a$ make al call  transitioning to $\sigma_b$,    execution of $\sigma_b$'s continuation   eventually result in $\sigma_c$, and $\sigma_c$ return  to $\sigma_d$. 
+Suppose all four states are external, and the module guarantees $\TwoStatesN {\overline{x}} {A}$, and $\sigma_a \not\models A$, but $\sigma_b \models A$. 
+Scoped invariants %require   
+ensure  $\sigma_c \models A$, but allow   $\sigma_d \not\models A$.\end{minipage}
+& 
+\begin{minipage}{.18\textwidth}
+\resizebox{2cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/compare.png}
+} 
+\end{minipage}
+\end{tabular}
+\end{flushleft}
 
 
-
-\label{ssect:sem}
-% \subsection{Specifications Semantics}
- 
-\footnoteSD{TODO motivate;
-Here what we had: As discussed in \S \ref{s:approach}, 
-{open world specifications need to be able to provide}
-guarantees which hold
-during execution of an internal, 
-known, trusted module $M$ when linked together with any
-unknown, untrusted, module $M_{ext}$. These guarantees need only hold 
-when the external module is executing; we are not concerned if they are
-temporarily broken by the internal module. Therefore, we are only interested in states where the
-executing object (\prg{this}) is an external object. 
-To express our focus on external states, we define the  \emph{external states semantics}, of the form 
-$\reduction{M_{ext}}{M}{\sigma}{\sigma'}$, where $M_{ext}$ is the external
-module, and $M$ is the internal module, and where we
-collapse all internal steps into one single step.
-}
-
-
-  
-We now move to the semantics of specifications:   $M \models S$ expresses that  module  $M$   satisfies a specification  $S$.  
-{For this, we first define what it means for a state $\sigma$ to satisfy a triple of assertions:}
-
- 
-\begin{definition} \label{def:hoare:sem}
-For modules $\Mtwo$, $M$, state $\sigma$, and assertions $A$, $A'$ and  $A''$, we define:
-\begin{itemize}
-\item
-$ {\satAssertQuadruple  \Mtwo  M     {A} \sigma {A'} {A''} } \ \ \triangleq \ \ \forall \overline{z}, \overline{w}, \sigma',\sigma''.[
-$  \\
-$\strut \hspace{.2cm} M,  \sigma \models  {A} % \, \wedge\,    {\GRelevant {\overline \alpha}  \sigma} 
-  \  \ \Longrightarrow$\\
- $\strut   \ \ \ \  \  \ \ \ \   [ \ \ \  {\leadstoBoundedStarFin { \Mtwo\madd M}{\sigma}  {\sigma'} }\ \ \Longrightarrow\ \   M,  \sigma' \models  \sdN{A'} %[\overline{\interpret \sigma z/z}] 
- \ \ \ \  ] \ \ \ \wedge$\\
- $\strut   \ \ \ \  \  \ \ \ \   [ \ \  \ {\leadstoBoundedStar  {\Mtwo\madd M}{\sigma}  {\sigma''} }\ \  \ \Longrightarrow\   \   M,  \sigma'' \models  {(\extThis \rightarrow A''[\sdN{\overline{\interpret \sigma z/z}}])}\ \ \  ] $\\
-% $\strut \hspace{.2cm}$ where  $ \overline z= \fv(A)\!\setminus\! \vs(\sigma.\prg{cont}),\ \overline w=\fv(A)  \ \ \ ]$ %\ \ \ \  \ \ \ \  \ \  \ \ \ \  \ \ \ \ ]$
- $\strut \hspace{.2cm}$ where  $ \overline z=\fv(A)  \ \ \ ]$ %\ \ \ \  \ \ \ \  \ \  \ \ \ \  \ \ \ \ ]$
-\end{itemize} 
-\end{definition}
-
-
-\begin{definition}  [Semantics of  Specifications]
-We define $\satisfies{M}{{S}}$ by cases over$S$: % the three possible syntactic forms.
-
-\label{def:necessity-semantics}
-
-\begin{enumerate}
- \item
- $\satisfies{M}{\TwoStatesN {\overline {x:C}} {A}} \ \  \ \triangleq   \ \ \ {\forall   \Mtwo,  \sigma.[\ {\satAssertQuadruple  \Mtwo  M    {\extThis \wedge \overline {x:C} \wedge A} \sigma {A} {A} }\ ].}$
-  \item
- $\satisfies{M} { \mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3} }\  \ \ \   \triangleq    \ \ \ \forall   \Mtwo,  \sigma.[\ $    \\
-$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \   { \forall   y_0,\overline y, \sigma[ \ \ \ \sigma.\prg{cont}\txteq {u:=y_0.m(y_1,..y_n)} \ \ \Longrightarrow \ \ 
-\satisfies  {M} {\quadruple  {A_1'} }   {\sigma}   {A_2' } {A_3' }  \  \ \  ]} $  \\
-$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \  \mbox{where}$\\
-$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \   A_1' \triangleq   y_0:D,{\overline {y:D}}   \wedge   A[y_0/\prg{this}],\  \  A_2' \triangleq A_2[u/res,y_0/\prg{this}],\ \ A_3' \triangleq A_3  \  ]$  
- \item
- $\satisfies{M}{S\, \wedge\, S'}$\ \ \  \ \ \  $\triangleq$  \  \ \  \   $\satisfies{M}{S}\ \wedge \ \satisfies{M}{S'}$
-\end{enumerate}
-\end{definition}
-
- We have illustrated  the meaning of ${\TwoStatesN {\overline {x:C}} {A}}$ in \S \ref{sect:approach:scoped} in Fig. \ref{fig:illusrPreserve}. 
- We have that $M_{good} \models S_2 \wedge S_3 \wedge S_4$, and  $M_{fine} \models S_2 \wedge S_3 \wedge S_4$,
- while $M_{bad} \neg\models S_2$.
- {Appendix~\ref{app:spec} contains further examples.}
-
-
-\paragraph{Discussion} {Our \emph{scoped invariants} }  ensure that if a state $\sigma$ satisfies $A$, then all future states reachable from $\sigma$—including nested method calls and returns but \forget{excluding}{\emph{stopping} before}  the return from the active call in $\sigma$—will also satisfy $A$. For example, let $\sigma$ make an external call, transitioning to $\sigma_1$,    execution of $\sigma_1$'s continuation results in $\sigma_2$, and $\sigma_2$ returns  to $\sigma'$. 
-Suppose the module guarantees $\TwoStatesN {\overline{x}} {A}$, and $\sigma \not\models A$, but $\sigma_1 \models A$. 
-\sd{Scoped invariants %require   
-\se{ensure} $\sigma_2 \models A$, but allow   $\sigma' \not\models A$.}
-{Although similar to scoped invariants, neither history invariants nor object invariants provide what we need.}
-
-{\emph{History  invariants}} \cite{liskov94behavioral,usinghistory,Cohen10}, instead, allow future states to contain the return from the active call, and thus, {would  require that   $\sigma' \models A$. Thus, they are,}  for our purposes,  both
+{\emph{History  invariants}} \cite{liskov94behavioral,usinghistory,Cohen10}, instead, allow future states to contain the return from the active call, and thus, {would  require that   $\sigma_d \models A$. Thus, they are,}  for our purposes,  both
  \emph{unenforceable} and overly \emph{restrictive}.\ \  \emph{Unenforceable}: \ Take $A \txteq \inside{a.\prg{key}}$,  assume  in $\sigma$ a path to an external object which has access to $a.\prg{key}$, assume that path is unknown in $\sigma_1$: then, the transition from $\sigma_1$ to $\sigma_2$ cannot eliminate that path—hence, $\sigma' \not\models \inside{a.\prg{key}}$.\ \  \emph{Restrictive}:\ Take $A \txteq \inside{a.\prg{key}}\wedge a.\prg{blnce}\geq b$; then,  requiring  $A$   to hold in all states from $\sigma_1$ until termination would prevent all future withdrawals from $a$, rendering the account useless.
 
-{\emph{Object}} invariants  \cite{Meyer92,MeyerDBC92,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06}, on the other hand, require the invariant to hold in all (visible) states, and thus,  are equally \emph{inapplicable} for us: They would require, \eg, that for all objects $a$, in all (visible) states, $\inside{a.\prg{key}}$, and thus prevent \emph{any} withdrawals from \emph{any} account in \emph{any} state.
+{\emph{Object}} invariants  \cite{Meyer92,MeyerDBC92,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06}, on the other hand, expect %require -- too many require in the para
+invariants to hold in all (visible) states,
+here would require,  \eg that $\sigma_a \models A$. Thus, they  are %equally 
+\emph{inapplicable} for us: They would require, \eg, that for all % objects 
+ $a$, in all (visible) states, $\inside{a.\prg{key}}$, and thus prevent \emph{any} withdrawals from \emph{any} account in \emph{any} state.
+ 
 
-\vspace{.1cm}
 
-% SD chopped below. I think we have alsready said it.
-%In summary, scoped invariants make guarantees about future states up to  returning from the current call. %active call.
+ 
 
+\paragraph{Discussion: The Difference between Postconditions and Invariants}
+% The interested reader might have noticed that 
+In all our method specification examples so far, the post-condition and the invariant part were identical.
+However, this need not be so. 
+Assume a method \prg{tempLeak} defined in \prg{Account}, with an external argument \prg{extArg}, and a method body:
+\\
+$\strut \hspace{1cm} \prg{extArg.m(this.key); this.key:=new Key}$
+\\
+Then, the assertion   $ \inside{\prg{this.key}}$  is  broken by the external call \prg{extArg.m(this.key)}, but is  established by \prg{his.key:=new Key}.
+Therefore, $ \inside{\prg{this.key}}$  is not an invariant.
+The specification of \prg{tempLeak} could be\\
+$
+{\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_{\prg{tempLeak}}} 
+		{  \ \prg{true}\  }
+		{\prg{public Account}} {\prg{tempLeak}} {\prg{extArg}:\prg{external}}
+		{  \  \inside{\prg{this.key} }\  }
+		{  \  \prg{true}\  }
+}
+$
+
+ 
+ 
 \footnoteSD{First bullet: This means that we require all objects to satisfy even if not locally relevant. Second Bullet: notice that we are asking for globally relevant objects}  
 \footnoteSD{{TODO: Make an example that demonstrates the difference if in the second bullet we had asked for locally relevant objects ${\overline o}$.}}
 \footnoteSD{{TODO Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.}}
