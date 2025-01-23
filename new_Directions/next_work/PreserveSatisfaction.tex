@@ -34,8 +34,9 @@ This, however, is not   the case for our assertions, where protection depends no
 on the mapping from the top frame. % set of objects reachable from the top frame.
 % whether $\alpha$ is protected, \ie whether   $\inside {\alpha}$ holds, depends on the heap as well as the set of objects reachable from the top frame;
 % the latter  changes when the frame changes.
-This is shown, \eg in  Fig. \ref{fig:Protected} where 
-$\sigma_2 \not\models \inside {o_6}$, but after pushing a frame , we have $\sigma_3  \models \inside {o_6}$.
+%This is shown, 
+\Eg  Fig. \ref{fig:Protected} where 
+$\sigma_2 \not\models \inside {o_6}$, but after pushing a frame, we have $\sigma_3  \models \inside {o_6}$.
 %$\sigma_1 \not\models \inside {o_3}$, then $\sigma_2 \models \inside {o_3}$, and then $\sigma_3  \not\models \inside {o_3}$
  
  
@@ -96,9 +97,10 @@ We do the former   through    \emph{adaptation}   ($\pushSymbolInText$ in Sect \
  \label{s:preserve:encaps}
  \label{s:viewAndProtect}
  
- As we discussed in \S  \ref{sec:howThird} it is possible for an assertion  not to be satisfied at the caller
-but to be  satisfied at the called viewpoint {(the callee)}. %:  right before a method call, $A$ might not be satisfied,
-We define the operator $\pushSymbolInText$ which  translates an assertion from the viewpoint of the callee, to that of the caller.
+ As  discussed in \S  \ref{sec:howThird}, it is possible to know that a certain object will be protected ($\inside \re$) after pushing a frame, if we know enough about the arguments of that frame. 
+ %  for an assertion  not to be satisfied at the caller
+% but to be  satisfied at the called viewpoint {(the callee)}. %:  right before a method call, $A$ might not be satisfied,
+We define the operator $\pushSymbolInText$ which  translates an assertion from the viewpoint of a callee whose arguments are $\overline y$, to that of the caller.
 
 \begin{definition}
 \label{def:push}
@@ -130,15 +132,20 @@ $
 \label{f:Push}
 \end{definition}
 
-Only the first equation in  Def.  \ref{def:push}  is interesting,
-  $\PushAS y {\inside \re}$.  
-For $\re$ to be {protected at  the} callee, it should be protected from all the call's arguments,
-\ie  $\protectedFrom {\re} {\overline {y}}$. 
+Only the first equation in  Def.  \ref{def:push}  is interesting: for $\re$ to be {protected at  a} callee with argument $\overline y$, it should be protected from   % the call's 
+these arguments -- thus
+  $\PushAS y {\inside \re} = \protectedFrom {\re} {\overline {y}}$. 
 The notation $\protectedFrom {\re} {\overline {y}}$   stands for $\protectedFrom \re {y_0}\  \wedge\  ...  \wedge \protectedFrom \re {y_n}$, assuming that $\overline y$=${y_0, ... y_n}$.
 
-Lemma \ref{lemma:push:ass:state}  states that  $\pushSymbolInText$ indeed adapts assertions from the callee to the caller.
-It is the counterpart to the states' operator $\pushSymbol$:
-A caller   $\sigma$ satisfies  $\PushAS y A$, if and only if the callee   ($\PushASLong {\phi} {\sigma}$) 
+Lemma \ref{lemma:push:ass:state}  states that %  (\ref{lemma:push:ass:state:one}) and (\ref{lemma:push:ass:state:two}):  
+indeed, $\pushSymbolInText$ adapts assertions from the callee to the caller, and is the counterpart to the %states' 
+operator $\pushSymbol$.
+In particular:\ \ 
+ (\ref{lemma:push:ass:state:one}):\ If the caller,   $\sigma$,  satisfies  $\PushASLong  {Rng(\phi)} {A}$, then  the callee,   ($\PushASLong {\phi} {\sigma}$), satisfies $A$.
+\ \ (\ref{lemma:push:ass:state:two}):\ The opposite implication holds if the callee is external.
+\ \ (\ref{l:push:stbl}):\    $\pushSymbolInText$ turns an assertion into a stable assertion.
+\ \ (\ref{lemma:internal:adapted}): \ {In internal states, an assertion implies its adapted version. % (Lemma \ref{lemma:internal:adapted}).}
+  
 %% The below was fine when we had a more detailed version
 % (1) If \ the caller state
 %$\sigma$ satisfies  $\PushAS y A$, then  the callee's state  ($\PushASLong {\phi} {A}$) % (after pushing a frame with the values of $\overline y$) 
@@ -149,40 +156,32 @@ A caller   $\sigma$ satisfies  $\PushAS y A$, if and only if the callee   ($\Pus
 
 \begin{lemma} 
 \label{lemma:push:ass:state}
-For   state  $\sigma$, assertion $A$ with $\fv(A)=\emptyset$,  variables   $\overline y$, frame $\phi$ with $Range (\phi)=\overline {\interpret \sigma y}$:
+For  any  state  $\sigma$, assertion $A$,   % with $\fv(A)=\emptyset$,  %variables   $\overline y$, 
+frame $\phi$, and variables $\overline y$: % with $Range (\phi)=\overline {\interpret \sigma y}$:
 
 
-\begin{itemize} %{enumerate}
+\begin{enumerate}
  \item
  \label{lemma:push:ass:state:one}
-$M, \sigma \models \PushAS  {y} {A}\ \  \ \ \ \ \  \ \ \    \Longrightarrow  \ \ \ \ M,  \PushSLong {\phi} {\sigma}   \models A$
+$\fv(A)=\emptyset \ \ \wedge \ \  M, \sigma \models \PushASLong  {Rng(\phi)} {A}\ \  \ \ \ \ \  \ \ \    \Longrightarrow  \ \ \ \ M,  \PushSLong {\phi} {\sigma}   \models A$
 \item
  \label{lemma:push:ass:state:two}
-\sdNew{
- $M,  \PushSLong {\phi} {\sigma}   \models  A  \wedge \extThis  \ \  \ \ \ \ \  \ \ \    \Longrightarrow  \ \ \ \ M, \sigma \models \PushAS  {y} {A}$
- }
-\end{itemize}  % {enumerate}
-\end{lemma}
-
-
-Moreover, $\pushSymbolInText$ turns an assertion into a stable assertion (Lemma \ref{l:push:stbl}), and {in internal states, an assertion implies its adapted version (Lemma \ref{lemma:internal:adapted}).}
-
-\begin{lemma}
-For all    assertions $A$ : \ \ \ \ \  $\Stable{ \PushAS y A}$
+$\fv(A)=\emptyset \ \ \wedge \ \ M,  \PushSLong {\phi} {\sigma}   \models  A  \wedge \extThis    \ \  \ \ \    \Longrightarrow  \ \ \ \ M, \sigma \models \PushASLong  {Rng(\phi)} {A}$
+\item
 \label{l:push:stbl}
-\end{lemma}
-
-{
-\begin{lemma}
+$\overline y\neq [] \ \ \ \ \Longrightarrow \ \ \ \ \Stable{ \PushAS y A}$
+\item
 \label{lemma:internal:adapted}
-For a state $\sigma$, variables $\overline y\subseteq dom(\sigma)$:\ \ \ $M, \sigma \models A \wedge \intThis \ \ \Longrightarrow M, \sigma \models  \PushAS {y} {A}$.
+$M, \PushSLong {\phi} {\sigma}  \models A \wedge \intThis \ \ \Longrightarrow M, \PushSLong {\phi} {\sigma}  \models  \PushASLong {Rng(\phi)} {A}$.
+\end{enumerate}
 \end{lemma}
 }
 
-{ In general, original versions of  assertions do  not  \sdN{imply} adapted versions, nor vice versa:}
- 
 
-\begin{example}[Adapted and Original versions are incomparable]
+
+Proofs of the lemma can be found in \A\ \ref{appendix:adaptation}. We next discuss examples demonstrating why the \prg{extl} and \prg{intl} requirements are necessary for (\ref{lemma:push:ass:state:two}) and (\ref{lemma:internal:adapted}) above, and why  original and adapted versions of assertions are not always comparable.
+
+\begin{example}[Comparing Validity of Adapted and Original versions]
 \label{push:does:not:imply}
 \notesep   $A$ does not imply $\PushAS {y} {A}$:\  \Eg  take 
   a   $\sigma_1$ where $\interpret {\sigma_1} {\prg{this}}$ = $o_1$, and $o_1$ is {external},  and there is no other object. Then, we have
