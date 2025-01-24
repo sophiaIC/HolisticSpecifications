@@ -94,7 +94,7 @@ $o_4$, $o_5$ and $o_2$.
 Fields denote direct access. The transitive closure of direct access gives indirect (or transitive) access. Here, $o_1$ has direct access to $o_4$, and indirect access to $o_6$.
 
 Object $o_6$ is %the key to the account $o_4$, and represents 
-the capability that allows withdrawal from $o_4$. We highlight this through a dark outline to $o_4$.
+the capability that allows withdrawal from $o_4$. We highlight this through a dark outline to $o_6$.
 \end{minipage}
 & \ \  \   &
 \begin{minipage}{.25\textwidth}
@@ -258,18 +258,11 @@ We formalize the concepts "reachable from the current point of execution" and  "
 through the concept of \emph{protection}, and \emph{scoped invariants}. 
 We discuss these concepts in more detail in \S \ref{sect:approach:protection}, and \S \ref{sect:approach:scoped}.
 But first, we clarify the concept of "current point of execution".
-%We formalize "no external objects  reachable from the current frame have access" through the concept of \emph{protection}, 
-%and "the future scoped from the current frame" through  the concept of \emph{scoped invariants}. 
-%We discuss these concepts in more detail in \S \ref{sect:approach:protection}, and \S \ref{sect:approach:scoped}.
 
 \subsubsection*{The Current Point of Execution} is characterized by the heap, and   the activation frame of the currently executing method. 
  Activation frames, or frames for short, consist of a variable map and a continuation -- the statements remaining to be executed. 
 Upon method call and return, frames are pushed onto/popped from the call stack.
 Thus, the frame on top of the stack is the one most recently pushed; therefore it corresponds to the currently executing method.
-
-Fig. \ref{f:CurrentPoint} illustrates these concepts: The left pane, $\sigma_1$, shows a state with the same heap as earlier, but where the top frame is $\phi_1$ -- it could be the state before a call to \prg{buy}.
-  The middle pane, $\sigma_2$, is a state where we have pushed  $\phi_2$ on top of the stack of $\sigma_1$ -- it could be a state during execution of \prg{buy}.
-   The right pane, $\sigma_3$, is a state where we have pushed  $\phi_3$ on top of the stack of $\sigma_1$ -- it could be a state during execution of \prg{pay}. 
 \begin{figure}[tbh]
 \begin{tabular}{|c|c|c|}
 \hline
@@ -299,6 +292,11 @@ $\sigma_3$, top frame $\phi_3$
 \end{figure}
 
 
+Fig. \ref{f:CurrentPoint} illustrates these concepts: The left pane, $\sigma_1$, shows a state with the same heap as earlier, but where the top frame is $\phi_1$ -- it could be the state before a call to \prg{buy}.
+  The middle pane, $\sigma_2$, is a state where we have pushed  $\phi_2$ on top of the stack of $\sigma_1$ -- it could be a state during execution of \prg{buy}.
+   The right pane, $\sigma_3$, is a state where we have pushed  $\phi_3$ on top of the stack of $\sigma_1$ -- it could be a state during execution of \prg{pay}. 
+
+
 
 
 \subsubsection{Protection}
@@ -312,13 +310,12 @@ if no external object transitively accessible from $o'$ has direct access to $o'
 \\
 Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$,  
 if no external object transitively accessible from the current frame\footnote{An object is transitively accessible from a frame if
- there exists a sequence of field accesses leading from one of the variables in the frame  to that object.} 
-has direct access to $o$. 
-\ 
+ there exists a sequence of field accesses leading from one of the variables in the frame  to that object.} has direct access to $o$,
+ and   if $o$ is not an argument if the receiver is external.
+
 More in Def. \ref{def:chainmail-protection-from}. % and Fig. \ref{fig:ProtectedBoth}.   
  \end{description}
  
- Fig. \ref{fig:ProtectedBoth} illustrates these concepts. In particular, $o_6$ is not protected in $\sigma_1$ nor $\sigma_2$, but is protected in $\sigma_3$. This is so, because when pushing a frame makes fewer objects  transitively accessible from the new top frame. Here, $o_5$ is transitively accessible from the  top frame in $\sigma_2$, but not transitively accessible from the   top frame in $\sigma_3$.
  
 
 \begin{figure}[htb]
@@ -362,11 +359,11 @@ $\sigma_3 \models \inside{o_6}$
 \\
 $... \not\models  \protectedFrom {o_6} {o_5}$
 &
-$\sigma_1  \models \inside{o_5}$
+$\sigma_1  \models \inside{o_4}$
 &
-$\sigma_2 \models \inside{o_5}$
+$\sigma_2 \models \inside{o_4}$
 &
-$\sigma_3 \models \inside{o_5}$
+$\sigma_3 \not \models \inside{o_4}$
 %\\
 %$... \not\models  \protectedFrom {o_3} {o_5}$
 %& & & 
@@ -380,6 +377,11 @@ $\sigma_3 \models \inside{o_5}$
  }
    \label{fig:ProtectedBoth}
  \end{figure}
+ 
+  Fig. \ref{fig:ProtectedBoth} illustrates these concepts. In particular, $o_6$ is not protected in $\sigma_1$ nor $\sigma_2$, but is protected in $\sigma_3$. This is so, because when pushing a frame makes fewer objects  transitively accessible from the new top frame -- here, $o_5$ is transitively accessible from the  top frame in $\sigma_2$, but not transitively accessible from the   top frame in $\sigma_3$.
+ Moreover, $o_4$  is  protected in $\sigma_1$ and  $\sigma_2$,  and not  protected in $\sigma_3$. 
+ This is so, because even though neither $o_5$ nor $o_7$ have direct access to $o_4$, in $\sigma_3$  the receiver is external, and $o_4$ is one of the arguments.
+
 
  If the  internal module  never passes $o$ to  external objects (\ie never leaks $o$) and  $o$ is protected, then $o$ will remain protected during execution of the current method and all the methods \emph{it} calls.
 However, it need not be protected during execution of the method calling the current method, nor after termination of the current method.   
