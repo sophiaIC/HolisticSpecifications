@@ -289,20 +289,26 @@ Fields may be read or written only if the class of the object whose field is bei
 Private methods may be called only if the class of the receiver (the object whose method is being called), and the class of the caller (the object which is calling) belong to the same module.
 Public methods may always be called.
 
-The semantics is unsurprising :  
+The semantics is unsurprising:  
 In $\sigma$, the  top frame's continuation contains the statement to be  executed next.  
  Statements may assign to variables, allocate new objects, 
 perform field reads and writes on objects, and
  call methods on those objects. 
 When a method is called, a new frame is pushed onto the stack; this frame  maps \prg{this} and the formal parameters to  the values for the receiver and other arguments, and the continuation to the body of the method. 
-{Methods are expected to store their return values in the variable \prg{res}.}
- When the continuation is {empty ($\epsilon$), the frame is popped and the value of \prg{res}
- {\susan{\footnote{\prg{res} is implicit like \prg{this}}}}
- {\footnote {\sue{In the examples in this paper \prg{void} methods omit the assignment to \prg{res}.}}}
- from the popped frame  is stored  in the variable map of the top frame.}
+{Method bodies are expected to store their return values in the implicitly defined variable \prg{res}.}
+ {\footnote%{\prg{res} is implicit -- \sdred{like} \prg{this}. 
+ \sdred{For ease of presentation, 
+in} the examples in this paper \prg{void} methods omit the assignment to \prg{res}.}}
+ When the continuation is  empty ($\epsilon$), the frame is popped and the value of \prg{res}
+ from the popped frame  is stored  in the variable map of the top frame.
 %In other aspects, the semantics is unsurprisring.%we return from that call, its frame is  popped, and execution continues in the context of the calling method. 
 %The relation $\leadstoOrigStar  {\Mtwo} {\_}   {\_}$  is the reflexive, transitive closure of $\leadstoOrig  {\Mtwo} {\_}   {\_}$ .
-Wlog, {to simplify some proofs} we  require, as in Kotlin, that method bodies do not assign to formal parameters, , \cf Def.  \ref{def:wf:state}.  
+
+Wlog, {to simplify some proofs} we  require, as in Kotlin, that method bodies do not assign to formal parameters.
+\sdred{ The function   $\Formals {\sigma}  {\Mtwo}$ returns the formal parameters of the method currently executing % in $\sigma$ 
+-- \cf Def. \ref{def:params}}
+
+
 %This simplifies some proofs and gives rise to a well-formedness requirement for states, 
 %$\models \sigma$, which guarantees that for all frames  on the stack, the actual parameters of a method call in a  caller frame have the same values as the formal parameters in the called frame, \cf Def.  \ref{def:wf:state}. 
 %From now on we require implicitly that $\models \sigma$.
@@ -333,20 +339,26 @@ while $\leadstoOrigStar  {\Mtwo} {\sigma_{10}}   {\sigma_{15}}$,   involves no c
 % \end{figure}
  
 
-\section{\susan{Fundamental} Concepts}
+\section{Fundamental  Concepts}
 \label{s:auxiliary}
 
-{The semantics of our assertion language % , \AssertLang, 
-is based on three concepts built on} \LangOO: {method calls and returns, scoped execution}, and locally reachable objects.}
+%We now define some concepts 
 
-% \subsection{ Method Calls and Returns}
+The semantics of our assertion language % , \AssertLang, 
+is based on three concepts built on \LangOO: method calls and returns, scoped execution, and locally reachable objects. 
+
+
+
+
+ \subsection{ Method Calls and Returns}
  
-Method calls and returns are \susan{critical} for our work. 
-They are characterized through pushing/popping   frames on the stack.  
-The operator   $ \PushS  {\phi} {\sigma}$ pushes 
-frame $\phi$ onto the stack of $\sigma$,
- \susan{ while
- operator $\sigma$ $\popSymbol$   pops a frame of $\sigma$'s stack and updates the continuation and variable map.}
+Method calls and returns are  critical for our work. 
+They are characterized through pushing/popping   frames on the stack:
+% Dropped "The oerator" to avoid ugly line-break %Operator   
+$ \PushS  {\phi} {\sigma}$ pushes 
+frame $\phi$ onto the stack of $\sigma$, while
+% the  operator 
+$\sigma$ $\popSymbol$   pops the top frame of $\sigma$'s stack and updates the continuation and variable map.
 
  
  
@@ -425,9 +437,10 @@ $\leadstoOrig {\Mtwo} {\sigma_{14}}  {\sigma_{15}}$ and  $\NotEarlierS {\sigma_{
 
 \vspace{.1cm}
 {The relation $\boundedTrans$ contains more than the transitive closure of  $\bounded$.
-\Eg, ${\leadstoBoundedStar  {\Mtwo}  {\sigma_9}  {\sigma_{13}}}$, even though ${\notLeadstoBounded   {\Mtwo}  {\sigma_{12}}  {\sigma_{13}}}$.} 
+\Eg, ${\leadstoBoundedStar  {\Mtwo}  {\sigma_9}  {\sigma_{13}}}$, even though ${\leadstoBounded   {\Mtwo}  {\sigma_{9}}  {\sigma_{12}}}$  and ${\notLeadstoBounded   {\Mtwo}  {\sigma_{12}}  {\sigma_{13}}}$.} 
 %
-Appendix \ref{app:aux} discussed further properties of scoped execution:
+\sdred{Lemma \ref{l:params:do:not:change} says that the value of the parameters does not change during  execution of the same method. }
+
 %Lemma \ref{lemma:orig:to:bounded:front} says  that \scoped executions describe the same set of executions as those  starting at an initial state\footnote{An \emph{Initial} state's heap contains a single object of class \prg{Object}, and
 %its  stack   consists of a single frame, whose local variable map is a mapping from \prg{this} to the single object, and whose continuation is  any statement.
 %(See Def. \ref{def:initial})}. 
@@ -436,16 +449,21 @@ Appendix \ref{app:aux} discussed further properties of scoped execution:
 %the interpretation of a variable remains unaffected by
 %scoped execution of statements  which do not mention that variable.
 
- 
+ \sdred{
+\begin{lemma}
+\label{l:params:do:not:change} For all $\Mtwo$, $\sigma$ and $\sigma'$:
+
+ $\strut \hspace{1cm} \leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma'} \ \ \wedge\  \ \DepthFs{\sigma}=\DepthFs {\sigma'}\ \ \ \Longrightarrow\ \  \ \forall x\in \Formals {\Mtwo} {\sigma}.[ \ \interpret \sigma x = \interpret {\sigma'} x \ ]$
+\end{lemma}
+}
+
+\sdred{Appendix \ref{app:aux} discusses further properties of scoped execution, and proofs.}
 
 
 
 
 
-
-
-
-  \subsection{Reachable  Objects, and Locally Reachable Objects}
+  \subsection{Reachable  Objects, Locally Reachable Objects, \sdred{and Well-formed States}}
   
  {A central concept to our work is %object 
 protection, \se{that no locally reachable external object can have %unmitigated
@@ -466,6 +484,41 @@ $ \LRelevantO   \sigma  \ \  \ \triangleq \ \  \  \{ \ \alpha \ \mid \ { \exists
 \end{itemize}
 \end{definition}
 
+% \subsection{Well-formed states}
+
+\sdred{
+In well-formed states, $\Mtwo \models \sigma$,    the value of any parameter in any all callee   (${\RestictTo  \sigma {k}}$) is the same as the value of some variable in the caller (${\RestictTo  \sigma {k\!-\!1}}$),
+and any address reachable from any frame (${\LRelevantO   {\RestictTo  \sigma {k}} }$) is reachable from some formal parameter of that frame. 
+Well--formedness is satisfied in initial states $(1)$, and is preserved by execution $(2)$.
+}
+
+\sdred{ 
+\begin{definitionLemma}[Well-formed states]
+\label{def:wf:state}
+For modules $\Mtwo$, and  states $\sigma$, $\sigma'$:
+
+$\Mtwo \models \sigma \ \ \triangleq \ \  \forall k. 1<k\leq \DepthFs {\sigma}.$\\
+$\strut \hspace{2.2cm}[\ \ \forall   x \in   \Formals {\RestictTo  \sigma {k1}} {\Mtwo}.[\ \exists y. \ \interpret {\RestictTo  \sigma {k1}}  {x} = \interpret {\RestictTo  \sigma {k\!-\!1}}  {y} \ ]  \ \ \ \wedge$
+\\
+$\strut \hspace{2.2cm} \ \ \ \   {\LRelevantO   {\RestictTo  \sigma {k}} }\ = \ { \{ \ \alpha \ \mid \exists z\!\in\!  \Formals {\RestictTo  {\sigma} {k}} {\Mtwo} \ \wedge \ \alpha\in \Relevant { \interpret   {\RestictTo  \sigma {k}}  {z}}\sigma \ \} \ ] }$ 
+
+\vspace{.01cm}
+\noindent 
+The following properties hold
+
+%\end{definition}
+%}
+%
+%\sdred{
+%\begin{lemma} 
+
+\label{l:wf:state}
+  $(1)   \  \ \DepthFs \sigma = 1 \ \      \Longrightarrow \ \  \Mtwo \models \sigma\ \ $
+
+%\ -\!\!- 
+$(2)\  \  \Mtwo \models \sigma \ \wedge \ {\exec{\Mtwo} {\sigma} {\sigma'}}  \ \    \Longrightarrow \ \ \Mtwo \models \sigma' \ $
+\end{definitionLemma}
+}
  
 Lemma  \ref{lemma:relevant} % describes properties of global reachability. 
 says that 
@@ -480,7 +533,7 @@ For all modules $\Mtwo$, states $\sigma$, $\sigma'$,   and frame $\phi$:
 \begin{enumerate}
 \item
 \label{oneLR}
-{$ \sigma'= \PushS {\phi} {\sigma}   \ \wedge  \  {Rng(\phi)} \subseteq \LRelevantO  {\sigma} 
+{$ \sigma'= \PushSF {\phi} {\sigma}   \ \wedge  \  \sdred{ \Mtwo \models \sigma} %  {Rng(\phi)} \subseteq \LRelevantO  {\sigma} 
  \ \  \Longrightarrow\ \ \LRelevantO {\sigma'}\  \subseteq \LRelevantO   {\sigma}$}
 \item
 \label{threeLR}

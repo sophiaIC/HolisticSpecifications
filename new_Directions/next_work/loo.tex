@@ -27,7 +27,7 @@ limited type system of \LangOO.}
 A program state ($\sigma$) is a pair of of a stack and a heap.
 The stack is a a stack is a non-empty list of frames ($\phi$), and the heal ($\chi$)
 is a map from addresses ($\alpha$) to objects ($o$). A frame consists of a local variable
-map and a continuation (\prg{cont}) that represents the statements that are yet to be executed ($s$).
+map and a continuation .\prg{cont} that represents the statements that are yet to be executed ($s$).
 % or a hole waiting to be filled by a method return in the frame above ($x := \bullet; s$).
 A statement is either a field read ($x := y.f$), a field write ($x.f := y$), a method call
 ($u :=y_0.m(\overline{y})$), a constructor call ($\prg{new}\ C$), 
@@ -66,9 +66,9 @@ $\interpret{\sigma}{\alpha.f}\ \triangleq\ v_i $ \ \ if \ \ $\chi(\alpha)=(\_; \
 \item
 $\interpret{\sigma}{x.f}\ \triangleq\ \interpret{\sigma}{\alpha.f}$ where $\interpret{\sigma}{x}=\alpha$
 \item
-$\phi(\prg{cont}) \ \triangleq\ s$ 
+$\phi.\prg{cont} \ \triangleq\ s$ 
 \item
-$\sigma(\prg{cont}) \ \triangleq\ \phi(\prg{cont})$\
+$\sigma.\prg{cont} \ \triangleq\ \phi.\prg{cont}$\
 \item
 $\phi[\prg{cont}\mapsto s'] \ \triangleq\ (\overline {x \mapsto v}, s')$
 \item
@@ -131,9 +131,10 @@ As we already said in \S \ref{s:underlying}, we forbid assignments to a method's
 To do that, the following function retiurns the  identifiers of the formal parameters of the currently active method.
 
 
-\label{def:params}
+
 \begin{definition}
 For program state $\sigma$:
+\label{def:params}
 
 $\Formals \sigma \Mtwo \ \ \triangleq \ \  \overline x \ \ \ \mbox{such that} \ \  \  \exists \overline {\phi},\,\phi_k, \, \phi_{k+1}, \,C,\,p.$\\
 $\strut \hspace{3.2cm} [   \ \ \sigma =  (\overline {\phi}\cdot{\phi_k}\cdot{\phi_{k+1}}\,, \chi) 
@@ -143,14 +144,8 @@ $\strut \hspace{3.2cm} \class{(\phi_{k+1},\chi)}  {\prg{this} }\  \ \wedge\ \ \m
 
 
 
-Finally, we define well-formed states, $\models \sigma$, which guarantee  that for all frames  on the stack of $\sigma$, any the actual parameter of any caller frame have the same values as the formal parameters in the callee frame
-\begin{definition}[Well-formed state]
-\label{def:wf:state}
-For program state $\sigma$:
 
-$\models \sigma \ \ \triangleq \ \  \forall \overline {\phi}, \overline {\phi'}, {\phi_k}, {\phi_{k+1}}.  [\ \sigma = ((\overline {\phi}\cdot{\phi_k}\cdot{\phi_{k+1}}\cdot{\overline {\phi'}}), \chi) \ \wedge\ \phi_k.\prg{cont}=z:=y_0.m(y_1,...y_n); stmt \ \Longrightarrow $\\
- $\strut \hspace{3cm}  \exists x_1,.. x_n..[\  \Formals {\RestictTo  \sigma {k+1}} {\Mtwo}  \Mtwo =  x_1,.. x_n \ \wedge \ \forall j\in [1..n][\  \interpret {\phi_k} {y_j} = \interpret {\phi_{k+1}} {x_j} \ ] \ ] \ \ \ ] $
-\end{definition}
+
 
 Fig. \ref{f:loo-semantics} gives the operational semantics of \LangOO. 
 Program state $\sigma_1$ reduces to $\sigma_2$ in the context of
@@ -165,27 +160,27 @@ are restricted to the class that the field belongs to,
 \begin{mathpar}
 \infer
 	{
-	   {\phi_n}(\prg{cont})  \txteq   u := y_0.m(\overline{y}); \_ \ \ \ \ \ \ \ 
+	   {\phi_n}.\prg{cont}  \txteq   u := y_0.m(\overline{y}); \_ \ \ \ \ \ \ \ 
 	   u \notin \Formals {( {\overline{\phi}\cdot\phi_n},  \chi)} {\Mtwo} \\
-    \meth{\Mtwo}{\class{(\phi_n,\chi)}{y_0}}{m} = p \ C::m(\overline{x : T}){:T}\{\ s\ \}\\
+    \meth{\Mtwo}{\class{(\phi_n,\chi)}{y_0}}{m} = p \ C::m(\overline{x : T}){:T}\{\ stmts\ \}\\
         	{{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {(\phi_n,\chi)}{\Mtwo} }} \\
-	\phi_{n+1}= {  (\  \prg{this}\, \mapsto\, \interpret{\phi_n}{y_0},\overline{x\, \mapsto\, \interpret{\phi_n}{y}}; \ s\ ) } 
+	\phi_{n+1}= {  (\  \prg{this}\, \mapsto\, \interpret{\phi_n}{y_0},\overline{x\, \mapsto\, \interpret{\phi_n}{y}}; \ stmts\ ) } 
 	}
 	{\exec{\Mtwo}{ ( {\overline{\phi}\cdot\phi_n},  \chi) }{{(\overline{\phi}\cdot\phi_n\cdot\phi_{n+1}},\chi)}}
 	\quad(\textsc{Call})
 	\and
 \infer
 	{
-		\phi_{n+1}(\prg{cont}) \txteq  {\epsilon} \\  
-	\phi_n(\prg{cont})   \txteq  {x := y_0.m(\overline y)}; s \\
-	\phi'_n= \phi[x \mapsto \interpret{\phi_{n+1}}{\prg{res}}][\prg{cont} \mapsto {s} ]
+		\phi_{n+1}.\prg{cont} \txteq  {\epsilon} \\  
+	\phi_n.\prg{cont}   \txteq  {x := y_0.m(\overline y)}; stmts \\
+	\phi'_n= \phi[x \mapsto \interpret{\phi_{n+1}}{\prg{res}}][\prg{cont} \mapsto {stmts} ]
 			}
 	{\exec{\Mtwo}{({\overline{\phi} \cdot \phi_n \cdot \phi_{n+1}}, \chi) }{({\overline{\phi}\cdot  \phi'_n}, \chi)}}
 	\quad(\textsc{Return})
 	\and
 \infer
 	{
-	{\sigma_1(\prg{cont})  \txteq  x := y.f; s} \ \ \ \ \ \ \ 
+	{\sigma_1.\prg{cont}  \txteq  x := y.f; s} \ \ \ \ \ \ \ 
 	 x \notin \Formals {\sigma_1} {\Mtwo} \\
 	 \Same {\prg{this}}  {y}  {\sigma_1} {\Mtwo}\\
 	\sigma_2=\sigma_1[x\mapsto  \interpret{\sigma_1}{y.f} \} ][\prg{cont} \mapsto s ] 
@@ -195,7 +190,7 @@ are restricted to the class that the field belongs to,
 	\and
 \infer
 	{
-	\sigma_1 (\prg{cont})  \txteq  x.f := y; s \ \ \ \ \ \ \ 
+	\sigma_1 .\prg{cont}  \txteq  x.f := y; s \ \ \ \ \ \ \ 
 	 x \notin \Formals {\sigma_1} {\Mtwo} \\
 	\Same {\prg{this}}  {x}  {\sigma_1} {\Mtwo}\\
 	\sigma_2 = \sigma_1[\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ][\prg{cont}\mapsto s]	
@@ -206,7 +201,7 @@ are restricted to the class that the field belongs to,
 	\and
 \infer
 	{
-	\sigma_1(\prg{cont})\  \txteq\  x := {\prg{new}\ C }; s \ \ \ \ \ \ \ 
+	\sigma_1.\prg{cont}\  \txteq\  x := {\prg{new}\ C }; s \ \ \ \ \ \ \ 
 	 x \notin \Formals {\sigma_1} {\Mtwo} \\
 	fields(\Mtwo,C)=\overline{f} \\
 	{\overline v}   \mbox{ initial values for } \overline f\\
@@ -215,6 +210,7 @@ are restricted to the class that the field belongs to,
 	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
 	\quad(\textsc{New})
 \end{mathpar}
+\vspace{-0.4cm}
 \caption{\LangOO operational Semantics}
 \label{f:loo-semantics}
 \end{minipage}
@@ -364,7 +360,7 @@ That is, given a module $M$ and a program state $\sigma$, expression $e$ evaluat
 if $\eval{M}{\sigma}{e}{v}$. Note, the evaluation of expressions is separate from the operational
 semantics of \LangOO, and thus there is no restriction on field access.
 
-\sdN{
+{
 \paragraph{Lemmas and Proofs}
 }
 %We prove lemma  \ref{l:var:unaffect}, using the following lemma:
@@ -393,7 +389,7 @@ semantics of \LangOO, and thus there is no restriction on field access.
 %\end{lemma}
 %}
 % 
-%\sdN{
+%{
 %\beginProof{l:leadsto:depth}
 %\begin{enumerate}
 %\item Follows from the definition of $\DepthSt {\_}$, and $ \EarlierS {\_}  {\_}$.
@@ -411,7 +407,16 @@ semantics of \LangOO, and thus there is no restriction on field access.
 %\completeProof
 %}
 
-\sdN{
+\sdred{
+\beginProof{l:wf:state}
+The first assertion is proven by unfolding the definition of $\_ \models \_ $.
+
+The second assertion is proven by case analysis on the execution relation $\exec {\_} {\sigma} {\sigma'}$. 
+The assertion gets established when we call a method, and is preserved through all the execution steps, because we do not allow assignments to the formal parameters.
+} 
+
+
+{
 We now prove lemma \ref{l:var:unaffect}:
 
 \beginProof{l:var:unaffect} 
