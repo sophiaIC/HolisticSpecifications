@@ -118,11 +118,11 @@ if there exists an $M$ in $\Mtwo$, so that $M(C)$ contains the definition ${ pr}
 
 
 
-\newcommand{\Same}[4]{{SameModule(#1,#2,#3,#4)}}
+
 
 We define what it means for two objects to come from the same module
 \begin{definition}[Same Module]
-\label{def:class-lookup}
+\label{def:same:module}
 For program state $\sigma$,  modules $\Mtwo$, and variables $x$ and $y$, we defone
 $$\Same {x} {y} {\sigma}{\Mtwo}\ \triangleq\ \exists C, C', M[ \ M\in \Mtwo \wedge C, C'\in M \wedge  \class{\sigma}{x}=C \wedge \class{\sigma}{y} =C'\ ]$$
 \end{definition}
@@ -153,74 +153,14 @@ modules$\Mtwo$ if $\exec{\Mtwo}{\sigma_1}{\sigma_2}$. The semantics in Fig. \ref
 are unsurprising, but it is notable that reads (\textsc{Read}) and writes (\textsc{Write})
 are restricted to the class that the field belongs to,
 {and methods  may only be called if public, or from same module as current receiver.}
-\begin{figure}[t]
-\begin{minipage}{\textwidth}
-\begin{minipage}{\textwidth}
-\footnotesize
-\begin{mathpar}
-\infer
-	{
-	   {\phi_n}.\prg{cont}  \txteq   u := y_0.m(\overline{y}); \_ \ \ \ \ \ \ \ 
-	   u \notin \Formals {( {\overline{\phi}\cdot\phi_n},  \chi)} {\Mtwo} \\
-    \meth{\Mtwo}{\class{(\phi_n,\chi)}{y_0}}{m} = p \ C::m(\overline{x : T}){:T}\{\ stmts\ \}\\
-        	{{p=\prg{public} \ \vee \ \Same{\prg{this}} {y_0} {(\phi_n,\chi)}{\Mtwo} }} \\
-	\phi_{n+1}= {  (\  \prg{this}\, \mapsto\, \interpret{\phi_n}{y_0},\overline{x\, \mapsto\, \interpret{\phi_n}{y}}; \ stmts\ ) } 
-	}
-	{\exec{\Mtwo}{ ( {\overline{\phi}\cdot\phi_n},  \chi) }{{(\overline{\phi}\cdot\phi_n\cdot\phi_{n+1}},\chi)}}
-	\quad(\textsc{Call})
-	\and
-\infer
-	{
-		\phi_{n+1}.\prg{cont} \txteq  {\epsilon} \\  
-	\phi_n.\prg{cont}   \txteq  {x := y_0.m(\overline y)}; stmts \\
-	\phi'_n= \phi[x \mapsto \interpret{\phi_{n+1}}{\prg{res}}][\prg{cont} \mapsto {stmts} ]
-			}
-	{\exec{\Mtwo}{({\overline{\phi} \cdot \phi_n \cdot \phi_{n+1}}, \chi) }{({\overline{\phi}\cdot  \phi'_n}, \chi)}}
-	\quad(\textsc{Return})
-	\and
-\infer
-	{
-	{\sigma_1.\prg{cont}  \txteq  x := y.f; s} \ \ \ \ \ \ \ 
-	 x \notin \Formals {\sigma_1} {\Mtwo} \\
-	 \Same {\prg{this}}  {y}  {\sigma_1} {\Mtwo}\\
-	\sigma_2=\sigma_1[x\mapsto  \interpret{\sigma_1}{y.f} \} ][\prg{cont} \mapsto s ] 
-	}
-	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
-	\quad(\textsc{Read})
-	\and
-\infer
-	{
-	\sigma_1 .\prg{cont}  \txteq  x.f := y; s \ \ \ \ \ \ \ 
-	 x \notin \Formals {\sigma_1} {\Mtwo} \\
-	\Same {\prg{this}}  {x}  {\sigma_1} {\Mtwo}\\
-	\sigma_2 = \sigma_1[\interpret{\sigma_1}{x}.f \mapsto\ \interpret{\sigma_1}{y} ][\prg{cont}\mapsto s]	
-	}
-	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
-	{}
-	\quad(\textsc{Write})
-	\and
-\infer
-	{
-	\sigma_1.\prg{cont}\  \txteq\  x := {\prg{new}\ C }; s \ \ \ \ \ \ \ 
-	 x \notin \Formals {\sigma_1} {\Mtwo} \\
-	fields(\Mtwo,C)=\overline{f} \\
-	{\overline v}   \mbox{ initial values for } \overline f\\
-	\alpha \mbox{ fresh in } \sigma_1 \\
-	\sigma_2 = \sigma_1[x\mapsto \alpha][\alpha  \mapsto  (\ C;\  \overline{f\, \mapsto \, v} \  ] [\prg{cont}\mapsto s] 		}
-	{\exec{\Mtwo}{\sigma_1}{\sigma_2}}
-	\quad(\textsc{New})
-\end{mathpar}
-\vspace{-0.4cm}
-\caption{\LangOO operational Semantics}
-\label{f:loo-semantics}
-\end{minipage}
 
 Notice that the operational semantics preserves wellformedness of the state.
 This is expressed through an explicit condition which overwrites a variable in the top frame, but can, if course, be done more elegantly, eg by looking up the names of the formal parameters. However, since this can easily be done, and is not the main subject of our paper, we decided not to incorporate it in the operational semantics.
 From now on we require implicitly that $\models \sigma$.
 
+\begin{figure}[hbp]
 \begin{minipage}{\textwidth}
-\footnotesize
+\footnotesize{
 \begin{mathpar}
 \infer
 		{}
@@ -307,9 +247,9 @@ From now on we require implicitly that $\models \sigma$.
 		}
 		\quad(\textsc{E-Ghost})
 \end{mathpar}
+}
 \caption{\LangOO expression evaluation}
 \label{f:evaluation}
-\end{minipage}
 \end{minipage}
 \end{figure}
 
@@ -407,16 +347,16 @@ semantics of \LangOO, and thus there is no restriction on field access.
 %\completeProof
 %}
 
-\sdred{
+ 
 \beginProof{l:wf:state}
-The first assertion is proven by unfolding the definition of $\_ \models \_ $.
+\sdred{The first assertion is proven by unfolding the definition of $\_ \models \_ $.
 
 The second assertion is proven by case analysis on the execution relation $\exec {\_} {\sigma} {\sigma'}$. 
 The assertion gets established when we call a method, and is preserved through all the execution steps, because we do not allow assignments to the formal parameters.
-} 
+ 
+}
+\completeProof
 
-
-{
 We now prove lemma \ref{l:var:unaffect}:
 
 \beginProof{l:var:unaffect} 
