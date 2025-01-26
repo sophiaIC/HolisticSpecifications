@@ -11,7 +11,7 @@ and \emph{\externalO  objects} defined in
 \emph{any} number of external modules $\overline M$\footnote{We use the notation $\overline z$ for a sequence of $z$, \ie for $z_1,z_2,...z_n$ }.~ 
 States whose receiver (\prg{this}) is internal are \emph{internal states} -- they are executing code from the internal module -- the other states are  \emph{external states}.
 {\prg{Private} methods  {may only be} called by objects of the same
-  module,  while \prg{public}  methods  may be  by \emph{any}
+  module,  while \prg{public}  methods  may be \sue{called} by \emph{any}
   object with a reference to the method receiver, {and with
   actual arguments of  dynamic types that match} the declared formal parameter types.} 
 \footnote{As in Joe-E, we leverage  module-based privacy to restrict propagation of capabilities, and reduce the need for reference monitors etc, \cf Sect 3 in  \cite{JoeE}.}   
@@ -47,7 +47,7 @@ containing classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}.
 Classes  {\prg{Inventory} and \prg{Item} have the expected functionality. 
 \prg{Account}s hold a balance and have a \password. 
 Access to an \prg{Account},  allows one  to pay money into it, 
-and  access to an account  and its \password, allows one to withdraw money from it.
+and  access to an \prg{Account}  and its \prg{Key}, allows one to withdraw money from it.
 % Implementations of such a class  appear in the next section.
 }
  \prg{Shop}  has  a public method \prg{buy} whose formal parameter \prg{buyer} is an \prg{external}   object. 
@@ -79,7 +79,7 @@ The   sketch below  shows a possible heap snippet. Red and green rounded rectang
 \begin{tabular}{@{}lll@{}}
   \begin{minipage}{.74\textwidth}
 Each object has a  number, % (address), 
- followed by an abbreviation of its class. Here, $o_1$, $o_2$ and $o_5$ are a \prg{Shop}, an \prg{Inventory}, and external. 
+ followed by an abbreviated class name. Here, $o_1$, $o_2$ and $o_5$ are a \prg{Shop}, an \prg{Inventory}, and an external object. 
 
 Curved arrows %between objects 
 indicate field values. Here, $o_1$ has three fields, pointing to 
@@ -129,7 +129,7 @@ Can \prg{Shop}  be certain?} Indeed, if
 \item  \Mshop ensures that 
 \begin{enumerate}[(a)]
 \item access to keys is not leaked to external objects, \ \ \ \emph{----} and
-\item    that  funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password,
+\item   funds cannot be withdrawn unless the external entity responsible for the withdrawal has eventual access to the account's \password,
 \end{enumerate}
 \ \  \ \ \ \emph{----} then
 \item  The external  call on line 8 will not result  in a decrease in the shop's account balance.
@@ -187,8 +187,8 @@ We want to give a formal meaning to the guarantee that for some effect, $E$, and
 \hfill
 \begin{minipage}{.95\textwidth}
 \begin{flushleft}
-$E$ can be caused only  by external objects calling methods on internal objects, \\
-and only if the causing object has access  to $o_c$. 
+$E$ \sue{(\eg the account's balance decreases)} can be caused only  by external objects calling methods on internal objects, \\
+and only if the causing object has access  to $o_c$ \sue{(\eg the key)}. 
 \end{flushleft}
 \end{minipage}
 
@@ -200,7 +200,7 @@ and only if the causing object has access  to $o_c$.
 % \end{quote}
 
 \noindent 
-The first task is to describe that effect  $E$ took place: if we  find  some assertion $A$ which is invalidated by $E$, then, (*) can be described by something like:
+The first task is to describe that effect  $E$ took place: if we  find  some assertion $A$ \sue{(\eg must have the key to lower the balance)}which is invalidated by $E$, then, (*) can be described by something like:
 
 \vspace{.1cm}
 
@@ -239,7 +239,7 @@ Thus:
 \hfill
 \begin{minipage}{.95\textwidth}
 \begin{flushleft}
-\ If $A$ holds, \  and \  no external object  \emph{reachable from current point of execution}  has access to $o_c$, \\  
+\ If $A$ holds, \  and \  no external object  \emph{reachable from the current point of execution}  has access to $o_c$, \\  
 \   and\   no  internal objects pass $o_c$ to external objects,  \\
 \ then \ \ \  \ $A$ holds in  \emph{the future scoped by the current point of execution}.  
 \end{flushleft}
@@ -256,7 +256,7 @@ But first, we clarify the concept of "current point of execution".
 \subsubsection*{The Current Point of Execution} is characterized by the heap, and   the activation frame of the currently executing method. 
  Activation frames, or frames for short, consist of a variable map and a continuation -- the statements remaining to be executed. 
 Upon method call and return, frames are pushed onto/popped from the call stack.
-Thus, the frame on top of the stack is the one most recently pushed; therefore it corresponds to the currently executing method.
+Thus, the frame on top of the stack is the one most recently pushed; it corresponds to the currently executing method.
 \begin{figure}[tbh]
 \begin{tabular}{|c|c|c|}
 \hline
@@ -281,7 +281,7 @@ $\sigma_3$, top frame $\phi_3$
 \\
 \hline % \hline
 \end{tabular}
-\caption{\textit{ Current point of execution} before \prg{buy}, during \prg{buy}, and during \prg{pay}.  Frames $\phi_1$, $\phi_2$ in green, as their receiver (\prg{this}) is internal;  $\phi_3$ in red as its receiver is external. Continuations were elided.}
+\caption{\textit{ Current point of execution} before \prg{buy}, during \prg{buy}, and during \prg{pay}.  Frames $\phi_1$, $\phi_2$ in green, as their receiver (\prg{this}) is internal;  $\phi_3$ in red as its receiver is external. Continuations were omitted.}
  \label{f:CurrentPoint}
 \end{figure}
 
@@ -305,10 +305,21 @@ if no external object transitively accessible from $o'$ has direct access to $o'
 Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$,  
 if no external object transitively accessible from the current frame\footnote{An object is transitively accessible from a frame if
  there exists a sequence of field accesses leading from one of the variables in the frame  to that object.} has direct access to $o$,
- and   if $o$ is not an argument if the receiver is external.
-
-More in Def. \ref{def:chainmail-protection-from}. % and Fig. \ref{fig:ProtectedBoth}.   
+ and   if $o$ is not an argument if the receiver is external. 
+ 
+ More in Def. \ref{def:chainmail-protection-from}. % and Fig. \ref{fig:ProtectedBoth}.   
  \end{description}
+\sue{ SEVERAL CHANGES. NOTE the last o in the first sentence should not have a '
+
+Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
+if no external object transitively accessible from $o'$ has direct access to $o$.
+Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$,  
+if no external object transitively accessible from the current frame\footnote{An object is transitively accessible from a frame if 
+there exists a sequence of field accesses leading from one of the variables in the frame  to that object.} has direct access to $o$,
+ and  if the receiver is external then $o$ is not an argument. 
+ More in Def. \ref{def:chainmail-protection-from}. % and Fig. \ref{fig:ProtectedBoth}.   
+
+ }
  
  
 
@@ -371,8 +382,8 @@ $\sigma_3 \not \models \inside{o_4}$
  }
    \label{fig:ProtectedBoth}
  \end{figure}
- 
-  Fig. \ref{fig:ProtectedBoth} illustrates these concepts. In particular, $o_6$ is not protected in $\sigma_1$ nor $\sigma_2$, but is protected in $\sigma_3$. This is so, because when pushing a frame makes fewer objects  transitively accessible from the new top frame -- here, $o_5$ is transitively accessible from the  top frame in $\sigma_2$, but not transitively accessible from the   top frame in $\sigma_3$.
+ \sue{AFTER 'new top frame' THE SUBSRIPT SHOULD BE 4 NOT 5}
+  Fig. \ref{fig:ProtectedBoth} illustrates these concepts. In particular, $o_6$ is not protected in $\sigma_1$ nor $\sigma_2$, but is protected in $\sigma_3$. This is so, because pushing a frame makes fewer objects  transitively accessible from the new top frame -- here, $o_5$ is transitively accessible from the  top frame in $\sigma_2$, but not transitively accessible from the   top frame in $\sigma_3$.
  Moreover, $o_4$  is  protected in $\sigma_1$ and  $\sigma_2$,  and not  protected in $\sigma_3$. 
  This is so, because even though neither $o_5$ nor $o_7$ have direct access to $o_4$, in $\sigma_3$  the receiver is external, and $o_4$ is one of the arguments.
 
@@ -465,7 +476,8 @@ Green resp. red  disks represent  internal resp. external states.
  \end{figure}
  
 The scoped invariant   ${\TwoStatesN {\overline {x:C}} {A_0}}$   guarantees that  if $A_0$ holds in $\sigma_8$, then it will also hold in $\sigma_9$,    $\sigma_{13}$, and $\sigma_{14}$;
- it may or may not hold in $\sigma_{10}$, $\sigma_{11}$,  and $\sigma_{12}$ as these are internal states.
+ it %may or may not 
+ doesn't have to hold in $\sigma_{10}$, $\sigma_{11}$,  and $\sigma_{12}$ as these are internal states.
 Similarly, it guarantees that if $A_0$ holds at $\sigma_6$, then it will also hold at 
 $\sigma_7$, $\sigma_8$, $\sigma_9$, $\sigma_{13}$,  $\sigma_{14}$,   $\sigma_{15}$,  $\sigma_{16}$, $\sigma_{17}$,   $\sigma_{20}$ and  $\sigma_{21}$; it may or may not hold at
 $\sigma_{10}$, $\sigma_{11}$,  $\sigma_{12}$,  $\sigma_{18}$,  $\sigma_{19}$, as these are internal states.
@@ -600,7 +612,7 @@ $\ \strut \hspace{.01in} $ \prg{an\_account.set(42); an\_account.transfer(rogue\
 Even though  \prg{transfer} in  \ModB is ``safe'' when considered in isolation, it is not safe when considered in conjunction with other methods from the same module. 
 
 %Modules 
-$\ModA$ and $\ModC$ satisfy $S_2$ and $S_3$, while $\ModB$ satisfies neither. None satisfies $S_1$, because  \prg{pay} leaks an \prg{Account}.
+$\ModA$ and $\ModC$ satisfy $S_2$ and $S_3$, while $\ModB$ satisfies neither. None satisfy $S_1$, because  \prg{pay} leaks an \prg{Account}.
 
 \end{example}
  
