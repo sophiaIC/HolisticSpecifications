@@ -272,6 +272,111 @@ Rule {\sc{combine}} combines two quadruples for the same statement into one.
 Rule  {\sc{Absurd}} allows us to deduce anything our of \prg{false} precondition, and  {\sc{Cases}} allows for case analysis.
 These  rules  apply to \emph{any} statements -- even those containing method calls.
 
+\subsubsection{Adaptation}
+
+ \label{s:preserve:encaps}
+ \label{s:viewAndProtect}
+ 
+\sdred{ As  discussed in \S  \ref{sec:howThird},   the $\pushSymbolInText$ allows us to adapt an assertion from the view of the callee to that of the caller,
+ and is used in the Hoare logic from method calls. It is defined below.}
+ 
+% it is possible to know that a certain object will be protected ($\inside \re$) after pushing a frame, if we know enough about the arguments of that frame. 
+% %  for an assertion  not to be satisfied at the caller
+%% but to be  satisfied at the called viewpoint {(the callee)}. %:  right before a method call, $A$ might not be satisfied,
+%We define the operator $\pushSymbolInText$ which  translates an assertion from the viewpoint of a callee whose arguments are $\overline y$, to that of the caller.
+
+\begin{definition}
+\label{def:push}
+[The $\pushSymbolInText$  operator]  
+
+$
+\begin{array}{c}
+\begin{array}{l}
+\begin{array}{rclcrcl}
+  \PushAS y {\inside \re} & \triangleq &  \protectedFrom \re {\overline {y} }
+  & \ \ \  \ &
+  \PushAS y   {(A_1  \wedge  A_2)} & \triangleq &  (\PushAS y  { A_1})  \wedge  ( \PushAS y  {A_2} )  
+\\ 
+ \PushAS y {(\protectedFrom \re {\overline {u}})} &  \triangleq& \protectedFrom \re {\overline {u}} 
+  & &
+ \PushAS y  {(\forall x:C.A)} & \triangleq & \forall x:C.({\PushAS y A} )  
+  \\  
+  \PushAS y  {(\external \re)} &  \triangleq & {\external \re}  %   \PushAS y  {(\external \re)} & \triangleq &   {\external \re}
+  & & 
+  \PushAS y  {(\neg A)} &  \triangleq & \neg( {\PushAS y A} )  
+    \\
+     \PushAS y  {\re} &  \triangleq&   \re %    \PushAS y  {(\internal \re)} &  \triangleq & {\internal \re}
+    & &
+    \PushAS y  {(\re:C)} &  \triangleq&   \re:C 
+ \end{array}
+\end{array}
+\end{array}
+$
+\label{f:Push}
+\end{definition}
+
+Only the first equation in  Def.  \ref{def:push}  is interesting: for $\re$ to be {protected at  a} callee with argument $\overline y$, it should be protected from   % the call's 
+these arguments -- thus
+  $\PushAS y {\inside \re} = \protectedFrom {\re} {\overline {y}}$. 
+The notation $\protectedFrom {\re} {\overline {y}}$   stands for $\protectedFrom \re {y_0}\  \wedge\  ...  \wedge \protectedFrom \re {y_n}$, assuming that $\overline y$=${y_0, ... y_n}$.
+
+Lemma \ref{lemma:push:ass:state}  states that %  (\ref{lemma:push:ass:state:one}) and (\ref{lemma:push:ass:state:two}):  
+indeed, $\pushSymbolInText$ adapts assertions from the callee to the caller, and is the counterpart to the %states' 
+operator $\pushSymbol$.
+In particular:\ \ 
+ (\ref{lemma:push:ass:state:one}):\ If the caller,   $\sigma$,  satisfies  $\PushASLong  {Rng(\phi)} {A}$, then  the callee,   ($\PushASLong {\phi} {\sigma}$), satisfies $A$.
+\ \ (\ref{lemma:push:ass:state:two}):\ The opposite implication holds if the callee is external.
+\ \ (\ref{l:push:stbl}):\    $\pushSymbolInText$ turns an assertion into a stable assertion.
+\ \ (\ref{lemma:internal:adapted}): \ {In internal states, an assertion implies its adapted version. % (Lemma \ref{lemma:internal:adapted}).}
+  
+%% The below was fine when we had a more detailed version
+% (1) If \ the caller state
+%$\sigma$ satisfies  $\PushAS y A$, then  the callee's state  ($\PushASLong {\phi} {A}$) % (after pushing a frame with the values of $\overline y$) 
+%will satisfy $A$.  
+%(2) is the opposite: {If the called state ($\PushASLong {\phi} {A}$) % (in which we pushed a frame with the values for $\overline y, \overline z$
+% satisfies $A$, then the caller state will satisfy 
+%$\PushAS {y} {A}$. } % will hold {in the caller state}. % after popping that frame.
+
+\begin{lemma} 
+\label{lemma:push:ass:state}
+For  any  state  $\sigma$, assertion $A$,   % with $\fv(A)=\emptyset$,  %variables   $\overline y$, 
+frame $\phi$, and variables $\overline y$: % with $Range (\phi)=\overline {\interpret \sigma y}$:
+
+
+\begin{enumerate}
+ \item
+ \label{lemma:push:ass:state:one}
+$\fv(A)=\emptyset \ \ \wedge \ \  M, \sigma \models \PushASLong  {Rng(\phi)} {A}\ \  \ \ \ \ \  \ \ \    \Longrightarrow  \ \ \ \ M,  \PushSLong {\phi} {\sigma}   \models A$
+\item
+ \label{lemma:push:ass:state:two}
+$\fv(A)=\emptyset \ \ \wedge \ \ M,  \PushSLong {\phi} {\sigma}   \models  A  \wedge \extThis    \ \  \ \ \    \Longrightarrow  \ \ \ \ M, \sigma \models \PushASLong  {Rng(\phi)} {A}$
+\item
+\label{l:push:stbl}
+$\overline y\neq [] \ \ \ \ \Longrightarrow \ \ \ \ \Stable{ \PushAS y A}$
+\item
+\label{lemma:internal:adapted}
+$M, \PushSLong {\phi} {\sigma}  \models A \wedge \intThis \ \ \Longrightarrow M, \PushSLong {\phi} {\sigma}  \models  \PushASLong {Rng(\phi)} {A}$.
+\end{enumerate}
+\end{lemma}
+}
+
+
+
+Proofs of the lemma can be found in \A\ \ref{appendix:adaptation}. We next discuss examples demonstrating why the \prg{extl} and \prg{intl} requirements are necessary for (\ref{lemma:push:ass:state:two}) and (\ref{lemma:internal:adapted}) above, and why  original and adapted versions of assertions are not always comparable.
+
+\begin{example}[Comparing Validity of Adapted and Original versions] TODO - do not read!
+\label{push:does:not:imply}
+\notesep   $A$ does not imply $\PushAS {y} {A}$:\  \Eg  take 
+  a   $\sigma_1$ where $\interpret {\sigma_1} {\prg{this}}$ = $o_1$, and $o_1$ is {external},  and there is no other object. Then, we have
+$\_,\sigma_1 \models \inside {\prg{this}}$ and $\_,\sigma_1 \not\models \protectedFrom {\prg{this}} {\prg{this}}$.
+\notesep Nor does  $\PushAS {y} {A}$  imply $A$.\  \Eg  take a $\sigma_2$ where $\interpret {\sigma_2} {\prg{this}}$ = $o_1$,
+ $\interpret {\sigma_2} {x}$ = $o_2$ , and  $\interpret {\sigma_2} {x.f}$ = $o_3$, and $o_2$ is external, and there are no other objects or fields.
+ Then $\_,\sigma_2 \models   \protectedFrom {x.f} {\prg{this}}$ but  $\_,\sigma_2 \not\models \inside {x.f}$.
+\end{example}
+
+
+
+
 
 
 \subsubsection{Reasoning about   calls}

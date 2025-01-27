@@ -14,10 +14,14 @@ inheritance, subsumption, exceptions, and control flow.
 % it has a simple concept of module with module-private fields and methods, described in Sect. \ref{sect:execution}.
 \sdred{In our examples, we use numbers and booleans -- these can be encoded.}
  
- The syntax of \LangOO is given in Fig. \ref{f:loo-syntax}. It  includes syntax for ghost terms $gt$ that may %only
+ The syntax of \LangOO is given in Fig. \ref{f:loo-syntax}. It  includes syntax for ghost terms $\re$ that may %only
 be used in writing
-specifications or the definition of ghost fields.
-% The operational semantics of \LangOO~ {is given  in   {Appendix \ref{app:loo}.}\footnote{{{The examples in this paper are using  a slightly richer syntax for greater readability.}}}
+specifications or the definition of ghost functions (ghost fields). 
+\sdred{The syntax does  not distinguish between fields and ghost fields:
+$f$ stands  for a field, or a ghost  field, but not a method -- \ie no side-effects.}
+\footnote{
+\Eg  $\prg{a}.\prg{\balance}$ may, in some modules (\eg in \ModA), be a field lookup, while in others (e.g. when  balance is defined though an entry in a lookup table) may execute   a ghost function. 
+}% The operational semantics of \LangOO~ {is given  in   {Appendix \ref{app:loo}.}\footnote{{{The examples in this paper are using  a slightly richer syntax for greater readability.}}}
  A \LangOO state, $\sigma$,  consists of a  heap $\chi$ and a stack. 
 {A stack  is a sequence of frames, $\phi_1\!\cdot\!...\!\cdot\! \phi_n$.}
 A  frame, $\phi$, consists of a local variable map and a continuation, \ie a sequence of statements to be executed.
@@ -99,11 +103,11 @@ $
 \\
 \syntaxElement{gfld}{Ghost Field Def.}
 		{\syntaxline
-			{\prg{ghost}\ g\!f\ (\overline{x : T})\{\ gt\ \} : T}
+			{\prg{ghost}\ g\!f\ (\overline{x : T})\{\ re\ \} : T}
 %			{\prg{ghost}\ \prg{intrnl}\ g\  (\overline{x : T})\{\ gt\ \} : T} -- DO NOT REMOVE THESE yet
 		\endsyntaxline}
 \endSyntaxElement\\
-\syntaxElement{{gt}}{{Ghost Term}}
+\syntaxElement{{\re}}{{Ghost Term}}
 		{
 		\syntaxline
 				{x}
@@ -111,8 +115,8 @@ $
 %				{gt\! +\! gt}. -- DO NOT REMOVE THESE yet
 %				{gt\! =\! gt}
 %				{gt \!< \!gt}
-				{gt.f}
-				{gt_0.g\!f(\overline {gt})}
+				{\re.ff}
+				{\re_0.f(\overline {\re})}
 %		\endsyntaxline
 %		}
 %		{
@@ -449,9 +453,11 @@ $\leadstoOrig {\Mtwo} {\sigma_{14}}  {\sigma_{15}}$ and  $\NotEarlierS {\sigma_{
 
 \vspace{.1cm}
 {The relation $\boundedTrans$ contains more than the transitive closure of  $\bounded$.
-\Eg, ${\leadstoBoundedStar  {\Mtwo}  {\sigma_9}  {\sigma_{13}}}$, even though ${\leadstoBounded   {\Mtwo}  {\sigma_{9}}  {\sigma_{12}}}$  and ${\notLeadstoBounded   {\Mtwo}  {\sigma_{12}}  {\sigma_{13}}}$.} 
+\Eg, ${\leadstoBoundedStar  {\Mtwo}  {\sigma_9}  {\sigma_{13}}}$, even though ${\leadstoBounded   {\Mtwo}  {\sigma_{9}}  {\sigma_{12}}}$  and ${\notLeadstoBoundedStar   {\Mtwo}  {\sigma_{12}}  {\sigma_{13}}}$.} 
 %
 \sdred{Lemma \ref{l:params:do:not:change} says that the value of the parameters does not change during  execution of the same method. }
+\sdred{Appendix \ref{app:aux} discusses further properties of scoped execution, and proofs.}
+
 
 %Lemma \ref{lemma:orig:to:bounded:front} says  that \scoped executions describe the same set of executions as those  starting at an initial state\footnote{An \emph{Initial} state's heap contains a single object of class \prg{Object}, and
 %its  stack   consists of a single frame, whose local variable map is a mapping from \prg{this} to the single object, and whose continuation is  any statement.
@@ -465,13 +471,12 @@ $\leadstoOrig {\Mtwo} {\sigma_{14}}  {\sigma_{15}}$ and  $\NotEarlierS {\sigma_{
 \begin{lemma}
 \label{l:params:do:not:change} 
  
-  \sdred{For all $\Mtwo$, $\sigma$ and $\sigma'$:
- $\strut \hspace{0.3cm} \leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma'} \ \ \wedge\  \ \DepthFs{\sigma}=\DepthFs {\sigma'}\ \ \ \Longrightarrow\ \  \ \forall x\in \Formals {\Mtwo} {\sigma}.[ \ \interpret \sigma x = \interpret {\sigma'} x \ ]$
+  \sdred{For all $\Mtwo$, $\sigma$, $\sigma'$:
+ $\strut \hspace{0.3cm} \leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma'} \ \wedge  \ \DepthFs{\sigma}=\DepthFs {\sigma'}\ \ \ \Longrightarrow\ \  \ \forall x\in \Formals {\Mtwo} {\sigma}.[ \ \interpret \sigma x = \interpret {\sigma'} x \ ]$
 }
 \end{lemma}
  
 
-\sdred{Appendix \ref{app:aux} discusses further properties of scoped execution, and proofs.}
 
 
 
@@ -501,9 +506,9 @@ $ \LRelevantO   \sigma  \ \  \ \triangleq \ \  \  \{ \ \alpha \ \mid \ { \exists
 % \subsection{Well-formed states}
 
 \sdred{
-In well-formed states, $\Mtwo \models \sigma$,    the value of any parameter in any all callee   (${\RestictTo  \sigma {k}}$) is the same as the value of some variable in the caller (${\RestictTo  \sigma {k\!-\!1}}$),
+In well-formed states, $\Mtwo \models \sigma$,    the value of any parameter in any all callee   (${\RestictTo  \sigma {k}}$) is also the %same as the 
+ value of some variable in the caller (${\RestictTo  \sigma {k\!-\!1}}$),
 and any address reachable from any frame (${\LRelevantO   {\RestictTo  \sigma {k}} }$) is reachable from some formal parameter of that frame. 
-Well--formedness is satisfied in initial states $(1)$, and is preserved by execution $(2)$.
 }
 
 
@@ -540,11 +545,6 @@ $\Mtwo \models \sigma \ \wedge \ {\exec{\Mtwo} {\sigma} {\sigma'}}  \ \    \Long
 \label{oneLR}
 {$ \sigma'= \PushSF {\phi} {\sigma}   \ \wedge  \  \sdred{ \Mtwo \models \sigma'} %  {Rng(\phi)} \subseteq \LRelevantO  {\sigma} 
  \ \  \Longrightarrow\ \ \LRelevantO {\sigma'}\  \subseteq \LRelevantO   {\sigma}$}
-\item
-\label{threeLR}
-{${\leadstoBoundedStar {\Mtwo}  {\sigma}    {\sigma'}}  \ \  \Longrightarrow\ \ 
-dom(\sigma) \cap \LRelevantO {\sigma'} \subseteq   \LRelevantO {\sigma}$
-}
 
 \end{enumerate}
 \end{lemma}
