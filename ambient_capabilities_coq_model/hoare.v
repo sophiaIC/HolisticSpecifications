@@ -85,7 +85,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   Definition hoare_triple_semantics (M : module)(P : asrt)(s : stmt)(Q : asrt) :=
     forall χ lcl s' ψ χ' lcl',
       reductions M (frm lcl s ⋅ ψ, χ) (frm lcl' s' ⋅ ψ, χ') ->
-      final s ->
+      final s' ->
       sat M (frm lcl s ⋅ ψ, χ) P ->
       sat M (frm lcl' s' ⋅ ψ, χ) Q.
 
@@ -139,8 +139,6 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
     end.
 
   (* Proof Rules *)
-
-  (* Is there a purpose to splitting the internal and external method arguments? *)
 
   Fixpoint Stbl (A : asrt) :=
     match A with
@@ -318,9 +316,9 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   (** -----------------------------*)
   (** M ⊢ ⦃ true ⦄ x := new C ⦃ ⟪ x ⟫ <-\- y ⦄ *)
 
-  | h_prot_new2 : forall M x y C,
-      x <> y ->
-      M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt_frm (e_ x) (e_ y)⦄
+  | h_prot_new2 : forall M u x C,
+      u <> x ->
+      M ⊢ ⦃ a_true ⦄ (s_new u C) ⦃ a_prt_frm (e_ u) (e_ x)⦄
 
 
   (** -----------------------------*)
@@ -329,7 +327,7 @@ i.e. if we overwrite the variable in the method body, but don't modify the origi
   | h_prot_new3 : forall M x C e,
       M ⊢ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄
 
-
+  (* TODO: check is in paper!!! *)
   (* add to appendix & fix markup *)
   (** -----------------------------*)
   (** M ⊢ ⦃ true ⦄ x := new C ⦃ prt x ⦄ *)
@@ -385,6 +383,7 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** ----------------- *)
   (** M ⊢ ⦃ P1 ∧ P2 ⦄ s ⦃ Q1 ∧ Q2 ⦄  *)
 
+  (* TODO: remove *)
   | h_and : forall M P1 P2 s Q1 Q2,
       M ⊢ ⦃ P1 ⦄ s ⦃ Q1 ⦄ ->
       M ⊢ ⦃ P2 ⦄ s ⦃ Q2 ⦄ ->
@@ -393,7 +392,7 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** ----------------- *)
   (** M ⊢ ⦃ [y.f / x] P ⦄  ⦃ P ⦄  *)
 
-  (*)| h_read : forall M x y f P,
+  (*| h_read : forall M x y f P,
       M ⊢ ⦃ [e_ y∙f /s x] P ⦄ s_read x (e_fld (e_ y) f) ⦃ P ⦄*)
 
   (** M ⊢ ⦃ P ∧ e ⦄ s1 ⦃ Q ⦄ *)
@@ -401,22 +400,30 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** -----------------------------*)
   (** M ⊢ ⦃ P ⦄ if e then s1 else s2 ⦃ Q ⦄  *)
 
+  (* TODO: Does appear in paper. Sophia to move from App H -> AppF. *)
   | h_if : forall M e s1 s2 P Q,
       M ⊢ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
       M ⊢ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
       M ⊢ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄
 
   (** -----------------------------*)
-  (** M ⊢ ⦃ w prt-frm x ⦄ y := z.f ⦃ w prt-frm x ⦄  *)
+  (** M ⊢ ⦃ prt-frm w x ∧ prt-frm w z ⦄ y.f := z ⦃ prt-frm w x ⦄  *)
 
+  (* TODO: duplicate of h_prot4. remove.*)
   | h_write_prt_frm : forall M w x y z f,
       M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ∧
               a_prt_frm (e_ w) (e_ z) ⦄
         s_write y f (e_ z)
         ⦃ a_prt_frm (e_ w) (e_ x) ⦄
 
-  | h_write_prt1 : forall M e1 x f e2,
-      M ⊢ ⦃ a_prt e1 ∧ a_prt e2 ⦄ s_write x f e2 ⦃ a_prt e1 ⦄
+  (* TODO: check if used/needed. not sound. must remove.
+
+   e1 := if x ≠ y then p else u
+   e2 := y
+
+   *)
+  (*| h_write_prt1 : forall M e1 x f e2,
+      M ⊢ ⦃ a_prt e1 ∧ a_prt e2 ⦄ s_write x f e2 ⦃ a_prt e1 ⦄*)
 
   (*| h_write_prt2 : forall M e x f y,
       simple_exp e ->
@@ -443,13 +450,15 @@ Because of this, we can preserve the usual assignment rule from HL.
     comes up in the proof of Account::set. I will think more about this...
    *)
 
-  | h_prot1 : forall M A e s,
+  (* TODO: remove A. derivable using h_and *)
+
+  | h_prot1 : forall M e s A,
       Stbl A ->
       call_free s ->
       (forall z, does_not_assign_to_var s z ->
-            M ⊢ ⦃ A ∧ a_ (e_eq e (e_ z)) ⦄
-              s
-              ⦃ a_ (e_eq e (e_ z)) ⦄) ->
+            M ⊢ ⦃ (A ∧ a_ (e_eq e (e_ z))) ⦄ s ⦃ (a_ (e_eq e (e_ z))) ⦄) ->
+            (*M ⊢ ⦃ a_ (e_eq e (e_ z)) ⦄ s ⦃ a_ (e_eq e (e_ z)) ⦄ ->
+            does_not_assign_to_var s z) ->*)
       M ⊢ ⦃ A ∧ a_prt e ⦄ s ⦃ a_prt e ⦄
 
   (*)| h_prot1_variant : forall M e s,
@@ -481,10 +490,10 @@ Because of this, we can preserve the usual assignment rule from HL.
    *)
 
   | h_prot2 : forall M x z z' e e' e'' s,
-      (*((s = s_read x e'') \/ (s = s_read x e'') ->*)
+      (*((s = s_read x y) \/ (s = s_read x ((e_ y) ∙ f)) \/ (s = x := v) ->*)
       z <> x -> z' <> x ->
       M ⊢ ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄
-        s_read x e''
+        s_read x e'' (* s *)
         ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄ ->
       M ⊢ ⦃ a_prt_frm e e' ⦄ s ⦃ a_prt_frm e e' ⦄
 
@@ -506,11 +515,19 @@ Because of this, we can preserve the usual assignment rule from HL.
       M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ ->
       M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄
 
+  (* TODO: change to TYPES1 from the paper -> USE TYPES1 below *)
   | h_read_type : forall M e T x,
       M ⊢ ⦃ a_ (e_typ e T) ⦄
-        (s_read x e)
+        (s_read x e) (* change to general s *)
         ⦃ a_ (e_typ (e_ x) T) ⦄
 
+  (* TODO: change to TYPES1 from the paper *)
+  | h_types1 : forall M e T x,
+      M ⊢ ⦃ a_ (e_typ e T) ⦄
+        (s_read x e) (* change to general s *)
+        ⦃ a_ (e_typ (e_ x) T) ⦄
+
+  (* TODO: remove *)
   | h_read_prt_frm : forall M e1 e2 e x y,
       e = (e_ y) \/ (exists f, e = (e_fld (e_ y) f)) ->
       (forall z1 z2, ~ In z1 (x::y::nil) ->
