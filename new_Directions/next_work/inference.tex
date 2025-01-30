@@ -506,6 +506,38 @@ where the choice is made at runtime.
 However, such scenaria  can be  supported through the case-split rule and the rule of consequence. 
 More details in h \A\  \ref{app:polymorphic}.
 
+\begin{example}[Proving external calls]
+We continue our discussion from \S \ref{sec:howThird} on how to establish the Hoare triple    \textbf{(1)} :
+
+ \vspace{.05cm}
+  \begin{minipage}{.05\textwidth}
+   \textbf{(1?)}\ \ 
+\end{minipage}
+\hfill
+\begin{minipage}{.95\textwidth}
+\begin{flushleft}
+$\{\  \   \external{\prg{buyer}} \ \wedge\ 
+% red here is meanrt to make the contrast with the  next one 
+   {\protectedFrom {\prg{this.\myAccount.key}}  {\prg{buyer} } }
+ \ \wedge\ \prg{this.\myAccount.\balance}= b  \ \  \}$\\
+$\ \ \ \ \ \ \ \ \ \ \ \ {\ \prg{buyer.pay(this.accnt,price)}   \ } $\\
+$  \{\  \ \  {\prg{this.\myAccount.\balance}} \geq  b \  \  \} \ \ ||\ \  \{\ \inside{\prg{a.\password}}\wedge  \prg{a.\balance}\!\geq\!{\prg{b}}   \ \}  $ 
+\end{flushleft}
+\end{minipage}
+ 
+\vspace{.03cm}
+\noindent
+We use $S_3$, which says that $\TwoStatesN{ \prg{a}:\prg{Account},\prg{b}:\prg{int} } {\inside{\prg{a.key}} \wedge \prg{a.\balance} \geq \prg{b} }$. 
+We can apply rule {\sc{Call\_Ext\_Adapt}}, by taking  $y_0 \triangleq \prg{buyer}$,  and $\overline {x : D}\triangleq \prg{a}:\prg{Account},\prg{b}:\prg{int}$, 
+and $A \triangleq  \inside{\prg{a.\pwd}}\wedge \prg{a.\balance}\geq \prg{b}$, \ \ 
+and $m \triangleq \prg{pay}$,\ and $\overline {y} \triangleq \prg{this.accnt},\prg{price}$,
+and provided that we can establish that\\
+\strut \ \ \   \textbf{(2?)}  $ {\small{\strut \ \ \ \protectedFrom {\prg{this.\myAccount.key}} {(\prg{buyer},\prg{this.\myAccount},\prg{price})}}}$\\
+holds. Using   Def. \ref{def:push}, and type information, we can indeed establish that\\
+\strut \ \ \   \textbf{(3)} $ {\small{\strut \ \ \ \protectedFrom {\prg{this.\myAccount.key}} {(\prg{buyer},\prg{this.\myAccount},\prg{price})}  \ = \   \protectedFrom {\prg{this.\myAccount.key}} {\prg{buyer}}}}$\
+Then, by application of the rule of consequence, \textbf{(3)}, and the rule {\sc{Call\_Ext\_Adapt}}, we can establish \textbf{(1)}.\ \ \ 
+More details in \S  \ref{l:buy:sat}.
+\end{example}
 
 \subsection{Third phase: Proving adherence to Module Specifications}
 \label{sect:wf}
@@ -617,8 +649,98 @@ specification $\TwoStatesN{ \overline{x:C}} {A}$,  if the method body of each pu
 \textbf{Barendregt} In  {\sc{method}} we \sdN{implicitly} require   the free variables  in a method's precondition  not to overlap with variables in its body, unless they are the receiver or one of the parameters ($\sdN{\vs(stmt) \cap \fv(A_1) \subseteq   \{ \prg{this}, y_1, ... y_n \} }$).  And in {\sc{invariant}} we require   the free variables in $A$ (which are a subset of  $\overline x$) not to overlap with the variable  in $stmt$ ($ \sdN{ \vs(stmt)\,  \cap\, \overline x\, =\, \emptyset}$).
 This can easily be achieved through renamings, \cf Def. \ref{d:promises}.
 
+\newcommand{\sdsp}{\strut \ \ \ \ \ }
 
-
-
+\begin{example}[Proving a public method] Consider the proof that \prg{Account::set} from $M_{fine}$ satisfies $S_2$. Applying rule {\sc{invariant}}, we need to establish:\\
+{\small{ \vspace{.05cm}
+  \begin{minipage}{.05\textwidth}
+  \textbf{(5?)}\ \ 
+\end{minipage}
+\hfill
+\begin{minipage}{.95\textwidth}
+\begin{flushleft}
+$\{ \  \   ... \prg{a}:\prg{Account}\ \wedge\,  {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {(\prg{key'},\prg{key''})} \  \} \ $\\
+$\ \ \ \ \ \ \ \ \ \ \  \prg{body\_of\_set\_in\_Account\_in}\_ M_{fine}\   $\\
+$  \{\  \ \   \{ {\inside{\prg{a.key}}}\ \wedge\ {\PushASLong {\prg{res}\ } {\ \inside{\prg{a.key}}}} \   \} \ \ \  || \ \ \ 
+	   \{ {\inside{\prg{a.key}}} \}  $ 
+\end{flushleft}
+\end{minipage}
+}}
+\vspace{.03cm}
+\noindent
+Given the conditional statement in \prg{set}, and with the obvious treatment of conditionals (\cf Fig. \ref{f:substructural:app}), among other things, we  need to prove for the \prg{true}-branch that:\\
+\vspace{.01cm}
+{\small{  \begin{minipage}{.05\textwidth}
+  \textbf{(6?)}\ \ 
+\end{minipage}
+\hfill
+\begin{minipage}{.95\textwidth}
+\begin{flushleft}
+$\{ \  \   ...    {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {(\prg{key'},\prg{key''})}  \wedge  \,  \prg{this.key}=\prg{key'}\  \} \ $\\
+$\ \ \ \ \ \ \ \ \ \ \  \prg{this.key := key'}\   $\\
+$  \{\  \ \   \{ {\inside{\prg{a.key}}}\   \   \} \ \ \  || \ \ \   \{ {\inside{\prg{a.key}}} \}  $ 
+\end{flushleft}
+\end{minipage}
+}}
+\\
+ \vspace{.03cm}
+\noindent
+We can apply case-split  (\cf Fig. \ref{f:substructural:app}) on whether \prg{this}=\prg{a}, and thus a proof of \textbf{(7?)} and \textbf{(8?)}, gives a proof of \textbf{(6)}:\\
+ \vspace{.03cm}
+{\small{  \begin{minipage}{.05\textwidth}
+   \textbf{(7?)}\ \ 
+\end{minipage}
+\hfill
+\begin{minipage}{.95\textwidth}
+\begin{flushleft}
+$\{ \  \   ...    {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {(\prg{key'},\prg{key''})} \wedge  \,  \prg{this.key}\!=\!\prg{key'}\ \wedge\ \prg{this}\!=\!\prg{a}  \} \ $\\
+$\ \ \ \ \ \ \ \ \ \ \   \prg{this.key := key'}\    $\\
+$  \{\  \ \   \{ {\inside{\prg{a.key}}}  \   \} \ \ \  || \ \ \     \{ {\inside{\prg{a.key}}} \}  $ 
+\end{flushleft}
+\end{minipage}
+}}
+\\
+and also
+\\
+ \vspace{.03cm}
+{\small{  \begin{minipage}{.05\textwidth}
+   \textbf{(8?)}\ \ 
+\end{minipage}
+\hfill
+\begin{minipage}{.95\textwidth}
+\begin{flushleft}
+$\{ \  \   ...   {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {(\prg{key'},\prg{key''})}  \wedge  \,  \prg{this.key}\!=\!\prg{key'}\ \wedge\ \prg{this}\!\neq\!\prg{a}  \} \ $\\
+$\ \ \ \ \ \ \ \ \ \ \  \prg{this.key := key'}\   $\\
+$  \{\  \ \   \{ {\inside{\prg{a.key}}}  \   \} \ \ \  || \ \ \     \{ {\inside{\prg{a.key}}} \}  $ 
+\end{flushleft}
+\end{minipage}
+}}
+\\
+ \vspace{.03cm}
+\noindent
+If  $ \prg{this.key}\!=\!\prg{a'}\ \wedge\ \prg{this}\!=\!\prg{a}$, then $\prg{a.key}\!=\!\prg{key'}$, which contradicts that $\protectedFrom {\prg{a.key}} {\prg{key'}}$, and so by contradiction (\cf Fig. \ref{f:substructural:app}), we have proven   \textbf{(7?)}.
+When  $\prg{this.key}\!\neq \!\prg{a}$, we would obtain from the underlying Hoare logic that the value of \prg{a.key} did not change. Thus, we can apply rule {\sc{Prot\_1}}, and obtain  \textbf{(7?)}. \ \ \ More details in \S \ref{l:set:sat}
+\\
+ 
+ \vspace{.06cm}
+\noindent
+This also demonstrates why \prg{set} from $M_{bad}$ cannot be proven to satisfy $S_3$. Namely, it % \prg{set} from $M_bad$ 
+ does not have the condition \prg{this.key}=\prg{key'}, and would requires us to prove that\\
+\vspace{.03cm}
+{\small{  \begin{minipage}{.05\textwidth}
+   \textbf{(??)}\ \ 
+\end{minipage}
+\hfill
+\begin{minipage}{.95\textwidth}
+\begin{flushleft}
+$\{ \  \   ...    {\inside{\prg{a.key}}} \, \wedge \, \protectedFrom {\prg{a.key}} {(\prg{key'},\prg{key''})}  \   \} \ $\\
+$\ \ \ \ \ \ \ \ \ \ \  \prg{this.key := key'}\   $\\
+$  \{\  \ \   \{ {\inside{\prg{a.key}}}\   \   \} \ \ \  || \ \ \   \{ \ {\inside{\prg{a.key}}} \ \}  $ 
+\end{flushleft}
+\end{minipage}
+}}
+\\
+and there is no way we can prove \textbf{(??)}.
+\end{example}
 
  
