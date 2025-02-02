@@ -9,16 +9,21 @@
 
 \paragraph{External calls}
 
-In today's complex software, internal, trusted, code  is tightly intertwined  with external, untrusted, code: external code
-calls into internal code, internal code calls
-out to external code  and external code  even calls back  into internal code --- all within the same call chain.
-
-
+%% In today's complex software, internal, trusted, code  is tightly intertwined  with external, untrusted, code: external code
+%% calls into internal code, internal code calls
+%% out to external code  and external code  even calls back  into internal code --- all within the same call chain.
+Software is critical to today's open world. 
+External, untrusted, or unknown code calls our trusted internal code, that internal code 
+calls out to other external code  and external code can even call back  into internal code --- all within the same call chain.
+%
+%
 This paper addresses reasoning about \emph{external calls} --- when
 trusted internal code calls out to untrusted, unknown external code.
-This reasoning is hard because by ``external code'' we mean untrusted
-code where we don't have a specification.
-External code may even have been written by an attacker trying to subvert or destroy the whole system.  
+This reasoning is hard because by ``external code'' we mean untrusted code
+where we don't have a specification,
+where we may not be able to get source code, or
+which may even have been written to attack and subvert the system.
+%External code may even have been written by an attacker trying to subvert or destroy the whole system.  
 %Worse still, external code can call back into internal code as part of the same call chain. SUSAN:said in the paragraph before.
 \forget{
 External code may be written years or decades after the core 
@@ -29,19 +34,21 @@ can run code for machines back to the Manchester
 Baby \cite{MAME-SSEM}, where source code is long lost in the bits of
 history \cite{Smalltalk-bits}.
  }
- 
-
-\vspace*{1mm}
-
-
+ %
+%
+\vspace*{-2mm}
+%
+%
+\newlength{\curparindent}
+\setlength{\curparindent}{\parindent}
 \noindent
 \begin{flushleft}
 \begin{tabular}{@{}lll@{}}
   \begin{minipage}{.55\textwidth}
-    In this code sketch, 
-%  The code sketch to the right illustrates the problem.
+\setlength{\parindent}{\curparindent}
+In the code sketch to the right, 
 %  While
-    the internal module,  $M_{intl}$, has two  methods. %,  \prg{m1}  and \prg{m2}. 
+an internal module,  $M_{intl}$, has two  methods. %,  \prg{m1}  and \prg{m2}. 
     %contains only trusted code, but
  %   code is trusted,
   Method \prg{m2} takes an untrusted parameter \prg{untrst},
@@ -66,26 +73,27 @@ module $M_{intl}$
 \end{tabular}
 \end{flushleft}
 
-
-
+\vspace*{-4mm}
  \paragraph{External calls  need not have  arbitrary   effects} 
 If the programming language supports encapsulation (\eg no address forging, private
  fields, %, ownership, no direct memory access 
  \etc) then internal modules can be  written \emph{defensively} %\cite{MillerPhD}, 
-so  that effects are
+so  that effects are either
 
  \begin{customquote}
 \emph{Precluded}, \ie  guaranteed to \emph{never happen}.
   E.g., a  correct  %defensive 
  implementation of the DAO  \cite{Dao} can ensure that  
- the DAO's balance  never falls below the sum of the balances of its subsidiary accounts.
+ the DAO's balance  never falls below the sum of the balances of its subsidiary accounts, or
 
 
- \emph{Limited}, \ie  they  \emph{may happen}, but  
-  \emph{only if} the external 
-code  uses  certain \emph{object  capabilities}.
-E.g., while the DAO does not preclude that a signatory's balance will decrease, it  does ensure that the balance decreases only if the
-code causing this reduction used  the signatory itself.
+ \emph{Limited}, \ie  they  \emph{may happen}, but
+ only in well-defined circumstances.
+%%   \emph{only if} the external 
+%% code  uses  certain \emph{object  capabilities}.
+E.g., while the DAO does not preclude that a signatory's balance will decrease, it  does ensure that the balance decreases only
+as a direct consequence of calls from the signatory.
+% if the code causing this reduction uses the signatory itself.
  
  \end{customquote}
  
@@ -93,9 +101,12 @@ code causing this reduction used  the signatory itself.
  
 \noindent
 %\sdred{Reasoning about  effects limited through capabilities is the remit of this paper.}
-Precluded effects is a special case of effects limited through capabilities -- reasoning about these 
-has been studied in the context of object invariants   \cite{staticsfull,DrossoFrancaMuellerSummers08,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06}. 
-{Reasoning about effects limited  through capabilities is the remit of this paper.}
+Precluded effects are special case of limited effects,
+and have been studied extensively in the context of object invariants   \cite{staticsfull,DrossoFrancaMuellerSummers08,BarDelFahLeiSch04,objInvars,MuellerPoetzsch-HeffterLeavens06}.
+In this paper, we tackle the more general, more difficult, and more subtle case of reasoning about limited effects for external calls.
+%{Reasoning about limited effects
+%  %through capabilities
+%  is the remit of this paper.}
   
 %  While the literature has explored external calls \cite{vanproving,cerise-jacm2024,vmsl-pldi2023,ddd}, ``robust safety'' \cite{gordonJefferyRobustSafety,robustSafetyPatrignani,abate2019journey}, \etc, to our knowledge, there is no widely accepted term limiting the range of effects resulting from external calls.
  
@@ -106,35 +117,38 @@ has been studied in the context of object invariants   \cite{staticsfull,DrossoF
 \paragraph{The Object Capability Model}\footnoteSD{SD says: check whether these two paragraph are the "necessary" nature}
 
 
-The object-capability model combines the ``capabilities'' developed
-for operating system security 
-\forget{as in the Cambridge CAP or IBM
-System/38} 
-(\cite{levy:capabilities,CAP}) with pure object-oriented
-programming
-\forget{as SELF or Actors}(\cite{selfpower,selfexp95,agha_actors_1987}).  Capability-based
-operating systems reify effects and resources 
-\forget{(such as memory regions,
-files, or even hardware devices)}as \textit{capabilities} ---
+The object-capability model combines the capability model
+of operating system security \cite{levy:capabilities,CAP}
+with pure object-oriented programming
+\cite{selfpower,selfexp95,agha_actors_1987}.  Capability-based
+operating systems reify resources
+%and effects 
+%(such as memory regions,
+%  files, or even hardware devices)}
+as \textit{capabilities} ---
 unforgeable, distinct, duplicable, attenuable, communicable bitstrings
-which both denote a resource and grant rights which can be exercised
-over that resource. Access control\forget{over effects} is\forget{then} achieved
-solely by controlling access to the capabilities.\forget{that reify those
-effects. To create a new file, for example, a process must possess a
-capability to the directory that will contain the new file, a
-capability strong enough to create new files. Invoking the
-``\texttt{creat}'' system call \cite{Kern84a} on that capability will
-create a new file and return a capability for that file.  Duplicating
-the capability and sending it to another process shares the file with
-that process, granting that process access to the file; sending a suitably
-attenuated capability can e.g.\ grant the other process read-only
-access.}
+which both denote a resource and grant rights over that resouce.
+%Causing an effect
+%on a resource
+%requires invoking the capability to that resource:
+Effects can only be caused by invoking capabilities:
+controlling effects reduces to controlling capabilities.
+%% \forget{that reify those
+%% effects. To create a new file, for example, a process must possess a
+%% capability to the directory that will contain the new file, a
+%% capability strong enough to create new files. Invoking the
+%% ``\texttt{creat}'' system call \cite{Kern84a} on that capability will
+%% create a new file and return a capability for that file.  Duplicating
+%% the capability and sending it to another process shares the file with
+%% that process, granting that process access to the file; sending a suitably
+%% attenuated capability can e.g.\ grant the other process read-only
+%% access.}
 
 
 % \forget{As described by} 
 Mark Miller's \cite{MillerPhD}
-\textit{object}-capability model uses\forget{on the recognition that}
-object references\forget{satisfy all the requirements to be effective}
+\textit{object}-capability model treats
+object references
 as capabilities. 
 Building on early object-capability languages such as E
 \cite{MillerPhD,ELang} and Joe-E \cite{JoeE}, 
@@ -156,13 +170,16 @@ is encoded in the relationships between the objects, and the interactions betwee
 %\forget{-- interactions which can communicate capabilities around the system.  As such, object
 %capabilities offer a seamless model throughout a programming language or even a distributed global system\footnote{To quote Dan Ingalls,
 %``Operating System:\ldots there shouldn't be one'' \cite{ingalls1981}.}. } 
- As argued in  \citet{capeFTfJP}, %Drossopoulou and Noble have put it:
+ As argued by \citet{capeFTfJP}, %Drossopoulou and Noble have put it:
 %\textit{``
-object capabilities are a mechanism which makes it possible to write secure
-  programs
+ object capabilities
+ %are a mechanism which makes
+ make it possible to write secure
+  programs,
 % }  %  \cite{capeFTfJP}\forget{ in ways other security models simply do not, }although they 
-  but cannot guarantee that any particular program
-  using the provided mechanism is, indeed,  secure.
+  but cannot by themselves guarantee that any particular program
+  %  using the provided mechanism is, indeed,  secure.
+  will be secure.
   %  uses the provided mechanism to be correct or even secure.
 %The formulation and verification of such guarantees 
 %
@@ -180,31 +197,35 @@ object capabilities are a mechanism which makes it possible to write secure
  Recent work has developed logics to prove properties of programs employing object capabilities.
 \citet{ddd} develop a logic to prove that code employing object
 capabilities for encapsulation preserves invariants for
-intertwined code, but without external calls. 
-\forget{Relying on techniques from separation logic, they intend their proofs e.g.\ to support library components that can be reused in different contexts.}
-\forget{--- which is implicitly support in our distinction between external and internal code.
- \footnote{\red{TO CHECK}\kjx{I have looked at it - good enough for
- me.}}}
-  \citet{dd} \forget{work with Kripke logical relations describing program semantics, which} can describe and verify invariants
+intertwingled code, but without external calls. 
+%\forget{Relying on techniques from separation logic, they intend their proofs e.g.\ to support library components that can be reused in different contexts.}
+%\forget{--- which is implicitly support in our distinction between external and internal code.
+% \footnote{\red{TO CHECK}\kjx{I have looked at it - good enough for
+% me.}}}
+\citet{dd}
+%\forget{work with Kripke logical relations describing program semantics, which can}
+describe and verify invariants
 about multi-object structures and the availability and exercise of object capabilities.  %\citeauthor{dd} 
 % They propose and solve several
 % problems involving external calls. 
-\forget{,  but require proofs specific to each individual problem, rather than a systematic Hoare logic.}
- Similarly,
-{\citet{vmsl-pldi2023} propose a separation logic to support formal modular reasoning about communicating VMs, including in the presence of unknown VMs.
+%\forget{,  but require proofs specific to each individual problem, rather than a systematic Hoare logic.}
+Similarly,
+\citet{vmsl-pldi2023} propose a separation logic to support formal modular reasoning about communicating VMs, including in the presence of unknown VMs.
 \citet{irisWasm23} specify WASM modules, %and compose them in a simple target language, 
-and prove that adversarial code  can only affect other modules through the functions} that they explicitly export. 
+and prove that adversarial code can affect other modules only through functions they explicitly export. 
 %Since external calls may in turn call any number of internal, public methods, 
 %it is crucial  to prove that \taming of effects is preserved by the module's 
 %\emph{emergent} behaviour, \ie any intertwining of external code with calls to internal, public methods.
-\citet{CassezFQ24}  handle external calls by replacing them through an unbounded number of calls to the module's public methods.
+\citet{CassezFQ24} model external calls as an unbounded number of invocations to a module's public interface.
  
- The approaches above %, with partical exception of  \cite{{FASE,OOPSLA22} 
- do not aim to support indirect, eventual access to capabilities.
-\citet{FASE} and \citet{OOPSLA22} do describe such access; %concentrate on access to capabilities;
-  the former proposes  ``holistic specifications'' to describe a module's emergent behaviour. 
+The approaches above %, with partical exception of  \cite{{FASE,OOPSLA22} 
+do not aim to support
+%indirect, eventual access to capabilities.
+general reasoning to limit the effects of external calls to untrusted code.
+\citet{FASE} and \citet{OOPSLA22} begin to tackle external effects; %concentrate on access to capabilities;
+the former proposes  ``holistic specifications'' to describe a module's emergent behaviour. 
 and the latter develops 
-a tailor-made logic to prove that modules which do not contain external calls adhere to such specifications.
+a tailor-made logic to prove that modules which do not contain external calls adhere to holistic specifications.
 %They propose a tailor-made proof for an external call.
 %We argue that in order to \emph{prove} that effects are \tamed,
 %we need a way to specify the conditions necessary for that effect, 
@@ -216,19 +237,20 @@ a tailor-made logic to prove that modules which do not contain external calls ad
 %\vspace{.03cm}
 %
 %Other than this, 
-%{To} reason about the effects of specific external calls,
+%{To} reason about the effects of ific external calls,
 %the systems above {would} rely on problem-specific, custom-made proofs rather than a Hoare logic.
 Rather than relying on problem-specific, custom-made proofs, we propose a Hoare logic that addresses access to capabilities, limited effects, and external calls.
 % and their limited effects.
 
-  
-\paragraph{This paper's contributions} % In this paper we propose 
-{(1) assertions to describe   access to capabilities}, 
-(2) a specification language to \sdred{specify} effects limited through capabilities.
-3) a Hoare logic to reason about external calls and to prove that modules satisfy their %\tamed effects 
+%\paragraph{This paper's contributions}
+\paragraph{This paper contributes}
+(0) a demonstration that object-capabilities can reify the effects of external calls,
+{(1) \emph{protection assertions} to limit access to object-capabilities, and concomitantly limit effects}, 
+(2) a specification language to define how capabilities should limit effects, %effects should be limited by capabilities.
+(3) a Hoare logic to reason about external calls and to prove that modules satisfy their %\tamed effects 
 specifications,
-4)  proof of soundness,
-5) a worked illustrative example {with a mechanised proof in Coq}.
+(4) proof of soundness,
+(5) a worked illustrative example {with a mechanised proof in Coq}.
  
 
  \paragraph{Structure of this paper}
