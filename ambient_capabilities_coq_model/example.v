@@ -2125,13 +2125,25 @@ e : C
 
     *
       (* Account::transfer *)
-      unfold simplify_conj;
-        simpl.
+      simpl.
       unfold transferBody.
+      simpl_types.
+      conseq_post
+        (a_prt ((e_ a) ∙ key) ∧
+           (a_ e_lt (e_ b) ((e_ a) ∙ balance) ∧
+              a_prt_frm ((e_ a) ∙ key) (e_ result)));
+        try solve [unfold prt_frms, asrt_frm_list;
+                   simpl;
+                   intros_entails;
+                   repeat asrt_sat_auto_destruct_conj;
+                   auto with assert_db].
       repeat split_post_condition_by_conjunction.
  (*     drop_right_of_conj.
       drop_right_of_conj.
       apply_hq_sequ_with_mid_eq_fst.*)
+      (* TODO: clean up. too many subgoals created due to
+               duplicates in post-condition
+       *)
 
       **
         conseq_pre (a_prt ((e_ a) ∙ key));
@@ -2190,38 +2202,73 @@ e : C
         simpl.
         unfold prt_frms, asrt_frm_list;
           simpl.
+        admit.
+
       **
+        simpl_types.
+        repeat hq_conj_assoc_right_rewrite.
+        unfold prt_frms, asrt_frm_list;
+          simpl.
+        econseq_pre;
+          [|apply conj_entails_right].
         drop_right_of_conj.
         drop_right_of_conj.
         drop_right_of_conj.
         drop_right_of_conj.
+        drop_right_of_conj.
+        drop_right_of_conj.
+        drop_right_of_conj.
+
+        repeat split_post_condition_by_conjunction_and_solve;
+          try solve [hoare_post_true].
 
         apply_hq_sequ_with_mid_eq_fst.
 
+        repeat split_post_condition_by_conjunction_and_solve.
+
         ***
-          repeat split_post_condition_by_conjunction;
-            try solve [by_hq_types2; by_assumption].
+          hoare_post_true.
 
         ***
           by_prt_frm_bool.
 
     * (* setKey *)
-      unfold simplify_conj;
-        simpl.
+      simpl_types.
+      conseq_post
+        (a_prt ((e_ a) ∙ key) ∧
+           (a_ e_lt (e_ b) ((e_ a) ∙ balance) ∧
+              a_prt_frm ((e_ a) ∙ key) (e_ result)));
+        try solve [unfold prt_frms, asrt_frm_list;
+                   simpl;
+                   intros_entails;
+                   repeat asrt_sat_auto_destruct_conj;
+                   auto with assert_db].
       unfold setKeyBody.
 
       apply hq_if.
 
       ** (* true branch, i.e. this.key == null: this.key = k *)
+
         drop_right_of_conj.
         drop_right_of_conj.
-        match goal with
+        (*match goal with
         | [ |- _ ⊢ ⦃ ?A ∧ ?A1 ⦄ _ ;; _ ⦃ _ ⦄ || ⦃ _ ⦄ ] =>
             apply hq_sequ with (A2:=A1)
         end;
         [|return_false_protects_key].
+
+        admit.
+
+        by_assumption.
+
+        intros_entails.
+        asrt_sat_auto_destruct_conj.
+        by_assumption.
+
+        try solve [intros_entails].*)
+
         repeat split_post_condition_by_conjunction;
-          try solve [by_hq_types2; by_assumption].
+          try solve [by_prt_frm_bool].
 
         apply hq_mid.
         eapply h_strengthen with
