@@ -167,40 +167,18 @@ Can the \prg{Shop}  be certain? Indeed, if
 \item  \Mshop ensures that 
 \begin{enumerate}[(a)]
 \item access to keys is not leaked to external objects, \ \ \ \emph{----} and
-\item   funds cannot be withdrawn unless the external entity responsible for the withdrawal has indirect access to the account's \password,
+\item   funds cannot be withdrawn unless the external entity responsible for the withdrawal (eventually) has  access to the account's \password,
 \end{enumerate}
 \item[--- then]
-%\ \  \ \ \ \emph{---} then
 \item  The external  call on line 8 can never result in a decrease in the shop's account balance.
 \end{enumerate}
 
 
-
-%\vspace{.3cm}
-\noindent
+ \noindent
 The remit of this paper is to provide specification and verification tools that support arguments like the one above.
 This gives rise to the following two challenges:\  1$^{st}$:  A specification language which describes access to capabilities and limited effects,\ 
 2$^{nd}$: A  Hoare Logic for adherence to such specifications.
 
-%\begin{description}
-%\item[\ \ \ \ \  1$^{st}$ Remit:]  \ A specification language which describes access to capabilities and limited effects,
-%
-%\item[\ \ \ \ \   2$^{nd}$ Remit:]  A  Hoare Logic for adherence to such specifications,
-%
-%\item[\ \ \ \ \  3$^{rd}$ Remit:]  A  Hoare Logic for external calls.
-%\end{description}
-
-%We continue our example with three versions of the module, some of which satisfy (B) from above, and some of which do not
-
-% In our example, we relied on two yet-to-be-defined concepts: (1) ``eventual access'' and (2) limited effects (e.g., no money withdrawn unless certain conditions are met).
-%Therefore, we need to address the following three challenges: 
-%\begin{description}
-%\item[\ \ \ \ \  1$^{st}$ Challenge] The specification   of ``eventual  access''. 
-%
-%\item[\ \ \ \ \   2$^{nd}$ Challenge] The specification of limited effects, 
-%
-%\item[\ \ \ \ \  3$^{rd}$ Challenge] A  Hoare Logic for external calls, and for adherence to limited effect specifications.
-%\end{description}
 
 
 
@@ -309,7 +287,7 @@ The frame on top of the stack (the most recently pushed frame)
 belongs to the currently executing method.
 
 
-Fig.\ \ref{f:CurrentPoint} illustrates the current point of execution.  The left pane, $\sigma_1$, shows a state with the same heap as earlier, but where the top frame is $\phi_1$ -- it could be the state before a call to \prg{buy}.
+Fig.\ \ref{f:CurrentPoint} illustrates the current point of execution.  The left pane, $\sigma_1$, shows a state with the same heap as earlier, and where the top frame is $\phi_1$ -- it could be the state before a call to \prg{buy}.
   The middle pane, $\sigma_2$, is a state where we have pushed  $\phi_2$ on top of the stack of $\sigma_1$ -- it could be a state during execution of \prg{buy}.
    The right pane, $\sigma_3$, is a state where we have pushed  $\phi_3$ on top of the stack of $\sigma_2$ -- it could be a state during execution of \prg{pay}. 
 
@@ -354,21 +332,22 @@ $\sigma_3$, top frame $\phi_3$
 Object $o$ is \emph{protected  from} $o'$, formally $\protectedFrom {o} {o'}$,  
 if no external object indirectly accessible from $o'$ has direct access to $o$.
 Object $o$ is \emph{protected}, formally ${\inside{\prg{\it{o}}}}$,  
-if no external object indirectly accessible from the current frame\footnote{An object is indirectly accessible from a frame if 
-there exists a sequence of field accesses (direct references) leading from one of the variables in the frame  to that object.} has direct access to $o$,
- and  if the receiver is external then $o$ is not an argument. 
+if no external object indirectly accessible from the current frame has direct access to $o$,
+ and  if the receiver is external then $o$ is not an argument.\footnote{An object has direct access to another object if it has a field pointing to the latter;
+ it has indirect access to another object if there exists a sequence of field accesses (direct references) leading to the other object; 
+ an object is indirectly accessible from the frame if one of the frame's variables is indirect access to it.} 
  More in Def.\ \ref{def:chainmail-protection-from}. % and Fig. \ref{fig:ProtectedBoth}. 
 \end{description}
  
  
 Fig.\ \ref{fig:ProtectedBoth} illustrates \emph{protected} and \emph{protected
 from}. Object $o_6$ is not protected in states $\sigma_1$ and
-$\sigma_2$, but $o_6$ is protected in state $\sigma_3$.
+$\sigma_2$, but \emph{is} protected in state $\sigma_3$.
+This is so, because the external object $o_5$ is indirectly accessible from the top frame in $\sigma_1$ and in  $\sigma_2$, but not
+from the top frame in $\sigma_3$ --
+in general, calling a method (pushing a frame) can only ever \emph{decrease} the set of indirectly accessible objects, 
 Object $o_4$  is  protected in  states $\sigma_1$ and  $\sigma_2$,  and not  protected in state $\sigma_3$
-(because though neither object $o_5$ nor $o_7$ have direct access to $o_4$, in state $\sigma_3$ the receiver is external and $o_4$ is one of the arguments).
-%Perhaps counterintuitively, in this formal model
-Calling a method (pushing a frame) can only ever \emph{decrease} the set of indirectly accessible objects,  % (pre{\"e}xisting) objects,
-so while object $o_5$ is indirectly accessible from the top frame in $\sigma_2$, it is not indirectly accessible from the top frame in $\sigma_3$.
+because though neither object $o_5$ nor $o_7$ have direct access to $o_4$, in state $\sigma_3$ the receiver is external and $o_4$ is one of the arguments.
 
  
 \begin{figure}[htb]
@@ -434,10 +413,9 @@ $\sigma_3 \not \models \inside{o_4}$
 If a protected object $o$ is never passed to external objects (\ie never leaked)  then $o$ will remain protected during the whole execution of the current method,
 including during any nested calls.
 % and all the methods \emph{it} calls. 
-This is the case even if $o$
-was not protected before the execution of the current method,
-during the remainder of the execution of the method calling the current method, nor after termination of the current method.
-We express these call-stack bounds with \emph{scoped invariants}.
+This is the case even if $o$ was not protected before the call to f the current method.
+% Moroever,  during the remainder of the execution of the method calling the current method, nor after termination of the current method.
+We express these ``call-stack bounds'' with \emph{scoped invariants}.
 % need not be protected during execution of the method calling the current method, nor after termination of the current method.   
 % This discussion leads us to  scoped invariants.
 
@@ -574,18 +552,21 @@ This example illustrates three crucial properties of our invariants:
  \begin{customquote}
  \vspace{.05cm}
 \noindent
-\textbf{\emph{Conditional}}: Invariants are \emph{preserved}, but unlike object invariants, they do not % guarantee that they
+\textbf{\emph{Conditional}}: They %Invariants 
+are \emph{preserved}, but unlike object invariants, they do not % guarantee that they
 always hold.
 \ \Eg   \prg{buy} cannot assume $\inside{a.\prg{key}}$ holds on entry, but   guarantees that if it holds on entry, then  it will still hold on exit.
 
 \vspace{.05cm}
 \noindent
 \textbf{\emph{Scoped}}:  %  These invariants 
-Invariants are preserved during  execution of a specific method but not beyond its return. It is, in fact, expected that the invariant will eventually cease to hold after its completion. For instance, while $\inside{a.\prg{key}}$ may currently hold, it is possible that an earlier (thus quiescent) method invocation frame has direct access to $a.\prg{key}$ -- without such access, $a$ would not be usable for payments. Once control flow returns to the quiescent method (\ie enough frames are popped from the stack) $\inside{a.\prg{key}}$  will no longer hold.
+They % Invariants
+ are preserved during  execution of a specific method but not beyond its return. It is, in fact, expected that the invariant will eventually cease to hold after its completion. For instance, while $\inside{a.\prg{key}}$ may currently hold, it is possible that an earlier (thus quiescent) method invocation frame has direct access to $a.\prg{key}$ -- without such access, $a$ would not be usable for payments. Once control flow returns to the quiescent method (\ie enough frames are popped from the stack) $\inside{a.\prg{key}}$  will no longer hold.
 
  \vspace{.05cm}
 \noindent
-\textbf{\emph{Modular}}: Invariants describe  externally observable effects (\eg  \prg{key} stays protected) across whole modules,
+\textbf{\emph{Modular}}: They % Invariants 
+describe  externally observable effects (\eg  \prg{key} stays protected) across whole modules,
  % the account's balance may increase), 
 rather than  the individual methods (\eg\, \prg{set}) making up a module's interface.
 Our example specifications will
@@ -833,7 +814,7 @@ $\{\  \   \external{\prg{buyer}} \ \wedge\
  {\color{red} {\protectedFrom {\prg{this.\myAccount.key}}  {\prg{buyer} } }}
  \ \wedge\ \prg{this.\myAccount.\balance}= b  \ \  \}$\\
 $\ \ \ \ \ \ \ \ \ \ \ \ {\ \prg{buyer.pay(this.accnt,price)}   \ } $\\
-$  \{\  \ \  {\prg{this.\myAccount.\balance}} \geq  b \  \  \} \ \ ||\ \  \{\ \inside{\prg{a.\password}}\wedge  \prg{a.\balance}\!\geq\!{\prg{b}}   \ \}  $ 
+$  \{\  \ \  {\prg{this.\myAccount.\balance}} \geq  b \  \  \} \ \ ||\ \  \{ \ ... \ \} $ % \{\ \inside{\prg{a.\password}}\wedge  \prg{a.\balance}\!\geq\!{\prg{b}}   \ \}  $  simpler
 \end{flushleft}
 \end{minipage}
 \\
@@ -856,16 +837,19 @@ For example, in state $\sigma_2$ (Fig. \ref{fig:ProtectedBoth}), which could ini
 Fig. \ref{fig:ProtectedBoth} provides insights into addressing this issue. Upon entering the call, in state $\sigma_3$, 
 we find that $\sigma_3 \models \inside{o_4\prg{.key}}$. More generally, if $\protectedFrom{\prg{this.\myAccount.key}}{\prg{buyer}}$ holds before the call to \prg{pay}, then $\inside{\prg{this.\myAccount.key}}$ holds upon entering the call.
 This is because any objects indirectly accessible during \prg{pay} must have been indirectly accessible from the call's
-receiver (\prg{buyer}) or  arguments (\prg{this.\myAccount} and \prg{price}) when \prg{pay} was called --- calls cannot increase the set of indirectly accessible objects (\S \ref{sect:approach:protection}).
-
-In general, for a call $\prg{y}_0.m(\prg{y}_1, ..., \prg{y}_n)$, if at the call $\protectedFrom{\prg{x}}{\prg{y}_i}$  for all %arguments 
- $\prg{y}_i$, \  then $\inside{\prg{x}}$   upon entering the call. 
+receiver (\prg{buyer}) or  arguments (\prg{this.\myAccount} and \prg{price}) when \prg{pay} was called.
+% The below is true but is not sufficient reason why <<this.accnt.key>> inside the call.
+% --- calls cannot increase the set of indirectly accessible objects (\S \ref{sect:approach:protection}).
+ 
+In general, if   $\protectedFrom{\prg{x}}{\prg{y}_i}$  for all %arguments 
+ $\prg{y}_i$, holds before a call $\prg{y}_0.m(\prg{y}_1, ..., \prg{y}_n)$, then $\inside{\prg{x}}$ holds  upon entering the call. 
 % chopped as adaptation not as prominent
 %To formulate this, we introduce the adaptation operator $\pushSymbolInText$, which translates assertions from the caller's perspective to that of the callee. 
 %Specifically, $\PushASLong  {(\prg{y}_0, ..., \prg{y}_n)}   A$ at a call, ensures   $A$  when the variables  $\prg{y}_0, ..., \prg{y}_n$ are pushed onto a new frame. More in Def   \ref{def:push} and  Lemma \ref{lemma:push:ass:state}. Here, \\
 %$\strut \ \ \ \ $  \small $\PushASLong {(\prg{buyer},\prg{this.\myAccount},\prg{price})} {\inside{\prg{this.\myAccount.key}}}$
 %= $\protectedFrom{\prg{this.\myAccount.key}}{\prg{buyer}}$\\
-%  \normalsize   
+%  \normalsize 
+Here we have  $\protectedFrom{\prg{this.accnt.key}}{\prg{buyer}}$ by precondition, and also $\protectedFrom{\prg{this.accnt.key}}{\prg{this.accnt}} \wedge \protectedFrom{\prg{this.accnt.key}}{\prg{price}}$ by the type system.
 This enables the application of $S_3$ in \textbf{(1)}. The corresponding Hoare logic rule is shown in Fig. \ref{f:external:calls}.
 
 % {Below  a  Hoare logic rule  dealing with external calls - \cf. Fig.\ref{f:external:calls}.} % where $\overline y$ stands for $y_1$,,, $y_n$ -
@@ -919,7 +903,7 @@ The external code may be written in the same or a different programming language
 
  
 
-The conditional and scoped nature of our invariants are critical to their applicability.
+The conditional and scoped nature of our invariants is critical to their applicability.
 %might prompt questions about their usefulness.
 Protection is a local condition, constraining accessible objects rather than imposing a structure across the whole heap.
 Scoped invariants are likewise local: they do not preclude some effects from the whole execution of a program,
