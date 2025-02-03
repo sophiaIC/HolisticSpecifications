@@ -453,7 +453,6 @@ Because of this, we can preserve the usual assignment rule from HL.
   (* TODO: remove A. derivable using h_and *)
 
   | h_prot1 : forall M e s A,
-      Stbl A ->
       call_free s ->
       (forall z, does_not_assign_to_var s z ->
             M ⊢ ⦃ (A ∧ a_ (e_eq e (e_ z))) ⦄ s ⦃ (a_ (e_eq e (e_ z))) ⦄) ->
@@ -522,10 +521,10 @@ Because of this, we can preserve the usual assignment rule from HL.
         ⦃ a_ (e_typ (e_ x) T) ⦄
 
   (* TODO: change to TYPES1 from the paper *)
-  | h_types1 : forall M e T x,
+  | h_types1 : forall M e T s,
       M ⊢ ⦃ a_ (e_typ e T) ⦄
-        (s_read x e) (* change to general s *)
-        ⦃ a_ (e_typ (e_ x) T) ⦄
+        s (* change to general s *)
+        ⦃ a_ (e_typ e T) ⦄
 
   (* TODO: remove *)
   | h_read_prt_frm : forall M e1 e2 e x y,
