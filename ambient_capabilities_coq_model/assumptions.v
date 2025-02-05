@@ -242,4 +242,36 @@ Module Assumptions.
                       (ret e_false)
                       (a_ (e_eq ((e_ x) ∙ f) (e_ y))).
 
+  Fixpoint and A1 A2 :=
+    match A1 with
+    | A ∧ A' => and A (and A' A2)
+    | _ => A1 ∧ A2
+    end.
+
+  Fixpoint simplify_conj (A : asrt) : asrt :=
+    match A with
+    | (a_true) ∧ A' => (simplify_conj A')
+    | A' ∧ (a_true) => (simplify_conj A')
+    | A1 ∧ A2 => and (simplify_conj A1) (simplify_conj A2)
+    | _ => A
+    end.
+
+  Fixpoint simplify_neg (A : asrt) : asrt :=
+    match A with
+    | ¬ ¬ A' => simplify_neg A'
+    | A1 ∧ A2 => (simplify_neg A1) ∧ (simplify_neg A2)
+    | a_all C A' => a_all C (simplify_neg A')
+    | _  => A
+    end.
+
+  Lemma simplify_conj_entails1 :
+    forall M A, M ⊢ A ⊆ (simplify_conj A).
+  Proof.
+  Admitted.
+
+  Lemma simplify_conj_entails2 :
+    forall M A, M ⊢ (simplify_conj A) ⊆ A.
+  Proof.
+  Admitted.
+
 End Assumptions.
