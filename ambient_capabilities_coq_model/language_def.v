@@ -345,6 +345,56 @@ Module LanguageDefinition.
       crush.
   Defined.
 
+  #[global] Program Instance eqbTy : Eq ty :=
+    {
+      eqb := fun T1 T2 =>
+               match T1, T2 with
+               | t_cls C1, t_cls C2 => eqb C1 C2
+               | t_int, t_int => true
+               | t_bool, t_bool => true
+               | t_str, t_str => true
+               | t_ext, t_ext => true
+               | _, _ => false
+               end
+    }.
+  Solve Obligations of eqbTy with crush.
+  Next Obligation.
+    match goal with
+    | [a : ?T |- _] =>
+        destruct a
+    end;
+    auto.
+    match goal with
+    | [c : ?T |- _] =>
+        rewrite <- (eqb_refl c)
+    end;
+    simpl;
+    auto.
+  Defined.
+  Next Obligation.
+    match goal with
+    | [a : ?T |- _] =>
+        destruct a
+    end;
+    auto.
+    simpl.
+    auto.
+    match goal with
+    | [c : ?T |- _] =>
+        rewrite <- (eqb_refl c)
+    end;
+    simpl;
+    auto.
+  Defined.
+  Next Obligation.
+  Defined.
+  Next Obligation.
+  Defined.
+  Next Obligation.
+  Defined.
+  Next Obligation.
+  Defined.
+
   #[global] Program Instance eqbMdl : Eq mdl :=
     {
       eqb := fun C1 C2 =>
@@ -447,21 +497,84 @@ Module LanguageDefinition.
     }.
   Solve Obligations of eqbVal with crush.
   Next Obligation.
-  Admitted.
-  Next Obligation.
-  Admitted.
-  Next Obligation.
-  Admitted.
-  Next Obligation.
-  Admitted.
-  Next Obligation.
-(*    destruct a1; destruct a2;
+    destruct a;
+      auto;
       try solve [crush].
-    destruct a, a0;
-      try solve [crush].*)
-  Admitted.
+    destruct a.
+    apply Nat.eqb_refl.
+    apply eqb_reflx.
+    apply String.eqb_refl.
+  Defined.
   Next Obligation.
-  Admitted.
+    destruct a1, a2;
+      auto;
+      try solve [crush].
+    destruct a, a0.
+    apply Nat.eqb_sym.
+    destruct b, b0; auto.
+    apply String.eqb_sym.
+  Defined.
+  Next Obligation.
+    destruct a1, a2;
+      crush.
+    destruct a, a0; auto.
+    apply Nat.eqb_eq in H;
+      subst;
+      auto.
+    apply Z.eqb_eq in H;
+      subst;
+      auto.
+    destruct b, b0;
+      crush.
+    apply String.eqb_eq in H;
+      subst;
+      auto.
+  Defined.
+  Next Obligation.
+    destruct a1, a2;
+      crush.
+    destruct a0.
+    rewrite Nat.eqb_refl in H;
+      crush.
+    rewrite Bool.eqb_reflx in H;
+      crush.
+    rewrite String.eqb_refl in H;
+      crush.
+  Defined.
+  Next Obligation.
+    destruct a1, a2;
+      try solve [crush].
+    destruct a, a0.
+    apply Nat.eqb_neq;
+      intro Hcontra;
+      subst;
+      crush.
+    apply Z.eqb_neq.
+    crush.
+    destruct b, b0;
+      crush.
+    apply String.eqb_neq.
+    crush.
+  Defined.
+  Next Obligation.
+    destruct a1, a2;
+      try (match goal with
+           | [x : ?T, y : ?T |-_] =>
+               destruct (eq_dec x y)
+           end;
+           [subst; auto|]);
+      try solve [right; crush].
+    destruct (Z.eq_dec z z0);
+      subst; auto;
+      right; crush.
+    destruct b, b0;
+      subst; auto;
+      right; crush.
+    destruct (String.string_dec s s0);
+      subst; auto;
+      right; crush.
+    left; auto.
+  Defined.
 
   #[global] Program Instance eqbExp : Eq exp :=
     {
@@ -471,18 +584,48 @@ Module LanguageDefinition.
                | e_var x1, e_var x2 => eqb x1 x2
                | e_val v1, e_val v2 => eqb v1 v2
                | e_fld e1 f1, e_fld e2 f2 => eqb' e1 e2 && eqb f1 f2
-               (*)| e_typ : exp -> ty -> exp
-               | e_ghost : exp -> ghost -> exp -> exp
-               | e_if : exp -> exp -> exp -> exp
-               | e_eq : exp -> exp -> exp
-               | e_plus : exp -> exp -> exp
-               | e_minus : exp -> exp -> exp*)
+               | e_typ e1 T1, e_typ e2 T2 => eqb' e1 e2 && eqb T1 T2
+               | e_ghost e1 g1 e1', e_ghost e2 g2 e2' => eqb' e1 e2 &&
+                                                          eqb g1 g2 &&
+                                                          eqb' e1' e2'
+               | e_if e0 e1 e2, e_if e0' e1' e2' => eqb' e0 e0' &&
+                                                     eqb' e1 e1' &&
+                                                     eqb' e2 e2'
+               | e_eq e1 e2, e_eq e1' e2' => eqb' e1 e1' &&
+                                              eqb' e2 e2'
+               | e_plus e1 e2, e_plus e1' e2' => eqb' e1 e1' &&
+                                                  eqb' e2 e2'
+               | e_minus e1 e2, e_minus e1' e2' => eqb' e1 e1' &&
+                                                    eqb' e2 e2'
                | _, _ => false
                end
     }.
   Solve Obligations of eqbExp with crush.
   Next Obligation.
-  Admitted.
+    destruct a;
+      try solve [apply Nat.eqb_refl];
+      try solve [destruct v;
+                 try solve [apply Nat.eqb_refl]].
+    admit.
+    admit.
+    rewrite <- (eqb_refl v); auto.
+    simpl.
+    auto.
+    destruct v;
+      auto;
+      [
+      |apply Z.eqb_refl
+      |apply Bool.eqb_reflx
+      |apply String.eqb_refl].
+    destruct a;
+      apply Nat.eqb_refl.
+    destruct a.
+    rewrite (eqb f f) <-.
+    rewrite Nat.eqb_refl;
+      simpl.
+    rewrite eqb_refl <-.
+    crush.
+  Defined.
   Next Obligation.
   Admitted.
   Next Obligation.
