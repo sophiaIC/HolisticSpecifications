@@ -7,30 +7,30 @@ Class Eq (A : Type) :=
   {eqb : A -> A -> bool;
    eqb_refl : forall a, eqb a a = true;
    eqb_sym : forall a1 a2, eqb a1 a2 = eqb a2 a1;
-   eqb_eqp : forall a1 a2, eqb a1 a2 = true ->
-                      a1 = a2;
+   eqb_eq : forall a1 a2, eqb a1 a2 = true ->
+                     a1 = a2;
    eqb_neq : forall a1 a2, eqb a1 a2 = false ->
                       a1 <> a2;
-   neq_eqb : forall a1 a2, a1 <> a2 ->
+  (* neq_eqb : forall a1 a2, a1 <> a2 ->
                       eqb a1 a2 = false;
-   eq_dec : forall (a1 a2 : A), {a1 = a2} + {a1 <> a2}}.
+   eq_dec : forall (a1 a2 : A), {a1 = a2} + {a1 <> a2}*)}.
 
-#[global] Hint Resolve eqb_refl eqb_sym eqb_eqp eqb_neq neq_eqb eq_dec : eq_db.
+#[global] Hint Resolve eqb_refl eqb_sym eqb_eq eqb_neq (*neq_eqb eq_dec*) : eq_db.
 
 #[global] Program Instance nat_Eq : Eq nat :=
   {eqb n m := n =? m;
    eqb_refl := Nat.eqb_refl;
-   eqb_sym := Nat.eqb_sym;
-   eq_dec := Nat.eq_dec}.
+   eqb_sym := Nat.eqb_sym(*;
+   eq_dec := Nat.eq_dec*)}.
 Next Obligation.
   auto using beq_nat_eq.
 Defined.
 Next Obligation.
   apply Nat.eqb_neq; auto.
 Defined.
-Next Obligation.
+(*Next Obligation.
   apply Nat.eqb_neq; auto.
-Defined.
+Defined.*)
 
 Definition total_map (A B : Type) `{Eq A} := A -> B.
 

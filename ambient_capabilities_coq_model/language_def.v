@@ -136,7 +136,7 @@ Module LanguageDefinition.
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     intros;
       destruct a1;
       destruct a2;
@@ -151,7 +151,7 @@ Module LanguageDefinition.
       auto;
       right;
       crush.
-  Defined.
+  Defined.*)
 
 
   #[global] Program Instance eqbGhost : Eq ghost :=
@@ -181,7 +181,7 @@ Module LanguageDefinition.
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     intros;
       destruct a1;
       destruct a2;
@@ -196,7 +196,7 @@ Module LanguageDefinition.
       auto;
       right;
       crush.
-  Defined.
+  Defined.*)
 
   #[global] Program Instance eqbVar : Eq var :=
     {
@@ -241,7 +241,7 @@ Module LanguageDefinition.
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     intros; destruct a1; destruct a2;
       try solve [crush];
       apply Nat.eqb_neq;
@@ -255,7 +255,7 @@ Module LanguageDefinition.
       auto;
       right;
       crush.
-  Defined.
+  Defined.*)
 
   #[global] Program Instance eqbMth : Eq mth :=
     {
@@ -284,7 +284,7 @@ Module LanguageDefinition.
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     intros;
       destruct a1;
       destruct a2;
@@ -299,7 +299,7 @@ Module LanguageDefinition.
       auto;
       right;
       crush.
-  Defined.
+  Defined.*)
 
   #[global] Program Instance eqbCls : Eq cls :=
     {
@@ -328,7 +328,7 @@ Module LanguageDefinition.
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     intros;
       destruct a1;
       destruct a2;
@@ -343,7 +343,7 @@ Module LanguageDefinition.
       auto;
       right;
       crush.
-  Defined.
+  Defined.*)
 
   #[global] Program Instance eqbTy : Eq ty :=
     {
@@ -373,27 +373,79 @@ Module LanguageDefinition.
   Defined.
   Next Obligation.
     match goal with
-    | [a : ?T |- _] =>
-        destruct a
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
     end;
-    auto.
-    simpl.
     auto.
     match goal with
-    | [c : ?T |- _] =>
-        rewrite <- (eqb_refl c)
+    | [c1 : ?T, c2 : ?T |- _] =>
+        destruct c1, c2;
+        apply Nat.eqb_sym
+    end.
+  Defined.
+  Next Obligation.
+    match goal with
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
     end;
-    simpl;
+    try solve [match goal with
+               | [H : false = true |- _] =>
+                   inversion H
+               end];
     auto.
+    match goal with
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
+    end.
+    apply Nat.eqb_eq in H;
+      subst;
+      auto.
   Defined.
   Next Obligation.
+    match goal with
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
+    end;
+    try solve [crush].
+    intro Hcontra;
+      inversion Hcontra;
+      subst.
+    destruct c0.
+    apply Nat.eqb_neq in H.
+    crush.
+  Defined.
+  (*Next Obligation.
+    match goal with
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
+    end;
+    try solve [crush].
+    match goal with
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
+    end.
+    apply Nat.eqb_neq.
+    intro Hcontra;
+      crush.
   Defined.
   Next Obligation.
-  Defined.
-  Next Obligation.
-  Defined.
-  Next Obligation.
-  Defined.
+    match goal with
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
+    end;
+    auto;
+    try solve [right; crush].
+    match goal with
+    | [a1 : ?T, a2 : ?T |- _] =>
+        destruct a1, a2
+    end;
+    auto.
+    destruct (Nat.eq_dec n n0);
+      subst;
+      auto.
+    right;
+      crush.
+  Defined.*)
 
   #[global] Program Instance eqbMdl : Eq mdl :=
     {
@@ -422,7 +474,7 @@ Module LanguageDefinition.
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     intros;
       destruct a1;
       destruct a2;
@@ -437,7 +489,7 @@ Module LanguageDefinition.
       auto;
       right;
       crush.
-  Defined.
+  Defined.*)
 
   #[global] Program Instance eqbAddr : Eq addr :=
     {
@@ -466,7 +518,7 @@ Module LanguageDefinition.
       rewrite Nat.eqb_neq in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     intros;
       destruct a1;
       destruct a2;
@@ -481,7 +533,7 @@ Module LanguageDefinition.
       auto;
       right;
       crush.
-  Defined.
+  Defined.*)
 
   #[global] Program Instance eqbVal : Eq val :=
     {
@@ -541,7 +593,7 @@ Module LanguageDefinition.
     rewrite String.eqb_refl in H;
       crush.
   Defined.
-  Next Obligation.
+  (*Next Obligation.
     destruct a1, a2;
       try solve [crush].
     destruct a, a0.
@@ -574,7 +626,37 @@ Module LanguageDefinition.
       subst; auto;
       right; crush.
     left; auto.
-  Defined.
+  Defined.*)
+
+  Fixpoint eqbExpHelper e1 e2 :=
+    match e1, e2 with
+    | e_hole n1, e_hole n2 => eqb n1 n2
+    | e_var x1, e_var x2 => eqb x1 x2
+    | e_val v1, e_val v2 => eqb v1 v2
+    | e_fld e1 f1, e_fld e2 f2 => eqbExpHelper e1 e2 && eqb f1 f2
+    | e_typ e1 T1, e_typ e2 T2 => eqbExpHelper e1 e2 && eqb T1 T2
+    | e_ghost e1 g1 e1', e_ghost e2 g2 e2' => eqbExpHelper e1 e2 &&
+                                               eqb g1 g2 &&
+                                               eqbExpHelper e1' e2'
+    | e_if e0 e1 e2, e_if e0' e1' e2' => eqbExpHelper e0 e0' &&
+                                          eqbExpHelper e1 e1' &&
+                                          eqbExpHelper e2 e2'
+    | e_eq e1 e2, e_eq e1' e2' => eqbExpHelper e1 e1' &&
+                                   eqbExpHelper e2 e2'
+    | e_plus e1 e2, e_plus e1' e2' => eqbExpHelper e1 e1' &&
+                                       eqbExpHelper e2 e2'
+    | e_minus e1 e2, e_minus e1' e2' => eqbExpHelper e1 e1' &&
+                                         eqbExpHelper e2 e2'
+    | e_lt e1 e2, e_lt e1' e2' => eqbExpHelper e1 e1' &&
+                                   eqbExpHelper e2 e2'
+    | _, _ => false
+    end.
+
+(*  Lemma eqbExpSym :
+    forall e1 e2, eqbExpHelper e1 e2 = eqbExpHelper e2 e1.
+  Proof.
+    intro e
+  Qed.*)
 
   #[global] Program Instance eqbExp : Eq exp :=
     {
@@ -597,45 +679,255 @@ Module LanguageDefinition.
                                                   eqb' e2 e2'
                | e_minus e1 e2, e_minus e1' e2' => eqb' e1 e1' &&
                                                     eqb' e2 e2'
+               | e_lt e1 e2, e_lt e1' e2' => eqb' e1 e1' &&
+                                              eqb' e2 e2'
                | _, _ => false
                end
     }.
   Solve Obligations of eqbExp with crush.
   Next Obligation.
-    destruct a;
+    induction a;
       try solve [apply Nat.eqb_refl];
       try solve [destruct v;
-                 try solve [apply Nat.eqb_refl]].
-    admit.
-    admit.
-    rewrite <- (eqb_refl v); auto.
-    simpl.
+                 try solve [apply Nat.eqb_refl]];
+      try solve [
+          match goal with
+          | [v : ?T |- _] =>
+              rewrite <- (eqb_refl v);
+              destruct v;
+              auto
+          end
+        ];
+    try (repeat (match goal with
+                 | [IHa : ?f1 ?a ?a = true |- _] =>
+                     rewrite IHa;
+                     simpl;
+                     clear IHa
+                 end; simpl);
+         auto);
+      try solve[simpl;
+                match goal with
+                | [_ : exp,
+                      f : ?T |- _] =>
+                    rewrite <- (eqb_refl f)
+                end;
+                simpl;
+                auto];
     auto.
-    destruct v;
+    destruct t;
       auto;
-      [
-      |apply Z.eqb_refl
-      |apply Bool.eqb_reflx
-      |apply String.eqb_refl].
-    destruct a;
-      apply Nat.eqb_refl.
-    destruct a.
-    rewrite (eqb f f) <-.
+      rewrite <- (eqb_refl c);
+      simpl;
+      auto.
+
+    rewrite <- (eqb_refl g);
+      destruct g;
+      simpl;
+      auto.
     rewrite Nat.eqb_refl;
-      simpl.
-    rewrite eqb_refl <-.
-    crush.
+      auto.
   Defined.
   Next Obligation.
-  Admitted.
+    generalize a2; clear a2.
+    induction a1;
+      intros a2;
+      destruct a2;
+      auto;
+      try (repeat (match goal with
+                   | [IHa : forall a2, ?f1 ?a1 a2 = ?f a2 ?a1 |- _] =>
+                       rewrite IHa;
+                       simpl;
+                       clear IHa
+                   end; simpl);
+           auto);
+
+      try solve [match goal with
+                 | [v1 : ?T,
+                       v2 : ?T |- _] =>
+                     assert (Hsym : eqb v1 v2 = eqb v2 v1);
+                     [apply eqb_sym|simpl in Hsym; auto; rewrite Hsym; auto]
+                 end
+        ].
+  Defined.
   Next Obligation.
-  Admitted.
+    generalize H; clear H.
+    generalize a2; clear a2.
+    induction a1;
+      intros;
+      destruct a2;
+      try solve [crush];
+      try solve [
+          match goal with
+          | [x : ?T, y : ?T |- _ ] =>
+              rewrite (eqb_eq x y);
+              auto
+          end
+        ];
+      try (
+          repeat match goal with
+            | [H : _ && _ = true |- _] =>
+                apply andb_true_iff in H;
+                destruct H
+            end
+        );
+      try (rewrite (IHa1_1 a2_1);
+           auto;
+           rewrite (IHa1_2 a2_2);
+           auto).
+
+    rewrite (eqb_eq f f0);
+      auto.
+    rewrite (IHa1 a2);
+      auto.
+
+    rewrite (eqb_eq t t0);
+      auto.
+    rewrite (IHa1 a2);
+      auto.
+
+    rewrite (eqb_eq g g0);
+      auto.
+
+    rewrite (IHa1_3 a2_3);
+      auto.
+  Defined.
   Next Obligation.
-  Admitted.
+    generalize H;
+      generalize a2;
+      clear H; clear a2.
+    induction a1;
+      intros;
+      destruct a2;
+      try solve [crush];
+      try (intro Hcontra;
+           inversion Hcontra;
+           subst);
+
+      try (repeat match goal with
+             | [H : _ && _ = false |- _ ] =>
+                 apply andb_false_iff in H;
+                 destruct H
+             end;
+
+           [specialize (IHa1_1 a2_1);
+            apply IHa1_1 in H;
+            crush|
+             specialize (IHa1_2 a2_2);
+             apply IHa1_2 in H;
+             crush]).
+
+    apply Nat.eqb_neq in H.
+    crush.
+
+    assert (Heqb : eqb v0 v0 = true);
+      [apply eqb_refl| simpl in Heqb; rewrite Heqb in H];
+      crush.
+
+    assert (Heqb : eqb v0 v0 = true);
+      [apply eqb_refl| simpl in Heqb; rewrite Heqb in H];
+      crush.
+
+    repeat match goal with
+           | [H : _ && _ = false |- _ ] =>
+               apply andb_false_iff in H;
+               destruct H
+           end.
+    specialize (IHa1 a2);
+      apply IHa1 in H.
+    crush.
+
+    destruct f0; rewrite Nat.eqb_refl in H; crush.
+
+    repeat match goal with
+           | [H : _ && _ = false |- _ ] =>
+               apply andb_false_iff in H;
+               destruct H
+           end.
+    specialize (IHa1 a2);
+      apply IHa1 in H.
+    crush.
+
+    destruct t0; crush.
+    destruct c; rewrite Nat.eqb_refl in H; crush.
+
+    repeat match goal with
+           | [H : _ && _ = false |- _ ] =>
+               apply andb_false_iff in H;
+               destruct H
+           end.
+    specialize (IHa1_1 a2_1);
+      apply IHa1_1 in H;
+      crush.
+    destruct g0; rewrite Nat.eqb_refl in H; crush.
+    specialize (IHa1_2 a2_2);
+      apply IHa1_2 in H;
+      crush.
+
+    repeat match goal with
+           | [H : _ && _ = false |- _ ] =>
+               apply andb_false_iff in H;
+               destruct H
+           end.
+    specialize (IHa1_1 a2_1);
+      apply IHa1_1 in H;
+      crush.
+    specialize (IHa1_2 a2_2);
+      apply IHa1_2 in H;
+      crush.
+    specialize (IHa1_3 a2_3);
+      apply IHa1_3 in H;
+      crush.
+  Defined.
+  (*Next Obligation.
+    generalize H;
+      generalize a2;
+      clear H; clear a2.
+    induction a1;
+      intros;
+      destruct a2;
+      crush.
+
+    apply Nat.eqb_neq.
+    crush.
+
+    assert (Hneq : v <> v0);
+      [intro Hcontra; subst; crush
+      |apply neq_eqb in Hneq; simpl; auto].
+
+    assert (Hneq : v <> v0);
+      [intro Hcontra; subst; crush
+      |apply neq_eqb in Hneq; simpl; auto].
+
+    destruct (eq_dec f f0) as [|Hneq];
+      [subst|apply neq_eqb in Hneq].
+
+    specialize (IHa1 a2);
+      rewrite IHa1;
+      auto.
+    intro Hcontra;
+      subst; crush.
+    simpl in Hneq; rewrite Hneq; crush.
+
+    destruct (eq_dec t t0) as [|Hneq];
+      [subst|apply neq_eqb in Hneq].
+
+    specialize (IHa1 a2);
+      rewrite IHa1;
+      auto.
+    intro Hcontra;
+      subst; crush.
+    simpl in Hneq; rewrite Hneq; crush.
+
+    destruct (eq_dec g g0) as [|Hneq];
+      [subst
+      |apply neq_eqb in Hneq; simpl in Hneq; rewrite Hneq; crush].
+
+    assert (Hneq : ~(a1_1 = a2_1 /\ a1_2 = a2_2));
+      [intro Hcontra; crush|].
+    simpl in Hneq.
+    Defined.
   Next Obligation.
-  Admitted.
-  Next Obligation.
-  Admitted.
+  Defined.*)
 
   (**
      Assertions
@@ -681,19 +973,133 @@ Module LanguageDefinition.
           | _, _ => false
           end
     }.
-  Solve Obligations with crush.
+  Solve Obligations of eqbAsrt with crush.
   Next Obligation.
-  Admitted.
+    induction a; crush;
+    try solve [assert (Heq : eqb e e = true);
+               [apply eqb_refl|simpl in Heq; auto]].
+
+    destruct c; rewrite Nat.eqb_refl; auto.
+
+    assert (Heq : eqb e e = true);
+      [apply eqb_refl|simpl in Heq; rewrite Heq].
+
+    assert (Heq0 : eqb e0 e0 = true);
+      [apply eqb_refl|simpl in Heq0; crush].
+  Defined.
+
   Next Obligation.
-  Admitted.
+    generalize a2; clear a2.
+    induction a1;
+      intros a2;
+      destruct a2;
+      try solve [crush];
+
+    try solve [assert (Hsym : eqb e e0 = eqb e0 e);
+               [apply eqb_sym|simpl in Hsym; crush]].
+
+
+    assert (Hsym : eqb c c0 = eqb c0 c);
+      [apply eqb_sym|simpl in Hsym; rewrite Hsym].
+    specialize (IHa1 a2).
+    rewrite IHa1.
+    auto.
+
+    assert (HsymA : eqb e e1 = eqb e1 e);
+      [apply eqb_sym|simpl in HsymA; rewrite HsymA].
+
+    assert (HsymB : eqb e0 e2 = eqb e2 e0);
+      [apply eqb_sym|simpl in HsymB; crush].
+  Defined.
+
   Next Obligation.
-  Admitted.
+    generalize H; clear H.
+    generalize a2; clear a2.
+    induction a1;
+      intros;
+      destruct a2;
+      try solve [crush];
+      try solve [
+          match goal with
+          | [x : ?T, y : ?T |- _ ] =>
+              rewrite (eqb_eq x y);
+              auto
+          end
+        ];
+      try (
+          repeat match goal with
+            | [H : _ && _ = true |- _] =>
+                apply andb_true_iff in H;
+                destruct H
+            end
+        );
+      try (rewrite (IHa1_1 a2_1);
+           auto;
+           rewrite (IHa1_2 a2_2);
+           auto);
+      try (rewrite (IHa1 a2); auto).
+
+    rewrite (eqb_eq c c0); auto.
+
+    rewrite (eqb_eq e e1), (eqb_eq e0 e2); auto.
+
+  Defined.
+
   Next Obligation.
-  Admitted.
-  Next Obligation.
-  Admitted.
-  Next Obligation.
-  Admitted.
+    generalize H;
+      generalize a2;
+      clear H; clear a2.
+    induction a1;
+      intros;
+      destruct a2;
+      try solve [crush];
+      try (intro Hcontra;
+           inversion Hcontra;
+           subst);
+
+      try (repeat match goal with
+             | [H : _ && _ = false |- _ ] =>
+                 apply andb_false_iff in H;
+                 destruct H
+             end;
+
+           [specialize (IHa1_1 a2_1);
+            apply IHa1_1 in H;
+            crush|
+             specialize (IHa1_2 a2_2);
+             apply IHa1_2 in H;
+             crush]);
+
+      try solve [assert (Heqb : eqb e0 e0 = true);
+                 [apply eqb_refl| simpl in Heqb; rewrite Heqb in H];
+                 crush].
+
+    specialize (IHa1 a2).
+    contradiction IHa1;
+      auto.
+
+    repeat match goal with
+           | [H : _ && _ = false |- _ ] =>
+               apply andb_false_iff in H;
+               destruct H
+           end.
+
+    assert (Heqb : eqb c0 c0 = true);
+      [apply eqb_refl| simpl in Heqb; rewrite Heqb in H];
+      crush.
+
+    specialize (IHa1 a2).
+    contradiction IHa1;
+      auto.
+
+    assert (HeqbA : eqb e1 e1 = true);
+      [apply eqb_refl| simpl in HeqbA; rewrite HeqbA in H];
+      crush.
+
+    assert (HeqbB : eqb e2 e2 = true);
+      [apply eqb_refl| simpl in HeqbB; rewrite HeqbB in H];
+      crush.
+  Defined.
 
   Inductive path :=
   | p_fld : fld -> path

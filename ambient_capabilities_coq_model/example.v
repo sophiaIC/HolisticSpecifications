@@ -12,6 +12,8 @@ Require Export operational_semantics.
 Require Import assert_theory.
 Require Import hoare.
 Require Import spec.
+Require Import shop.
+Require Import assumptions.
 
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.

@@ -383,7 +383,6 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** ----------------- *)
   (** M ⊢ ⦃ P1 ∧ P2 ⦄ s ⦃ Q1 ∧ Q2 ⦄  *)
 
-  (* TODO: remove *)
   | h_and : forall M P1 P2 s Q1 Q2,
       M ⊢ ⦃ P1 ⦄ s ⦃ Q1 ⦄ ->
       M ⊢ ⦃ P2 ⦄ s ⦃ Q2 ⦄ ->
@@ -400,7 +399,6 @@ Because of this, we can preserve the usual assignment rule from HL.
   (** -----------------------------*)
   (** M ⊢ ⦃ P ⦄ if e then s1 else s2 ⦃ Q ⦄  *)
 
-  (* TODO: Does appear in paper. Sophia to move from App H -> AppF. *)
   | h_if : forall M e s1 s2 P Q,
       M ⊢ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
       M ⊢ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
