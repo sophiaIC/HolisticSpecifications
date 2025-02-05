@@ -270,10 +270,34 @@ Assuming a predicate $Contents(\prg{stack},\prg{i},\prg{v})$, which expresses th
  $$\strut \SPSP  S_{stack}\ \  \triangleq \ \ \TwoStatesN{ s:\prg{Stack},i:\mathbb{N},\prg{v}:\prg{Value}} 
  {\ \inside{\prg{s.modifier}} \ \wedge \ Contents(\prg{s},i,\prg{v})\  }$$  
  
- The work in \cite{irisWasm23}  is not concerned, however, with Hoare logic proofs of external calls.
  
  
+ In that work, they provide a tailor-made proof that indeed, when the stack makes an external call, passing only the inspect-capability, the contents will not change. 
+ However, because the language is essentially functional, they do not consider the possibility that the external call might already have stored the modifier capability.
+ Moreover, the proof does not make use of a Hoare logic.  
  
+ \subsubsection{Sealer-Unsealer pattern} 
+ The sealer-unsealer pattern, proposed by \citet{JamesMorris}, is a security  pattern  to enforce data
+abstraction while interoperating with untrusted  code. He proposes a function
+\prg{makeseal} which generating pairs of functions (\prg{seal}, \prg{unseal} ), such that \prg{seal} takes a value $v$ and returns a low-integrity value $v'$.
+The function \prg{unseal} when given $v'$ will return $v$. But there is no other way to obtain $v$ out of $v'$ except throughthe use of the \prg{usealer}.
+Thus, $v'$ can securely be shared with untrusted code.
+This pattern has been studied by \citet{ddd}.
+
+We formulate this pattern here. 
+As we are working with an object oriented rather than a functional language, we assume the existence of a class 
+\prg{DynamicSealer} with two methods, \prg{seal}, and \prg{unseal}. 
+And we define a predicate $Sealed(v,v',us)$ to express that $v$ has been sealed into $v'$ and can be unsealed using $us$.
+
+Then, the scoped invariants 
+
+ $$\strut \SPSP  S_{sealer\_1}\ \  \triangleq \ \ \TwoStatesN{ \prg{v},\prg{v}',\prg{us}: \prg{Object} }
+ {\   \inside{\prg{us}} \ \wedge\ Sealed(\prg{v},\prg{v}',\prg{us}) }$$  
  
-%
+ $$\strut \SPSP  S_{sealer\_2}\ \  \triangleq \ \ \TwoStatesN{ \prg{v},\prg{v}',\prg{us}: \prg{Object} }
+ {\ \inside{\prg{v}} \ \wedge \ \inside{\prg{us}} \ \wedge\ Sealed(\prg{v},\prg{v}',\prg{us}) }$$  
+
+\noindent
+ expresses that the unsealer is not leaked to external code ($S_{sealer\_1}$), and that if the external world has no access to the high-integrity value $\prg{v}$ nor to the its unsealer  \prg{us}, then it will not get access to the value  ($S_{sealer\_2}$). 
+ %
 %\input{crowdsale}
