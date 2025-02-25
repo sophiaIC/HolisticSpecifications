@@ -222,7 +222,7 @@ the aim is to systematically derive the concept of protection
 \newcommand{\Eff}{E\!f\!f}
 
 We say that a capability $\re$ guards an effect %$\Eff$, if $\Eff$ 
-if the effect cannot take place -- or be observed--  from an  external state, unless some external objet makes a call on $\re$.  To make this concept precise, we need to make precise 1) the effect   being observed, and 2) making a call on $\re$. Wrt 1): the effect   is observed iff we go from a state satisfying $A$ to a state which does not satisfy $A$. And wrt 2): an external object makes a call on $\re$ iff $\re$ is the receiver or one of the arguments. This leads to the following definitions:
+if the effect cannot take place -- or be observed--  from an  external state, unless some external objet makes a call on $\re$.  To make this concept precise, we need to make precise 1) the effect   being observed, and 2) making a call on $\re$. Wrt 1): the effect   is observed iff we go from a state satisfying $A$ to a state which does not satisfy $A$. And wrt 2): an external object makes a call on $\re$ iff $\re$ is the receiver or one of the arguments in a call that will be executed next. This leads to the following definitions:
 
 %\newcommand{\callsOn}[2]{{#1}{\stackrel{calls}{\longrightarrow}}{#2}}
 
@@ -230,7 +230,7 @@ if the effect cannot take place -- or be observed--  from an  external state, un
 \newcommand{\callsOn}[1] {{\ensuremath{\mathcal C}\!{\mathit{lld}}(#1)}}
 %{ {\mathcal C}\!\mathit{ll}{\mathcal O\!}\mathit{n}(#1)}
 
-\newcommand{\Guards}[2]{{\mathcal G}\!\mathit{urds}( {#1}, {#2})}
+\newcommand{\Guards}[2]{{\mathcal G}\!\mathit{uards}( {#1}, {#2})}
 
 
 \begin{definition}
@@ -239,31 +239,47 @@ $~ \ $
 \begin{itemize}
 
 \item
-$M, \sigma \models \,     \callsOn {\re}\ \ \ \ \ \triangleq \ \  \  \exists x,y_0,\overline y,m.[\ \ \  \sigma.\prg{cont}\txteq x:=y_0.m(\overline y) \ \ \wedge\  \ \interpret {\sigma} {\re}\! \in\!  \{\, \interpret {\sigma} {y_0}, \overline{ \interpret {\sigma} {y}} \, \} \  \ ] $
+$M, \sigma \models \,     \callsOn {\re}\ \ \ \ \ \triangleq \ \  \exists x,y_0,\overline y,m.[\ \ \  \sigma.\prg{cont}\txteq x:=y_0.m(\overline y) \ \ \wedge\  \ \interpret {\sigma} {\re}\! \in\!  \{\, \interpret {\sigma} {y_0}, \overline{ \interpret {\sigma} {y}} \, \} \  \ ] $
  
    $~ \\ $
 
 \item
 
-$M  \models \,  \Guards {\re} {A}   \ \triangleq \ \ \  
-  \  \forall \Mtwo, \sigma, \sigma'.[\ \ M, \sigma \models \,  (\extThis \wedge A) \ \ \wedge\ \ \sigma.\prg{cont}\neq \_; \_ \ \  \ \wedge $\\
+$M  \models \,  \Guards {\re} {A}   \ \triangleq \ \ 
+   \forall \Mtwo, \sigma, \sigma'.[\ \ M, \sigma \models \,  (\extThis \wedge A) \ \ \wedge\ \ \sigma.\prg{cont}\neq \_; \_ \ \  \ \wedge $\\
 $\strut \hspace{5.05cm}   \leadstoBoundedStarFin {\Mtwo\circ M} {\sigma} {\sigma'}\ \ \wedge \ \ M, \sigma' \models \,  
  \neg A   $\\
 $\strut \hspace{5cm}  
-   \Longrightarrow \  M, \sigma \models \,     \callsOn {\re} $
+   \Longrightarrow \  M, \sigma \models \,     \callsOn {\re} \ \ ] $
    $~ \\ $
-    
-\item
-$M, \sigma \models \,  \insidef{\re}  \ \   \ \ \   \ \ \  \ \ \ \triangleq \ \ \   \ \forall \Mtwo, \sigma'. [
-\ \ \ M, \sigma \models \,  \extThis \ \ \wedge\ \  \leadstoBoundedStar  {\Mtwo\circ M} {\sigma} {\sigma'}\ \ \wedge\ \ M, \sigma' \models \,  \extThis$\\
-$\strut \hspace{4.6cm} \ \  \Longrightarrow\ \ M, \sigma' \not \models \,   \callsOn {\re}\ \ ] $
-
 \end{itemize}
 
 
 \end{definition}
 
-The above definitions give us that if a capability $\re$ guards some assertion $A$, and $\re$ is never called in any state reachable from $\sigma$, then $A$ will never get invalidated:
+
+Therefore, an important property is the  guarantee that an expression $\re$ will ever by called on from an external state.  
+This is defined in Def \ref{def:insidef}.
+
+\begin{definition}
+\label{def:insidef}
+
+$~ \ $
+
+\begin{itemize}
+
+\item
+$M, \sigma \models \,  \insidef{\re}  \ \   \ \ \   \ \ \  \ \ \ \triangleq \ \ \   \ \forall \Mtwo, \sigma'. [
+%\ \ \ M, \sigma \models \,  \extThis \ \ \wedge
+ \ \  \leadstoBoundedStar  {\Mtwo\circ M} {\sigma} {\sigma'}\ \ \wedge\ \ M, \sigma' \models \,  \extThis
+ % $\\ $\strut \hspace{4.6cm}
+  \ \  \Longrightarrow\ \ M, \sigma' \not \models \,   \callsOn {\re}\ \ ] $
+
+\end{itemize}
+
+\end{definition}
+
+And if a capability $\re$ guards some assertion $A$, and $\re$ is never called in any external  state reachable from $\sigma$, then $A$ will never get invalidated:
 
 \begin{lemma}
 $~ $ \\
@@ -271,7 +287,7 @@ $~ $ \\
 \begin{itemize}
 
 \item
-$M, \sigma \models \,  \insidef{\re} \ \ \wedge\ \ M, \sigma \models \  \insidef{\re} \ \wedge \  M, \sigma \models \  A \wedge \extThis \ \ \Longrightarrow $\\
+$ \Guards {\re} {A} \ \ \wedge\ \ M, \sigma \models \  \insidef{\re} \ \wedge \  M, \sigma \models \  A \wedge \extThis \ \ \Longrightarrow $\\
 $\strut \hspace{3.6cm}\forall \Mtwo,  \sigma'.[\ \   \leadstoBoundedStar  {\Mtwo\circ M} {\sigma} {\sigma'}\ \ \wedge\ \ M, \sigma' \models \,  \extThis  \ \  \Longrightarrow\ \ M, \sigma' \models\,  A \ \ ]$.
 \end{itemize}
 \end{lemma}
@@ -288,13 +304,66 @@ $~ \ $
 \begin{itemize}
 
 \item
-$M, \sigma \models \,  \inside{\re}  \ \   \ \ \   \ \ \  \ \ \ \triangleq \ \ \   \ \forall \Mtwo, \sigma'. [
-\ \ \ M, \sigma \models \,  \extThis \ \ \wedge\ \  \leadstoBoundedStar  {\Mtwo\circ M} {\sigma} {\sigma'}\ \ \wedge\ \ M, \sigma' \models \,  \extThis$\\
-$\strut \hspace{4.6cm} \ \  \Longrightarrow\ \ M, \sigma' \not \models \,   \callsOn {\re}\ \ ] $
+{{$\Relevant {\alpha} {\sigma}  \ \ \ \ \ \triangleq \ \  \  \{ \ \alpha' \, \mid \ \exists n\!\in\!\mathbb{N}.\exists f_1,...f_n.. [\ \interpret {\sigma} {\alpha.f_1...f_n} = \alpha'\ \}$}}.
+
+\item
+$ \LRelevantO   \sigma  \ \  \ \triangleq \ \  \  \{ \ \alpha \ \mid \ { \exists x\in dom(\sigma) \wedge \alpha \in \Relevant {\interpret  {\sigma} x}
+{\sigma} \ \} } $.
+
+\item
+\label{sect:semantics:assert:prt}
+$\satisfiesA{M}{\sigma} {\inside {\re}}  \ \ \ \  \ \triangleq \ \ \   $
+% \begin{enumerate}
+%\item
+ $(1)\ \ \satisfiesA{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \interpret \sigma x  \neq \interpret \sigma \re $,\ \ \ \ and 
+% \item
+\\
+$~\strut  \hspace{2.7cm} (2) \ \ \forall \alpha.\forall f.[\ \alpha\!\in\!{\LRelevantO {\sigma}} \wedge\   \satisfiesA{M}{\sigma}{\external {\alpha}} 
+  \ \Longrightarrow \  
+  \interpret {\sigma} {\alpha.f}\! \neq \! \interpret {\sigma} {\re}     \ ] $.
+%  \end{enumerate}
 
 \end{itemize}
 
-
 \end{definition}
+
+Lemma \ref{lemma:inside:implies:noCalls} says that $\satisfiesA{M}{\sigma} {\inside {\re}} $ and its preservation are sufficient conditions for $M, \sigma \models \  \insidef{\re}$. 
+
+To obtain some intuition why this is so, we first discuss that $\satisfiesA{M}{\sigma} {\inside {\re}} $ is, 
+"almost",  a necessary condition for $\satisfiesA{M}{\sigma} {\insidef {\re}} $. 
+
+We first consider (1) from the definition of $ {\inside {\re}}$:
+Assume that we had a state $\sigma_o$ such that $\satisfiesA{M}{\sigma_o}{\extThis}$ and with  a variable $x$ so that  $\interpret {\sigma_o} x  = \interpret {\sigma_o} \re $.Then, we could chose modules $\Mtwo$ with method body for the current, external, receiver\footnote{But the frame in $\sigma$ contains the code of the current execution ... :-( }, so that it calls a method on $x$. This gives that we obtain a $\sigma_e'$ so that
+$\leadstoBoundedStar  {\Mtwo\circ M} {\sigma_o} {\sigma_e}\ \ \wedge\ \ M, \sigma_e\models \,  \extThis
+\wedge\ \ M, \sigma_e \models \,   \callsOn {\re}$. And this means that $M, \sigma_o \not\models \  \insidef{\re}$.
+
+We now consider (2) from the definition of $ {\inside {\re}}$:
+Assume that we had a state $\sigma_o$ and an address $\alpha$ and a field $f$, so that $\alpha\!\in\!{\LRelevantO {\sigma_o}}$, and $\satisfiesA{M}{\sigma_o}{\external {\alpha}}$ and  
+$\interpret {\sigma_o} {\alpha.f}\! \neq \! \interpret {\sigma} {\re}$. 
+Assume that there is a further state $\sigma_e$ such that   $\leadstoBoundedStar  {\Mtwo\circ M} {\sigma_o} {\sigma_e}$ so that $\interpret {\sigma} {\alpha}$, and that the heap of $\sigma_e$ is identical to that of $\sigma_o$. Then, we can chose the body of the current method in $\sigma_e$ to read the field $f$, and then use its value in a further call. Therefore, we have $M, \sigma_e \models \,  \extThis
+\wedge\ \ M, \sigma_e \models \,   \callsOn {\re}$. And this means that $M, \sigma_o \not\models \  \insidef{\re}$.
+
+On the other hand, $\satisfiesA{M}{\sigma} {\inside {\re}} $ is not a sufficient condition for $\satisfiesA{M}{\sigma} {\insidef {\re}} $.
+Namely, assume that $M$ had a pubic method which returned $\re$; then any external object could call that public method, obtain $\re$ and then make a call on it.
+This means that we need to also  require that $\satisfiesA{M}{\sigma} {\inside {\re}} $ is preserved by execution.
+
+
+\begin{lemma}
+$~ $ \\
+\label{lemma:inside:implies:noCalls}
+\begin{itemize}
+
+\item
+$\satisfiesA{M}{\sigma} {\inside {\re} } %\wedge \extThis}
+ \ \ \wedge\ \ \forall \Mtwo.\forall \sigma'.[\ \ 
+ \leadstoBoundedStar  {\Mtwo\circ M} {\sigma} {\sigma'}\ \ \wedge \ \ \satisfiesA{M}{\sigma'} {\extThis} \ \ \Longrightarrow \satisfiesA{M}{\sigma'} {\inside {\re}}  \ \ ]
+ $
+ \\
+ $\strut \hspace{1cm} \Longrightarrow \ \ \  M, \sigma \models \  \insidef{\re}$
+
+\end{itemize}
+\end{lemma}
+
+Proof by unfolding the definitions. 
  
 \end{document}
