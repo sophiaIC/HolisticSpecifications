@@ -1,6 +1,8 @@
 \section{Appendix to Section \ref{sect:sound:proofSystem} -- Soundness of the Hoare Logics}
 
 \subsection{Expectations}
+\label{s:expectations}
+
 \begin{axiom}
 \label{lemma:axiom:enc:assert:ul}
 \label{ax:ul:sound}
@@ -19,7 +21,82 @@ $M \vdash A   \ \ \ \  \Longrightarrow  \ \ \ \  \forall \sigma.[\ M, \sigma \mo
  \end{center}
 \end{axiom}
 
-\subsection{\Scoped satisfaction of assertions}
+The expectation that $M\ \vdash_{ul}\  \triple A {stmt} {A'} $ is sound is not onerous: 
+since the assertions $A$ and $A'$ do not talk about protection, many Hoare logics from the literature could be taken.
+
+On the other hand, in the logic  $M \vdash A$ we want to allow the assertion $A$   to talk about protection. 
+Since protection is a novel concept, the   literature offers no such logics.
+Nevertheless, such a logic can be constructed by extending and underlying assertion logic $M \vdash_{ul} A$  which does not talk about protection.
+We show such an extension in Fig \ref{assert:logic:extend}.
+
+
+\begin{figure}[htb]
+$
+\begin{array}{c}
+\inferruleSD{[\sc{Ext-1}]}
+	{  M \vdash_{ul} A  	}
+	{ M \vdash_{ul} A   }
+\\ \\
+\begin{array}{lcl}
+\inferruleSD{[\sc{Ext-2}]}
+	{  
+	M \vdash A \rightarrow A'
+	 
+	}
+	{   M \vdash (A \wedge \protectedFrom {\re} {\re'}) \rightarrow (A' \wedge \protectedFrom {\re} {\re'})   }
+& & 
+\inferruleSD{[\sc{Ext-3}]}
+	{   
+	M \vdash A \rightarrow A'
+	 
+	}
+	{   M \vdash (A \wedge \inside {\re} {) \rightarrow (A' \wedge \inside{\re}})   }
+\end{array}
+\\ \\
+\inferruleSD{[\sc{Ext-4}]}
+	{   
+	\
+	}
+	{   M \vdash {((A_1 \vee A_2) \wedge \protectedFrom {\re} {\re'})) \leftrightarrow 
+	                     ((A_1  \wedge  \protectedFrom {\re} {\re'})  \vee (A_2  \wedge \protectedFrom {\re} {\re'}))  }}
+\\ \\
+\inferruleSD{[\sc{Ext-5}]}
+	{   \ 
+	}
+	{   M \vdash {((A_1 \vee A_2) \wedge \inside{\re}) \leftrightarrow 
+	                     ((A_1  \wedge  \inside{\re})  \vee (A_2  \wedge  \inside{\re}))  }}
+\end{array}
+$
+\caption{From $M \vdash_{ul} A$ to $M \vdash  A$}
+\label{assert:logic:extend}
+\end{figure}
+
+\noindent
+The extension shown in  in Fig.  \ref{assert:logic:extend}  preserves soundness of the logic:
+
+\begin{lemma}
+Assume a logic $\vdash_{ul}$, such that 
+\begin{center}
+$M \vdash_{ul} A   \ \ \ \  \Longrightarrow  \ \ \ \  \forall \sigma.[\ M, \sigma \models A\ ]$.\\
+ \end{center}
+
+\noindent
+Extend this logic according to the rules in Fig.  \ref{assert:logic:extend}, and obtain $M \vdash  A$. Then, we have:
+\begin{center}
+$M \vdash A   \ \ \ \  \Longrightarrow  \ \ \ \  \forall \sigma.[\ M, \sigma \models A\ ]$.\\
+ \end{center}
+
+\end{lemma}
+
+\begin{proof}
+By induction over the derivation that $M \vdash A$.
+\end{proof}
+
+Note that the rules in  in Fig.  \ref{assert:logic:extend} allow the derivation  of $M\vdash A$, 
+for which $\Pos A$ does not hold -- \eg we can derive  $M \vdash \inside {\re}  \rightarrow  \inside{\re}$ through application of rule {\sc{Ext-3}}.
+However, this does not affect soundness of our logic --    $\Pos {\_}$ is required only in specifications.
+
+\subsection{\Strong satisfaction of assertions}
 \label{s:scoped:mean}
 
 \begin{definition}% [State Restriction, and Multi-level Sartisfaction]
@@ -91,7 +168,7 @@ $\strut \hspace{2cm} M, \sigma'' \models A[\overline{ {{\interpret \sigma z}/ z}
 
  
  
-Finally, the following lemma allows us to combine shallow and \scoped satisfaction:
+Finally, the following lemma allows us to combine shallow and \Strong satisfaction:
 
 \begin{lemma}
 \label{l:shallow:scoped:scoped}
@@ -110,7 +187,7 @@ By structural induction on $A$, and unfolding/folding the definitions.
 
 
 
-\subsection{Shallow and \Scoped Semantics of Hoare tuples}
+\subsection{Shallow and \Strong Semantics of Hoare tuples}
 
 Another example demonstrating that assertions at the end of a method execution might not hold after the call:
 
@@ -131,7 +208,7 @@ However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \n
 \end{example} 
 
 
-\begin{definition}[\Scoped Satisfaction of Quadruples by States]
+\begin{definition}[\Strong Satisfaction of Quadruples by States]
 \label{def:restrict:sat}
 For modules $\Mtwo$, $M$, state $\sigma$,  
 and assertions $A$, $A'$ and  $A''$
@@ -169,7 +246,7 @@ In addition to that, Hoare quadruples, $\quadruple {A} {stmt} {A'} {A''}$, promi
 We give both a weak and a shallow version of the semantics
 
 
- \begin{definition}[\Scoped Semantics of Hoare triples]
+ \begin{definition}[\Strong Semantics of Hoare triples]
 For modules $M$, and assertions $A$, $A'$   we define:
 %  the semantics of Hoare-triples,   $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ as follows:
 \begin{itemize}
@@ -207,7 +284,7 @@ $\satisfiesD {M} {\quadruple {A} {stmt} {A'} {A''}}  \ \ \  \triangleq$ \\
 
 
  
- \begin{lemma}[\Scoped   vs Shallow Semantics of Quadruples]
+ \begin{lemma}[\Strong   vs Shallow Semantics of Quadruples]
 For all $M$, $A$, $A'$, and $stmt$:
 \begin{itemize}
 \item
@@ -219,15 +296,15 @@ $\satisfiesD {M} {\quadruple {A} {stmt} {A'} {A''}}   \ \ \ \Longrightarrow \ \ 
  \end{proof}
  
  
-\subsection{\Scoped satisfaction of specifications} 
-%\subsection{\Scoped satisfaction of specifications -- \red{better term than \Scoped?}}  
+\subsection{\Strong satisfaction of specifications} 
+%\subsection{\Strong satisfaction of specifications -- \red{better term than \Strong?}}  
 \label{sect:HLmeans:scoped}
 
 
 
-We now give a \scoped meaning to specifications: 
+We now give a \Strong meaning to specifications: 
 
-\begin{definition} [\Scoped Semantics of  Specifications]
+\begin{definition} [\Strong Semantics of  Specifications]
 
 We define $\satisfiesD{M}{{S}}$ by cases: %  over the three possible syntactic forms.
 
@@ -251,7 +328,7 @@ $\strut  \ \ \   \ \ \ \ \ \ \ \ \   \  \ A_1' \triangleq   y_0:D,{\overline {y:
 \end{enumerate}
 \end{definition}
 
- \begin{lemma}[\Scoped   vs Shallow Semantics of Quadruples]
+ \begin{lemma}[\Strong   vs Shallow Semantics of Quadruples]
 For all $M$, $S$:
 \begin{itemize}
 \item
