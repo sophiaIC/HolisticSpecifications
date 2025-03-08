@@ -1,28 +1,22 @@
-We  now define   syntax and semantics of  our specifications, and illustrate through examples.
-%
-Our specification language % \SpecLang,  
- supports scoped invariants,   method specifications, and {conjunctions}. 
+We  now discuss   syntax and semantics of  our specifications, and illustrate through examples.
+ 
+\subsection{\textbf{Syntax, Semantics, Examples}} Our specification language   supports scoped invariants,   method specifications, and {conjunctions}. 
+
 \begin{definition} [Specifications Syntax]     We define the syntax  of  specifications, $S$:
 \label{f:holistic-syntax}
 \[
 \begin{syntax}
 \syntaxElement{S}{ }
 		  {\syntaxline
-                               %   {  \OneStateQ {\overline {x:C}} {A} }	
-				{ \TwoStatesN {\overline {x:C}} {A}  }
-				%  {\mprepost{A}{C}{m}{x}{C}{A} }
-%		 \endsyntaxline
-% 		}
-%  		{
-% 		\syntaxline
- 				{\mprepostN{A}{p\ C}{m}{y}{C}{A} {A}}%{A[\!\![ \,C\!::\!m(\overline{x:C})\,]\!\!] A }}
-				{S\, \wedge \, S}
+				{\  \TwoStatesN {\overline {x:C}} {A}\  }
+ 				{\ \mprepostN{A}{p\ C}{m}{y}{C}{A} {A}\ } 
+				{\ S\, \wedge \, S\ }
 		 \endsyntaxline
  		}
 \endSyntaxElement\ 
 \syntaxElement{p}{ } 
  	 {\syntaxline
-                                  {\  \ \ \  \prg{private} \ } 	
+                                  {\    \prg{private} \ } 	
 				 {\   \prg{public} \ } 	
 		 \endsyntaxline
  		}
@@ -31,80 +25,65 @@ Our specification language % \SpecLang,
 \]
 
 
-
-% \end{itemize} 
 \end{definition}
 
-Def. \ref{f:holistic-wff}  describes well-formedness of specifications, $\vdash S$.
- We require for  scoped invariants, that the assertion is encapsulated, and that  its free variables  are bound by the quantifier. For method specifications, that the three assertions are $Stbl^+$, that the invariant part is encapsulated, that \prg{res} and \prg{this} are not in the formal parameters, that the free variables in the postcondition are either formal parameters or free  in the precondition, and similar for the invariant part.
-%precondition's free variables all appear in the formal parameters or 
-%{\emph{Well-formedness}},  $\vdash S$,  is   defined by cases on $S$:\\
-%  $\strut \ \  \vdash {\TwoStatesN {\overline {x:C}} {A}} \ \ \ \triangleq\  \ \ \fv(A)\subseteq\{  \overline x \}\,\wedge\, {M \vdash \encaps {\sdN{\overline {x: C}} \wedge A}} $;\\
-% $\strut \ \  \vdash {\mprepostN{A}{p\ C}{m}{y}{C}{A'} {A''}}\ \ \ \triangleq\  \ \  \exists \overline x, \overline {C'}.[ $\\
-%  $\strut \hspace{1cm}  \sdN{\prg{res}\notin \overline{x}, \overline{y}}\,  \wedge\,  \ \sdN{\fv(A_0)\subseteq \overline{x},\overline y, \prg{this}}\   \wedge \fv(A')\subseteq  \fv(A),\prg{res}\   \wedge\  \fv(A'')\subseteq  \sdN{\overline{x}} $\\
-%  $\strut \hspace{1cm}\wedge\  \Pos A\, \wedge\, \Pos {A'}\, \wedge \,\Pos {A''}\, \wedge  \,  M \vdash \encaps  {\overline {x: C'} \wedge A''}\ \ \  ]$ \\
-%  $\strut \ \   \vdash S\, \wedge \, S' \ \ \triangleq \ \  \vdash S\, \wedge\, \vdash S'  $.  
-
- 
-
-
-
+In Def. \ref{f:holistic-wff}  later on we describe  well-formedness of $S$, but  we first show  semantics and some examples.
+%To motivate this definition, we first define the semantics of these specifications, and show some examples.
+%
 \label{ssect:sem}
-% \subsection{Specifications Semantics}
-
-  
-To give the semantics of specification we first {define quadruples involving states rather than statements}:
+ % 
+%The semantics of specifications uses  
+%For the semantics we 
+We use quadruples involving states: % rather than statements}:
 ${\satAssertQuadruple  \Mtwo  M     {A} \sigma {A'} {A''} }$ 
-  says that   if $\sigma$ satisfies $A$, then any terminating execution of its continuation (${\leadstoBoundedStarFin { \Mtwo\madd M}{\sigma}  {\sigma'} }$) will satisfy $A'$, and
- any intermediate reachable external state (here $\sigma''$) will satisfy $A''$. 
-In  $A''$. In the latter, we replace $A$'s
-where we replace  free variables by their denotation in $\sigma$.
-
+  says that   if $\sigma$ satisfies $A$, then any terminating scoped execution of its continuation (${\leadstoBoundedStarFin { \Mtwo\madd M}{\sigma}  {\sigma'} }$) will satisfy $A'$, and any intermediate reachable external state 
+  (${\leadstoBoundedStar  {\Mtwo\madd M}{\sigma}  {\sigma''}}$) will satisfy the "mid-condition", $A''$. 
+  
  
 \begin{definition} \label{def:hoare:sem}
 For modules $\Mtwo$, $M$, state $\sigma$, and assertions $A$, $A'$ and  $A''$, we define:
 \begin{itemize}
 \item
-$ {\satAssertQuadruple  \Mtwo  M     {A} \sigma {A'} {A''} } \ \ \triangleq \ \ \forall \overline{z}, \sigma',\sigma''.[
+$ {\satAssertQuadruple  \Mtwo  M     {A} \sigma {A'} {A''} } \ \ \triangleq \ \ \forall \sigma',\sigma''.[
 $  \\
-$\strut \hspace{.2cm} M,  \sigma \models  {A}  
-  \  \ \Longrightarrow$\\
- $\strut   \ \ \ \  \  \ \ \ \   [ \ \ \  {\leadstoBoundedStarFin { \Mtwo\madd M}{\sigma}  {\sigma'} }\ \ \Longrightarrow\ \   M,  \sigma' \models  \sdN{A'}  
- \ \ \ \  ] \ \ \ \wedge$\\
- $\strut   \ \ \ \  \  \ \ \ \   [ \ \  \ {\leadstoBoundedStar  {\Mtwo\madd M}{\sigma}  {\sigma''} }\ \  \ \Longrightarrow\   \   M,  \sigma'' \models  {(\extThis \rightarrow A''[\sdN{\overline{\interpret \sigma z/z}}])}\ \ \  ] $\\
- $\strut \hspace{.2cm}$ where  $ \overline z=\fv(A)  \ \ \ ]$ %\ \ \ \  \ \ \ \  \ \  \ \ \ \  \ \ \ \ ]$
+$\strut \hspace{.2cm} M,  \sigma \models  {A}   
+  \  \ \Longrightarrow \ \   [ \ \  {\leadstoBoundedStarFin { \Mtwo\madd M}{\sigma}  {\sigma'} }\ \ \Longrightarrow\ \   M,  \sigma' \models  {A'}  
+ \ \ \ \  ] \ \ \ \wedge$\\ 
+ $\strut   \   \hspace{2.5cm}  [ \ \   {\leadstoBoundedStar  {\Mtwo\madd M}{\sigma}  {\sigma''} }\ \  \ \Longrightarrow\   \   M,  \sigma'' \models  {(\extThis \rightarrow {\as \sigma {A''}} )}\ \ \  ] \ \ \ \ \ ]$ 
 \end{itemize} 
 \end{definition}
 
 {\begin{example}
-${\satAssertQuadruple  \Mtwo  M     {A_1} {\sigma_{4}} {A_2} {A_3} }$  %with $\sigma_4$ from 
-in Fig. \ref{fig:illusrPreserve}, % from  \S \ref{sect:approach:scoped}, -- short
-assuming  $\sigma_4$ satisfies $A_1$ and $\sigma_{23}$ has empty continuation,    % ${\satAssertQuadruple  \Mtwo  M     {A_1} {\sigma_{4}} {A_2} {A_3} }$ 
-%says that if 
-  then $\sigma_{23}$ will satisfy $A_2$, while $\sigma_6$-$\sigma_9$, $\sigma_{13}$-$\sigma_{17}$, $\sigma_{20}$-$\sigma_{21}$ will satisfy $A_3$.
+${\satAssertQuadruple  \Mtwo  M     {A_1} {\sigma_{4}} {A_2} {A_3} }$   
+in Fig. \ref{fig:illusrPreserve},  
+assuming  $\sigma_4$ satisfies $A_1$ and $\sigma_{23}$ has empty continuation,
+then $\sigma_{23}$ will satisfy $A_2$, while $\sigma_6$-$\sigma_9$, $\sigma_{13}$-$\sigma_{17}$, $\sigma_{20}$-$\sigma_{21}$ will satisfy $A_3$.
  \end{example}}
 
-{Now to the} semantics to specifications:  %shirter
- $\satisfies{M}{\TwoStatesN {\overline {x:C}} {A}}$ 
-says that if an external state $\sigma$ satisfies $A$, then all future external states reachable from $\sigma$—including nested % method -- shorter
- calls and returns but  {\emph{stopping} before}   returning from the active call in $\sigma$—%will  -- shorter
-also satisfy $A$. 
+{Now to} % should have been "to the" but this way we avoid bad line break in 3 lines
+ semantics of specifications:     $\satisfies{M}{\TwoStatesN {\overline {x:C}} {A}}$ 
+says that if an external state $\sigma$ satisfies $A$, then all future external states reachable from $\sigma$—including nested  
+ calls and returns but  {\emph{stopping} before}   returning from the active call in $\sigma$— also satisfy $A$. 
  And  $\satisfies{M} { \mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3} }$ says that scoped execution of a call to $m$ from $D$   in  states satisfying $A_1$ leads to final states satisfying $A_2$ (if it terminates),
  and to intermediate external states satisfying $A_3$.
 
 \begin{definition}  [Semantics of  Specifications]
-We define $\satisfies{M}{{S}}$ by cases over $S$: % the three possible syntactic forms.
+We define $\satisfies{M}{{S}}$ by cases over $S$:  
 
 \label{def:necessity-semantics}
 
 \begin{enumerate}
  \item
+\label{def:necessity-semantics-first}
  $\satisfies{M}{\TwoStatesN {\overline {x:C}} {A}} \ \  \ \triangleq   \ \ \ {\forall   \Mtwo,  \sigma.[\ {\satAssertQuadruple  \Mtwo  M    {\extThis \wedge \overline {x:C} \wedge A} \sigma {A} {A} }\ ].}$
   \item
+   \label{def:necessity-semantics-second}
  $\satisfies{M} { \mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3} }\  \ \ \   \triangleq  $ \\ %  \ \ \ \forall   \Mtwo,  \sigma, y_0,\overline y.[\ $    \\
-$\strut \ \   \forall   \Mtwo,  \sigma, y_0,\overline y.[\ $\\
-$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \  \ \ \ \ \sigma.\prg{cont}\txteq {u:=y_0.m(y_1,..y_n)} \ \ \Longrightarrow \ \ $\\
-$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \ \ \  \ \ \satisfies  { \Mtwo\!\cdot\! M} {\quadruple  { y_0\!:\!D,{\overline {y\!:\!D}}  \wedge   A[y_0/\prg{this}]}   {\sigma}   {A_2[u/res,y_0/\prg{this}] }  {A_3 } }  \  \ \  ]  $   
+$\strut \ \   \forall   \Mtwo,  \sigma, y_0,\overline y.[\ 
+% $\\ $\strut  \ \ \   \ \ \ \ \ \ \ \ \   \  \ \ \
+ \ \sigma.\prg{cont}\txteq {u:=y_0.m(y_1,..y_n)} \ \ \Longrightarrow \ \ $\\
+$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \ \ \  \ \ 
+\ \ \ \ \ \ \ \ \ {\satAssertQuadruple  { \Mtwo} {M} { y_0\!:\!D, \overline {y\!:\!D}   \wedge   A[y_0/\prg{this}]}  {\ \sigma\ }   {A_2[u/res,y_0/\prg{this}] }{A_3 } } \  \ \  ]  $   
 %$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \  \mbox{where}$\\
 %$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \   A_1' \triangleq   y_0:D,{\overline {y:D}}   \wedge   A[y_0/\prg{this}],\  \  A_2' \triangleq A_2[u/res,y_0/\prg{this}],\ \ A_3' \triangleq A_3  \  ]$  
  \item
@@ -119,25 +98,26 @@ We continue with some examples -- more in % can be found in
 \A ~\ref{app:spec}.
 
 {
- \begin{example}[Scoped Invariants]
+ \begin{example}[Scoped Invariants and Method Specs]
  \label{example:twostate}
+ \label{example:mprepostl}
   % 
- $S_5$  guarantees   that   non-null keys do not change:
+ $S_5$  says % shorter than guarantees  
+  that   non-null keys are immutable:
  \\
  \begin{tabular}{lcll}
 $\strut \ \ \ \ \ \ \ \ S_5$ & $\triangleq$   & ${\TwoStatesN {\prg{a}:\prg{Account}.\prg{k}:\prg{Key}}  {\prg{null}\neq \prg{k}=\prg{a.\password}}} $  \end{tabular}
- \end{example} 
- }
-
-
- 
- \begin{example}[Method Specifications]
- \label{example:mprepostl}
- A specification for method \prg{buy} appeared in \S\ref{sec:howThird}. 
-%  $S_6$ guarantees that  \prg{buy} does not decrease  the balance of the shop's account if its key is protected from the buyer, while 
-Here,  $S_9$    guarantees that \prg{set} preserves the protectedness of any account, and any key. %as well as of any key.  
-%  Appendix~\ref{app:spec} contains further examples.
-
+\\
+% \end{example} 
+% }
+%
+%
+% 
+% \begin{example}[Method Specifications]
+% \label{example:mprepostl}
+ %A specification for method \prg{buy} appeared in \S\ref{sec:howThird}. 
+%(Method Specifications) Here,  
+$S_9$    guarantees that \prg{set} preserves the protectedness of any account, and any key.  \\
 %   \small   {
 %  {\sprepost
 %		{\strut \ \ \ \ \ \ \ \ \ S_6} 
@@ -158,18 +138,60 @@ Here,  $S_9$    guarantees that \prg{set} preserves the protectedness of any acc
 		{   \inside{a}\wedge  \inside{a'.\prg{key}} }
 }
 
-Note that %in $S_9$ the variables 
-$a$, $a'$ are disjoint from \prg{this} and the formal parameters of \prg{set}. 
-In that sense, $a$ and $a'$ are universally quantified; a call of \prg{set} will preserve protectedness for \emph{ all} accounts and their keys. %, whether locally  accessible or not.
-% $S_9$ guarantees that any call of \prg{set} will preserve protractedness for all
+\noindent
+Note that  $a$, $a'$ are disjoint from \prg{this} and the formal parameters of \prg{set}. 
+In that sense, $a$ and $a'$ are universally quantified; a call of \prg{set} will preserve protectedness for \emph{ all} accounts and their keys. 
 
 \end{example}
 
+\subsection{\textbf{Well-formedness}} We now define what it means for a specification to be well-formed:
+
+\begin{definition}% [Specifications Well-formed]    
+ {\emph{Well-formedness}} of specifications,  $\vdash S$,  is   defined by cases on $S$:\\
+\label{f:holistic-wff}
+
+\begin{itemize}
+\item
+  $\strut \  \vdash {\TwoStatesN {\overline {x:C}} {A}} \ \ \ \triangleq\  \ \ \fv(A)\subseteq\{  \overline x \}\,\wedge\, {M \vdash \encaps {{\overline {x: C}} \wedge A}} $.
+    \item
+ $\strut \ \vdash {\mprepostN{\overline{x:C'} \wedge A}{p\ C}{m}{y}{C}{A'} {A''}}\ \ \ \triangleq$\\
+$\strut \hspace{0.7cm}  [ \ \ {\small{   {\prg{res},\prg{this}\!\notin\! \overline{x}, \overline{y}}\ \wedge\  {\fv(A)\!\subseteq\! \overline x, \overline y, \prg{this}}\     \wedge\    \fv(A')\!\subseteq \! \overline{x}, \overline{y}, \prg{this}, \prg{res}\   \wedge\   \fv(A'')\!\subseteq\!  {\overline{x}} }} $\\
+    $\strut \hspace{0.7cm} \ \ \  \wedge\  \Pos {A } \, \ \wedge \ \,  \Pos {A'} \, \ \wedge \  \,  M \vdash \encaps  {\overline {x: C'} \wedge A''}\ \ \  ]$ 
+%  \item
+% SAME AS ABOVE, not small, and in 3 lines
+% $\strut \ \vdash {\mprepostN{\overline{x:C'} \wedge A}{p\ C}{m}{y}{C}{A'} {A''}}\ \ \ \triangleq$\\
+%  $\strut \hspace{1cm} [ \ \  {\prg{res},\prg{this}\notin \overline{x}, \overline{y}} \ \ \wedge$\\
+% $\strut \hspace{1cm} \ \ \ \  {\fv(A)\subseteq \overline x, \overline y, \prg{this}}\  \,  \wedge\ \,  \fv(A')\subseteq    \overline{x}, \overline{y}, \prg{this}, \prg{res}\  \, \wedge\ \,  \fv(A'')\subseteq  {\overline{x}}\ \  \wedge $\\
+%    $\strut \hspace{1cm} \ \ \ \   \Pos {A \wedge A' \wedge A''} \, \ \wedge \  \,  M \vdash \encaps  {\overline {x: C'} \wedge A''}\ \ \  ]$ 
+  \item  $\strut \   \vdash S\, \wedge \, S' \ \ \triangleq \ \  \vdash S\, \ \wedge\,  \ \vdash S'  $.  
+\end{itemize}
+
+\end{definition}
+
+Def \ref{f:holistic-wff}'s  requirements about  free variables are relatively straightforward: In scoped invariants, $A$ may only mention   variables introduced by the quantifier, $\overline x$. In method specifications, the precondition, $\overline{x:C'} \wedge A$, may only mention the receiver, \prg{this}, the formal parameters, $\overline y$, and the explicitly introduced  variables, $\overline x$; it may \emph{not}  mention the result  \prg{res}. The postcondition, $A'$, may mention these variables, and in addition, may mention the result, \prg{res}. The mid-condition, $A''$ is about a state which has at least one more frame than the current method's,
+and therefore it  may not mention \prg{this}, nor $\overline{y}$, nor \prg{res}.
+
+%Def \ref{f:holistic-wff}'s  requirements about encapsulation are more interesting:
+Def \ref{f:holistic-wff}'s  requirements about encapsulation are motivated by  Def.   \ref{def:necessity-semantics}. If  $\overline {x:C}\wedge A$ in the scoped invariant  was not encapsulated,  then it could be invalidated by some external code, and it would be impossible to ever satisfy Def.   \ref{def:necessity-semantics}(\ref{def:necessity-semantics-first}).% requirement that $A$ is preserved during scoped external execution.
+Similarly, if a method specification's mid-condition, $A''$, could be invalidated by some external code, then it would be impossible to ever satisfy Def.   \ref{def:necessity-semantics}(\ref{def:necessity-semantics-second}). % requirement that $A''$ holds in intermediate external states.
+
+
+Def \ref{f:holistic-wff}'s  requirements about stability are motivated by our Hoare logic rule for internal calls,   {\sc{[Call\_Int]}}, Fig \ref{f:internal:calls}. The requirement    $\Pos {A}$ for the method's precondition, gives that $A$ is preserved when an internal frame is pushed, \cf Lemma \ref{l:preserve:asrt}.
+The requirement     $\Pos {A'}$ for the method's postcondition gives,  in the context of \strong satisfaction,  that $A'$ is preserved when an internal frame is popped, \cf Lemma \ref{l:calls:return:deep}. This is crucial for soundness of  {\sc{[Call\_Int]}}.
+
+  %precondition's free variables all appear in the formal parameters or 
+%{\emph{Well-formedness}},  $\vdash S$,  is   defined by cases on $S$:\\
+%  $\strut \ \  \vdash {\TwoStatesN {\overline {x:C}} {A}} \ \ \ \triangleq\  \ \ \fv(A)\subseteq\{  \overline x \}\,\wedge\, {M \vdash \encaps {{\overline {x: C}} \wedge A}} $;\\
+% $\strut \ \  \vdash {\mprepostN{A}{p\ C}{m}{y}{C}{A'} {A''}}\ \ \ \triangleq\  \ \  \exists \overline x, \overline {C'}.[ $\\
+%  $\strut \hspace{1cm}  {\prg{res}\notin \overline{x}, \overline{y}}\,  \wedge\,  \ {\fv(A_0)\subseteq \overline{x},\overline y, \prg{this}}\   \wedge \fv(A')\subseteq  \fv(A),\prg{res}\   \wedge\  \fv(A'')\subseteq  {\overline{x}} $\\
+%  $\strut \hspace{1cm}\wedge\  \Pos A\, \wedge\, \Pos {A'}\, \wedge \,\Pos {A''}\, \wedge  \,  M \vdash \encaps  {\overline {x: C'} \wedge A''}\ \ \  ]$ \\
+%  $\strut \ \   \vdash S\, \wedge \, S' \ \ \triangleq \ \  \vdash S\, \wedge\, \vdash S'  $.  
 
 
 
+\subsection{\textbf{Discussion}}  
 
-\paragraph{Discussion: Comparing with Object and History Invariants}  Our scoped invariants y are similar to, but different from, history invariants  and object invariants, but
+\paragraphSD{Difference with Object and History Invariants}  Our scoped invariants are similar to, but different from, history invariants  and object invariants, but
 neither of these provide what we need. 
 We compare through an example:
 
@@ -202,22 +224,20 @@ here would require,  \eg that $\sigma_a \models A$. Thus, they  are %equally
 \emph{inapplicable} for us: They would require, \eg, that for all % objects 
  $\prg{acc}$, in all (visible) states, $\inside{\prg{acc.key}}$, and thus prevent \emph{any} withdrawals from \emph{any} account in \emph{any} state.
  
-
-
  
 
-\paragraph{Discussion: The Difference between Postconditions and Invariants}
+\paragraphSD{Difference between Postconditions and Invariants}
 % The interested reader might have noticed that 
-In all our method specification examples so far, the post-condition and the invariant part were identical.
+In all  method specification examples so far, the post-condition and   mid-condition were identical.
 However, this need not be so. 
-Assume a method \prg{tempLeak} defined in \prg{Account}, with an external argument \prg{extArg}, and a method body:
+Assume a method \prg{tempLeak} defined in \prg{Account}, with an external argument \prg{extArg}, and  method body:
 \\
-$\strut \hspace{1cm} \prg{extArg.m(this.key); this.key:=new Key}$
+{\small{$\strut \hspace{1cm} \prg{extArg.m(this.key); this.key:=new Key}$}}
 \\
-Then, the assertion   $ \inside{\prg{this.key}}$  is  broken by the external call \prg{extArg.m(this.key)}, but is  established by \prg{his.key:=new Key}.
-Therefore, $ \inside{\prg{this.key}}$  is not an invariant.
+Then, the assertion   $ \inside{\prg{this.key}}$  is  invalidated by the external call \prg{extArg.m(this.key)}, but is  established by \prg{this.key:=new Key}.
+Therefore, $ \inside{\prg{this.key}}$  is a valid post-condition but not a valid   mid-condition.
 The specification of \prg{tempLeak} could be\\
-$
+{\small{$
 {\sprepost
 		{\strut \ \ \ \ \ \ \ \ \ S_{\prg{tempLeak}}} 
 		{  \ \prg{true}\  }
@@ -225,13 +245,12 @@ $
 		{  \  \inside{\prg{this.key} }\  }
 		{  \  \prg{true}\  }
 }
-$
+$}}
 
  
  
 \footnoteSD{First bullet: This means that we require all objects to satisfy even if not locally relevant. Second Bullet: notice that we are asking for globally relevant objects}  
 \footnoteSD{{TODO: Make an example that demonstrates the difference if in the second bullet we had asked for locally relevant objects ${\overline o}$.}}
-\footnoteSD{{TODO Notice that we assume that $\overline x$ are not free in $A$ -- cf Barendregt convention.}}
 \footnoteSD{TODO: explain why we did not require the stronger $\leadstoFin{M_{ext}\!\circ \!M}{\sigma}{\sigma'}$ rather than $\leadstoBoundedStar {M_{ext}\!\circ \!M}{\sigma}  {\sigma'}$.}
 
 \input{expressivitySummary}
