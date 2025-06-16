@@ -1,40 +1,22 @@
+
+
 \label{sub:SpecO}
 
+We assume a sequence of specification identifiers, $S_1$, .... $S_m$, and a sequence of module identifiers, $M_1$,... $M_n$, where $n\geq m$. We also assume lookup functions, $\Spec$ and $\Mod$, which map the specification identifiers to specifications, and the module identifiers to modules. 
 
-Our assertions are    standard  (\eg properties of the values of expressions,  connectives, quantification \etc),   about protection (\ie ${\protectedFrom{{\re}} {{\re}}} $ and  $ {\inside {{\re}}} $), and about adherence to Specifications ($ {\obeys {\re} {S}}$).
 
+Our assertions are    standard  (\eg properties of the values of expressions,  connectives, quantification \etc),   about protection (\ie ${\protectedFrom{{\re}} {{\re}}} $ and  $ {\inside {{\re}}} $), and about adherence to Specifications ($ {\obeys {\re} {S}}$). Moreover, in order to be able to give a well-founded definition to the meaning of assertions, we introduce stratification to  assertions: an assertion at level $n$, denoted by $A^n$, may contain  $ {\obeys {\re} {S_i}}$ for $i<n$ in any positions, and may contain $ {\obeys {\re} {S_n}}$ in positive positions only.
 
-\begin{definition}
+ 
+
+\begin{definition}[Staified Assertions]
 \label{def:assert:syntax}
-%Expressions, $\re$, 
-%Assertions, $A$,  are defined as follows:
-%
-%\label{f:chainmail-syntax}
-%$
-%\begin{syntax}
-%\syntaxElement{A\ \ }{}
-%		{
-%		\syntaxline
-%				{{\re}}
-%				{{\re} : C}
-%				{\external{{\re}}}
-% 				{\protectedFrom{{\re}} {{\re}}} 
-%				 {\inside {{\re}}} 
-%				 {\obeys {\re} {S}}
-%				 {\neg A}
-%				{A\ \wedge\ A}
-%				{\all{x:C}{A}}				
-%		\endsyntaxline
-%		}
-%\endSyntaxElement\\
-%\end{syntax}
-% 
 
-We   define \emph{concrete} assertions $\co {A}$, \emph{basic} assertions which contain no $\textbf{obeys}$ clauses $\ba A$, and well-formed assertions $\wf {A}$, as follows (where $S$ stands for a specification identifier):
+Given a sequence of specification identifiers,  $S_1$, .... $S_m$, for any number $n\in[0..m)$, we define $A^n$, the syntax of assertions at level $n$, as follows:
 
 $
 \begin{syntax}
-\syntaxElement{\co A}{}
+\syntaxElement{A^c}{}
 		{
 		\syntaxline
 				{{\re}}
@@ -42,28 +24,13 @@ $
 				{\external{{\re}}}
  				{\protectedFrom{{\re}} {{\re}}} 
 				 {\inside {{\re}}} 
-				  {\neg \co A}
-				{\co A\ \wedge\ \co A}			
-		\endsyntaxline
-		}
-\endSyntaxElement
- \\
-\syntaxElement{\ba A}{}
-		{
-		\syntaxline
-				{{\re}}
-				{{\re} : C}
-				{\external{{\re}}}
- 				{\protectedFrom{{\re}} {{\re}}} 
-				 {\inside {{\re}}} 
-				  {\neg \ba A}
-				{\ba A\ \wedge\ \ba A}
-								{\all{x:C}{\ba A}}				
+				  {\neg A^c}
+				{A^c \wedge A^c}	
 		\endsyntaxline
 		}
 \endSyntaxElement
 \\
-\syntaxElement{\wf A  }{}
+\syntaxElement{A^0}{}
 		{
 		\syntaxline
 				{{\re}}
@@ -71,10 +38,30 @@ $
 				{\external{{\re}}}
  				{\protectedFrom{{\re}} {{\re}}} 
 				 {\inside {{\re}}} 
-				{\neg \ba A}
-				{\wf A\ \wedge\ \wf A \strut \  \ \  \ }
-				{\all{x:C}{\wf A} }	
-				 {\obeys {\re} {S}}				 			
+				  {\neg A^0}
+				{A^0 \wedge A^0\ \ \ }
+				 {\all{x:C}{A^0}}			
+		\endsyntaxline
+		}
+\endSyntaxElement
+ \\
+\syntaxElement{A^{n+1}}{}
+		{
+		\syntaxline
+				{{\re}}
+				{{\re} : C}
+				{\external{{\re}}}
+ 				{\protectedFrom{{\re}} {{\re}}} 
+				 {\inside {{\re}}} 
+				  {\neg  A^n}
+				 { A^{n+1}  \wedge A^{n+1}}
+				 {\all{x:C}{A^{n+1}}}	
+                  \endsyntaxline
+                }
+                {
+		\ \ 
+		\syntaxline
+				 {\obeys {\re} {S_{n+1}}}		
 		\endsyntaxline
 		}
 \endSyntaxElement
@@ -84,8 +71,48 @@ $
  
 \end{definition}
 
-Concrete assertions, $\co A$ will be used when modules give meaning to abstract predicates, and basic assertions $\ba A$ are used in order to ensure that $\textbf{obeys}$ clauses do not appear in negative positions in our assertions $\wf A$.
- 
+We write $A$ for any $A\in A^m$ for some $m\in \mathbb{N}$.
+Concrete assertions, $A^c$ will be used when modules give meaning to abstract predicates.
+
+Like assertions, specifications are stratified too:
+
+\begin{definition}[Specifications]
+A specification consists of a name, $S_n$, and a set of stratified policies, $Pol^n$, defined as:
+
+$
+\begin{syntax}
+\syntaxElement{Spec^m}{}
+		{
+		\syntaxline
+				{ {\textbf{specification}}\ \  S_n \ \{ \ \ { (\ {\textbf{abstr}}\ P ( x^* ) \ )^*} \ \  (\ Pol^n\ )^* \ \ \} }		
+		\endsyntaxline
+		}
+\endSyntaxElement
+\\
+ \syntaxElement{Pol^{1}}{}
+		{
+		\syntaxline				
+ 				{ \{ \ A^0 \ \} \ \  \prg{this.m(y}^*\prg{)} \ \ 	     \{ \ A^1\ \} \ \ \	}
+% 				{ \{ \ \wf A \ \} \ \ \prg{any\_code} \ \   \{ \ \wf A \ \}	}	
+				{ {\textbf{invr}}\ A^1 \ }	
+		\endsyntaxline
+		}
+\endSyntaxElement
+\\
+\syntaxElement{Pol^{n+1}}{}
+		{
+		\syntaxline				
+ 				{ \{ \ A^n \ \} \ \  \prg{this.m(y}^*\prg{)} \ \ 	     \{ \  A^{n+1} \ \}	}
+% 				{ \{ \ \wf A \ \} \ \ \prg{any\_code} \ \   \{ \ \wf A \ \}	}	
+				{ {\textbf{invr}}\ A^{n+1} \  }	
+		\endsyntaxline
+		}
+\endSyntaxElement
+\end{syntax}
+$
+\footnote{@James: you were right that "obeys" in pre-conditions is as.if it appeared in a negative position.}
+
+ \end{definition} 
 \footnote{ AUTHORS:  
  Note that $\re$ are ghostfields, and therefore can also be abstract predicates whose bodies are defined in the modules -- same as in ghostfields. 
  Perhaps we do not need to clarify this.
@@ -94,159 +121,168 @@ Concrete assertions, $\co A$ will be used when modules give meaning to abstract 
 %\label{def:chainmail-semantics-all}
 %\label{dup:def:chainmail-semantics}
 %\noindent
- Satisfaction  of  obeys-free assertions, $\ba A$ by a module and a state is expressed  through \ $\satisfiesAB{M}{\sigma}{{\ba A}}$ \  and defined by cases on the shape of $\ba A$, in definitions \ref{def:chainmail-semantics}.
+We now define satisfaction  of assertions $A$, in the context of a modules $\Mod$, specifications $\Spec$, and a state $\sigma$.
+The judgment $\satM   \sigma m A$ is defined only if $A\in A^n$.
+The judgement $\satMN \sigma m n A$ is used to define $\satM \sigma m A$.
+
+@authors: In contract with OOPSLA-25, we now use \emph{all} the modules. We need that for Def ???
+
+@authors:  What is external? Is it external to a module-id? or a spec-id?
 
 
-\begin{definition}[Satisfaction of Basic Assertions] 
+\begin{definition}[Stratified Satisfaction of Assertions] 
 \label{def:chainmail-semantics}
 \label{def:chainmail-protection-from}
 \label{sect:semantics:assert:prtFrom}
  \label{def:chainmail-protection}
- We define satisfaction of basic assertions, $\ba A$, by a % program 
-state $\sigma$ and 
- module $M$ as:\footnote{AUTHORS: This is essentially OOPSLA 2025}
+% We define satisfaction of basic assertions, $\ba A$, by a % program  state $\sigma$ and 
+% module $M$ as:\footnote{AUTHORS: This is essentially OOPSLA 2025}
+is defined below, where $m$ and $n$ are arbitrary out of $\mathbb N$ -- unless explicitly quantified.
+%We assume that the number of specifications in $\Spec$ is ${\mathcal s}$.
+
 \begin{enumerate}
 \item
+\label{sat}
+$\sat \sigma  A \ \ \ \triangleq \ \ \   \satM  \sigma {\mathcal s}  A $,\ \ \  where ${\mathcal s}$=number of specifications in $\Spec$.\footnote{But what about externals?}
+\item
+\label{satM}
+$\satM \sigma m A \ \ \ \triangleq \ \ \  \forall n\in \mathbb{N}. [\ \satMN \sigma m n A\ ]$
+\item
 \label{cExpr}
-$\satisfiesAB{M}{\sigma}{{\re}}\ \ \ \triangleq \ \ \   \eval{M}{\sigma}{{\re}}{\true}$
+$\satMN \sigma m n {{\re}}\ \ \ \triangleq \ \ \   \eval{\Mod}{\sigma}{{\re}}{\true}$  
 \item
 \label{cClass}
-$\satisfiesAB{M}{\sigma}{{{\re}} : C}\ \ \ \triangleq \ \ \   \eval{M}{\sigma}{{\re}}{\alpha}\   \wedge \ \class{\alpha} {\sigma}= C$
+$\satMN \sigma m n {\re : C}\ \ \ \triangleq \ \ \   \exists \alpha.[\ \eval{\Mod}{\sigma}{{\re}}{\alpha}\   \wedge \ \class{\alpha} {\sigma}= C\ ]$  
 \item
 \label{cExternal}
-$\satisfiesAB{M}{\sigma}{\external{{\re}}} \ \ \ \triangleq \ \ \  \exists C.[\ \satisfiesAB{M}{\sigma}{{{\re}} : C} \ \wedge \ C \notin M \ ]$
- 
+$\satMN \sigma m n {\external \re}\ \ \ \triangleq \ \ \  \exists \alpha.[\ \eval{\Mod}{\sigma} {\re} {\alpha}\   \wedge \ \class{\alpha} {\sigma}= C  \ \wedge \ C \notin ???? \ ]$ 
  \item
  \label{cProtected}
-$\satisfiesAB{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$ $\ \  \triangleq\ \ $
+$\satMN \sigma m n {\protectedFrom \re  {\re_o}}$ $\ \  \triangleq\ \ $ 
 $\exists \alpha, \alpha_{o}. [$ 
   \begin{enumerate}
  \item
- $ \eval{M}{\sigma}{{\re}}{\alpha}\ \ \ \wedge\ \ \eval{M}{\sigma}{{\re_o}}{\alpha_o}$,
+ $ \eval{\Mod}{\sigma}{{\re}}{\alpha}\ \ \ \wedge\ \ \eval{\Mod}{\sigma}{{\re_o}}{\alpha_o}$,
   \item
 $\alpha\neq \alpha_0$,
  \item
-$\forall \alpha'.\forall f.[\ \alpha' \in {\Relevant {\alpha_o} {\sigma}} \wedge\   \satisfiesAB{M}{\sigma}{\external {\alpha'}} 
+$\forall \alpha'.\forall f.[\ \alpha' \in {\Relevant {\alpha_o} {\sigma}} \wedge\   \satMN \sigma m n {\external {\alpha'}} 
 \ \ \Longrightarrow \ \  
   \interpret {\sigma} {\alpha'.f} \neq \alpha     \ ] $  $  \strut \hspace{.25cm} ] $.
 \end{enumerate}
 
 \item
  \label{sect:semantics:assert:prt}
-$\satisfiesAB{M}{\sigma}{\inside{{\re}}} $ $\ \  \triangleq\ \  $ 
+$\satMN \sigma m n {\inside \re} $ $\ \  \triangleq\ \  $ 
 $\exists \alpha. [$  
 \begin{enumerate}
 \item
-$ \eval{M}{\sigma}{{\re}}{\alpha}$,
+$ \eval{\Mod}{\sigma}{{\re}}{\alpha}$,
  \item 
- $\satisfiesAB{M}{\sigma}{\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma.\ \satisfiesAB{M}{\sigma}{x\neq \alpha}$,
+ $\satMN {\sigma} m n {\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma. \satMN {\sigma} m n {x\neq \alpha}$,
  \item
-$\forall \alpha'.\forall f.[\ \alpha' \in {\LRelevantO {\sigma}} \wedge\   \satisfiesAB{M}{\sigma}{\external {\alpha'}} 
+$\forall \alpha'.\forall f.[\ \alpha' \in {\LRelevantO {\sigma}} \wedge\    \satMN \sigma m n {\external {\alpha'}} 
 \ \ \Longrightarrow \ \  
   \interpret {\sigma} {\alpha'.f} \neq \alpha     \ ]$ 
  \strut \hspace{.25cm} ].    \end{enumerate} 
  
   \item
-$\satisfiesAB{M}{\sigma}{\neg \ba A}\ \ \ \triangleq \ \ \   \notsatisfiesAB{M} {\sigma} {\ba A}$
+ $\satMN \sigma m n {\neg \ A}\ \ \ \triangleq \ \ \   \notsatM   {\sigma} {m-1}  {A}$
 \item
-$\satisfiesAB{M}{\sigma}{\ba A_1\ \wedge\ \ba A_2}\ \ \ \triangleq \ \ \   \satisfiesAB{M}{\sigma}{\ba A_1} \   \wedge \ \satisfiesAB{M}{\sigma}{\ba A_2}$
+$\satMN \sigma m n {A_1\ \wedge\ A_2}\ \ \ \triangleq \ \ \   \satMN \sigma m n {A_1} \   \wedge \  \satMN \sigma m n {A_2}$
 \item
 \label{quant1}
-$\satisfiesAB{M}{\sigma}{\all{x:C}{\ba A}} \ \ \ \triangleq \ \ \   
-\forall \alpha.[\   \satisfiesAB {M}{\sigma} {\alpha:C}  \ \Longrightarrow   \ \satisfiesAB{M}{\sigma} {\ba A[\alpha/x]} \ ] $
-\end{enumerate}
+$\satMN \sigma m n  {\all{x:C}{A}} \ \ \ \triangleq \ \ \   
+\forall \alpha.[\   \satMN \sigma m n {\alpha:C}  \ \Longrightarrow   \ \satMN \sigma m n  {A[\alpha/x]} \ ] $
 
- \end{definition} 
+\item
+\label{satObeys}
+$\satM   \sigma m    {\obeys  \re {S_i}} \ \ \ \triangleq \ \ \   \forall n\in \mathbb{N}.[ \satMN  \sigma m n   {\obeys \re {S_i} }$.
 
-We now define specifications
+\item
+\label{satObeysMNa}
+$\satMN  \sigma m n   {\obeys  \re {S_i}} \ \ \ \triangleq \ \ \   \satM  \sigma i    {\obeys  \re {S_i}} $\ \ \ \ if $i < m$.
 
-\begin{definition}[Specifications]
-A specification consists of a name and a set of policies
+\item
+\label{satObeysMNb}
+$\satMN  \sigma m 0   {\obeys  \re {S_m}} \ \ \ \triangleq \ \ \  \exists \alpha. \eval{\Mod}{\sigma}{{\re}}{\alpha}$
 
-$
-\begin{syntax}
-\syntaxElement{Spec}{}
-		{
-		\syntaxline
-				{ {\textbf{specification}}\ \  S \ \{ \ { {\textbf{abstt}}\ P ( x^* ) } \ Policy^* \} }		
-		\endsyntaxline
-		}
-\endSyntaxElement
-\syntaxElement{Policy}{}
-		{
-		\syntaxline				
- 				{ \{ \ \wf A \ \} \ \  \prg{this.m(y}^*\prg{)} \ \ 	     \{ \ \wf A \ \}	}
-% 				{ \{ \ \wf A \ \} \ \ \prg{any\_code} \ \   \{ \ \wf A \ \}	}	
-				{ {\textbf{inve}}\ A \  }	
-		\endsyntaxline
-		}
-\endSyntaxElement
-\end{syntax}
-$
+\item
+\label{satObeysMNc}
+$\satMN  \sigma m {i+1}   {\obeys  \re {S_m}} \ \ \ \triangleq \ \  $
 
- \end{definition} 
- 
- We now define satisfaction of well-formed assertions, For this, we will be using step-indexing. 
- We use $\satisfiesAK M \sigma k A$, where $k\in \mathbb{N}$ to express that $A$ is satisfied at level $k$.
- 
- 
- \begin{definition}[Satisfaction of Well-fomedAssertions] 
-For any module $M$, state $\sigma$, assertion $A$ and $k\!\in\! \mathbb{N}$ we define
 \begin{enumerate}
 \item
-\label{cExpr}
-$\satisfiesAK{M}{\sigma} k {\re}  \ \ \triangleq \ \ \   \satisfiesAB{M}{\sigma}{{\re}}$
-\item
-\label{cClass}
-$\satisfiesAK{M}{\sigma} k {\re  : C}\ \ \ \triangleq \ \ \    \satisfiesAB{M}{\sigma} {\re  : C}$
-\item
-\label{cExternal}
-$\satisfiesAK{M}{\sigma} k {\external{{\re}}} \ \ \ \triangleq \ \ \satisfiesAB{M}{\sigma}{\external{{\re}}} $
- 
- \item
- \label{cProtected}
-$\satisfiesAK{M}{\sigma} k {\protectedFrom{{\re}} {{\re_{o}}}}$ $\ \  \triangleq\ \ $
-$\satisfiesAB{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$ 
+$ \satMN  \sigma m {i}   {\obeys  \re {S_m}}$
+\item 
+$\forall k\leq i.\forall \sigma'\forall pol.[ \ pol\in\Spec(S_m) \ \wedge \Mod,\sigma \leadsto_k \sigma' \ 
+\Longrightarrow \ \satMN  \sigma m {i+1}   {\sats  \re {pol}} $
+\end{enumerate}
 
 \item
- \label{sect:semantics:assert:prt}
-$\satisfiesAK{M}{\sigma} k {\inside{{\re}}} $ $\ \  \triangleq\ \  $ 
-$\satisfiesAB{M}{\sigma}{\inside{{\re}}}$ 
- 
- 
-  \item
-$\satisfiesAK{M}{\sigma} k {\neg \ba A}\ \ \ \triangleq \ \ \   \satisfiesAB{M}{\sigma}{\neg \ba A}$
-\item
-$\satisfiesAK{M}{\sigma} k {\wf A_1\ \wedge\ \wf A_2}\ \ \ \triangleq \ \ \   \satisfiesAK{M}{\sigma} k {\wf A_1}\ \wedge\ \satisfiesAK{M}{\sigma} k {\wf A_2}$
-\item
-\label{quant1}
-$\satisfiesAK{M} k {\sigma}{\all{x:C}{\wf A}} \ \ \ \triangleq \ \ \   
-\forall \alpha.[\   \satisfiesAB {M}{\sigma} {\alpha:C}  \ \Longrightarrow   \ \satisfiesAK{M}{\sigma}  k {\wf A[\alpha/x]} \ ] $
-\item
-$\satisfiesAK{M} \sigma k {\obeys \re S}$ \ \ is defined by cases on $k$:
-\begin{itemize}
-\item
-$\satisfiesAK{M} \sigma  0 {\obeys \re S}  \ \ \ \ \ \triangleq \ \ \   \exists \alpha. \eval{M}{\sigma}{{\re}}{\alpha}$
-\item
-$\satisfiesAK{M} \sigma  {k+1} {\obeys {\re} {S}}  \ \ \ \triangleq \ \ \   \satisfiesAK{M} \sigma {k} {\obeys {\re} {S}} \wedge \forall pol\! \in\! S. \satisfiesAK{M}\sigma  {k} {\obeys {\re} {pol}}$
-\end{itemize}
-\item
-$\satisfiesAK{M} \sigma  k {\obeys \re pol}$ \ \ for policies, $pol$  is defined by cases on $piol$
-\begin{itemize}
-\item
-$\satisfiesAK{M} \sigma  0 {\obeys \re pol}  \ \ \ \triangleq \ \ \   \exists \alpha. \eval{M}{\sigma}{{\re}}{\alpha}$
-\item
-$\satisfiesAK{M} \sigma  {k+1} {\obeys {\re} {S}}  \ \ \ \triangleq \ \ \ $
-\begin{itemize}
-\item
- $ \satisfiesAK{M} \sigma {k} {\obeys {\re} {pol}} $
- \item
-$\forall M', \sigma''.[ M'*M. \sigma \leadsto^k \sigma'' \wedge  the pol after k steps for k $
-\end{itemize}
-\end{itemize}
+$ \satMN  \sigma m {i+1}   {\sats  \re {\{ \ A  \ \} \   \prg{this.m(y}^*\prg{)} \  \{ \  A'  \ \} } }
+ \ \ \ \triangleq \ \ \
+ \forall \sigma'. $\\
+$ [ \  \  \ \satM   {\sigma} {m-1}  {A[\re/\prg{this}]}\ \ \wedge\ \  \sigma.cont=(\prg{this}.m(\overline y))[\re/\prg{this}] \ \ \wedge\ \
+\Mod, \sigma\leadsto^*_{fin} \sigma'  $\\
+$\strut \hspace{3cm} \hfill \ \   \ \  \  \Longrightarrow\ \ \ \  \satMN  {\sigma'} m {i}  {A'[\re/\prg{this}] }\ \ \ ]$
+
 \end{enumerate}
 
  \end{definition} 
+
+ 
+% We now define satisfaction of well-formed assertions, For this, we will be using step-indexing. 
+% We use $\satisfiesAK M \sigma k A$, where $k\in \mathbb{N}$ to express that $A$ is satisfied at level $k$.
+% 
+% 
+% \begin{definition}[Satisfaction of Well-fomedAssertions] 
+%For any module $M$, state $\sigma$, assertion $A$ and $k\!\in\! \mathbb{N}$ we define
+%\begin{enumerate}
+%\item
+%\label{cExpr}
+%$\satisfiesAK{M}{\sigma} k {\re}  \ \ \triangleq \ \ \   \satisfiesAB{M}{\sigma}{{\re}}$
+%\item
+%\label{cClass}
+%$\satisfiesAK{M}{\sigma} k {\re  : C}\ \ \ \triangleq \ \ \    \satisfiesAB{M}{\sigma} {\re  : C}$
+%\item
+%\label{cExternal}
+%$\satisfiesAK{M}{\sigma} k {\external{{\re}}} \ \ \ \triangleq \ \ \satisfiesAB{M}{\sigma}{\external{{\re}}} $
+% 
+% \item
+% \label{cProtected}
+%$\satisfiesAK{M}{\sigma} k {\protectedFrom{{\re}} {{\re_{o}}}}$ $\ \  \triangleq\ \ $
+%$\satisfiesAB{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}}$ 
+%
+%\item
+% \label{sect:semantics:assert:prt}
+%$\satisfiesAK{M}{\sigma} k {\inside{{\re}}} $ $\ \  \triangleq\ \  $ 
+%$\satisfiesAB{M}{\sigma}{\inside{{\re}}}$ 
+% 
+% 
+%%  \item
+%%$\satisfiesAK{M}{\sigma} k {\neg \ba A}\ \ \ \triangleq \ \ \   \satisfiesAB{M}{\sigma}{\neg \ba A}$
+%%\item
+%%$\satisfiesAK{M}{\sigma} k {\wf A_1\ \wedge\ \wf A_2}\ \ \ \triangleq \ \ \   \satisfiesAK{M}{\sigma} k {\wf A_1}\ \wedge\ \satisfiesAK{M}{\sigma} k {\wf A_2}$
+%%\item
+%%\label{quant1}
+%%$\satisfiesAK{M}   {\sigma} k {\all{x:C}{\wf A}} \ \ \ \triangleq \ \ \   
+%%\forall \alpha.[\   \satisfiesAB {M}{\sigma} {\alpha:C}  \ \Longrightarrow   \ \satisfiesAK{M}{\sigma}  k {\wf A[\alpha/x]} \ ] $
+%%
+%%\item
+%%$\satisfiesAK{M} \sigma k {\obeys \re S}$ \ \ is defined by cases on $k$:
+%%\begin{itemize}
+%%\item
+%%$\satisfiesAK{M} \sigma  0 {\obeys \re S}  \ \ \ \ \ \triangleq \ \ \   \exists \alpha. \eval{M}{\sigma}{{\re}}{\alpha}$
+%%\item
+%%$\satisfiesAK{M} \sigma  {k+1} {\obeys {\re} {S}}  \ \ \ \triangleq \ \ \   \satisfiesAK{M} \sigma {k} {\obeys {\re} {S}} \wedge \forall pol\! \in\! S. \lsatisfiesAK{M}\sigma  {k} {\obeys {\re} {pol}}$
+%%\end{itemize}
+%%
+%%
+%%\end{itemize}
+%\end{enumerate}
+%
+% \end{definition} 
  
  
  
