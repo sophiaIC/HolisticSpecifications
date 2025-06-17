@@ -1,0 +1,75 @@
+
+The specification of  a \prg{Purse} appears in Fig. \ref{fig:PurseSpec}. This specification is at level 1, and therefore pre-conditions for not mention $\obeys x {Purse}$ but postconditions do.
+The specification of  an  \prg{Escrow} appears in Fig. \ref{fig:EscrowSpec}. This specifications is at level 2, and therefore both pre- and post-conditions may mention  $\obeys x {Purse}$ .
+
+\newcommand{\sMT}{sellerM} 
+\newcommand{\bMT}{buyerM}
+\newcommand{\sGT}{sellerG} 
+\newcommand{\bGT}{buyerG}
+\newcommand{\sM}{\prg{\sMT}}
+\newcommand{\bM}{\prg{\bMT}}
+\newcommand{\sG}{\prg{\sGT}}
+\newcommand{\bG}{\prg{\sGT}}
+
+%   fields sellerMoney, sellerGoods, buyerMoney, buyerGoods //  Purse
+%   fields price, amt   // Number
+% had to drop this one
+\begin{figure*}[t]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{specification}$ $Purse$ {
+    
+    $\textbf{abstr}:$ SameMint(x):bool
+    $\textbf{abstr}:$ balance:int
+    
+    $\textbf{scoped-invr}:\  \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}\geq b$
+    $\textbf{invr}:\  \prg{this}.\prg{balance}\geq 0$       
+     
+    true  
+        $\textbf{\{}$ this.transfer(p) $\textbf\}$
+    res $\wedge$ $\obeys  {p} {Purse}$  $\wedge$  this.SameMint(p)
+    $\vee$
+    $\neg$ res
+
+    this.SameMint(p) $\wedge$  $\bM$.balance=bm$\geq$amt   $\wedge$ this$\neq$p
+        $\textbf{\{}$ this.transfer(p) $\textbf\}$
+    res $\wedge$   $\wedge$  $\bM$.balance=bm-amt 
+     
+}
+
+\end{lstlisting}
+\caption{Specification of  $Purse$ -- Incomplete}
+\label{fig:PurseSpec}
+ \end{figure*}
+
+
+
+
+\begin{figure*}[t]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{specification}$ $Escrow$ {
+    
+    //   1$^{st}$ case:
+    $\obeys  {\{\sM,\sG\}} {Purse}$ $\wedge$ 
+    $\sM$.SameMint($\bM$) $\wedge$  $\sG$.SameMint($\bG$)  $\wedge$ price, amt:$\mathbb{N}$  $\wedge$
+    $\bM$.balance=bm$\geq$price  $\wedge$  $\sM$.balance=sG$\geq$amt $\wedge$ ...
+    $\obeys  {p} {Purse}$   $\wedge$ p.balance = pM
+           $\textbf{\{}$ this.deal($\sM,\, \bM,\, \sG,\, \bG$, price, amt) $\textbf\}$
+    res $\wedge$
+    $\bM$.balance=bM-price $\wedge$ $\sM$.balance=....  $\wedge$
+    p.balance=pM
+
+     //   2$^{nd}$ case:
+    $\obeys  {\sM } {Purse}$ $\wedge$ $\neg(\obeys  { \bM} {Purse})$ $\wedge$ 
+    ....
+    $\obeys  {p} {Purse}$ $\wedge$ $\protectedFrom {p} {\{ \bM, \sG, \bG \}}$  $\wedge$ p.balance = pM
+          $\textbf{\{}$ this.deal($\sM,\, \bM,\, \sG,\, \bG$, price, amt) $\textbf\}$
+    $\neg$ res $\wedge$
+    .... $\wedge$
+    p.balance=pM
+     
+}
+
+\end{lstlisting}
+\caption{Specification of  $Escrow$.\prg{::deal} -- Incomplete}
+\label{fig:EscrowSpec}
+ \end{figure*}
