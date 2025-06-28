@@ -38,7 +38,6 @@ Module SubstDefn.
           end
     }.
 
-  (* TODO: fix??? disallow "this" in list substitutions? *)
   #[global] Instance list_subst {A B C : Type}`{Subst A B C} : Subst (list A) B C :=
     {
       sbst :=
@@ -56,12 +55,9 @@ Module SubstDefn.
           match A with
           | a_exp e     => a_exp ([ α /s n ] e)
           | A1 ∧ A2     => (sbst' A1 n α) ∧ (sbst' A2 n α)
-(*          | A1 ∨ A2     => (sbst' A1 n α) ∨ (sbst' A2 n α)*)
           | ¬ A         => ¬ (sbst' A n α)
-          (*)        | A1 ⟶ A2   => (sbst' A1 n α) ⟶ (sbst' A2 n α)*)
 
           | a_all C A  => a_all C (sbst' A (S n) α)
-(*          | a_ex C A   => a_ex C (sbst' A (S n) α)*)
 
           | a_extl e => a_extl ([α /s n] e)
 
@@ -97,10 +93,8 @@ Module SubstDefn.
           | a_exp e' => a_exp ([e /s x] e')
 
           | A1 ∧ A2 => (sbst' A1 x e) ∧ (sbst' A2 x e)
-(*          | A1 ∨ A2 => (sbst' A1 x e) ∨ (sbst' A2 x e)*)
           | ¬ A' => ¬ (sbst' A' x e)
           | a_all C A' => a_all C (sbst' A' x e)
-(*          | a_ex C A' => a_ex C (sbst' A' x e)*)
 
           | a_extl e' => a_extl ([e /s x] e')
 
@@ -117,43 +111,5 @@ Module SubstDefn.
     | (c, b) :: t => listSubst ([c /s b] a) t
     end.
 
-  (*#[global] Instance exp_acc_subst : Subst exp (var * fld) var :=
-    {
-      sbst :=
-        fix sbst' e acc x :=
-          match e with
-          | e_fld e0 f0 => match e0, acc with
-                          | e_ y, (z, f) => if (eqb y z && eqb f0 f)
-                                           then e_ x
-                                           else e
-                          | _, _ => e_fld (sbst' e0 acc x) f0
-                          end
-          | e_class e0 C => e_class (sbst' e0 acc x) C
-          | e_ghost e0 g e1 => e_ghost (sbst' e0 acc x) g (sbst' e1 acc x)
-          | e_if e0 e1 e2 => e_if (sbst' e0 acc x) (sbst' e1 acc x) (sbst' e2 acc x)
-          | _ => e
-          end
-    }.*)
-
-  (*#[global] Instance asrt_acc_subst : Subst asrt (var * fld) var:=
-    {
-      sbst :=
-        fix sbst' A acc x :=
-          match A with
-          | a_exp e => a_exp ([x /s acc] e)
-
-          | A1 ∧ A2 => (sbst' A1 acc x) ∧ (sbst' A2 acc x)
-          | A1 ∨ A2 => (sbst' A1 acc x) ∨ (sbst' A2 acc x)
-          | ¬ A' => ¬ (sbst' A' acc x)
-          | a_all C A' => a_all C (sbst' A' acc x)
-          | a_ex C A' => a_ex C (sbst' A' acc x)
-
-          | a_intl e => a_intl ([x /s acc] e)
-          | a_extl e => a_extl ([x /s acc] e)
-
-          | a_prt e => a_prt ([x /s acc] e)
-          | a_prt_frm e1 e2 => a_prt_frm ([x /s acc] e1) ([x /s acc] e2)
-          end
-    }.*)
 
 End SubstDefn.
