@@ -14,11 +14,7 @@ Require Import spec.
 Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
 
-(** 
-
-Definition of the Shop Example
-
- *)
+(** * Definition of the Shop Example - Appendix H*)
 
 Module Shop.
 
@@ -68,6 +64,8 @@ Module Shop.
 
 
    ***)
+
+  (** ** Variable and Field Definitions *)
 
   Definition Shop := c_id 1.
 
@@ -124,6 +122,8 @@ Module Shop.
   Definition a := v_spec 11.
 
   Definition b := v_spec 12.
+
+  (** ** Method Bodies *)
 
   Definition buyBody := (s_read itemPrice (e_fld (e_ item) price)) ;;
                         (s_read thisAcc (e_fld (e_ this) acc) ;;
@@ -227,11 +227,13 @@ Module Shop.
                           empty
                           empty.
 
-  (* Shop Specifications *)
+  (** ** Shop Specifications *)
 
   Definition S2 := S_inv ((a, t_cls Account)::nil) (a_prt (e_fld (e_ a) key)).
 
-  Definition S3 := S_inv ((a, t_cls Account)::(b, t_int)::nil) (a_prt (e_fld (e_ a) key) ∧ a_ (e_lt (e_ b) (e_fld (e_ a) balance))). 
+  Definition S3 := S_inv ((a, t_cls Account)::(b, t_int)::nil) (a_prt (e_fld (e_ a) key) ∧ a_ (e_lt (e_ b) (e_fld (e_ a) balance))).
+
+  (** ** Mgood Definition *)
 
   Definition Mgood : module := (S_and S2 S3,
                                  ⟦ Shop ↦ ShopDef ⟧

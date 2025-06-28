@@ -36,7 +36,7 @@ Module ShopProof.
 
   Open Scope hoare_scope.
 
-  Lemma Shop_sat_I2 :
+  Lemma Shop_sat_H2 :
     forall m mDef, ⟦ m ↦ mDef ⟧_∈ c_meths ShopDef ->
                    vis mDef = public ->
                    Mgood ⊢ ⦃ ((a_typs ((result, rtrn mDef) ::
@@ -240,7 +240,7 @@ Module ShopProof.
         end
     end.
 
-  Lemma Account_sat_I2 :
+  Lemma Account_sat_H2 :
     forall m mDef,
       ⟦ m ↦ mDef ⟧_∈ c_meths AccountDef ->
       vis mDef = public ->
@@ -402,7 +402,7 @@ Module ShopProof.
       return_false_protects_key.
   Qed.
 
-  Lemma Key_sat_I2 :
+  Lemma Key_sat_H2 :
     forall m mDef,
       ⟦ m ↦ mDef ⟧_∈ c_meths KeyDef ->
       vis mDef = public ->
@@ -425,7 +425,9 @@ Module ShopProof.
     end.
   Qed.
 
-  Lemma I2 :
+  (** * Lemma H2: Mgood satisfies S2 *)
+
+  Lemma H2 :
     spec_sat Mgood S2.
   Proof.
     setup_shop.
@@ -437,7 +439,7 @@ Module ShopProof.
     *
       (* Shop *)
       destruct H; subst.
-      eapply Shop_sat_I2;
+      eapply Shop_sat_H2;
         eauto.
 
     *
@@ -449,12 +451,12 @@ Module ShopProof.
 
       **
         (* Account *)
-        eapply Account_sat_I2;
+        eapply Account_sat_H2;
           eauto.
 
       **
         (* Key *)
-        eapply Key_sat_I2;
+        eapply Key_sat_H2;
           eauto.
   Qed.
 
@@ -548,7 +550,7 @@ Module ShopProof.
 
   Qed.
 
-  Lemma Shop_sat_I3 :
+  Lemma Shop_sat_H7 :
     class_satisfies_invariant Mgood Shop S3.
   Proof.
     setup_shop.
@@ -719,7 +721,7 @@ Module ShopProof.
       crush. (* send is not a public method *)
   Qed.
 
-  Lemma Account_sat_I3 :
+  Lemma Account_sat_H7 :
     class_satisfies_invariant Mgood Account S3.
   Proof.
     setup_shop.
@@ -1029,7 +1031,7 @@ Module ShopProof.
 
   Qed.
 
-  Lemma Key_sat_I3 :
+  Lemma Key_sat_H7 :
     class_satisfies_invariant Mgood Key S3.
   Proof.
     setup_class.
@@ -1040,7 +1042,9 @@ Module ShopProof.
     end.
   Qed.
 
-  Lemma I3 :
+  (** * Lemma H7: Mgood satisfies S3 *)
+
+  Lemma H7 :
     spec_sat Mgood S3.
   Proof.
     setup_shop.
@@ -1052,7 +1056,7 @@ Module ShopProof.
     *
       (* Shop *)
       destruct H; subst.
-      eapply Shop_sat_I3;
+      eapply Shop_sat_H7;
         eauto; auto.
 
     *
@@ -1064,13 +1068,13 @@ Module ShopProof.
 
       **
         (* Account *)
-        eapply Account_sat_I3;
+        eapply Account_sat_H7;
           eauto.
         auto.
 
       **
         (* Key *)
-        eapply Key_sat_I3;
+        eapply Key_sat_H7;
           eauto.
         auto.
   Qed.

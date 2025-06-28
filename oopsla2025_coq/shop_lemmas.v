@@ -19,10 +19,8 @@ Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
 
 
-(** *
-    Shop Lemmas
-    Suppporting lemmas for the main Shop Proof in shop_proof.v
- *)
+(** * Shop Lemmas *)
+(** * Suppporting lemmas for the main Shop Proof in shop_proof.v *)
 
 Module ShopLemmas.
 

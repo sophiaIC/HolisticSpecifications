@@ -9,6 +9,8 @@ Module LanguageDefinition.
 
   Import ZArith.ZArith.
 
+  (** * Lul Syntax - Section 3.1 *)
+
   Inductive addr :=
   | address : nat -> addr.
 
@@ -671,9 +673,7 @@ Module LanguageDefinition.
       crush.
   Defined.
 
-  (** 
-     Assertion Syntax
-   *)
+  (** * Assertion Syntax - Section 4*)
 
   Inductive asrt :=
   | a_exp : exp -> asrt
@@ -844,9 +844,7 @@ Module LanguageDefinition.
   | p_fld : fld -> path
   | p_cons : fld -> path -> path.
 
-  (** 
-      Core Language Definitions
-   **)
+  (** * Core Language Definitions **)
 
   Inductive l_spec :=
   | S_inv : list (var * ty) -> asrt -> l_spec

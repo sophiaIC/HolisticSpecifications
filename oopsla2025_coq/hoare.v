@@ -13,6 +13,11 @@ Require Export ZArith.
 
 (** * Hoare Logic *)
 
+(** This file contains the hoare logics that are the main contributions of the associated paper.
+    In most cases we have attempted to indicate where in the paper the corresponding definitions
+    can be found.
+ *)
+
 Module Hoare.
 
   Import LanguageDefinition.
@@ -212,6 +217,9 @@ Module Hoare.
   | h_prot_new : forall M x C,
       M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄
 
+  (** Note: h_strengthen and h_weaken are introduced separately. In the paper they exist in the appendices as
+   a single rule h_consequence *)
+
   (** M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ *)
   (** M ⊢ P2 ⊆ P1 *)
   (** -----------------------------*)
@@ -256,7 +264,7 @@ Module Hoare.
   (** call_free s *)
   (** ∀ z, s does not assign to z → M ⊢ ⦃ A ∧ e = z ⦄ s ⦃ e = z ⦄ *)
   (** -----------------------------*)
-  (** M ⊢ ⦃ A ∧ prt e ⦄ y := z.f ⦃ prt e ⦄ *)
+  (** M ⊢ ⦃ A ∧ prt e ⦄ s ⦃ prt e ⦄ *)
 
   | h_prot1 : forall M e s A,
       call_free s ->
@@ -265,9 +273,11 @@ Module Hoare.
       M ⊢ ⦃ A ∧ a_prt e ⦄ s ⦃ a_prt e ⦄
 
 
-  (**  *)
+  (** z ≠ x *)
+  (** z' ≠ x *)
+  (** M ⊢ ⦃ z = e ∧ z' = e' ⦄ s ⦃ z = e ∧ z' = e'  ⦄ *)
   (** -----------------------------*)
-  (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
+  (** M ⊢ ⦃ prt_frm e e' ⦄ s ⦃ prt_frm e e' ⦄ *)
 
   | h_prot2 : forall M x e e' s,
       (forall z z', z <> x -> z' <> x ->
@@ -276,32 +286,45 @@ Module Hoare.
                  ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄) ->
       M ⊢ ⦃ a_prt_frm e e' ⦄ s ⦃ a_prt_frm e e' ⦄
 
+  (** x ≠ z *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ prt_frm y.f z ⦄ x := y.f ⦃ prt_frm x z ⦄ *)
   | h_prot3 : forall M x z y f,
       x <> z ->
       M ⊢ ⦃ a_prt_frm (e_fld (e_ y) f) (e_ z) ⦄
         s_read x (e_fld (e_ y)  f)
         ⦃ a_prt_frm (e_ x) (e_ z) ⦄
 
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ prt_frm x z ∧ prt_frm x y' ⦄ y.f := y' ⦃ prt_frm x z ⦄ *)
   | h_prot4 : forall M x y y' f z,
       M ⊢ ⦃ a_prt_frm (e_ x) (e_ z) ∧ a_prt_frm (e_ x) (e_ y') ⦄
         (s_write y f (e_ y'))
         ⦃ a_prt_frm (e_ x) (e_ z) ⦄
 
+
+  (** M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ *)
+  (** M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ A1 ⦄ s1; s2 ⦃ A3 ⦄ *)
   | h_seq : forall M A1 A2 A3 s1 s2,
       M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ ->
       M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ ->
       M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄
 
-  | h_read_type : forall M e T x,
-      M ⊢ ⦃ a_ (e_typ e T) ⦄
-        (s_read x e)
-        ⦃ a_ (e_typ (e_ x) T) ⦄
 
+  (** -----------------------------*)
+  (** M ⊢ ⦃ e : T ⦄ x := e ⦃ e : T ⦄ *)
   | h_types1 : forall M e T s,
       M ⊢ ⦃ a_ (e_typ e T) ⦄
         s
         ⦃ a_ (e_typ e T) ⦄
 
+  (** M ⊢ ⦃ A1 ⦄ s ⦃ A3 ⦄ *)
+  (** M ⊢ ⦃ A2 ⦄ s ⦃ A3 ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ A1 ∨ A2 ⦄ s ⦃ A3 ⦄ *)
   | h_or : forall M A1 A2 A3 s, M ⊢ ⦃ A1 ⦄ s ⦃ A3 ⦄ ->
                            M ⊢ ⦃ A2 ⦄ s ⦃ A3 ⦄ ->
                            M ⊢ ⦃ A1 ∨ A2 ⦄ s ⦃ A3 ⦄.
@@ -318,34 +341,64 @@ Module Hoare.
     (quad M P s Q A) (at level 40, s at level 59).
 
   Inductive hoare_quad : HoareQuadruple stmt :=
+
+  (** M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄  *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ *)
   | hq_mid : forall M A1 s A2 A,
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ ->
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄
 
+
+  (** -----------------------------*)
+  (** M ⊢ ⦃ e : T ⦄ s ⦃ e : T ⦄ || ⦃ A ⦄ *)
   | hq_types2 : forall M s e T A,
       M ⊢ ⦃ a_ (e_typ e T) ⦄ s ⦃ a_ (e_typ e T) ⦄ || ⦃ A ⦄
 
+
+  (** M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄  *)
+  (** M ⊢ ⦃ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄  *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ A1 ∧ A3 ⦄ s ⦃ A2 ∧ A4 ⦄ || ⦃ A ⦄ *)
   | hq_combine : forall M A1 s A2 A3 A4 A,
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A ⦄ ->
       M ⊢ ⦃ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
       M ⊢ ⦃ A1 ∧ A3 ⦄ s ⦃ A2 ∧ A4 ⦄ || ⦃ A ⦄
 
+
+  (** M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ *)
+  (** M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ A1 ⦄ s1; s2 ⦃ A3 ⦄ || ⦃ A ⦄ *)
   | hq_sequ : forall M A1 A2 A3 A s1 s2,
       M ⊢ ⦃ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A ⦄ ->
       M ⊢ ⦃ A2 ⦄ s2 ⦃ A3 ⦄ || ⦃ A ⦄ ->
       M ⊢ ⦃ A1 ⦄ s1 ;; s2 ⦃ A3 ⦄ || ⦃ A ⦄
 
+
+  (** M ⊢ ⦃ e ∧ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A3 ⦄ *)
+  (** M ⊢ ⦃ ¬ e ∧ A1 ⦄ s2 ⦃ A2 ⦄ || ⦃ A3 ⦄ *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ A1 ⦄ if e then s1 else s2 ⦃ A2 ⦄ || ⦃ A3 ⦄ *)
   | hq_if : forall M A1 A2 A3 e s1 s2,
       M ⊢ ⦃ (a_ e) ∧ A1 ⦄ s1 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
       M ⊢ ⦃ ¬ (a_ e) ∧ A1 ⦄ s2 ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
       M ⊢ ⦃ A1 ⦄ s_if e s1 s2 ⦃ A2 ⦄ || ⦃ A3 ⦄
 
+
+  (** M ⊢ ⦃ A4 ⦄ s ⦃ A5 ⦄ || ⦃ A6 ⦄ *)
+  (** M ⊢ A1 ⊆ A4 *)
+  (** M ⊢ A5 ⊆ A2 *)
+  (** M ⊢ A3 ⊆ A6 *)
+  (** -----------------------------*)
+  (** M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄ *)
   | hq_conseq : forall M s A1 A2 A3 A4 A5 A6,
       M ⊢ ⦃ A4 ⦄ s ⦃ A5 ⦄ || ⦃ A6 ⦄ ->
       M ⊢ A1 ⊆ A4 ->
       M ⊢ A5 ⊆ A2 ->
       M ⊢ A3 ⊆ A6 ->
       M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄
+
 
   | hq_call_int : forall M A1 C m ys T A2 A3 y0 u xs xCs yCs yxs,
       has_m_spec M A1 C m xCs T A2 A3 ->
@@ -357,6 +410,7 @@ Module Hoare.
         s_call u y0 m ys
         ⦃ [e_ u /s result][e_ y0 /s this] (listSubst A2 yxs) ⦄ || ⦃ A3 ⦄
 
+
   | hq_call_int_adapt : forall M A1 C m ys T A2 A3 y0 u xs xCs yCs yxs,
       has_m_spec M A1 C m xCs T A2 A3 ->
       xs = map fst xCs ->
@@ -367,6 +421,7 @@ Module Hoare.
         s_call u y0 m ys
         ⦃ adapt ([e_ u /s result][e_ y0 /s this] (listSubst A2 yxs)) (y0 :: ys) ⦄ || ⦃ A3 ⦄
 
+
   | hq_call_ext_adapt : forall M xCs A u y0 m ys,
       has_l_spec M (S_inv xCs A) ->
       M ⊢
@@ -375,6 +430,7 @@ Module Hoare.
             (adapt A (y0::ys)) ⦄
         s_call u y0 m ys
         ⦃ (adapt A (y0::ys)) ⦄ || ⦃ A ⦄
+
 
   | hq_call_ext_adapt_strong : forall M xCs A u y0 m ys,
       has_l_spec M (S_inv xCs A) ->

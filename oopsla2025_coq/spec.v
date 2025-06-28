@@ -5,6 +5,7 @@ Require Import Bool.
 Require Import language_def.
 Require Import hoare.
 
+(** * Specification proof rules - Section 6.3 *)
 
 Module SpecSatisfaction.
 

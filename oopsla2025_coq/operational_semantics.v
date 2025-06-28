@@ -23,7 +23,7 @@ Module OperationalSemantics.
 
   Open Scope Z_scope.
 
-  (** Expression Evaluation *)
+  (** * Expression Evaluation *)
 
   Inductive eval : module -> config -> exp -> val -> Prop :=
   | eval_val : forall M σ v, eval M σ (v_ v) v
@@ -95,7 +95,7 @@ Module OperationalSemantics.
     | _ => (s_seq s1 s2)
     end.
 
-  (** Statement Reduction *)
+  (** * Statement Reduction - Section 3.2 *)
 
   Inductive reduction : module -> config -> config -> Prop :=
   | r_read : forall M χ x e v lcl ψ T,
@@ -178,6 +178,8 @@ Module OperationalSemantics.
   | sub_refl : forall l, sublist l l
   | sub_cons : forall l h t, sublist l t ->
                         sublist l (h :: t).
+
+  (** * Scoped Execution - Section 3.3.2 *)
 
   Definition scoped_config (σsc σ : config) :=
     (exists ϕsc ψsc ϕ ψ, fst σsc = ϕsc ⋅ ψsc /\

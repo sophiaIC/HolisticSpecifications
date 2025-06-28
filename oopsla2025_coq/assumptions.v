@@ -16,7 +16,10 @@ Require Export Coq.Numbers.BinNums.
 Require Export ZArith.
 
 (** 
-    The majority of assumptions we make are detailed within this file. 
+    The majority of assumptions we make are detailed within this file.
+    These either fall into assumed properties of the underyling traditional hoare logic, or
+    simple properties of assertions that are both simple enough to be assumed, and out of
+    scope for this artifact.
  *)
 
 Module Assumptions.
@@ -60,82 +63,86 @@ Module Assumptions.
         apply hq_conseq with (A4:=A1)(A5:=A2)(A6:=A)
     end.
 
-  Parameter hq_conj_assoc1_pre :
+  (** * Assumed properties of assertions in Hoare logics and for assertion consequence (entails) *)
+
+  Axiom hq_conj_assoc1_pre :
     forall M A1 A2 A3 A4 s A, M ⊢ ⦃ A1 ∧ (A2 ∧ A3) ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
                          M ⊢ ⦃ (A1 ∧ A2) ∧ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄.
 
-  Parameter hq_conj_assoc2_post :
+  Axiom hq_conj_assoc2_post :
     forall M A1 A2 A3 A4 s A, M ⊢ ⦃ A1 ⦄ s ⦃ A2 ∧ (A3 ∧ A4) ⦄ || ⦃ A ⦄ ->
                          M ⊢ ⦃ A1 ⦄ s ⦃ (A2 ∧ A3) ∧ A4 ⦄ || ⦃ A ⦄.
 
-  Parameter hq_conj_assoc2_pre :
+  Axiom hq_conj_assoc2_pre :
     forall M A1 A2 A3 A4 s A, M ⊢ ⦃ (A1 ∧ A2) ∧ A3 ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄ ->
                          M ⊢ ⦃ A1 ∧ (A2 ∧ A3) ⦄ s ⦃ A4 ⦄ || ⦃ A ⦄.
 
-  Parameter hq_conj_assoc1_post :
+  Axiom hq_conj_assoc1_post :
     forall M A1 A2 A3 A4 s A, M ⊢ ⦃ A1 ⦄ s ⦃ (A2 ∧ A3) ∧ A4 ⦄ || ⦃ A ⦄ ->
                          M ⊢ ⦃ A1 ⦄ s ⦃ A2 ∧ (A3 ∧ A4) ⦄ || ⦃ A ⦄.
 
 
-  Parameter rewrite_hoare_quad1 :
+  Axiom rewrite_hoare_quad1 :
     forall M A A1, M ⊢ A1 ⊆ A ->
               forall A2 A3 s, M ⊢ ⦃ A ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄ ->
                          M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄.
 
-  Parameter rewrite_hoare_quad2 :
+  Axiom rewrite_hoare_quad2 :
     forall M A A2, M ⊢ A ⊆ A2 ->
               forall A1 A3 s, M ⊢ ⦃ A1 ⦄ s ⦃ A ⦄ || ⦃ A3 ⦄ ->
                          M ⊢ ⦃ A1 ⦄ s ⦃ A2 ⦄ || ⦃ A3 ⦄.
 
-  Parameter conj_strengthen_entails :
+  Axiom conj_strengthen_entails :
     forall M A1 A2 A, M ⊢ A1 ⊆ A2 ->
                  M ⊢ (A1 ∧ A) ⊆ A2.
 
-  Parameter entails_prt_intl :
+  Axiom entails_prt_intl :
     forall M x y C, M ⊢ ((a_ e_typ y (t_cls C)) ∧ ¬ a_extl y) ⊆ a_prt_frm x y.
 
-  Parameter entails_intl :
+  Axiom entails_intl :
     forall M e C, C ∈ (snd M) ->
                   M ⊢ (a_ (e_typ e (t_cls C))) ⊆ (¬ a_extl e).
 
-  Parameter entails_extl :
+  Axiom entails_extl :
     forall M e, M ⊢ (a_ (e_typ e t_ext)) ⊆ (a_extl e).
 
-  Parameter entails_different_type_neq :
+  Axiom entails_different_type_neq :
     forall M e1 e2 T1 T2, T1 <> T2 ->
                      M ⊢ ((a_ e_typ e1 T1) ∧ (a_ e_typ e2 T2)) ⊆
                        ¬ (a_ (e_eq e1 e2)).
 
-  Parameter exp_neq_different_type :
+  Axiom exp_neq_different_type :
     forall M e1 e2 T1 T2,
       T1 <> T2 ->
       M ⊢ (a_ e_typ e1 T1) ∧ (a_ e_typ e2 T2) ⊆
                                (¬ a_ (e_eq e1 e2)).
 
-  Parameter exp_eq_same_type :
+  Axiom exp_eq_same_type :
     forall M e1 e2 T,
       M ⊢ (a_ e_typ e1 T) ∧ (a_ e_eq e1 e2) ⊆ (a_ e_typ e2 T).
 
-  Parameter entails_eq_trans :
+  Axiom entails_eq_trans :
     forall M e1 e2 e3, M ⊢ a_ (e_eq e1 e2) ∧ a_ (e_eq e2 e3) ⊆ a_ (e_eq e1 e3).
 
-  Parameter entails_eq_fld :
+  Axiom entails_eq_fld :
     forall M e1 e2 f, M ⊢ a_ (e_eq e1 e2) ⊆ a_ (e_eq (e1 ∙ f) (e2 ∙ f)).
 
-  Parameter entails_eq_not_prt_frm :
+  Axiom entails_eq_not_prt_frm :
     forall M e1 e2, M ⊢ a_ (e1 ⩵ e2) ⊆ ¬ a_prt_frm e1 e2.
 
-  Parameter entails_prt_eq :
+  Axiom entails_prt_eq :
     forall M e1 e2, M ⊢ a_ (e_eq e1 e2) ∧ a_prt e1 ⊆ a_prt e2.
 
-  Parameter entails_prt_null :
+  Axiom entails_prt_null :
     forall M, M ⊢ a_prt e_null ⊆ a_false.
 
-  Parameter hoare_false :
+  Axiom hoare_false :
     forall M s A, M ⊢ ⦃ a_false ⦄ s ⦃ A ⦄.
 
-  Parameter neg_absurd :
+  Axiom neg_absurd :
     forall M A, M ⊢ A ∧ ¬ A ⊆ a_false.
+
+  (** * Assumptions of the assumed underlying, traditional Hoare logic *)
 
   Parameter hoare_UL_write_different_field :
     forall M x f y f' e z,
@@ -191,11 +198,21 @@ Module Assumptions.
                       (ret e_false)
                       (a_ (e_eq ((e_ x) ∙ f) (e_ y))).
 
+
+  (** Assumption of the type system *)
+  Axiom h_read_type : forall M e T x,
+      M ⊢ ⦃ a_ (e_typ e T) ⦄
+        (s_read x e)
+        ⦃ a_ (e_typ (e_ x) T) ⦄.
+
   Fixpoint and A1 A2 :=
     match A1 with
     | A ∧ A' => and A (and A' A2)
     | _ => A1 ∧ A2
     end.
+
+  (** Simplifications of assumptions into a normal form. These are used to restructure assertions, performing tedious
+      operations such as removing duplicates of sub-assertions *)
 
   Fixpoint simplify_conj (A : asrt) : asrt :=
     match A with

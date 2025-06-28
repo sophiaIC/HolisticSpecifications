@@ -17,12 +17,30 @@ Module AssertTheory.
   (* assertion satisfaction is assumed, and is disconnected from the semantics defined in the paper. later we make some assumptions to simplify   *)
   Parameter sat : module -> config -> asrt -> Prop.
 
+  (** * Assertion Entailment (Consequence of Assertions) *)
+
+  (** Note: We use the definition of entails/consequence below to allow coq to
+   discharge certain obligations in an easier manner, rather than including
+   a significant amount of rewrite rules/tactics. This means that in some
+   proofs one might see a program configuration introduced as a result of splitting
+   the obligation: M ⊢ A1 ⊆ A2 into the Coq form of:*)
+
+  (** sat M σ A1 *)
+  (** -------------------------------*)
+  (** sat M σ A2 *)
+
+  (** While this may be unexpected in the use of a syntactic proof system
+   that does not consider the existence of program configurations, we never
+   actually interogate or consider the program configuration, nor the assertion
+   semantics. In fact instead of assuming the form sat M σ A, we might have
+   assumed sat M A, and there would be no changes required to the proof.
+   We maintained the current form so as to not confuse any future extension of
+   assertion satisfaction. *)
+
   Notation "M ⊢ A1 ⊆ A2" := (entails M A1 A2)(at level 40).
 
   Parameter entails_sound :
     forall M A1 A2, entails M A1 A2 <-> (forall σ, sat M σ A1 -> sat M σ A2).
-
-
 
   Parameter nsat : module -> config -> asrt -> Prop.
 
