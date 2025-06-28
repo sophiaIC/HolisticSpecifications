@@ -5,7 +5,6 @@ Require Import Bool.
 Require Import common.
 Require Import language_def.
 Require Import subst.
-(*Require Import assert.*)
 Require Export operational_semantics.
 Require Import assert_theory.
 
@@ -68,6 +67,8 @@ Module Hoare.
   Definition a_typs (xCs : list (var * ty)) :=
     asrt_frm_list (fun eC => a_ (e_typ (e_ (fst eC)) (snd eC))) xCs.
 
+  (** * Adaptation. See Section 6.2.2 in the related paper *)
+
   Fixpoint adapt (A : asrt)(ys : list var) : asrt :=
     match A with
     | a_prt e => prt_frms e ys
@@ -79,17 +80,35 @@ Module Hoare.
     | ¬ A => ¬ (adapt A ys)
     end.
 
-  (* Proof Rules *)
+  (** * Stability. See Section 4.3.1 in the related paper *)
 
   Fixpoint Stbl (A : asrt) :=
     match A with
-    | a_prt_frm x y => False
     | a_prt x => False
     | A1 ∧ A2 => Stbl A1 /\ Stbl A2
     | a_all C A => Stbl A
     | ¬ A => Stbl A
     | _ => True
     end.
+
+  (** Stbl_plus is defined here, but not used in the proofs of satisfaction*)
+
+  Fixpoint Stbl_plus (A : asrt) :=
+    match A with
+    | A1 ∧ A2 => Stbl_plus A1 /\ Stbl_plus A2
+    | a_all C A => Stbl_plus A
+    | ¬ A => Stbl_neg A
+    | _ => True
+    end
+
+  with Stbl_neg (A : asrt) :=
+         match A with
+         | a_prt x => False
+         | A1 ∧ A2 => Stbl_neg A1 /\ Stbl_neg A2
+         | a_all C A => Stbl_neg A
+         | ¬ A => Stbl_plus A
+         | _ => True
+         end.
 
   Inductive lift : list var -> asrt -> asrt -> Prop :=
   | lift_exp : forall e ys, lift ys (a_ e) (a_ e)
@@ -104,7 +123,17 @@ Module Hoare.
     | _ => True
     end.
 
-  (** * Section 7.1 - Hoare Triples *)
+  Fixpoint prt_free A :=
+    match A with
+    | a_prt_frm x y => False
+    | a_prt x => False
+    | A1 ∧ A2 => prt_free A1 /\ prt_free A2
+    | a_all C A => prt_free A
+    | ¬ A => prt_free A
+    | _ => True
+    end.
+
+  (** * Hoare Triples - Section 6.1 *)
 
   Class HoareTriple (A : Type) := triple : module -> asrt -> A -> asrt -> Prop.
   Notation "M '⊢' '⦃' P '⦄' s '⦃' Q '⦄'" :=
@@ -119,7 +148,7 @@ Module Hoare.
 
   Parameter hoare_base_stbl :
     forall M P s Q, hoare_base M P s Q ->
-               Stbl P /\ Stbl Q /\ call_free s.
+               Stbl P /\ Stbl Q /\ call_free s /\ prt_free P /\ prt_free Q.
 
   Fixpoint exp_not_in e x :=
     match e with
@@ -164,7 +193,7 @@ Module Hoare.
   Inductive hoare_extension : HoareTriple stmt :=
 
   (** 
-      Note: there is no explicit use of Stbl P, Stbl Q, or call_free s in h_base because
+      Note: there is no explicit use of Stbl P, Stbl Q, prt_free, or call_free s in h_base because
       it is implicitly handled by the hoare_base_stbl assumption.
    *)
 
@@ -180,32 +209,8 @@ Module Hoare.
   (** -----------------------------*)
   (** M ⊢ ⦃ true ⦄ x := new C ⦃ ⟪ x ⟫ ⦄ *)
 
-  | h_prot_new1 : forall M x C,
+  | h_prot_new : forall M x C,
       M ⊢ ⦃ a_true ⦄ (s_new x C) ⦃ a_prt (e_ x) ⦄
-
-
-  (** x ≠ y *)
-  (** -----------------------------*)
-  (** M ⊢ ⦃ true ⦄ x := new C ⦃ ⟪ x ⟫ <-\- y ⦄ *)
-
-  | h_prot_new2 : forall M u x C,
-      u <> x ->
-      M ⊢ ⦃ a_true ⦄ (s_new u C) ⦃ a_prt_frm (e_ u) (e_ x)⦄
-
-
-  (** -----------------------------*)
-  (** M ⊢ ⦃ prt e ⦄ x := new C ⦃ prt e ⦄ *)
-
-  | h_prot_new3 : forall M x C e,
-      M ⊢ ⦃ a_prt e ⦄ (s_new x C) ⦃ a_prt e ⦄
-
-  (** -----------------------------*)
-  (** M ⊢ ⦃ true ⦄ x := new C ⦃ prt x ⦄ *)
-
-  | h_new_prt2 : forall M x e1 e2 C,
-      exp_not_in e1 x ->
-      exp_not_in e2 x ->
-      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ (s_new x C) ⦃ a_prt_frm e1 e2 ⦄
 
   (** M ⊢ ⦃ P1 ⦄ s ⦃ Q ⦄ *)
   (** M ⊢ P2 ⊆ P1 *)
@@ -236,27 +241,22 @@ Module Hoare.
       M ⊢ ⦃ P1 ⦄ s ⦃ Q1 ⦄ ->
       M ⊢ ⦃ P2 ⦄ s ⦃ Q2 ⦄ ->
       M ⊢ ⦃ P1 ∧ P2 ⦄ s ⦃ Q1 ∧ Q2 ⦄
-  (** *)
+
+  (** M ⊢ ⦃ P ∧ e ⦄ s1 ⦃ Q ⦄ *)
+  (** M ⊢ ⦃ P ∧ ¬ e ⦄ s2 ⦃ Q ⦄ *)
   (** ----------------- *)
-  (** M ⊢ ⦃ [y.f / x] P ⦄  ⦃ P ⦄  *)
+  (** M ⊢ ⦃ P ⦄ if e then s1 else s2 ⦃ Q ⦄  *)
 
   | h_if : forall M e s1 s2 P Q,
       M ⊢ ⦃ P ∧ a_ e ⦄ s1 ⦃ Q ⦄ ->
       M ⊢ ⦃ P ∧ ¬ a_ e ⦄ s2 ⦃ Q ⦄ ->
       M ⊢ ⦃ P ⦄ s_if e s1 s2 ⦃ Q ⦄
 
+
+  (** call_free s *)
+  (** ∀ z, s does not assign to z → M ⊢ ⦃ A ∧ e = z ⦄ s ⦃ e = z ⦄ *)
   (** -----------------------------*)
-  (** M ⊢ ⦃ prt-frm w x ∧ prt-frm w z ⦄ y.f := z ⦃ prt-frm w x ⦄  *)
-
-  | h_write_prt_frm : forall M w x y z f,
-      M ⊢ ⦃ a_prt_frm (e_ w) (e_ x) ∧
-              a_prt_frm (e_ w) (e_ z) ⦄
-        s_write y f (e_ z)
-        ⦃ a_prt_frm (e_ w) (e_ x) ⦄
-
-
-  (** -----------------------------*)
-  (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
+  (** M ⊢ ⦃ A ∧ prt e ⦄ y := z.f ⦃ prt e ⦄ *)
 
   | h_prot1 : forall M e s A,
       call_free s ->
@@ -265,15 +265,22 @@ Module Hoare.
       M ⊢ ⦃ A ∧ a_prt e ⦄ s ⦃ a_prt e ⦄
 
 
+  (**  *)
   (** -----------------------------*)
   (** M ⊢ ⦃ prt x ⦄ y := z.f ⦃ prt x ⦄ *)
 
-  | h_prot2 : forall M x z z' e e' e'' s,
-      z <> x -> z' <> x ->
-      M ⊢ ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄
-        s_read x e''
-        ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄ ->
+  | h_prot2 : forall M x e e' s,
+      (forall z z', z <> x -> z' <> x ->
+               M ⊢ ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄
+                 s
+                 ⦃ a_ ((e_ z) ⩵ e) ∧ a_ ((e_ z') ⩵ e') ⦄) ->
       M ⊢ ⦃ a_prt_frm e e' ⦄ s ⦃ a_prt_frm e e' ⦄
+
+  | h_prot3 : forall M x z y f,
+      x <> z ->
+      M ⊢ ⦃ a_prt_frm (e_fld (e_ y) f) (e_ z) ⦄
+        s_read x (e_fld (e_ y)  f)
+        ⦃ a_prt_frm (e_ x) (e_ z) ⦄
 
   | h_prot4 : forall M x y y' f z,
       M ⊢ ⦃ a_prt_frm (e_ x) (e_ z) ∧ a_prt_frm (e_ x) (e_ y') ⦄
@@ -294,15 +301,6 @@ Module Hoare.
       M ⊢ ⦃ a_ (e_typ e T) ⦄
         s
         ⦃ a_ (e_typ e T) ⦄
-
-  | h_read_prt_frm : forall M e1 e2 e x y,
-      e = (e_ y) \/ (exists f, e = (e_fld (e_ y) f)) ->
-      (forall z1 z2, ~ In z1 (x::y::nil) ->
-                ~ In z2 (x::y::nil) ->
-                M ⊢ ⦃ a_ e_eq e1 (e_ z1) ∧ a_ e_eq e2 (e_ z2) ⦄
-                  s_read x e
-                  ⦃ a_ e_eq e1 (e_ z1) ∧ a_ e_eq e2 (e_ z2)⦄) ->
-      M ⊢ ⦃ a_prt_frm e1 e2 ⦄ s_read x e ⦃ a_prt_frm e1 e2 ⦄
 
   | h_or : forall M A1 A2 A3 s, M ⊢ ⦃ A1 ⦄ s ⦃ A3 ⦄ ->
                            M ⊢ ⦃ A2 ⦄ s ⦃ A3 ⦄ ->
