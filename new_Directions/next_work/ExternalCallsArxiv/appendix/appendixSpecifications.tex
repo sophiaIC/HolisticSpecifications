@@ -1,28 +1,6 @@
 \section{Appendix to Section \ref{sect:spec} -- Specifications}
 \label{app:spec}
 
-
- \begin{example}[Badly Formed Method Specifications]
-$S_{9,bad\_1}$ is not a well-formed specification, because $A'$ is not a formal parameter, nor free in the precondition. 
-
-   {\sprepost
-		{\strut \ \ \ \ \ \ \ \ \ S_{9,bad\_1} }
-		{  a:\prg{Account} \wedge  \inside{a} }
-		{\prg{public Account}} {\prg{set}} {\prg{key'}:\prg{Key}}
-		{   \inside{a}\wedge  \inside{a'.\prg{key}}  }
-		{  true }
-}
-		
- {\sprepost
-		{\strut \ \ \ \ \ \ \ \ \ S_{9,bad\_2} }
-		{  a:\prg{Account} \wedge  \inside{a} }
-		{\prg{public Account}} {\prg{set}} {\prg{key'}:\prg{Key}}
-		{   \inside{a}\wedge  \inside{a'.\prg{key}}  }
-		{  \prg{this}.\balance \ }
-
-}
-\end{example}
-
 { \begin{example}[More Method Specifications]
 \label{ex:spesMore}
 $S_7$ below  guarantees that
@@ -36,11 +14,11 @@ $S_8$ guarantees that if the key supplied is that of the receiver, the correct a
 		{ a:\prg{Account}\wedge  a.\prg{\balance}=b \wedge
 		(\prg{dst}\neq a\neq\prg{this} \vee \prg{key'}\neq a.\prg{\password})}
 	               {\prg{public Account}} {\prg{transfer}} {\prg{dst}:\prg{Account},\prg{key'}:\prg{Key},\prg{amt}:\prg{nat}}
-		{ a.\prg{\balance}=b}
-		{\sdred{ a.\prg{\balance}=b}}
+		{ \ a.\prg{\balance}=b\ }
+		{  \ a.\prg{\balance}=b\ }
 }
 \\
-{\sprepostLB
+{\sprepost 
 		{\strut \ \ \ \ \ \ \ \ \ S_8} 
 		{  % b,b':\prg{int} \wedge  
 		\prg{this}\neq \prg{dst}\wedge \prg{this}.\prg{\balance}=b \wedge  \prg{dst}.\prg{\balance}=b' }
@@ -48,7 +26,7 @@ $S_8$ guarantees that if the key supplied is that of the receiver, the correct a
 		  	  {\prg{transfer}} 
 		   	 {\prg{dst}:\prg{Account},\prg{key'}:\prg{Key},\prg{amt}:\prg{nat} }
 		{\prg{this}.\prg{\balance}=b-\prg{amt} \wedge \prg{dst}.\prg{\balance}=b'+\prg{amt} } 
-		{    \prg{this}.\prg{\balance}=b \wedge  \prg{dst}.\prg{\balance}=b'   }
+		{ \   \prg{this}.\prg{\balance}=b \wedge  \prg{dst}.\prg{\balance}=b'  \  }
 }
 \\
 {\sprepost
@@ -56,12 +34,17 @@ $S_8$ guarantees that if the key supplied is that of the receiver, the correct a
 		{  a:\prg{Account}\wedge
 		 \inside{a.\prg{\password}}}
 		{\prg{public Account}} {\prg{set}} {\prg{key'}:\prg{Key}}
-		{ \inside{a.\prg{\password}}}
-		{ \inside{a.\prg{\password} } }		
+		{\ \inside{a.\prg{\password} }\ }
+		{ \ \inside{a.\prg{\password} } \ }		
 }
 }
 \end{example}
 }
+
+
+
+
+
  
 %??? OR should it be ??? (for the below, we need to add some implications in the Hoare logic for call, or for specs
 %\\
@@ -170,6 +153,79 @@ We now discuss the requirements about free variables in well-formed specificatio
  In scoped invariants, $A$ may only mention   variables introduced by the quantifier, $\overline x$. In method specifications, the precondition, $\overline{x:C'} \wedge A$, may only mention the receiver, \prg{this}, the formal parameters, $\overline y$, and the explicitly introduced  variables, $\overline x$; it may \emph{not}  mention the result  \prg{res}. The postcondition, $A'$, may mention these variables, and in addition, may mention the result, \prg{res}. The mid-condition, $A''$ is about a state which has at least one more frame than the current method's,
 and therefore it  may not mention \prg{this}, nor $\overline{y}$, nor \prg{res}.
 
+ \begin{example}[Badly Formed Method Specifications -- Free Variables]
+$S_{9,bad}$ is not a well-formed specification, because $a'$ is not a formal parameter, nor free in the precondition. 
+
+ {\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_{9,bad} }
+		{  a:\prg{Account} \wedge  \inside{a} }
+		{\prg{public Account}} {\prg{set}} {\prg{key'}:\prg{Key}}
+		{   \inside{a}\wedge  \inside{a'.\prg{key}}  }
+		{  true }
+}
+		
+% {\sprepost
+%		{\strut \ \ \ \ \ \ \ \ \ S_{9,bad\_2} }
+%		{  a:\prg{Account} \wedge  \inside{a} }
+%		{\prg{public Account}} {\prg{set}} {\prg{key'}:\prg{Key}}
+%		{   \inside{a}\wedge  \inside{a'.\prg{key}}  }
+%		{  \prg{this}.\balance \ }
+%
+%}
+\end{example}
+
+\subsubsection{Encapsulation in well-formed specifications}
+\label{wff:spec:encaps:more}
+
+We now discuss the requirements that post-conditions and invariants as encapsulated -- as defined in Def. \ref{f:holistic-wff}.
+
+ \sdnew{ \begin{example}[Badly Formed Method Specifications -- Postcondition  not encapsulated]
+$S_{10,bad}$ is not a well-formed specification,  because the postcondition contains protection in   a negative position ($\neg \inside{\prg{this}.\prg{key}}$), and therefore is  not encapsulated.
+
+ {\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_{10,bad} }
+		{  \ true\  }
+		{\prg{public Account}} {\prg{leak}} {\prg{x}:\prg{external}}
+		{  \neg \inside{\prg{this}.\prg{key}}   }
+		{  true }
+}
+
+For similar reasons, $S_{11,bad}$  % and $S_{12,bad}$ are 
+is  not well-formed either. The requirment that $\neg \inside{\prg{this}.\prg{key}} $  in the precondition is OK (preconditions need not be encapsulated), but the requirement that $\neg \inside{\prg{this}.\prg{key}} $ in the postcondition is not.
+
+ {\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_{11,bad} }
+		{  \  \neg \inside{\prg{this}.\prg{key}}  \ }
+		{\prg{public Account}} {\prg{leak\_preserve}} {\prg{x}:\prg{external}}
+		{  \neg \inside{\prg{this}.\prg{key}}   }
+		{  true }
+}
+
+\vspace{.03cm}
+
+Forbidding specifications like  $S_{10,bad}$ or $S_{11,bad}$ does not restrict the expressiveness of our language. 
+They are impossible, or near impossible, to satisfy, because they  talk about properties of the external code, 
+over which the internal code has very little  control.
+
+$S_{10,bad}$ is impossible to satisfy: Even if the method \prg{leak} were to pass the \prg{key} to the external object
+\prg{x}, there is no way to ensure that \prg{x}, or some other external object will store the key, and thus no way to guarantee that    $\neg \inside{\prg{this}.\prg{key}}$     holds after the call.
+
+On the other hand, $S_{11,bad}$ can only be satisfied, if \prg{leak\_preserve} makes no external call.
+It \prg{leak\_preserve} were to make an external call, it would be impossible to guarantee that $\neg   \inside{\prg{this}.\prg{key}}$ will be not be invalidated by that external call.
+		
+\end{example}
+}
+
+ \sdnew{ \begin{example}[Badly Formed  Specifications -- Scoped Invariant  not encapsulated]
+$S_{12,bad}$ is not a well-formed specification,  because the scoped invariant contains protection in   a negative position ($\neg \inside{\prg{this}.\prg{key}}$), and therefore   is not encapsulated.
+
+$\strut \SPSP\ \ \   S_{12,bad}\ \  \triangleq \ \ \TwoStatesN {\prg{a}:\prg{Account}}  {\not \inside{\prg{a}.\prg{key}}} $ 
+
+ 
+Forbidding specifications like  $S_{12,bad}$  does not restrict the expressiveness of our language, because such specifications are impossible to satisfy. Here, $ S_{12,bad}$ requires that external call does not give up access to $\prg{a}.\prg{key}$. Such a guarantee cannot be made by the internal code.
+		
+\end{example}
+}
 
 \input{appendix/appendixExpressivity}
  
