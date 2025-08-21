@@ -42,7 +42,8 @@ All we can rely on, is the guarantee that external code interacts with the inter
 \label{sec:shop}
 
 Consider the following internal module \Mshop, % which also includes the 
-containing classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
+%containing 
+with classes \prg{Item}, \prg{Shop}, \prg{Account}, and \prg{Inventory}. 
 Classes \prg{Inventory} and \prg{Item} are straightforward: we elide
 their details. 
 \prg{Account}s hold a balance and have a \password. 
@@ -56,11 +57,10 @@ and pay for an \prg{Item}:
  % SD chopped  with a method { \prg{pay}.}} 
 
 
-\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=none]
 module M$_{shop}$
   ...   
   class Shop
-  
     field accnt:Account, invntry:Inventory, clients:external     
      
     public method buy(buyer:external, anItem:Item)
@@ -70,8 +70,8 @@ module M$_{shop}$
       if (this.accnt.blnce == oldBlnce+price)  
          this.send(buyer,anItem)
       else
-         buyer.tell("you have not paid me")   
-            
+         buyer.tell("you have not paid me") 
+                       
     private method send(buyer:external, anItem:Item)  
        ...         
 \end{lstlisting}
@@ -79,7 +79,7 @@ module M$_{shop}$
  
  
 \begin{wrapfigure}[12]{r}{0cm}%expand to fit figure
-\includegraphics[width=35mm]{diagrams/ShopAtrimmed.png}
+\includegraphics[width=25mm]{diagrams/ShopAtrimmed.png}
 \end{wrapfigure}
 
 
@@ -103,10 +103,8 @@ is the key capability that allows withdrawal from $o_4$.
 
 The critical point in our code is the external call on line 8,   where the \prg{Shop} asks the \prg{buyer} to pay the price of that item,
 by calling  \prg{pay} on \prg{buyer} and passing the \prg{Shop}'s account as an argument.
-% somebody had written " \prg{Shop}'s account" but SD thinks it has to be  \prg{Shop}'s account
 As \prg{buyer} is an external object, the module \Mshop has no method specification for \prg{pay}, and no 
-certainty about what its implementation %knowledge of what the implementation of \prg{pay} 
-might do. 
+certainty about what its implementation might do. 
 
 
 What are the possible effects of that external call?
@@ -223,12 +221,7 @@ Thus:
 
 \vspace{.1cm}
  
-\noindent 
-%% We formalize the concepts "reachable from the current point of execution" and  "future scoped by the current point of execution"
-%% through the concepts of \emph{protection}, and \emph{scoped invariants}. 
-%% We discuss these concepts in more detail in \S \ref{sect:approach:protection}, and \S \ref{sect:approach:scoped}.
-%% But first, we clarify the concept of "current point of execution".
-
+ 
 \noindent We will shortly formalize ``reachable from the current point of execution'' as
 \emph{protection} in \S \ref{sect:approach:protection},
 and then  ``future scoped by the current point of execution''
@@ -297,7 +290,7 @@ if no external object indirectly accessible from the current frame has direct ac
  and  if the receiver is external then $o$ is not an argument.\footnote{An object has direct access to another object if it has a field pointing to the latter;
  it has indirect access to another object if there exists a sequence of field accesses (direct references) leading to the other object; 
  an object is indirectly accessible from the frame if one of the frame's variables has indirect access to it.} 
- More in Def.\ \ref{def:chainmail-protection-from}. % and Fig. \ref{fig:ProtectedBoth}. 
+ More in Def.\ \ref{def:chainmail-protection-from}.   
 \end{description}
  
  
@@ -316,7 +309,7 @@ because though neither object $o_5$ nor $o_7$ have direct access to $o_4$, in st
 \hline
  heap
 &
-$\sigma_1$  % protected from object $o_2$
+$\sigma_1$   
 &
 $\sigma_2$ 
 &
@@ -338,14 +331,8 @@ $\sigma_1  \models \inside{o_4}$
 $\sigma_2 \models \inside{o_4}$
 &
 $\sigma_3 \not \models \inside{o_4}$
-%\\
-%$... \not\models  \protectedFrom {o_3} {o_5}$
-%& & & 
-%\\
-%$...  \models  \protectedFrom {o_2} {o_5}$
-%& & & 
 \\
-\hline % \hline
+\hline  
 \end{tabular}
 \caption{\textit{Protected from and Protected}. -- continuing from Fig, \ref{f:CurrentPoint}.
  }
@@ -362,57 +349,12 @@ We define  \emph{scoped invariants} to  describe
 \sdnew{property  preservation within the current  and all nested calls}.
 
 
-%Going back to the original question, if $o_{c}$ is protected,  and $o_{c}$ is never leaked to external objects, 
-%then  effect  $E$ is guaranteed not to occur. % , \se{unless caused by internal code}.
 
-
-
- 
-%\begin{figure}[tbh]
-%\begin{tabular}{|c|c|c|}
-%\hline
-%\resizebox{3.5cm}{!}{
-%\includegraphics[width=\linewidth]{diagrams/prfC.png}
-%} 
-%&
-%\resizebox{4.5cm}{!}{
-%\includegraphics[width=\linewidth]{diagrams/prtFirst.png}
-%}
-%&
-%\resizebox{4.5cm}{!}{
-%\includegraphics[width=\linewidth]{diagrams/prtSecond.png}
-%}
-%\\
-%\hline
-%protected from object $o_2$
-%&
-%protected  with current frame $\phi_1$
-%&
-%protected  with current frame $\phi_2$
-%\\
-%\hline \hline
-%\end{tabular}
-%\caption{\textit{Protected from and Protected}. Pink and green squares are external and internal objects, respectively. Connecting straight arrows  indicate fields. Blue boxes are frames on the stack. Protected objects are  highlighted in yellow. 
-% The left pane shows a heap with objects $o_1$-$o_9$.
-% Here  $o_1$, $o_4$, $o_5$ and $o_9$ 
-%are protected from $o_2$. 
-% The middle pane {shows the same heap and a stack with frame  $\phi_1$} whose receiver,   \prg{this},  points to $o_1$. Here 
-% $o_1$, $o_2$, $o_4$, $o_5$ and $o_9$  are protected. 
-% The right pane {shows the configuration after pushing frame  $\phi_2$}, whose receiver,  \prg{this},  and local variable, \prg{x}, point to $o_3$ and  $o_7$, respectively.
-% Here $o_3$ and $o_7$ are protected, in addition  to  the objects protected in the previous pane.
-%}
-%   \label{fig:ProtectedBoth}
-% \end{figure}
  
 
 \subsubsection{Scoped Invariants}
-%\subsection{2$^{nd}$ Challenge: Specification of limited effects}
-
+ 
 \label{sect:approach:scoped}
-%How can we express the guarantee that effects are limited?  
-% In particular, when effects can be the outcome of the execution of more than one method? 
-% Traditional,  {per-method} PRE/POST conditions {cannot guarantee} %specifications cannot express guarantees
-%  that two or more of our methods won't interact to produce an unlimited effect. 
 We build on the concept of history invariants \cite{liskov94behavioral,usinghistory,Cohen10} and define:
 
 \begin{description}
@@ -548,7 +490,7 @@ We illustrate the meaning of our specifications using three versions
 ($\ModA$,  $\ModB$, and $\ModC$) of the \Mshop module \cite{OOPSLA22};
 these all share the same \prg{transfer} method to withdraw money: 
 
-\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=none]
 module $\ModA$      
   class Shop   ... as earlier ...
   class Account
@@ -572,7 +514,7 @@ only in their \prg{set} methods. Whereas \ModA 's key is fixed once it is \prg{s
 \begin{tabular}{lll}
 \begin{minipage}[b]{0.40\textwidth}
 
-\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=none]
 module $\ModB$
   ... as earlier ...
   public method set(key':Key)
@@ -581,7 +523,7 @@ module $\ModB$
 \end{minipage}
 &\ \ \  \ \   &%
 \begin{minipage}[b]{0.48\textwidth}
-\begin{lstlisting}[mathescape=true, language=chainmail, frame=lines]
+\begin{lstlisting}[mathescape=true, language=chainmail, frame=none]
 module $\ModC$
   ... as earlier ...
   public method set(key',key'':Key)
@@ -657,8 +599,8 @@ We then embed  the $\vdash_{ul}$-logic into the quadruples logic
 ( $\vdash_{ul}$-triples  whose   statements do not contain method calls give rise to quadruples in our logic -- see rule below).
 We  extend assertions $A$ so they may mention protection and add rules about protection
  (\eg newly created objects are protected -- see rule below), and
- add the usual conditional and substructural rules.
- More in Fig.\ref{f:protection}  and \ref{f:substructural:app}.
+ add   usual conditional and substructural rules.
+ More in Fig.\ref{f:protection}  and \aref{Fig. 15}{\ref{f:substructural:app}}.
 
 \noindent
 \small
