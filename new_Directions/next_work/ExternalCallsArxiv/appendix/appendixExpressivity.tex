@@ -18,29 +18,48 @@ modify the node's \prg{property} -- where  \prg{parent}, \prg{children} and \prg
 are fields in class \prg{Node}. Since the top nodes of the tree
 usually contain privileged information, while the lower nodes contain
 less crucial third-party information, we must be able to limit 
- access given to third parties to only the lower part of the DOM tree. We do this through a \prg{Proxy} class, which has a field \prg{node} pointing to a \prg{Node}, and a field \prg{height}, which restricts the range of \prg{Node}s which may be modified through the use of the particular \prg{Proxy}. Namely, when you hold a \prg{Proxy}  you can modify the \prg{property} of all the descendants of the    \prg{height}-th ancestors of the \prg{node} of that particular \prg{Proxy}.  We say that
+ access given to third parties to only the lower part of the DOM tree. 
+ 
+ We do this through a \prg{Proxy} class, which has a field \prg{node} pointing to a \prg{Node}, and a field \prg{height}, which restricts the range of \prg{Node}s which may be modified through the use of the particular \prg{Proxy}. Namely, when you hold a \prg{Proxy}  you can modify the \prg{property} of all the descendants of the    \prg{height}-th ancestors of the \prg{node} of that particular \prg{Proxy}.  
+We say that 
 \prg{pr} has \emph{modification-capabilities} on \prg{nd}, where \prg{pr} is
 a  \prg{Proxy} and \prg{nd} is a \prg{Node}, if the \prg{pr.height}-th  \prg{parent}
 of the node at \prg{pr.node} is an ancestor of \prg{nd}.
 %}
 
-We specify this property as follows:
+We express this through the predicate $may\_modify$ defined as follows:
 \\
-$\strut \SPSP  S_{dom\_1}\ \  \triangleq \ \ \TwoStatesN{ nd:\prg{DomNode}}{\  \forall pr:\prg{Proxy}.[ \ may\_modi\!f\!y(pr, nd) \rightarrow \inside{pr}\  ] \ }$ 
+$\strut \SPSP   may\_modi\!f\!y(pr, nd) \triangleq \exists k. [ \  nd.parent^k=pr.node.parent^{pr.height}\ ]$
 \\
-$\strut \SPSP  S_{dom\_2}\ \  \triangleq \ \  \forall{ nd:\prg{DomNode}, val:\prg{PropertyValue} }$.\\
-$\strut \SPSP\strut \SPSP\strut \SPSP\strut \SPSP	\{ { \ \forall pr:\prg{Proxy}.[ \ may\_modi\!f\!y(pr, nd) \rightarrow \inside{pr}\  ]  \wedge nd.property = val} \ \} $ 
-\\
-where $may\_modi\!f\!y(pr, nd) \triangleq \exists k. [ \  nd.parent^k=pr.node.parent^{pr.height}\ ]$
+Thus, a proxy object $pr$, which satisfies $may\_modi\!f\!y(pr,nd)$ is a capability which may modify the node $nd$. 
 
 
-Note that $S_{dom\_2}$ is strictly stronger than $S_{dom\_1}$
-% THE MEANING IS OBVIOUS
-% \footnote{\red{We have not defined strictly stronger in this document}.}
+\noindent
+\sdnew{Below, $S_{dom\_1}$ mandates  that nodes, $nd$ are not leaked.}
+\\
+$\strut \SPSP  S_{dom\_1}\ \  \triangleq \ \ \TwoStatesN{ nd:\prg{DomNode}}{\  \inside{nd}\  ] \ }$ 
+\\
+\noindent
+\sdnew{Also, $S_{dom\_2}$ mandates  that proxies which $may\_modi\!f\!y(pr,nd)$ are not leaked.}
+\\
+$\strut \SPSP  S_{dom\_2}\ \  \triangleq \ \ \TwoStatesN{ nd:\prg{DomNode}}{\  \forall pr:\prg{Proxy}.[ \ may\_modi\!f\!y(pr, nd) \rightarrow \inside{pr}\  ] \ }$ 
+\\
+\sdnew{Finally, $S_{dom\_3}$ mandates   that proxies which $may\_modi\!f\!y(pr,nd)$ are not leaked, and that when a node $nd$ is protected, and  all proxies that can  $may\_modi\!f\!y(pr,nd)$ are protected, then  the $property$ of $nd$ cannot be modified by external code.}
+\\
+$\strut \SPSP  S_{dom\_3}\ \  \triangleq \ \  \forall{ nd:\prg{DomNode}, val:\prg{PropertyValue} }$.\\
+$\strut \SPSP\strut  \SPSP\strut \SPSP	\{ { \  \inside{nd} \wedge \forall pr:\prg{Proxy}.[ \ may\_modi\!f\!y(pr, nd) \rightarrow \inside{pr}\  ]  \wedge nd.property = val} \ \}  $ 
+
+
+
+
+
+% chopped the below. It is NOT true!
+%Note that $S_{dom\_2}$ is strictly stronger than $S_{dom\_1}$
+ 
 
 \vspace{.1cm}
 
-\citet{OOPSLA22} specify this as:
+\citet{OOPSLA22} specify the DOM as follows:
  
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 DOMSpec $\triangleq$ from nd : Node $\wedge$ nd.property = p  to nd.property != p
@@ -97,7 +116,7 @@ while class invariants are one-state, which means they are required to hold in a
 
 \vspace{0.5cm}
 We now compare with the specification given in \cite{OOPSLA22}.
-\prg{DAOSpec1} in similar to  $S_{dao\_1}$: iy
+\prg{DAOSpec1} is similar to  $S_{dao\_1}$: it
 says that no participant's balance may ever exceed the ether remaining 
 in DAO. It is, essentially, a one-state invariant.
 
