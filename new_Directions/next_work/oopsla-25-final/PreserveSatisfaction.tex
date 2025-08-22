@@ -1,0 +1,178 @@
+
+
+Program logics require some form of framing, \ie conditions under which  satisfaction of  assertions is preserved across program execution. 
+This is the subject of  the current subsection.
+
+Def. \ref{def:as}  turns an assertion  $A$ %or an expression
+to the equivalent variable-free from by replacing all free variables from $A$ by their values in $\sigma$. % $\interpret \sigma x$.
+ Then,   Lemma \ref{l:assrt:unaffect}  says  that 
+satisfaction of an assertion is not affected by replacing free  variables by their values, nor by changing the sate's continuation.
+
+\begin{definitionAndLemma} $ $ ~
+\label{def:as}
+\label{lemma:addr:expr}
+\label{l:assrt:unaffect}
+For all $M$, $\sigma$,  $stmt$,   $A$, and $\overline x$ where  $\overline x = \fv{(A)}$:
+
+\begin{itemize}  
+\item
+
+${\as  \sigma A} \ \triangleq \ \ A[\overline {{\interpret {\sigma} {x}}/x}]$\  
+\item
+$\satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{{\as {\sigma} A} }    \ \ \ \Longleftrightarrow\ \ \  \satisfiesA{M}{\sigma[\prg{cont}\mapsto stmt]}{A}$ 
+\end{itemize}
+\end{definitionAndLemma}
+
+%\begin{lemma}
+%
+%For all $M$, $\sigma$,  $stmt$, and $A$:
+%
+%\begin{itemize} % {enumerate}
+%\item
+%\label{one:ad:exp}
+%\label{l:assrt:unaffect:one}
+%$\satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma}{\as {\sigma} A}     \ \ \ \Longleftrightarrow\ \ \  \satisfiesA{M}{\sigma[\prg{cont}\mapsto stmt]}{A}$ 
+%% holds, but not used
+%%\item
+%%$\eval{M}{\sigma}{{\re}}{\alpha}  \ \ \Longrightarrow\ \  [ \ \satisfiesA{M}{\sigma}{A} \  \Longleftrightarrow\   \  \satisfiesA{M}{\sigma}{A[\alpha/\re]} \  \  ]$
+%%\item
+%%$ \satisfiesA{M}{\sigma}{A}   \ \ \ \Longleftrightarrow\ \ \ \satisfiesA{M}{\sigma[\prg{cont}\mapsto stmt]}{A}$ 
+%\end{itemize} %{enumerate}
+%
+%\end{lemma}
+
+ \noindent
+We now move to assertion preservation across method call and return.  
+
+\subsubsection{\textbf{Stability}} %{Stability: Preservation across method call and return}
+\label{s:preserve:call:ret}
+In most program logics, satisfaction of  variable-free assertions  is preserved when pushing/popping frames
+-- \ie immediately after entering a method or  returning from it.
+But this is not  so for our assertions, where protection depends %not only 
+on the heap but also 
+on the range of %mapping from 
+the top frame. \Eg  Fig. \ref{fig:ProtectedBoth}:\  
+$\sigma_2 \not\models \inside {o_6}$, but after pushing a frame, we have $\sigma_3  \models \inside {o_6}$.
+ 
+ 
+
+{Assertions} which do  not contain  $\inside {\_}$   are called $\Stable {\_}$, 
+while assertions which do  not contain $\inside {\_}$ in \emph{negative} positions are called $\Pos {\_}$. 
+Sect \ref{sect:Compare:stable:enc} shows some examples.
+%Thus, $\Stable {\protectedFrom {\re_o} {\re}}$  and  $\Pos{\protectedFrom {\re_o} {\re}}$, while  $\neg(\Stable {\inside {\re} })$  but
+%$\Pos{\inside {\re}}$; finally, $\neg(\Stable {\inside{\re} \rightarrow x.f\!>\!3})$  and   $\neg(\Pos {\inside{\re} \rightarrow x.f\!>\!3})$.
+Lemma \ref{l:stbl:preserves} says that $\Stable{\_}$ assertions are  preserved when pushing/popping frames,
+and $\Pos {\_}$ assertions are preserved when pushing  {internal} frames.
+\Cf    \A\ \aref{D}{\ref{app:preserve}} for   definitions and proofs. 
+
+\begin{lemma}
+For all  states $\sigma$, frames $\phi$,   all assertions $A$ with  $\fv(A)=\emptyset $
+\label{l:preserve:asrt}
+\label{l:stbl:preserves} 
+\begin{itemize}
+\item 
+$\Stable{A} \  \ \  \Longrightarrow  \  \ \  [\ \ M, \sigma \models A \ \ \Longleftrightarrow \ \  M,{\PushSLong \phi \sigma} \models A\ \ ]$
+\item 
+\label{l:preserve:asrt:two}
+$\Pos{A}   \ \wedge    \ {M\cdot\Mtwo \models {\PushSLong \phi \sigma}}\  \wedge\  M, {\PushSLong \phi \sigma} \models  \intThis\  \wedge  \ M, \sigma \models A $
+$\  \ \ \Longrightarrow \ \  \ M,{\PushSLong \phi \sigma} \models A\ $
+\end{itemize}
+\end{lemma}
+
+
+While $Stb^+$ assertions \emph{are} preserved  when pushing  internal frames,   they  are \emph{not} necessarily preserved when pushing  external frames  
+nor when popping frames   (\cf Ex. \ref{ex:pop:does:not:preserve}). 
+
+{ 
+\begin{example}%[$Stb^+$  not always preserved by External Push]
+\label{push:does:not:preserve}
+Fig. \ref{fig:ProtectedBoth} illustrates that \\ 
+-- \textit{$Stb^+$  not necessarily preserved by External Push}: 
+%In    Fig. \ref{fig:Protected}, where $\sigma_2$ by pushing external frame onto $\sigma_1$, and 
+%$\sigma_1 \models \inside {o_3}$ but $\sigma_2 \not\models \inside {o_3}$.
+% Bad syntax above, but fits in one line
+%In Fig. \ref{fig:ProtectedBoth} we have 
+Namely, $\sigma_2 \models \inside {o_4}$,   pushing   frame $\phi_3$ with an external receiver 
+ and $o_4$ as argument gives $\sigma_3$,  we have $\sigma_3 \not\models \inside {o_4}$.
+%   $\sigma_3$ emerges by pushing an external frame onto $ \sigma_2$’s stack we have $\sigma_2 \models \inside {o_3}$ and $\sigma_3 \not\models \inside {o_3}$ 
+%\end{example}
+% 
+\\
+%\begin{example}[$Stb^+$ not always preserved by Pop]
+\label{ex:pop:does:not:preserve}
+%Take Fig. \ref{fig:ProtectedBoth} again: 
+-- \textit{$Stb^+$  not necessarily preserved by Pop}:  %Returning from $\sigma_3$ would give  $\sigma_2$. And we 
+Namely,  $\sigma_3 \models \inside {o_6}$, returning from $\sigma_3$ would give  $\sigma_2$, and  we have  $\sigma_2 \not\models \inside {o_6}$.
+\end{example}
+}
+
+ 
+{We work with  $Stb^+$  assertions   (the  $Stbl$ requirement is too strong). 
+But  we need to address the lack of preservation of $Stb^+$ assertions  {for external method calls and returns}.
+ %,  makes it difficult to  ensure certain (perhaps weaker) assertions hold when entering   or returning from a method. 
+We do the former   through    \emph{adaptation}   ($\pushSymbolInText$ in Sect \ref{s:viewAndProtect}), and the latter through  
+\emph{\strong satisfaction} (\S \ref{s:scoped:valid}).
+  }
+  
+
+\subsubsection{\textbf{Encapsulation}} % : Preservation across heap modifications}
+ \label{sect:Compare:stable:enc}
+ 
+ As external code is unknown, it could, in principle, have unlimited effect and  invalidate any assertion, and thus make  reasoning about  external calls impossible.
+However, because fields are private, assertions which  read internal fields only,  cannot be invalidated by external execution steps.
+Reasoning about external calls relies on such   \emph{encapsulated} assertions. 
+
+Judgment $M\ \vdash \encaps{A}$,  
+{defined in} %Def 
+\aref{D.4}{\ref{d:encaps:sytactic}},  
+{requires that} $A$ looks up the contents of
+internal objects only,  
+{that $A$} does not contain  $\inside {\_}$  in negative positions,  
+{nor does it} contain  $\protectedFrom {\_} {\_}$  
+{in any position}.  
+Lemma \ref{lem:encap-soundness} says that %encapsulation judgment  
+$M\ \vdash \encaps{A}$  
+{implies}
+that any external scoped execution step which involves $M$ and any set of other modules $\Mtwo$  % always satisfies  
+{preserves} satisfaction of $A$. %  unless the execution  included internal execution steps}.
+%Lemma \ref{lem:encap-soundness} says that encapsulation judgment  $M\ \vdash \encaps{A}$ implies   semantic 
+%encapsulation, $M\ \models \encaps{A}$.
+
+
+\begin{lemma}[Encapsulation] % [An assertion $A$ is \emph{encapsulated} by module $M$] $~$ 
+\label{d:encaps}  For all modules $M$, and assertions $A$:  
+\label{lem:encap-soundness}
+
+\begin{itemize}
+\item
+$ \proves{M}{\encaps{A}}   \ \Longrightarrow\ \ \forall \Mtwo, \sigma, \sigma'.[   \ \  \satisfiesA{M}{\sigma}{(A  \wedge \externalexec)}\  \wedge\ { \leadstoBounded {M\madd\Mtwo}  {\sigma}{\sigma'}} % \\    \ \ \ \ \ \   
+        \  \Longrightarrow\  
+    {M},{\sigma'}\models {\as \sigma A} \ \  ]$
+ \end{itemize}
+  
+ \end{lemma}
+ 
+ The example below compares the judgments $\Stable{\_}$, \ \ $\Pos {\_}$, \ and \ $\encaps{\_}$. %\ assertions
+
+
+ $
+ \begin{array}{c}
+ \begin{array}{|c|c|c|c|c|c|}
+ \hline
+          & \ \ \prg{z.f}\geq 3  \ \ &  \ \   \inside{\prg{x}} \ \ & \ \ \neg(\ \inside{\prg{x}}\ ) \ \ & \ \ \protectedFrom {\prg{y}} {\prg{x}} \ \ &  \ \ \neg (\ \protectedFrom {\prg{y}} {\prg{x}}\ ) \ \ \\
+   \hline
+ \Stable  {\_}  &  \checkmark &  \times & \times &  \checkmark  &  \checkmark  \\
+ \hline 
+  \Pos {\_ } &  \checkmark &   \checkmark  & \times &  \checkmark  &  \checkmark  \\ 
+  \hline 
+  \encaps{\_ } &   \checkmark &  \checkmark & \times &   \times   &  \times \\ 
+  \hline
+ \end{array}
+  \end{array}
+ $
+% \caption{Comparing $\Stable{\_}$, \ \ $\Pos {\_}$, \ and \ $\encaps{\_}$\ assertions.}
+% \label{f:Compare:stable:enc}
+%\end{figure}
+
+
+
