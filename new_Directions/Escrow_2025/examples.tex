@@ -11,36 +11,103 @@ The specification of  an  \prg{Escrow} appears in Fig. \ref{fig:EscrowSpec}. Thi
 \newcommand{\sG}{\prg{\sGT}}
 \newcommand{\bG}{\prg{\sGT}}
 
+
+\subsection{Purse}
+
+The \prg{Purse} has a ghost field (or abstract predicate), \prg{SameMint(\_)}, which guarantees that the receiver and argument belong to the same \prg{Mint}.  It also has another ghost field, which is the balance of the account.
+
+\textbf{To discuss} \begin{enumerate}
+\item
+implicit obeys for the receiver
+\item
+\prg{SameMint} definition
+\item
+\prg{SameMint} role
+\end{enumerate}
 %   fields sellerMoney, sellerGoods, buyerMoney, buyerGoods //  Purse
 %   fields price, amt   // Number
 % had to drop this one
+
 \begin{figure*}[t]
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 $\textbf{specification}$ $Purse$ {
     
-    $\textbf{abstr}:$ SameMint(x):bool
-    $\textbf{abstr}:$ balance:int
-    
-    $\textbf{scoped-invr}:\  \forall b:nat.[\ \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}\geq b \ ]$
-    $\textbf{invr}:\  \prg{this}.\prg{balance}\geq 0$       
+    $\textbf{ghost}$ balance:int
+    $\textbf{ghost}$ SameMint(x):bool  
+         
+    $\textbf{scoped-invr}\  \forall b:nat.[\ \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}\geq b \ ]$
+    $\textbf{invr}\  \prg{this}.\prg{balance}\geq 0$       
+    $\textbf{invr}\  \forall p:\prg{Object}.[\ \ \prg{this.SameMint(p)} \ \longrightarrow \  \obeys {\prg{p}} {Purse}\ \ ]$
      
-    true  
-        $\textbf{\{}$ this.transfer(p) $\textbf\}$
-    res $\wedge$ $\obeys  {p} {Purse}$  $\wedge$  this.SameMint(p)
+    this$\neq$p $\wedge$ this.balance=bm$\geq$amt  // implicit $\obeys {\prg{this}} {Purse}$
+         $\textbf{\{}$ this.transfer(p,amt) $\textbf\}$ : bool
+    res $\wedge$  this.SameMint(p)       // implicit $\obeys {\prg{p}} {Purse}$
+        $\wedge$ this.balance=balT-amt $\wedge$ p.balance=balP+amt 
     $\vee$
     $\neg$ res
 
-    this.SameMint(p) $\wedge$  $\bM$.balance=bm$\geq$amt   $\wedge$ this$\neq$p
-        $\textbf{\{}$ this.transfer(p) $\textbf\}$
-    res $\wedge$   $\wedge$  $\bM$.balance=bm-amt 
-     
 }
 
 \end{lstlisting}
-\caption{Specification of  $Purse$ -- Incomplete}
+\caption{Specification of  $Purse$ }
 \label{fig:PurseSpec}
  \end{figure*}
 
+A possible implementation of \prg{Purse} appears below. The Purses have a field storing therr Mint and their balance
+
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{class}$ $PurseImpl\_a\ \textbf{implements} Purse$ {
+    
+    $\textbf{field}$  myMint: Mint
+    $\textbf{field}$  myBalance: int
+     
+    $\textbf{ghost}$ SameMint(x) $\textbf{is}$ this.myMint = x.myMint
+    $\textbf{ghost}$ balance $\textbf{is}$ this.myBalance
+    
+    method transfer(p:Object,amt:nat)  // external
+    	if p.myMint == this.myMint and this.blance>= amt 
+	then
+		return true
+	else
+		return false	
+  
+}
+\end{lstlisting}
+
+A anotherimplementation of \prg{Purse} appears below. The Purses have a field storing their Mint, but their balances are stored in a 
+lookup table in the Mint
+
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{class}$ Mint{
+
+	field myPurses ... a list of Purse
+	field myBalances .., a map from Purse to int
+	
+	method inMint(p:Purse) : bool    //  internal
+	...	
+	method getBalance{p:Purse): int
+	...
+	method setBalance(p:Purse,amt:int): void
+	...	
+}
+$\textbf{class}$Purse{
+    
+    $\textbf{field}$  myMint: Mint
+     
+    $\textbf{ghost}$ SameMint(x) $\textbf{is}$ this.myMint.inMint(x)
+    $\textbf{ghost}$ balance $\textbf{is}$ this.myMint = x.myMint
+    
+    method transfer(p:Object,amt:nat) // external 
+    	if myMint.inMint(p) and myMint.getBalance(this)>= amt 
+	then
+		myMint.setBalance(this,...)
+		myMint.setBalance(p,...)
+		return true
+	else
+		return false	
+  
+}
+\end{lstlisting}
 
 
 
