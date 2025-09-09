@@ -36,15 +36,21 @@ $\textbf{specification}$ $Purse$ {
     $\textbf{ghost}$ SameMint(x):bool  
          
     $\textbf{scoped-invr}\  \forall b:nat.[\ \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}\geq b \ ]$
+    $\textbf{invr}\   \forall p:\prg{Object}[\ \ \prg{this.SameMint(p)}\ \ ]$ // enough?
+    $\textbf{scoped-invr}\   \forall p:\prg{Object}.,\forall b:bool.[\ \ \neg \prg{this.SameMint(p)}\ \ ]$ // enough?
     $\textbf{invr}\  \prg{this}.\prg{balance}\geq 0$       
     $\textbf{invr}\  \forall p:\prg{Object}.[\ \ \prg{this.SameMint(p)} \ \longrightarrow \  \obeys {\prg{p}} {Purse}\ \ ]$
      
-    this$\neq$p $\wedge$ this.balance=bm$\geq$amt  // implicit $\obeys {\prg{this}} {Purse}$
+    true  // implicit $\obeys {\prg{this}} {Purse}$
          $\textbf{\{}$ this.transfer(p,amt) $\textbf\}$ : bool
-    res $\wedge$  this.SameMint(p)       // implicit $\obeys {\prg{p}} {Purse}$
-        $\wedge$ this.balance=balT-amt $\wedge$ p.balance=balP+amt 
+    res $\wedge$  this.SameMint(p) // implicit $\obeys {\prg{p}} {Purse}$
     $\vee$
-    $\neg$ res
+    $\neg$res $\wedge$ [ this==p $\vee$ this.balance$\leq$amt $\vee$ $\neg(\, \prg{this.SameMint(p)}\,)$ ]
+
+    this$\neq$p $\wedge$ this.balance=bm$\geq$amt  $\wedge$   this.SameMint(p)  
+     // implicit $\obeys {\prg{this}} {Purse} \ \wedge\ \    \obeys {\prg{p}} {Purse}$
+         $\textbf{\{}$ this.transfer(p,amt) $\textbf\}$ : bool
+    res $\wedge$ this.balance=balT-amt $\wedge$ p.balance=balP+amt 
 
 }
 
@@ -52,6 +58,10 @@ $\textbf{specification}$ $Purse$ {
 \caption{Specification of  $Purse$ }
 \label{fig:PurseSpec}
  \end{figure*}
+ 
+ NOTE: Julian proposed to replace lines 7 and 8 above with   \\
+ $\ \ \  $ $\textbf{scoped-invr}\   \forall p:\prg{Object}.,\forall b:bool.[\ \ \neg \prg{this.SameMint(p)}\ \ ]$ 
+But this would require us to ecplain that $b$ is a value and not a variable. HMHHHHH Is this also a problem in the OOPSLA-25 paper!!!
 
 A possible implementation of \prg{Purse} appears below. The Purses have a field storing therr Mint and their balance
 
@@ -67,6 +77,9 @@ $\textbf{class}$ $PurseImpl\_a\ \textbf{implements} Purse$ {
     method transfer(p:Object,amt:nat)  // external
     	if p.myMint == this.myMint and this.blance>= amt 
 	then
+		this.balance -= amt
+		p.balance += amt
+		// will throw exception if p is not from class \prg{Purse}
 		return true
 	else
 		return false	
@@ -78,7 +91,7 @@ A anotherimplementation of \prg{Purse} appears below. The Purses have a field st
 lookup table in the Mint
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
-$\textbf{class}$ Mint{
+ $\textbf{class}$ Mint{
 
 	field myPurses ... a list of Purse
 	field myBalances .., a map from Purse to int
@@ -90,7 +103,7 @@ $\textbf{class}$ Mint{
 	method setBalance(p:Purse,amt:int): void
 	...	
 }
-$\textbf{class}$Purse{
+ $\textbf{class}$Purse{
     
     $\textbf{field}$  myMint: Mint
      
