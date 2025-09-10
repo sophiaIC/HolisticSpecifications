@@ -1,0 +1,405 @@
+
+
+%%(\eg  \prg{a1}.\prg{myBank} = \prg{a2}.\prg{myBank}),   %kjx elided
+%
+%
+\Chainmail\ incorporates assertions   about
+%\susan{the intro mentions viewpoint as well - the two should be consistent}
+%
+\textit{permission},
+% --- objects being accessible from other objects (\eg
+% $\CanAccess{\x}{\y}$);
+%
+\textit{control},
+% --- the next method to be invoked ($\Calls {\x} {\y} {\m} {\z}$);
+%
+%\textit{authority},
+%  --- about the change of some property (\eg $\Changes{\x.\f}$);
+%
+\textit{space}, %--- some property being observable within a subset of
+%the current state ( $\Using{\A}{S}$);
+%
+\textit{time},
+%
+and \textit{viewpoint},
+% --- about some property holding in the future or in the past (\eg $\Future \A$ or $\Past \A$).
+%
+as well as   ``classical'' assertions  
+about  variables and the heap.
+%
+In this Section we  give a brief and informal  overview of %the most salient features of  
+\Chainmail -- a full exposition appears in Section \ref{sect:assertions}.
+
+
+
+\sdparagraph{Example Configurations} We  will illustrate these concepts in terms of examples coming from  \prg{Bank}/\prg{Account} as  in the previous Section.
+We  use the runtime configurations $\sigma_1$ and $\sigma_2$ 
+shown in the left and right diagrams in Figure \ref{fig:BakAccountDiagrams}.
+%These configurations could arise from the execution of different implementation of the \prg{Bank}/\prg{Account}
+% module.
+In both diagrams the rounded boxes depict objects:  green for those from the 
+\prg{Bank}/\prg{Account} component, and grey for the ``external'',  ``client'' objects.
+The transparent green rectangle  shows which objects are  part of  %contained by 
+the \prg{Bank}/\prg{Account} component.
+The object at \prg{1} is a \prg{Bank}, those at \prg{2}, \prg{3} and \prg{4} are 
+\prg{Account}s, and those at \prg{91}, \prg{92}, \prg{93} and \prg{94} are 
+``client'' objects which belong to classes different than those from the \prg{Bank}/\prg{Account}  module.
+
+Each configuration represents one alternative implementation of the Bank object.
+Configuration  $\sigma_1$ may arise from execution using a module $M_{BA1}$, where  \prg{Account} objects of
+  have a field \prg{myBank} pointing to their \prg{Bank}, and an integer field  \prg{balance}
+-- the code can be found in appendix~\ref{Bank:appendix} Fig.~\ref{fig:BanAccImplV1}.
+
+\susan{I don't see what the code adds - these are completely
+straightforward to imagine}
+\james{yeah but longer appendices are clearly good, right?}
+\sophia{We need these codes later on where we explain ghostfields}
+Configuration  $\sigma_2$ may arise from execution using a module $M_{BA2}$,  where \prg{Account}s have a \prg{myBank}
+field,  \prg{Bank} objects  have a \prg{ledger} implemented though a sequence of \prg{Node}s, each of which has a 
+ field pointing to the \prg{Account}, a field \prg{balance}, and a
+ field \prg{next} -- the code can be found in appendix~\ref{Bank:appendix}
+Figs.~\ref{fig:BanAccImplV2a} and~\ref{fig:BanAccImplV2b}.
+
+%In our diagrams. 
+ 
+\begin{figure}[htbp]
+\begin{tabular}{cc}
+ \begin{minipage}{0.45\textwidth}
+$\sigma_1$\\
+ \includegraphics[width=\linewidth, trim=55  330 320 60,clip]{diagrams/BankAccount_version_1.pdf}
+   \end{minipage}
+ &  
+ \begin{minipage}{0.45\textwidth}
+ $\sigma_2$\\
+  \includegraphics[width=\linewidth, trim=55  330 320 60,clip]{diagrams/BankAccount_version_2.pdf}
+   \end{minipage}
+\end{tabular}
+\caption{Two runtime configurations for the \prg{Bank}/\prg{Account} example. 
+}
+\label{fig:BakAccountDiagrams}
+\end{figure}
+
+\noindent 
+For the rest,  assume variable identifiers $\prg{b}_1$, and $\prg{a}_2$--$\prg{a}_4$, and  $\prg{u}_{91}$--$\prg{u}_{94}$ denoting objects \prg{1}, \ \prg{2}--\prg{4},
+and   \prg{91}--\prg{94} respectively for both $\sigma_1$ and $\sigma_2$.
+That  is, $\sigma_i(\prg{b}_1)$=\prg{1}, and 
+$\sigma_i(\prg{a}_2)$=\prg{2}, $\sigma_i(\prg{a}_3)$=\prg{3},  $\sigma_i(\prg{a}_4)$=\prg{4}, and  
+  $\sigma_i(\prg{u}_{91})$=\prg{91}, $\sigma_i(\prg{u}_{92})$=\prg{92},   
+  $\sigma_i(\prg{u}_{93})$=\prg{90}, $\sigma_i(\prg{u}_{94})$=\prg{94},
+  for $i$=$1$ or $i$=$2$.
+
+
+% X Y Z W
+% Z: top
+% LEFT
+  
+%%Unlike JML or Dafny \cite{Leavens-etal07,dafny} \Chainmail specifications are not
+%%tied tightly to the systems they are specifying.
+%%\sdcomment
+%%\sophia{Not sure what this means.}
+%% Rather, a system may
+%%be described by a set of \Chainmail\ specifications, each consisting of
+%%a number of named \lstinline+policy+ clauses.
+%%%\sdcomment
+%%\sophia{We do not have that 
+%%syntax any more. Do we need it?}
+%\Chainmail\ specifications and policies overlap and are interlinked to
+%provide strong protection against attacks --- just like the links in
+%physical chainmail.
+%%\sdcomment
+%\sophia{What does overlap mean?}
+%Each policy should aim to capture one very
+%specific concern in the design of a system. 
+%%\sdcomment
+\sophia{I think this para is great -- not sure it belongs here. \\
+While traditional policies are
+expressed as Hoare triples --- often describing a single method
+invocation on an instance of the class being specified (as in
+XXXXX), R%Figure~\ref{BANK-OR-DOM}).  
+holistic policies are expressed as 
+temporal or spatial invariants that a module that
+conforms to the specification must maintain even though any other code
+may be executed (as in the three policies in section~\ref{DOM-OR-BANK}).}
+
+%% \Chainmail\ policies (and specifications) can cross cut both each
+%% other and the various modules and objects in the system being
+%% specified.  The validity of a specification is the conjunction of its
+%% policies; a module or an object must satisfy all the specification's
+%% policies for us to consider that the object meets the specification.
+%% Policies and specifications are not tied to any specific module or
+%% class: rather, any implementing module that satisfies the
+%% specification's policies obeys the specification.
+
+% \sd{\Chainmail~specifications ere we need a summary of what will come.}
+%\Chainmail can express necessary specifications because its invariant
+%language includes \kjx{several carefully-chosen} \textit{holistic}
+%assertion constructs, along with traditional state-based assertions.
+%%\jncomment
+%\james{if we say things like that, need to discuss alternative
+%  constructs in the discussion section. do we have alternatives?
+%  transitive Access. two-state assertions. what else? \sd{that would be good, but 
+%  more work to do. Can some body do it? Is it very important to have?}}.
+%That is, as well as supporting assertions on the contents of local
+%variables and object fields (\eg $\prg{x}.\f1 > \prg{this}.\f2$),
+%\Chainmail\ incorporates assertions which talk about
+%%
+%\textit{access}
+%--- objects being accessible from other objects (\eg
+%$\CanAccess{\x}{\y}$);
+%%
+%\textit{control} --- the
+%next method to be invoked ($\Calls {\x} {\y} {\m} {\z}$);
+%%
+%\textit{authority} --- about the change of some
+%property (\eg $\Changes{\x.\f}$);
+%%
+%\textit{space} --- some property being observable within a subset of
+%the current state ( $\Using{\A}{S}$);
+%%
+%and
+%%
+%\textit{time} --- about some property
+%holding in the future or in the past (\eg $\Future \A$ or $\Past \A$).
+%%
+%.
+%%\scd
+%  \sophia{While
+%many  individual
+%features of \Chainmail can  be found also in other work, we
+%%claim that their  combination as well as
+%%their application in the specification of open systems are novel.
+%argue that their power and novelty for specifying open systems lies in their careful
+%  combination}
+%  %\kjx
+%  \james{Hmm. a delicate, subtle argument \ldots }
+%%
+%%
+%These assertions draw from some concepts from object capabilities
+%($\CanAccess{\_}{\_}$  for  permission and $\Changes{\_}$ for
+%authority) 
+%as well as temporal logic ($\Future \A$, $\Past \A$ and friends), and the relation of
+%our spatial connective ($\Using{\A}{S}$)  with ownership and effect
+%systems.
+%%\sdcomment
+%\sophia{TODO: add references here}. 
+%%\jncomment
+%\james{don't forget the whole
+%  AOP mionitoring/specs stuff, just for fun.  (HELM contracts!!! (vs
+%  Meyer Contracts :-)}  
+%%
+%%\jncomment
+%\james{somewhere, should we say something like: the goal is
+%  to allow wholistic specifations with as extra little machinery as
+%  possible over a basic Hoare language}.
+\sdparagraph{Classical Assertions} talk about the contents of the 
+local variables (\ie the topmost stack frame), and the 
+fields of the various objects (\ie the heap).  
+  For example, the assertion  $\ \prg{a}_2.\prg{myBank}$=$\prg{a}_3.\prg{myBank} \ $, says that 
+  $\prg{a}_1$ and  $\prg{a}_2$  have the same bank. In fact, this assertion is
+  satisfied in both $\sigma_1$ and $\sigma_2$, written formally as\\
+  $\strut$ \hspace{1.1cm}  $...,\sigma_1 \ \models \ \prg{a}_2.\prg{myBank}=\prg{a}_3.\prg{myBank}$ 
+  % , $\ \ \ $  and also 
+%  $\strut$ \hspace{1.1cm} 
+ \hspace{1cm}   $...,\sigma_2 \ \models \ \prg{a}_2.\prg{myBank}=\prg{a}_3.\prg{myBank}$.
+   
+ 
+  The term \prg{x}:\prg{ClassId} says that \prg{x} is an object of class \prg{ClassId}. For example\\
+  $\strut$ \hspace{1.1cm}  $...,\sigma_1 \ \models \ \prg{b}_1 : \prg{Bank}$.
+  
+  We support ghost fields~\cite{Leavens-etal07}, \susan{this is the jml reference manual - if you want something else say}\sophia{I do not know where the term was introduced, also nit sure whether it is model fields or ghost fields. I asked Alex. Here a more respectable paper on that ESOP "A Verification Methodology for Model Fields"}
+    \eg $\prg{a}_1$.\prg{balance} is a physical field in $\sigma_1$ and a ghost field in $\sigma_2$ since in \prg{MBA2} the \prg{Account}s do not store their \prg{balance}. \sd{The abstract function %this is a term from the ESOP'06 paper from aboove
+    for \prg{balance} for \prg{MBA2} s is defined in  the body of class \prg{Account}}  in \prg{MBA2}  \sd{in the obvious way}.
+  % so that for any \prg{a} of class \prg{Account} the value
+  % of \prg{a.balance} is    \prg{nd}.\prg{balance} such that \prg{nd} is a \prg{Node},    and \prg{nd}.\prg{myAccount}=\prg{a},
+   %  $\prg{a}.\prg{balance}$=\prg{m} if
+%  \prg{a.myBank.next}$^k$.\prg{acc}=\prg{a}, and  \prg{a.myBank.next}$^k$.\prg{balance}=
+\sd
+
+We also support the usual logical connectives, and so, we can express assertions such as \\
+$\strut$ \hspace{1.1cm}    $\forall \prg{a}. [ \ \ \prg{a}:\prg{Account} \ \longrightarrow \ \ \prg{a}.\prg{myBank}:\prg{Bank}\ \wedge\  \prg{a}.\prg{balance}\geq 0\ \ ] $ .
+
+
+
+\sdparagraph{Permission: Access}
+%
+Our first holistic assertion, $\CanAccess{\x}{\y}$, asserts that  
+object $\x$ has a direct reference to another object $\y$: either one
+of $\x$'s fields contains a 
+reference to $\y$, or the receiver of the currently executing method is \prg{x}, and \prg{y}
+is one of the arguments or a local variable. 
+For example:\\
+ $\strut$ \hspace{1.1cm}  $...,\sigma_1 \ \models \  \CanAccess{\prg{a}_2}{\prg{b}_1}$
+\\
+If   $\sigma_1$ was currently executing  a call like ${\prg{a}_2}$.\prg{deposit}\prg{(}${\prg{a}_3}$,\prg{100.00}\prg{)}, then we 
+would  have\\
+ $\strut$ \hspace{1.1cm}  $...,\sigma_1 \ \models \  \CanAccess{\prg{a}_2}{\prg{a}_3}$, \\
+ Namely, during execution of \prg{deposit}, $\prg{a}_2$ has access to $\prg{a}_3$, and could,
+ %  in ptinciple and
+ if the method body chose to,
+ store a reference to $\prg{a}_3$ in its own fields. \sophia{ALL: does this clarify why 
+ we define access to take method execution into account?}
+ Note that access is not symmetric, nor transitive:\\
+  $\strut$ \hspace{1.1cm}  $...,\sigma_1 \ \not\models \  \CanAccess{\prg{a}_3}{\prg{a}_2}$, \hspace{0.6cm}\\
+  $\strut$ \hspace{1.1cm} 
+  $...,\sigma_2 \ \models \  \CanAccessTr{\prg{a}_2}{\prg{a}_3}$, \hspace{0.6cm}
+ %   $\strut$ \hspace{1.1cm}  
+ $...,\sigma_2 \ \not\models \  \CanAccess{\prg{a}_2}{\prg{a}_3}$.
+
+
+%\james{do we really not also need reachable (transitive closure of access)}
+%\susan{we don't seem to need transitivity in any of the examples}
+%\sophia{We do not want transitivity, our policies where access is in the conclusion would become too weak.}
+
+\sdparagraph{Control: Calls}
+%
+The  assertion $\Calls {\x} {\y} {\m} {\zs}$
+\sophia{it said " is more-or-less the control flow analogue of
+the access assertion" -- that is a nice simile, but is it true?\kjx{I
+think it's true}}  holds 
+in program states where a method on object 
+${\x}$ makes a method call ${\y}.{\m}({\zs})$ --- that is it calls method 
+{\m} with object {\y} as the receiver, and with arguments {\zs}.
+For example, \\
+ $\strut$ \hspace{1.1cm}  $...,\sigma_0 \models \  \Calls {\x}{\prg{deposit}}  {\prg{a}_2}  {\prg{(}{\prg{a}_3},\prg{600}\prg{)}}$.\\
+ %{{...}} {\prg{a}_2}} {\prg{deposit}} {\prg{(}{\prg{a}_3},\prg{100.00}\prg{)}}$.\\
+ means that the receiver in %configuration 
+ $\sigma_0$ is \x, and the next statement to be executed  
+ is  $\prg{a}_2.\prg{deposit}\prg{a}_3,\prg{100.00}$.
+ 
+
+%% \sdparagraph{Authority --  Changes and Internal/External}\sophia{Is it good to put these together?}
+%% The assertion $\Changes{\prg{e}}$  holds when the value of {\prg{e}}
+%% in the next configuration is different to the value in the current configuration.
+%% For example, if the code being executed in $\sigma_1$ started with $\acc_2.\bal=\acc_2.\bal+\prg{100.00}$, then:\\
+%%   $\strut$ \hspace{1.1cm}  $..., \sigma_1 \ \models \  \Changes {\acc_2.\bal}$.\\
+%%   Moreover, the assertion $\External {\prg{e}}$ expresses that the object {\prg{e}} does not belong to the module under consideration. 
+%%   For example, \\
+%% $\strut$ \hspace{1.1cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \models \ \External{\pu_{92}}$,
+%% %$\strut$ 
+%% \hspace{1cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \not\models \ \External{\acc_2}$, \\
+%% $\strut$
+%%  \hspace{1.1cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \not\models \ \External{\pb_{1}.\prg{ledger}}$\\
+%% Notice the use of the \emph{internal} module, $\M_{AB2}$, needed to judge which objects are internal, and which are external.
+ 
+
+\sdparagraph{Space: ??}
+The space assertion $\Using{\A}{\SF}$ states that  assertion $\A$ is
+true in a configuration which has been restricted to only contain the 
+objects from the set \SF. 
+In other words, it restricts the set of objects which may be used to establish property \A. For example, 
+if $\SF_1$ includes object \prg{94}, and  $\SF_2$ does not include  it, then we   have\\ 
+ $\strut$ \hspace{1.1cm}  $..., \sigma_1 \ \models \ \Using{ \exists \prg{o}.[ \ \External{\prg{o}} \wedge \CanAccess{\prg{o}} {\acc_4}\ ]}{\SF_1}$\\
+ $\strut$ \hspace{1.1cm}  $..., \sigma_1 \ \not\models \ \Using{ \exists \prg{o}.[ \ \External{\prg{o}} \wedge \CanAccess{\prg{o}} {\acc_4}\ ]} {\SF_2}$.\\
+ $\Using{\A}{\SF}$  is therefore {\em not} the footprint of the assertion $\A$; it is more like the \emph{fuel} \cite{stepindex}
+ given to establish that assertion. Note that $\Using {\A} {\SF}$ does not imply  
+  $\Using {\A} {\SF\cup\SF'}$, nor the other direction.
+\james{would still like  a one sentence motivating/justifying ``with''.
+Why do we need it}
+
+
+\sdparagraph{Time: Next, Will, Prev, Was}
+%
+%\Chainmail 
+We support several temporal operators familiar from temporal
+logic ($\Next \A$, and $\Future \A$, and  $\Prev \A$, and $\Past \A$) to
+talk about the future or the past in one or any number of steps.
+%We support birectional temporal
+%assertions, constraining either future ($\Future \A$. $\Next \A$)
+%or past behaviour ($\Past \A$.  $\Prev \$A$) either considering only
+%the  immediate next or immediate previous step ($\Next \A$,
+%$\Prev \$A$) or for conditions that become eventually true in some
+%distant future, or were true once in some distant past  
+%($\Future \A$, $\Past \A$). We have bidirectional pairs of operators
+%to give expressiveness in writing assertions: this does not offer any
+%additional reasoning power. 
+The assertion $\Future \A$ expresses that after one or more execution steps 
+$\A$ will hold. For example, if the code being executed in $\sigma_2$ was 
+method $\prg{m()}$ with receiver $\pu_{94}$,  and if $\sigma_2(\prg{94},\f_1)=\prg{2}$ and
+$\sigma_2(\prg{94},\f_2)=\prg{93}$, and calling   \prg{m2} on \prg{93} returns \prg{4},
+ and the body of \prg{m} was \prg{this}.$\f_1$.\prg{deposit(}\prg{\this.}$\f_2$.\prg{m2()},\prg{4.00}\prg{)},then\\
+ $\strut$ \hspace{1.1cm}  $\M_{BA2}\mkpair ..., \sigma_2 \ \models \ \Future{ \Changes {\acc_2.\bal}}$.\sophia{It would
+ be nice to have a simpler example; what makes it difficult is the fact that $\M_{AB2}$-internal transitions are
+ not registered.}
+ 
+\sdparagraph{Viewpoint: --  External}
+%% The assertion $\Changes{\prg{e}}$  holds when the value of {\prg{e}}
+%% in the next configuration is different to the value in the current configuration.
+%% For example, if the code being executed in $\sigma_1$ started with $\acc_2.\bal=\acc_2.\bal+\prg{100.00}$, then:\\
+%%   $\strut$ \hspace{1.1cm}  $..., \sigma_1 \ \models \  \Changes {\acc_2.\bal}$.\\
+
+The assertion $\External {\prg{e}}$ expresses that the object {\prg{e}} does not belong to the module under consideration. 
+  For example, \\
+$\strut$ \hspace{1.1cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \models \ \External{\pu_{92}}$,
+%$\strut$ 
+\hspace{1cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \not\models \ \External{\acc_2}$, \\
+$\strut$
+ \hspace{1.1cm}  $\M_{AB2}\mkpair ..., \sigma_2 \ \not\models \ \External{\pb_{1}.\prg{ledger}}$\\
+Notice the use of the \emph{internal} module, $\M_{AB2}$, needed to judge which objects are internal, and which are external.
+ 
+
+
+%\sophia{The observer pattern example is very nice, but unfortunately we cannot use it, because the
+%calls are internal, and therefore not visible in the current system.}
+%For example, a part of the observer pattern is that when
+%a subject is notified of a change, then the observer must
+%be told to update itself.    We can write this from the
+%subject's perspective, looking forwards:
+%
+%\begin{lstlisting}
+%  Call(_,subject,notify,_) --> Will(Call(subject,observer,update,_))
+%\end{lstlisting}
+%
+%\noindent meaning that once notify is called on a subejct, then its
+%observer will be updated sometime in the future.  We can write a very
+%similar specification for an observer, looking backwards.
+%
+%\begin{lstlisting}
+%  Call(subject,observer,update,_) --> Was(Call(_,subject,notify,_))
+%\end{lstlisting}
+%
+%\noindent meaning that if a subject updates an observer, that subject
+%have been notified sometime previously. We could tighten each
+%specifaction, so that the update must immediately follow the
+%notification, by replacing $\Future \A$ or $\Past \A$ with 
+%$\Next \A$ or $\Prev \A$.
+
+\sdparagraph{Putting these together} We now look at some composite assertions which use ingredients
+from several families from above. The assertion below says that if the call to be made next is $\pu_{94}$.\m\prg{()},
+then the balance of $\acc_2$ will eventually change:\\
+ $\strut$ \hspace{1.1cm}  $\M_{BA2}\mkpair ..., \sigma_2 \ \models \ {\Calls {..} {\pu_{94}} {\m} {()}}  \longrightarrow \Future{ \Changes {\acc_2.\bal}}$.\sophia{some delicate issues with $\sigma_2$ as used in prev. paragraph, where we already assumed that
+ the code in $\sigma_2$ started with $\pu_{94}$.\m\prg{()} -- what can we do?}
+
+We now add space to the mix, and demonstrate that in general $\Future {\Using {\A} {\SF}}$ is different from 
+  $\Using {\Future {\A}} {\SF}$. Consider $\SF_1$ consisting of objects \prg{1}, \prg{2}, \prg{4}, \prg{93}, and \prg{94}, 
+  and $\SF_2$ consisting of objects \prg{1}, \prg{2}, \prg{4}. Assume also that $\sigma_1$ contained the 
+  call $\prg{m()}$ with receiver $\pu_{94}$,   that the code of \prg{m} and \prg{m2} were as above. Then\\
+  $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_1 \ \models \ \Using {\Future{ \Changes {\acc_2.\bal}}} {\SF_1}$\\ 
+   $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_1 \ \not\models \ \Using {\Future{ \Changes {\acc_2.\bal}}} {\SF_2}$\\ 
+ $\strut$ \hspace{1.1cm}  $\M_{BA1}\mkpair ..., \sigma_1 \ \models \ \Future{ \Using {\Changes {\acc_2.\bal}} {\SF_2}}$\
+
+%\vspace{.2in} 
+\sophia{While
+many  individual
+features of \Chainmail can  be found also in other work, we
+%claim that their  combination as well as
+%their application in the specification of open systems are novel.
+argue that their power and novelty for specifying open systems lies in their careful
+  combination}
+  %\kjx
+  \james{Hmm. a delicate, subtle argument \ldots }
+%
+%
+\sdparagraph{In summary,} in addition to classical logical concepts, our holistic assertions draw from some concepts from object capabilities
+($\CanAccess{\_}{\_}$  for  permission and $\Changes{\_}$ for
+authority) 
+as well as temporal logic ($\Future \A$, $\Past \A$ and friends), and the relation of
+our spatial connective ($\Using{\A}{S}$)  with ownership and effect
+systems.
+%\sdcomment
+\sophia{TODO: add references here}. 
+%\jncomment
+ 
+\james{somewhere, should we say something like: the goal is
+  to allow wholistic specifations with as extra little machinery as
+  possible over a basic Hoare language}.
+
