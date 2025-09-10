@@ -1,0 +1,935 @@
+The key claim of this paper is that we need specifications that let us
+talk about trust and risk explicitly.  In this section, we begin by
+informally introducing three novel specification language constructs:
+$\obeys$ to model trust, and $\MayAccess$ and $\MayAffect$ to model
+risk.  We then revisit the %  \prg{V1}
+specifications from the previous
+section using these constructs, showing how they can be used to
+specify the purse and escrow examples, and we argue informally that a
+revised \prg{escrow} method can in fact meet revised specifications.
+
+% Section~\ref{sec:FORMAL} presents our specification language
+% formally.
+
+
+
+% \begin{itemize}
+% \item
+% We need to be able to write specifications that describe trust and how trust can be established.
+% \item
+% We also need ways to describe the risk involved when encountering untrustworthy objects.
+% \item
+% And we need ways to reason statically that programs adhere to specifications talking about risk and trust.
+% \end{itemize}
+
+% \noindent In this paper, we  tackle these challenges as follows
+% \jn{juggle this list}
+\begin{figure*}
+\begin{lstlisting}[escapechar=@]
+specification ValidPurse(@\textbf{dest}@){
+  field balance // Number
+
+  policy Pol_deposit_1     //   1$^{st}$ case:
+      amt$\in \mathbb{N}$
+        @\textbf{ \{ res = dest.deposit(amt, src) \} }@
+      res $\rightarrow$ (
+              // TRUST
+              src$\obeys\PRE$ValidPurse $\wedge$ CanTrade(dest,src)$\PRE{}$
+              // FUNCTIONAL SPECIFICATION
+              $\wedge$ 0$\leq$amt$\leq$src.balance$\PRE{}\ \wedge$
+              dest.balance=dest.balance$\PRE$+amt $\wedge$ src.balance=src.balance$\PRE$-amt  $\wedge$
+              //RISK
+              $\forall$p.(p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$dest,src$\}\,\rightarrow\,$ p.balance=p.balance$\pre$)  $\wedge$
+              $\forall$o:$\pre$Object. $\forall$ p$\obeys$$\pre$ValidPurse.  $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p)  )
+
+  policy Pol_deposit_2     //   2$^{nd}$ case:
+      amt$\in \mathbb{N}$
+        @\textbf{ \{ res = dest.deposit(amt, src) \} }@
+       $\neg$res $\rightarrow$ (
+              // TRUST and FUNCTIONAL SPECIFICATION
+              $\neg$( src $\obeys\PRE{}$ ValidPurse $\wedge$ CanTrade(dest,src)$\PRE{}$ $\wedge$ 0$\leq$amt$\leq$src.balance$\PRE{}  )\ \wedge$
+              // RISK
+              $\forall$p.(p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$)   $\wedge$
+              $\forall$o:$\pre$Object. $\forall$ p$\obeys$$\pre$ValidPurse.  $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p)  )
+
+  policy Pol_sprout
+      true
+        @\textbf{ \{ res = dest.sprout() \} }@
+      // TRUST
+      res$\obeys$ ValidPurse $\wedge$  CanTrade(dest,res)$\PRE{}$ $\wedge$
+      // FUNCTIONAL SPECIFICATION
+      res.balance=0 $\wedge$
+      // RISK
+      $\forall$p.(p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ res $\neq$ p)  $\wedge$
+      $\forall$o:$\pre$Object. $\forall$ p$\obeys$$\pre$ValidPurse.  $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p)  )
+
+  policy Pol_can_trade_constant
+       true
+        @\textbf{ \{ any\_code \} }@
+       $\forall$ prs1,prs2$\obeys$$\pre$ValidPurse. CanTrade(prs1,prs2) $\longleftrightarrow$ CanTrade$\pre$(prs1,prs2) 
+
+  policy Pol_protect_balance
+      // RISK
+      $\forall$ o,p:Object. p$\obeys$ValidPurse $\wedge$ $\MayAffect$(o,p.balance) $\rightarrow$ $\MayAccess$(o,p)
+}
+
+abstract predicate CanTrade(prs1,prs2) is reflexive
+
+\end{lstlisting}
+\caption{Specification of \prg{ValidPurse} }
+\label{fig:ValidPurse}
+\end{figure*}
+
+
+\paraC{Modelling Trust: $\obeys$}
+
+To model trust, we introduce a special predicate, ``\obeys'', of the
+form $o \obeys\ Spec$  which we interpret to mean that 
+\jn{the current object trusts $o$} to adhere to the specification $Spec$.
+
+
+
+%SD: Skip the paragraph as the style of spec has changed
+%and the below on longer true
+%
+%We primarily use \obeys\ in policy preconditions, to indicate e.g.\
+%that a method assumes its arguments obeys a particular specification.
+%We can use \obeys\ in other places too: in a policy's postcondition,
+%for example, \obeys\ can also indicate that the return value of a
+%method can be trusted to obey a particular specification.  Trust
+%postconditions can also be \textit{conditional} --- for example a
+%method could return a pair of a Boolean and an object: if the Boolean
+%is \prg{true} the object is trustworthy, if not, not.
+
+Because we generally can't be sure that an object --- especially one
+supplied from elsewhere in an open system --- can actually be trusted
+to obey a particular specification, our reasoning and specifications
+tend to be \textit{hypothetical}: analysing the same piece of code
+under different trust hypotheses --- i.e.\
+assuming that particular objects may or may not be trusted to
+obey particular specifications.
+
+%As we are in an object-oriented setting, methods are dynamically
+%dispatched upon a receiver object ``\prg{this}''.  This means that in
+%order to be sure the expect method is invoked, we must be able to
+%trust the receiver. In practice, this means that in writing the specification
+%for a \prg{ValidPurse} object, say, we always have the implicit
+%assumption that the receiver can be trusted to obey that
+%specification, i.e.:
+%%
+%\lstinline+this $\obeys$ ValidPurse+
+%%
+%\noindent in the \prg{ValidPurse} specification.  
+
+Thus, {\em if}   object \prg{o} can be trusted to obey specification \prg{Spec}, and   \prg{Spec} had a policy describing the behaviour of some method  \prg{m}, then we may expect the method call \prg{o.m(...)} to behave according to that policy --- otherwise, all bets are off.
+This also leads to
+chains of hypothetical reasoning, as every method request on an object
+needs a case that the receiver obeys the specification we hope
+it does.
+
+\sd{More about the formal treatment of the \obeys\ predicate in section 4, definition \ref{Def:PolSpec}.}
+
+
+
+
+\paraC{Modelling Risk:  $\MayAccess$ and $\MayAffect$}
+
+To model risk, we introduce predicates $\MayAccess$ and $\MayAffect$, which
+express whether an object may read or may affect another object or
+property. We will write
+%
+``\lstinline+$\MayAffect$(o,p)+''
+%
+to mean that it is possible that some method invocation on $o$ would
+affect the object or property $p$. Similarly, we will write
+%
+``\lstinline+$\MayAccess$(o,p)+''
+%
+to mean that it is possible that the code in object $o$ could potentially gain
+a capability to access to $p$ --- that is, a reference to $p$.  In
+practice, \lstinline+$\MayAccess$(o,p)+ means that $p$ is in the
+transitive closure of the points-to relation on the heap starting from
+$o$.
+\jnCUT{including both public and private references.}
+
+\forget{
+As with \obeys, $\MayAffect$ and $\MayAccess$ may appear in both
+preconditions and postconditions, and take part in hypothetical and
+conditional reasoning. For example, to execute a \prg{print} method,
+we can write a precondition requiring that a console object is able to
+access an output stream:
+%
+
+%
+$\exists$ p. \lstinline+$\MayAccess$(console, p) $\wedge$ p $\obeys$ Stream+
+}
+%
+
+%%
+%\noindent These predicates do appear more often in postconditions than
+%preconditions. For example, after an element \prg{e} is added to a
+%\prg{collection}, that collection is able to access the element:
+%%
+%
+%%
+%\lstinline+policy Add_1+ \\
+%\lstinline+     $\textbf{ \{ collection.add(e) \} }$+\\
+%\lstinline+   $\MayAccess$(collection,e)+
+%%
+\sd{ More about  the formal foundation of $\MayAccess$ and $\MayAffect$ in definition \ref{def:two-state-assertions-with-potential} in section 4.}
+
+
+
+ 
+
+\paraC{Valid Purse: the Policies of \prg{Purse}}
+ 
+ % \section{Open Policies for Purses and deal}
+We will now revisit the specifications for \prg{Purse} and
+\prg{Escrow} and give their policies using the new features introduced
+in the previous section.
+Once again, we begin by considering the specification of purses,
+before going on to the specification and then implementation of the
+escrow itself.  
+
+Figure~\ref{fig:ValidPurse} revisits the purse
+specification policies from Figure~\ref{fig:PurseSpec},
+making the risk and trust explicit. 
+%
+%\sd{The specification \prg{ValidPurse} is used in two senses: as a predicate over runtime values to ascertain that they guarantee the obey policies, properties, and as a predicate over a class, to ascertain that  all its values obey the required policies. }
+%\sd{The key differences between the old and the new specification are
+%\begin{itemize}
+%\item parametricity over the implementing class, \prg{Prs},
+%\item use of \obeys-clauses,
+%\item use of the value of the result to determine something about the state before a method call  (in \prg{Pol\_deposit\_1} and \prg{Pol\_deposit\_2})
+%\item requirements over {\em any code} % preserves some properties
+%(\prg{any\_code} in \prg{Pol\_mint\_constant}),
+%\item hypothetical actions ($\MayAffect$ in  \prg{Pol\_protect\_balance}).
+%\end{itemize}
+%We will explain these differences in more detail as we discuss the policies.}
+%
+
+
+\sd{Note that the specification is parametric with \prg{dest}, the receiver of all method calls described in the policies. This reflects the fact that policies are essentially predicates over objects. Any object which obeys the specification may be safely assumed to satisfy all the policies in that specification. More details and definitions in section 4.}
+
+\sd{Note also that instead of the concrete predicate \prg{SameMint},
+  we are using an abstract predicate \prg{CanTrade} which holds when
+  two \prg{Purse}s can trade with each other.
+  \prg{CanTrade} must be reflexive, but does not
+  require that its arguments have the same class or mint:
+  just that \prg{deposit} can 
+  transfer currency from one purse to another. This could involve a
+  clearing house, interbank exchange, or could simply boil down to
+  \prg{SameMint}. The point is that an
+  abstract predicate can be implemented in different ways by
+  different classes.} 
+
+We now consider the policies in turn.
+%The cases 
+\prg{Pol\_deposit\_1}  and \prg{Pol\_deposit\_2} taken together  distinguish between
+a successful and an unsuccessful deposit, signalled by
+returning \prg{true} or \prg{false} respectively. In the first case, i.e. \prg{Pol\_deposit\_1}
+where the result is \prg{true},
+argument \prg{src}  must have been 
+a valid purse
+%
+(``\lstinline++'src $\obeys$ ValidPurse'')
+%
+\sd{which could trade with the receiver} ,
+ and \prg{src} must have sufficient balance. In the second case, i.e. \prg{Pol\_deposit\_2}
+where the result is \prg{false},
+ either \prg{src} was not a valid purse,
+or would not trade with the receiver, or had insufficient
+funds. 
+
+\sd{The last two lines in the postcondition of   \prg{Pol\_deposit\_1}  and \prg{Pol\_deposit\_2}
+provide framing conditions:}
+In the first case, the transaction will happen, but
+all other purses will be unmodified (line 14 in figure \ref{fig:ValidPurse}) , whereas in the second case no
+purses will be modified (line 24 in figure \ref{fig:ValidPurse}). 
+\sd{Another framing condition,  not stated in figure 1,
+appears on lines 15, 25 and 36 of figure \ref{fig:ValidPurse}, and requires that the methods do not leak access to
+\jnCUT{(the internals of)} any \prg{ValidPurse} object. In other words, if after the method call, a pre-existing
+\prg{o} has access to a \prg{ValidPurse} object \prg{p}, then \prg{o} had access to a \prg{p} already before the call.}
+
+\vspace{.02in}
+The key difference between the \prg{ValidPurse} specification and the
+earlier \prg{Purse} specification is that \prg{ValidPurse} uses
+\obeys\ clauses to reason about trust explicitly.  For the reasons
+described above, \prg{ValidPurse} cannot make absolute statements
+about trust, but can support relative, hypothetical statements.
+%
+Consider the request\\ % a deposit request such as
+%
+\SP  \lstinline+res=dest.deposit(amt, src)+\\
+%
+If the destination purse accepts the deposit, then   % can deduce
+we would like to deduce that it has been   able to retrieve the funds
+from the source purse, 
+% Ideally, we would like to
+% So, we would like to 
+\sd{and} \jn{so} assert the {\em absolute} statement that \\
+%
+\SP   \lstinline+res $\rightarrow$  src $\obeys$ ValidPurse+\\
+%
+Unfortunately, the \prg{ValidPurse} specification % as a whole
+only
+applies if the receiver \lstinline+dest+ is trustworthy: we can get
+only as far as the % relative 
+{\em conditional} conclusion\\
+%
+\SP  \lstinline+res $\wedge$ dest$\obeys$ValidPurse $\rightarrow$ src$\obeys$ValidPurse+\\
+%
+meaning that, if the \prg{deposit} method returns true, then we can
+trust \prg{src} if we were willing to trust \prg{dest}.
+%SD I trimmed the below -- too many intermediate steps
+%we trust \prg{src} only inasmuch as we trust \prg{dest}.
+%In fact, even this relative conclusion too strong, because the
+%reasoning must be hypothetical: it only applies
+%when a \prg{deposit} request is actually successful (``at runtime''). The
+%best we can conclude is
+%%
+%``\lstinline+res $\rightarrow$ dest $\obeys$ ValidPurse $\rightarrow$ src $\obeys$ ValidPurse+'',
+%%
+%meaning that, if the \prg{deposit} method returns true, then we can
+%trust \prg{src} if we were willing to trust \prg{dest}.
+\noindent So, if an amount is deposited successfully into a
+trustworthy destination \prg{ValidPurse}, that purse vouches that the
+\prg{src} is itself trustworthy. 
+% This is essentially what it means to
+% accept a trustworthy deposit, and accepting trustworthy deposits is
+% key to being a trustworthy purse --- 
+\sd{To quote} \cite{ELang}:
+``\textit{A reported successful deposit can be trusted as much as one
+  trusts the purse one is depositing into}''. 
+
+\vspace{.02in}
+\prg{Pol\_sprout},  the third policy,
+is basically the same as the
+earlier version in Figure~\ref{fig:PurseSpec}, except that the first
+postcondition now is slightly weaker, as it only promises that the result is a trusted purse, without guaranteeing which class it belongs to.
+\sd{We also have the additional framing rule about $\MayAccess$.}
+
+
+The fourth policy, \prg{Pol\_can\_trade\_constant}, guarantees that
+\jn{whether two purses can trade with each other can \textit{never}
+change, no matter what code is run.  This is
+another key ingredient of our approach: we can
+  require that our code must \sd{preserve} properties in the face of
+  unknown code.}
+
+
+Finally, the fifth policy, \prg{Pol\_protect\_balance},
+delimits the risk involved with the purses. This policy
+guarantees that
+ a valid purse \lstinline+p+'s balance can only be changed
+(``\lstinline+$\MayAffect$(o,p.balance)+'')
+by some object \lstinline{o}
+that may access that purse
+(``\lstinline+$\MayAccess$(o,p)+'').
+
+\jnCUT{
+\paraA{Discussion}
+\sd{Four possible implementations of \prg{ValidPurse} and their
+  properties are \jn{sketched} in examples 
+\ref{example:modules} and \ref{example:Satisifed} in section 4. 
+ In \cite{WAS-OOPSLA14-TR}  a statically typed % straightforward
+implementation  of purses and mints \cite{capeIFM14} is proven to meet a weaker version of the current
+specification. %  in a statically typed setting.
+In all these examples, the predicate \prg{CanTrade} is represented
+through a private field. This could also be done 
+e.g.\ through sealer/unsealer pairs \cite{JamesMorris}.}
+
+\sd{The main challenge of the specification as given in figure \ref{fig:ValidPurse}, is the framing assertions, and in particular the requirement that operations on a \prg{ValidPurse} do not affect the balance of any other \prg{ValidPurse}. This property cannot be ascertained in a modular fashion: if we do not know the representation of other \prg{ValidPurse}s how can we ensure that we do not affect their properties? What if an unknown purse's balance is the sum of some other purses'? What will forbid such constructions?}
+
+\sd{It seems that the \prg{ValidPurse} predicate in its generality is a colouring problem. If an object is considered a \prg{ValidPurse} then some other objects may not be.}
+
+\sd{In this paper we do not try to prove that code adheres to the specification \prg{ValidPurse}. Instead, we use the definition of
+\prg{ValidPurse} in the proof of adherence to 
+the specification of \prg{Escrow::deal}. 
+In further work we will work on better ways to express framing. We expect that encapsulation will play an important role in \jn{this}.
+}
+}
+
+\paraC{The Mint: Implementing \prg{ValidPurse}} 
+
+\begin{figure}
+\begin{lstlisting}
+class mint.new -> Mint {
+  def ledger = collections.map.new // maps Purse to Numbers
+
+  method newPurse(amount : Number) -> Purse {
+    def p = purse.new(amount, self)
+    ledger.put(p, amount)
+    return p
+  }
+  method deposit(to : Purse, amount : Number, from : Purse) -> Boolean { 
+    if ((amount >= 0)
+         && {ledger.contains(to)}
+         && {ledger.contains(from)}
+         && {(ledger.get(from) - amount) >= 0})
+       then {
+         ledger.put(from, ledger.get(from) - amount)
+         ledger.put(to, ledger.get(to) + amount)
+         return true
+       } else {return false}
+  }
+  method balance(prs : Purse) -> Number {return ledger.get(prs)}
+}
+
+class purse.new(amount : Number, mint : Mint) {
+  method hashcode {asString.hashcode}
+  method asString {"a Purse"}
+  method balance {mint.balance(self)}
+  method sprout -> Purse { mint.newPurse(0) }
+  method deposit(amt : Number, src : Purse) -> Boolean {
+    return mint.deposit(self, amt, src)
+  }
+}
+\end{lstlisting}
+\caption{An implementation of Mint and Purse}
+\label{fig:ledger}
+\end{figure}
+
+
+KJX TODO FOCAL-ize\ldots
+
+Figure~\ref{fig:ledger} shows a Grace implementation of Mints and
+Purses that meets the \prg{ValidPurse} specification
+\cite{capeFTfJP14}.
+
+A mint represents a fungible value --- perhaps a fiat currency, a
+crypto-currency, or a corporate share registry, or even an amount of
+goods that can be bought and sold.  A Purse holds some amount of the
+value of the Mint. A holder of a mint capability can inflate the
+currency of the mint, that is increase the sum of all the purses in
+that mint, while all that the holder of a purse can do is can transfer
+funds from that purse into another purse of the same mint.
+
+The integrity of the entire system depends on the Mint object ---
+anyone with access to a Mint can create money in that mint ``out of
+thin air'', so access to the Mint must be carefully controlled.  On
+the other hand, Purses can be passed around without affecting the
+total currency issued by the Mint (the sum of all balances).
+
+To make a secure payment, the payer will typically make a new, empty,
+temporary purse from one of their existing purses via
+\lstinline+sprout+, and deposit only enough funds for the payment into
+the temporary purse.  The payer then passes the temporary purse to the
+payee, who then empties it back into their primary purse.  This allows
+two \textit{mutually untrusting} components to transfer funds,
+provided that they both trust the mint and purse system.  \sd{Thus, if
+  the payer has a \lstinline+payerMainPurse+ account, and the payee
+  has a \lstinline+payeeMainPurse+ account, then the transaction may
+  take place as follows:}
+
+\label{s-payment}
+\begin{lstlisting}
+    //payer creates temp purse
+    def tempPurse = payerMainPurse.sprout
+    tempPurse.deposit(100, payerMainPurse)
+    //payer passes tempPurse to payee
+    payee.acceptPayment(100, tempPurse)
+    //payee
+    payeeMainPurse.deposit(100, tempPurse)
+\end{lstlisting}
+
+A feature of the Grace implementation is that each mint stores a
+ledger that tracks the balance of its purses.
+The ledger is an instance of the \lstinline+collection.map+ class, that is
+the \lstinline+map+ implementation from the standard
+\lstinline+collection+ library.
+% We use a map to store every purse's balance, rather than a field in
+% purse, say, because Grace's encapsulation is per-instance, like
+% Smalltalk, not per-class, like
+% Java or Joe. 
+%  The
+%   \lstinline+is confidential+ annotation (with the antonym
+%   \lstinline+is public+)
+% declares a field or method accessible only from \lstinline+self+
+% (confidential) or from any object (public) --- fields are confidential
+% by default, methods public by default.  A confidential
+% \lstinline+balance+ field could not be read or assigned from outside
+% the object, but a public field would certainly leak information and
+% potentially could be overwritten in such a way that the program would crash.
+
+Finally, it is important for the wider system that the
+\lstinline+deposit+ method will return true only if both purses
+are listed in the mint's \lstinline+legder+ and that the source purse
+has sufficient funds --- otherwise the \lstinline+deposit+ returns false.
+
+We believe this implementation meets the \prg{ValidPurse}
+specification, and we present it here to illustrates two key points
+about that specification. 
+
+First, this implmentation illustrates the key trust property of the
+\prg{ValidPurse} specification: that if a request like
+\prg{res=dest.deposit(0, src)} returns true, the \prg{dest} purse can
+vounch that the \prg{src} purse can be trusted. In this
+implementation, purses only trust other purses from the same mint: as 
+all purses are listed in their mint's ledger, a transfer validates the
+source purse by ensuring it is listed in the same ledger as the
+destination purse. 
+
+Second, there can be many different families of purses and mints in
+the system from this implementation, and also many alternative
+implementations. In an open system, we cannot expect a central
+authority to know which are trustworthy and which are not.
+
+
+
+
+
+\paraC{Establishing Mutual Trust}
+
+The key to successful swapsies --- or any other trading --- is
+establishing just enough mutual trust for just long enough for the two
+parties %  to the exchange being 
+to be able to complete the transaction.
+We have argued that
+% the \prg{Pol\_deposit} policy means that a 
+a call like:\\
+%
+\SP \lstinline+res1=dest.deposit(amt, src)+\\
+%
+\noindent lets us conclude that\\
+%
+\SP \lstinline+res1 $\wedge$ dest$\obeys$ValidPurse $\rightarrow$ src$\obeys$ValidPurse+
+%
+ This trust % of course
+   is
+just one way: from the destination to the source purse.
+% Noble and Drossopoulou in 
+\sd{\cite{capeFTfJP14} offers}  a key insight: we can
+establish mutual trust between two purses by attempting a second
+deposit in the reverse direction:\\
+%
+\SP \lstinline+res2=src.deposit(amt, dest)+\\
+%
+\noindent which gives\\
+%
+\SP  \lstinline+res2 $\wedge$ src$\obeys$ValidPurse $\rightarrow$ dest$\obeys$ValidPurse+\\
+%
+\noindent Reasoning conditionally, on a path where \lstinline+res1 $\wedge$ res2+ are
+true, we'll have % both postconditions,
+% --- that is\\
+%
+% \SP \lstinline+dest $\obeys$ ValidPurse $\rightarrow$ src $\obeys$ ValidPurse+\\
+%
+% and\\
+%
+% \SP \lstinline+src $\obeys$ ValidPurse $\rightarrow$ dest $\obeys$ ValidPurse+\\
+%
+% which is just enough to 
+ established mutual trust:\\
+%
+% \SP \lstinline+res1 $\wedge$ res2 + $\longtirhtarrow$ \\
+\SP    \lstinline+dest $\obeys$ ValidPurse $\longleftrightarrow$ src $\obeys$ ValidPurse+
+%
+
+\begin{figure}
+\begin{lstlisting}
+method dealV2(  ) // returns Boolean
+{
+  //setup and validate Money purses
+  escrowMoney = sellerMoney.sprout
+  res=escrowMoney.deposit(0, sellerMoney)
+  if (!res) then {return false}
+  res = buyerMoney.deposit(0, escrowMoney)
+  if (!res) then {return false}
+  res = escrowMoney.deposit(0, buyerMoney)
+  if (!res) then {return false}
+
+  //setup and validate Goods purses
+  escrowGoods = buyerGoods.sprout
+  res=escrowGoods.deposit(0, buyerGoods)
+  if (!res) then {return false}
+  res = sellerGoods.deposit(0, escrowGoods)
+  if (!res) then {return false}
+  res = escrowGoods.deposit(0, sellerGoods)
+  if (!res) then {return false}
+
+  res = escrowMoney.deposit(price, buyerMoney)
+  if (!res) then {return false}
+  res = escrowGoods.deposit(amt, sellerGoods)
+  if (!res) then {
+    buyerMoney.deposit(price, escrowMoney)
+    return false}
+
+  sellerMoney.deposit(price, escrowMoney)
+  buyerGoods.deposit(amt, escrowGoods)
+
+  return true
+}
+\end{lstlisting}
+\caption{Revised \prg{Escrow} method}
+\label{fig:DealV2}
+\end{figure}
+ 
+
+As with much of our reasoning, this is both conditional and
+hypothetical: at a particular code point, when two \prg{deposit}
+requests have succeeded (or rather, that they have both
+\textit{reported} success) then we can conclude that either both are
+trust worthy, or both are untrustworthy: we have only {\em hypothetical}
+knowledge of the $\obeys$ predicate.
+
+\forget{
+To understand why, imagine an object claiming to be a purse that
+returns \prg{true} to all \prg{deposit} requests (while ignoring all
+the request arguments) and always returns itself in response to all
+\prg{spawn} request. A pair of these trojan purses will always claim
+mutually trust each other, of course nothing would ever actually be
+swapped.
+}
+
+\sdCut{This is a variation on the classic problem of ``trusting trust''.
+%\cite{trustingTrust}.
+We rely on the destination purse to validate
+source purse, and vice versa.  But if neither purse acts in good
+faith, if neither purse is trustworthy, there is no sure way we can
+tell the difference between two trustworthy purses mutually trusting
+each other, and two untrustworthy purses both lying.
+}{I think this will be said again later}
+
+
+% 
+%where // auxiliary definitions
+%  
+
+
+\paraC{Escrow with Explicit Mutual Trust}
+\label{sec:mutual-trust}
+
+Two way deposit calls are sufficient to establish mutual trust, %  is all very fine in
+% theory, but 
+but come with risks. % must have risks in practice.  
+For example, as part of
+validating that a buyer's money purse mutually trusts the seller's
+money purse, we must  pass the buyer's purse 
+% --- with enough money
+% to pay the price in it --- 
+as % the \prg{src} 
+argument in a
+\prg{deposit} call to the seller's money purse, e.g.\\
+%
+~ \SP \lstinline+sellerMoney.deposit(0, buyerMoney)+\\
+%
+\noindent
+If the seller's purse is not in fact trustworthy, then it can take this
+opportunity to steal all the money in the buyer's purse before the
+transaction officially starts, even if the \prg{amt} that is supposed
+to be deposited is \prg{0}.
+
+We can minimise this risk by careful use of escrow purses. Rather than
+mutually validating buyers and sellers directly, we can create an escrow
+purse on the destination side of the transaction (the seller's money
+and the buyer's goods) and then mutually validate the buyer's and
+sellers actual purses against the escrow --- resulting in a chain of
+mutual trust between the destination purse and the escrow purse, and
+the escrow purse and the source purse. This allows us to hypothesise
+that the source and destination purses are mutually trusting before we
+start on the transaction proper.
+
+The resulting escrow method is in
+Figure~\ref{fig:DealV2}. Line~4 creates a \prg{escrowMoney}
+purse and then lines~5--10 hypothetically establish mutual trust
+between the \prg{escrowMoney}, \prg{sellerMoney}, and \prg{buyerMoney}
+purses.  We don't need the \prg{sellerMoney} purse to validate the
+\prg{escrowMoney} purse explicitly
+(\prg{sellerMoney.deposit(0, escrowMoney)}) because the \prg{sprout}
+method specification says sprouted purses can trusted as much as their
+parent purses (\prg{res } $\obeys$ \prg{ValidPurse}). If any of these
+\prg{deposit} request fail, we abort.
+Lines~13--19 do exactly the same, but for goods purses rather than
+money purses.  Finally, lines~21--31 carry out the escrow exchange
+itself, in exactly the same manner as lines~8--27 of the first escrow
+\sd{implementation}  % specification 
+in Figure~\ref{fig:DealV1}.
+
+
+\paraC{Specifying the Mutual Trust Escrow}
+\label{sec:VaildEscrow}
+
+Figure~\ref{fig:ValidEscrow}~shows a specification for the
+revised escrow deal method from Figure~\ref{fig:DealV2}.  Whereas our
+original specification in Figure~\ref{fig:EscrowSpec} consisted of two
+cases based on the value of the result,
+%\footnot partitioned by the preconditions,
+our revised
+\prg{ValidEscrow} specification distinguishes % makes an analysis of 
+four cases, based
+on % analyses of 
+the value of the result, {\em as well as} the trustworthiness of the participants.  
+% All the
+% \prg{ValidEscrow} cases share the preconditions that the \prg{price}
+% and \prg{amt} arguments to the \prg{deal} method are positive.
+%
+% The \prg{ValidEscrow} specification relies on 
+We use these auxiliary
+definitions:
+\vspace{-1ex}
+\begin{lstlisting}[numbers=none,frame=none,rulecolor=\color{white}]
+GoodPrs$=\{$ p | p $\obeys\PRE$ ValidPurse $\}$
+PPrs$=\{$ sellerMoney, sellerGoods, buyerMoney, buyerGoods $\}$
+OthrPrs$=$GoodPrs $\setminus$ PPrs
+BadPPrs$=$PPrs $\setminus$ GoodPrs
+\end{lstlisting}
+\vspace{-1.5ex}
+% \prg{GoodPrs}=\{ p | p $\obeys\PRE$\prg{ValidPurse} \}, \\
+% \prg{OthrPrs}=\prg{GoodPrs}$\setminus$\prg{PPrs} ,\\
+% \prg{PPrs}=\{\prg{sellerMoney},\prg{sellerGoods}, \prg{buyerMoney},\prg{buyerGoods}\},\\
+% \prg{BadPPrs}=\prg{PPrs}$\setminus$\prg{GoodPrs}
+% \\
+ %  of Figure~\ref{fig:ValidEscrow}. 
+ The
+set \prg{PPrs} contains the four ``participant purses'' passed
+as arguments. % into the \prg{deal} method.
+% while the
+% (\prg{sellerMoney},
+%\prg{sellerGoods}, \prg{buyerMoney}, \prg{buyerGoods}).
+%The set
+\lstinline{BadPPrs} contains % the subset of the participant purses that are
+the untrustworthy participant purses.
+%  --- that is, those that do not conform to the  \lstinline{ValidPurse}
+% specification. 
+\lstinline{GoodPrs} are all trustworthy purses in the system
+that do conform to the \lstinline{ValidPurse} specification, and
+\prg{OthrPrs} are the trustworthy purses that do
+\textit{not} participate in this particular deal.
+
+\begin{figure*}
+\begin{lstlisting}[escapechar=@]
+specification ValidEscrow(@\textbf{e}@) {
+   fields sellerMoney, sellerGoods, buyerMoney, buyerGoods //  Purse-s
+   fields price, amt   // $\mathbb{N}$
+
+ policy Pol_deal_1    //   1$^{st}$ case:
+   price,amt$\in \mathbb{N}$ $\wedge$ price,amt>0
+      @\textbf{  \{  e.deal( \ ) \} }@
+    res $\wedge$ BadPPrs=$\emptyset$  $\rightarrow$ (
+      // FUNCTIONAL SPECIFICATION
+     CanTrade(buyerMoney,sellerMoney) $\wedge$  CanTrade(buyerGoods,sellerGoods) $\wedge$
+      buyerMoney.balance=buyerMoney.balance$\pre$-price $\wedge$sellerMoney.balance=sellerMoney.balance$\pre$+price$\wedge$
+      buyerGoods.balance=buyerGoods.balance$\pre$+amt $\wedge$ sellerGoods.balance=sellerGoods.balance$\pre$-amt $\wedge$
+      // RISK
+      $\forall$p:$\pre$OthrPrs. p.balance=p.balance.$\pre$  $\wedge$
+      $\forall$o:$\pre$Object,p:$\pre$GoodPrs. $\MayAccess$(o,p) $\rightarrow \MayAccess$(o,p)$\pre$  )
+      
+ policy Pol_deal_2    //   2$^{nd}$ case:
+    price,amt$\in \mathbb{N}$ $\wedge$ price,amt>0
+       @\textbf{  \{  e.deal( \ ) \} }@
+    $\neg$res $\wedge$ BadPPrs=$\emptyset$  $\rightarrow$ (
+       // FUNCTIONAL SPECIFICATION
+       $\neg$( CanTrade(buyerMoney,sellerMoney) $\wedge$  CanTrade(buyerGoods,sellerGoods) $\wedge$
+         buyerMoney.balance$\pre  \geq$ price $\wedge$ sellerGoods.balance$\pre \geq$ amt ) $\wedge$
+      // RISK
+      $\forall$p:$\pre$GoodPrs. p.balance=p.balance.$\pre$   $\wedge$
+      $\forall$o:$\pre$Object,p:$\pre$GoodPrs.  $\MayAccess$(o,p) $\rightarrow \MayAccess$(o,p)$\pre$  )
+ 
+ policy Pol_deal_3    //   3$^{rd}$ case:
+    price,amt$\in \mathbb{N}$ $\wedge$ price,amt>0
+       @\textbf{  \{  e.deal( \ ) \} }@
+    $\neg$res $\wedge$ BadPPrs$\neq$$\emptyset$  $\rightarrow$  (
+       //RISK
+       $\forall$p:$\pre$GoodPrs. ( p.balance=p.balance.$\pre$ $\vee\  \exists$ bp$\in$BadPPrs$\pre.\, \MayAccess$(bp,p)$\pre$ $\wedge$
+       $\forall$o:$\pre$Object,p:$\pre$GoodPrs.$\MayAccess$(o,p)$\rightarrow$($\MayAccess$(o,p)$\pre$$\vee \exists$b$\in$BadPPrs$\pre$.$\MayAccess$(b,p)$\pre$))
+
+
+ policy Pol_deal_4    //   4$^{th}$ case:
+    price,amt$\in \mathbb{N}$ $\wedge$ price,amt>0
+       @\textbf{  \{  e.deal( \ ) \} }@
+    res $\wedge$ BadPPrs$\neq\emptyset$    $\rightarrow$  (
+      // TRUST
+      buyerMoney$\obeys$PurseSpec $\longleftrightarrow$ sellerMoney$\obeys$PurseSpec  $\wedge$
+      buyerGoods$\obeys$PurseSpec $\longleftrightarrow$ sellerGoods$\obeys$PurseSpec  $\wedge$
+      //RISK
+      $\forall$p:$\pre$OthrPrs. ( p.balance=p.balance.$\pre$ $\vee\  \exists$ bp$\in$ BadPPrs$\pre.\, \MayAccess$(bp,p)$\pre$   $\wedge$
+       $\forall$o:$\pre$Object,p:$\pre$GoodPrs.$\MayAccess$(o,p)$\rightarrow$($\MayAccess$(o,p)$\pre$$\vee \exists$b$\in$BadPPrs$\pre$.$\MayAccess$(b,p)$\pre$))
+}
+\end{lstlisting}
+\caption{\prg{ValidEscrow} specification}
+\label{fig:ValidEscrow}
+\end{figure*}
+
+
+% These sets are used to partition the four cases of the policy, which we
+% now take in turn:
+We now discuss the four cases of the policy
+
+   \vspace{-.2in}
+\begin{description}
+
+\item [1$^{st}$ case:] The result is \prg{true} and all participant purses are trustworthy.
+%(that   is, ``\lstinline+BadPPrs=$0$+'').
+Then, the goods and money purses
+  were from the same mints respectively, and there was sufficient
+  money in the buyer's purse and sufficient goods in the sellers purse.
+  In this case, everything is fine, so we can play swapsies:
+  \prg{price} will have been transferred from the buyer's to the
+  seller's money purse, and \prg{amt} will have been transferred from
+  the seller's to the buyer's goods purse. % In this case the risk is
+  No risk arises: % confined to the purse objects passed in as arguments: 
+  no other
+  purses' balance will change (whether passed in to
+  the method or not).
+
+  
+\item [2$^{nd}$ case:] The result is \prg{false} and all participant purses are trustworthy. Then
+one or more of  the functional correctness conditions are
+  not satisfied: purses' mints did not match appropriately, or input
+  purses did not have sufficient balance. Again, no risk arises
+  to any purses.
+
+
+\item [3$^{rd}$ case:] The result is \prg{false} and some participant purse is untrustworthy.
+  In this case, no   trustworthy purses' balances have been changed --- unless
+  they were already accessible by an untrustworthy purse passed in to
+  the method. 
+
+\item [4$^{th}$ case:]  The result is \prg{true}  and some participant
+  purse is untrustworthy --- \jn{actually} at least two
+  matching participant purses are untrustworthy. 
+  %% Do not change the above. The previous change was wrong.
+  That is, the pair of matching purses  
+%  
+ % --- one from each side of the transaction --- 
+ have co{\"o}perated to
+  suborn the escrow \textit{and we cannot tell}.   
+  % Here,
+  % as in the
+  %3$^{rd}$ case, we have at least one untrustworthy purse: in fact,
+ % for this case to apply we must 
+ Therefore, either both money purses are untrustworthy, 
+ \sd{(as per line 41)},  % \\
+ % NOT either - or; they can both be
+% \begin{lstlisting}
+% buyerMoney$\obeys$PurseSpec $\longleftrightarrow$ sellerMoney$\obeys$PurseSpec
+% \end{lstlisting}
+or both goods purses are untrustworthy, 
+ \sd{(as per line 42)},
+%\begin{center}
+% $ ~ $ \SP\SP \lstinline+buyerMoney$\obeys$PurseSpec+ $\longleftrightarrow$\\
+% $ ~ $ \SP\SP \lstinline+sellerMoney$\obeys$PurseSpec+\\
+%\end{center}
+%
+%
+%
+% \noindent or both goods purses are untrustworthy (line )
+% :\\
+%
+%
+%\begin{center}
+% $ ~ $ \SP\SP \lstinline+buyerGoods$\obeys$PurseSpec $\longleftrightarrow$+\\
+% $ ~ $ \SP\SP \lstinline+sellerGoods$\obeys$PurseSpec+ \\
+%\end{center}
+%
+% \begin{lstlisting}
+% buyerGoods$\obeys$PurseSpec $\longleftrightarrow$ sellerGoods$\obeys$PurseSpec
+% \end{lstlisting}
+%
+%\noindent 
+or all four are bad. % As we've argued above, in this
+% circumstance an implementation cannot tell whether the purses are good
+% or not, so we permit the method to return \prg{true}.
+
+The risk is that an uninvolved trustworthy purse's balance can be
+changed if it was previously accessible from a bad purse.
+ %  --- even if it is passed in as an argument to the
+% \prg{deal} method.
+
+\end{description}
+% \vspace{-\topsep}
+
+The first and second case correspond  to  the
+  traditional \prg{Escrow} specification in
+  Figure~\ref{fig:EscrowSpec}, because traditional specifications
+  assume all objects are trustworthy.
+
+\paragraph{Discussion} The 3$^{rd}$  and 4$^{th}$ case represent  more of a risk than we would like: ideally (as
+  in the 2$^{nd}$ case) we'd hope nothing should have changed. But an
+  escrow method cannot undo a system that is already suborned --- if
+  one of the participant purses is already benefiting from a security
+  breach, passing that purse in to this method gives it an opportunity
+  to exercise that breach.  On the other hand, the risk is contained:
+  this method cannot make things worse.
+%
+
+The % 3$^{rd}$ and
+ 4$^{th}$ case does not prevent trustworthy participant purses from
+ being modified, to cater e.g., for the possibility that the two money
+ purses are  trustworthy, while the two goods purses are not, in which
+ case  the money transaction will take place as expected,  while all
+ bets are off about the goods transaction. 
+ We can give the stronger guarantee for the 3$^{rd}$ case, because by
+ the time the escrow starts making non-$0$ transactions \jnCUT{(line
+   24 onwards in Fig.\  7)} it has established that the purses in each
+ pair are either both trustworthy or both not trustworthy. 
+
+Most importantly, and perhaps surprisingly.
+the return value of the method, \prg{res}, does {\em not} indicate
+whether the participants were trustworthy or not. Namely, a \prg{true}
+result may be obtained in the 1$^{st}$ case (all purses trustworthy)
+as well as the 4$^{th}$ (some purses are untrustworthy).  The
+return value indicates {\em only} whether the escrow attempted to complete the
+transaction (returning \prg{true}) or abort (returning
+\prg{false}). This came indeed
+  as a surprise to \sd{us, as well as the original developers of the \prg{deal}\ method.}
+As with much of our reasoning around trust,
+this leads to yet more conditional reasoning, which must be
+interpreted hypothetically.
+
+Nevertheless, the return value does communicate a valuable guarantee to an honest
+participant,   whose money and goods purses are both
+trustworthy:  If \prg{deal} returns \prg{true}, then the swap has taken
+place. Furthermore if it returns \prg{false}, the swap has not taken
+place and with \textit{no} more risk to the honest purses than those that existed before the call.
+% \footnoteC{SD dropped the following, as I do not understand it:  This is
+% because the guarantees about balances remaining unaffected differ
+% between cases 1 and 4 (which exclude the participant purses from the
+% guarantee) and 2 and 3 (which include them).
+% \jn{But I thought that you wrote it!  The risk of case 3 and case 4
+%   are different, we need to characterize that difference }}
+
+
+
+% \footnoteC{SD I dropped the following as the point is that in case 4,
+%   the escrow does NOT detect untrustworthiness, but perhaps you can
+%   turn it to something else and useful.
+% \jn{again, trying to distinguish between cases 3 and 4}
+
+% Note also that the 3rd and 4th case overlap: the specification is
+% nondeterministic where untrustworthy purses are involved.  If an
+% implementation somehow detects the untrustworthiness and aborts the
+% swap, it may return \prg{false} providing that the participating
+% purses' balances have not be changed (modulo pre{\"e}xisting access
+% from bad purses). Alternatively, the method may return \prg{true} and
+% make no guarantees about the balances of any of the
+% participating purses.}
+
+This \prg{ValidEscrow} specification also gives a guarantee to other
+purse objects, who do {\em not} necessarily take part in the
+deal. Namely, if the participants had no prior access to these purses,
+then even if those participants were dishonest, the purses' balance
+can never be affected.
+
+\forget{
+The mutual trust escrow code (Figure~\ref{fig:DealV2}) has
+23 non-commented lines, while the specification
+(Figure~\ref{fig:ValidEscrow}) is around
+29 longer lines.
+%  t representation, where the four policies are
+% --
+%??? JAMES are we sure we want to have 4 policies rather than 4 cases and be more succinct?
+% the code is more succinct.
+The crucial advantage of the
+specification is that it makes clear \textit{what} will happen when
+the deal method runs, while the code
+only shows \textit{how} it happens. In particular, the specification
+makes the trust relationships explicit via $\obeys$ clauses and
+hypothetical reasoning, and the risks explicit via $\MayAccess$ and
+$\MayAffect$ relations.
+}
+
+% \vspace{.05in}
+\paragraph{Reasoning}  \sd{We have \jn{16 pages of hand-developed proof} that the code from Figure \ref{fig:DealV2} adheres to the specification from Figure \ref{fig:ValidEscrow}. Some of the arguments used in that proof are discussed at the end of section 4.}

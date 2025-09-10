@@ -1,0 +1,582 @@
+\section{The Specification Language Chainmail}
+ \label{sec:SpecLan}
+
+Our specifications and policies are expressed in terms of one-state as well as two-state
+assertions. To express the state in which an expression is evaluated, we annotate it with a \t-subscript. For example, given $\sigma$ and $\sigma'$ where $\interp{x}{sigma}$={4},  and $\interp{x}{sigma}$={3}, we have  $\M,\sigma,\sigma' \modelsWithO x\pre {-} x\post = 1$.
+% {The specification language uses functions and  predicates  defined below.}.
+% {In function bodies
+% \footnote{a better term than \syntax{FArg}?}  we allow the use of values, as well as known mathematical operators such as $+$, $-$ etc. Similarly, in predicate bodies we allow the use of known mathematical operators such as $\leq$, $\leq$ etc. \footnote{{SD asks: do we need to allow $\wedge$, $\not$ etc explicitly? Perhaps they can all be encoded with what we have}}
+% }\footnote{{TODO: Find better names than FunBody and PredBody}}
+
+\subsection{Expressions} We first define expressions, $\sE\in\syntax{Expr}$,
+% and assertions \syntax{\A},
+which depend on  {\em one state} only.
+We allow the use of mathematical operators, like $+$
+and $-$, and we use the identifier  $\mathit{f}$    to indicate
+functions whose value depends on the state (eg the function
+\prg{length} of a list). We use  identifier  $\syntax{Q}$, or   $\syntax{P}$  to
+range over {predicate  identifiers}.
+%  whose validity depends on the state (eg the predicate \prg{Acyclic} for a list).
+
+The difference between expressions $\sE$, and arguments $\mathit{ar}$, as from
+the earlier section, is that
+expressions may depend  ghost information, which is not
+stored explicitly in the state $\sigma$
+but can be deduced from it ---  e.g.\ the length of a list
+that is not stored with the list. {Thus, expressions may read the fields from
+any object reachable from \kw{this}, or
+any argument or local variable; they may access ghost fields, and they may call functions.}
+
+\begin{definition}[Expressions]
+$ ~ $ \\
+
+\noindent
+% \begin{figure}[h]
+\begin{tabular}{lcll}
+{\syntax{Path}}  &   \BBC  &   \syntax{ParId} ~\SOR~ \syntax{VarId} ~\SOR~ {\kw{this}}
+    \SOR   \syntax{Path}{\kw{.}} \syntax{FieldId}
+\\
+ \syntax{\sExpr} \ \  &   \BBC  &   {\syntax{Arg}}  ~\SOR~ {\syntax{Path}}  ~\SOR~ \syntax{Val}  \\
+  &  ~\SOR~   & ~\SOR~ \syntax{\sExpr} $+$ \syntax{\sExpr}  ~\SOR~ ... ~\SOR~
+ \syntax{f}(\syntax{\sExpr}$^*$) \\
+&     ~\SOR~ & \kw{if} \syntax{\sExpr} \kw{then} \syntax{\sExpr} \kw{else} \syntax{\sExpr}
+ \\
+\syntax{funDescr} \ \  &   \BBC  &   \kw{function}  \syntax{f}\lp \syntax{ParId}$^*$ \rp\lb~   \syntax{\sExpr}~ \rb
+ \end{tabular}
+\label{fig:syntax:functions}
+% \end{figure}
+
+\end{definition}
+
+We now define the value  of such expressions through the interpretation function
+$\interp{e}{\M,\sigma} $. {We distinguish between the case where the function returns a value, is undefined, or unknown. The latter case arises only when the expression mentions functions which are unknown in the current module.}
+
+\begin{definition}[Interpretations]
+We define the interpretation of expressions, as a {\em partial} function:
+
+\noindent
+$
+\begin{array}{c}
+% \begin{array}{lcl}
+\  \interp{\cdot}{}\, : \, \syntax{\sExpr} \times   \syntax{Module} \times   \syntax{state}
+% \times \syntax{state}
+\rightarrow \syntax{Value}
+% \times \syntax{state}
+% \end{array}
+ \end{array}
+$
+
+\noindent
+using the notation  $\interp{\cdot}{\M,\sigma}$: \\
+
+
+\begin{itemize}
+\item
+ $\interp{val}{\M,\sigma} $    = $val$,\  for all values $val\ {\in \syntax{Val}}$.
+\item
+ $\interp{{a}}{\M,\sigma} $    = $\interp{{a}{} }{\sigma}${, for all arguments $a\ \in \syntax{Arg}$}.
+ \item
+ {${\interp {p\kw{.}f} {\M,\sigma} } $} = $ {\chi(\interp {p} {\sigma})(f)}$  {if} $\interp {p} {\sigma}$
+  is defined,
+  \\   $~$ \hspace{.2in}  and  $f$ is a field of $\interp {p} {\sigma}$
+\\
+undefined,  otherwise.
+\item
+{$ \interp {p\kw{.}\mathit{gf}} {\M,\sigma}$} = $ \interp {e[p/\prg{this}]} {\M,\sigma} $ if  $\interp {p} {\M,\sigma}$
+ is defined,  \\
+% $~ $   \hspace{.2in}  and $\mathit{gf}$ is a ghost field of that object,\\
+ $~ $   \hspace{.2in}  and  $\syntax{e}$= ${\cal G}(\M,{\cal C}lass(\interp {p} {\sigma}, \sigma),\mathit{gf}))$,
+\\ {unknown,}\ \  if $\interp {p} {\sigma}, \sigma$ defined, \\
+$~ $   \hspace{.2in}  and
+$\M({\cal C}lass(\interp {p} {\sigma}, \sigma))$   undefined
+\\  undefined,\ \    otherwise.
+
+\item
+  $\interp{\syntax{\sE_1}+ \syntax{\sE_2}}{\M,\sigma}$ =
+ $\interp{\syntax{\sE_1}}{\M,\sigma} + \interp{\syntax{\sE_2}}{\M,\sigma}$,
+ \\
+ $~ $   \hspace{.1in}  if $\interp{\syntax{\sE_1}}{\M,\sigma}$
+ and $\interp{\syntax{\sE_2}}{\M,\sigma}$ are numbers,\\
+ undefined, $~ $   \hspace{.1in}  if $\interp{\syntax{\sE_1}}{\M,\sigma}$
+ or $\interp{\syntax{\sE_2}}{\M,\sigma}$ are undefined, \\
+$~ $  \hspace{.2in}   or not numbers
+ \item
+  $\interp{\syntax{f}(\syntax{\sE_1},...\syntax{\sE_n})}{\M,\sigma}$ =
+ $\interp{\syntax{\sE}[\syntax{\sE_1}/\prg{this},\sE_2/\syntax{p_2}, ... \syntax{\sE_n}/\syntax{p_n}]}{\M,\sigma}$
+ \\   $ ~ $ $ \hspace{.2in} $ where
+ $ \M(f, {\cal C}lass(\sE,\sigma)) =  \kw{function} ~\syntax{f}~\lp  \syntax{p_2}...\syntax{p_n}  \rp\lb~   \syntax{\sE}~ \rb $,
+\\
+undefined, $~ $   \hspace{.1in} if $\exists i$.  $\interp{\syntax{\sE_i}}{\M,\sigma}$ undefined,\\
+% $~ $   \hspace{.2in} or $\interp{\syntax{\sE}[\syntax{\sE_1}/\syntax{p_1}, ... \syntax{\sE_n}/\syntax{p_n}]}{\M,\sigma}$  undefined,
+%\\
+{unknown,}  $~ $   \hspace{.1in} if  $\exists i$.  $\interp{\syntax{\sE_i}}{\M,\sigma}$ unknown, \\ $~ $   \hspace{.2in} or
+if $ \M({\cal C}lass(\sE_1,\sigma),f )$ undefined.
+
+ \item
+$\interp{ \kw{if} ~\syntax{\sE_0} ~\kw{then} ~ \syntax{\sE_1} ~\kw{else} ~\syntax{\sE_2}}{\M,\sigma} $\\
+$ ~ $ $ \hspace{.2in} $=$\interp{ \ \syntax{\sE_1} }{\M,\sigma} $, \ \   \ \ if $\interp{ \ \syntax{\sE_0} }{\M,\sigma} $=\kw{true}, \\
+$ ~ $ $ \hspace{.2in} $=$\interp{ \ \syntax{\sE_2} }{\M,\sigma} $, \ \  \ \  if $\interp{ \ \syntax{\sE_0} }{\M,\sigma} $=\kw{false}.
+\\
+{undefined,} if $\interp{ \ \syntax{\sE_0} }{\M,\sigma} $ undefined, \\
+$ ~ $   \hspace{.2in} or
+$\interp{ \ \syntax{\sE_0} }{\M,\sigma} $ defined but not \kw{true} or \kw{false}.
+\\
+{unknown,} if $\interp{ \ \syntax{\sE_0} }{\M,\sigma} $ unknown.
+% \item TODO: Say something about further predefined functions
+ \end{itemize}
+
+
+\end{definition}
+
+\noindent
+Thus,  the interpretation  $\interp {e} {\M,\sigma}$ is undefined if $e$ refers to non-existing variables, or fields, or calls a infinite recursive function. For example, $\interp {length(x)} {\M,\sigma}$ is undefined if $x$ is not defined in $\sigma$, or if $\interp {x} {\sigma}$ points to a cyclic structure, and the $length$ function is defined with the obvious meaning in the class of $x$.}
+{On the other hand,  the interpretation  is unknown, if any subterm of $e$ refers objects whose class is not defined in $\M$. For example, if the class of $x$ is not defined in $\M$, then $\interp {length(x)} {\M,\sigma}$ is unknown.} Undefined expressions remain undefined in the context of larger modules, but unknown expressions may become known. For example, consider a module $M'$ whichj contains a definition for t the class of $x$, then $\interp {length(x)} {\M'*M,\sigma}$ is no longer unknown; it may be defined or undefined.
+
+
+
+
+\subsection{One-state assertions} We now define the syntax of one-state assertions, i.e. assertions whose
+validity depends on {\em one} state.
+{These assertions include the standard assertions, such as expressions $e$, comparisons $e>e'$, and the usual operators on expressions. They also support the usual boolean combinators, ie implication, negation etc.\footnote{All these may be encode through $\rightarrow$, the value
+ \kw{false} and $\wedge$, so we only defined these.}
+One state assertions also include predicates  specific to our concerns:} the assertions $\MayAffect$ and $\MayAccess$ which we   use to
+model risk, the assertion $\sE:\prg{C}$ which expresses class membership, and the assertion
+$\sE\obeys\prg{S} $ which expresses adherence to a specification. The two former  predicates
+are {\em hypothetical}, in that they talk about the
+  potential effect of execution of code, or of the existence of paths to connect two objects.
+In particular, the  predicate $\MayAffect$   ascertains whether its first
+parameter may execute code which affects the second one,  while
+the predicate $\MayAccess$
+%, and $\MayPublicAccess$
+ ascertains whether
+its first parameter has {\em any} path to the second one.
+
+
+\noindent
+\begin{definition}[One-state Assertions]
+$ ~ $ \\
+
+\begin{tabular}{lcll}
+\syntax{\A} \ \  &   \BBC  &   \syntax{\sExpr}  ~\SOR~   \syntax{\sExpr} $\geq$ \syntax{\sExpr} ~\SOR~  ...
+\\
+& ~\SOR~ &  \syntax{Q}(\syntax{\sExpr}$^*$)
+ \\
+& ~\SOR~ &     \syntax{\A} $\wedge$ \syntax{\A} ~\SOR~
+{\syntax{\A} $\rightarrow$ \syntax{\A}} \\
+& ~\SOR~ &  $\exists \prg{x}.$\syntax{\A} ~\SOR~ $\forall \prg{x}.$\syntax{\A}
+ \\
+& ~\SOR~ & \syntax{\sExpr}\kw{:}\syntax{ClassId}
+\\
+& ~\SOR~ & $\MayAffect$ \lp\syntax{\sExpr},\syntax{\sExpr}\rp
+\\
+& ~\SOR~ & $\MayAccess$\lp\syntax{\sExpr},\syntax{\sExpr}\rp
+\\
+& ~\SOR~ & \syntax{\sExpr} \obeys \syntax{SpecId} \\
+\\
+ \syntax{PredDescr} \ \  &   \BBC  &  \kw{predicate}  \syntax{Q}\lp \syntax{ParId}$^*$ \rp\lb~   \syntax{\A}~ \rb
+ \end{tabular}
+\label{fig:syntax:functions}
+\end{definition}
+
+We next define  validity of one-state assertions through a judgement of the form
+$\M,\sigma  \modelsWithO \A$,
+which expresses that the assertion $\A$ holds for module $\M$, state $\sigma$ and using {the oracle \O.}\footnote{want better name than oracle.} We first define what is an oracle.
+ 
+\begin{definition}
+\label{def:orcacle}
+\label{def:oracle}
+A function \\
+$\strut \ \ \ \ $ $\O : Module \times ClassId \ \longrightarrow \ \{ true, false \}$\\
+ is called an {\em oracle} for module $\M$, if it is defined for exactly the classes defined in $\M$.  
+ \begin{itemize}
+\item  $\M \vdash \O\$ iff  $$dom(\O) = Classes(\M)$. 
+\end{itemize}
+\end{definition}
+ 
+ 
+
+ The oracle $\O$ is needed to give meaning to the assertion $\M,\sigma  \models\withO e \obeys  \prg{S}$.  We appeal to \prg{C}, the class of the object indicated by $e$, 
+and appeal to the oracle as to whether $\O(\M,\prg{C},\prg{S})$ holds.
+%We do not define an algorithm for $\O$  
+Later in   this paper,  cf. Def. \ref{def:C:adheres:to:A}, we define soundness of such oracles to means that whenever the oracle judges that a class \prg{C} indeed adheres to a specification \prg{S}, then all objects of this class behave according to \prg{S}.
+%Moreover, we  argue that it is possible to develop such algorithms, and we outline how one can indeed ascertain that some classes adhere to their specs ....\footnote{We need to write thjis section} 
+
+ Note that whether an object
+obeys a spec depend on the state $\sigma$ only insofar as the class of the object is concerned, and not on the contents of the object's fields or any other fields. This may seem strange - surely an object cannot fullfill its obligations unless its state is well-formed? However, we are only concerned with reachable states, and in these, if the class has been implemented in a robust manner, the object's state will be appropriate\footnote{TODO explain this betterm as it is crucial.}
+
+Note also, that judging that $\M,\sigma  \not\modelsWithO \sE \obeys  \prg{S}$ does not imply that there exists some witness 
+that the object will have behaviour contradicting \prg{S}.
+ In fact, it is even possible to have that a class's behaviour indeed adheres to the spec at a semantic level, but the oracle still returns $false$. 
+ \footnote{ TODO expand. }This treatment allows us to avoid circularities in the definitions with relatively light-weight means, 
+ as opposed to using notion like ... as in Devries  \footnote{ TODO expand.  TODO perhaps move some of this to the section ojn Hoare  Logic. }
+ 
+
+\begin{definition}[Validity of one-state assertions] % --  $\MayAffect$ and $\MayAccess$] $ ~ $
+\label{def:one-state-assertion:valid}
+%{We assume a sound judgment of the form $\M  \vdash\,\prg{C}: \A $}.
+Given an oracle $\O \subseteq Module \times ClassId$,   
+the validity of an  assertion \syntax{\A}, is defined through the {\em partial} judgments:
+$ ~ $
+\\
+
+\noindent
+$ \  \ \ \models \ \subseteq \,  \syntax{Module} \times   \syntax{state} \times Oracle  \times  Assertion$
+\\
+$\strut \  \   \not\models \ \subseteq \,  \syntax{Module} \times   \syntax{state} \times Oracle  \times   Assertion 
+% {\syntax{A}}
+% SD: A is a metavariable, and Assertion is a set
+$
+\\
+
+\noindent
+using the notations  $\M,\sigma \modelsWithO \A$ and $\M,\sigma \not\modelsWithO \A$: \\
+
+
+\begin{itemize}
+ \item
+ $\M,\sigma  \modelsWithO \syntax{\sE}$, \ \ \  if  $\interp{ \syntax{\sE}}{\M,\sigma}=\kw{true}$, \\
+  {$\M,\sigma  \not\modelsWithO \syntax{\sE}$, \ \ \  if  $\interp{ \syntax{\sE}}{\M,\sigma}=\kw{false}$,\\
+  $\M,\sigma  \not\modelsWithOQ \syntax{\sE}$, \ \ \ otherwise.}
+
+   \item  $\M,\sigma  \modelsWithO \syntax{\sE_1}\geq\syntax{\sE_2}$, \ \ \  if $\interp{ \syntax{\sE_1}}{\M,\sigma}$
+  $\geq$ $\interp{ \syntax{\sE_2}}{\M,\sigma}$, \\
+  {$\M,\sigma  \not\modelsWithO \syntax{\sE}$, \ \ \ $\interp{ \syntax{\sE_1}}{\M,\sigma}$
+  $<$ $\interp{ \syntax{\sE_2}}{\M,\sigma}$,
+  \\
+  undefined, \ \ \ \ if $\interp{ \syntax{\sE_1}}{\M,\sigma}$ or $\interp{ \syntax{\sE_1}}{\M,\sigma}$ is undefined, \\
+  \hspace{1in} or not a number.
+}
+%  \item
+% $\M,\sigma   \modelsWithO {\syntax{Q}(\syntax{\sE_1},...\syntax{\sE_n})}$ iff \\
+%   $\M,\sigma  \modelsWithO {\syntax{A}[\syntax{\sE_1}/\syntax{p_1}, ... \syntax{\sE_n}/\syntax{p_n}]}$
+% \\
+% if  $ \M(Q) =  \kw{predicate} ~\syntax{Q}~\lp \syntax{p_1}...\syntax{p_n} \rp\lb~   \syntax{\A}~ \rb $,
+ \item
+ {
+ $\M,\sigma   \modelsWithO {\syntax{Q}(\syntax{\sE_0},\syntax{\sE_1},...\syntax{\sE_n})}$, \ \ \ if \\
+ $~$  \hspace{.3in} $\M,\sigma  \modelsWithO  \syntax{A}[\syntax{\sE_0}/\syntax{this,\syntax{\sE_1}/\syntax{p_1}, ... \syntax{\sE_n}/\syntax{p_n}]}$
+ \\
+  $\M,\sigma   \not\modelsWithO {\syntax{Q}(\syntax{\sE_0},\syntax{\sE_1},...\syntax{\sE_n})}$, \ \ \ if \\
+ $~$  \hspace{.3in} $\M,\sigma  \not\modelsWithO  \syntax{A}[\syntax{\sE_0}/\syntax{this,\syntax{\sE_1}/\syntax{p_1}, ... \syntax{\sE_n}/\syntax{p_n}]}$
+ \\
+ if ${\cal P}(\M,\interp {\sE_0}{\sigma}\downarrow_1, \syntax{Q})   =  \kw{predicate} ~\syntax{Q}~\lp \syntax{p_1}...\syntax{p_n} \rp\lb~   \syntax{\A}~ \rb $,
+ \\
+  undefined, \ \ \ \ if ${\cal P}(\M,\interp {\sE_0}{\sigma}\downarrow_1, \syntax{Q})$ undefined,\\
+   \hspace{1in} or if  $\M,\sigma   \modelsWithO {\syntax{A}(\syntax{\sE_0},\syntax{\sE_1},...\syntax{\sE_n})}$ undefined.
+}
+
+    \item
+ $\M,\sigma  \modelsWithO \syntax{\A_1}\wedge\syntax{\A_2}$, \ \  if   $\M,\sigma  \modelsWithO \syntax{\A_1}$ and  $\M,\sigma  \modelsWithO \syntax{\A_2}$,
+ \\
+ {$\M,\sigma \not \modelsWithO \syntax{\A_1}\wedge\syntax{\A_2}$, \ \  if   $\M,\sigma  \not\modelsWithO \syntax{\A_1}$ or  $\M,\sigma  \not\modelsWithO \syntax{\A_2}$}
+ \\
+ undefined, if  $\M,\sigma  \modelsWithO \syntax{\A_1}$ or  $\M,\sigma  \modelsWithO \syntax{\A_2}$ is undefined.
+
+      \item
+$\M,\sigma  \modelsWithO \syntax{\A_1} \rightarrow \syntax{\A_2}$, \ \  if   $\M,\sigma  \modelsWithO \syntax{\A_1}$ and  $\M,\sigma  \modelsWithO \syntax{\A_2}$,\\
+$~$ \hspace{1in} or $\M,\sigma  \not\modelsWithO \syntax{\A_1}$.
+ \\
+  $\M,\sigma  \not\modelsWithO \syntax{\A_1} \rightarrow \syntax{\A_2}$, \ \  if   $\M,\sigma  \modelsWithO \syntax{\A_1}$ and  $\M,\sigma  \not\modelsWithO \syntax{\A_2}$ ,
+ \\
+\sdO{$\M,\sigma  \modelsWithOQ \syntax{\A_1} \rightarrow \syntax{\A_2}$, \ \ otherwise}
+
+
+ \item
+  $\M,\sigma  \modelsWithO \exists \prg{x}.\syntax{\A}$ iff for some address $\iota$ and some {fresh} variable $\prg{z}{\!\in\!\syntax{VarId}}$,  we have $\M,\sigma[\prg{z}{\mapsto}\iota] \modelsWithO  \syntax{\A[\prg{z}/\prg{x}}]$.
+  \\
+{$\M,\sigma \not\modelsWithO \exists \prg{x}.\syntax{\A}$ iff for all address $\iota$ and  {fresh} variable  $\prg{z}{\!\in\!\syntax{VarId}}$,  we have $\M,\sigma[\prg{z}{\mapsto}\iota] \not\modelsWithO  \syntax{\A[\prg{z}/\prg{x}}]$.}
+\\
+$\M,\sigma  \modelsWithOQ \exists \prg{x}.\syntax{\A}$, otherwise.
+
+  \item
+  $\M,\sigma  \modelsWithO \forall \prg{x}.\syntax{\A}$ iff for all addresses $\iota\!\in dom\!(\sigma)$, and fresh variable $\prg{z}$, we have  $\M,\sigma[\prg{z}{\mapsto}\iota] \modelsWithO  \syntax{\A[\prg{z}/\prg{x}}]$.
+  \\
+{  $\M,\sigma  \not\modelsWithO \forall \prg{x}.\syntax{\A}$ iff there exists an address  $\iota\!\in dom\!(\sigma)$, and fresh variable $\prg{z}$, such that  $\M,\sigma[\prg{z}{\mapsto}\iota] \not\modelsWithO  \syntax{\A[\prg{z}/\prg{x}}]$.
+  \\
+  undefined, otherwise.}
+
+  \item
+ $\M,\sigma  \modelsWithO  \syntax{\sE}\kw{:}\prg{C}$, \ \  if $\sigma(\interp{ \syntax{\sE}}{\M,\sigma})\downarrow_1 = \prg{C}$.
+ \\
+ {
+ $\M,\sigma  \not\modelsWithO  \syntax{\sE}\kw{:}\prg{C}$, \ \  if $\sigma(\interp{ \syntax{\sE}}{\M,\sigma})\downarrow_1 \neq \prg{C}$.
+ \\
+ $\M,\sigma \modelsWithOQ  \syntax{\sE}\kw{:}\prg{C}$, \  if $\interp{ \syntax{\sE}}{\M,\sigma}$ undefined, or\\
+\strut \hspace{1in} $\sigma(\interp{ \syntax{\sE}}{\M,\sigma})\notin dom(\sigma\downarrow_2)$.}
+
+ \item
+$\M,\sigma  \modelsWithO \MayAffect \lp\syntax{\sE},\syntax{\sE'}\rp$, \ \ if
+{$\interp {\prg{\sE} }{\M,\sigma}$ and $\interp {\prg{\sE'} }{\M,\sigma}$ are defined,} and there exists a method \prg{m}, arguments $\bar{\prg{a}}$, state $\sigma'$, identifier \prg{z}, such that
+    $ \M, \sigma[\prg{z}\mapsto \interp {\syntax{\sE}} {\M,\sigma}], \syntax{z}\prg{.m}(\bar{\prg{a}}) \leadsto   \sigma'$, and   $\interp {\syntax{\sE'}} {\M,\sigma} \neq  \interp {\syntax{{\sE'}}} {\M,\sigma\downarrow_1,\sigma'\downarrow_1}    $.\\
+ $\M,\sigma  \modelsWithO \MayAffect \lp\syntax{\sE},\syntax{\sE'}\rp$, \ \ undefined if
+{$\interp {\prg{\sE} }{\M,\sigma}$ or $\interp {\prg{\sE'} }{\M,\sigma}$ are undefined}.
+\\
+{$\M,\sigma \not\modelsWithO \MayAffect \lp\syntax{\sE},\syntax{\sE'}\rp$, \ \ otherwise.}
+
+\item
+$\Prog{},\sigma \modelsWithO { \MayAccess}(\prg{\sE},\prg{\sE'})$,   \ if \  {$\interp {\prg{\sE} }{\M,\sigma}$ and $\interp {\prg{\sE'} }{\M,\sigma}$ are defined,} and there exist  fields  $\prg{f}_1$,... $\prg{f}_n$, such that
+      $\interp{\prg{z}.\prg{f}_1...\prg{f}_n}{\M,\sigma[\prg{z}\mapsto \interp {\syntax{\sE}} {\M,\sigma}]}= \interp {\prg{\sE'} }{\M,\sigma}$.
+\\
+ $\M,\sigma  \modelsWithOQ  {\MayAccess}(\prg{\sE},\prg{\sE'})$, \ \  if
+ $\interp {\prg{\sE} }{\M,\sigma}$  or $\interp {\prg{\sE'} }{\M,\sigma}$ \\
+\strut \hspace{1in} is undefined.
+\\
+{$\M,\sigma \not\modelsWithO  {\MayAccess}(\prg{\sE},\prg{\sE'})$, \ \ otherwise.}
+
+  \item
+{$\M, \sigma  \modelsWithO \sE \obeys \prg{S}   $},  \  {if ${\cal S}(\prg{C},\M)= \prg{S}$ and $\O(\prg{C})$}
+   \\
+ {$\M, \sigma  \not\modelsWithO \sE \obeys \prg{S}   $},  \     {if ${\cal S}(\prg{C},\M)\neq \prg{S}$ or $\neg \O(\prg{C})$}
+ \\
+\strut \hspace{1in} where \prg{C}=${\cal C}lass(\sE,\sigma)$.  
+  \\
+{$\M, \sigma  \modelsWithOQ \sE \obeys \prg{S}   $},  \   if
+  $\interp{ \syntax{\sE}}{\M,\sigma}$ undefined,  \\
+\strut  \hspace{1in} or ${\cal C}lass(\sE,\sigma) \notin dom(\M)\cap dom(\O)$
+%\SP  $\ \ \ \forall\, (\sigma,\code)\!\in\!\Arising(M).\ \forall  i\!\!\in\! \!\{1..n\}.$\\%  \wedge
+%\SP  $\ \ \  \forall\,\sigma',\code'.\ (\sigma',\code')\!\in\!\Reach(M,\sigma,\code).$\\
+%\SP  $\ \ \ \ \ \ \ \ \ \SP M, \sigma'[z\mapsto\interp{e}{\sigma}]  \modelsWithO \Policy_i[ z / {\kw{this}}]$ \\
+%where $z$ is a fresh variable in $\sigma'$, and where
+% we assume that $\PolSpecId$ was defined as \\ %  that   \PolSpecId was introduced by\\
+%$ \ \prg{specification}\ \PolSpecId\  \{\ \Policy_1, ... \Policy_n\ \}$, \\
+
+ \end{itemize}
+ In the above, the  notation   {$\sigma[v{\mapsto} \iota]$} is shorthand for
+$(\phi[v{\mapsto}\iota],\chi)$ for a state $\sigma = (\phi,\chi)$.
+ \end{definition}
+
+ {Note that the definition of  $\M, \sigma  \modelsWithO \sE \obeys \prg{S}   $   only depends on whether 
+  \prg{C},    the {\em class} of the object denoted by $\sE$,  is considered by the oracle $\O$ to satisfy  \prg{S}. In particular, $\M, \sigma  \modelsWithO \sE \obeys \prg{S}   $  does not imply that $\sE$  satisfies the policies from  \prg{S}.  In order to have this guarantee we also need to know that $\O$ is sound - as defined in Def \ref{def:sound:oracle}.}
+
+{Some examples to do with undefined assertions and preservation under linking can be found in section
+\ref{problems:undefinedAssert}. In particular, in a state $\sigma$
+where \prg{x} points to an object of class \prg{c}, and module $\M$
+ where  class \prg{c} is undefined, and any specification identifier \prg{S}, we have that
+$\M, \sigma  \modelsWithO \prg{x} \obeys \prg{S}$ is undefined, and
+$\M, \sigma  \modelsWithO \prg{x} \obeys \prg{S} \rightarrow \kw{true}$ is also undefined.
+ }
+
+{However, the situation that the class of an object in the state is undefined in a module cannot
+happen  in states that have been reached by execution of a module:}
+
+\begin{lemma}
+For all modules $\M$, all states $\sigma$, and specification identifiers \prg{S}:
+
+\begin{itemize}
+\item
+{If $\sigma\in\Arising(\M)$  and $\prg{x}\in dom (\sigma)$, then \\  $\M, \sigma \modelsWithO \prg{x} \obeys \prg{S}$ is defined.}\\
+\end{itemize}
+\end{lemma}
+\begin{proof}
+We first prove that in any $\sigma\in\Arising(\M)$,  any object in
+$\sigma$ has a class that is defined in $\M$. This can be proven
+by induction on the execution. It holds because objects can only
+be crated if $\M$ contains a class declaration for the respective class.
+We then argue that under this condition the judgment $\M, \sigma \modelsWithO \prg{x} \obeys \prg{S}$ is well-defined for any \prg{S}, provided that
+  \end{proof}
+
+{Therefore, for any $\O$, if $\sigma\!\in\!\Arising(\M)$  and $\prg{x}\!\in\!dom (\sigma)$, then  either $\M, \sigma \modelsWithO \prg{x} \obeys \prg{S}$ or $\M, \sigma \not\modelsWithO \prg{x} \obeys \prg{S}$.
+This is so, because we always either $\O(\M,\prg{C},\prg{S})=true$, or  $\O(\M,\prg{C},\prg{S})=false$.  }
+
+
+{TODO Say somewhere that even though it is possible to construct sound $\O$s, the $\O$ is not unique.}
+
+\subsection{Two state assertions} Two-state assertions\footnoteC{TODO add citation} allow us to compare properties of two different states, and thus say, e.g. that $\prg{p.balance}\post = \prg{p.balance}\pre + 10$. To differentiate between the two states we use the subscripts  \textsf{pre} and  \textsf{post}.
+
+\noindent
+\begin{definition}[Two-state Assertions]
+$ ~ $ \\
+
+% \begin{figure}[h]
+\begin{tabular}{lcll}
+ {\textit{t}} &   ::= & \textsf{pre} \ \     | \ \ \textsf{post}  \ \ | \ \ $\epsilon$
+ \\
+\syntax{\B} \ \  &   \BBC  &   \syntax{\A}$_{{\textit{t}}}$ \\
+&  ~\SOR~  &\syntax{\sExpr}$_{\textit{t}}$ $\geq$ \syntax{\sExpr}$_{{\textit{t}}}$ ~\SOR~ ... \\
+& \SOR & $\New(\syntax{\sExpr})$ \\
+&  ~\SOR~  & \syntax{\B}  $\wedge$ \syntax{\B}  ~\SOR~ ... \\
+& ~\SOR~ &  $\exists \prg{x}.$\syntax{\B}  ~\SOR~ $\forall \prg{x}.$\syntax{\B} . \\
+ \end{tabular}
+\label{fig:syntax:two:state:assert}
+% \end{figure}
+\end{definition}
+
+\noindent
+Given the syntax from above, we can express assertions like\\
+ $ ~ $ \ \ $ \ \ \ \ $  $\forall \prg{p}.\prg{p}:\pre\prg{Purse}.$\\
+$ ~ $ \ \ $ \ \ \ \ $ $[\ \prg{p.bank}\pre=\pre\prg{RBS} \rightarrow $\\
+$ ~ $ \ \ $ \ \ \ \ \ \ \  \ $ $\prg{p.balance}\pre =\prg{p.balance}\post\  ]$,\\
+ to require that the \prg{balance} of any \prg{Purse} belonging to \prg{RBS} is immutable across the to states.  
+ 
+ \paragraph{Validity of one-state, two-state assertions, and policies}
+We now define validity of two state assertions, ...
+
+\begin{definition}
+[Validity of Two-state assertions] We define the judgment \\
+$
+\begin{array}{c}
+\begin{array}{lcl}
+\ \ \  \models   &   \subseteq &   Module \times state \times state \\
+& & \times\, Oracle\, \times {TwoStateAssertion}
+\end{array}
+\end{array}
+$
+
+\noindent
+using the notation $\Prog{},\sigma,\sigma'\modelsWithO \B $\ as follows
+\begin{itemize}
+\item
+$\Prog{},\sigma,\sigma'\modelsWithO \syntax{\A}_{\textit{t}}$
+iff   $\Prog{},\sigma''\modelsWithO \syntax{\A}$, \\
+where  $\sigma''=\sigma$ if  {{\textit{t}}}=\textsf{pre}, and  $\sigma''=\sigma'$ otherwise.
+\item
+$\Prog{},\sigma,\sigma'\modelsWithO \syntax{\sE}_{\textit{t}} \geq \sE'_{\textit{t'}}$,
+    iff $\interp{\syntax{\sE}}{\M,\sigma_1} \geq \interp{\syntax{\sE'}}{\M,\sigma_2}$,\\
+    where $\sigma_1=\sigma$ if  {{\textit{t}}}=\textsf{pre}, and  $\sigma_1=\sigma'$ otherwise,\\
+    and $\sigma_2=\sigma$ if  {{\textit{t}}}$'$=\textsf{pre}, and  $\sigma_2=\sigma'$ otherwise.
+\item
+$\Prog{},\sigma,\sigma'\modelsWithO \New(\syntax{\sE})$
+\ iff \
+$\interp{\syntax{\sE}}{\M,\sigma'}\in dom(\sigma')\setminus dom(\sigma)$
+\item
+$\Prog{},\sigma,\sigma'\modelsWithO  \syntax{\B}_1   \wedge \syntax{\B}_2$   iff\\
+ $\Prog{},\sigma,\sigma'\modelsWithO  \syntax{{\B}}_1 $
+    and   $\Prog{},\sigma,\sigma'\modelsWithO  \syntax{{\B}}_2  $.
+\item
+  $\M,\sigma,{\sigma'}  \modelsWithO \exists \prg{x}.\syntax{\B}$ iff for some address $\iota$ and fresh variable $\prg{z}$,  we have $\M,\sigma[\prg{z}\mapsto\iota], {\sigma'[\prg{z}\mapsto\iota]} \modelsWithO  \syntax{\B[\prg{z}/\prg{x}}]$.
+  \item
+  $\M,\sigma,{\sigma'}  \modelsWithO \forall \prg{x}.\syntax{\B}$ iff for all addresses $\iota$ %\!\in dom\!(\sigma)$, 
+  and fresh variable $\prg{z}$, we have $\M,\sigma[\prg{z}\!\mapsto\!\iota],\sigma'[\prg{z}\!\mapsto\!\iota]  \modelsWithO  \syntax{\B[\prg{z}/\prg{x}}]$.
+
+\end{itemize}
+
+\end{definition}
+
+\noindent
+  For example, for states $\sigma_1$, $\sigma_2$ where
+$\interp  {\prg{x.balance}} {\sigma_1}  = 4$  and $\interp
+{\prg{x.balance}} {\sigma2}  = 14$,
+we have\\
+%  $\Prog{},\sigma,\sigma' \not\modelsWithO \prg{x.balance}\PRE  \geq 10$, and
+%  $\Prog{},\sigma_1,\sigma_2 \modelsWithO \prg{x.balance}\POST  \geq 10$.  And we would also have that
+\noindent  $\Prog{},\sigma_1,\sigma_2\modelsWithO \prg{x.balance}\POST = \prg{x.balance}\PRE+10$.
+
+
+
+\subsection{Policies and Specification} are expressed in terms of one-state assertions $\A$, $A'$, etc. and two state assertions $\B$, $\B''$ etc.\footnoteC{Should probably introduce this naming earlier on.}
+
+Policies can have one of the three following forms:
+1)~invariants of the form $\A$, which require that $\A$ holds at all visible states of a
+program; or
+2)\  $\A\, \lb \, \prg{code}\, \rb\, \B$, which require that execution of \prg{code} in any state which satisfies $\A$ will lead to a state
+ which satisfies $\B$ wrt the original state\footnoteC{How else to talk of validity of two-state assertions?};
+ or
+ 3)\ $\A\, \{\prg{any\_code}\}\, \B$ which, similar to two state invariants, requires that execution of {\em any} code in a state which satisfies $\A$ will lead to a state which satisfies $\B$.
+
+
+\begin{definition}[Policies and Specifications]
+\label{def:polAndSpec}
+ $ ~ $ \\
+ $
+\begin{array}{lclcl}
+Policy & \BBC & \ \A \ | \  \A \ \{ \prg{res}=\prg{this.m(par)} \}\  \B \ \\
+ & | \ & \   \A \ \{ \prg{res}=\prg{new(x1,..xn)} \}\  \B \\
+ & | \ & \ \ \A \ \{ \kw{any\_code} \}\ \B
+\\
+Specification & \  \BBC  & \  \prg{spec}\ SpcId \, \lb\, Policy^*\, \rb
+\end{array}
+$
+\end{definition}
+
+\footnote{Do we want to policies for constructors $ \A \ \{ \prg{res}=\prg{new(x1,..xn)} \}\  \B$ and do we still want to policy
+$\A \ \{ \prg{any\_code} \}\ \B$ -- we can add both; the next chapter is incomplete wrt the two latter ones}
+\footnoteC{TODO: Give examples of policies. Probably refer to the main part of paper where we have the policies already, Perhaps there are some examples further to those in the paper we would like to talk about}.
+
+\subsection{Connectivity Properties}
+
+A large amount of research into is concerned with properties of connectivity. For this we will first prove lemmas about connectivity.
+
+\begin{lemma}[Only Connectivity Begets Connectivity for Existing Objects] For any module $\M$, oracle $\O$, frame $\phi$,
+\label{lemma:connectivity-existing}\ \\
+\begin{itemize}
+\item  {If $\M, \phi \cdot \chi, \prg{stmts} \leadsto \phi' \cdot \chi'$ and if $\{x,z\}\subseteq dom(\chi)$, and
+$\M, \phi' \cdot \chi' \modelsWithO   \MayAccess(x,z)$,  then\\
+$\M, \phi \cdot \chi  \modelsWithO   \MayAccess(x,z)$ or
+$\exists w, y\in dom(\chi) \cap dom(\phi).\
+\M, \phi \cdot \chi \modelsWithO   \MayAccess(w,x) \land \MayAccess(y,z)$.}
+
+\item {If $\M, \phi \cdot \chi, \mathit{rhs} \leadsto \chi'$ and if
+$\{x,z\}\subseteq dom(\chi)$, and
+$\M, \phi \cdot \chi' \modelsWithO   \MayAccess(x,z)$ then\\
+$\M, \phi \cdot \chi  \modelsWithO   \MayAccess(x,z)$ or
+$\exists w, y\in dom(\chi) \cap dom(\phi).\
+\M, \phi \cdot \chi \modelsWithO   \MayAccess(w,x) \land \MayAccess(y,z)$.}
+
+\item {If $\phi' \cdot \chi' \in \Reach(M,\phi \cdot \chi,\stmts)$
+and if $\{x,z\} \subseteq dom(\chi)$, and
+$\M, \phi' \cdot \chi' \modelsWithO   \MayAccess(x,z)$ then\\
+$\M, \phi \cdot \chi  \modelsWithO   \MayAccess(x,z)$ or
+$\exists w, y\in dom(\chi) \cap dom(\phi).\
+\M, \phi \cdot \chi \modelsWithO   \MayAccess(w,x) \land \MayAccess(y,z)$.}
+
+\end{itemize}
+\end{lemma}
+
+This lemma expresses a basic property of object-capability
+systems that ``only connectivity begets connectivity''~\cite{MillerPhD},
+{and says that the only way that some existing object~$z$ can become
+accessible by some existing~$x$
+through executing statements $\prg{stmts}$ or expression~$\mathit{rhs}$
+is if each is already accessible to some~$y$ and~$w$ respectively that are
+both in the current stack frame~$\phi$.}
+\begin{proof}
+{
+The first two bullets we prove
+by structural induction over the mutual inductive definitions of $\leadsto$
+for statements and expressions. The final bullet is then proved by
+structural induction over statements using the definition of $\Reach$.
+}
+\end{proof}
+
+The following lemma expresses the only connectivity begets connectivity
+property for newly created objects.
+
+\begin{lemma}[Only Connectivity Begets Connectivity for New Objects]
+\label{lemma:connectivity-new}\ \\
+\begin{itemize}
+\item {If $\M, \phi \cdot \chi, \prg{stmts} \leadsto \phi' \cdot \chi'$ and if $x \in dom(\chi)$ and $z \not\in dom(\chi)$, and
+$\M, \phi' \cdot \chi' \modelsWithO   \MayAccess(x,z) \lor \MayAccess(z,x)$, then\\
+$\exists w \in dom(\chi) \cap dom(\phi).\
+\M, \phi \cdot \chi \modelsWithO   \MayAccess(w,x)$.}
+
+\item {If $\M, \phi \cdot \chi, \mathit{rhs} \leadsto \chi'$ and if
+$x \in dom(\chi)$ and $z \not\in dom(\chi)$, and
+$\M, \phi \cdot \chi' \modelsWithO   \MayAccess(x,z) \lor \MayAccess(z,x)$, then\\
+$\exists w \in dom(\chi) \cap dom(\phi).\
+\M, \phi \cdot \chi \modelsWithO   \MayAccess(w,x)$.}
+
+
+\item {If $\phi' \cdot \chi' \in \Reach(M,\phi \cdot \chi,\stmts)$
+and if $x \in dom(\chi)$ and $z \not\in dom(\chi)$, and
+$\M, \phi' \cdot \chi' \modelsWithO   \MayAccess(x,z) \lor \MayAccess(z,x)$, then\\
+$\exists w \in dom(\chi) \cap dom(\phi).\
+\M, \phi \cdot \chi \modelsWithO   \MayAccess(w,x)$.}
+
+\end{itemize}
+\end{lemma}
+
+It says that if an existing object~$x$ gains access to an object
+$z$ by executing $\stmts$ or $\mathit{rhs}$ in which $z$ is newly created, then
+$x$ must have already been accessible to some objecct $w$ in the initial stack
+frame~$\phi$.
+
+\begin{proof}
+Analogous to \autoref{lemma:connectivity-existing}.
+\end{proof}
+
+
+
+
+
+
+

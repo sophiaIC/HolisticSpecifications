@@ -1,0 +1,386 @@
+\subsection{Giving precise meaning to the policies} % {Specifying the policies}
+
+Armed with the concepts from section 4.1, we turn our attention to   the
+precise meaning  of the six policies. An important aspect of  our
+ approach is that we quantify over modules, extensions to
+modules, over the code being executed, and over execution contexts.
+
+We discuss the policies in  order of increasing complexity of their specification. We were surprised how many different interpretations we uncovered while developing this part of the work.
+
+%\jn{we haven't talked about all those quantifiers yet. need to give
+%  explicit examples, weave into the previous (sub)section. i.e we need
+%to give more examples/ precise defintions of the specification
+%langauge first.}
+
+% \paragraph{The sixth policy}
+
+
+ \paragraph{The fifth policy}
+  {\bf Pol\_5}, ``Balances are always non-negative integers'', is akin to object invariants \cite{Mey88,Parkinson07,pubsdoc:invariants-iwaco09}. We can  express the policy directly, by requiring that a module $M$ satisfies {\bf Pol\_5},
+if for all $M'$ legal extensions of $M$, and  runtime configurations $(ctxt, expr)$  arising through execution of the 
+augmented program  $M*M'$, the configuration $(ctxt, expr)$ will produce a context $ctxt'$, in which the balance is positive.
+
+
+%%\begin{figure}
+\begin{shaded}
+\begin{center}
+Module $M$ satisfies policy {\bf Pol\_5}\\ iff\\  $ \forall$ $M'$. $\forall (code,ctxt)
+% , such that: \  % code snippet
+%\ $M*M'$ defined, and   \ $(ctxt, code)
+\in{\mathcal A}rising(M*M')$, \ and  $\prg{prs}:_{ctxt}\prg{Purse}$: \\
+$ M*M', ctxt, code \ \leadsto \   ctxt', \val{}   \ \Rightarrow\  \prg{prs.balance}_{ctxt'}\geq 0$
+ \end{center}
+\end{shaded}
+% \caption{The fifth policy}
+% \end{figure}
+
+The subscripts in the path expression  \prg{prs.balance} indicate whether the path is looked up in the old, or the new context ($\prg{prs.balance}_{ctxt}$ vs \prg{prs.balance}$_{ctxt'}$).
+
+Execution uses the extended module $M*M'$, where $M'$ is universally quantified. This reflects the open nature of capability policies. It is essential to allow   $M*M'$ in the execution, because this supports  calling methods and accessing fields defined in $M$ but also in $M'$.
+ 
+We implicitly assume that quantification over linked modules only quantifies over those where
+the $*$ operator is defined. Thus, 
+\\ $~ \SP \SP \SP \forall M'. \forall (ctxt,code)\in {\mathcal A}rising(M*M')$ 
+\\ implicitly stands for \\
+$~ \SP \SP \SP \forall M' s.t. M*M' \mbox{is defined},  \forall code, ctxt, s.t. (ctxt,code)\in {\mathcal A}rising(M*M')$. 
+
+\paragraph{The third policy} {\bf Pol\_3}, stating  ``The mint can only inflate its own currency'',
+%It looks as if  it may have two possible  meanings:
+  could  mean  that the currency of a mint never decreases, or
+  that the mint cannot affect the currency of a different mint. 
+  As the second meaning is a corollary of {\bf Pol\_2}, we consider the first meaning only.
+
+We first  define the {\em currency} of a mint, which is an implicit assertion in the sense from section 3, as it  quantifies over all objects of the heap:
+\begin{center}
+$
+Currency_{ctxt}(\prg{mnt})=\sum_{\prg{p}\in Ps(\prg{mnt})_{ctx}}\prg{p.balance}_{ctxt}$
+\\
+where $Ps(\prg{mnt})_{ctxt} = \{ \prg{p} \ | \ \prg{p}:_{ctxt} \prg{Purse } \ \wedge
+\prg{p.mint}_{ctxt}=\prg{mnt}_{ctxt} \} $
+\end{center}
+
+We can now express the policy.
+
+
+\begin{shaded}
+\begin{center}
+Module $M$ satisfies policy {\bf Pol\_3} \\
+iff \\
+% for all modules
+$ \forall$ $M'$.  % , $code$, $ctxt$, such that: \  % code snippet
+%\ $M*M'$ defined, and   
+ $\forall (ctxt, code)\in{\mathcal A}rising(M*M')$,  and  \prg{mnt}$:_{ctxt}$\prg{Mint} \\
+$ M*M', ctxt, code \ \leadsto \ ctxt', \val{} $ \\
+$ \ \Rightarrow\ $
+\\
+ $ Currency(\mbox{\prg{mnt}})_{ctxt}\leq  Currency(\mbox{\prg{mnt}})_{ctxt'} $
+ \end{center}
+\end{shaded}
+
+\noindent
+{\bf Pol\_3} describes a
+monotonic property, and is therefore related to   history invariants \cite{usinghistory}. However, it differs from history invariants through its 
+open nature, and hence the quantification over $M'$. Note that in the conclusion  we talk about  the values of functions in the old context ({\it i.e.}  $Currency(\prg{mnt})_{ctxt}$) as well as those in the new context ({\it i.e.} $Currency(\prg{mnt})_{ctxt'}$).
+
+ 
+
+
+ \paragraph{The first policy.}
+{\bf Pol\_1}  states``With two purses of the same mint, one can transfer
+money between them''. It can be understood to mean that if \prg{p1} and \prg{p2} are    purses of the same mint,
+then the method call  \prg{p1.deposit(p2,m)}  will transfer the money. Therefore, it can 
+ specified   through a Hoare  Logic triple as 
+follows:
+\begin{center}
+$ \{ \ \prg{p1.mint=p2.mint} \ \wedge  \prg{ p1.amount=k1}\  \wedge \ \prg{p2.amount = k2 +m}\   \}$
+ \\
+$ \prg{p1.deposit(p2,m)} $
+ \\
+$ \{ \ \ \prg{p1.amount=k1+m}\  \wedge\  \prg{p2.amount = k2}  \  \} $
+  \end{center}
+  %\end{shaded}
+
+Using a similar notation to that we used so far, we can write {\bf Pol\_1} as: %  follows:
+
+
+\begin{shaded}
+\begin{center}
+%\begin{definition}[Specification of {\bf Pol\_1] -- first attempt}
+Module $M$ satisfies policy {\bf Pol\_1}\\
+ iff
+\\
+$\forall$  $M'$. %$\!\in Nat$, 
+ $\forall$  $(ctxt, \prg{p1.deposit(p2,m}))\in{\mathcal A}rising(M*M')$, \ with \prg{p1},\prg{p2}:$_{ctxt}$ \prg{Purse}:\ \\%
+ %, and  \prg{p2}$:_{ctxt} $\prg{Purse}:\\
+\prg{p1.mint} $_{ctxt}$=\prg{p2.mint}$_{ctxt}\ $      $\ \wedge\  \  \  \prg{p2.balance}_{ctxt} \geq \prg{m}$
+\\ 
+ $\ \wedge \    M*M',  ctxt,  \prg{p1.deposit(p2)}  \ \leadsto \ ctxt', \val{}$ \\
+$ \ \Rightarrow\ $ 
+\\
+\prg{p1.balance}$_{ctxt'}$= \prg{p1.balance}$_{ctxt}$\prg{+m}\ $ \wedge$ \ \prg{p2.balance}$_{ctxt'}$ = \prg{p2.balance}$_{ctxt}$\prg{-m}.
+ \end{center}
+\end{shaded}
+
+\noindent
+The above specification  ranges over all module extensions, $M'$, and thus covers a larger set  of runtime configurations than if
+it was expressed without the quantification over $M'$.
+ Therefore it guarantees that the code $M'$ can do nothing to break the behaviour of the \prg{deposit} method from $M$, thus forcing the method \prg{deposit} to be final, or a system with contracts which ensures any subclasses will satisfy the same contract.
+ 
+The above is perhaps an over-specification, as it prescribes {\em how}
+the transfer is to take place by explicitly calling the
+  \prg{p1.deposit(p2)}  method. Instead, we may want to only requiring
+that it should be {\em possible} for the transfer to take place,
+ without discussing features of the program design. Therefore, we define a
+second, more general version of the policy, which  only requires the existence of some
+  code snippet   that performs the transaction, and which applies existential qualification over the code:
+\begin{shaded}
+\begin{center}
+Module $M$ satisfies policy {\bf Pol\_1, vrs2} \\ iff
+\\
+$\forall  (ctxt,\_)\in{\mathcal A}rising(M)$. \ $\forall$ %  \prg{p1},\prg{p2}.  % $\forall$ \prg{p1}, \prg{p2}.
+% , \prg{m} $\in Nat$,
+\prg{p1}, \prg{p2}\,:$_{ctxt}$ \prg{Purse}.
+\\
+\prg{p1.mint} $_{ctxt}$=\prg{p2.mint}$_{ctxt}\ $      $\ \wedge \  \  \prg{p2.balance}\geq \prg{m}$
+ $\ \wedge \  \ \prg{p1},\prg{p2}\in {\mathcal A}ccPub(M, ctxt)$\\
+ $ \ \Rightarrow\ $\\
+$\exists$ $code$, such that
+$\  M,  ctxt, code \ \leadsto \ ctxt', \val{}$  $\ \wedge \  $\\
+\prg{p1.balance}$_{ctxt'}$= \prg{p1.balance}$_{ctxt}$\prg{+m}\ $ \wedge$ \ \prg{p2.balance}$_{ctxt'}$ = \prg{p2.balance}$_{ctxt}$\prg{-m}.
+ \end{center}
+\end{shaded}
+\noindent
+In the above specification, the existentially quantified code only appears in the conclusion of the specification. This  gives the correct, existentially quantified meaning to the selection of $code$. We require that the two purses are accessible in $ctxt$ without reading private fields (${\mathcal A}ccPub(M, ctxt)$). The specification does not range over extending modules, because the specification as given here implies the one  quantifying over module extensions $M'$ --  proof is further work.
+
+
+Another possible meaning of  {\bf Pol\_1}, however, is that the function \prg{deposit} may only be called if the two objects had the same mint:
+\begin{shaded}
+\begin{center}
+Module $M$ satisfies policy {\bf Pol\_1, vrs3} \\ iff
+\\
+$\forall  M', ctxt$, $(ctxt, \prg{p1.deposit(p2)})\!\in\!{\mathcal A}rising(M*M')$. \ \ $\forall$ \prg{p1},\, \prg{p2}\,:$_{ctxt}$ \prg{Purse}.\\
+$ M*M',  ctxt, \prg{p1.deposit(p2,m)} \ \leadsto \ ctxt', \val{}$ \\
+$ \ \Rightarrow\ $
+\\
+\prg{p1.mint}$_{ctxt}$\  =\ \prg{p2.mint}$_{ctxt}$ 
+ \end{center}
+\end{shaded}
+
+\noindent
+Note that in the above specification the conclusion is only concerned with properties observable in the original context, $ctxt$, while he premise is concerned with properties observable in $ctxt$ as well as $ctxt'$. This reflects the deny nature of the policy.
+
+A fourth possible meaning of {\bf Pol\_1} would be that  a money transfer from \prg{p1} to \prg{p2} may take place only if \prg{p1} and \prg{p2} share the   mint.  This poses the  challenge of identifying {\em the cause} of any difference in the balance; we therefore leave it for further work.  
+
+Finally, a fifth, and more straightforward meaning would mandate that the balance of a purse \prg{p1} may change, only 
+if \prg{deposit} was executed on \prg{p1} or with \prg{p1} as an argument. This can be expressed as follows:
+
+\begin{shaded}
+\begin{center}
+Module $M$ satisfies policy {\bf Pol\_1, vrs5} \\ iff
+\\
+$\forall M'. \, \forall (ctxt, code)\in{\mathcal A}rising(M*M'). \ \forall  \prg{p1} :_{ctxt} \prg{Purse}.$
+\\
+$M*M', ctxt,code \ \leadsto\  ctxt',\val{}\ \ \wedge \ \  \prg{p1.balance}_{ctxt} \neq  \prg{p1.balance}_{ctxt'}$
+\\
+$ \ \Rightarrow\ $
+\\
+$\exists  ctxt'$, \ s.t.$ \ \ \ \ \ $ $(ctxt', \prg{p1.deposit(\_,\_)})\in{\mathcal R}each(M*M',ctxt,code)$ \ or \\
+  $  ~ \ \ \ \ \  \ \ \ \ \ \ \ \  \ \ \ \ \  (ctxt',\prg{ \_.deposit(p1,\_)})\in{\mathcal R}each(M*M',ctxt,code)$ 
+ \end{center}
+\end{shaded}
+
+\noindent
+The assertion $(ctxt', \prg{p1.deposit(\_,\_)})\in{\mathcal R}each(M*M',ctxt,code)$ expresses that execution of the configuration
+$(ctxt, code)$ will reach a point where it calls the method \prg{deposit} on the receiver \prg{p1} -- \appref{formal:reachable}.
+ 
+
+%Notice that in the expression of  {\bf Pol\_1, vrs5} we allowed the premise to talk about properties in the original context 
+%({\it e.g.,} \prg{p1.balance}$_{ctxt}$) as well as properties in the new context ({\it e.g.,} \prg{p1.balance}$_{ctxt'}$).
+
+ \paragraph{The fourth policy}
+  {\bf Pol\_4}, ``No one can affect the balance of a purse they
+don't have'',  says that if some runtime configuration affects the balance of some purse  \prg{prs}, then the 
+original runtime configuration must have had access to the \prg{prs}
+itself.
+% has a very similar nature to {\bf Pol\_2}, but it is talking about purses rather than mints:
+
+% More concretely,
+
+\begin{shaded} 
+\begin{center}
+Module $M$ satisfies policy {\bf Pol\_4}\\  iff
+\\ $\forall$  $M'$, $(ctxt,code)\in{\mathcal A}rising(M*M')$. \ 
+ $\forall \prg{prs}:_{ctxt}\prg{Purse}$:\\
+$  M*M', ctxt \ \leadsto \ ctxt', \val{} \  \ \wedge \  \ \prg{prs.balance}_{ctxt}\neq \prg{prs.balance}_{ctxt'}$
+\\
+$ \ \Rightarrow\ $
+\\
+$\ HasAccess(M*M',ctxt,code,\prg{prs})$
+ \end{center}
+\end{shaded}
+ 
+ \noindent
+ Note that we have not yet specified the meaning of $\ HasAccess(M*M',ctxt,code,\prg{prs})$. We will discuss the possible meanings for this together with the second policy: 
+ 
+
+ \paragraph{The second policy.}
+{\bf Pol\_2}, stating ``Only someone with the mint of a given currency can violate conservation of that
+currency.'', is along the pattern of {\bf Pol\_4}, in that it mandates that certain changes of state (here change in currency) may only happen
+if the originating context had some property (here access to the mint).
+%Notice that {\bf Pol\_2} places restrictions on the code that may achieve a certain effect. Essentially, what it says is, that a module $M$
+%satisfies {\bf Pol\_2}, iff for all modules $M'$ which can be linked with $M$, and all code snippets $code$ executed using $M*M'$,   if execution of $code$ has some effect (\ie a modification of the currency), then the context of execution has some property (here has access to the mint).
+
+ 
+ 
+\begin{shaded}
+\begin{center}
+Module $M$ satisfies policy {\bf Pol\_2} \\ iff \\ $\forall$  $M'$, $(ctxt,code)\in{\mathcal A}rising(M*M')$. \ 
+ $\forall \prg{mnt}:_{ctxt} \prg{Mint}$:\\
+$ M*M', ctxt, code \ \leadsto \ ctxt', \val{} \ \ \wedge \  \ Currency_{ctxt}(\prg{mnt})\neq Currency_{ctxt'}(\prg{mnt})$
+\\
+$ \ \Rightarrow\ $
+\\
+$HasAccess(M*M',ctxt,code,\prg{mnt})$
+ \end{center}
+\end{shaded}
+
+\noindent
+ We now need to fix the meaning of $HasAccess(M*M',ctxt,code,\prg{mnt})$. We have the following three candidates:
+  
+  \begin{enumerate}
+    \item  $\prg{mnt} \in {\mathcal A}ccAll(M, cxtx)$, i.e. that  $ctxt$ has a path from the stack frame to \prg{mnt} which involves any fields. 
+\item $\prg{mnt}  \in {\mathcal U}ses(M, cxtx, code)$, i.e. that execution of $code$ in the context of $ctxt$ will at some point use  the object \prg{mnt}. 
+  \item $\prg{mnt} \in {\mathcal A}ccPub( cxtx, code)$, i.e. that  $ctxt$ has a path from the stack frame to \prg{mnt} which involves only public fields, or private fields from the same class  as the current recover.
+    \end{enumerate}
+    
+  Given lemma \ref{formal:lemma} from App. \ref{formal:relation}, the choices 2) and 3)  give  stronger guarantees, and are therefore to be preferred.  
+  
+  The module $M_{\prg{Purse}}*M_{{\prg{Mint}}}$  satisfies ${\bf Pol\_2}$ with  meaning 2) -- and therefore also with meaning 1), by application of lemma 
+ \ref{formal:lemma}. A proof sketch for why $M_{\prg{Purse}}*M_{{\prg{Mint}}}$  satisfies ${\bf Pol\_2}$ with  meaning 2) appears
+  in section 5.
+  
+   Interestingly, $M_{\prg{Purse}}*M_{{\prg{Mint}}}$  does {\em not} satisfy ${\bf Pol\_2}$ with  meaning 3). More importantly, without the concept of package and package-local classes, or some concept of ownership, it is impossible to write an implementation for {\prg{Purse}} so that it satisfies
+   ${\bf Pol\_2}$ with  meaning 3). Namely, we can always write another class {\prg{Cheat}} with a private field \prg{myMint} of class {\prg{Mint}}, and which leaks this field through a public method \prg{leak}. Then, in a context where \prg{x} points to a  {\prg{Cheat}} object, the code snippet $\kw{new}\ \prg{Purse(x.leak(),300)}$, affects the currency of \prg{x.myMint}, even though the initial context did not have public access to \prg{x.myMint}.
+  More discussion in section 6.3.
+  
+ \vspace{.1in}
+\noindent
+{\it The sixth policy} -- ``A reported successful deposit can be trusted as much as one trusts the purse one
+is depositing into'' -- relates to trust, a question left  to further work.
+  
+ 
+
+
+\label{HasAccess}
+
+
+\subsection{Capability Policy Specification Triples}
+
+The meanings of policies given in  the previous section vary, but they share  common characteristics:\begin{itemize}
+\item  They have the form that execution of some code under some conditions, guarantees some conclusion (except for {\bf Pol\_2,vrs2}).
+\item Conditions may refer to properties of the state before as well as after execution.
+\item The code may be universally  or existentially quantified, or  explicitly given.
+\item Conclusions may refer to properties of the state before as well as after execution.
+\end{itemize}
+
+\newcommand{\old}{{\ensuremath{_{\prg{OLD}}}}}   %{{\ensuremath{_{\prg{\bf{old}}}}}}
+\newcommand{\new}{{\ensuremath{_{\prg{NEW}}}}}   %  {{\ensuremath{_{\prg{\bf{new}}}}}}
+\newcommand{\some}{{\prg{SOME}}}
+\newcommand{\any}{{\prg{ANY}}}
+
+We propose   {\em policy triples},   consisting of three components. %  ${\it <Effect, Code, Concl>}$.
+  The first and third component %  $\it{Effect}$
+stand for the conditions and conclusions mentioned above,  and they describe properties of the context before as well as after the execution.
+In order to distinguish between the latter two, we use the subscripts  \prg{OLD} and \prg{NEW}.
+The second component   may fully specify some code, or quantify over all possible codes \any, or just require that some code exists \some.
+
+In the syntax from below, $PL\_Code$ stands for programming panguage code, $Func$ stands for user-defined functions (such as $Currency$) as well as system defined functions (such as ${\mathcal A}ccAll$ or ${\mathcal U}sed$), and $Pred$ stands for user or system-defined predicates (such as $\in$ or $\geq$).
+
+%{JAMES: Does the following help, or should it be deleted, or put in the appendix?}
+
+$
+\begin{array}{c}
+\begin{array}{lcl}
+\\
+\it{Policy} & \ \  ::= \ \  & \it{PolicyTriple}*
+\\
+ \it{PolicyTriple}  & ::= & < \ \ \it{Cond}, \it{Code}, \it{Cond} \ \ > \\
+ \it{Cond} & ::= &         \it{Pred}( \it{Entity}^*)  \ \  | \ \   \it{Cond}  \wedge  \it{Cond}    \  | \ \   \it{Cond}  \vee  \it{Cond}
+ \\
+  \it{Entity} & ::= &  \it{Arg}_{\it Annot} \ \     | \ \   \it{Func}( \ \it{Arg}*)_{\it Annot}
+  \\
+  {\it Annot} & ::= & \prg{OLD} \ \     | \ \ \prg{NEW}
+    \\
+    \it{Arg} & ::= &  \it{Path}\ |\  \it{Value}
+\\
+\it{Code} & \ \  ::= \ \  & \any \ \  | \ \  \some \ \  | \ \  {PL\_Code}
+\\
+\\
+\end{array}
+\end{array}
+$
+
+
+
+In figure~2 we express some of  the   policies through policy triples. Requirements such as $\prg{mnt}:\old \prg{Mint}$
+are left   implicit, as they follow  from the use of the  identifiers, e.g. from ${\it Currency(\prg{mnt})}\old$.
+
+ 
+\begin{figure}
+$\begin{array}{lclll}
+%{\bf Pol\_1} &\ \  \equiv \ \ & ( & \mbox{ \prg{p1.balance}\old=\prg{k1}\  $\wedge$ \ \prg{p2.balance} \old=\prg{k2+m}}, \\
+%& & & \prg{p1.deposit(p2)}, \\
+% & & &
+%\mbox{\prg{p1.balance}\new=\prg{k1+m}\ $ \wedge$ \ \prg{p2.balance}\new =\prg{k2}} & )  \\
+%\\
+{\bf Pol\_1, vrs2} & \equiv & ( & 
+ \prg{p1.mint}\old=\prg{p2.mint}\old\   \wedge   
+    \ \prg{p2.balance} \old\geq \prg{m}, \\
+& & &  \some , \\
+ & & &
+  \prg{p1.balance}\new=\prg{p1.balance}\old\prg{+m}\  \ \ \  \wedge  \\
+     & & &   \prg{p2.balance}\new=\prg{p2.balance}\old\prg{+m}  
+ &  )
+\\
+\\
+{\bf Pol\_2} & \equiv & ( &Currency( \mbox{ \prg{mnt}})\old\neq Currency( \mbox{ \prg{mnt}})\new,\\
+& & & \any , \\
+ & & &
+\prg{mnt}\old \in {\mathcal U}sed & )  \\
+\\
+{\bf Pol\_3} & \equiv & ( & \prg{true},\\
+& & &  \any , \\
+ & & &
+ Currency(\mbox{\prg{mnt}})\old\leq  Currency(\mbox{\prg{mnt}})\new   &  )
+\\
+\\
+{\bf Pol\_4} & \equiv & ( & \prg{prs.balance}\old\neq\prg{prs.balance}\new,\\
+& & &  \any , \\
+ & & &
+\prg{prs}\old \in {\mathcal U}sed & )
+\\
+\\
+{\bf Pol\_5} & \equiv & ( & \prg{true},\\
+& & &  \any , \\
+ & & &
+ \prg{prs.balance}\new\geq 0 & )
+\end{array}
+$
+\caption{Some of the five policies expressed through policy triples}
+\label{fig:pols}
+\end{figure}
+
+  
+
+Our triples   are a generalisation of Hoare logics. Namely,
+\begin{itemize}
+\item The assumptions and the conclusions may refer to properties of the runtime context before as well as after execution, while in Hoare triples the assumptions may  only refer to properties of the context before
+execution of the code.
+\item The second component may specify the code exactly (as is Hoare triples), or through existential or universal quantification.
+\item The properties under consideration may contain accessibility or tracing properties.
+\item The interpretation of the policy triples is always open, i.e. there is an implicit quantification over modules $M'$ extending the module $M$ expected to satisfy the policy.
+\end{itemize}
+
+ A module $M$ satisfies   a triple  ${\it <Cond_1, Cd_1, Cond_2>}$ iff for all $M'$, execution of ${\it{Cd_1}}$ with code $M*M'$ in a context $ctxt$  leading to $ctxt'$, then if $Cond_1$ holds on $ctxt$ and $ctxt'$, then $Cond_2$ holds on $ctxt$ and $ctxt'$. In further work we will define a mapping from such triples to their interpretation.
+
+

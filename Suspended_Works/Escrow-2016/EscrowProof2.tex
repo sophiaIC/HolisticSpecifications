@@ -1,0 +1,1213 @@
+\onecolumn
+\section{June 2016 EscrowProof2}
+
+
+\begin{figure*}[htb]
+\begin{lstlisting}
+method dealV2(  ) // returns Boolean
+{
+  //setup and validate Money purses
+  var escrowMoney := sellerMoney.sprout
+  var res := escrowMoney.deposit(0, sellerMoney)
+  if (!res) then {return false}
+  res := buyerMoney.deposit(0, escrowMoney)
+  if (!res) then {return false}
+  res := escrowMoney.deposit(0, buyerMoney)
+  if (!res) then {return false}
+
+  //setup and validate Goods purses
+  var escrowGoods := buyerGoods.sprout
+  res := escrowGoods.deposit(0, buyerGoods)
+  if (!res) then {return false}
+  res := sellerGoods.deposit(0, escrowGoods)
+  if (!res) then {return false}
+  res := escrowGoods.deposit(0, sellerGoods)
+  if (!res) then {return false}
+
+  // start the actual exchange
+  res := escrowMoney.deposit(price, buyerMoney)
+  if (!res) then {return false}
+  res := escrowGoods.deposit(amt, sellerGoods)
+  if (!res) then {
+    // undo the transaction
+    buyerMoney.deposit(price, escrowMoney)
+    return false}
+  // transfer from the two escrows to two accounts
+  sellerMoney.deposit(price, escrowMoney)
+  buyerGoods.deposit(amt, escrowGoods)
+
+  return true
+}
+\end{lstlisting}
+%\vspace*{-7mm}
+\caption{Consolidated i.e.\ full length version of the \prg{deal\_V2} method}
+\label{fig:DealV2Consolidated}
+\end{figure*}
+
+
+\begin{figure*}[htb]
+\begin{lstlisting}
+method deal( DOWEWANTARGUMENTS )
+{
+  //setup and validate Money purses
+  var escrowMoney := sellerMoney.sprout
+  var res := escrowMoney.deposit(0, sellerMoney)
+  if (res) then  {
+    res :=  buyerMoney.deposit(0, escrowMoney)
+    if (res) then  {
+      res := escrowMoney.deposit(0, buyerMoney)
+      if (res) then  {
+
+        // set up and validate Goods purses
+        var escrowGoods := buyerGoods.sprout
+        res := escrowGoods.deposit(0, buyerGoods)
+        if (res) then  {
+          res := sellerGoods.deposit(0, escrowGoods)
+          if (res) then  {
+            res :=  escrowGoods.deposit(0, sellerGoods)
+            if (res) then  {
+
+              // start the actual exchange
+              res := escrowMoney.deposit(price, buyerMoney)
+              if (res) then  {
+                res := escrowGoods.deposit(amt, sellerGoods)
+                if (!res) then  {
+                  // undo the transaction
+                  buyerMoney.deposit(price, escrowMoney)
+                } else {
+                  // transfer from the two escrows to two accounts
+                  sellerMoney.deposit(price, escrowMoney)
+                  buyerGoods.deposit(amt, escrowGoods)
+                }
+              } else skip
+            } else skip
+          } else skip
+        } else skip
+      } else skip
+    } else skip
+  }
+  return res
+}
+\end{lstlisting}
+%\vspace*{-7mm}
+\caption{Revised \prg{deal} method expressed without {\prg{return}} statements}
+\label{fig:DealV3}
+\end{figure*}
+
+\newcommand{\bothfigs}{fig.~\ref{fig:DealV2Consolidated} or \ref{fig:DealV3}}
+
+\newpage
+
+\begin{figure*}[htb]
+\begin{lstlisting}[escapechar=@]
+true
+     @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+sellerMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+   sellerMoney $\obeys$ ValidPurse $\wedge$
+   // TRUST
+   escrowMoney $\obeys$ ValidPurse $\wedge$ CanTrade(sellerMoney, escrowMoney) $\wedge$
+   // FUNCTIONAL
+   escrowMoney.balance=0) $\wedge$
+   // RISK
+$\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ escrowMoney $\neq$ p ]  $\wedge$
+$\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]
+\end{lstlisting}
+\caption{Hoare tuple for first step in \prg{deal} (Done with lstisting)}
+\label{fig:DealV3:S1}
+\end{figure*}
+
+
+\newcommand{\MACROsproutOld}[2]{{
+{\tt\footnotesize
+\fbox{\parbox{0.8\textwidth}{
+\internallinenumbers
+\resetlinenumber[1]
+\begin{verse}
+  true \\
+   ~~~~~~\textbf{ \{ var #1 := #2.sprout \} }\\
+   #2$\pre$ $\obeys$ ValidPurse $\rightarrow$ (\\
+   ~~~~#2 $\obeys$ ValidPurse $\wedge$ \\
+   ~~~~// TRUST \\
+   ~~~~#1 $\obeys$ ValidPurse $\wedge$ CanTrade(#2, #1) $\wedge$\\
+   ~~~~// FUNCTIONAL  \\
+   ~~~~#1.balance=0 )$\wedge$\\
+   // RISK\\
+   $\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ #1 $\neq$ p ]  $\wedge$\\
+   $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] \\
+\end{verse}
+}}
+}}}
+
+\begin{figure*}[htb]
+\MACROsproutOld{escrowMoney}{sellerMoney}
+\caption{MACRO VERSION: Hoare tuple for first step in \prg{deal} - \sdJJ{has some errors}}
+\label{fig:DealV3:S1:old}
+\end{figure*}
+ 
+
+\newcommand{\MACROsproutNew}[2]{{
+{\tt\footnotesize
+\fbox{\parbox{0.8\textwidth}{
+\internallinenumbers
+\resetlinenumber[1]
+\begin{verse}
+  true \\
+   ~~~~~~\textbf{ \{ var #1 := #2.sprout \} }\\
+   #2$\pre$ $\obeys$ ValidPurse $\rightarrow$ (\\
+   ~~~~#2 $\obeys$ ValidPurse $\wedge$ \\
+   ~~~~// TRUST \\
+   ~~~~#1 $\obeys$ ValidPurse $\wedge$ CanTrade(#2, #1) $\wedge$\\
+   ~~~~// FUNCTIONAL  \\
+   ~~~~#1.balance=0 )$\wedge$\\
+   // RISK\\
+   $\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ 
+        ( [ p.balance=p.balance$\pre$ $\wedge$ #1 $\neq$ p ] $\vee$\\  
+        ~~~~ ~~~~ ~~~~ ~~~~~~~~ ~~~~ ~~~~ ~~~~ $\MayAccess\pre$(#1,p) ) ]  \\
+   $\wedge$\\
+   $\forall$z:$\pre$Object.$\forall$u:Object. \\
+   ~~~~[ $\MayAccess$(z,u) $\rightarrow$ ($\MayAccess\pre$(z,u)$\vee$ ($\MayAccess\pre$(#2,z)$\wedge\MayAccess\pre$(#2,u)) ] \\
+   $\HoareCSep$\\
+   true
+\end{verse}
+}}
+}}}
+
+\begin{figure*}[htb]
+\MACROsproutNew{escrowMoney}{sellerMoney}
+\caption{MACRO VERSION: Hoare tuple for first step in \prg{deal} - \sdJJ{corrected}}
+\label{fig:DealV3:S1}
+\end{figure*}
+
+
+ 
+
+
+% \newcommand{\MACROvalidate}[2]{{
+% {\tt\footnotesize
+% \fbox{\parbox{0.8\textwidth}{
+% \internallinenumbers
+% \resetlinenumber[1]
+% \begin{verse}
+%       true\\
+%       ~~~~~~\textbf{ \{ res := #1.deposit(0, #2) \} }\\
+%       (#1$\pre$ $\obeys$ ValidPurse $\rightarrow$  #1 $\obeys$ ValidPurse) $\wedge$ \\
+%       // TRUST AND FUNCTIONAL\\
+%       res $\equiv$ CanTrade(#1,#2)$\PRE{}$  $\wedge$\\
+%       // RISK\\
+%       $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$\\
+%       $\forall$o:$\pre$Object.\ $\forall$p$\obeys\pre$ValidPurse.\
+%          [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )\\
+% \end{verse}
+% }}
+% }}}
+
+% \begin{figure*}[htb]
+% \MACROvalidate{escrowMoney}{sellerMoney}
+% \caption{WRONG MACRO VERSION: Hoare tuple for step 2 in \prg{deal}}
+% \label{fig:DealV3:S2}
+% \end{figure*}
+
+
+
+
+% \newcommand{\MACROdeposit}[3]{{
+% {\tt\footnotesize
+% \fbox{\parbox{0.8\textwidth}{
+% \internallinenumbers
+% \resetlinenumber[1]
+% \begin{verse}
+%       #2$\in \mathbb{N}$\\
+%       ~~~~~~\textbf{ \{ res := #1.deposit(#2, #3) \} }\\
+%       #1$\pre$ $\obeys$ ValidPurse $\rightarrow$ [\\
+%       #1 $\obeys$ ValidPurse $\wedge$\\
+%       (res $\rightarrow$ \\
+%       ~~~~// TRUST\\
+%       ~~~~CanTrade(#1,#3)$\PRE{}$  $\wedge$\\
+%       ~~~~// FUNCTIONAL  \\
+%       ~~~~0$\leq$#2$\leq$#3.balance$\PRE{}\ \wedge$\\
+%       ~~~~#1.balance=#1.balance$\PRE$+#2 $\wedge$\\
+%       ~~~~#3.balance=#3.balance$\PRE$-#2  $\wedge$\\
+%       ~~~~//RISK\\
+%       ~~~~$\forall$p.[ p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$#1,#3$\}\,\rightarrow$\\
+%       ~~~~~~~~ p.balance=p.balance$\pre$ ]  $\wedge$\\
+%       ~~~~$\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+%                [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]~~)\\
+%       $\vee$\\
+%       ($\neg$res $\rightarrow$ \\
+%       ~~~~// TRUST and FUNCTIONAL  \\
+%       ~~~~$\neg$[ CanTrade(#1,#3)$\PRE{}$ $\wedge$ 0$\leq$#2$\leq$#3.balance$\PRE{}$ ] $\wedge$\\
+%       ~~~~// RISK\\
+%       ~~~~$\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$\\
+%       ~~~~$\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+%                [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]~~)~~]\\
+% \end{verse}
+% }}
+% }}}
+
+% \begin{figure*}[htb]
+% \MACROdeposit{escrowMoney}{price}{buyerMoney}
+% \caption{WRONG MACRO VERSION: Hoare tuple for step 9 in \prg{deal}}
+% \label{fig:DealV3:S9}
+% \end{figure*}
+
+\cleardoublepage
+\newpage
+
+We now outline the most salient steps from the proof of the
+Escrow --- fig.~\ref{fig:DealV2Consolidated} shows the code of the
+whole deal method.
+To simplify the Hoare rules our formal language does not support
+returning from the inside of a method. Fig.~\ref{fig:DealV3}
+shows a re-written version of the method using only conditional
+statements: note that the line numbers match
+fig.~\ref{fig:DealV2Consolidated} as much as possible.
+
+\subsection{Step 1}\footnote{James updated on 29th June, and Sophia revisited on 30th June}
+
+The pre- and post-conditions for the first method call that
+\lstinline+sprout+'s the \lstinline+escrowMoney+ purse from the
+\lstinline+sellerMoney+ purse (line 4 in
+\bothfigs) are shown in fig.~\ref{fig:DealV3:S1}.
+The postcondition is concerned with two scenarios: what if \prg{escrowMoney} is valid purse, and what if it it not?
+
+
+
+\subsubsection{What if \prg{escrowMoney} is valid purse}
+
+First, from \lstinline+Policy_sprout+ in the \lstinline+ValidPurse+
+specification (fig.~\ref{fig:ValidPurse}) by straightforwardly
+applying \ruleN{meth-call-1} we obtain (1A):
+
+\begin{tabular}{lll}
+{\bf 1A} & &
+\begin{lstlisting}[escapechar=@]
+sellerMoney $\obeys$ ValidPurse
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+   // TRUST
+escrowMoney $\obeys$ ValidPurse $\wedge$ CanTrade(sellerMoney, escrowMoney) $\wedge$
+   // FUNCTIONAL
+escrowMoney.balance=0 $\wedge$
+   // RISK
+$\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ escrowMoney $\neq$ p ]  $\wedge$
+$\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]  
+   $\HoareCSep$
+true
+\end{lstlisting}
+\end{tabular}
+
+\noindent (1A) includes \lstinline+sellerMoney $\obeys$ ValidPurse+ in
+the pre-condition.  We can "move" this into the postcondition by
+applying \ruleN{Cons-2} ---  allowing us to weaken the precondition
+to \lstinline+true+ (1B):
+ 
+
+\begin{tabular}{lll}
+{\bf 1B} & & \begin{lstlisting}[escapechar=@]
+true
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+sellerMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+   // TRUST
+   escrowMoney $\obeys$ ValidPurse $\wedge$ CanTrade(sellerMoney, escrowMoney) $\wedge$
+   // FUNCTIONAL
+   escrowMoney.balance=0 $\wedge$
+   // RISK
+   $\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ escrowMoney $\neq$ p ]  $\wedge$
+   $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )
+   $\HoareCSep$
+true
+\end{lstlisting}
+\end{tabular}
+
+
+We need to ensure that we remember that \lstinline+sellerMoney+ still $\obeys$
+\texttt{ValidPurse} in the post-condition, ie line 4 below. We apply on (1B) the rules
+\ruleN{code-invar-2}, \ruleN{Cons-1}), and \ruleN{Cons-2}) to get (1C):
+
+\begin{tabular}{lll}
+{\bf 1C} & &
+\begin{lstlisting}[escapechar=@]
+true
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+sellerMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+   sellerMoney $\obeys$ ValidPurse $\wedge$
+   // TRUST
+   escrowMoney $\obeys$ ValidPurse $\wedge$ CanTrade(sellerMoney, escrowMoney) $\wedge$
+   // FUNCTIONAL
+   escrowMoney.balance=0 $\wedge$
+   // RISK
+   $\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ escrowMoney $\neq$ p ]  $\wedge$
+   $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )
+   $\HoareCSep$
+true
+\end{lstlisting}
+\end{tabular}
+
+\noindent
+We can use \ruleN{code-invar-2} and the invariance of $\obeys$ to show
+that at this point we have already established the one-way trust
+relationship (1-ONEWAY):
+
+\begin{lstlisting}[backgroundcolor=\color{yellow}]
+sellerMoney $\obeys$ ValidPurse $\rightarrow$  escrowMoney $\obeys$ ValidPurse
+\end{lstlisting}
+
+So far so good: but the problem is that the RISK is only bounded if
+the \lstinline+sellerMoney+ purse obeys its specification.   Because
+of object-capability safety we are able to reason about connectivity even when
+objects do not obey their specifications
+
+\subsubsection{What if we have no evidence that \prg{escrowMoney} is valid purse}
+
+\paragraph{Who may affect} The first question we tackle is who may affect a purse's balance.
+For this,  \ruleN{code-invar-1} lets us import the policy
+\lstinline+Pol_protect_balance+ from \lstinline+ValidPurse+:  
+
+\begin{tabular}{lll}
+{\bf 1D} & & \begin{lstlisting}[escapechar=@]
+true
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+   //RISK
+true
+   $\HoareCSep$
+$\forall$ p. [ p $\obeys$ ValidPurse $\rightarrow$ $\forall$ o:Object.[$\MayAffect$(o,p.balance) $\rightarrow$ $\MayAccess$(o,p)] ]
+\end{lstlisting}
+\end{tabular}
+
+By application of rules \ruleN{code-invar-1}, \ruleN{Cons} and \ruleN{Cons-1} on (1D) we obtain
+
+\begin{tabular}{lll}
+{\bf 1E} & & 
+\begin{lstlisting}[escapechar=@]
+p $\obeys$ ValidPurse 
+    @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+true
+    $\HoareCSep$
+$\forall$z.[$\MayAffect$(z, p.balance ) $\rightarrow$ $\MayAccess$(z,p)]  
+\end{lstlisting}
+\end{tabular}
+
+
+
+
+\vspace{.02in}
+\paragraph{How does accessibility evolve} The next question we tackle is 
+changes in accessibility after the first line.
+We start by application of \ruleN{meth-Call-2} ---
+this says that the only way \sdJJ{accessibility can increase} is by the
+\lstinline+sellerMoney+ having \sdJJ{access to objects, and passing these to other objects.}.
+We combine \ruleN{meth-Call-2} with \ruleN{Cons-1} and obtain:\footnote{\sdJJ{This is different from the old version, because of the
+quantifiers $\forall$ z: $\Obj$. $\forall$ u:$\pre$ $\Obj$. in line 6 -- we allow for new objects too}}
+ 
+
+\begin{tabular}{lll}
+{\bf 1F} & &
+\begin{lstlisting}[escapechar=@]
+true
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+   //RISK
+$\forall$ z:$\pre$ $\Obj$.[ $\MayAccess$(escrowMoney, z) $\rightarrow$ $\MayAccess\pre$(sellerMoney, z) ]
+   $\HoareCSep$
+$\forall$ z:$\Obj$.$\forall$ u:$\Obj$.
+    [  $\MayAccess$(z,u) $\rightarrow$
+         [$\MayAccess\pre$(z,u)$\,\vee\,$ ($\MayAccess\pre$(sellerMoney,u)$\wedge\MayAccess\pre$(sellerMoney,z)]   ]
+\end{lstlisting}
+\end{tabular}
+
+\vspace{.02in}
+\paragraph{When does the balance of a valid purse change?}
+
+We put together (1E), (1F) through rule \ruleN{Conj}, apply \ruleN{Cons-1} and obtain (1G) below. To do that we need to prove that 
+$\forall z:\Obj.\forall u: \Obj.
+[ \MayAccess(z, u)\rightarrow[\MayAccess\pre(z, u) \,\vee\, \MayAccess\pre(sellerMoney, u)]$ and $\neg\MayAccess\pre(sellerMoney, p)$  imply that 
+$\forall z:\Obj.[\MayAccess(sellerMoney, z) \rightarrow
+\neg\MayAccess(z, p)$. This is shown through transitivity of the $\MayAccess$ relation -- connectivity begets connectivity. 
+
+
+\begin{tabular}{lll}
+{\bf 1G} & &
+\begin{lstlisting}[escapechar=@]
+p $\obeys$ ValidPurse $\wedge\ \neg\MayAccess$(sellerMoney, p) 
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+   //RISK
+true
+   $\HoareCSep$
+$\forall$z.[$\MayAffect$(z,p.balance) $\rightarrow$ $\MayAccess$(z,p)]
+   $\wedge$
+$\forall$ z:$\Obj$.[ $\MayAccess$(sellerMoney,z) $\rightarrow$ $\neg\MayAccess$(z,p) ]
+\end{lstlisting}
+\end{tabular}
+ 
+
+We can now  apply on (1G) the rule \ruleN{Frame-MethCall} to establish that
+ good purses inaccessible to \lstinline+sellerMoneyt+ cannot be changed by calling
+\lstinline+sprout+. We obtain (1H): 
+
+\begin{tabular}{lll}
+{\bf 1H} & &
+\begin{lstlisting}[escapechar=@]
+p $\obeys$ ValidPurse $\wedge\ \neg\MayAccess$(sellerMoney, p) 
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+   //RISK
+p.balance = p.balance\pre  
+   $\HoareCSep$
+true   
+   \end{lstlisting}
+\end{tabular}
+
+And by applying \ruleN{Cons-2}, and \ruleN{Quantifiers-1}  on (1H) we obtain (1I):
+
+\begin{tabular}{lll}
+{\bf 1I} & &
+\begin{lstlisting}[escapechar=@]
+true 
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+   //RISK
+$\forall$ p. [ p $\obeys$ ValidPurse $\rightarrow$ [ p.balance = p.balance$\pre\,\vee\,  \MayAccess$(sellerMoney, p) ] ]
+   $\HoareCSep$
+true   
+   \end{lstlisting}
+\end{tabular}
+
+
+
+\vspace{.02in}
+\subsubsection{Putting it all together } We now combine the results from (1C), (1I), (1F) - lines 6, 7 and 8, and obtain: 
+
+\begin{tabular}{lll}
+{\bf 1K} & &
+\begin{lstlisting}[escapechar=@]
+true
+        @\textbf{ \{ var escrowMoney := sellerMoney.sprout \} }@
+sellerMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+   sellerMoney $\obeys$ ValidPurse $\wedge$
+   // TRUST
+   escrowMoney $\obeys$ ValidPurse $\wedge$ CanTrade(sellerMoney, escrowMoney) $\wedge$
+   // FUNCTIONAL
+   escrowMoney.balance=0 $\wedge$
+   // RISK
+   $\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ escrowMoney $\neq$ p ]  $\wedge$
+   $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )
+$\wedge$
+$\forall$ p. [ p $\obeys$ ValidPurse $\rightarrow$ [ p.balance = p.balance$\pre\,\vee\,  \MayAccess$(sellerMoney, p) ] ]
+$\wedge$
+$\forall$ z:$\Obj$.$\forall$ u:$\Obj$.
+    [  $\MayAccess$(z,u) $\rightarrow$
+         [$\MayAccess\pre$(z,u) $\,\vee\,$ ($\MayAccess\pre$(sellerMoney,u)$\wedge\MayAccess\pre$(sellerMoney,z)]   ]
+$\HoareCSep$
+true
+\end{lstlisting}
+\end{tabular}
+ 
+
+\subsection{Step 2}
+
+We next must consider the second method call (
+%
+\lstinline+escrowMoney.deposit(0, sellerMoney)+,
+%
+line 5 in \bothfigs) where the
+\lstinline+escrowMoney+ purse in turn validates the
+\lstinline+sellerMoney+ purse.
+There are two policies describing the behaviour of the
+\lstinline+deposit+ method in the
+\lstinline+ValidPurse+ specification (fig.~\ref{fig:ValidPurse}).
+\lstinline+Pol_deposit_1+ applies when a deposit reports success (by
+returning \lstinline+true+) and \lstinline+Pol_deposit_2+ when a
+deposit reports failure.  Because we're only interested in validating
+the purses, the amount we are attempting to transfer is 0, and so we
+can combine these policies, giving the pre- and post-conditions
+in fig.~\ref{fig:DealV3:S2}.
+
+The overall shape of the argument follows step 1, except that we need
+to consider the additional \lstinline+src+ argument of the deposit.
+
+Applying \ruleN{meth-call-1} and \ruleN{Conj}
+to \lstinline+Pol_deposit_1+ and \lstinline+Pol_deposit_2+
+we obtain (2A):
+
+\begin{lstlisting}[escapechar=@]
+escrowMoney $\obeys$ ValidPurse
+       @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+      // TRUST
+res $\equiv$ CanTrade(escrowMoney,sellerMoney)$\PRE{}$  $\wedge$
+      // RISK AND FUNCTIONAL
+$\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+$\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+\noindent (2A) again includes \lstinline+escrowMoney $\obeys$ ValidPurse+ in
+the pre-condition.  We can "move" this into the postcondition by
+applying \ruleN{Cons-2} ---  allowing us to weaken the precondition
+to \lstinline+true+ (2B):
+
+\begin{lstlisting}[escapechar=@]
+true
+       @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+escrowMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+      // TRUST
+      res $\equiv$ CanTrade(escrowMoney,sellerMoney)$\PRE{}$  $\wedge$
+      // RISK AND FUNCTIONAL
+      $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+      $\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse.
+         [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+We need to ensure that we remember that \lstinline+escrowMoney+ still $\obeys$
+\texttt{ValidPurse} in the post-condition. We apply
+\ruleN{code-invar-2}, \ruleN{Cons-1}) to get (2C):
+
+\begin{lstlisting}[escapechar=@]
+true
+       @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+escrowMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+      escrowMoney $\obeys$ ValidPurse $\wedge$
+      // TRUST
+      res $\equiv$ CanTrade(escrowMoney,sellerMoney)$\PRE{}$  $\wedge$
+      // RISK AND FUNCTIONAL
+      $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+      $\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse.
+         [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+
+We again need to bound the risk whether or not \lstinline+escrowMoney+
+obeys its specification. Here we must take the argument purse into account.
+\kjx{James --- ignoring the 0 passed in, but worrying about res.}
+We again apply \ruleN{meth-Call-2} (2D):
+
+\begin{lstlisting}[escapechar=@]
+true
+        @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+   //RISK
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z))
+   $\HoareCSep$
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$ (( $\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z)  ) $\wedge$
+                             ($\MayAccess\pre$(escrowMoney, u) $\vee$ $\MayAccess\pre$(sellerMoney, u)  )) ] )
+\end{lstlisting}
+
+
+Then \ruleN{code-invar-1} lets us import \lstinline+Pol_protect_balance+: (2E)
+
+\begin{lstlisting}[escapechar=@]
+true
+         @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+    //RISK
+true
+    $\HoareCSep$
+$\forall$ z. z $\obeys$ ValidPurse $\rightarrow$ $\forall$ o:Object. [$\MayAffect$(o,z.balance) $\rightarrow$ $\MayAccess$(o,z) ]
+\end{lstlisting}
+
+
+The we combine (2D) and (2E) to get (2F):
+
+\begin{lstlisting}[escapechar=@]
+true
+        @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+   //RISK
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z))
+   $\HoareCSep$
+[ $\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z)  ) $\wedge$
+        ($\MayAccess\pre$(escrowMoney, u) $\vee$ $\MayAccess\pre$(sellerMoney, u)  )) ] ) ] $\wedge$
+[ $\forall$ z. z $\obeys$ ValidPurse $\rightarrow$
+       $\forall$ o:Object. ($\MayAffect$(o,z.balance) $\rightarrow$ $\MayAccess$(o,z) ) ]
+\end{lstlisting}
+
+
+\kjx{James --- Is this assumption right?}  We apply \ruleN{method-call-2}
+again, but hypothesizing that there is some other \kjx{ValidPurse}  $p$ that
+neither sellerMoney nor escrowMoney can access (2G):
+
+
+\begin{lstlisting}[escapechar=@]
+$\forall$ p. p $\obeys$ ValidPurse. $\neg$ $\MayAccess$(escrowMoney, p) $\wedge$ $\neg$ $\MayAccess$(sellerMoney, p)
+         @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+    //RISK
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z))
+   $\HoareCSep$
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z)  ) $\wedge$ ($\MayAccess\pre$(escrowMoney, u) $\vee$ $\MayAccess\pre$(sellerMoney, u)  )) ] )
+\end{lstlisting}
+
+We need to show the assumption is preserved, i.e. the is no purse they couldn't get to before, but can get to afterwards: given
+%
+\lstinline+$\neg$ $\MayAccess\pre$(escrowMoney, p) $\wedge$ $\neg$ $\MayAccess\pre$(sellerMoney, p)+
+%
+we have to show
+%
+\lstinline+$\neg$ $\MayAccess$(escrowMoney, p) $\wedge$ $\neg$ $\MayAccess$(sellerMoney, p)+
+
+
+The reasoning is the same as the 1G step: contradiction on the invariant: to conclude
+$\MayAccess\texttt{(escrowMoney, p)}$  then either
+$\MayAccess\pre\texttt{(escrowMoney, p)}$  (contradiction) or
+$\MayAccess\pre\texttt{(escrowMoney, z)}$ where $z = p$ (contradition);
+and similarly
+$\MayAccess\texttt{(sellerMoney, p)}$  then either
+$\MayAccess\pre\texttt{(sellerMoney, p)}$  (contradiction) or
+$\MayAccess\pre\texttt{(sellerMoney, z)}$ where $z = p$ (contradition).
+
+\begin{lstlisting}[escapechar=@]
+$\forall$ p: p $\obeys$ ValidPurse. $\neg$ $\MayAccess$(escrowMoney, p) $\wedge$ $\neg$ $\MayAccess$(sellerMoney, p)
+         @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+    //RISK
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z))
+   $\HoareCSep$
+   //What the rule gives us
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z)  ) $\wedge$ ($\MayAccess\pre$(escrowMoney, u) $\vee$ $\MayAccess\pre$(sellerMoney, u)  )) ] )
+   //WHAT SOPHIA WANTS
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(escrowMoney, z) $\rightarrow$ $\neg \MayAccess$(z,p) $\wedge$
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(sellerMoney, z) $\rightarrow$ $\neg \MayAccess$(z,p)
+   //WHAT James thinks we can get (which implies sophia's condition above)
+$\neg \MayAccess\texttt{(escrowMoney, p)} \wedge \neg \MayAccess\texttt{(sellerMoney, p)}$
+\end{lstlisting}
+
+
+Again we cross our fingers and invoke \ruleN{frame-methCall}:
+
+$\begin{array}{l}
+   \inferenceruleNNP {frame-methCall} {
+          \Hoare{\A}   {v:=\prg{x.m(y)}} {{\true}}  {\B} \\
+B \equiv \forall \prg{z}. (\ \MayAffect(\prg{z},\A')  \rightarrow \B'({\prg{z}})\ )\ \ \wedge
+          \\
+% trick for layout
+		\SP\SP  \
+		{\forall \prg{z}.(\ (\MayAccess\pre(\prg{x},\prg{z}) \vee \MayAccess\pre(\prg{y},\prg{z})
+           \vee \New(\prg{z}) \ )%(\prg{z}:\prg{Object}\wedge \neg ( \prg{z}:\pre\prg{Object}) ) \ )
+           \ \rightarrow\  \neg \B'(\prg{z})\ )}
+}
+{
+          \Hoare{{\A\wedge\A'}} {\prg{v:=x.m(y)}} {\A'} {{\true}}
+}
+\end{array}{l}$
+
+The ``precondition'' is: $A \equiv \neg \MayAccess\texttt{(escrowMoney, p)} \wedge \neg \MayAccess\texttt{(sellerMoney, p)}$
+
+The property being preseved is:
+ $A' \equiv \texttt{p.balance} = \texttt{p.balance}\pre$.
+
+We hypothesize:
+%
+$B'(z) \equiv  \MayAccess\texttt{(z , p)}$
+
+We need (2H):
+
+\begin{lstlisting}[escapechar=@]
+$\forall$ p: p $\obeys$ ValidPurse. $\neg \MayAccess$(escrowMoney, p) $\wedge$  $\neg \MayAccess$(sellerMoney, p)
+    @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+true
+    $\HoareCSep$
+$\forall$z.($\MayAffect$(z, p.balance ) $\rightarrow$ $\MayAccess$(z,p)) $\wedge$
+$\forall$z.(($\MayAccess$(escrowMoney,z) $\vee$ $\MayAccess$(sellerMoney,z) $\vee$ New(z))$\rightarrow$ $\neg \MayAccess$(z,p))
+\end{lstlisting}
+
+We know the first conjunct because \lstinline+p+ is a good purse by \lstinline+Pol_protect_balance+.
+We know the second by transitivity of $\MayAccess$,
+and \lstinline+p+ is in the pre-state so it cannot be new;
+
+Thus we obtain (2I):
+
+\begin{lstlisting}[escapechar=@]
+$\forall$ p: p $\obeys$ ValidPurse. $\neg \MayAccess$(escrowMoney, p) $\wedge$  $\neg \MayAccess$(sellerMoney, p)
+    @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+p.balance = p.balance$\pre$
+    $\HoareCSep$
+true
+\end{lstlisting}
+
+
+By \ruleN{CONS-2} (2J):
+
+\begin{lstlisting}[escapechar=@]
+true
+    @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+$\forall$ p: p $\obeys\pre$ ValidPurse. ($\neg \MayAccess$(escrowMoney, p) $\wedge \neg \MayAccess$(sellerMomey, p) ) $\rightarrow$ p.balance = p.balance$\pre$
+    $\HoareCSep$
+true
+\end{lstlisting}
+
+Rewriting the implication (2K):
+
+\begin{lstlisting}[escapechar=@]
+true
+    @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+$\forall$ p: p $\obeys\pre$ ValidPurse.  ($\MayAccess$(escrowMoney, p) $\vee$ $\MayAccess$(sellerMomey, p) )  $\vee$ p.balance = p.balance$\pre$
+    $\HoareCSep$
+true
+\end{lstlisting}
+
+Finally, \ruleN{conj} lets us combine (2C), (2D) and (2K) for (2L):
+
+\begin{lstlisting}[escapechar=@]
+true
+    @\textbf{ \{ res := escrowMoney.deposit(0, sellerMoney) \} }@
+//2C
+escrowMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+      escrowMoney $\obeys$ ValidPurse $\wedge$
+      // TRUST
+      res $\equiv$ CanTrade(escrowMoney,sellerMoney)$\PRE{}$  $\wedge$
+      // RISK AND FUNCTIONAL
+      $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+      $\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )  $\wedge$
+//2D
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z) $\wedge$
+//2K
+$\forall$ p: p $\obeys\pre$ ValidPurse. ($\MayAccess$(escrowMoney, p) $\vee$ $\MayAccess$(sellerMoney, p)  $\vee$ p.balance = p.balance$\pre$ )
+   $\HoareCSep$
+//2D
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z)  ) $\wedge$ ($\MayAccess\pre$(escrowMoney, u) $\vee$ $\MayAccess\pre$(sellerMoney, u)  )) ] )
+\end{lstlisting}
+
+\subsubsection{Combining Step 1 and Step 2}
+
+Rule \ruleN{sequence} lets us combine 1L and 2L --- the main thing is that because
+%
+\lstinline+$\MayAccess$(escrowMoney, z) $\rightarrow$ $\MayAccess\pre$(sellerMoney, z)+
+%
+we can elide escrowMoney from the risk, and if
+%
+\lstinline+sellerMoney$\pre$ $\obeys$ ValidPurse+
+%
+then \lstinline+res+ must be \lstinline+true+.
+%
+giving (2M):
+
+\begin{lstlisting}[escapechar=@]
+true
+    @\textbf{ \{ var escrowMoney := sellerMoney.sprout }@
+    @\textbf{     res := escrowMoney.deposit(0, sellerMoney) \} }@
+sellerMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+   // TRUST
+   sellerMoney $\obeys$ ValidPurse $\wedge$  escrowMoney $\obeys$ ValidPurse $\wedge$ CanTrade(sellerMoney, escrowMoney) $\wedge$
+   // FUNCTIONAL
+   escrowMoney.balance=0 $\wedge$
+   res $\equiv$ true
+   // RISK (such as it is)
+   $\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ escrowMoney $\neq$ p ] 
+   $\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]
+) $\wedge$
+//RISK
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(escrowMoney, z) $\rightarrow$ $\MayAccess\pre$(sellerMoney, z) $\wedge$
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+    [$\MayAccess\pre$(u, z) $\vee$ (($\MayAccess\pre$(sellerMoney, z)  ) $\wedge$ ($\MayAccess\pre$(sellerMoney, u)  )) ] ) $\wedge$
+//2D
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ $\MayAccess\pre$(sellerMoney, z) $\wedge$
+//2K
+$\forall$ p: p $\obeys\pre$ ValidPurse. ($\MayAccess$(escrowMoney, p) $\vee$ $\MayAccess$(sellerMoney, p)  $\vee$ p.balance = p.balance$\pre$ )
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(sellerMoney, z)  ) $\wedge$ ($\MayAccess\pre$(escrowMoney, u) $\vee$ $\MayAccess\pre$(sellerMoney, u)  )) ] )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+
+\subsubsection{End of Step 2}
+
+Note that at this, by \ruleN{Cond-1}, if \lstinline+res+ is true, we
+have again established a one-way trust relationship, in the opposite
+direction to Step 1: (2-ONEWAY):
+
+\begin{lstlisting}[backgroundcolor=\color{yellow}]
+res $\rightarrow$ (sellerMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$  escrowMoney$\pre$ $\obeys$ ValidPurse)
+\end{lstlisting}
+
+\noindent based on the definition of \lstinline+CanTrade+, or rather
+its specification by the policies \lstinline+My_Purses_Valid+ and
+\lstinline+My_Purses_CanTrade+. \kjx{James thinks he would rather
+  have the obeys clause in the specification. not buried in CanTrade.}
+
+\kjx{James has no idea if the following is right:}
+Then by \ruleN{Cons-1}, we can assume
+the trust relationship from Step 1 (1-ONEWAY) into the precondition,
+and \ruleN{code-invar-2} carries that in to post-condition;
+\ruleN{sequence} ensures (1-ONEWAY) as precondition is satisifed.
+Thus, at this point, we have established the two way trust (2-TWOWAY):
+
+\begin{lstlisting}[backgroundcolor=\color{red}]
+res $\rightarrow$ (sellerMoney$\pre$ $\obeys$ ValidPurse $\longleftrightarrow$  escrowMoney$\pre$ $\obeys$ ValidPurse)
+\end{lstlisting}
+
+For Step 3 to step 31 we will be under the condition that
+\lstinline+res+ is true, so in that portion of the code this
+assumption holds.
+
+\subsubsection{Error Exit}
+
+Looking ahead slightly, what if we reach line 6 of \bothfigs\ with
+%
+\lstinline+res $\equiv$ false+?
+%
+Considering (2M), we must have
+%
+\lstinline+$\neg$ sellerMoney$\pre$ $\obeys$ ValidPurse+
+%
+the risk is given by the unconditional conjuncts from 2M.
+
+\subsection{Steps 3 and 4}
+
+Steps 3 and 4, lines 6 to 10 of \bothfigs, are basically the same as Step 2, except validating
+\lstinline+buyerMoney+ against \lstinline+escrowMoney+.
+
+\kjx{What follows is mostly so I can track my working (or you check it), this doesn't even have to appear in the TR.}
+
+We work from 2L with the POWER of CUT and PASTE to get 3L:
+
+\begin{lstlisting}[escapechar=@]
+true
+    @\textbf{ \{ res := buyerMoney.deposit(0, escrowMoney) \} }@
+buyerMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+      buyerMoney $\obeys$ ValidPurse $\wedge$
+      // TRUST
+      res $\equiv$ CanTrade(buyerMoney,escrowMoney)$\PRE{}$  $\wedge$
+      // RISK AND FUNCTIONAL
+      $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+      $\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )  $\wedge$
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(buyerMoney, z) $\vee$ $\MayAccess\pre$(escrowMoney, z) $\wedge$
+$\forall$ p: p $\obeys\pre$ ValidPurse. ($\MayAccess$(buyerMoney, p) $\vee$ $\MayAccess$(escrowMoney, p)  $\vee$ p.balance = p.balance$\pre$ )
+   $\HoareCSep$
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(buyerMoney, z) $\vee$ $\MayAccess\pre$(escrowMoney, z)  ) $\wedge$ ($\MayAccess\pre$(buyerMoney, u) $\vee$ $\MayAccess\pre$(escrowMoney, u)  )) ] )
+\end{lstlisting}
+
+and then 4L:
+
+\begin{lstlisting}[escapechar=@]
+true
+    @\textbf{ \{ res := escrowMoney.deposit(0, buyerMoney) \} }@
+escrowMoney$\pre$ $\obeys$ ValidPurse $\rightarrow$ (
+      escrowMoney $\obeys$ ValidPurse $\wedge$
+      // TRUST
+      res $\equiv$ CanTrade(escrowMoney,buyerMoney)$\PRE{}$  $\wedge$
+      // RISK AND FUNCTIONAL
+      $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+      $\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )  $\wedge$
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(buyerMoney, z) $\wedge$
+$\forall$ p: p $\obeys\pre$ ValidPurse. ($\MayAccess$(escrowMoney, p) $\vee$ $\MayAccess$(buyerMoney, p)  $\vee$ p.balance = p.balance$\pre$ )
+   $\HoareCSep$
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(escrowMoney, z) $\vee$ $\MayAccess\pre$(buyerMoney, z)  ) $\wedge$ ($\MayAccess\pre$(escrowMoney, u) $\vee$ $\MayAccess\pre$(buyerMoney, u)  )) ] )
+\end{lstlisting}
+
+\subsubsection{End of Step 4}
+
+Rule \ruleN{sequence} lets us combine 2M, 3L, and 4L to get 4M ---
+\kjx{I'm NOT showing all the rules, doing it by inspection (i.e.\
+  guessing) becuase it's just a sequence and simplification). I
+  think. \ldots}.  (4M):
+
+\newcommand{\init}{_\textit{0}}
+
+\kjx{should some of the $e\pre$ become $e\init$?   I only started using init$\init$ around step 10}
+
+\begin{lstlisting}[escapechar=@]
+true
+    @\textbf{ \{ var escrowMoney := sellerMoney.sprout }@
+    @\textbf{     res := escrowMoney.deposit(0, sellerMoney) }@
+    @\textbf{     if (res) then \{ }@
+    @\textbf{      res := buyerMoney.deposit(0, escrowMoney) }@
+    @\textbf{       if (res) then \{ }@
+    @\textbf{         res := escrowMoney.deposit(0, buyerMoney) }@
+//THIS IS A GUESS
+((sellerMoney$\pre$ $\obeys$ ValidPurse) $\vee$  (buyerMoney $\obeys$ ValidPurse)) $\rightarrow$ (
+   // TRUST
+   res $\equiv$ CanTrade(sellerMoney, buyerMoney) $\wedge$
+   CanTrade(sellerMoney, buyerMoney) $\rightarrow$ CanTrade(escrowMoney, buyerMoney) $\wedge$
+   // FUNCTIONAL
+   escrowMoney.balance=0 $\wedge$
+   // RISK (such as it is)
+   $\forall$p.[ p$\obeys\PRE$ValidPurse $\rightarrow$ p.balance=p.balance$\pre$ $\wedge$ escrowMoney $\neq$ p ] 
+   $\forall$o:$\pre$Object. $\forall$p$\obeys\pre$ValidPurse. [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]
+) $\wedge$
+
+//RISK
+$\forall$ z:$\pre$ $\Obj$. $\MayAccess$(res, z)  $\rightarrow$ ($\MayAccess\pre$(sellerMoney, z) $\vee$ $\MayAccess\pre$(buyerMoney, z) $\wedge$
+$\forall$ p: p $\obeys\pre$ ValidPurse. ($\MayAccess$(sellerMoney, p) $\vee$ $\MayAccess$(buyerMoney, p)  $\vee$ p.balance = p.balance$\pre$ )
+   $\HoareCSep$
+$\forall$ z, u:$\pre$ $\Obj$. ($\MayAccess$(u, z) $\rightarrow$
+      [$\MayAccess\pre$(u, z) $\vee$
+       (( $\MayAccess\pre$(sellerMoney, z) $\vee$ $\MayAccess\pre$(buyerMoney, z)  ) $\wedge$ ($\MayAccess\pre$(sellerMoney, u) $\vee$ $\MayAccess\pre$(buyerMoney, u)  )) ] )
+\end{lstlisting}
+
+Note once again that if we get here with \lstinline+res = true+, we have established hypothetical two-way trust
+between all three purses, and thus between the buyer and seller purses in particular (4-TWOWAY):
+
+\begin{lstlisting}[backgroundcolor=\color{red}]
+sellerMoney$\pre$ $\obeys$ ValidPurse $\longleftrightarrow$  escrowMoney$\pre$ $\obeys$ ValidPurse $\longleftrightarrow$  buyerMoney$\pre$ $\obeys$ ValidPurse
+\end{lstlisting}
+
+\subsubsection{Error Exit}
+
+I don't want to be that fine-grained so again, so we take risk is that from 4M, i.e. the worst case,
+for exiting at any of the intermediate steps.
+
+\subsection{Steps 5-8}
+
+Steps 5 to 8, lines 12 to 20 of \bothfigs, are exactly the same as
+steps 1-4, except validating \lstinline+buyerGoods+ against
+\lstinline+escrowGoods+.  The POWER of CUT and PASTE can give us 8M
+\kjx{which I'd copy and paste \textbf{were I surer the above was
+    correct} although were I surer they above was correct I wouldn't
+  need to cut and paste it.}
+
+
+\subsection{Step 9}
+
+Step 9, line 22 of \bothfigs,
+%
+\lstinline+res := escrowMoney.deposit(price, buyerMoney)+
+%
+is the first actual deposit with a non-zero balance in the escrow
+code.  The reasoning forthis step is essentially the same as for step
+2, however there we elided the amount since it was always zero --- so
+must revisit steps 2A-2C, this time also handling the \lstinline+amt+.
+The risk does not depend on the amount transferred, so steps 2D-2L are
+unchanged: I've elided it here.
+
+Thus (9A) from \ruleN{meth-call-1} and \ruleN{Conj} with \lstinline+Pol_deposit_1+ and \lstinline+Pol_deposit_2+: the postcondition is a big conjunction of both policies (9A):
+
+\begin{lstlisting}[escapechar=@]
+(escrowMoney $\obeys$ ValidPurse) $\wedge$ amt$\in \mathbb{N}$
+       @\textbf{ \{ res := escrowMoney.deposit(price, buyerMoney) \} }@
+res $\rightarrow$ (
+    // TRUST
+    CanTrade(escrowMoney,buyerMoney)$\PRE{}$  $\wedge$
+    // FUNCTIONAL
+    0$\leq$price$\leq$buyerMoney.balance$\PRE{}\ \wedge$
+    escrowMoney.balance=escrowMoney.balance$\PRE$+price $\wedge$
+    buyerMoney.balance=buyerMoney.balance$\PRE$-price  $\wedge$
+    //RISK
+    $\forall$p.[ p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$escrowMoney,buyerMoney$\}\,\rightarrow$
+       p.balance=p.balance$\pre$ ]  $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]   )
+$\wedge$
+$\neg$res $\rightarrow$ (
+    // TRUST and FUNCTIONAL
+    $\neg$[ CanTrade(escrowMoney,buyerMoney)$\PRE{}$ $\wedge$ 0$\leq$price$\leq$buyerMoney.balance$\PRE{}$ ] $\wedge$
+    // RISK
+    $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]   )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+
+
+\kjx{at this point I really don't know what I'm doing}
+
+\noindent \ruleN{sequence} means that by the start of line 22 we have
+\lstinline+escrowMoney $\obeys$ ValidPurse+ (folowing from 8M); for
+now we ignore \lstinline+amt$\in \mathbb{N}$+.
+
+As in step 2 and the other deposit steps, we move the trust assumption
+to the precondition, and carry trust over into the postcondition
+via  \ruleN{Cons-2}l, \ruleN{code-invar-2}, \ruleN{Cons-1}) to get (9C):
+
+At the end of step 1L, we had \lstinline+escrowMoney.balance = 0+;
+that step preserves \lstinline+buyerMoney+'s initial balance (which
+I'll write \lstinline+buyerMoney\init+) all subsequent steps preserve
+every valid purse's balance, including \lstinline+escrowMoney+ and
+\lstinline+buyerMoney+: and \ruleN{code-invar-2} means we can carry
+the assumption that they purses are valid through each step (see 4M, 8M).
+
+\begin{lstlisting}[escapechar=@]
+amt$\in \mathbb{N}$
+       @\textbf{ \{ res := escrowMoney.deposit(price, buyerMoney) \} }@
+(escrowMoney $\obeys$ ValidPurse $\wedge$  res $\rightarrow$ (
+    // TRUST
+    CanTrade(escrowMoney,buyerMoney)$\PRE{}$  $\wedge$
+    // FUNCTIONAL
+    0$\leq$price$\leq$buyerMoney.balance$\init\ \wedge$
+    escrowMoney.balance=price $\wedge$
+    buyerMoney.balance=buyerMoney.balance$\init$-price  $\wedge$
+    //RISK
+    $\forall$p.[ p$\obeys\init$ValidPurse $\wedge$ p$\notin\{$escrowMoney,buyerMoney$\}\,\rightarrow$
+       p.balance=p.balance$\init$ ]  $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\init$(o,p) ]   ) )
+$\wedge$
+(escrowMoney $\obeys$ ValidPurse $\wedge$  $\neg$res $\rightarrow$ (
+    // TRUST and FUNCTIONAL
+    $\neg$[ CanTrade(escrowMoney,buyerMoney)$\PRE{}$ $\wedge$ 0$\leq$price$\leq$buyerMoney.balance$\PRE{}$ ] $\wedge$
+    // RISK
+    $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]   ) ) )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+
+\subsubsection{Error Exit}
+
+Line 23 takes an error exit if the result is true.  Have to deal with those later.
+
+\subsection{Step 10}
+
+Line 24
+%
+\lstinline+res := escrowGoods.deposit(amt, sellerGoods)+
+%
+is reached only if step 9 returned true, can be handled in a similar
+way to step 9. We again use \ruleN{cond-1} and \ruleN{sequence}:
+
+\begin{lstlisting}[escapechar=@]
+(escrowMoney $\obeys$ ValidPurse $\wedge$ escrowGoods $\obeys$ ValidPurse) $\longrightarrow$ (
+    // TRUST
+    CanTrade(escrowMoney,buyerMoney)  $\wedge$
+    // FUNCTIONAL
+    0$\leq$price$\leq$buyerMoney.balance$\init$ $\wedge$
+    escrowMoney.balance=price $\wedge$
+    buyerMoney.balance=buyerMoney.balance$\init$-price  $\wedge$
+    //RISK
+    $\forall$p.[ p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$escrowMoney,buyerMoney$\}\,\rightarrow$
+       p.balance=p.balance$\pre$ ]  $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )
+       @\textbf{    \{  res := escrowGoods.deposit(amt, sellerGoods) \} }@
+(escrowMoney $\obeys$ ValidPurse $\wedge$ escrowGoods $\obeys\pre$ ValidPurse $\wedge$  res $\rightarrow$ (
+    // TRUST
+    CanTrade(escrowGoods,sellerGoods)$\PRE{}$  $\wedge$
+    // FUNCTIONAL
+    0$\leq$amt$\leq$sellerGoods.balance$\init\ \wedge$
+    escrowGoods.balance=amt $\wedge$
+    sellerGoods.balance=sellerGoods.balance$\init$-amt  $\wedge$
+    //RISK
+    $\forall$p.[ p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$escrowGoods,sellerGoods$\}\,\rightarrow$
+       p.balance=p.balance$\init$ ]  $\wedge$
+    $\forall$o:$\init$Object. $\forall$p$\obeys$$\init$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\init$(o,p) ]    $\wedge$
+    escrowMoney.balance=price $\wedge$  buyerMoney.balance=buyerMoney.balance$\init$-price //implied by the above line ) )
+$\wedge$
+(escrowGoods $\obeys$ ValidPurse $\wedge$  $\neg$res $\rightarrow$ (
+    // TRUST and FUNCTIONAL
+    $\neg$[ CanTrade(escrowGoods,sellerGoods)$\PRE{}$ $\wedge$ 0$\leq$amt$\leq$sellerGoods.balance$\init{}$ ] $\wedge$
+    // RISK
+    $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$  //cannot be init
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\init$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\init$(o,p) ]   ) )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+A reminder again that I'm ignoring the residual risk: this is the same as calculated in 4M above for money,
+replicated at 8M for goods if anyone cares\ldots.
+
+\subsection{Step 11}
+
+If step 10 has failed (returned false) then goods have failed to be moved into the escrow,
+so the amount has not been escrowed from \lstinline+sellerGoods+ but
+because step 9 has completed we have
+%
+\lstinline+buyerMoney.balance=buyerMoney.balance$\init$-price+
+%
+. We need to undo that transaction, which is what step 11 does;
+by \ruleN{sequence} and \ruleN{cond-1} --- it is nothing but the reverse of step 9.
+Note know this transction will succeed because we know \lstinline+escrowMoney.balance+ contains \lstinline+price+
+from step 9, preserved through step 10.   We also use the twoway trust to talk about \lstinline+buyerGoods+ rather than
+\lstinline+escrowGoods+, ditto for money (11M):
+
+\begin{lstlisting}[escapechar=@]
+(escrowMoney $\obeys$ ValidPurse $\wedge$ escrowGoods $\obeys$ ValidPurse) $\longrightarrow$ (
+    // REASON FOR FAILURE (failure conjunct of Step 10 postcondition)
+    $\neg$[ CanTrade(buyerGoods,sellerGoods)$\PRE{}$ $\wedge$ 0$\leq$amt$\leq$sellerGoods.balance$\init{}$ ] $\wedge$
+    // TRUST
+    CanTrade(sellerMoney,buyerMoney)  $\wedge$
+    // FUNCTIONAL
+    0$\leq$price$\leq$buyerMoney.balance$\init$ $\wedge$
+    escrowMoney.balance=price $\wedge$
+    buyerMoney.balance=buyerMoney.balance$\init$-price  $\wedge$
+    //RISK
+    $\forall$p.[ p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$escrowMoney,buyerMoney$\}\,\rightarrow$
+       p.balance=p.balance$\init$ ]  $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\init$(o,p) ] )
+       @\textbf{ \{ res := escrowMoney.deposit(price, buyerMoney) \} }@
+(escrowMoney $\obeys$ ValidPurse $\wedge$ escrowGoods $\obeys$ ValidPurse) $\longrightarrow$ (
+    // REASON FOR FAILURE (failure conjunct of Step 10 postcondition)
+    $\neg$[ CanTrade(buyerGoods,sellerGoods)$\PRE{}$ $\wedge$ 0$\leq$amt$\leq$sellerGoods.balance$\init{}$ ] $\wedge$
+    // TRUST
+    CanTrade(sellerMoney,buyerMoney)$\pre$  $\wedge$
+    // FUNCTIONAL
+    0$\leq$price$\leq$buyerMoney.balance$\init$ $\wedge$
+    escrowMoney.balance=0 $\wedge$
+    buyerMoney.balance=buyerMoney.balance$\init$  $\wedge$
+    //RISK
+    $\forall$p.[ p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$escrowMoney,buyerMoney$\}\,\rightarrow$
+       p.balance=p.balance$\pre$ ]  $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ] )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+\noindent which ends up saying nothing has changed at all.
+Then by a series of applications of \ruleN{cond-2} \lstinline+deal+ will return \lstinline+false+ and,
+with the postcondition (11):
+
+\begin{lstlisting}[escapechar=@]
+true
+       @\textbf{ \{ res := deal \} }@
+(sellerMoney $\obeys$ ValidPurse $\wedge$ buyerGoods $\obeys$ ValidPurse) $\longrightarrow$ (
+    // REASON FOR FAILURE (failure conjunct of Step 10 postcondition)
+    $\neg$[ CanTrade(buyerGoods,sellerGoods)$\PRE{}$ $\wedge$ 0$\leq$amt$\leq$sellerGoods.balance$\init{}$ ] $\wedge$
+    // TRUST
+    CanTrade(sellerMoney,buyerMoney)$\pre$  $\wedge$
+    // FUNCTIONAL
+    0$\leq$price$\leq$buyerMoney.balance$\init$ $\wedge$
+    //RISK
+    $\forall$p.[ p$\obeys\init{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\init$ ] $\wedge$
+    $\forall$o:$\pre$Object. $\forall$p$\obeys$$\init$ValidPurse.
+       [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\init$(o,p) ]   ) )
+   $\HoareCSep$
+true
+\end{lstlisting}
+
+This is the nastiest subcase of the second case of the \lstinline+ValidEscrow+ specification,
+because we had to reverse out the escrow. The other subcases are that the Step 9 money transfer fails:
+we just finish with the poscondition from step 9, which just adds the reason for failure to the postcondition above.
+
+\begin{lstlisting}
+    $\neg$[ CanTrade(sellerMoney,buyerMoney)$\PRE{}$ $\wedge$ 0$\leq$price$\leq$buyerMoney.balance$\PRE{}$ ] $\wedge$
+\end{lstlisting}
+
+I'm pretty sure that gets us to case 2 of \lstinline+ValidEscrow+
+
+\subsection{Steps 12 and 13}
+
+Steps 9 and 10 above exemplify the reasoning necessary to prove steps
+12 and 13; as with step 11 we know both deposits will succeed because
+both goods and money have been successfully escrowed (postcondition of
+step 10; preservation of balance when dealing with trusted purses).
+
+I'm pretty sure that gets us to case 1 of \lstinline+ValidEscrow+
+
+\subsection{Error Exits}
+
+Errors exits are covered by unconditional risk e.g. shown in the postconditions of 4M.
+Errors where once side fails to validate will be caught at steps 1-8;
+That seems to get us to case 3 of \lstinline+ValidEscrow+.  I think.
+
+\subsection{Fool me twice, shame on me}
+
+Finally case 4 relies that all the postconditions are conditional on whether some purse objets its spec.
+In such cases (hah!) the residual risk (see 4M above) applies.
+
+\kjx{I can think a bit more about these if someone sanity-checks the above}

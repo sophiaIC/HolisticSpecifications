@@ -1,0 +1,304 @@
+\section{Proof of \prg{Escrow:deal}}
+
+
+We now outline the most salient steps from the proof of the \prg{Escrow}. Note that out formally defined language does not support returning from the inside of a method - we did this to simplify the Hoare rules. Therefore, in \autoref{fig:DealV3} we re-write the mothod \prg{deal} so that it obeys this  syntactic restriction.
+
+\begin{figure*}[htb]
+\begin{lstlisting}
+method deal(  )  
+{
+  //setup and validate Money purses
+  escrowMoney := sellerMoney.sprout
+  res := escrowMoney.deposit(0, sellerMoney)
+  if res then {
+    res :=  buyerMoney.deposit(0, escrowMoney)
+    if res then {
+      res := escrowMoney.deposit(0, buyerMoney)     
+      if res then {
+        // set up and validate Goods purses
+        escrowGoods := buyerGoods.sprout
+        res := escrowGoods.deposit(0, buyerGoods) 
+        if res then {
+          res := sellerGoods.deposit(0, escrowGoods) 
+          if res then {
+            res :=  escrowGoods.deposit(0, sellerGoods) 
+            if res then {
+              // start the actual exchange
+              res := escrowMoney.deposit(price, buyerMoney)
+              if res then {
+                res := escrowGoods.deposit(amt, sellerGoods)
+                if res then{
+                  // transfer from the two escrows to two accounts
+                  sellerMoney.deposit(price, escrowMoney)
+                  buyerGoods.deposit(amt, escrowGoods)
+                } else {
+                  // undo the transaction
+                  buyerMoney.deposit(price, escrowMoney)
+                }
+              } else skip                        
+            } else skip
+          } else skip 
+        } else skip 
+      } else skip
+    } else skip 
+  }
+  return res  
+}  
+\end{lstlisting}
+%\vspace*{-7mm}
+\caption{Revised \prg{deal} method expressed without {\prg{return}} statements}
+\label{fig:DealV3}
+\end{figure*}
+\subsection{Preliminaries}
+
+We first create some admissible rules, useful for our reasoning.
+
+Firstly, because logical variables cannot be assigned to, we have that   $\Hoare  {{\lvar} }  {\stmts}   {\kw{true}}  {{\lvar}=\lvar\pre}$ for any \stmts; therefore,  the following rules are admissible for any logical variable \lvar, and specification $S$:\\
+$  \inferenceruleN {code-inavr-3} {
+           
+     }{
+    \Hoare  {{\lvar} \obeys S}  {\prg{code}}   {\kw{true}}  {{\lvar} \obeys S}
+     }
+$
+
+\vspace{.1in}
+Similarly, through application of \ruleN{Frame-General}, if $\prg{z}\neq\prg{x}$, we get 
+$ \Hoare  {\prg{z}=\lvar}  {\prg{x:=rhs}}   {\prg{z} =\lvar}  {\kw{true}}  $, which also gives that
+$ \Hoare  {\kw{true}}  {\prg{x:=rhs}}   {\prg{z} =\prg{z}\pre}  {\kw{true}}  $. Then, 
+by \ruleN{Code-Invar-2}  and \ruleN{Cons-1} we obtain that \\
+$  \inferenceruleN {obeys-invar} {
+           \prg{z}\neq \prg{x}
+     }{
+    \Hoare  {{\prg{z}} \obeys S}  {\prg{x:=rhs}}   {\kw{true}}  {{\prg{z}} \obeys S}
+     }
+$
+
+
+\vspace{.1in}
+\noindent
+%This rule follows from\textsc{code-invar-2}, and ...
+
+
+\subsection{First Step}
+
+The pre and postconditions for the first line from the code, ie for line 4 from Figure \ref{fig:DealV3} are described in figure \ref{fig:DealV3:S1}.
+Drawing on the \prg{Pol\_sprout} policy of the 
+\prg{ValidPurse} specification, this step is obtained as follows:
+
+Firstly, by application of \ruleN{obeys-ivar} and \ruleN{Cons-4} we obtain
+\\
+$  (0) 
+\\ \HoareNL
+      {\prg{true}}
+       {\eM:=\sM.\prg{sprout}}
+      { \sM\pre  \obeys \PS\ \rightarrow \\
+      \SP\SP\SP \sM\ \obeys \PS}
+         {\kw{true}} %  {\kw{true}}
+$
+ \vspace{.1in}
+
+\begin{figure*}[htb]
+\begin{lstlisting}
+   true
+        {  var escrowMoney := sellerMoney.sprout  }
+   $\sM\pre \obeys \PS \longrightarrow (\ \eM \obeys \PS\  \wedge$  
+                                      $CanTrade(\eM,\sM)\  \wedge$
+                                      $\eM.\bal = 0\  \wedge\   $
+                                      $\forall p\in\pre \GP. p.\bal\pre=p.\bal\ \wedge $
+                                      $ \sM  \obeys \PS\ ) \ \ \ \ \wedge $
+    $ \forall p:\pre \GP.  (\, p.\bal\pre=p.\bal\ \vee\ \MayAccess\pre(\sM,p) \, )\ \ \ \  \ \ \ \    \wedge$
+    $ \forall z:\pre \Obj.\ (\,  \MayAccess(\eM,z)\  \longrightarrow\   \MayAccess\pre(\sM,z)\, ) \ \ \ \ \wedge$
+    $ \forall z,y:\pre \Obj.\ (\,  \MayAccess(\,z,y\,)\  \longrightarrow\   $
+              $  (\, \MayAccess\pre(\, z, y\,)\  \vee\  \MayAccess\pre(\, \sM, y\,) \wedge  \MayAccess\pre(\, \sM, z\,) \, ) $
+    $\HoareCSep$
+    true
+   \end{lstlisting}
+%\vspace*{-7mm}
+\caption{Hoare tuple for first step in \prg{deal}}
+\label{fig:DealV3:S1}
+\end{figure*}
+
+. 
+
+%\textsc{code-invar-1}, 
+\noindent
+Then, from the specification of \sprout in $\PS$, and the rule \ruleN{Meth-Call-1} we obtain that \\
+$  (1) 
+\\ \HoareNL
+      {\sM \obeys \PS}
+       {\eM:=\sM.\prg{sprout}}
+      { \eM  \obeys \PS\  \wedge \\
+        CanTrade(\eM,\sM)\  \wedge \\ 
+        \forall\,p:\pre\GP. p.\bal=p.\bal\pre} 
+         {\kw{true}} %  {\kw{true}}
+$
+ \vspace{.1in}
+\noindent
+Then, from (1), and application of \ruleN{Cons-2}, we obtain\\
+$ (2) \\
+ \HoareNL
+      {\kw{true}}
+       {\eM:=\sM.\sprout}
+      { \sM\pre \obeys \PS \rightarrow\\
+       \SP\SP \ \ (\ \eM  \obeys \PS\  \wedge \\
+        \SP\SP\SP CanTrade(\eM,\sM)\  \wedge \\ 
+        \SP\SP\SP \forall \,p\in\pre\GP.\ p.\bal=p.\bal\pre\ )}
+       { \kw{true} }  $
+ \vspace{.1in}
+ 
+\noindent
+Also, by application of \ruleN{Code-Invar-1}, and the specification of \PS, we  have that\\
+$ (3) \\
+ \HoareNL
+      {\kw{true}}
+       {\eM:=\sM.\sprout}
+       { \kw{true} }
+       {  \forall\,p\in\pre\GP,o:\Obj.\ \\
+        \ \ \  (\, \MayAffect(o,p.\bal) \rightarrow \MayAccess(o,p) \ )}
+        $
+ \vspace{.1in}
+ 
+\noindent
+ By application of \ruleN{Meth-Call-2} and \ruleN{Frame-Meth-Call} and (3) we obtain\footnoteC{here I am not sure about!!!}\\
+$ (4) \\
+ \HoareNL
+      {\kw{true}}
+       {\eM:=\sM.\sprout}
+       { \kw{true} }
+       {  \forall\,p\in\pre\GP\ \\
+        \ \ \  (\, p.\bal=p.\bal\pre \vee \\
+        \ \ \ \ \ \MayAccess\pre(\sM,o) \ )}
+        $ 
+ \vspace{.1in}
+  
+\noindent
+ Finally, by application of \ruleN{Meth-Call-2}   we obtain\\
+$ (5) \\
+ \HoareNL
+      {\kw{true}}
+       {\eM:=\sM.\sprout}
+       { \kw{true} }
+      { \forall z,y:\pre \Obj.\ (\,  \MayAccess(\,z,y\,)\  \longrightarrow\   \\
+              \SP (\, \MayAccess\pre(\, z, y\,)\  \vee\  \\
+              \SP \ \ \MayAccess\pre(\, \sM, y\,) \wedge\\
+              \SP \ \   \MayAccess\pre(\, \sM, z\,) \, ) }
+$
+\vspace{.1in}
+
+By application of \ruleN{Cons-1}, and \ruleN{Conj} on (0), (2), (4), and (5), we obtain the pre-postconditions from Figure \ref{fig:DealV3}.
+ 
+ 
+ 
+ % \vspace{.1in}
+
+
+
+\subsection{Second Step}
+The pre and postconditions for the second step are described in figure
+\ref{fig:DealV3:S2}. The main differences between
+figures \ref{fig:DealV3:S1} and \ref{fig:DealV3:S2} are a reflection of the
+differences between the policies \prg{Pol\_sprout} and
+\prg{Pol\_deposit\_1} and \prg{Pol\_deposit\_2} in the
+\prg{ValidPurse} specification.  Functionally, \prg{deposit} may
+succeed or fail, indictated by its return value \prg{res}, while
+\prg{sprout} always succeeds; \prg{deposit} may change the balances of
+participant purses, while \prg{sprout} may not.  
+
+Crucially for us, the trust essentially the same in both cases:\\
+\mbox{\lstinline+src$\obeys\PRE$ValidPurse $\wedge$ CanTrade(this,src)$\PRE{}$+}\\
+\noindent and the risk is very similar --- slightly more complex for
+\prg{deposit} which may modify the two purses:\\
+\noindent \mbox{\lstinline+$\forall$p.(p$\obeys$$\pre$ValidPurse
+  $\wedge$p$\notin\{$this,src$\}\,\rightarrow$+}\\
+\mbox{~~~~\lstinline+p.balance=p.balance$\pre$)  $\wedge$+}\\
+\noindent  but otherwise may not increase risk:\\
+\noindent\mbox{\lstinline+$\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.$\MayAccess$(o,p)
+  $\rightarrow$+}\\
+\noindent\mbox{~~~~\lstinline+$\MayAccess\pre$(o,p)  )+}\\
+\noindent Thus, the reasoning for this step can be justified in
+similar ways to those that from figure \ref{fig:DealV3:S1}. 
+
+
+
+\begin{figure*}[htb]
+\begin{lstlisting}
+    true
+          {  res=escrowMoney.deposit(0, sellerMoney)  }
+   $\eM\pre \obeys \PS  \longrightarrow (  \forall p\in\pre \GP. p.\bal\pre=p.\bal ) $
+   $\eM\pre \obeys \PS \wedge \prg{res}\  \rightarrow\  (\, \sM \obeys \PS\,  \wedge$
+   $ \forall p:\pre \GP.  (\, p.\bal\pre=p.\bal\ \vee\ \MayAccess\pre(\sM,p) \, )\ \ \ \  \ \ \ \    \wedge$
+   $ \forall z:\pre \Obj.\ (\,  \MayAccess(\eM,z)\  \longrightarrow\   \MayAccess\pre(\eM,z)\, ) \ \ \ \ \wedge$
+   $ \forall z,y:\pre \Obj.\ (\,  \MayAccess(\,z,y\,)\  \longrightarrow\   $
+              $  (\, \MayAccess\pre(\, z, y\,)\  \vee\  \MayAccess\pre(\, \sM, y\,) \wedge  \MayAccess\pre(\, \sM, z\,) \, ) $
+    $\HoareCSep$
+    true
+ \end{lstlisting}
+%\vspace*{-7mm}
+\caption{Hoare tuple for second step in \prg{deal}}
+\label{fig:DealV3:S2}
+\end{figure*}
+
+ 
+
+
+\newpage
+\subsection{Step 1 and Step 2 Establish Mutual Trust}
+
+When we combine step 1 and step 2 we obtain the Hoare tuple from figure \ref{fig:DealV3:S3}. Here we make use of the results from figure \ref{fig:DealV3:S1} and figure \ref{fig:DealV3:S2}, and combine them through the \ruleN{Sequence} rule. For example, we use our invariants entailment  $\longrightarrow_\M$, whereby for any module $\M$:\\
+ $\forall z:\pre \Obj.\ (\,  \MayAccess(\eM,z)  \rightarrow$\\
+ $\SP\SP\SP  \MayAccess\pre(\sM,z)\, ),\ $\\
+$\forall z:\pre \Obj.\ (\,  \MayAccess(\sM,z)\  \rightarrow$ \\
+$\SP\SP\SP   \MayAccess\pre(\eM,z)\, ), $\  \\
+$\longrightarrow_\M$ \\
+ {\kw {true}}, \\
+ $\forall z:\pre \Obj.\ (\,  \MayAccess(\eM,z)\  \rightarrow$\\
+ $\SP\SP\SP    \MayAccess\pre(\sM,z)\,).$
+
+\begin{figure*}[htb]
+\begin{lstlisting}
+    true
+        {  var escrowMoney := sellerMoney.sprout 
+           res :=  escrowMoney.deposit(0, sellerMoney)  }
+    $\res\ \longrightarrow \ \sM\pre \obeys \PS \longleftrightarrow  \eM \obeys \PS\  \ \  \wedge$  
+    $\sM\pre \obeys \PS \ \longrightarrow (\  CanTrade(\eM,\sM)\  \wedge$
+                                         $\eM.\bal = 0\  \wedge\   $
+                                         $\forall p\in\pre \GP. p.\bal\pre=p.\bal\ \wedge $
+                                         $ \sM  \obeys \PS\ ) \ \ \ \ \wedge $
+    $ \neg \res\ \longrightarrow\ \neg(\sM\pre \obeys \PS) \ \ \ \  \ \ \ \    \wedge$                                  
+    $ \forall p:\pre \GP.  (\, p.\bal\pre=p.\bal\ \vee\ \MayAccess\pre(\sM,p) \, )\ \ \ \  \ \ \ \    \wedge$
+    $ \forall z:\pre \Obj.\ (\,  \MayAccess(\eM,z)\  \longrightarrow\   \MayAccess\pre(\sM,z)\, ) \ \ \ \ \wedge$
+    $ \forall z:\pre \Obj.\ (\,  \MayAccess(\sM,z)\  \longrightarrow\   \MayAccess\pre(\sM,z)\, ) \ \ \ \ \wedge$
+    $ \forall z,y:\pre \Obj.\ (\,  \MayAccess(\,z,y\,)\  \longrightarrow\   $
+              $  (\, \MayAccess\pre(\, z, y\,)\  \vee\  \MayAccess\pre(\, \sM, y\,) \wedge  \MayAccess\pre(\, \sM, z\,) \, ) $
+    $\HoareCSep$
+    true
+   \end{lstlisting}
+%\vspace*{-7mm}
+\caption{Hoare tuple for first and second step in \prg{deal}}
+\label{fig:DealV3:S3}
+\end{figure*}
+
+\vspace*{1cm}  
+ 
+These two steps combined prove that we have now established 
+mutual trust between these two purses.  This is expressed in
+line 4 of
+figure~\ref{fig:DealV3:S3}:\\
+\mbox{\lstinline+$\res\ \longrightarrow$+}\\
+\mbox{~~~~\lstinline+$\sM\pre \obeys \PS$+}\\
+\mbox{~~~~~~~~~~~~~~~~\lstinline+$\longleftrightarrow \eM \obeys \PS$+}\\
+\noindent The bulk of the proof proceeds similarly, with lines 6-18 of
+figure~\ref{fig:DealV3}
+requiring the same reasoning to establish the remaining mutual trust
+relationships, first by including the remaining money purse, and then
+between all the goods purses. 
+
+Finally lines 20-30 complete the escrow exchange by exchanging money
+and goods.  The core reasoning here is completely straightforward, as
+trust is already established between all concerned purses --- although
+of course we also have to handle the cases where trust is not
+established, on paths where a \prg{deposit} call fails. We have to
+continue to reason about the risk, but since only \prg{deposit} and
+\prg{sprout} calls are involved, this reasoning is no different to
+that of the first and second step.
+

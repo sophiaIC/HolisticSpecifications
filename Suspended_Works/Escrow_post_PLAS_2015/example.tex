@@ -1,0 +1,170 @@
+\section{Escrow Exchange }
+\label{section:example}
+
+Figure~\ref{fig:DealV1} shows a first attempt to implement an escrow
+exchange, also shown in previous work \cite{miller-esop2013,capeFTfJP14}.
+%
+%
+We model both money and goods by \prg{Purses} (a resource model
+proposed in E~\cite{ELang}).  The call
+%
+\lstinline+dst.deposit(amt, src)+
+%
+will either transfer \lstinline+amt+ resources from the \lstinline+src+
+purse to the \lstinline+dst+ purse and return true, or do nothing and
+return false.  A new, empty purse can be created at any time by asking
+an existing purse to \prg{sprout} --- the new purse has a zero balance
+but can then be filled via \prg{deposit}.
+
+\begin{figure}[htb]
+% do not change the lines, as hard coded in explanations
+% or if you do, update explanations
+\begin{lstlisting}
+method deal_version1( ) {
+
+   // make temporary money Purse
+   escrowMoney = sellerMoney.sprout
+   // make temporary goods Purse
+   escrowGoods = buyerGoods.sprout
+
+   res = escrowMoney.deposit(price, buyerMoney)
+   if (!res) then
+        // insufficient money in buyerMoney
+        // or different money mints
+        { return false }
+
+   // sufficient money; same mints.
+   // price transferred to escrowMoney
+   res = escrowGoods.deposit(amt, sellerGoods)
+   if (!res) then
+        // insufficient goods in sellerGoods
+        // or different goods mints
+        {  // undo the goods transaction
+           buyerMoney.deposit(price,escrowMoney)
+           return false }
+
+   // price in escrowMoney; amt in escrowGoods.
+   // now complete the transaction
+   sellerMoney.deposit(price, escrowMoney)
+   buyerGoods.deposit(amt, escrowGoods)
+   return true
+}
+\end{lstlisting}
+\vspace*{-7mm}
+\caption{First attempt at Escrow Exchange deal method}
+\label{fig:DealV1}
+\end{figure}
+
+The goal of the escrow is to exchange \texttt{amt} goods for
+\texttt{price} money, between the purses of a seller and buyer.
+To make the exchange transactional, we use % will use an additional pair of
+two private \textit{escrow} purses, one for on each side of the
+transaction (money and goods). 
+%Rather than swapping money and goods
+%between buyer's and seller's purses in one go, the buyer's money and
+%seller's goods are moved first into escrow purses, and then from the
+%escrow purses into the final destinations.  In this way, we only
+%complete the second half of the transaction when we are sure enough
+%money and goods are securely in the escrow purses. If the transaction
+%needs to be abandoned halfway through, we can return the buyer's money
+%from the escrow purse without any reference to the seller.
+%
+Lines 3--6 of Figure~\ref{fig:DealV1} show how we first set up the
+escrow purses, by sprouting two new purses (\prg{escrowMoney} and
+\prg{escrowGoods}) from their respective input purses.  
+
+It is
+important that the escrow purses are newly created within the method,
+and cannot have been manipulated or retained by the buyer or seller,
+which is why the escrow asks \prg{sellerMoney} to make one, and
+\prg{buyerGoods} to make the other.  The requirements of an open
+system means that the escrow method cannot have the escrow purses
+before the transaction, because 
+the escrow cannot know the right kind of purses to create, 
+and there is no central trusted authority
+that could provide them.
+Buyers and sellers cannot provide escrows purses directly, 
+precisely because we must assume 
+they don't trust each other: if they did, 
+they wouldn't need to use an escrow.
+
+Second, we attempt to escrow the buyer's money by transferring it from
+the \prg{buyer}\-\prg{Money} purse into the new \prg{escrowMoney} purse ---
+line 8.  If this \prg{deposit} request returns true, then the money
+will have been transferred. If the deposit fails we abort the
+transaction.
+%
+Third, we attempt to escrow the seller's goods --- line \tobym{16}, again by
+depositing them into the other escrow purse.  If we are unsuccessful,
+we again abort the transaction, after we have returned the escrowed
+money to the buyer --- lines 21 and 22.
+%
+At this point (line \tobym{26}) the deal method should have sole access
+to sufficient money and goods in the escrow purses.  The method
+completes the transaction by transferring the escrowed money and goods
+into the respective destination purses --- lines 26 and 27. Thanks to
+the escrow purses, these transfers should not fail, and indeed, if
+\prg{deal\_version1} is called in good faith it will carry out the transaction
+correctly.  Unfortunately, we cannot assume good faith in a mutually
+untrusting open system.
+
+
+\paraC{The failure of \prg{deal\_version1}}
+The % \prg{deal\_version1} 
+method in Figure~\ref{fig:DealV1} does not behave
+correctly % --- in fact, 
+in an open system. %, it \textit{cannot}.
+%SD the "it cannot" makes sense only if we had a spec for deal.
+The critical
+problems are assumptions about trust: both the code and the
+specification implicitly trust the purse objects with which they interact.
+%Considering both the \prg{Purse} and \prg{Escrow} specifications: what
+%happens if a purse or escrow is asked to interact with an
+%untrustworthy purse?  How much risk is involved: just the potentially
+%untrustworthy purse? That purse plus any other purse it knows about,
+%or interacts with (e.g.\ both are passed into the same method)?  Any
+%purse (or indeed any object) anywhere in the system?
+%
+%Classical approaches to specification and verification have no notion
+%of the risks involved when an object that does not meet its
+%specification. All bets are off: the world ends.
+%
+
+Imagine if \prg{sellerMoney} was a malicious, untrustworthy object. At
+line \tobym{4}, the \prg{sprout} call could itself return a malicious object,
+which would then be stored in \prg{escrowMoney}. At line \tobym{8},
+%
+\lstinline+escrowMoney.deposit(price, buyerMoney)+
+%
+would let the malicious \prg{escrowMoney} purse steal all the
+money out of \prg{buyerMoney} purse, and still return \prg{false}. As
+a result, the seller would lose all their money, and receive no goods!
+Even if the seller was more cautious, and themselves sprouted a
+special temporary purse with a balance of exactly \prg{price} to pass
+in as \prg{sellerMoney}, they would still lose all this money without
+any recompense.
+
+Perhaps there is something else we could do --- a \prg{trusted} method
+on every object, say, that returns \prg{true} if the object is
+trusted, and \prg{false} otherwise?
+% , like tainting in Perl
+% \cite{Perl-tainging} or the dataflow checks that secure web browsers
+% \cite{existing-web-broweser-cites}?
+  The problem, of course, is that
+an object that is untrustworthy is, well, untrustworthy: we cannot
+expect a \prg{trusted} method ever to return \prg{false}. 
+This leads
+to our definition of trust: trust is {\em hypothetical}, and in
+relation to some specification of expected behaviour.
+
+%Thus, trust is always with respect to some specification.}
+
+% SD: do not like the beliow, because we do not ever ascertain that something is
+% untrustworthy
+% an untrustworthy object: a untrustworthy
+% object is an object that does not obey its specification.
+
+
+% \begin{center}
+% *~~~~~~~~~~~~~~~~~~~~~~~~~*~~~~~~~~~~~~~~~~~~~~~~~~~*
+% \end{center}

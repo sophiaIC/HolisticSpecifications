@@ -1,0 +1,472 @@
+\HoareFigOne  
+
+\section{Hoare Logic}
+
+We define the Hoare Logic that allows us to prove adherence to
+policies. In order to reflect that the code to be verified is executed
+in an open system, and that it calls code whose specification and
+trustworthiness is unknown to the code being verified, we augment the
+Hoare triples, so that not only do they guarantee some property to
+hold {\em after} execution of the code, but also guarantee that some
+property is preserved {\em during} execution of the
+code.
+
+
+
+A Hoare tuple in our system has either the format\\
+$ ~ \ \ \ \ \ \ \ \  \ \ \ \  $   \HoareExpl{\A} {\prg{stms}} {\M} {\A'} {\B},\\ 
+ or the format\\
+$ ~ \ \ \ \ \ \ \ \  \ \ \ \  $   \HoareExpl{\A} {\prg{stms}} {\M} {\B'} {\B},\\  
+The former promises that execution of \prg{stms} in any
+state which satisfies $A$~will lead to a state which satisfies $\A'$.
+The latter promises that execution of \prg{stms} in any
+state which satisfies $A$~will lead to a state where the relation of the old and new state is described by $\B$.
+Both the former and latter tuples also promise that
+%throughout execution of this \prg{stms}, 
+the relation between the initial state, and any of the 
+the intermediate states reached by execution of  \prg{stms} will be described by $\B$. 
+
+The execution of \prg{stmts}  may call methods defined in \M, and the
+predicates appearing in $\A$, $\A'$, and $\B$, may use  predicates
+as defined in \M. 
+ When the module \M\ is implicit from the context
+ % , or ???\footnote{of no particular importance?} 
+ we use the shorthand
+\Hoare{\A} {\prg{stms}}  {\A'} {\B}. 
+
+\sdJ{*** I commented out the stuff about the logical variables; I hope we can do without ***}
+
+%As is usual in many Hoare logics~\cite{Kleymann:phd} we introduce {\em logical variables} into our assertions. We assume that
+%these have the form \lvar, \lvar', and that they come from a separate domain. We also
+% assume that there exists a function \Lvars, which returns all the
+% logical variables within an assertion. For example $\Lvars(\prg{p1.balance}=\lvar ) =\{\,\lvar\,\}$.
+% % \wedge \prg{p2.balance}>\lvar')=\{\lvar, \lvar'\}$
+%\footnote{Make sure we have said earlier that \val stands for a value.\sd{Just noticed that I sometimes uses \prg{v} for variables, and some times for values. Arghh}}
+% 
+%\begin{definition}[Validity of Hoare Tuples]\label{defn:validity}
+%$ $ \\
+%
+%  \begin{itemize}
+%  \item
+%$M  \models \HoareImpl{\A} {\prg{stms}} {\A'} {\B}  $ \ \ \  iff\\
+%\SP $ \Lvars(\A)=\Lvars(\A')=\{\, \overline{\lvar}\, \}\ \wedge \ \forall \M',\sigma, \overline{\val}.$\\
+%\SP\SP $ (\sigma,\_)\in \Arising(\M*\M')$\\
+%\SP\SP $ \wedge\ \M*\M',  \sigma{[\overline{\lvar}\mapsto\overline{\val}]} \models \A$\\
+%\SP\SP $ \wedge\  \M\!*\!\M', \sigma, \prg{stms}  \leadsto  \sigma'$\\
+%\SP\SP\SP \ \ \ $\longrightarrow$ \ \ \ \\
+%\SP\SP   $ \M\!*\!\M'\!, \sigma'{[\overline{\lvar}\mapsto\overline{\val}]} \models \A' $\\
+%\SP\SP    $\wedge$ \\
+%\SP\SP  $\forall {\sigma''}\!\in\!\Reach(M,\sigma,\stmts).\ \M\!*\!\M', \sigma, {\sigma''} \models \B   $
+%  \item
+%$M  \models  \HoareImpl{\A} {\prg{stms}} {\B'} {\B}  $ \ \ \  iff\\
+%\SP $ \Lvars(\A)=\Lvars(\A')=\{\, \overline{\lvar}\, \}\ \wedge \ \forall \M',\sigma, \overline{\val}.$\\
+%\SP\SP $ (\sigma,\_)\in \Arising(\M*\M')$\\
+%\SP\SP $ \wedge\ \M*\M',  \sigma{[\overline{\lvar}\mapsto\overline{\val}]} \models \A$\\
+%\SP\SP $ \wedge\  \M\!*\!\M', \sigma, \prg{stms}  \leadsto  \sigma'$\\
+%\SP\SP\SP \ \ \ $\longrightarrow$ \ \ \ \\
+%\SP\SP   $ \M\!*\!\M'\!, \sigma{[\overline{\lvar}\mapsto\overline{\val}]}, \sigma'{[\overline{\lvar}\mapsto\overline{\val}]} \models \B'$\\
+%\SP\SP   $\wedge$ \\
+%\SP\SP  $\forall {\sigma''}\!\in\!\Reach(M,\sigma,\stmts).\ \M\!*\!\M', \sigma, {\sigma''} \models \B   $
+%\end{itemize}
+%\end{definition}
+%
+%Note that the definition from above does not support the use of logical variables in the invariant part of the tuple, $\B$. Even though it would have been possible to accommodate for this in our formal model, it would slightly complicate the expositions, and so far we have not found a need to do that.
+%
+%
+%\footnoteC{TODO:  Explain why we want both logical variables as well as two-state assertions, and why two state assertions cannot easily be encoded into logical variables.}
+
+\subsection{Hoare Rules}
+
+ We define the Hoare rules in figure
+\ref{fig:HoareLogicBasic} for the language constructs, while in figure \ref{fig:HoareLogic} we give the rules for framing, the rules for consequence, and rules about invariants preserved during execution of a statement.\footnote{\sd{Notice that we have no rule for object creation; these would like rules for method calls; while they do  not pose special challenges, they would increase the size of our system and we leave this to further work.}}
+
+% \noindent 
+We first consider the rules from figure \ref{fig:HoareLogicBasic}:
+ The rules  \ruleN{VarAsg}  and  \ruleN{FieldAsg} are not surpising. The annotations $\_$\pre\ and $\_$\post\ explain the use of $\prg{a}\pre$, and allow us to talk in the postcondition about values in the pre-state. For example, we would obtain \\
+ $\HoareNL {\kw {true}}  {\prg{this.f=this.f+3}} {\prg{this.f}=\prg{this.f}\pre+3} {{\kw {true}}} {}$.
+
+The rules  \ruleN{Cond-1} and \ruleN{Cond-2} describe conditional statements, and are standard.
+
+\forget{
+The rule  \ruleN{NewObj} guarantees that the fields of the new object will contain the values of the arguments as read in the old state, and that the new object will belong to class \prg{C}. More importantly, it also guarantees that the new object will satisfy   the specification of \prg{C} as given in module \M. Note that in contrast to rule here we are in a ``closed'' world. We know therefore that the new object will obey the specification of its class, as given in the module. 
+\footnoteC{\sd{SUPERIMPORTANT: This rule is unsound! We either need to add constructors into the specification, and check their preconditions when we create a new object, and also check the constructors when we check that a module is well-formed, or drop object creation altogether. I have left the rule and the stuff in for the time being. Note that we do not need this rule for the Escrow proof, but we would need it if we were to prove Purse, but Purse is currently beyond our reach.}}
+}
+
+ The   rule   \ruleN{meth-call-1}  describes method call. \footnoteC{   ... TODO explain that we use one possible pair of Pre/Post conditions, explain the replacements, } \footnote{We have no invariant part in the spec of a method,  but it would not be difficult to extend the system to support this.}
+%I have not changed this, as it would be too much work. But perhaps we should.}
+
+
+
+ On the other hand, rule   \ruleN{meth-call-2} is unusual in a Hoare logic setting; it expresses that  ``only connectivity
+begets connectivity'' . The terms was coined by Mark Miller\footnoteC{add citation}  and is used widely in the capabilities literature. To our knowledge, this property has not been expressed in a Hoare logic. The reason, is, we believe, that Hoare logics so far have been developed with the closed world assumption, in the sense that all methods (or functions) called come from code which has a specification, and which has been verified.  
+
+
+\HoareFigTwo
+
+The rule  \ruleN{Frame-methCall} is also unusual; note that its precondition is \kw{true}. This means that we make no assumptions about the receiver of the method call; this allows us to reason in an {\em open} setting.  Even though we do not know what the behaviour method \prg{m} will be, we still have some conditions which can guarantee  that $A'$ will be preserved. These conditions are that anything that was accessible from the receiver \prg{x} or argument of \prg{z} at the time of the method call, or anything that is newly created during execution of the method body,  does not satisfy the prerequisites necessary to affect $A'$.\footnote{Notes that  $\sigma'\!\in\!\Reach(M,\sigma,\stmts)$ is a shorthand for $\sigma'.  (\sigma',\_')\!\in\!\Reach(M,\sigma,\stmts)$. }
+% ofPerhaps we have done so already in earlier chapters.}
+
+ The last rule in figure \ref{fig:HoareLogicBasic} is  \ruleN{Sequence}. \sd{It
+%  requires that the first premise uses the format    $\Hoare{\A}{\prg{stms}_1}{\A'}{\B'}$ 
+% TODO say why this is necessary. TODO  say how rule  \ruleN{Cons-1} is useful here. 
+requires that the precondition  and the postcondition of the first statements, \ie $\A$\, and $\B_1$, imply the precondition of the second statements, ie $\A_2$, and that the combined effects described by the two-state assertion in the postconditions of $\stmts_1$ and $\stmts_2$, $\B_1$\, followed by $\B_2$, imply the postcondition of the  sequence, \ie $\B$. }
+
+\sd{The standard entailment,  \ie $\A\, \rightarrow_\M\, \A'$,   guarantees that any state which satisfies $\A$\, also satisfies $\A'$. We extend the notion to cater for two state assertions, and have three new forms of entailment, described in Definition \ref{def:entail}. The requirement  $\A,\B_1\, \rightarrow_\M\, {\bf true}, \A_2$ guarantees that for any pair of states if the former states satisfies $\A$ and the two together satisfy $\B_1$, then the second state will also satisfy $\A_2$, \cf  Definition \ref{def:entail}.\ref{entailPQPP}. The requirement $\B_1,\B_2 \rightarrow_\M\, \B$ guarantees for any three states, if the first two together satisfy $\B_1$, and the second and third together satisfy $\B_2$, then the first and third will satisfy $\B$,  \cf  Definition \ref{def:entail}.\ref{entailQQQ}.  For example, with \ref{def:entail}.\ref{entailPQPP} we have $\prg{x}=5,\prg{x}\post=\prg{x}+2 \rightarrow_\M  \kw{true},\prg{x}=7$, while with  \ref{def:entail}.\ref{entailQQQ} we have $\prg{x}\post=\prg{x}+4,\prg{x}\post=\prg{x}+2 \rightarrow_\M  \prg{x}\post=\prg{x}+6$ for any module $\M$.}
+
+\sdJ{\begin{definition}[Entailment]
+\label{def:entail}
+$ $ \\
+
+\begin{enumerate} 
+\item
+\label{entailPP}
+$\A\, \rightarrow_\M\, \A'$\ \  iff\ \\
+$\forall   \M'. \forall (\_,\sigma)\in \Arising(\M*\M').$ \\
+ $\M*\M', \sigma \models  \A$ \ implies \ $\M*\M',  \sigma \models  \A'$.
+\item
+\label{entailQQ}
+$\B\, \rightarrow_\M\, \B'$\ \  iff\ \\
+$\forall   \M'. \forall (\_,\sigma),(\_,\sigma')\in \Arising(\M*\M').$ \\
+$\M*\M', \sigma, \sigma' \models  \toby{\B}$ \ implies \   $\M*\M', \sigma, \sigma' \models  \B'$.
+\item
+\label{entailPQPP}
+$\A, \B \rightarrow_\M \A',\A''$\ \  iff\ \\
+$\forall   \M'. \forall (\_,\sigma),(\_,\sigma')\in \Arising(\M*\M').$ \\
+$\M*\M', \sigma\models \A\ \wedge\ \M*\M', \sigma,\sigma' \models \B $ \ 
+implies \ $ \M*\M',\sigma \models \A' \ \wedge\   \M*\M',\sigma' \models \A''$ 
+\item
+\label{entailPPQ}
+$\A, \A' \rightarrow_\M \B$\ \  iff\ \\
+$\forall   \M'. \forall (\_,\sigma),(\_,\sigma')\in \Arising(\M*\M').$ \\
+$\M*\M',\sigma\models \A\ \wedge\  \M*\M',\sigma' \models \A'$ \ implies \ $\M*\M',\sigma,\sigma' \models \B$. 
+\item
+\label{entailQQQ}
+$\B, \B' \rightarrow_\M \B''$ \ \  iff\ \\
+$\forall   \M'. \forall (\_,\sigma),(\_,\sigma')\in \Arising(\M*\M').$ \\
+$\M*\M',\sigma,\sigma' \models \B\ \wedge\   \M*\M'\sigma',\sigma'' \models \B'$ implies $\M*\M',\sigma,\sigma'' \models \B''$ 
+\end{enumerate}
+\end{definition}
+}
+
+\sdJ{Note that $\A\, \rightarrow_\M\, \A'$ is equivalent with 
+$\M \models  \A \rightarrow \A'$. TODO: what about the rest? Can they be expressed more succinctly?
+}
+
+
+We now turn our attention to the structural\footnoteC{\sd{to check that this is the term}} rules from figure   \ref{fig:HoareLogic}. 
+
+Rule  \ruleN{Frame-General} allows us to frame onto a tuple any assertion that has not been affected by the code. \footnoteC{TODO: cite reynolds' paper for this}. For this, we  need two notions of some code being disjoint from an assertion:
+
+\begin{definition}[Disjointness]\label{defn:disjointness}
+$ $ \\
+\begin{itemize}
+\item
+\sd{$\M,\sigma \models \prg{stms} \ddisj \A$ iff }\\
+$\M,\sigma  \models \A$ \  $\wedge$ \  $\forall \sigma'\in\Reach(\M,\stmts,\sigma). \ \M,\sigma'  \models \A$.
+
+\item
+$\M,\sigma \models \prg{stms} \disj \A$ iff \\
+$\M,\sigma  \models \A$ \  $\wedge$ \  $\M,\sigma, \prg{stms} \leadsto \sigma'$ \ \ $\rightarrow$ \ \ $\M,\sigma'  \models \A$.
+\end{itemize}
+\end{definition}
+
+For example $\prg{x=7}\disj\prg{x:=x+1; x:=x-1}$ holds for all states and modules,  but  $\prg{x=7}\ddisj\prg{x:=x+1; x:=x-1}$ never holds. In general, framing is an undecidable problem, but we can prove some very basic properties, eg that assignment to a variable does not affect all other variables, nor other paths. Note, that in order to express this property we are making use of logical variables.
+
+\begin{lemma}
+For all modules \M, and states $\sigma$,
+
+\begin{itemize}
+\item
+If \prg{x} and \prg{y} are textually different variables, then\\
+$\M,\sigma \models \prg{x=a}\ddisj \prg{y}:=\prg{a'}$.
+\footnoteC{\sd{Thank you for taking care of :=, Toby. And I think you have pushed it throughout rest of appendix. WOW!}}
+\item
+\sd{If \prg{x} is not a prefix of the path \prg{p}, then} \\
+$\M,\sigma \models \prg{p.f=a}\ddisj \prg{x}:=\prg{a'}$ \footnoteC{\sd{Need to make sure that logical variable are part of \prg{a}}}. 
+\item
+\sd{If $\M,\sigma \models \prg{stms} \ddisj \A$ then  $\M,\sigma \models \prg{stms}  \disj \A$.}
+\end{itemize}
+\end{lemma}
+
+The rule  \ruleN{Conj} allows us to combine different Hoare tuples for the same code, and follows standard Hoare logics.
+
+ Interestingly, our system has {\em four} rules of consequence. The fist rule, \ruleN{Cons-1}, is largely standard, as it allows us to strengthen the precondition \A, and weaken the postcondition \B, and invariant $\B'$. A novelty of this rule, however, is that it allows the invariant to be conjoined to the postcondition; this is sound, because the invariant is guaranteed to hold throughout execution of the code, and thus also after it. 
+
+\sd{For \ruleN{Cons-1} we use the entailment  $\A\, \rightarrow_\M\, \A'$, which guarantees that any state which satisfied $\A$\, also satisfies $\A'$, and that of the form  $\B\, \rightarrow_\M\, \B'$ which guarantees that any pair of states which together satisfy $\B$ also satisfy $\B'$. This is described in Definition \ref{def:entail}.}
+
+
+ The next rule,   \ruleN{Cons-2}, is unusual, in that it allows us to {\em weaken} the precondition, while adding a hypothesis $\B'$ to the postcondition, such that the original postcondition, $\B$, is only guaranteed if $\B'$ holds. The rule is sound, because we also require that the new precondition $\A'$ together with the new postcondition $\B'$ guarantee that the original precondition holds in the pre-state.   
+The judgment $\A,\B\, \rightarrow_\M\, \A',\A''$ is defined in  in Definition \ref{def:entail}. 
+For example, we can use this rule to take\\
+$\HoareNL {\prg{p1}\, \obeys\, Purse} {\prg{p2:=p1.sprout}} {\prg{p2}\, \obeys\, Purse}  {\kw{true}}$\\ and deduce that\\
+$\HoareNL {\kw{true}} {\prg{p2:=p1.sprout}} {\prg{p1}\pre\, \obeys\, Purse \rightarrow \prg{p2}\, \obeys\, Purse}  {\kw{true}}$.
+
+The next two rules, \ruleN{Cons-3} and \ruleN{Cons-4}, allow us to swap between tuples
+ where the postcondition is a one-state assertion, \ie $\Hoare {\A} {\prg{stms}} {\A'} {\B'}$ and
+that where the postcondtion is a one state assertion, \ie $\Hoare {\A} {\prg{stms}} {\B} {\B'}$. 
+
+
+% perhaps some part of following text to be resurrected later
+% We have the standard definitions of entailment of the form  $\A\, \rightarrow_\M\, \A'$ and $\toby{\B'}\, \rightarrow_\M\, \B$\, but we also need an unusual definition of entailment, namely: \sd{The third entailment from below, ie $\A, \B\wedge\B' \rightarrow_\M \A',\A''$ allows us to turn an assertion of the form   $\Hoare{\A}{\prg{stms}}{ \B}{\B'}$ to an assertion of the from  $\Hoare{\A}{\prg{stms}}{ \A'}{\B'}$, as shown in rule ??? in figure ??? . Moreover, the fourth entailment, ie ... TODO complete all this}
+
+
+
+
+
+
+The following lemma is an example entailment.
+\begin{lemma} For all modules $\M$:
+$ ~ $
+
+\noindent$ \MayAccess(\prg{x},\prg{y}) \wedge \MayAccess({\prg{y},\prg{z}})  \rightarrow_\M \ \MayAccess(\prg{x},\prg{z}) $.
+
+\end{lemma} 
+
+The two last rules in \ref{fig:HoareLogic} are concerned with adherence to specification.
+
+The rule \ruleN{Code-Invar-1} expresses that throughout execution of any code, in all intermediate states, for any variable \prg{x} for which we know that it \obeys a specification $S$, we know that it satisfies any of $S$'s stated policies. 
+
+The rule \ruleN{Code-Invar-2} guarantees that any term $e$ which has been shown to be pointing to an object which \obeys a specification $S$ will continue satisfying the specification throughout execution of any \prg{stms}. 
+
+
+\subsection{Soundness}
+
+We first demonstrate that judgments made in the context of a module are preserved when we link a larger module. 
+In lemma \ref{lemma:linkentail}, we state that entailment is preserved by linking:
+
+\begin{lemma}
+\label{lemma:linkentail}
+$ $ \\
+
+\begin{itemize}
+\item
+$\A\, \rightarrow_\M\, \A'$\ implies that\  $\A  \rightarrow_{\M*\M'}\, \A'$.
+\item
+$\B\, \rightarrow_\M\, \B'$\ implies that\  $\B\, \rightarrow_{\M*\M'}\,  \B'$
+ \item
+$\A,\A'\, \rightarrow_\M\, \B$\ implies that\  $\A,\A'\, \rightarrow_{\M*\M'}\,  \B$
+\item
+$\B,\B'\, \rightarrow_\M\, \B''$\ implies that\  $\B,\B'\, \rightarrow_{\M*\M'}\,  \B''$
+\end{itemize}
+\end{lemma}
+
+In lemma \ref{lemma:hl:preserve}  we state that  derivability and validity of Hoare tuples is preserved for larger modules
+\begin{theorem}[Linking preserves derivations and validity]
+\label{lemma:hl:preserve}
+For all modules $\M$, $\M'$.
+
+\begin{itemize}
+\item
+If $\HoareExpl {\A} {\prg{stms}}  {\M} {\A'} {\B}$ , then\\ $\HoareExpl {\A} {\prg{stms}}  {\M\!*\!\M'} {\A'} {\B}$.
+\item
+{If $\M\models \HoareImpl {\A} {\prg{stms}}  {\A'} {\B}$, then \\
+$\M\!*\!\M'\models \HoareImpl {\A} {\prg{stms}}  {\A'} {\B}$}\footnoteC{\sd{Toby, this was what the second bullet was meant to say}  }
+\end{itemize}
+\end{theorem}
+
+We now define what it means for a method body, and a class definition to adhere to its specification
+
+We say that a method \prg{m} defined a class \prg{C} adheres to is specification, \\
+\SP\SP $\M \vdash \prg{C},\prg{m}$\\
+if we able to show that the body of \prg{m} when executed in a state that satisfies \A,  the difference between the initial and final state is described by \B, and will preserve \B', 
+ where \A\ and \B' \  and \B\ are the method's pre,   postcondition, and invariant.
+ Moreover, we say that a class adheres to its specification\\
+\SP\SP $\M \vdash \prg{C}$\\
+ of all its methods adhere to their specification.
+ Finally, a module adheres to its specification, \\
+\SP\SP $\M \vdash \M$\\ 
+if all the classes in \M adhere to their specifications. \footnoteC{\sd{Toby you wrote: \toby{This is phrased as a definition. But
+doesn't proving a module's
+adherence to a specification involve some kind of inductive argument?
+It feels to me like it is some kind of inductive argument that would justify
+adding the $\wedge \kw{this} \obeys Spec$ precondition as, from my
+understanding, this precondition is added to capture the idea that when
+proving the correctness of method \texttt{m} we implicitly assume correctness
+of all of \texttt{m}'s callees, right?} Does the new Def. read better?}}
+
+ 
+  
+\begin{definition}[Proving code's adherence to specification]
+~ \\
+
+\begin{itemize}
+\item
+$\M, \prg{C} \vdash\, \A \,\lb \, \prg{this.m(par)}\, \rb\, \B$ \SP iff    \\
+we can prove that\\
+ $\HoareExpl  {\A\, \wedge\,  \sdJ{\kw{this} : \prg{C}}}  {\prg{stmts}} {\M} {\B[\prg{a}/\prg{res}]} {\sd{\kw{true}} }$ %  {\B'}$
+\\
+where\\
+  $ \Meths {} {\prg{C}} {\prg{m}}$ = 
+$\kw{method} \ \prg{m}\lp  \prg{par}  \rp\ \lb\,    \prg{stmts}\semi\, \kw{return}\, \prg{a}\, \rb$. 
+
+\item
+$\M, \prg{C} \vdash\, \A $ \SP iff    \\
+forall $\M'$, %if $\M * \M'$ is defined, then, 
+and for all $(\sigma,\code)\in \Arising(\M'*\M)$,\footnote{Note that is $\M * \M'$ is undefined, then the set 
+ $\Arising(\M*\M')$ is empty, and the assertion is trivially satisfied.}
+\\
+\sdJ{$\M*\M', \sigma \models\kw{this} : \prg{C}  \rightarrow \A$}
+
+\item
+$\M, \prg{C} \vdash\, \prg{S}$  \SP iff    \\
+for all policies $Pol\in \M{} (\prg{S})$,  \footnote{Perhaps this needs to be expressed better?} 
+we have\ \ $\M, \prg{C} \vdash\, Pol$
+ 
+\item
+$\M \vdash \prg{C}$ \SP iff  \\
+for all \prg{S}, with  $\M{} (\prg{C}) $ = $\kw{class}\,\prg{C}\,\kw{satisfies}\, ..., \prg{S}, ...\, \lb ... \rb$, we have that\ \ \ 
+ $\M, \prg{C} \vdash \prg{S}$.
+ \item
+$  \vdash \M$ iff\\
+ $\M \vdash \prg{C}\ \ $  
+  for all classes \prg{C} from \M
+\end{itemize}
+
+\end{definition}
+
+\sdJ{*** Very important: 2nd bullet point above. This one worries me. ****}
+
+Below we are defining and proving the soundness of our Hoare logic. \scd{Note that we do not require that  $\M \vdash \M$, because
+we do not model object creation. If we had object creation in our system, we would have needed that requirement, and the proof of soundness would have required slightly more complex proof techniques such as a generation lemma, or double induction.}
+
+\begin{lemma}
+\label{lemma:connectivity}
+If $\M, \sigma, \prg{stmts} \leadsto \sigma'$ and if $\z\in dom(\sigma)$, and 
+$\M, \sigma' \models \MayAccess(..)$ then
+$\M, \sigma  \models \MayAccess(..)$ or ....
+\end{lemma}
+
+This lemma expresses the basic axiom of object-capability
+systems that ``only connectivity begets connectivity''~\cite{MillerPhD},
+\begin{proof}
+By structural induction over the derivation of $\M, \sigma, \prg{stmts} \leadsto \sigma'$.
+\end{proof}
+
+\begin{theorem}[Soundness of the Hoare Logic]
+\label{lemma:hl:soundness}
+ For any modules  \M and $\M'$, code \prg{stms}, assertions $\A$, $\A'$ and $\B$ and $\B'$. 
+If 
+\begin{enumerate}
+\item   
+$\vdash \M$, and 
+% \item If \ $\HoareExpl {\A} {\prg{stms}}{\M}  {\A'} {\B}$\\ then  $\M \models \HoareImpl {\A} {\prg{stms}} {\A'} {\B}$.
+\item   \ $\HoareExpl {\A} {\prg{stms}}{\M}  {\B'} {\B}$, and 
+\item
+\sdJ{$\M, \sigma \models \A$}, and 
+\item
+\sdJ{$\M * \M', \sigma, \prg{stms} \leadsto \sigma'$}
+\end{enumerate}
+then
+\begin{enumerate} 
+\item
+$\M, \sigma, \sigma' \models \B'$,  and
+\item
+$\forall {\sigma''}\!\in\!\Reach(M,\sigma,\stmts).\ \M\!*\!\M', \sigma, {\sigma''} \models \B   $
+\end{enumerate}
+\end{theorem}
+
+\sdJ{Note that  the first and second requirement above only talk of module $\M$ which has been verified, and
+which is used to prove the tuple $\HoareExpl {\A} {\prg{stms}}{\M}  {\B'} {\B}$. However execution of the \prg{stmts} is in the context of the linked program $\M'$, and validity of the assertion $\A$ is again wrt to both $\M$ and $\M'$ -- ACTUALLY SD NOT SURE ABOUT THE LATTER} 
+\begin{proof}
+We fix the modules $\M$ and $\M'$. 
+ 
+\sdJ{The proof proceeds by well-founded induction.
+We define a well-founded ordering $\prec$ which orders tuples of states, statements, one-state assertions, and two two-state assertions, ie\\
+$\mbox{ } \ \ \prec\ \  \subseteq\  \ (\ state\ \times\ \syntax{Stmts}\ \times\ \syntax{OneStateAssert}\ \times$
+\\
+$  \mbox{ } \hspace{.49in}  \syntax{TwoStateAssert}\  \times\ \syntax{TwoStateAssert} \ )^2
+$
+\\
+This ordering $\prec$ is the 
+ smallest relation which satisfies the following two requirements\footnote{need to express better}
+\\
+For all $\sigma$, $\sigma'$ $\prg{stmts}$, $\prg{stmts'}$,$\A$, $\B$, $\B'$,  $\A'$, $\B''$, $\B'''$:
+\\
+If $\M*\M', \sigma, \prg{stmts} \leadsto \sigma''$ in fewer steps than $\M*\M', \sigma', \prg{stmts}' \leadsto \sigma'''$\footnote{This should be expressed better, but is clear}, then \\
+$  \mbox{ } \hspace{.2in} (\sigma, \prg{stmts}, \A, \B, \B') \prec (\sigma', \prg{stmts'}, \A', \B'', \B''')$
+\\
+If the proof of $\HoareExpl {\A} {\prg{stms}}{\M}  {\B} {\B'}$ requires the proof of 
+$\HoareExpl {\A'} {\prg{stms}}{\M}  {\B''} {\B'''}$ through one of the steps from Figure 4\footnote{DANGEROUS, need to know that we cannot introduce cycles! but should be doable}, then\\
+ $  \mbox{ } \hspace{.2in}  (\sigma, \prg{stmts}, \A, \B, \B') \prec (\sigma, \prg{stmts}, \A', \B'', \B''')$
+\\
+We now argue that the relation is well-founded, ie there are no cycles. *** some work here *** 
+}
+ 
+ 
+
+We proceed by case analysis on the last step in the derivation of $\HoareExpl {\A} {\prg{stms}}{\M}  {\B'} {\B}$.
+\begin{description}
+%\item[1st Case] $\prec$ because of a shorter execution. We now apply a case analysis on the last step from the Hoare logic to obtain  $\HoareExpl {\A} {\prg{stms}}{\M}  {\B'} {\B}$
+%
+%\begin{description}
+\item[Case] \ruleN{varAsg}, \ruleN{fieldAsg}, \ruleN{fieldAsg}, \ruleN{cond-1} and \ruleN{cond-2} all
+ follow %trivially 
+ %SD: Never say that somthing is trivial - except for the validity of $false \rightarrow A$
+ from the operational semantics of \LangOO; the latter two cases also require application of the induction hypothesis. \item[Case] \ruleN{meth-call-1}. 
+ \sdJ{This gives that \\
+ 5. $\prg{stmts}$ has the form\ $ \prg{v:=x.m(y)}$, and that \\
+ 6. $\A$ $\equiv$
+ $x \obeys \prg{S} \wedge \A'[\prg{x}/\prg{this}, \prg{y}/\prg{par}]$, where \\
+ 7.   $\M(S)$ $=$ $\kw{specification}\, \prg{S}\, \lb ..., \A' \lb \prg{this.m(par)} \B'', ... \rb$, and where\\
+8. $\B$ $\equiv$
+  $ \B''[\prg{x}/\prg{this}, \prg{y}/\prg{par}, \prg{v}/\prg{res}]$, and\\
+ 9.  $\B'$ $\equiv$ $\kw{true}$. \\
+From 5. and the operational semantics we obtain that \\
+10. $\M*\M', \phi'\cdot\chi, \prg{stmts'} \leadsto \sigma''$, where  \\
+11. $\Meths {} {\prg{C}} {\prg{m}} = .. \lb\, \prg{stmts'}; \kw{return}\, a\, \rb $,   and\\
+ 12. $\sigma'=\sigma''[\prg{v} \mapsto \interp {a} {\sigma''}]$ .
+... More steps here ...\\
+From 6. and 3., and by definition ???, we obtain that\\
+yy. $\sigma(x)\downarrow_1=\prg{C}$, and \\
+vv. \prg{C} is defined to satisfy \prg{S}.\\
+From 7, vv, and because of 1. we also obtain that\\
+zz. $\HoareExpl {\prg{this}:\prg{C} \wedge \A} {\prg{stms'}}{\M}  {\B''[\prg{a}/\prg{res}]} {\kw{true}}$\\
+From 10, and .. we obtain that\\
+uu. $(\phi'\cdot\chi,\prg{stms''}, x \obeys \prg{S} \wedge \A'[\prg{x}/\prg{this}, \prg{y}/\prg{par}], ..., ...)
+ \prec (\sigma, {\prg{stms}}, {\A}, {\B'},{\B}) $.\\
+Therefore, by application of inductive hypothesis, we obtain 
+... more here ..}
+
+\item[Case] \ruleN{meth-call-2} 
+\sdJ{Follows from lemma \ref{lemma:connectivity}.}
+
+\item[Case] \ruleN{frame-methCall} 
+\sdJ{needs work}
+%Is similar to \ruleN{meth-call-2} in
+%that it expresses a basic axiom of object-capability languages, namely that
+%in order to cause some visible effect, one must have access to an object able
+%to perform the effect. Coupled with ``only connectivity begets connectivity'',
+%this implies that a method can cause some effect only if the caller has
+%(transitive) access to some object able to cause the effect (including
+%perhaps the callee).
+\item[Case] \ruleN{sequence} follows from the definition of \linebreak
+$\Reach(M,\sigma,\prg{code$_1$; code$_2$})$ and the definition of validity of
+Hoare tuples (\autoref{defn:validity}).
+\item[Case] \ruleN{frame-general} 
+Follows by the definition of $\disj$ and $\ddisj$.
+%\end{description}
+%\item[2nd Case] $\prec$ because of a structural rule. Therefore, ....
+%\begin{description}
+\item[Case] \ruleN{cons-1} follows from the definition of entailment
+(\autoref{def:entail}) and the fact that\\ $(\sigma,\prg{stms}) \in \Reach(M,\sigma,\prg{stms})$.
+\item[Case] \ruleN{cons-2} follows because $\sigma,\sigma' \models Q' \rightarrow Q$ if and only iff $\sigma,\sigma' \models Q$ assuming $\sigma,\sigma' \models Q'$.
+\item[Case] \ruleN{cons-3} and \ruleN{cons-4} follow straightforwardly from
+the definition of entailment and Hoare tuple validity.
+\item[Case] \ruleN{code-invar-1} follows because the definition of policy
+satisfaction for one-state-assertions~$\A$ requires that $\A$ holds for all
+internally-reachable states~$\sigma'$ via $\Reach$.
+\item[Case] \ruleN{code-invar-2} follows straightforwardly from the
+definition of Hoare tuple validity and 2-state-assertion validity.
+%\end{description}
+\end{description}
+  \end{proof}
+
+
+
+
+ 
+
+
+ 
+
+

@@ -1,0 +1,194 @@
+\newcommand{\HoareFigOne}
+{\begin{figure*}
+$\begin{array}{l}
+ \begin{array}{lcl}
+      \inferenceruleN {varAsg} {
+} {
+     \Hoare {\kw{true}}
+     {\kw{var}\,  \prg{v} \kw{:=} \prg{a} } { \prg{v}=\prg{a}\pre } {\kw{true}}
+\\
+     \Hoare {\kw{true}}
+      {  \prg{v} \kw{:=} \prg{a} } { \prg{v}=\prg{a}\pre }  {\kw{true}}
+}
+& &
+\inferenceruleN {fieldAsg} {
+ 
+}{
+     \Hoare
+     {\kw{true}}
+      { \kw{this.}\prg{f}  \kw{:=} \prg{a} }
+      { \kw{this.}\prg{f}   = \prg{a}\pre}
+       {\kw{true}}
+}
+\\
+\\
+\inferenceruleN {cond-1} {
+ \A \rightarrow_\M \prg{cond} \\
+  \Hoare{\A} {  \prg{stmts}_1\  } {\B} {\B' }
+} {
+   \Hoare{\A} { {\kw{if}}\, \prg{cond}\,  {\kw{then}}\, \prg{stmts}_1\, {\kw{else}}\, \prg{stmts}_2  } {\B} {\B'}
+   }
+& &
+\inferenceruleN {cond-2} {
+ \A \rightarrow_\M \neg\prg{cond} \\
+  \Hoare{\A} {  \prg{stmts}_2\  } {\B} {\B'}
+} {
+   \Hoare{\A} { {\kw{if}}\, \prg{cond}\,  {\kw{then}}\, \prg{stmts}_1\, {\kw{else}}\, \prg{stmts}_2  } {\B} {\B'}
+   }
+   \\
+   \\
+   \inferenceruleN {skip} {
+} {
+   \Hoare{\A} { {\kw{skip}} } {\A} {\kw{true}}
+   }
+\end{array}
+\\
+%\\
+% \inferenceruleN {newObj} {
+%   \prg{f}_1,... \prg{f}_n \mbox{ are the fields of } \prg{C} 
+%}{
+%     \Hoare
+ %     {\kw{true} }
+%      { \prg{x}\,  \kw{:=} \, \kw{new}\, \prg{C}\lp \prg{a}_1... \prg{a}_n \rp}
+%      {\prg{this.f}_{1}=(\prg{a}_1)\pre \, \wedge ...  \wedge\, \prg{this.f}_{n}=(\prg{a}_n)\pre 
+% \  \wedge\ \prg{x}: \prg{C}\ \ \wedge\ \   \prg{x} \obeys Spec(\M,\prg{C}) }
+%      {\kw{true} }
+% }
+\\ \\
+  \inferenceruleNN {meth-call-1} {
+    \sd{ \M(S) \,= \,  \kw{spec}\ S\  \lb\  \overline{Policy}, \A \,\lb \, \prg{this.m(par)}\, \rb\, \B, \overline{Policy'}\  \rb}
+% \SP\SP \SP\SP\SP
+  %  \B''[\prg{x}/\prg{this},\prg{y}/\prg{par}] = \B'''
+    } {
+    \Hoare{\prg{x}\obeys S\wedge  \A[\prg{x}/\prg{this},\prg{y}/\prg{par}]} {\prg{v} \, \kw{:=}\, \prg{x.m(y)}} {\B[\prg{x}/\prg{this},\prg{y}/\prg{par},\prg{v}/\prg{res}]}   {\sd{\kw{true}}} % {\B'''}
+  }
+  \\
+  \\
+   \inferenceruleNN {meth-call-2} {
+         \B \equiv \forall \prg{z}:\pre \Obj.\ \MayAccess({\prg{v},\prg{z}}) \rightarrow  
+    (\, \MayAccess\pre(\prg{x},\prg{z})\, \vee \, \MayAccess\pre(\prg{y},\prg{z})\, )\\
+   \B' \equiv   \forall \prg{z},\prg{u}:\pre \Obj. \ ( \ \MayAccess({\prg{u},\prg{z}}) \rightarrow \\
+       $ ~ $ \hspace{1.3in}  ( \MayAccess\pre(\prg{u},\prg{z}) \ \ \ \vee  \\
+                 $ ~ $ \hspace{1.7in}(\  (\MayAccess\pre({\prg{x},\prg{z}})\vee \MayAccess\pre({\prg{y},\prg{z}}) )\ \wedge \\
+                 $ ~ $ \hspace{1.8in}  (\MayAccess\pre({\prg{x},\prg{u}})\vee \MayAccess\pre({\prg{y},\prg{u}}) ) \ ) \ ) \ \  )  } {
+    \Hoare{\true} {\prg{v} \, \kw{:=}\, \prg{x.m(y)}} {\B}
+           { \B'  }
+}
+\\ \\
+   \inferenceruleNN {frame-methCall} {
+          \Hoare{\A}   {\prg{x.m(y)}} {\sd{\kw{true}}}  {\forall \prg{z}. (\ \MayAffect(\prg{z},\A')  \rightarrow \B'({\prg{z}})\ )\ \ \wedge }
+          \\
+% trick for layout
+		\SP\SP\SP\SP\SP \SP\SP\SP\SP\SP  \ 
+		{\forall \prg{z}.(\ (\MayAccess\pre(\prg{x},\prg{z}) \vee \MayAccess\pre(\prg{y},\prg{z})
+           \vee \New(\prg{z}) \ )%(\prg{z}:\prg{Object}\wedge \neg ( \prg{z}:\pre\prg{Object}) ) \ )
+           \ \rightarrow\  \neg \B'(\prg{z})\ )}
+}{
+          \Hoare{\sd{\A\wedge\A'}} {\prg{x.m(y)}} {\A'} {\sd{\kw{true}}}
+}
+\\
+\\
+%\inferenceruleNN{sequence} {
+%        \Hoare{\A}{\stmts_1}{\A'}{\B'}  \SP\SP\SP\SP         \Hoare{\A'}{\stmts_2}{ \B}{\B'}
+%         }
+%     {
+%       \Hoare{\A}{\stmts_1; \, \stmts_2}{ \B}{\B'}
+%        }
+%\end{array}
+\inferenceruleNN{sequence} {
+        \Hoare{\A}{\stmts_1}{\B_1}{\B'}  \ \SP\SP\SP        \Hoare{\A_2}{\stmts_2}{ \B_2}{\B'}
+        % \\
+       \ \SP\SP\SP  
+         \sd{\A,\B_1\rightarrow_\M \kw{true},\A_2}    \ \SP\SP\SP  \sd{\B_1,\B_2\rightarrow_\M \B}
+        }
+     {
+       \Hoare{\A}{\stmts_1; \, \stmts_2}{ \B}{\B'}
+        }
+\end{array}
+$
+\caption{Hoare Logic -- Basic rules of the language -- we assume that the module \M\ is globally given}
+\label{fig:HoareLogicBasic}
+\end{figure*}
+}
+
+\newcommand{\HoareFigTwo}
+{
+\begin{figure*}
+$\begin{array}{l}
+\begin{array}{lcl}
+   \\
+\\
+   \inferenceruleN {frame-general} {
+          \Hoare{\A}{\stmts}{\B} {\B'}
+           \\
+        \sd{\A  \rightarrow_\M   \stmts\disj  \A'     \SP\SP\SP\    \A  \rightarrow_\M   \stmts\ddisj  \A''}
+} {
+          \Hoare{\A\wedge \A'} {\stmts} {\B\wedge\sd{\A'}}  {\B' \wedge\sd{\A''}}
+}
+& &
+\inferenceruleN {Conj} {
+ \sd{ \Hoare{\A_1}{\stmts}{ \B_1}{\B_3}}\\
+\sd{  \Hoare{\A_2}{\stmts}{ \B_2}{\B_4}}
+} {
+   \sd{ \Hoare{\A_1\wedge \A2 }{\stmts}{ \B_1 \wedge \B_2 }{\B_3 \wedge \B_4}   } 
+ }
+\\
+\\
+    \inferenceruleN {Cons-1} { % REFACTORED
+          \Hoare{\A}{\stmts}{ \B}{\B'} \SP\SP\SP \sd{\A' \rightarrow_\M \A}
+        \\
+     \sd{\B \rightarrow_\M \B''} \ \  \SP\SP\SP\SP\SP\SP\SP\SP \sd{\B' \rightarrow_\M \B'''}
+     }
+     {
+       \Hoare{\A'}{\stmts}{ \sd{\B''\wedge\B'}}{\sd{\B'''}}
+        }
+& 
+&
+    \inferenceruleN {Cons-2} {  % NEW
+          \Hoare{\A}{\stmts}{ \B}{\B''}   \\
+           \sd{\A',\B' \rightarrow_\M \A,\kw{true}}   
+     }
+     {
+       \Hoare{\A'}{\stmts}{\sd{\B' \rightarrow \B}}{\B''}
+        }
+\\ \\
+\inferenceruleN {Cons-3} 
+{ % was Cons-1
+  \Hoare{\A}{\stmts}{ \B}{\B'} %
+  % SD put in Cons-4 \SP\SP\SP\SP\SP \toby{\A' \rightarrow_\M \A}
+  \\
+ \A, \B \rightarrow_\M \kw{true},\A' 
+ % I droppped the \wedge \B', because Cons-1 does it
+} {
+   \Hoare{\sd{\A}}{\stmts}{ \A'}{\B'}
+   }
+& &
+  \inferenceruleN {Cons-4} { % was Cons-2
+          \Hoare{\A}{\stmts}{ \A'}{\B'} % \SP\SP\SP \toby{\A'' \rightarrow_\M \A}
+        \\
+     \toby{\sd{\A},\A' \rightarrow_\M \B} %\SP\SP\SP\SP\SP\SP\SP \toby{\B' \rightarrow_\M \B''}
+     }
+     {
+       \Hoare{\A}{\stmts}{ \B}{\toby{\B'}}
+        }
+   \\
+   \\
+ \inferenceruleN {code-invar-1} {
+            \sd{ \M( S) \equiv \  \kw{spec}\ S\  \lb\  \overline{Policy}, P, \overline{Policy'}\  \rb}
+  }
+     {
+       \Hoare {\sd{\kw{true}}} {\stmts} {\sd{\kw{true}}} {\sd{\forall \prg{x}.(\, \prg{x} \obeys S \rightarrow P[\prg{this}/\prg{x}]\, )}}
+      }
+    & &
+  \inferenceruleN {code-invar-2} {
+           
+     }{
+    \Hoare  {\sd{e} \obeys S}  {\stmts}    {\kw{true}}  {\sd{e}\pre \obeys S}
+      }
+ \end{array}
+  \end{array}
+$
+\caption{Hoare Logic -- we assume that the module \M\ is globally given}
+\label{fig:HoareLogic}
+\end{figure*}
+}

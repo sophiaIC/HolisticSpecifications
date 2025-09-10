@@ -1,0 +1,830 @@
+\documentclass[acmsmall,screen]{acmart}
+  \citestyle{acmauthoryear}
+
+  % \documentclass[acmsmall,10pt]{acmart}\settopmatter{printfolios=true} % ,review
+% \citestyle{acmauthoryear}
+\usepackage{subcaption}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{xspace, listings, lstcustom, wrapfig, graphicx, enumerate}
+\usepackage{paralist}
+\usepackage{color, colortbl, relsize}
+\usepackage{rotating}
+\usepackage{pifont}
+\usepackage{multirow}
+\usepackage{soul}
+\usepackage{tcolorbox}
+\usepackage[scaled=.9, light]{zlmtt}
+\usepackage{siunitx}
+\usepackage{setspace}
+
+  \include{macros}
+
+% \setcopyright{rightsretained}
+%\acmPrice{}
+%\acmDOI{10.1145/3133896}
+%\acmYear{2018}
+%\copyrightyear{2018}
+%\acmJournal{PACMPL}
+%\acmVolume{1}
+%\acmNumber{????}
+%\acmArticle{72}
+%\acmMonth{10}
+%
+%\citestyle{acmauthoryear}
+%
+%
+%
+%\copyrightyear{2017}
+%\copyrightdata{978-1-nnnn-nnnn-n/yy/mm}
+%\doi{nnnnnnn.nnnnnnn}
+
+
+
+%\usepackage[usenames]{color}
+
+\usepackage{times}
+ \usepackage{latexsym}
+\usepackage{listings}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+
+\lstset{ %
+  language=Java,                % the language of the code
+  mathescape=true,
+  basicstyle=\footnotesize\tt,           % the size of the fonts that are used for the code
+  numbers=left,                   % where to put the line-numbers
+  numberstyle=\tiny\color{dkgreen},  % the style that is used for the line-numbers
+  stepnumber=1,                   % the step between two line-numbers. If it's 1, each line
+                                  % will be numbered
+  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},      % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  frame=single,                   % adds a frame around the code
+  rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+  tabsize=2,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+  title=\lstname,                   % show the filename of files included with \lstinputlisting;
+                                  % also try caption instead of title
+  keywordstyle=\color{blue},          % keyword style
+  commentstyle=\color{gray},       % comment style
+  stringstyle=\color{mauve},         % string literal style
+  escapeinside={\%*}{*)},            % if you want to add LaTeX within your code
+  morekeywords={private,public,final,this,throw,new,||,to,def,any,fun,fld,abstract,policy,specification,ghost,field}
+         % if you want to add more keywords to the set
+}
+
+% \newcommand{\scd}[1]{{\color{blue}{#1}}}
+% \newcommand{\jn}[1]{{\color{green}{#1}}}
+% \newcommand{\sd}[1]{{\color{dkgreen}{#1}}}
+% \newcommand{\sd}[1]{{{#1}}}
+
+\begin{document}
+
+%\preprintfooter{internal memo}
+
+\author{Sophia D} \author{Holistic Group} \author{help from Alex S. and Krysia B.} \affiliation{zzz}
+
+
+%\authorinfo{Sophia Drossopoulou$^1$, James Noble$^{2,1}$, Toby Murray$^4$, Mark Miller$^3$, Shupeng Loh$^1$, Susan Eisenbach$^1$}{$^1$Imperial College London, $^2$Victoria University Wellington, $^3$Google Inc, $^3$NICTA and UNSW.}{}
+
+
+\title{Step-index like semantics for our assertions}
+\subtitle{Work in progress}
+
+
+\begin{abstract}
+
+How we define the semantics for assertions through step-indexing or similar ideas. The ensuing logic is not classical.
+We propose some alternatives, and discuss their ramifications.
+In this version we do not include the \obeys-predicate.
+\end{abstract}
+
+
+\maketitle
+
+
+\section{Introduction}
+
+\subsection{Preliminaries}
+
+We have the following entities:
+\begin{itemize}
+\item expressions $e$ with the expected syntax, and
+\item assertions $A$,
+\item modules $\M$ which hold the  definitions of classes, methods and functions, and the function $\Body{\M}{\prg{id}}$ which returns the body of a function or a predicate \prg{id}, as defined in \M.
+\item states $\sigma$ which contain a stack of frames. where each frame has the receiver, the method id, the arguments, the local variables, and the code being executed
+\end{itemize}
+
+The above are more or less as described in the July documents. For clarity we define assertions $A$  (we skip some parts of the syntax for the time being)
+
+\begin{definition}
+[Assertions] have the following syntactic form
+
+$A$ \ :;= \ \prg{true} \ | \ \prg{false} \ | \ \prg{e} \ | \ $A \rightarrow A$ \ | \ $A \vee A$ \ | \  $\neg A $ \ |  \prg{PredId{e}}.
+
+\end{definition}
+
+\subsection{Examples}
+
+In this paper we will consider  functions, predicates and states, described below.
+
+\noindent
+The function   \prg{acyclic}  returns \prg{true}
+if the list is acyclic, and is defined defined as \\
+\strut \ \ \ \ \prg{acyclic(x)} \ \ $\equiv$\\
+\strut \ \ \ \ {\small{\prg{if x:List then (if x.next==null then true else acyclic(x.next)) else false}}}.
+\\
+The function  \prg{length}  returns the length of a list, and is defined defined as \\
+\strut \ \ \ \ \prg{length(x)} \ \ $\equiv$\\
+\strut \ \ \ \ {\small{\prg{if x:List then (if x.next==null then 0 else 1+length(x.next)) else 0}}}
+
+
+\noindent
+We also define the predicates \prg{Finite} and  $\prg{Finite}'$ similar to the function \prg{acylcic},  as follows:\\
+\strut \ \ \ \ \prg{Finite(x)}\ \ \ $\equiv$     \ \ \  $\prg{x.next}\neq\prg{null} \ \rightarrow\ \prg{Finite(x.next)})$.\\
+% \strut \ \ \ \  \ \ \ {\small{$(\prg{x.next==null} \rightarrow \prg{true}) \wedge  (\prg{x.next!=null} \rightarrow \prg{Finite(x.next)})$}}.\\
+\strut \ \ \ \ $\prg{Finite}'(\prg{x})$\ \ \ $\equiv$     \ \ \  $\prg{x.next}=\prg{null} \ \vee\  \prg{Finite}'(\prg{x.next})$.\\
+And we define  the    contradictory predicate \prg{Cntrdct},\\
+\strut \ \ \ \  $\prg{Cntrdct}(\prg{x})\ \ \ \equiv \ \ \ \neg \prg{Cntrdct}(\prg{x})$. \\
+
+\noindent,
+Moreover, we assume a state $\sigma_{ac}$ such that
+$\sigma_{ac}(\prg{z.next.nex}t)$=\prg{null}\footnote{This needs to be written better.}
+And we assume another state,
+$\sigma_{cyc}$, where \prg{z} is a cyclic \prg{List} object, and
+$\sigma_{cyc}(\sigma_{cyc}(\prg{z}),\prg{next})=\sigma_{cyc}(\prg{z})$.
+
+\subsection{What we wiil do}
+
+We now define the judgments
+\begin{itemize}
+\item $\M, \sigma, e \leadsto_k v$ which says that $e$ evaluates to $v$ in up to $k$ steps
+\item $\M, \sigma \models_k A$  which says that validity of $A$ in  $\M, \sigma$ can be established in up to $k$ steps.
+\item $\M, \sigma \models  A$  which says that $A$ is valid in $\sigma$.
+
+\item $\M, \sigma\leadsto_k \sigma'$ which says that state $\sigma$ evaluates to new state $\sigma'$ in up to $k$ steps
+\end{itemize}
+
+We will not give complete definitions here, but show the most salient parts below.
+
+
+
+\section{Evaluation of expressions}
+
+
+\begin{definition}
+\label{def:expr:step:index}
+Given a module $\M$, a state $\sigma$, and a natural number $k$ we define the judgment $\M, \sigma, e \leadsto_k v$ by cases on \prg{e} as follows:
+\begin{itemize}
+\item
+$\M, \sigma, \prg{x} \leadsto_k v$ \ \ \  iff \ \ \  $\prg{x}\in Dom(\sigma)$  and $\sigma(\prg{x})$=$v$, for any value of $k$.
+\item
+$\M, \sigma, \prg{e.f} \leadsto_k v$\ \ \  iff \ \ \  $\M, \sigma, \prg{e} \leadsto_{k} \iota$ for some $\iota$,  % and $k\geq 1$,
+and $\sigma(\iota,\prg{f})$=$v$.
+\item
+$\M, \sigma, \prg{e1}==\prg{e2} \leadsto_k \prg{true}$\ \ \  iff \ \ \  $\M, \sigma, \prg{e1} \leadsto_{k} v$, \ and \ $\M, \sigma, \prg{e2} \leadsto_{k} v$ for some $v$.
+\item
+$\M, \sigma, \prg{e1}==\prg{e2} \leadsto_k \prg{false}$\ \ \  iff \ \ \  $\M, \sigma, \prg{e1} \leadsto_{k} v1$, \ and \ $\M, \sigma, \prg{e2} \leadsto_{k} v2$, and $v1\neq v2$. % for some $v1$, $v2$.
+\item
+$\M, \sigma, \prg{if\ e0 then\ e1\ else e2} \leadsto_k v$\ \ \  iff \ \ \    $\M, \sigma \leadsto_{k-1} \prg{true} $ \ and\ $\M, \sigma, \prg{e1} \leadsto_{k-1} v$ \\
+\strut \hspace{2.6in} or\ $\M, \sigma \leadsto_{k-1} \prg{false} $\  and\ $\M, \sigma, \prg{e2} \leadsto_{k-1} v$,\\
+\strut \hspace{2.6in}  and  $k\geq 1$.
+\item
+$\M, \sigma, \prg{fnId(e)} \leadsto_k v$\ \ \  iff \ \ \    $\M, \sigma, \prg{e} \leadsto_{k-1} v'$  and $\Body{\M}{\prg{fnId}}$=$\prg{e}'$ \\
+ \strut \hspace{1.55in} and  $\M, \sigma[\prg{z}\mapsto v'], \prg{e'}[\prg{z}/\prg{x}]  \leadsto_{k-1} v $ and \prg{z}   free in \prg{e} and  $\sigma$,\\
+ \strut \hspace{1.55in} and $k\geq 1$.
+\end{itemize}
+
+ We also define, more generally:
+\begin{itemize}
+\item
+$\interp {e}{\M,\sigma}$=$v$ \ \  iff \ \  $\exists k.\forall j\geq k. \,  \M, \sigma, \prg{e} \leadsto_j v$.
+\end{itemize}
+\end{definition}
+
+Note that expressions have no side-effects. The evaluation $\leadsto_k$ is monotonic, in the sense that if execution of up to $k$ steps returns a result, then any larger number of steps returns the same result.
+
+\begin{mylemma}[Expression Evaluation is monotonic]
+\label{lemma:expr:eval:monotinic}
+For any module $\M$, any state $\sigma$, expression \prg{e},  any natural numbers $k$, $j$ and values $v$ and $v'$ we have:
+\begin{itemize}
+\item
+$\M, \sigma, \prg{e} \leadsto_k v$ \ \ \  $\longrightarrow$ \ \ \  $\M, \sigma, \prg{e} \leadsto_{k+j} v$.
+\item
+$\M, \sigma, \prg{e} \leadsto_j v \ \wedge\ \M, \sigma, \prg{e} \leadsto_k v'$  \ \ \  $\longrightarrow$ \ \ \  $v$=$v'$
+\end{itemize}
+
+\end{mylemma}
+
+\begin{proof}
+The lemma is easy to prove. Just a sketch below
+
+\begin{itemize}
+\item
+By well-founded ordering introduced on the structure of \prg{e} and value of $k$\footnote{Here to find and use the right term from the step-index lit. - but it is well-founded ordering thing.}. Only the base case, where \prg{e}=\prg{v}, and the function calls are  a bit interesting cases.
+\item
+Similar argument.
+\end{itemize}
+\end{proof}
+
+
+ In some cases,  there exists no $k$ and $v$ such that $\M, \sigma, \prg{x} \leadsto_k v$; therefore the expression $\interp {e}{\M,\sigma}$ is not always defined. For example,   the terms $\interp {\prg{acyclic(z)}}{\M,\sigma_{cyc}}$
+and  $\interp {\prg{lenght(z)}}{\M,\sigma_{cyc}}$ are undefined.\footnote{In Summers-Drossopoulu-ECOOP11 we had special error values for such cases.} And the term $\interp {\prg{if acyclic(z)  then false else true}}{\M,\sigma_{cyc}}$, which corresponds to the negation of \prg{acyclic} is also undefined.
+
+
+\section{Code Execution}
+
+
+
+We now define what it means to execute code.\footnote{Or perhaps we can be parametric with that.  This sections is not that interesting for the time being.}
+
+\begin{definition}
+\label{def:execution:step:index}
+Given a module $\M$ a state $\sigma$ and a natural number $k$ we define the judgment $\M, \sigma  \leadsto_k \sigma'$ by cases on $\sigma$.\prg{code} as follows:
+\begin{itemize}
+\item
+$\M, \sigma  \leadsto_k \sigma$ for all $k$
+\item
+For all $k$, \\
+ if \  $\sigma[\prg{x},\prg{f}\mapsto\sigma(\prg{y}),\prg{code}\mapsto \prg{stmts}]  \leadsto_k \sigma'$, \ then \
+$\sigma[\prg{code} \mapsto \prg{x.f=y; stmts}] \leadsto_{k+1} \sigma'$
+\item
+... skipping the rest
+\end{itemize}
+\end{definition}
+
+\begin{mylemma}[Code execution is monotonic]
+For any module $\M$, any states $\sigma$, $\sigma'$, and $\sigma''$, and any natural numbers $k$, $j$ we have:
+
+\label{lemma:exec:monotinic}
+$\M, \sigma  \leadsto_k \sigma'$ and $\M, \sigma  \leadsto_j \sigma''$
+and $j\geq k$ imply that % $\sigma'=\sigma''$ or
+$\M, \sigma'  \leadsto_{j-k} \sigma''$.
+\end{mylemma}
+\begin{proof}
+TODO.
+\end{proof}
+
+\section{Semantics of assertions through step-indexing}
+
+Here step-indexing is important and interesting.
+%
+The basic structure of the definition has to follow the LICS style, and add a case for predicates.\footnote{Note the in Kripke predicate logics the predicates have an interpretation, and no bodies.}
+There is a large design space:
+
+\begin{enumerate}
+\item
+Do we define implication a) in terms of the "next" world, as in Kripke semantics, or b) in terms of the previous world, as in the LICS paper?
+\item
+For the base case, i.e.  for $\M, \sigma \models_0 A$ , do we have
+\begin{enumerate}
+\item $\M, \sigma \models_0 A$ always (as in LICS), or
+\item  $\M, \sigma \models_0 A$ never (this is inductive, and firs the execution of expressions),
+\item   $\M, \sigma \models_0 A$ iff $A$ is an expression $e$ and $\M, \sigma, e \leadsto_0 \prg{true}$.
+\end{enumerate}
+\item
+For implication, we have\\
+\strut   $ \ \ \hspace{.6in} $ a)  \ \  $\M, \sigma \models_k A \rightarrow A'$  \ \ \  iff \ \ \   $\M, \sigma \models_{k-1} A$ implies that $\M, \sigma \models_{k-1}   A'$, or
+\\
+\strut   $ \ \ \hspace{.6in} $ b) \ \ $\M, \sigma \models_k A \rightarrow A'$  \ \ \  iff \ \ \     $\forall j< k.\ \M, \sigma \models_{j} A$ implies that $\M, \sigma \models_{j}   A'$
+\item
+For disjunction do we have\\
+\strut   $ \ \ \hspace{.6in} $ a) \ \  $\M, \sigma \models_k A \vee A'$  \ \ \  iff \ \ \   $\M, \sigma \models_{k} A$ or $\M, \sigma \models_{k}   A'$, or
+\\
+\strut   $ \ \ \hspace{.6in} $ b) \ \ $\M, \sigma \models_k A \vee A'$  \ \ \  iff \ \ \     $\forall j< k.\ \M, \sigma \models_{j} A$ or $\M, \sigma \models_{j}   A'$
+
+\item
+For validity, do we have \\
+\strut   $ \ \ \hspace{.6in} $ a) \ \  $\M, \sigma \models  A'$  \ \ \  iff \ \ \   $\forall k\in \mathbb{N}.\ \M, \sigma \models_{k} A$, \ \ or \\
+\strut   $ \ \ \hspace{.6in}$  b) \ \ $\M, \sigma \models  A'$  \ \ \
+  iff \ \ \  $\exists k.\ \forall j\geq  k.\ \M, \sigma \models_{j} A$
+\end{enumerate}
+
+Wrt (1), I cannot see how the definition in terms of a future world could  work for u, because most of  predicates (e.g. \prg{Finite}) have an inductive (least fixpoint reading). Therefore I discard this avenue. Similarly,
+So, there are 18 alternatives.
+
+In the below, I am choosing 2c)-3a)-4b)-5b). I believe that the only other sensible alternative is to chose 2c)-3a)-4a)-5b.
+\footnote{I do not like 2a)  as it would give that  $\M, \sigma \models_0 \neg   A$ as well as $\M, \sigma \models_0    A$. Similarly, 2b) gives $\M, \sigma \models_0  \neg A$ as well as $\M, \sigma \models_0 \neg \neg A$}
+\footnote{In the LICS paper they start with $\M, \sigma \models_0 A$ always. But they do not have predicates, let alone recursive ones. But if we did that, then we would get, as shown below, that $\M, \sigma \models \prg{Acyclic(z)}$. And it makes sense to have a base case of invalid, as we have not yet dedicated enough fuel to investigate...
+}
+
+\subsection{Step-indexing with 2c)-3a)-4b)-5b}
+
+ \begin{definition}
+\label{def:assetion:step:index}
+ Given a module $\M$ a state $\sigma$ and a natural number $k$ we define the judgment $\M, \sigma \models_k A$ by cases on $A$  and $k$  as follows:
+
+\noindent
+For all $k$ we have
+% \begin{enumerate}[a]
+\begin{itemize}
+\item
+\label{def:assrt:expr}
+$\M, \sigma \models_k e$ \ \ \  iff \ \ \   $\M, \sigma, e  \leadsto_{k} \prg{true}$.\footnote{This rule implies
+that $\M, \sigma \models_k \prg{true}$  always and $\M, \sigma \models_k \prg{false}$.}
+% \footnote{should it be iff $\M, \sigma, e  \leadsto_{k-1} \prg{true}$? I do not think so, but to remember}
+\end{itemize}
+
+\noindent
+For $k\geq 1$ we define
+% \begin{enumerate}[a]
+\begin{itemize}
+\item
+\label{def:assrt:impl}
+$\M, \sigma \models_k A \rightarrow A'$  \ \ \  iff \ \ \   $\M, \sigma \models_{k-1} A$ implies that $\M, \sigma \models_{k-1}   A'$. %, and $k\geq 1$.
+\item
+\label{def:assrt:vee}
+$\M, \sigma \models_k A \vee A'$  \ \ \  iff \ \ \   $\forall j\leq k.\ \M, \sigma \models_{k}   A$\ or\   $\forall j\leq k.\ \M, \sigma \models_{k}   A'$. %\item
+%\label{def:assrt:Future}
+%$\M, \sigma \models_k \Future{A}$ \ \ \  iff \ \ \   $\exists \sigma'.\, \M, \sigma  \leadsto_{k-1} \sigma'$ and $\M, \sigma' \models_{k-1}  {A}$.\footnote{We can ignore this case for the time being, as the issues artise even without looking at this case.}
+%\item
+%\label{def:assrt:past}
+%$\M, \sigma \models_k \Past{A}$ \ \ \  iff \ \ \   ... like, and a bit more complex than above, doable.
+%\item
+%\label{def:assrt:Using}
+%$\M, \sigma \models_k \Using{A}{\prg{S}}$ \ \ \  iff \ \ \   $\M, \sigma |_{S} \models_k  A$ where $\interp{\prg{S}}{\M,\sigma}$=$S$
+%\footnote{We need to think a bit about $\interp{S}{\M,\sigma}$. Also, should it be $\M, \sigma |_{S} \models_{k-1}  A$, and does it make a difference?}
+\item
+\label{def:assrt:Pred}
+$\M, \sigma \models_k {\prg{PredId}(\prg{e})}$\ \ \  iff \ \ \   $\exists v.\, \M, \sigma, \prg{e} \leadsto_{k-1} v$  and $\Body{\M}{\prg{PredId}}$=$\prg{A}$ \\
+ \strut \hspace{1.55in} and  $\M, \sigma[\prg{z}\mapsto v']  \models_{k-1} \prg{A}[\prg{z}/\prg{x}]  $ and \prg{z}   free in \prg{A} and  $\sigma$.
+% \strut \hspace{1.55in} and $k\geq 1$.
+%\end{enumerate}
+\end{itemize}
+
+ As well, we define
+ \begin{itemize}
+  \item
+ $\M, \sigma \not\models_k A$\ \  iff\ \  $\M, \sigma\models_k   A$ does not hold. \end{itemize}
+
+And also
+\begin{itemize}
+\item
+$\M, \sigma \models  A$\ \  iff\ \  $\exists k.\forall j\geq k. \,  \M, \sigma\models_j  A$.
+% \item
+% $\M, \sigma \not\models  A$\ \  iff\ \  $\exists k.\forall j\geq k. \,  \M, \sigma\not\models_j  A$.
+\end{itemize}
+
+\end{definition}
+
+\begin{note}[The meaning of negation] We use $\neg A$ as shorthand for $A \rightarrow \prg{false}$. Therefore, we have that
+\ \ $\M, \sigma \models_k \neg A$   \  iff \    $\M, \sigma \models_{k}   A \rightarrow \prg{false}$, which means that  \ \
+ $\M, \sigma \models_k \neg A$   \  iff \   $\M, \sigma \not\models_{k}   A $.
+
+\end{note}
+
+
+\noindent{\bf{Discussion}}
+
+
+\begin{example}[acyclic and Finite]
+In the acyclic configuration $\sigma_{acyc}$, we can establish that x is finite after three steps. That is
+
+
+\begin{tabular}{llll}
+\ \ \ \ & (A) & $\M,\sigma_{acyc}  \models_0   \prg{x.next.next}=\prg{null} $,& by def \ref{def:assetion:step:index}, base case.\\
+\ \ \ \ & (A') & $\M,\sigma_{acyc}  \not \models_0   \prg{x.next}=\prg{null} $,& by def \ref{def:assetion:step:index}, base case.\\
+\ \ \ \ & (B) & $\M,\sigma_{acyc} \not\models_0  \prg{Finite}(\prg{x.next})$,& by def \ref{def:assetion:step:index}, base case.\\
+\ \ \ \ & (C) & $\M,\sigma_{acyc}  \not\models_0   \prg{Finite}(\prg{x})$,& by def \ref{def:assetion:step:index}, base case.\\
+\ \ \ \ & (D) & $\M,\sigma_{acyc}   \models_1   \prg{Finite}(\prg{x.next})$,& by A, and def \ref{def:assetion:step:index} ind.  case for predicates,\\
+\ & & & and inductive case for implications\\
+\ \ \ \ & (E) & $\M,\sigma_{acyc}   \not\models_1   \prg{Finite}(\prg{x})$,& by A' and C, and def \ref{def:assetion:step:index}  ind.  case for predicates\\
+\ & & & and inductive case for implications\\
+\ \ \ \ & (F) & $\M,\sigma_{acyc}    \models_2   \prg{Finite}(\prg{x})$,& by A' and D, and def \ref{def:assetion:step:index}  ind.  case for predicates\\
+\ & & & and inductive case for implications\\
+\ \ \ \ & (G) & $\M,\sigma_{acyc}    \models_3   \prg{Finite}(\prg{x})$,& by A' and F,  and def \ref{def:assetion:step:index}  ind.  case for predicates\\
+\ & & & and inductive case for implications\\
+& ... & ...
+\end{tabular}
+
+Therefore,    $\M,\sigma_{acyc}    \models_k   \prg{Finite}(\prg{x})$, for all $k \geq 2.$, which gives us that
+  $\M,\sigma_{acyc}    \models   \prg{Finite}(\prg{x})$.
+
+
+\vspace{.01in}
+In the cyclic configuration, as we saw earlier, $\interp{\prg{acyclic(z)}}{\sigma_{cyc}}$ is undefined. Nevertheless, we  $\M, \sigma_{cyc} \models_k \neg \prg{Finite}({z})$ for all $k$.
+  We also have that $\M, \sigma_{cyc} \models_k \neg \prg{length}(z)=3$, even though  \prg{length} and also $\prg{length}(z)=3$ are ubdefined
+ in the context of $\sigma_{cyc}$.
+This gives us   also that
+$\M, \sigma \models \neg \prg{Finite}({z})$, and $\M, \sigma_{cyc} \models_k \neg \prg{length}(z)=3$.
+\end{example}
+
+\begin{example}[Cntrdr]
+
+ We have $\M,\sigma \not\models  \prg{Cntrdct}(\prg{z})$ as well as $\M,\sigma \not\models    \neg\prg{Cntrdct}(\prg{z})$.
+ Namely,
+
+\begin{tabular}{llll}
+\ \ \ \ & (0) & $\M,\sigma \not\models_0  \prg{Cntrdct}(\prg{z})$,& by def \ref{def:assetion:step:index}, base case.\\
+& (1) &  $\M,\sigma \models_1   \prg{Cntrdct}(\prg{z})$, &  by (0) and def \ref{def:assetion:step:index}, inductive case for predicates.
+\\
+& (2) & $\M,\sigma \models_2   \neg \prg{Cntrdct}(\prg{z})$, & by (1) and def \ref{def:assetion:step:index}, inductive  case for predicates,\\
+& & & negation, implication and \prg{false}\\
+& (3)&  $\M,\sigma \models_3    \prg{Cntrdct}(\prg{z})$, & by (2) and def \ref{def:assetion:step:index}, inductive step case for predicates, \\
+& & & negation and implication.
+\\
+& & ...
+\end{tabular}
+
+So we obtain that\\
+\strut \hspace{.34in}(F1) \hspace{.3in}   $\M,\sigma \models_k   \prg{Cntrdct}(\prg{z})$ for all odd $k$, and $\M,\sigma \models_k   \neg\prg{Cntrdct}(\prg{z})$ for  all even $k$.
+
+Therefore,\\
+\strut \hspace{.3in}(F2) \hspace{.3in}  $\M,\sigma \not\models   \prg{Cntrdct}(\prg{z})$ als well as $\M,\sigma \not\models   \neg\prg{Cntrdct}(\prg{z})$. \\
+And also:\\
+\strut \hspace{.3in}(F3) \hspace{.3in}  $\M,\sigma \not\models   \prg{Cntrdct}(\prg{z}) \vee   \neg\prg{Cntrdct}(\prg{z})$.
+
+
+\end{example}
+
+\begin{example}[$\prg{Acyclic}'$]
+
+In the acyclic configuration $\sigma_{acyc}$ we cannot estabish the predicate $\prg{Acyclic}'$. This is because of our choice of 4b. In more detail.
+
+\begin{tabular}{llll}
+\ \ \ \ & (A) & $\M,\sigma_{acyc}  \not \models_k   \prg{x.next}=\prg{null} $,& for all $k$,   by def \ref{def:assetion:step:index}, base case.\\
+\ \ \ \ & (B) & $\M,\sigma_{acyc}  \not\models_0   \prg{Finite}'(\prg{x})$,& by def \ref{def:assetion:step:index}, base case.\\
+\ \ \ \ & (C) & $\M,\sigma_{acyc}   \not\models_1   \prg{Finite}'(\prg{x})$,& by A, B, and def \ref{def:assetion:step:index} ind.  case for predicates,\\
+\ & & & and inductive case for disjunction\\
+\ \ \ \ & (D) & $\M,\sigma_{acyc}   \not\models_2   \prg{Finite}'(\prg{x})$,& by A, C, and def \ref{def:assetion:step:index} ind.  case for predicates,\\
+\ & & & and inductive case for disjunction\\
+
+\end{tabular}
+
+Therefore $\forall k. \M,\sigma_{acyc}   \not\models_k   \prg{Finite}'(\prg{x})$, which gives that $\M,\sigma_{acyc}   \not\models    \prg{Finite}'(\prg{x})$
+
+\end{example}
+
+\begin{observation}[Lack of Monotonicity]
+
+ In contrast with LICS'09 (and all other step-index works I know), the judgment $\M, \sigma \models_k  A$ is not monotonic with $k$. Namely, it is possible to have that $\M, \sigma \models_k  A$, as well as
+$\M, \sigma \not\models_{k+j}  A$.
+\\
+An example can be seen in (F1).
+
+\end{observation}
+
+\begin{observation}[Lack of Modus Ponens]
+
+We do not have modus ponens. A counterexample appears in (F2) and in (F3.
+
+$Question$ Do we have modus ponens "in the steps", ie it does not hold for all $k$ that either
+$\M, \sigma \models_k  A$ or $\M, \sigma \models_k  \neg(A)$?
+
+
+\end{observation}
+
+
+\begin{observation}[Distributivity of Disjunction]
+
+In our system, disjunction distributes, ie we have
+
+\begin{mylemma}[Disjunction is distributive] For all $A$.
+
+\begin{itemize}
+\item
+ $\M, \sigma \models_k  A \vee A' $ implies $\M, \sigma \models_k  A $ or  $\M, \sigma \models_k A' $ for all $k$.
+ \item
+ $\M, \sigma \models  A \vee A' $ implies $\M, \sigma \models   A $ or  $\M, \sigma \models  A' $
+\end{itemize}
+ \end{mylemma}
+
+
+Note that if we had chosen 4a) rather than 4b), the above would not hold, Namely, we call $\models_{alt}$ the inference system 2c)-3a)-4b)-5b), and obtain:
+\\
+\strut \hspace{.3in}(F4) \hspace{.3in}   $\M,\sigma \models_{alt,k}   \prg{Cntrdct}(\prg{z})\ \vee\   \neg\prg{Cntrdct}(\prg{z})$ for  all   $k$.
+
+Which gives that,\\
+\strut \hspace{.3in}(F5) \hspace{.3in}   $\M,\sigma \models_{alt}   \prg{Cntrdct}(\prg{z})\ \vee\   \neg\prg{Cntrdct}(\prg{z})$.
+
+And also:\\
+\strut \hspace{.3in}(F6) \hspace{.3in}  $\M,\sigma \not\models_{alt}   \prg{Cntrdct}(\prg{z})$  and   $\M,\sigma \not\models_{alt}   \neg\prg{Cntrdct}(\prg{z})$.
+
+\end{observation}
+
+\begin{conjecture}[Consistency]
+For all $\M$, $A$, $A'$ and $\sigma$.
+
+\begin{itemize}
+\item
+ It is never the case that $\M, \sigma \models  A$  and  $\M, \sigma \models   \neg A $.
+ \item
+ $\M, \sigma \models  A \rightarrow A' $ and  $\M, \sigma \models  A$ entails  $\M, \sigma \models  A'$
+ \item
+  $\M, \sigma \models  \neg A \vee A' $ entails  $\M, \sigma \models   A \rightarrow A' $
+  \item
+ $\M, \sigma \models  A \vee A' $ implies $\M, \sigma \models   A $ or  $\M, \sigma \models  A' $
+\end{itemize}
+
+\end{conjecture}
+\begin{proof} This is a sketch
+
+\begin{itemize}
+\item
+ We will show that for all $k$ it is impossible to have $\M, \sigma \models_k  A  $ and  $\M, \sigma \models_k  \neg A$.
+ \item
+ Expecting this to work by unfolding the definitions.
+ \item
+Expecting this to work by unfolding the definitions. This property is less crucial tan the other two, but holds in intuitionistic logic.
+ \item
+ This property is less crucial tan the other two, but holds in intuitionistic logic.
+\end{itemize}
+\end{proof}
+
+\subsection{Considering holistic aspects}
+
+In  Definition \ref{def:assetion:step:index} we have not considered the holistic aspects of assertions. We will therefore extend the definition as below
+
+\begin{definition}
+\label{def:assetion:hol:step:index}
+ Given a module $\M$, a state $\sigma$, and a natural number $k$, we define the judgment $\M, \sigma \models_k A$ by cases on $A$  and $k$  as follows, where $k>0$ and arbitrary:
+
+ % \begin{enumerate}[a]
+\begin{itemize}
+\item
+all cases from Definition \ref{def:assetion:step:index}, and in addition:
+\item
+\label{def:assrt:obeys:basic}
+$\M, \sigma \models_0 x \obeys \prg{S}$ \ \ \  always.
+\item
+\label{def:assrt:obeys}
+$\M, \sigma \models_k x \obeys \prg{S}$ \ \ \  iff \\
+  for all  $\sigma'$, for all    assertions $A$ from \prg{S},\ \ if  $ \M, \sigma  \leadsto_{k-1} \sigma'$ then  $\M, \sigma' \models_{k-1}  {A[\prg{this}\mapsto \prg{x}]}$.
+
+\item
+\label{def:assrt:Future}
+$\M, \sigma \models_k \Future{A}$ \ \ \  iff \ \ \   $\exists \sigma'.\, \M, \sigma  \leadsto_{k-1} \sigma'$ and $\M, \sigma' \models_{k-1}  {A}$.
+\item
+\label{def:assrt:past}
+$\M, \sigma \models_k \Past{A}$ \ \ \  iff \ \ \   ... like, and a bit more complex than above, doable.
+\item
+\label{def:assrt:Using}
+$\M, \sigma \models_k \Using{A}{\prg{S}}$ \ \ \  iff \ \ \   $\M, \sigma |_{S} \models_k  A$ where $\interp{\prg{S}}{\M,\sigma}$=$S$
+\footnote{We need to think a bit about $\interp{S}{\M,\sigma}$. Also, should it be $\M, \sigma |_{S} \models_{k-1}  A$, and does it make a difference?}
+\end{itemize}
+
+ \end{definition}
+\begin{note} that we treat predicates differently to specifications. Namely, for all predicates $\prg{P}$, we have that $\M, \sigma \not\models_0 \prg{P}(\prg{x})$, while for any specification, \prg{S}, we have that $\M, \sigma \models_0 x \obeys \prg{S}$. That is, we define validity of predicates inductively, and validity of assertions co-inductively. We take the smallest fixpoints for predicates and take the largest fixpoints for assertions.
+\end{note}
+
+
+------------
+
+\section{Semantics of assertions through unfolding}
+
+Here an alternative way of defining validity of assertions -- less well thought at the moment.
+We define unfolding of assertions in the obvious way, and  then validity of an assertion through validity of finite unfolding:
+
+\begin{definition}
+\label{def:unfold}
+ We define the relation $\M, A \leadsto_k A'$ as follows, where $k\in \mathbb{N}$:
+
+\noindent
+ \begin{itemize}
+\item
+$\M, x \leadsto_k x$,  and $val \leadsto_k val$  for any k, and for all $val\in\{ \prg{null}, \prg{true}, \prg{false} \}$.
+\item
+$\M, e.f \leadsto_k e'.f$ if $e \leadsto_k e'$, for any k.
+\item
+$\M, func(e) \leadsto_{k+1} e'$ if $e \leadsto_k e''$,  and $FBody(fun)[x \mapsto e'']   \leadsto_k e'$
+\item
+$\M,  A \rightarrow A' \leadsto_{k+1} A'' \rightarrow A'''$  \ \ \  iff \ \ \   $ \M, A  \leadsto_{k}  A''$ and $ \M, A'  \leadsto_{k} A'''$
+\item
+$ \M, A \vee A' \leadsto_{k+1} A'' \vee A'''$  \ \ \  iff \ \ \   $ \M, A  \leadsto_{k}  A''$ and $\M,  A'  \leadsto_{k} A'''$
+\item
+$  {\prg{PredId}(\prg{e})} \leadsto_{k+1} A'$\ \ \  iff \ \ \   $e \leadsto_k e'$,  and $FBody(\M, \prg{PredId})[x \mapsto e']   \leadsto_k A'$\end{itemize}
+
+
+\end{definition}
+
+The $\leadsto_k$ relation is deterministic\footnote{better word needed}, i.e. $A \leadsto_k A'$ and $A \leadsto_k A''$ implies that $A'$=$A''$.
+
+
+\begin{definition}
+\label{def:three:values}
+ We define three valued logic carrier set $\{ \ttt, \ff, \unkn \}$, and operations $\vee$, $\rightarrow$ as follows, where $\bv$ is an arbitrary value from $\{ \ttt, \ff, \unkn \}$:
+ 
+ \noindent
+ \begin{itemize}
+\item The operator $\vee$
+\begin{itemize}
+\item $\ttt \vee \bv$ $\triangleq$ $\tt$
+\item $\ff \vee \bv$ $\triangleq$ $\bv$
+\item $\unkn \vee \bv$ $\triangleq$ $\bv$
+\end{itemize}
+
+\item The operator $\rightarrow$
+\begin{itemize}
+\item $\ttt \rightarrow \bv$ $\triangleq$ $\bv$
+\item $\ff \rightarrow \bv$ $\triangleq$ $\ttt$
+\item $\unkn \rightarrow \bv$ $\triangleq$ $\bv$
+\end{itemize}
+\end{itemize}
+
+The operators $\wedge$   and $\neg$ can be encoded.
+ \end{definition}
+
+ \begin{definition}
+\label{def:assertion:unfold}
+Given   a state $\sigma$ and an assertion $A$ we define  $\eval {A} {\sigma}$ as follows
+
+\begin{itemize}
+\item
+$\eval { \prg{PredId}(\prg{e})} {\sigma}$  $\triangleq$    $\unkn$
+\item
+ $\eval {e} {\sigma}$  $\triangleq$ $\bv$\ iff \  $\emptyset, \sigma, e \leadsto _0 \bv$.\footnote{Notice that we have the empty module $\emptyset$,
+and so cannot unfold functions in this judgment.}
+\item
+$\eval {A \rightarrow A'} {\sigma}$  $\triangleq$    $\eval {A}{\sigma}  \rightarrow \eval {A'}{\sigma}$
+\item
+$\eval {A \vee A'} {\sigma}$  $\triangleq$    $\eval {A}{\sigma}  \vee \eval {A'}{\sigma}$%\item
+\end{itemize}
+
+ Given a module $\M$ a state $\sigma$ and a natural number $k$ we define the judgment  $\eval { \prg{PredId}(\prg{e})} {\sigma,k}$   as follows:
+
+\begin{itemize}
+\item
+ $\eval { A} {\sigma,0}$ $\triangleq$   $\eval {A'} {\sigma}$, where $A \leadsto_0 A'$.
+ \item
+ $\eval { A\wedge A'} {\sigma,k+1}$ $\triangleq$   $\eval {A' \wedge A''} {\sigma}$, where $A \leadsto_k A'$ and $A \leadsto_{k+1} A''$
+
+ \item
+ $\eval { A\rightarrow A'} {\sigma,k+1}$ $\triangleq$   $\eval { A\rightarrow A'} {\sigma,k} \wedge \eval {A''\rightarrow A'''} {\sigma} $, where $A \leadsto_k A''$ and $A' \leadsto_{k+1} A'''$
+\end{itemize}
+
+ As well, we define
+ \begin{itemize}
+  \item
+ $\M, \sigma \not\models_k A$\ \  iff\ \  $\eval {A'} {\sigma,j} \neq \ttt$.
+  \end{itemize}
+
+And also
+\begin{itemize}
+\item
+$\M, \sigma \models  A$\ \  iff\ \  $\exists k.\forall j\geq k.  \eval {A} {\sigma,j} = \ttt$.
+% \item
+% $\M, \sigma \not\models  A$\ \  iff\ \  $\exists k.\forall j\geq k. \,  \M, \sigma\not\models_j  A$.
+\end{itemize}
+
+\end{definition}
+
+
+
+\subsection{Discussion}
+
+
+\begin{example}[acyclic and Finite]
+In the acyclic configuration $\sigma_{acyc}$, we can establish that x is finite after three steps. That is\\
+
+
+\begin{tabular}{llll}
+\ \ \ \ & (A) & $\prg{Finite}(\prg{x}) \leadsto_2 $\\
+& & $\prg{x.next }\neq\prg{null} \rightarrow $\\
+& & $~ ~ \hspace{.2in}( \prg{x.next.next}\neq\prg{null} \rightarrow \prg{Finite}(\prg{x}.\prg{next}.\prg{next})$
+ & by def \ref{def:unfold}, for all $k\geq 2$ \\
+ \ \ \ \ & (B) & $\eval {\prg{Finite}(\prg{x})}{\M,\sigma_{acyc} ,1} =\unkn $ & by def \ref{def:unfold}, and  def \ref{def:assertion:unfold}.\\
+\ \ \ \ & (C) & $\eval {\prg{Finite}(\prg{x})}{\M,\sigma_{acyc} ,2} =\ttt $ & by (A) and def \ref{def:assertion:unfold}.\\
+\ \ \ \ & (D) & $\eval {\prg{Finite}(\prg{x})}{\M,\sigma_{acyc} ,k}  =\ttt  $ & for all $k\geq 2$, by (A) and def \ref{def:assertion:unfold}.\\
+ & (E) & $\M,\sigma_{acyc} \models \prg{Finite}(\prg{x})  $,& by (D) and def \ref{def:assertion:unfold}.\\
+& ... & ...
+\end{tabular}
+
+Similarly, we have
+
+\begin{tabular}{llll}
+\ \ \ \ & (A) & $\prg{Finite}'(\prg{x}) \leadsto_k$ \\
+& & $\prg{x.next}=\prg{null} \vee $\\
+& &  $(\prg{x.next.next}=\prg{null} \vee \prg{Finite}'(\prg{x}.\prg{next}.\prg{next}) )$ & by def \ref{def:unfold}, base case, if $k\geq 2$ \\
+ \ \ \ \ & (B) & $\eval {\prg{Finite}'(\prg{x})}{\M,\sigma_{acyc} ,1} =\unkn $ &by def \ref{def:unfold}, and  def \ref{def:assertion:unfold}.\\
+\ \ \ \ & (C) & $\eval {\prg{Finite}'(\prg{x})}{\M,\sigma_{acyc} ,2} =\ttt $ & by (A) and def \ref{def:assertion:unfold}.\\
+\ \ \ \ & (D) & $\eval {\prg{Finite}'(\prg{x})}{\M,\sigma_{acyc} ,k}  =\ttt  $ & for all $k\geq 2$, by (A) and def \ref{def:assertion:unfold}.\\
+ & (E) & $\M,\sigma_{acyc} \models \prg{Finite}(\prg{x})  $,& by (D) and def \ref{def:assertion:unfold}.\\
+& ... & ...
+\end{tabular}
+
+\end{example}
+  
+\begin{appendix}
+
+\section{Appendix}
+
+\subsection{Continuing the example}
+\begin{example}[continued]
+The rest needs to be revisited and adapted.
+
+\vspace{.04in}
+In the cyclic configuration, as we saw earlier, $\interp{\prg{acyclic(z)}}{\sigma_{cyc}}$ is undefined. Nevertheless, we  $\M, \sigma_{cyc} \models_k \neg \prg{Finite}({z})$ for all $k$.
+  We also have that $\M, \sigma_{cyc} \models_k \neg \prg{length}(z)=3$, even though  \prg{length} and also $\prg{length}(z)=3$ are undefined
+ in the context of $\sigma_{cyc}$.
+This gives us   also that
+(*) \ \ $\M, \sigma \models \neg \prg{Finite}({z})$, and also $\M, \sigma_{cyc} \models_k \neg \prg{length}(z)=3$.
+\end{example}
+
+\begin{example}[Cntrdr]
+
+ We have $\M,\sigma \not\models  \prg{Cntrdct}(\prg{z})$ as well as $\M,\sigma \not\models    \neg\prg{Cntrdct}(\prg{z})$.
+ \end{example}
+
+
+\begin{observation}[Monotonicity]
+
+I think now we have that  $\M, \sigma \models_k  A$ implies $\M, \sigma \not\models_{k+j}  A$.
+\\
+To think more.
+
+\end{observation}
+
+\begin{observation}[Lack of Modus Ponens]
+
+We do not have modus ponens. A counterexample appears in (*).
+
+
+\end{observation}
+
+
+\begin{observation}[Distributivity of Disjunction]
+
+In our system, disjunction distributes, ie we have
+
+\begin{mylemma}[Disjunction is distributive] For all $A$.
+
+\begin{itemize}
+\item
+ $\M, \sigma \models_k  A \vee A' $ implies $\M, \sigma \models_k  A $ or  $\M, \sigma \models_k A' $ for all $k$.
+ \item
+ $\M, \sigma \models  A \vee A' $ implies $\M, \sigma \models   A $ or  $\M, \sigma \models  A' $
+\end{itemize}
+ \end{mylemma}
+
+TODO check!
+
+\end{observation}
+
+\begin{conjecture}[Consistency]
+For all $\M$, $A$, $A'$ and $\sigma$.
+
+\begin{itemize}
+\item
+ $\M, \sigma \models  A$  ana  $\M, \sigma \models   A $ never holds.
+ \item
+ $\M, \sigma \models  A \rightarrow A' $ and  $\M, \sigma \models  A$ entails  $\M, \sigma \models  A'$
+ \item
+  $\M, \sigma \models  \neg A \vee A' $ entails  $\M, \sigma \models   A \rightarrow A' $
+  \item
+ $\M, \sigma \models  A \vee A' $ implies $\M, \sigma \models   A $ or  $\M, \sigma \models  A' $
+\end{itemize}
+
+\end{conjecture}
+
+TODO check!
+
+%\begin{proof} This is a sketch
+
+%\begin{itemize}
+%\item
+% We will show that for all $k$ it is impossible to have $\M, \sigma \models_k  A  $ and  $\M, \sigma \models_k  \neg A$.
+% \item
+% Expecting this to work by unfolding the definitions.
+% \item
+%Expecting this to work by unfolding the definitions. This property is less crucial tan the other two, but holds in intuitionistic logic.
+% \item
+% This property is less crucial tan the other two, but holds in intuitionistic logic.
+%\end{itemize}
+ %\end{proof}
+
+\subsection{Considering holistic aspects}
+
+In  Definition \ref{def:assetion:step:index} we have not considered the holistic aspects of assertions. We will therefore extend the definition as below
+
+\begin{definition}
+\label{def:assetion:hol:step:index}
+ Given a module $\M$, a state $\sigma$, and a natural number $k$, we define the judgment $\M, \sigma \models_k A$ by cases on $A$  and $k$  as follows, where $k>0$ and arbitrary:
+
+\begin{itemize}
+\item
+$ x \obeys \prg{S}\leadsto_{k+1} A'$ \ \ \  iff \ \ \
+  for some $A$ from \prg{S},\ \    $A [\prg{this}\mapsto \prg{x}] \leadsto_{k} A'$.
+\item
+$\sigma \models_{naive} x \obeys \prg{S}$ \ \ \  is true.
+\item
+$\M, \sigma \models  A$\ \  iff\ \  $\exists k.  \forall j>k.  \forall A'. A \leadsto_{j} A'\ \implies \ \ \M, \sigma\models_{naive}  A'$.
+
+\end{itemize}
+
+ \end{definition}
+
+More thoughts needed here. Notice that in the non-holistic part we asked something weaker, ie we had that 
+$\exists k.  \forall j>k.  \exists A'. A \leadsto_{j} A'\ \wedge \ \ \M, \sigma\models_{naive}  A$.
+
+\end{appendix}
+
+\end{document}
+

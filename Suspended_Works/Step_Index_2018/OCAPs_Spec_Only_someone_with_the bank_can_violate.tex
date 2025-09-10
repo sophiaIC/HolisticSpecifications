@@ -1,0 +1,458 @@
+%-----------------------------------------------------------------------------
+%
+%               Template for sigplanconf LaTeX Class
+%
+% Name:         sigplanconf-template.tex
+%
+% Purpose:      A template for sigplanconf.cls, which is a LaTeX 2e class
+%               file for SIGPLAN conference proceedings.
+%
+%-----------------------------------------------------------------------------
+%
+%               Template for sigplanconf LaTeX Class
+%-----------------------------------------------------------------------------
+\documentclass[preprint,10pt]{sigplanconf}
+% \documentclass[preprint,10pt,nocopyrightspace]{sigplanconf}
+%KJX - for some reason, turning off preprint gives me an error!
+
+% The following \documentclass options may be useful:
+
+% preprint      Remove this option only once the paper is in final form.
+% 10pt          To set in 10-point type instead of 9-point.
+% 11pt          To set in 11-point type instead of 9-point.
+% authoryear    To obtain author/year citation style instead of numeric.
+
+\usepackage{graphicx}
+\usepackage{amssymb} % mathtools,
+\usepackage[reqno]{amsmath}
+\usepackage{listings}
+\usepackage{url}
+\usepackage{framed}
+\usepackage{enumitem}
+\usepackage{grace}
+\usepackage{balance}
+\usepackage{hyperref}
+\usepackage{lineno}
+
+
+
+\special{papersize=8.5in,11in}
+\setlength{\pdfpageheight}{\paperheight}
+\setlength{\pdfpagewidth}{\paperwidth}
+
+% \conferenceinfo{PLAS 2014}{6th July  2015, Prague, Czech Republic}
+\copyrightyear{2017}
+\copyrightdata{978-1-nnnn-nnnn-n/yy/mm}
+\doi{nnnnnnn.nnnnnnn}
+
+
+ \input{macros}
+
+%\usepackage[usenames]{color}
+
+\usepackage{times}
+ \usepackage{latexsym}
+\usepackage{listings}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+
+\lstset{ %
+  language=Java,                % the language of the code
+  mathescape=true,
+  basicstyle=\footnotesize\tt,           % the size of the fonts that are used for the code
+  numbers=left,                   % where to put the line-numbers
+  numberstyle=\tiny\color{dkgreen},  % the style that is used for the line-numbers
+  stepnumber=1,                   % the step between two line-numbers. If it's 1, each line
+                                  % will be numbered
+  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},      % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  frame=single,                   % adds a frame around the code
+  rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+  tabsize=2,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+  title=\lstname,                   % show the filename of files included with \lstinputlisting;
+                                  % also try caption instead of title
+  keywordstyle=\color{blue},          % keyword style
+  commentstyle=\color{gray},       % comment style
+  stringstyle=\color{mauve},         % string literal style
+  escapeinside={\%*}{*)},            % if you want to add LaTeX within your code
+  morekeywords={private,public,final,this,throw,new,||,to,def,any,fun,fld,abstract,policy,specification,ghost,field}               % if you want to add more keywords to the set
+}
+
+% \newcommand{\scd}[1]{{\color{blue}{#1}}}
+% \newcommand{\jn}[1]{{\color{green}{#1}}}
+% \newcommand{\sd}[1]{{\color{dkgreen}{#1}}}
+% \newcommand{\sd}[1]{{{#1}}}
+
+\begin{document}
+
+\preprintfooter{internal memo}
+
+\authorinfo{Sophia's proposal}{internal memo -- for the team only}
+%\authorinfo{Sophia Drossopoulou$^1$, James Noble$^{2,1}$, Toby Murray$^4$, Mark Miller$^3$, Shupeng Loh$^1$, Susan Eisenbach$^1$}{$^1$Imperial College London, $^2$Victoria University Wellington, $^3$Google Inc, $^3$NICTA and UNSW.}{}
+
+
+\title{The specification of "protection policies"}
+\subtitle{Only Somebody with the bank of a given currency\\ can violate conservation of that currency} 
+
+
+\date{1st April 2018} 
+
+
+\maketitle
+
+
+\begin{abstract}
+ Central to our work is the exact specification of "protection policies" such as
+ 
+ \begin{quote}
+{\em {Only somebody with the bank of a currency can violate conservation of that currency}} 
+  \end{quote}
+ 
+ In this short note we revisit the specification of such properties. 
+ We introduce new fundamental OCAP assertions $\CanAccess$ and $\WillAffect$,
+ \footnote{(to replace the old definitions of $\MayAccess$ and $\MayAffect$)}  and 
+ use them to specify protection policies.
+ 
+ I believe that the new fundamental OCAP assertions overcome the problems we had
+ identified   with the old  specs we had written for protection policies.
+ 
+
+\end{abstract}
+
+
+\section{Our earlier Specs -- design space and problems}
+
+To formulate the protection policy we needed to answer two questions: 1) How to express "Only somebody with a bank" and 2) How to express "can violate conservation of that currency". 
+
+Wrt 1): Is  "somebody with a bank" a) an object with direct access now (ie access through a field or a method parameter), or 
+b) an object with indirect access (the transitive closure of the direct access graph), 
+or c) an object which will have access eventually (through method calls and mutation of the object graph)?
+
+Wrt 2): Does this mean a) the current method call changes the value of the currency, or b) an eventual method call which happens during execution  of the current one? 
+
+ In earlier work we had adopted  1b) from above. 
+We had adopted 1b) in order to deal with the 
+possibility that   the object which causes the modification in the currency
+does not have direct access to the bank now, but can obtain it later through 
+further method calls or field reads. However, by adopting 1b) we consider   access through {\em any} path.
+The definition from 1b) is too permissive:\footnote{Mark was never happy with that aspect} according to 
+it  too many  objects have access to one another.
+1b) does not reflect that there are paths in the  object graph which cannot  be navigated; \eg
+ we can have 
+an object $o$ with direct access to a  account, and the account with direct access to the bank, but $o$ cannot use the account to get to the bank.
+
+\section{The Proposal}
+ I propose here that we use 1a) and 2b). The novelty  is 
+ that in the formulation of "can violate conservation of that currency", we consider not only who caused the violation
+ (\ie who was the receiver of the method execution which eventually modified the currency), but we
+ also  consider  the  {\em set of objects} which were {\em involved} in the execution of that method (\ie  the  objects whose fields were read
+ or written, or which executed methods, or whose identity was used in some way during that
+ execution).
+ This allows us to differentiate between the object which caused the change in the currency, and the object which
+ had the {\em direct} access to the bank. 
+ 
+ \vspace{.1cm}
+   To express the protection policy for the currency we will mandate that at least {\em one} of the objects involved had 
+   direct access to the bank,   that this access existed already at the start of that method call, and that the object which had access to the bank
+   object is  not a \prg{account} object. 
+
+
+
+
+\section{The Bank}
+\label{s-example}
+
+Remember the system for electronic money
+proposed in~\cite{ELang}. In Fig. \ref{fig:Bank} we outline one possible implementation, where 
+the accounts keep a reference to their bank, the bank keeps a
+list of pairs of accounts and balances. We use a class \prg{Node} in order to make a particular point later.
+%We do not give the definition of class \prg{Node} as it is obvious, 
+Fields declared \prg{private}  can only be read or wrriten by the object itself. Note that the fields of class \prg{Node} are
+not private; this is so because \prg{Node} objects do not ``escape'' the module \prg{Bank}/\prg{Account} and 
+need not be as 
+robust as   \prg{Bank} objects or \prg{Account} objects.
+ 
+\begin{figure}[tbp]
+\begin{lstlisting}
+ class Bank {  
+   private field ledger; // a Node
+     
+   Bank( ){  ledger = null; }
+      
+   fun makeAccount(amt) 
+     { ledger = 
+         new Node(Account(this), amt, ledger); }
+ }           
+
+ class Account {
+   private field myBank;
+
+    Account(aBank){  myBank = aBank;  }
+  
+  fun sprout( )
+   // create Account in same Bank with 0 balance
+
+   fun deposit(source,  amnt)
+   // if source and receiver are in same Bank,
+   // and source holds enough money, then
+   // transfer amnt from source into receiver
+  }
+  
+  class Node{
+    field balance; // the balance, a number
+    field next; // the next node
+    field theAccount // the account
+    
+    ...
+ }
+\end{lstlisting}
+\caption{The Bank example -- outline}
+\label{fig:Bank}
+ \end{figure}
+
+Figure \ref{fig:Diagram} contains a diagram of some objects from the
+ classes \prg{Bank}, \prg{Account} and \prg{Node}, as well as some 
+ external objects of unknown provenance (in grey).
+
+\section{The Protection Policies}
+Remember the five policies  proposed in~\cite{ELang}. In this note, we only look at two of them:
+
+\begin{description}
+\item[Pol\_2]
+Only someone with the bank of a given currency can violate conservation of that currency.
+ \item[Pol\_4]
+No one can affect the balance of a account they don't have.
+\end{description}
+
+\begin{figure}[btph]
+\includegraphics[width=9cm,height=9cm]{diagram}
+  %\includegraphics[width=0.5\textwidth]{diagram}
+ \caption{Diagrammatic representation of some objects from  \prg{Bank}, \prg{Account} \etc  }
+  \label{fig:Diagram}   
+  \end{figure}
+
+\begin{figure*}[tbph]
+$  $
+
+  {\bf {Pol\_2}}\ \  $\equiv$\ \ $\forall \prg{b}.\forall \prg{o}.\forall \prg{S}.\ [ \ \  \prg{b}:\prg{Bank}\ \wedge\  \prg{b}\neq \prg{o}\ \wedge \ \WillAffect(\prg{o},\prg{b.Currency},\prg{S})  $\\
+  $\strut \hspace{6cm}  \longrightarrow \ \ 
+  \exists \prg{o}'.\ [\, \prg{o}'\in \prg{S}\ \wedge \  \CanAccess( \prg{o}', \prg{b} )\ \wedge\ \neg (\, \prg{o}' : \prg{Account} \, ) \ ] \  \ ]$
+
+$  $  \\ 
+
+   {\bf {Pol\_4}}\ \  $\equiv$\ \ $\forall \prg{a}.\forall \prg{o}.\forall \prg{S}.\ [ \ \  \prg{a}:\prg{Account} \wedge \prg{a}\neq\prg{o} \wedge \WillAffect(\prg{o},\prg{a.Balance},\prg{S}) \  $\\
+$\strut \hspace{6cm} \longrightarrow\  \exists \prg{o}'. [\, \prg{o}'\in \prg{S}\ \wedge \ \CanAccess( \prg{o}', \prg{a} )\ \wedge \neg (\  \prg{o}' : \prg{Account}\ \cup\ \prg{Bank}\, ) \ ] \ \ ]$
+\\
+$  $  \\ 
+
+  \caption{Specification for policies ${\bf {Pol\_2}}$ and  ${\bf {Pol\_4}}$ }
+  \label{fig:Pol2}
+  \end{figure*}
+  
+  \begin{figure*}[tbph]
+$  $
+
+$\M, \sigma \models   {\bf {Pol\_2}}$\\$ \strut \ \ \ \  \ \  \longleftrightarrow $\\
+ $\forall \prg{b}.\forall \prg{o}.\forall \prg{S}.\ [ \ \ \ \ \M, \sigma \models \prg{b}:\prg{Bank}\ \wedge\  
+ \sigma(\prg{b})\neq \sigma(\prg{o})\ \wedge \ 
+ \sigma(\prg{this}) = \sigma(\prg{o}) $\\
+ $\strut \hspace{1.8cm}  \wedge \
+ \ \exists\sigma'.(\ \ \ \ \M \vdash \sigma\mid_{\prg{S}}  \leadsto^* \sigma'\
+\ \wedge\ \interp {\prg{b.Currency}}{\M,\sigma}\neq \interp {\prg{b.Currency}}{\M,\sigma'}\ )$\\
+$\strut \hspace{4cm} \longrightarrow\  \exists \prg{o}'. (\ \  \sigma(\prg{o}')
+\!\!\in\!\!\prg{S}\ \wedge \ \M, \sigma \models \CanAccess( \prg{o}', \prg{a} )\ \wedge \  \ClassOf{\prg{o}'}{\sigma}\!\!\notin\!\!\{ \prg{Account}, \prg{Bank}\}    \ )  \ \ \ \  ]$
+ 
+
+$  $  
+
+$\M  \models   {\bf {Pol\_2}}   \ \ \ \  \ \  \longleftrightarrow  \ \ \ \  \ \ 
+  \forall \M'. \forall \sigma\!\in\!\Arising(\M'*\M).\ \M'*\M,\sigma \models  {\bf {Pol\_2}}$
+ 
+ $  $ 
+  \caption{The meaning of policy {\bf {Pol\_2}}. We applied the Definition 1 on Figure \ref{fig:Pol2}  to obtain the first equivalence, and   the Definition 2   to obtain the second equivalence.}
+  \label{fig:Pol2Expand}
+  \end{figure*}
+  
+  
+ 
+\section{Permission and Authority}
+
+ 
+Policy {\bf {Pol\_2}}  ties
+{\em authority} with {\em permission}: namely, permission to access the bank is a necessary condition
+for authority over the bank's currency.
+ %
+We will define the OCAP assertions $\CanAccess$  (permission) 
+and   $\WillAffect$ (authority). \footnote{Note that they are slightly different 
+assertions to those we had in the past.}
+Their intuitive meaning is as follows:
+
+\begin{itemize}
+\item
+% $\M,\sigma  \models \CanAccess(\prg{z},\prg{\sE})$ 
+$\CanAccess(\prg{y},\prg{z})$  means that in the current runtime configuration, the object indicated by $\prg{y}$ has {\em direct} access to the object
+indicated by  $\prg{z}$. This direct access is given either because $\prg{z}$ is one of \prg{y}'s fields, or because $\prg{z}$
+is one of the arguments or local variables in the method body currently executing and that \prg{y} is the receiver.
+\item
+%$\M,\sigma  \models \WillAffect \lp S, \syntax{\sE}\rp$  
+$\WillAffect(\prg{x},\syntax{\sE},\prg{S})$
+means the current receiver is \prg{x}, and that 
+execution of the current configuration will eventually change the value of $\syntax{\sE}$, and that this execution  
+will only involve (ie call methods on, read or write fields from) objects from the set $\prg{S}$.
+%\item
+%$S \subseteq \prg{C1}\cup \prg{C2} \ldots \cup \prg{Cn}$ expresses that $S$ is a set of objects of runtime class \prg{C1} or \prg{C2} ... or \prg{Cn}.
+\end{itemize}
+
+For example, in the runtime configuration from Figure \ref{fig:Diagram}, and assuming that
+\prg{x1}, \prg{x10}, \prg{x11} are local variables mapping to addresses \prg{1}, \prg{10}, and \prg{11}, then  we   have that 
+$\CanAccess(\prg{x11},\prg{x10})$, and $\CanAccess(\prg{x10},\prg{x1})$, but $\neg \CanAccess(\prg{x11},\prg{x1})$.
+
+
+The assertion $\WillAffect$  only holds if the set $S$ includes all objects involved in causing the
+change of the value of \prg{e}. For example, still in Figure \ref{fig:Diagram}, if the classes of the 
+objects at  \prg{x10} and \prg{x11} contain appropriate methods,  and if the current receiver is \prg{11}, then $\WillAffect(\prg{x11}, \syntax{\prg{x1}.Currency},\{\prg{x11},\prg{x10},\prg{x1}\}, )$ is possible, but regardless of the code in these
+objects, we have $\neg \WillAffect(\prg{x11}, \syntax{\prg{x1}.Currency},\{\prg{x11},\prg{x10},\prg{x1}\}, )$
+
+\begin{lemma}
+For   sets $\prg{S}$ and  $\prg{S}'$, runtime configuration $\sigma$, variable $\prg{x}$ and expression $\prg{e}$, if
+$\sigma \models \WillAffect(\prg{x},\syntax{\sE},\prg{S})$ and $\sigma \models \prg{S} \subseteq \prg{S}'$, then
+$\sigma \models \WillAffect(\prg{x},\syntax{\sE},\prg{S}')$.
+\end{lemma}
+
+\vspace{.2cm}
+
+\noindent
+{\em {Definitions and Naming Conventions}} We now proceed with the precise definitions.  Remember first the
+naming conventions hat  $\M$ stands for a module (ie class definitions), that
+$\sigma$ stands for a runtime configuration (ie currently executing sequence of statements with frames and  heap),
+  that $\sE$ stands for an expression, that $\interp {\prg{\sE} }{\M,\sigma}$
+is the value of the
+expression $\sE$ in the state $\sigma$, and  that $\M\vdash \sigma  \leadsto   \sigma'$ expresses that execution of runtime 
+configuration $\sigma$   in the context of the class definitions from module $\M$ leads in one small step to $\sigma'$.
+
+\begin{definition}[Permission and Authority ]
+Given a module $\M$, identifiers \code{x} and \code{y}, expression $\sE$, and runtime configuration $\sigma$, and a set of addresses $S$, 
+%and class names \prg{C1},$\ldots$, \prg{Cn}, 
+we define validity of the assertions $\CanAccess$  and 
+$\WillAffect$ 
+% and $S:\prg{C1}  \ldots \cup \prg{Cn}$
+ as follows:
+
+\begin{itemize}
+\item
+$\Prog{},\sigma \models   \CanAccess(\prg{x},\prg{y})$   \ iff \\
+$\sigma(\prg{x},\prg{f})$=$\sigma(\prg{y})$  for some field \prg{f}, \\ or\\
+$\sigma(\prg{this})$=$\sigma(\prg{x})$ and 
+  $\sigma(\prg{z})$=$\sigma(\prg{y})$\\
+  $\strut \hspace{0.8cm}$
+for some some parameter of local variable \prg{z}.
+  %{$\interp {\prg{z} }}{\M,\sigma}$ and
+% $\interp {\prg{\sE} }{\M,\sigma}$ is defined, and
+ % for fields  $\prg{f}_1$,...$\prg{f}_n$, for which
+\item
+ $\sigma\mid_S$ denotes a {\em restriction} of $\sigma$ to the objects from the set $S$. That is, the domain of the heap in $\sigma\mid_S$ is $S$, and otherwise,  $\sigma\mid_S$ is identical to $\sigma$.
+ \item
+$\M,\sigma  \models \WillAffect(\prg{x},S,\syntax{\sE})$  \   iff \\
+$\sigma(\prg{this})$=$\sigma(\prg{x})$ and $\exists \sigma'.$\\
+$\strut \hspace{.2in}$ $ \M\vdash \sigma\mid_S  \leadsto^*   \sigma'$, and   $\interp {\syntax{\sE}} {\M,\sigma} \neq  \interp {\syntax{{\sE}}} {\M,\sigma'}    $.
+%\item
+%$\M,\sigma  \models S: \prg{C1}\cup \ldots \cup \prg{Cn}$ iff \\
+%$\forall \iota \in S. \ \ClassOf{\iota}{\sigma}\in \{ \prg{C1}, \ldots, \prg{Cn}\}$.
+\end{itemize}
+\end{definition}
+
+
+
+  
+\section{Invariants}
+
+% The policy  \code{Pol\_protect\_currency} in figure \ref{fig:ValidBank} is an invariant.
+% A policy is an invariant if it has to hold in any state reachable
+% from execution in the code of $\M$ linked together with any other code.
+We define below the meaning of invariants.\footnote{This part is as we had defined previously, with two simplifications: a) we do not need to worry about the $\obeys$-predicate here, and b) we do not distinguish the names of the classes and the names of participants in interfaces.}
+The assertion $\M   \models\  \A$ requires that  the assertion $A$ is sartisfied 
+in all reachable states.
+The   set  $\Arising(\M)$ contains all runtime configurations which can be reached
+when starting with an empty heap,  and executing any expression consisting of constructor  and method calls
+as defined in $\M$.\footnote{That is,
+$\Arising(\M)$=$\{ \ \sigma\ \mid\ \exists \prg{e}.\ \M \vdash (\prg{e},\emptyset) \leadsto* \sigma \ \}$}
+The term 
+%$\prg{x}:\prg{C}$ expresses that $\interp {\prg{x} }{\M,\sigma}$ is the address of an object of class \prg{C};
+$\M*\M'$ denotes the result of linking two modules -- the operation is defined only when the
+two modules do not have overlapping definitions.
+
+ 
+
+\begin{definition}[Invariants]
+\label{def:invariant}
+\noindent
+For a module $\M$  we define:\\
+
+ \begin{itemize}
+ \item
+$\M   \models\  \A$\ \ \  iff\ \ \ \ 
+% $\strut\SP\SP$
+$\forall \M'.\, \forall \sigma\!\in\!\Arising(\M'*\M).\ \M'*\M,\sigma \models \  \A$
+ \end{itemize}
+\end{definition}
+
+The use of the set of configurations from $\Arising(\M'*\M)$ reflects that policies
+ need to hold in an {\em open} world, where
+we link against {\em any} module $\M'$, 
+about which we know nothing. 
+% 
+% which does not necessarily use the objects created in $\M$
+%in the way these objects have been specified.
+%Thus, the policy $A$ has to hold in an   {\em open} system:  it has to hold in the presence of {\em any} other code.
+%In particular, class \prg{C}  may not make any assumptions about the order nor the states from
+%  which its methods/constructors are called from the code in $\M'$ called\footnote{Its public methods may not have any preconditions}, other
+%than those it can establish  and maintain itself, and can confidently know  are not broken by the
+%code in $\M'$. This means that the code of \prg{C} needs to protect
+%sensitive data, and expose only the functionality which will preserve $A$.
+%The protection may be afforded in many different ways: through objects which
+%attenuate authority, through cryptography, or through language mechanisms such
+%as private methods, constant fields\cite{immut}, or owned data \cite{ClaPotNobOOPSLA98}.
+% This leads to defensive, robust programming.\footnote{Here again, the full definition has the form $\M   \modelsWithO\  \prg{C}\, :\,\A$}.
+ 
+ \section{Specifying  {\bf {Pol\_2}} and  {\bf {Pol\_4}}}
+
+We    give a formal definition of {\bf {Pol\_2}} and  {\bf {Pol\_4}}   in Figure \ref{fig:Pol2}. 
+We discuss  {\bf {Pol\_2}}: It guarantees
+that if an object \prg{o}$\neq$\prg{b} may affect the value of \prg{b.Currency} only if the  objects 
+involved in the process of affecting the value of \prg{b.Currency}  include at least an object $\prg{o}'$ 
+which had direct access to \prg{b}, and 
+whose class is  not  \prg{Account}. Stated positively, this policy mandates 
+that exporting an \prg{Account} to an environment will not affect the \prg{Currency} of \prg{b}.  
+In other words,
+\prg{Account}s protect the integrity of the \prg{Bank}'s currency.
+ 
+In Figure \ref{fig:Pol2} we show the  meaning of policy {\bf {Pol\_2}} in more detail, by applying  Definition 1:
+That is, a runtime configuration $\sigma$ satisfies  {\bf {Pol\_2}}  if whenever the current receiver in $\sigma$
+is not a \prg{Bank} object, and the execution of $\sigma$ leads to another runtime configuration $\sigma'$ 
+with a different value for \prg{b.Currency}, then the objects involved in the execution from
+$\sigma$ to $\sigma'$ include at least one object which had direct access to \prg{b}. 
+Note that this direct access needs to exist at the beginning of   the execution, \ie at $\sigma$.
+
+\section{Reasoning about "leaks"}
+
+Even though not stated as such in 
+
+ 
+ \bibliographystyle{plain}
+ \bibliography{Case}
+
+
+
+\end{document}
+ 
+
+ 
+

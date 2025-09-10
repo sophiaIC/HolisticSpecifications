@@ -1,0 +1,440 @@
+ \renewcommand{\code}{{\prg{code}}}
+
+
+%\subsection{Specifications in Chainmail}
+\label{sec:SpecLan}
+
+Our specifications and policies are fundamentally two-state
+assertions. \sd{The specification language uses functions and  predicates dewritten in a simple specification language we call
+``Chainmail'' (as a homophone of ``JML''). 
+f
+\subsubsection{Basic Predicates}
+\label{sect:Basic}
+The Chainmail language is parametric over an
+underlying specification language of state dependent predicates,
+$Qs$,  state independent predicates, $Rs$,   state dependent
+functions, $Fs$, and  state independent functions, $Gs$.  We
+expect that these come from disjoint sets of identifiers, and that
+they come with predefined interpretations $\interpp{\cdot}{}$. 
+
+\begin{definition}
+\label{def:underlying}
+An {\em underlying specification language} is a tuple $(Qs, Rs, Fs, Gs, \interpp{}{})$ such that
+\begin{itemize}
+  \item $Qs$, $Rs$, $Fs$, $Gs$ are mutually disjoint sets of identifiers.
+  \item We use the mnemonics that $f, f' \in Fs$,and $g, g' \in Gs$, and $Q, Q' \in Qs$,and $R, R' \in Rs$.
+   \item  The interpretation is overloaded as follows: \\
+ \begin{itemize}
+ \item $\interpp{}{}\ : \  Fs   \times Value* \rightarrow Value$
+   \item $\interpp{}{}\ : \  Gs   \times Config \times Value* \rightarrow Value$
+  \item  $\interpp{}{}\ \subseteq \  Qs \times Module \times Value* $
+   \item $\interpp{}{}\ \subseteq \   Rs \times Module \times Config \times Value*$
+ \end{itemize}
+ \end{itemize}
+
+\end{definition}
+
+\noindent
+ For example, \prg{OrderedList} is a state dependent predicate,  $\leq$ is a state independent predicate, \prg{length} is a  state dependent function, and  \prg{+} is a state  independent function.
+Note that we have defined validity of the assertions so that it depends on  modules; we do that in order to allow assertions whose meaning depends on the program, as for example the  $\MayAffect$ assertion, which says that the module provides functions which have certain side-effects.
+
+ 
+
+
+
+
+\subsubsection{Assertions}
+
+Based on the underlying specification language described in section \ref{sect:Basic} we expand the set of assertions into {\em two-state} assertions,   annotated with  \textsf{pre} or  \textsf{post} to indicate whether the corresponding term or predicate is to be interpreted in the first or the second state.  
+
+ 
+ 
+
+\begin{definition}[Two-state assertions] $ ~ $ \\
+\label{def:two-state-assertions}
+$
+\begin{array}{c}
+\begin{array}{lcl}
+ \textit{P}  & ::= &  \textit{Q}( \textit{arg}_{{\textit{t}}}^*)  \ \  | \ \   \textit{R}( \textit{arg}^*)_{{\textit{t}}} \ \  |   \\
+ & &  \textit{P}   \wedge  \textit{P}   \  \  | \ \   \textit{P}  \vee  \textit{P} \ \ |   \ \   \prg{true} \ \ |   \ \   \prg{false}
+ \\
+  \textit{arg} &   ::= &   \textit{f}( \textit{arg}_{{\textit{t}}}^*) \ \  | \ \ \textit{g}( \textit{arg}^*)_{{\textit{t}}} \ \ | \ \ \textit{p}   \ | \ \  \textit{val}\ \
+  \\
+  {\textit{t}} &   ::= & \textsf{pre} \ \     | \ \ \textsf{post}  \ \ | \ \ \epsilon
+\end{array}
+\end{array}
+$
+\end{definition}
+\noindent
+
+ 
+
+We define the values of the terms based on the interpretations of functions and the look-up of paths
+\begin{definition}[Interpretation]  
+The interpretation of terms\\  
+$
+\begin{array}{c}
+\begin{array}{lcl}
+  \interp{}{} & : &  \textit{arg} \times   {\textit{t}} \times   Config   \times Config \rightarrow Value
+\end{array}
+\end{array}
+$
+
+\noindent
+using the notation $\interp{\cdot}{\kappa,\kappa'}$, is defined as follows: \\
+
+\begin{itemize}
+\item
+ $
+ \interp{\val{}_{{\textit{t}}}}{\kappa,\kappa'} $   = $ \val{}$.
+ \item
+  $\interp{p_{{\textit{t}}}}{\kappa,\kappa'}$ = $\interp{p{} }{\kappa''}$,\\
+   where $\kappa''=\kappa$ if  {{\textit{t}}}=\textsf{pre}, and  $\kappa''=\kappa'$ otherwise.
+  \item
+  $\interp{f(a1_{{\textit{t}1}},...an_{{\textit{t}n}})_{{\textit{t}}}}{\kappa,\kappa'}$ =
+  $\interpp{f}{}
+  ( \interp{a1_{{\textit{t}1}}}{\kappa,\kappa'}, ...\interp{an_{{\textit{t}n}}}{\kappa,\kappa'})$.
+  \item
+  $\interp{g(a1,...an)_{{\textit{t}}}}{\kappa,\kappa'}$ =
+  $\interpp{g}{\kappa''}
+  ( \interp{a1_{{\textit{t}}}}{\kappa,\kappa'}, ...\interp{an_{{\textit{t}}}}{\kappa,\kappa'})$,\\
+   where $\kappa''=\kappa$ if  {{\textit{t}}}=\textsf{pre}, and  $\kappa''=\kappa'$ otherwise.
+ \end{itemize}
+\end{definition}
+
+We now define when pairs of state satisfy assertions. In particular, the $\MayAffect$, and
+$\MayAccess$ predicates
+%, and $\MayPublicAccess$
+ ascertain whether the first
+parameter may execute code which affects the second one, and whether
+the first parameter has {\em any} path to the second one.
+
+\begin{definition}
+We define the judgment \\
+$
+\begin{array}{c}
+\begin{array}{lcl}
+ \models  &   \subseteq &   Module \times Config \times Config \times Assertion
+\end{array}
+\end{array}
+$
+
+\noindent
+using the notation $\Prog{},\kappa,\kappa'\models P $ as follows
+\begin{itemize}
+\item
+ $\Prog{},\kappa,\kappa'\models Q(a1_{{\textit{t}1}},...an_{{\textit{t}n}}) $ \\
+ iff   $\interpp{Q}{M}(\interp{a1_{{\textit{t}1}}}{\kappa,\kappa'}, ...\interp{an_{{\textit{t}n}}}{\kappa,\kappa'})$.
+ \item
+  $\Prog{},\kappa,\kappa'\models R(a1,...an) $ \\
+  iff   $\interpp{R}{M,\kappa''}(\interp{a1_{{\textit{t}}}}{\kappa,\kappa'}, ...\interp{an_{{\textit{t}}}}{\kappa,\kappa'})$'\\
+   where $\kappa''=\kappa$ if  {{\textit{t}}}=\textsf{pre}, and  $\kappa''=\kappa'$ otherwise.
+    \item $\Prog{},\kappa,\kappa'\models P \wedge P' $  iff $\Prog{},\kappa,\kappa'\models P  $
+    and    $\Prog{},\kappa,\kappa'\models P' $.
+     \item $\Prog{},\kappa,\kappa'\models P \vee P' $  iff $\Prog{},\kappa,\kappa'\models P  $
+    or    $\Prog{},\kappa,\kappa'\models P' $.
+     \item $\Prog{},\kappa,\kappa'\models \prg{true} $  always.
+     \item $\Prog{},\kappa,\kappa'\models \prg{false} $ never.
+    \end{itemize}
+
+\end{definition}
+
+\noindent
+  For example, for states $\kappa_1$, $\kappa_2$ where 
+$\interp  {\prg{x.balance}} {\kappa_1}  = 4$  and $\interp
+{\prg{x.balance}} {\kappa2}  = 14$,  
+we have\\
+%  $\Prog{},\kappa,\kappa' \not\models \prg{x.balance}\PRE  \geq 10$, and  
+%  $\Prog{},\kappa_1,\kappa_2 \models \prg{x.balance}\POST  \geq 10$.  And we would also have that 
+\noindent  $\Prog{},\kappa_1,\kappa_2\models \prg{x.balance}\POST = \prg{x.balance}\PRE+10$.
+
+% \subsubsection{One-state assertions}
+
+Now we define one-state assertions as a special case of two-state assertions. Namely, in one-state assertions we have no occurrence of the annotations \textsf{pre} and \textsf{post}.
+
+\begin{definition}[One-state assertion, basic] $ ~ $ \\
+\label{def:one-state-assertions}
+A two-state assertion $P$, which is only annotated by $\epsilon$ is called a {\em one-state} assertion.
+% \noindent
+For one-state assertions, we define: % $\Prog{},\kappa \models P $  as follows
+\begin{itemize}
+\item
+ $\Prog{},\kappa \models P $ \ \ 
+ iff  \ \   $\Prog{},\kappa, \kappa \models P $
+    \end{itemize}
+
+\end{definition}
+
+
+\noindent
+  For example, if   
+$\interp  {\prg{x.balance}} {\kappa}  = 4$  then  
+ $\Prog{},\kappa  \models \prg{x.balance}  \geq 2$, and $\Prog{},\kappa\not\models \prg{x.balance}\geq 5$.
+
+\subsection{$\MayAffect$ and $\MayAccess$ }
+\label{sect:MayAffect}
+
+
+We expand the assertion language with  the two state-dependent predicates $\MayAffect$ and $\MayAccess$ which we   use to
+model risk.
+ \sd{These predicates
+are {\em hypothetical}, in that they talk about the
+  potential effect of execution of code, or of the existence of paths to connect two objects.}
+
+
+\begin{definition}[$\MayAffect$ and $\MayAccess$] $ ~ $ \\
+\label{def:two-state-assertions-with-potential}
+$
+\begin{array}{c}
+\begin{array}{lcl}
+ \textit{R}  & ::= & ... \mbox{as in def. \ref{def:two-state-assertions} ...} \ \ | \\
+ & &   \ \   \MayAffect(p,p') \ \ |  \\
+  & & \ \  \MayAccess(p,p') \ \ \    | \\
+%  & & \ \  \MayPublicAccess(p,p')\ 
+  \end{array}
+\end{array}
+$
+
+\noindent
+\rm %%%HORRIBLE
+We define the  validity of these assertions  as follows:
+
+\begin{itemize}
+  \item
+  $\Prog{},\kappa,\kappa'\models\,  \MayAffect(\prg{p},\prg{p'})_{{\textit{t}}}  \ \mbox{iff} \ \  \\ \exists \mbox{public  method}\, \prg{m},  \mbox{paths}, \bar{\prg{p}}.  \\
+     M, \kappa'', \prg{p.m}(\bar{\prg{p}}) \leadsto \_, \kappa'''\  \mbox{and}\ \interp {\prg{p'}} {\kappa''} \neq  \interp {\prg{p'}} {\kappa'''}   $.
+\item
+$\Prog{},\kappa,\kappa'\models { \MayAccess}(\prg{p},\prg{p'})_{{\textit{t}}}   \ \mbox{iff} \ \ \\  \exists \mbox{fields}\, \prg{f}_1...\prg{f}_n.\ \
+      \interp{\prg{p}.\prg{f}_1...\prg{f}_n}{\kappa''}= \interp {\prg{p'}} {\kappa''}$.
+
+In both cases above,  if  {{\textit{t}}}=\textsf{pre}, then $\kappa''=\kappa$ , else $\kappa''=\kappa'$.
+\item
+ As a shorthand, additionally we define a one-argument variant of
+$\MayAccess$:
+
+$
+\interp{\Accessible(x)_{{\textit{t}}}}{\Prog{}, \kappa,\kappa'}\  = $
+\\
+$\{\ y\ |\  \Prog{}, \kappa,\kappa'
+\models \MayAccess_{{\textit{t}}}(x,y)\ \}
+$
+\end{itemize}
+\end{definition}
+
+ 
+%  Given the observations about paths stated in definition \ref{def:paths} it 
+%  holds that $\interpps{ \MayPublicAccess}{M,\kappa} (\prg{p},\prg{p'})$ implies $\interpps{ \MayAccess}{M,\kappa} (\prg{p},\prg{p'})$.
+
+
+\subsubsection{Arising Runtime Configurations}
+\label{formal:arising}
+
+To give meaning to our   policies,  it is essential
+to examine  only those runtime configurations (\ie context and code pairs) which
+may arise through the execution of the given modules.
+For example, if we allowed {\em any} well-formed configuration (well-formed in the sense of the type system) to be examined, and if we had a \prg{Purse} class which had private field \prg{balance}, and whose code never allowed  \prg{balance} to go negative, then  we would be unable to ascertain that the 5th policy from \cite{ELang} which guarantees that balances are always positive, is adhered to.\footnote{Such properties may be expressed through object invariants \cite{Mey88,LeinoMueller04}.}
+
+
+We therefore define ${\mathcal A}rising(\Prog{})$ as the set of runtime configurations
+which may occur during execution of some initial configuration ($\kappa_0$,$expr_0$).
+  We call initial configurations those with minimal heap, expression $expr_0$, and we
+  consider all configurations which may be reached from such initial configurations.
+  %  which are well-typed
+% under the assumptions that \kw{x} and \this\ denote objects of class \prg{Object}.
+These concepts are defined in App. \ref{formal:arising}.
+The {\em arising} configurations are those which may be reached by executing an initial configuration, where initial configurations all configurations that may be encountered at the start of program execution, \cf \ref{def:initial}.
+
+\begin{definition} $ $ \\
+$\begin{array}{lcl}
+ {\mathcal{A}rising} & : &  Program    \mapsto \mathcal{P}( Context \times Expr  )
+\\
+ {\mathcal{A}rising}(\Prog{}) \ &    = \  & \ \bigcup_{(ctxt,\expr{})\in {\mathcal{I}nit}(\Prog{})} {\mathcal{R}each}(\Prog{}, ctxt, \expr{})
+\end{array}$
+\end{definition}
+
+
+
+
+\subsubsection{Policies}
+
+Policies can have one of the three following forms:   invariants of the form $P$, which require that some property holds at all visible states of a program; or  $P\, {\prg{code}}\, P'$ where $P$ must be a one-state assertion, and which require that execution of \prg{code} in any state which satisfies $P$ will lead to a state which satisfied $P'$; or  $P\, {\prg{any\_code}}\, P'$ which, like two state invariants \cite{???}, require that execution of {\em any} code in a state which satisfies $P$ will lead to a state which satisfies $P'$.
+
+
+\begin{definition}[Policies]
+ $ ~ $ \\
+ $
+\begin{array}{lclcl}
+Policy &  ::= & \ P \ | \  P \ \{ \prg{code} \}\  P \ | \ \  P \ \{ \prg{any\_code} \}\ P
+\end{array}
+$
+
+\noindent
+Adherence to policy::
+
+\begin{itemize}
+\item
+$M  \models P$   \  iff \\ 
+%$ ~ $ \hspace{.2in} 
+$ \forall M'.\forall ( \kappa,\_ )\in {\mathcal{A}rising}(M*M').$
+  \\ 
+  $ ~ $   \hspace{.2in} 
+$ M, \kappa \models P$
+\item
+$M  \models P\, \{ \prg{code} \}\, P'$ \  iff \\ 
+% $ ~ $ \hspace{.2in}
+ $\forall M'. \forall (\kappa,\_ )\in {\mathcal{A}rising}(M*M').$\\
+ $ ~ $ \hspace{.2in} 
+ $(\ \ M, \kappa \models P\ \ \wedge\  \ M, \kappa, \prg{code}  \leadsto \prg{res}, \kappa' $ \\
+  $ ~ $   \hspace{.6in}  $ \ \ \  \longrightarrow $\\
+  $ ~ $   \hspace{.2in}  $  \ \ \ \ M, \kappa, \kappa' \models P'\ \ )$
+\item
+$M  \models P\, \{ \prg{any\_code} \}\,  P'  $ \  iff \\ 
+ $\forall M'. \forall (\kappa,\prg{code} )\in {\mathcal{A}rising}(M*M').$\\  $ ~ $ \hspace{.2in} 
+ $(\ \ M, \kappa \models P\ \ \wedge\  \ M, \kappa, \prg{code}  \leadsto \prg{res}, \kappa' $ \\
+  $ ~ $   \hspace{.6in}  $ \ \ \  \longrightarrow $\\
+  $ ~ $   \hspace{.2in}  $  \ \ \ \ M, \kappa, \kappa' \models P'\ \ )$
+\end{itemize}
+\end{definition}
+
+
+\subsubsection{Policy Specifications}
+
+A policy specification is parameterised by the class that should adhere to is, and consists of a set of policis
+
+\begin{definition}[Specifications and Adherence]
+$ $ \\
+
+ \begin{itemize}
+\item
+$
+%\begin{array}{lclcl}
+PolSpec \  ::= \  \prg{spec}\ SpcId\,<ParId>\{\ Policy^*\ \}
+% \end{array}
+$
+\item
+\noindent
+Adherence to policy specifications:
+
+% \begin{itemize}
+% \item
+$M  \models SpcId<ClssId>  $ \  iff  \\
+the specification for $SpecId$  has the form\\
+$\ \ \ \prg{speci}\ SpcId\  <ParId>\{\,Pol_1,\, ...\, Pol_n\, \}$\\
+and
+ $\ \ \ \forall i\!\in\! \{1..n\}. \ \  M  \models Pol_i[ClssId/ParId]$ 
+
+\end{itemize}
+\end{definition}
+
+
+
+
+% For example, the code from ADD A PURSE CODE adheres to policy  \prg{Pol\_mint_constant}, because no method in the class \prg{Purse} modifies the \prg{mint}, and the \prg{mint} is a private field. But if we were to remove the annotation that the field \prg{mint} is private, then it would no longer satisfy that policy. % \prg{Pol\_protect_balance}.
+
+
+
+
+
+
+ \subsection{Reasoning}
+ 
+% ConnRule\_1:
+% %{  true   }  x.m(y)  {  ∀z,z’:pre Object.  MayAccess(z,z’)    ⇒  MayAccess(z,z’)pre
+% %                                  ∨ MayAccess(x,z’)pre  ∨ MayAccess(y,z’)pre   }
+
+% ConnRule\_2:
+% % { true }  x.m(y)  {  ∀z:pre Object.   Accessible(z)pre∩ ( Accessible (x)pre⋃ Accessible (y)pre)=∅
+% %             ⇒  Accessible (z) = Accessible (z)pre  }
+
+
+We can reason about accessibilty due to one of the underying
+properties of object-capability systems: that ``\textit{Only
+  connectivity begets connectivity}'' \cite{MillerPhD}.  Object
+references -- capabilities --- can only be created when objects are
+created, and cannot be forged. The only way one object can get a
+capability to another object is if it creates the second object; is
+passed a capability to the second object as a method argument or when
+it is created; or if the second object is returned from a call to a
+third object:
+
+
+ 
+\noindent \textbf{ConnRule\_2}:\\
+$\{ true \} \prg{x.m(y)}  \{ \forall~z: \pre Object.\\
+~~~~\Accessible(z)\pre \cap\\
+~~~~~~~ (\Accessible (x)\pre \cup \Accessible (y)\pre) = \emptyset\\
+~~~~~~~~~~~~\Rightarrow  \Accessible(z) = \Accessible (z)\pre  \}$
+
+
+
+% Do we need to think about this now: these restrictions are not just for pre/post but also for during.
+
+\begin{figure*}
+$\begin{array}{c}
+\begin{array}{l}
+\\
+\inferenceruleNN {Conn1} {   } {
+\vdash  \ \prg{true}  \ 
+  \{\ \prg{x.m(y)} \ \} \  \prg{z},\prg{z}': \pre \prg{Object} \wedge 
+  \MayAccess(\prg{z},\prg{z}') \ \longrightarrow \\
+  \hspace{2in} \  (\MayAccess(z,z')\pre \vee   \MayAccess(x,z')\pre  \vee \MayAccess(y,z')\pre)  
+}
+\\
+\\
+
+\inferenceruleNN {obeys1} {   \vdash \ \prg{SpecId<ClassId>} \hspace{1in}    \vdash\ \prg{x: ClassId}    }
+{
+\hspace{1.6in}   \vdash  \prg{x} \obeys \prg{SpecId} 
+}
+\\
+\\
+\inferenceruleNN {obeys2} {  \vdash  \prg{x} \obeys \prg{SpecId} \hspace{0.6in}  {\bf{spec}}\  \prg{SpecId<ParId>} \{ \ ... Policy ...\  \} 
+\hspace{0.6in} Policy\equiv \prg{y}:\prg{ParId} \wedge PolicyRest
+  }
+{
+\hspace{1.6in}  \vdash \ PolicyRest[\prg{x}/\prg{z}]
+}
+\end{array}
+\end{array}
+$
+\label{fig:inference}
+\caption{Inference Rules }
+\end{figure*}
+
+\subsection{The meaning of $\obeys$}
+
+We also give meaning to the \obeys\ predicate. We assume
+that a function $Contracts$ gives the set of policies associated with
+a policy identifier, and $p$ is a path:
+
+\noindent
+$
+M, \kappa  \models p \obeys  \prg{Spec} \ \ \mbox{iff} $\\
+$ \forall \kappa',\code, \code'.  (\kappa',\code')\in {\mathcal{R}eaching}(M,\kappa,\code).$\\
+$\forall P \in Contracts(\prg{Spec}).$\\
+$ ~ $ $ ~ ~ ~ $ ~~ $ M, \kappa' \models P[p/this]$
+
+\noindent In other words, \prg{p} $\obeys$ \prg{Spec} if it
+conforms to all \prg{Spec}'s policies in all reachable
+configurations.  The crucial rule for reasoning about $\obeys$ is
+quite straightforward: if \prg{x} $\obeys$ \prg{Spec}, and 
+a particular policy 
+\prg{P}\textbf{\texttt{\footnotesize{ \{y.m(z)\} }}}\prg{Q}
+is part of that specification, then 
+\textbf{\texttt{\footnotesize{\{y.m(z)\}}}}
+also obeys the policy:
+
+\noindent \textbf{ObeyRule}:\\
+$\prg{x} \obeys \prg{Spec} \wedge \prg{Pol} \in \prg{Spec} \wedge
+ \prg{Pol} \equiv  \prg{P} \prg{ \{ y.m(z) \} } \prg{Q} \Rightarrow\\
+ ~~~~~~~~\prg{Pol} \equiv  \prg{P[x/y]} \prg{ \{ x.m(z) \} } \prg{Q[x/y}$
+
+
+
+
+
+%\jn{SOPHIA:  is there more to say here?   At least: what does it mean?}
+
+
+
+

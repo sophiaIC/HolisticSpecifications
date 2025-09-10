@@ -1,0 +1,338 @@
+\section{Linking and Well-formed Modules}
+\label{sect:Linking}
+
+\subsection{Well-formed, closed, and stratified modules}
+
+In this section we define what it means for a module to be well-formed, closed and  stratified. Examples are given in sections \ref{problems:wellFormedModule} and \ref{problems:stratifiedModule}.
+
+We first define some basic terms: A specification $\SPC$ {\em uses} another specification $\SPC'$, if the body of $\SPC$ mentions $\SPC'$.
+A module $\M$ {\em uses} a  specification $\SPC$ if one of the specification defined in $\M$ uses   $\SPC$. A module implements a
+specification $\SPC$ if one of the classes in $\M$ claims that is implements $\SPC$.
+
+\begin{definition}
+\label{def:uses}
+\label{def:impls}
+For a module $\M$ and specification identifiers $\SPC$ and $\SPC'$ we define
+\begin{itemize}
+   \item
+   $\M \vdash \SPC \uses \SPC'$\ \ iff\ \  $\M(\SPC)$ contains a term of the form $e \obeys \SPC'$
+   \item
+   $\Muses {\M} {\SPC}$\ \ iff\ \  $\M \vdash \SPC' \uses \SPC$ for some $\SPC'$, or there exists a class $\CP$, such that ${\cal S}(\M,\CP)=\SPC$.
+   \item
+   $\M \vdash \SPC \usestr \SPC'$\ \ iff\ \  $\SPC$=$\SPC'$, or $\exists \SPC.\,\M \vdash \SPC'' \uses \SPC''\, \wedge \, \M \vdash \SPC'' \usestr \SPC'$.
+   \item
+   $\Mimpls {\M} {\SPC}$\ \ iff\ \   $\exists \CP.\,{\cal S}(\M,\CP)=\SPC$.
+ \end{itemize}
+
+\end{definition}
+
+ We  define a  module to be {\em well-formed} if it contains descriptions for all the specification identifiers used in the module.
+
+\begin{definition}
+\label{def:well:formed:module}
+We say that a module $\M$   is well-formed iff
+\begin{itemize}
+   \item
+   $\forall \SPC.\ [\ \Muses {\M} {\SPC} \, \rightarrow\, {\SPC}\in dom(\M)\ ]$.
+\end{itemize}
+\end{definition}
+
+\noindent
+We can prove that   $\M$ is well-formed iff  $\forall \SPC,\SPC'.\  [\, \M \vdash \SPC \usestr \SPC'\ \rightarrow \SPC'\in dom(\M)\ ]$.
+
+
+ Based on these concepts, we define {\em closed modules} to be those which contain implementations for all
+ specifications used in  specifications  implemented in the module.
+
+\begin{definition}
+\label{def:closed}
+For a module $\M$ we say that $\Closed{\M}$ iff for all ${\SPC}$ and ${\SPC}'$
+\begin{itemize}
+   \item
+   $\Mimpls {\M} {\SPC} \,\wedge\, \M \vdash \SPC \uses \SPC'\ \ \rightarrow \ \ \Mimpls {\M} {\SPC'}$.
+  \end{itemize}
+\end{definition}
+
+\noindent
+We can easily show that $\Closed{\M}$ iff $\Mimpls {\M} {\SPC}$ and  $\M \vdash \SPC \usestr \SPC'$  then $\Mimpls {\M} {\SPC}$
+
+We now define modules to be {\em stratified} if whenever the module implements
+ specifications $\SPC$ and $\SPC'$ such that  $\SPC$ uses $\SPC'$, then it also implements all
+ ``intermediate'' specifications, \ie those which are used by $\SPC$ and in their turn use  $\SPC'$.
+
+\begin{definition}
+\label{def:stratified}
+For a module $\M$ we say that  $\Stratified{\M}$ iff
+\begin{itemize}
+   \item
+   $\M$ is well-formed, and
+   \item
+   $\Mimpls {\M} {\SPC} \,\wedge\, \M \vdash \SPC \uses \SPC''\ \ \,\wedge\, \M \vdash \SPC'' \uses \SPC'
+   \,\wedge\, \Mimpls {\M} {\SPC'} \ \ \rightarrow \ \ \Mimpls {\M} {\SPC''}$.
+
+
+ \end{itemize}
+\end{definition}
+
+ \noindent
+ We can show that in a stratified module, specifications which mutually use each other, are either both implemented in the  module, or both not implemented. That is, if $\Stratified{\M}$ then
+$\Mimpls {\M} {\SPC}\, \wedge\,  \M \vdash \SPC \usestr \SPC' \, \wedge\,  \M \vdash \SPC \usestr \SPC'\ \ \rightarrow \ \ \Mimpls {\M} {\SPC'}$.
+
+\begin{lemma}
+\label{lemma:closed:is:Stratified}
+For any module $\M$: $\Closed{\M} \ \rightarrow \ \Stratified{\M}.$
+\end{lemma}
+
+The opposite implication does not hold. A counterexample can be found in section \ref{problems:stratifiedModule}.
+
+
+
+
+
+\subsection{Linking}
+
+We can now define linking of modules. Linking is an operation that takes two modules, and creates a module which corresponds  to the union of the two. We use the concept of module linking 
+to model the open world, where our module $\M$ whose code we know, will be executed together with further modules whose code we do not know.
+
+
+We now define linking of modules, $M*M'$, to be the  union of their respective mappings, provided that the  domains of the two modules are disjoint wrt to classes, that the modules give the same definitions for specification identifiers, {and that linking preserves the privacy of the constructors of any classes which had been declared as private.}
+
+\begin{definition}[Linking]
+\label{formal:Linking}
+Linking  of  modules $\M$ and $\M{'}$ is
+
+\noindent $\ \ \ * \ : \ Module \times Module \ \longrightarrow \ Module  $
+\noindent
+
+$
+\M * \M{'}  =\ \left\{
+\begin{array}{l}
+                        \M *_{aux} \M{'},\ \ \   \hbox{if}\  \ WFL(\M,\M{'})\\
+\bot  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.\\
+                    \\
+(\M *_{aux} \M{'})(\clss{}) =\ \left\{
+\begin{array}{l}
+ \M(id),\ \ \ \mbox{if }
+\M(id) \mbox{ is defined}\\
+\M{'}(id) \ \ \  \mbox{otherwise.}
+\end{array}
+                    \right.
+                    $
+\\
+\\
+{$WFL(\M,\M{'})$ }    \ $\equiv $ \\ 
+
+\begin{itemize}
+\item
+$ ~ $   $dom(\M)\!\cap\!dom(\M{'})\!\cap\!\syntax{ClassId}\!=\!\emptyset\ \ \wedge\ $ 
+\item $ ~ $   $\forall \prg{S}\in \syntax{SpecId}\!\cap\! dom(\M)\!\cap\! dom(\M{'}).\  \M(\prg{S})=\M(\prg{S}')  $ 
+\item $ ~ $  $WFP(\M,\M') \ \wedge  \ WFP(\M',\M)$
+\item
+    $\Mimpls {\M_i} {\SPC} \ \rightarrow \Mimpls {\M_j} {\SPC}$ for $i\neq j\in \{1,2\}$
+\item
+   $\Mimpls {\M_1} {\SPC} \,\wedge\, \M_1 \vdash \SPC \uses \SPC'\ \   \ \ \rightarrow \ \ \neg \Mimpls {\M_2} {\SPC'}$.
+ \end{itemize}  
+ 
+{$WFP(\M,\M')$ } \ \   \ $\equiv $ \ \\
+
+ \begin{itemize}
+\item
+ $ \forall \prg{C}.  \ \Private{\M}{\prg{C}} \ \rightarrow \ \ \neg \Creates{\M}{\prg{C}}$
+  \end{itemize}  
+\end{definition}
+
+
+
+Add to the requirement that $\M_1$ and $\M_2$ implement disjoint specifications, and $\M_2$ does not implement any specification which is used by a specification implemented  in $\M_1$:
+ 
+ 
+ 
+{In the above, the predicate $WFL(\M,\M{'})$ asserts that linking of the modules $\M$ and $\M{'}$ is well-defined. It requires that 1) classes are not defined more than once, 2) specifications may have been defined more than once, but then their bodies must be identical\footnote{We need to expand this, to also require that such "duplicate" specifications do not mention classes}, and 3) no module can call private constructors\footnote{Why nor also private methods?} from another module. This means, that the runtime system enforces this form of privacy.   For example, if in module $\M{_{mp}}$ we define \prg{Purse} as \kw{private} and \prg{Mint} as not private,
+the call of the \prg{Purse} constructor is restricted to only insider the module $\M{_{mp}}$, while the call of \prg{Mint} is unrestricted.
+This means, that only objects of classes defined in the module  $\M{_{mp}}$ may create \prg{Purse}s, while  clients of $\M{_{mp}}$ may create
+objects of class \prg{Mint}. In effect, the creation of \prg{Mint} is publicly available, but the creation of  \prg{Purse}s is restricted}
+We place some conditions for module linking to be defined: We require that the two modules do not contain implementations for the same class identifiers, and if they contain bodies for the same specification identifiers, then the bodies should be identical. Moreover, we require that the two modules do not contain implementations for the same specification, and that the second module should not contain implementation for specifications used by the first. The former two requirements are uncontroversial -- otherwise we would have conflicts between the to modules. The last two requirements are 
+....
+
+
+\subsection{Linking preserves properties}
+\sdO{In this section we prove that linking preserves properties related to execution, validity and well-formedness.
+Note however, that all these lemmas are predicated on  the linking operation being defined, that is
+${\cal M}( \M,\prg{C},\prg{m}) $ =  ${\cal M}( \M'*\M,\prg{C},\prg{m})$ is a shorthand for
+If ${\cal M}( \M,\prg{C},\prg{m})$ is defined, then  ${\cal M}( \M,\prg{C},\prg{m}) $ =  ${\cal M}( \M'*\M,\prg{C},\prg{m})$.
+}
+
+{The following lemma says that lookup is preserved by linking more modules.}
+
+{
+\begin{lemma}
+\label{lemma:link:preserves:lookup}
+For   modules $\M$ and $\M'$ such that and $\M'*\M$ is defined, and class identifier \prg{C}. method identifier \prg{m}, predicate identifier \prg{Q}, and ghost field identifier \prg{gf}, we have
+
+\begin{itemize}
+\item
+%If ${\cal M}( \M,\prg{C},\prg{m})$ is defined, then
+ ${\cal M}( \M,\prg{C},\prg{m}) $ =  ${\cal M}( \M'*\M,\prg{C},\prg{m})$.
+\item
+%If ${\cal S}( \M,\prg{C})$ is defined, then
+ ${\cal S}( \M,\prg{C})$  =  ${\cal S}( \M'*\M,\prg{C})$.
+\item
+% If ${\cal P}( \M,\prg{C},\prg{Q})$ is defined, then
+ ${\cal P}( \M,\prg{C},\prg{Q}) $ =  ${\cal P}( \M'*\M,\prg{C},\prg{Q})$.
+\item
+%If ${\cal G}( \M,\prg{C},\prg{gf})$ is defined, then
+${\cal G}( \M,\prg{C},\prg{gf}) $ =  ${\cal G}( \M'*\M,\prg{C},\prg{gf})$.
+\end{itemize}
+\end{lemma}
+}
+{\begin{proof} By application of the definitions.
+\end{proof}
+}
+
+
+
+The following lemma says that execution is preserved by linking more modules.
+
+{
+\begin{lemma}
+\label{lemma:link:preserves:execution}
+For all state $\sigma$ and $\sigma'$, modules $\M$ and $\M'$, and statements $stmts$, such that and $\M'*\M$ is defined:
+\\
+If $\M, \sigma, stmts \leadsto \sigma'$, then $\M'*\M, \sigma, stmts \leadsto \sigma'$.
+\end{lemma}
+}
+{\begin{proof} By structural induction on the execution $\leadsto$ and lemma \ref{lemma:link:preserves:lookup}.
+\end{proof}
+}
+
+{The value of a defined expression is preserved by linking. The same applies to undefinedness.}
+
+{\begin{lemma}
+\label{lemma:link:preserves:exprs}
+For any   state $\sigma$, expression $e$, and modules $\M$ and $\M'$, where $\M'*\M$ is defined:\\
+\begin{itemize}
+\item
+If  $\interp {e} {\M,\sigma}$ is defined,  then $\interp {e} {\M,\sigma}$=$\interp {e} {\M'*\M,\sigma}$.
+\item
+{If  $\interp {e} {\M,\sigma}$ is undefined,  then $\interp {e} {\M'*\M,\sigma}$ is undefined.}
+\end{itemize}
+\end{lemma}
+
+\begin{proof}
+By structural induction on $e$ and   lemma \ref{lemma:link:preserves:lookup}.
+\end{proof}
+}
+
+ The opposite implication does not hold. It is possible to have, say  $\interp {e} {\M2*\M1,\sigma}$=$3$, but  $\interp {e} {\M1,\sigma}$ is undefined. Also, it is possible to have $\interp {e} {\M,\sigma}$ unknown,  but $\interp {e} {\M'*\M,\sigma}$   defined (or also undefined).
+
+{Validity of one-state assertions is preserved by linking, as expressed by the lemma below:}
+
+{\begin{lemma}
+\label{lemma:link:preserves:exprs}
+For any state $\sigma$, assertion $\A$, and modules $\M$ and $\M'$, where $\M'*\M$ is defined:\\
+\begin{itemize}
+\item
+If  $\M,\sigma  \modelsWithO  \A$ holds, then  $\M'*\M,\sigma  \modelsWithO  \A$.
+\item
+If  $\M,\sigma  \not\modelsWithO  \A$ holds, then  $\M'*\M,\sigma  \not\modelsWithO  \A$.
+\end{itemize}
+\end{lemma}
+\begin{proof}
+By structural induction on $\A$ and   lemmas \ref{lemma:link:preserves:lookup} and \ref{lemma:link:preserves:exprs}. In several inductive cases we
+use the fact that valictydity of the subterms must be defined, For example, in the case of implication,
+i.e. when $\A$ has the form $\A_1 \rightarrow \A_2$ we  use the fact that validity of $\A_1$ must be defined.  \end{proof}
+
+
+
+
+ \begin{lemma}[properties of linking]
+ For any modules $\M_0$, and $\M_1$ and $\M_2$, such that $\M_1*\M_2$ is defined:
+ \label{lemma:linking:properties}
+ \begin{itemize}
+     \item
+    If $\M_1$ and $\M_2$ are stratified,   then $\M_1*\M_2$ is also stratified.
+    \item
+    If $\M_0*\M_1$ is defined,   then $\M_0*\M_1*\M_2$ is also stratified.
+    \item
+    $\M_1*(\M_2*\M_3)$=$(\M_1*\M_2)*\M_3$.
+    \item
+    If $\M_0*\M_1$ is closed,   then there exists an $\M_3$ such that $\M_3$ is closed and
+    $\M_3*\M_0*\M_1*\M_2$ is also closed, and moreover $\M_3*\M_0*\M_1$=$\M_0*\M_1*\M_3$
+    \item
+    If $\M*\M'*\M''$ is closed,   then  $\M$  is closed and
+    $\M*\M'$ is also closed.
+ \end{itemize}
+
+ \end{lemma}
+
+ From now on, we implicitly expect all modules to be stratified.
+
+
+\sdO{We require modules to be {\em stratified}, namely we avoid cyclic dependencies among  specifications in different modules.
+In this section we define what it means for modules to be stratified, what it means to link modules, and describe the properties preserved by linking. }
+
+\subsection{Good Oracle}
+ An oracle is good if ...
+
+ We fist define oracle concatenation in the obvious way:
+ \begin{definition}[Oracle Concatenation]
+ \label{def:good:oracle}
+ For two oracles  $\O$ and $\O'$  their concatenation is undefined iff
+  $dom(\O)\cap dom(\O') \neq \emptyset$
+ and otherwise
+ \begin{itemize}
+      \item
+      If $\CP\in dom(\O)$ then $\O*\O'(\CP)=\O(\CP)$
+     \item
+    If $\CP\in dom(\O')$ then $\O*\O'(\CP)=\O'(\CP)$
+ \end{itemize}
+ \end{definition}
+
+ \begin{definition}[Good Oracle]
+ \label{def:good:oracle}
+ For a module $\M$ and an oracle $\O$, we say that $\M \models \O$ iff
+ \begin{itemize}
+     \item
+      $dom(\O)=\Classes{\M}$
+     \item
+   If $\M$ is closed, then \ \
+   $\forall \M'.\forall \sigma\in\Arising{\M*\M'}. \forall \CP\in \Classes{\M}. \forall Pol\in\Policies{\M}.$\\
+     $\M,\sigma \modelsWithO x:\CP \rightarrow Pol[x/\this]$
+    \item
+    If $\M$ is not closed, then $\forall \M'$, such that $\M'*\M$ is closed, and for all
+    $\O'$ such that $\M'\models\O'$.
+    $\forall \M''.\forall \sigma\in\Arising{\M'*\M*\M''}. \forall \CP\in \Classes{\M}. \forall Pol\in\Policies{\M}.$\\
+     $\M'*\M,\sigma \modelsWith{\O'*\O} x:\CP \rightarrow Pol[x/\this]$
+ \end{itemize}
+ \end{definition}
+
+ We can prove that if $\M$ is not closed, then $\M \models \O$ iff $\M*'*\M \models \O'*\O$ for all
+ $\M'$ such that $\M'*\M$ is closed, and $\O'$ such that $\M'\models\O'$.
+
+
+  \begin{lemma}[properties of good oracles]
+ For any modules  $\M$, $\M'$, $\M_1$, $\M_2$, and oracles $\O$, $\O_1$ and $\O_2$:
+ \label{lemma:good:properties}
+ \begin{itemize}
+     \item
+    If $\M \models \O$ then there exists a $O'$ such that $\M*\M'\models \O*\O'$
+    \item
+    If $\M_1 \models \O_1$ and $\M_2 \models \O_2$, then $\M_1*\M_2 \models \O_1*\O_2$.
+ \end{itemize}
+  \end{lemma}
+  \begin{proof}
+ \begin{itemize}
+     \item
+      If $\M*\M'$ is undefined, then the lemma holds trivially. If $\M*\M'$ is  defined, then take
+  $\O'$ to be the oracle mapping every class to false.
+    \item
+    Again, if $\M_1*\M_2$ is undefined, then the lemma holds trivially. If $\M_1*\M_2$ is  defined, then
+    use lemma \ref{lemma:linking:properties}
+   \end{itemize}
+  \end{proof}
+
+  Does the opposite hold??
+
+

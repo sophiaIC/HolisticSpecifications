@@ -1,0 +1,506 @@
+\section{\tobym{Illuminating Examples}}
+\label{examples}
+\toby{Here we consider a suite of examples that shed light on the
+various subtle aspects of our approach.}
+
+\subsection{Well-formed and Closed Modules}
+\label{problems:wellFormedModule}
+
+Consider the following module definition.
+
+ \begin{lstlisting}
+  module M$_1$
+       $\equiv$
+  specification S$_2${
+     field f
+     policy Pol$_2$
+         this.f obeys S_1
+  }
+\end{lstlisting}
+\noindent
+Module M$_1$ is closed, but not well-formed, because it messes a definition for $\SPC_1$, used by $\SPC_2$.
+
+If we add the definition of $\SPC_2$, we make the module well-formed:
+
+\begin{lstlisting}
+  module M$_2$
+       $\equiv$
+  specification S$_1${
+     field g
+     policy Pol$_1$
+         this.g > 4
+  }
+  specification S$_2${
+     ... $\mbox{as earlier}$ ...
+  }
+\end{lstlisting}
+Module M$_1$ is closed and well-formed.
+ 
+ If we add an implementation for $\SPC_2$ (and not $\SPC_1$) then the module will   not be closed:
+
+\begin{lstlisting}
+  module M$_3$
+       $\equiv$
+  specification S$_1${
+     ... $\mbox{as earlier}$ ... }
+  specification S$_2${
+     ... $\mbox{as earlier}$ ...  }
+  class C$_2$ implements S$_2$ {
+     ...
+  }
+\end{lstlisting}
+\noindent 
+Module $\M_3$ is well-formed but not closed.
+
+But if we add an implementation for $\SPC_1$    then the module will be    closed (regardless of whether we also have an implementation of  $\SPC_2$):
+
+\begin{lstlisting}
+  module M$_4$
+       $\equiv$
+  specification S$_1${
+     ... $\mbox{as earlier}$ ...  }
+  specification S$_2${
+     ... $\mbox{as earlier}$ ... }
+  class C$_1$ implements S$_1$ {
+     ...
+  }
+\end{lstlisting}
+\noindent 
+Module $\M_4$ is well-formed and closed.
+
+ 
+\subsection{Stratified Modules}
+\label{problems:stratifiedModule}
+
+Consider the following module definition, where $\M_1 \vdash \SPC_2 \uses \SPC_2$, and 
+$\M_1 \vdash \SPC_3 \uses \SPC_1$.
+
+  \begin{lstlisting}
+  module M$_1$
+       $\equiv$
+  specification S$_1${
+     field f
+     policy Pol$_1$
+         this.f > 5
+  specification S$_2${
+      ... x  obeys S_1  ... }
+  specification S$_3${
+      ... y obeys S_2 ... 
+  class C$_1$ implements S_$1$ { 
+      ...
+  }
+  class C$_{1a}$ implements S_$1$ { 
+      ...
+  }      
+\end{lstlisting}
+\noindent
+In \M$_1$ we implement $\SPC_1$, and therefore \M$_1$ is well-formed,  closed, and stratified.
+
+
+Now consider what happens if we implement $\SPC_3$ without implementing $\SPC_2$ which is used by $\SPC_3$.
+
+ \begin{lstlisting}
+  module M$_2$
+       $\equiv$
+  specification S$_1${
+     field f
+     policy Pol$_1$
+         this.f > 5
+  specification S$_2${
+      ... x  obeys S_1  ... }
+  specification S$_3${
+      ... y obeys S$_2$ ... 
+  class C$_3$ implements S$_3$ { 
+      ...
+  }
+\end{lstlisting}
+\noindent
+ \M$_2$ is well-formed, stratified, but not  closed.
+
+Now consider  \M$_3$, where we implement $\SPC_1$ and $\SPC_3$ but not $\SPC_2$.
+
+ \begin{lstlisting}
+  module M$_3$
+       $\equiv$
+  specification S$_1${
+     ... $\mbox{as earlier}$  ... }  
+  specification S$_2${
+      ... $\mbox{as earlier}$  ... }
+  specification S$_3${
+      ... $\mbox{as earlier}$  ... }
+  class C$_1$ implements S$_1$ { 
+      ...
+  }
+  class C$_3$ implements S$_3$ { 
+      ...
+  }      
+\end{lstlisting}
+\noindent
+ Therefore M$_3$ is well-formed, not closed, and not stratified.
+
+As we shall see later, there exists a module which we can link to $\M_3$ and obtain a closed module, while it is impossible to do that with $\M_2$.
+
+Finally, in $\M_4$ we introduce a cycle between $\SPC_1$, $\SPC_2$, and $\SPC_3$, and only implement $\SPC_1$: 
+\begin{lstlisting}
+  module M$_4$
+       $\equiv$
+  specification S$_1${
+     ... x obeys S$_3$ ... }
+  specification S$_2${
+      ... x obeys S$_1$ ... }
+  specification S$_3${
+      ... x obeys S$_2$ ... }
+  class C$_1$ implements S_$1$ { 
+      ...
+  }      
+\end{lstlisting}
+\noindent
+Module M$_4$ is well-formed, not closed, and not stratified.
+
+\subsection{Problems with stratified linking}
+\label{problems:stratified:problems}
+Stratified linking gives several very nice properties, but it creates problems, as explained below.
+Consider the following three modules
+
+ \begin{lstlisting}
+  module M$_1$
+       $\equiv$
+  specification S$_1${  }
+  class C$_1$ satisfies S$_1${  }
+  
+  module M$_2$
+       $\equiv$
+  specification S$_1${  }
+  class C$_2$ satisfies S$_2${  }
+  
+  module M$_3$
+       $\equiv$
+  specification S$_1${  }
+  class C$_1$ satisfies S$_1${  }
+  class C$_2$ satisfies S$_2${  }
+  \end{lstlisting}
+  
+\noindent
+Consider oracles $\O_1$,  $\O_3$ such that\\
+$\strut ~ \ \ \ \O_1=\CP_1 \mapsto true$ while $\O_3=\CP_1 \mapsto true, \CP_2 \mapsto true$
+\\
+Both oracles are sound in the respective modules, ie $\M_1 \models \O_1$ and $\M_3 \models \O_3$
+
+
+We then have that $\M_1 \modelsWith{\O_1} x \obeys \SPC_1 \rightarrow x:\CP_1$, but
+$\M_3 \not\modelsWith{\O_3} x \obeys \SPC_1 \rightarrow x:\CP_1$, which is a bit wierd.
+Currently there is no problem with that, because the linking of $\M_1$ and $\M_2$ is undefined. 
+But this in not a satisfactory
+solutions, because it would forbid me to argue that an implementation of $\SPC$ behaves as promised in the context of other
+implementations of $\SPC$. 
+
+For example,   if I prove that $\CP_{purse\_a}$ developed in $\M_a$ indeed implements $\prg{Purse}$, and
+I have another module $\M_b$, which provides a  $\CP_{purse\_b}$ also proven to implement   $\prg{Purse}$, then
+how can I argue that  $\CP_{purse\_a}$ upholds all promises if linked with  $\M_b$? 
+
+So, in the long term we will need to make linking less restrictive. To do this, we will need to either restrict assertions 
+so that they do not allow $\obeys$ in {\em some} negative positions (we have to be careful with that, because we want to allow, e.g.
+that $p \obeys \prg{Purse} \rightarrow p.balance>0$), or we will have to make the meaning of $\_ \modelsWith{\O} \_$ more
+demanding, so that t $\M_1 \not\modelsWith{\O_1} x \obeys \SPC_1 \rightarrow x:\CP_1$
+
+Perhaps we have to bite the bullet, and forbid $\obeys$ in {\em all} negative positions. And instead, only allow unfolding of the 
+specifications, e.g. Say that $\A\, \rightarrow_{\M}\, \A'$ iff ... $\A \wedge \A''$ where $\A''$ unfolds all the specifications?
+
+\subsection{Unknown Assertions}
+THIS SUBSECTION PROBABLY HAS TO BE SCRAPPED.
+\label{problems:undefinedAssert}
+Consider the following module definition.
+
+ \begin{lstlisting}
+  module M$_1$
+       $\equiv$
+  specification S$_1${
+    }
+  class C$_1$ satisfies S$_1${
+       }
+  module M$_2$
+       $\equiv$
+  class C$_2$ satisfies S$_1${
+      }
+  specification S$_1${
+    }
+  }
+\end{lstlisting}
+
+\noindent
+Consider now some mappings $\O_1$,  $\O_2$ such that\\
+  $~ \ \ \ \ \  $  $\O_1(\MP_1,\CP_1,\SPC_1)=true$, \ \ and \\  $~ \ \ \ \ \  $  $\O_1(\MP_1*\MP_2,\CP_1,\SPC_1)=false$, \ \
+ and\\
+ $~ \ \ \ \ \  $  $\O_2(\MP_1,\CP_1,\SPC_1)=false$, \ \  and\\   $~ \ \ \ \ \  $  $\O_2(\MP_1*\MP_2,\CP_1,\SPC_1)=true$.\\
+Neither $\O_1$, nor $\O_2$ are oracles, since they do not satisfy the requirements from Definition \ref{def:orcacle}.
+
+Now onsider now some mappings $\O_3$,  $\O_4$ such that\\
+ $~ \ \ \ \ \  $  $\O_3(\MP_1*\M',\CP_1,\SPC_1)=true$  for all $\M'$;\footnote{We assume that there also exist ab empty module, so as to also obtain $\O_3(\MP_1,\CP_1,\SPC_1)=true$}\\
+$~ \ \ \ \ \ $  $\O_3(\MP_2*\M',\CP_2,\SPC_1)$ for all $\M'$;\\
+ $~ \ \ \ \ \ $ $\O_3(\_,\_,\_)=false$, otherwise.
+\\
+$~ \ \ \ \ \ $ $\O_4(\MP_1*\M',\CP_1,\SPC_1)=false$  for all $\M'$;
+\\ $~ \ \ \ \ \ $ $\O_3(\MP_2*\M',\CP_2,\SPC_2)=true$ for all $\M'$;
+\\$~ \ \ \ \ \ $  $\O_4(\_,\_,\_)=false$, otherwise.
+\\
+Both $\O_3$ and $\O_4$ are oracles.
+Note that  $\O_4$  treats $\MP_1$, $\CP_1$ , and $\SPC_1$ differently from
+$\MP_2$, $\CP_2$ , and $\SPC_2$, even though they are structurally isomorphic. Nevertheless, $\O_4$ is
+an oracle.  Moreover, both $\O_3$ and $\O_4$ are {\em sound} oracles.
+
+We now consider the application of these oracles to judge validity.
+Assume a state $\sigma_1$ such that ${\cal C}lass(x)_{\sigma_1}=\prg{C}_1$,
+and ${\cal C}lass(x)_{\sigma_1}=\prg{C}_2$.
+Then we have that \\
+$~ \strut \ \ \ $ $\M_1, \sigma_1 \modelsWith{\O_4} x \obeys \prg{S}_1$, \ \ while\\
+$~ \strut \ \ \ $  $\M_1, \sigma_1 \modelsWith{\O_4} y \obeys \prg{S}_1$ is unknown.
+\footnote{If we adopted  Alex's clever definition however,  we would have $\M_1, \sigma_1 \models y \obeys \prg{S}_1 \rightarrow  x \obeys \prg{S}_1$ holds.-- Still to think whether we want that.}
+\\
+On the other hand:\\
+$~ \strut \ \ \ $ $\M_2*\M_1, \sigma_1 \modelsWith{{\O_3}} x \obeys \prg{S}_1 \rightarrow y \obeys \prg{S}_1$, \ \ \ but \\
+$~ \strut \ \ \ $  $\M_2*\M_1, \sigma_1 \not\modelsWith{{\O_4} }x \obeys \prg{S}_1 \rightarrow y \obeys \prg{S}_1$.\\ Therefore,
+we have that\\
+ $~ \strut \ \ \ $ $\models  x \obeys \prg{S}_1 \not\longrightarrow_{\M_2*\M_1} y \obeys \prg{S}_1$.
+
+
+\subsection{Infinite execution}
+
+Consider the following module definition.
+
+ \begin{lstlisting}
+  module M$_1$
+       $\equiv$
+  specification S$_1${
+     policy P$_1$:
+        true
+           { this.m() }
+        false
+  }
+  class C$_1$ satisfies S$_1${
+      method m(){
+          this.m()
+      }
+  }
+\end{lstlisting}
+
+Specification $\prg{S}_1$ is clearly nonsensical, as it asserts the
+unsatisfiable postcondition \prg{false}. However, perhaps surprisingly,
+ a mapping  $\O_1$ such that $\O_1(\MP_1*\M',\CP_1,\SPC_1)=true$ for all modules $\M'$,
+and $\O_1(\_,\_,\_)=false$, otherwise, is an oracle, and moreover is a {\em sound} oracle!
+ This circularity is not
+a soundness issue,   since \prg{m()} never terminates.
+Our   logic only requires \emph{partial correctness}.
+
+\subsection{Contradiction in the Specification}
+
+Our specification language allows one to express apparently contradictory
+specifications, such as the following.
+
+ \begin{lstlisting}
+  module M$_2$
+       $\equiv$
+  specification S$_2${
+     policy P$_2$:
+        $\neg$ this $\obeys$ S$_2$
+  }
+  class C$_2$ satisfies S$_2${
+      ...
+  }
+\end{lstlisting}
+
+Note that while class $\prg{C}_2$ claims to satisfy $\prg{S}_2$, the
+contradiction in policy $\prg{P}_2$ means that we would be very surprised if there was a possibility to satisfy it.
+ Consider any oracle $\O_1$ such that $\O_1(\MP_2,\CP_2,\SPC_2)=true$ -- such an oracle is {\em not} sound.
+
+Here is why: Assume a state $\sigma_1$ such that ${\cal C}lass(x)_{\sigma_1}=\prg{C}_2$, and assume that
+$\O_1$ was sound.
+Then, by definition of $\models$, we obtain that $\M_2, \sigma_1 \modelsWith{\O_1}  x \obeys \prg{S}_2 $. Because $\O_1$ is sound, we can unfold the definition of $\prg{S}_2$, and ontain $\M_2, \sigma_1 \not\modelsWith{\O_1}  x \obeys \prg{S}_2 $.
+This is a contradiction, and therefore, $\O_1$ is not sound.
+
+Note that we do not obtain a contradiction if we have an oracle  $\O_2$ such that  $\O_2(\MP_2,\CP_2,\SPC_2)=false$. Namely, we are not allowed the fold the definition, and thus we cannot obtain that $\M_2, \sigma_1 \modelsWith{\O_2}  x \obeys \prg{S}_2 $.
+
+%
+%Note that $o \obeys \prg{S}_2$ implies  that $\neg(o \obeys \prg{S}_2)$, but the opposite does not hold, ie
+% $\neg(o \obeys \prg{S}_2)$ does not imply that $o \obeys \prg{S}_2$.
+% This is so because $\obeys$ is always judged syntactically, i.e. wrt the
+%specifications that the class of the $o$ claims to satisfy and not wrt the behaviour of $o$.
+%
+%Therefore, the case analysis $o \obeys \prg{S}_2 \ \vee\ \neg(o \obeys \prg{S}_2)$
+%does not introduce a problem.
+%Namely, the case analysis   is equivalent to ``class of $o$ claims it satisfies   $\prg{S}_2$,
+%or  class of $o$ does not claim it   satisfies   $\prg{S}_2$.''
+%Also, by application of the implications from the previous paragraph,
+%$o \obeys \prg{S}_2 \ \vee\ \neg(o \obeys \prg{S}_2)$ implies  (but is not equivalent to) $\neg(o \obeys \prg{S}_2 )\ \vee\ \neg(o \obeys \prg{S}_2)$.
+
+\subsection{Monotonicity and Invariants}
+
+Consider the following module $\prg{M}_3$ that declares a single
+specification~$\prg{S}_3$
+and class~$\prg{C}_4$ that claims to satisfy $\prg{S}_3$.
+
+ \begin{lstlisting}
+  module M$_3$
+       $\equiv$
+  specification S$_3${ }
+  specification S$_4$
+  	policy Pol_1
+	       $\forall$ o. o:Object. o obeys S$_3$
+  }
+  class C$_3$ satisfies S$_3${
+      ...
+  }
+\end{lstlisting}
+
+In the context of this module \emph{alone} all objects will be of class
+$\prg{C}_4$, and so each will obey $\prg{S}_3$. However, the assertion
+$\prg{M}_3 \modelsWithO  \prg{C}_4 :\forall o:Object.\ o\ \obeys\ \prg{S}_3$ does \emph{not} hold for {\em any} oracle $\O$. This is so, because \autoref{def:invariant} requires that the assertion holds in all configuration arising from all possible extensions of $\prg{M}_3$, by linking
+$\prg{M}_3$ against all possible $\M'$. Naturally some of these $\M'$ not contain the definition of  $\prg{S}_3$, and by \autoref{def:oracle}  the oracle $\O$ will say that $\O(\M,\prg{C})=false$ for any class \prg{C} defined in $\M'$.
+
+\subsection{Negative Positions}
+
+Quite often\footnote{TODO find citations}, we need to restrict the assertions appearing in negative positions. But  this is not necessary here. Nevertheless, in general, when $\obeys$ appears in a negative position in the postcondition of a method specification, the specification is unsatisfiable.
+
+In the example below,    $\prg{x}  \obeys \SPC{_4}$  appears in a negative position.
+
+ \begin{lstlisting}
+  module M$_4$
+       $\equiv$
+  specification S$_4${
+       policy Pol$_{4a}$
+           true
+               { res=this.m(x) }
+           x $\obeys$ S$_4$ $\longrightarrow$ res
+
+       policy Pol$_{4b}$
+           true
+               { res=this.m(x) }
+           x $\obeys$ S$_4$ $\longleftarrow$ res
+  }
+  class C$_4$ satisfies S$_4${
+      method m(x){ ... }
+  }
+\end{lstlisting}
+
+In general, it is impossible to satisfy  $\prg{Pol}_{4a}$ unless the method \prg{m} always returns true. Namely, this specification requires
+that the method should recognize all objects which satisfy $\SPC_4$. Since there are many classes that can satisfy this specification, and not  all such classes are known to the module $\M_4$, it is impossible to write a method body for \prg{m} such that it satisfies this requirment.
+
+Policy $\prg{Pol}_{4b}$ is even more difficult to satisfy.
+
+\vspace{.1in}
+
+However, in the below we   strengthen the specification  $\SPC{_4}$ from he example above, so that $\prg{Pol}_{4a}$ became satisfiable.
+Namely, we added the policy $\prg{Pol}_{4c}$ which requires that objects which satisfy  $\prg{Spec}_4$ return $true$ when executing method \prg{check()}. On the other hand, policy  $\prg{Pol}_{4b}$ remains unsatisfiable.
+
+
+\begin{lstlisting}
+  module M$_{4a}$
+       $\equiv$
+  specification S$_4${
+       policy Pol$_{4a}$
+           true
+               { res=this.m(x) }
+           x $\obeys$ S$_4$ $\longrightarrow$ res
+
+       policy Pol$_{4b}$
+           true
+               { res=this.m(x) }
+           x $\obeys$ S$_4$ $\longleftarrow$ res
+
+       policy Pol$_{4c}$
+           true
+               { res=this.test() }
+          res
+  }
+  class C$_4$ satisfies S$_4${
+      method m(x){ z=x.check(); return z }
+  }
+\end{lstlisting}
+
+
+
+\vspace{.1in}
+On the other hand, the following spec is satisfiable (in fact, we have similar policies for Purse-s). Here we have an abstract predicate \prg{AP} on the right hand side of the implication. Since the abstract predicate will be made concrete by the module, it can be defined in such a way as to make it possible to satisfy the specification. Note that the predicate \prg{AP} is a  {\em binary} relation, while $\obeys$ is unary.
+\begin{lstlisting}
+  module M$_5$
+       $\equiv$
+  specification S$_5${
+       abstract predicate AP(o1,o2)
+
+       policy Pol$_5$
+           this.AP(o) $\rightarrow$ o $\obeys$ S$_5$
+
+       policy Pol$_6$
+           true
+               { res this.m(x) }
+          this.AP(o)  $\longleftrightarrow$ res
+  }
+  class C$_5$ satisfies S$_5${
+      ...
+  }
+\end{lstlisting}
+
+\subsection{Cyclic Definitions}
+
+
+ \begin{lstlisting}
+  module M$_6$
+       $\equiv$
+  specification S$_6${
+       field next
+       policy Pol$_6$
+           this.next$\neq$ null $\rightarrow$ this.next $\obeys$ S$_7$
+  }
+  specification S$_7${
+       field next
+       policy Pol$_7$
+           this.next$\neq$ null $\rightarrow$ this.next $\obeys$ S$_6$
+  }
+  private class C$_6$ satisfies S$_6$ {
+      field next
+      method m( ){ this.next = new C$_7$(null) }
+  }
+  private class C$_7$ satisfies S$_7$ {
+      field next
+      method m( ){ this.next = new C$_6$(null) }
+  }
+  class D{
+    ... new C$_6$(null)
+    ...
+  }
+\end{lstlisting}
+
+The specifications $\SPC{_6}$ and  $\SPC{_7}$ are  cyclic.
+An oracle $\O$  such that $\O(M_6, \prg{C}_6,\prg{S}_6)=true$ is sound only if
+  in each reachable state $\sigma$, if ${\cal C}lass (x)_\sigma)=\prg{C}_6$ and
+$\interp{x.next}{\sigma}\neq {\kw{ null}}$, then
+$\O(M_6, \prg{C},\prg{S}_7)=true$ where
+$\prg{C}={\cal C}lass (\prg{x.next})_\sigma$.
+ In the particular case, given the code of the classes $\prg{C}_6$, this
+amounts to requiring that $\O(M_6, \prg{C}_7,\prg{S}_7)$.
+
+
+ \begin{lstlisting}
+  module M$_8$
+       $\equiv$
+  specification S$_8${
+       policy Pol$_8$
+           $\forall$x. x$\,\obeys\,$S$_9$  $\rightarrow$ x$\,\obeys\,$S$_9$
+  }
+  specification S$_9${
+       policy Pol$_9$
+        ... $\mbox{some unsatisfiable requirement}$ ....
+  }
+  class C$_{surprise}$ satisfies S$_8$ {
+  }
+\end{lstlisting}
+
+Perhaps unsurprisingly, there exists a sound oracles $\O$, such that
+\ \  $\O(\MP_8,\CP_{surprise},\SPC_8)=true$,
+
+
+
+
+
+
+
+

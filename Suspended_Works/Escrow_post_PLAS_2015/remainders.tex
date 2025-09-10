@@ -1,0 +1,171 @@
+  \section{Material which may be removed or needs to be reorganised}
+
+\subsection{TODO: reogranize}
+
+TODO: some of it may go to section 4, and some to related work.
+
+To specify capability policies, we must be able to specify both rely
+and deny policies.  For \rely~properties, we can draw from
+specification languages for functional properties, {\it e.g.}
+JML~\cite{Leavens-etal07}, or
+separation-logic-based~\cite{IDF,MattAlex}, enhanced so as to also
+talk about indirect properties.
+
+
+
+The persistent nature of \deny~properties necessitates  refining the
+relations between different instants in time,
+\eg a change in the balance of a purse
+is preceded by a transfer, which in its turn, again, is preceded by
+the mint creating  the two purses. In more detail:
+if the balance of a purse of $p1$ decreases by $amt$ over its immediately previous value, then the immediately preceding step executed $p1.deposit(p2,mt)$,  and at some times prior to that step,  the purses $p1$ and $p2$ were created by  the same mint. The annotation $val_{prev}$ is meant to indicate a value  {\em immediately before} the event in question, and the annotation $\theta_{prec}$ is meant to indicate an event  {\em immediately preceding} the event in question. Thus, we express this policy as follows:\\
+
+
+Another facet of \deny~properties is the different modes of
+causality. For example, does {\bf Pol\_2} mean that a change in the currency implies that
+the mint object was accessible, or, more strongly, that the mint executed a method?
+Classical approaches to ownership, for example, support the latter
+approach\cite{ownVerif}.
+%
+%
+
+Object invariants \cite{Mey88,Parkinson07,pubsdoc:invariants-iwaco09}  are relevant, % in specifications,
+ {\it e.g.} an object's sealer and unsealer must come from the same mint.
+%  $\forall p1,p2: p1.sealer==p2.sealer \rightarrow p1.unselarer==p2.unsealer$.
+Monotonic properties are relevant too, \eg   {\bf Pol\_3} says that the currency can only grow. Such properties
+are akin to history invariants \cite{usinghistory}.
+Accommodating for object and history invariants  poses the challenge of deciding
+ at which point they may be broken/must be restored \cite{BarnettNaumann04,objInvars};
+%we will apply our experience from
+% surveying known approaches and establishing soundness
+known approaches  follow different, but fixed rules~\cite{DrossoFrancaMuellerSummers08}, we shall investigate whether the rules could
+be part of user-defined policies.
+%
+
+
+
+To address the crucial issue of capabilities leaking from trusted to
+untrusted code, we can apply techniques drawn from ownership types~\cite{ClaPotNobOOPSLA98,dynamicOwn,multiple,rolesForOwners}.
+Ownership types restrict heap topology to manage access between
+objects,
+and have generally been used to support encapsulation and
+concurrency.
+By applying ownership to capabilities, we
+will be able to support many deny policies directly:
+{\bf Pol\_4} and {\bf Pol\_5}, for example, or the policy of a client
+object of the currency system: that if an object owns its purse,
+no other objects should be able to access that purse.
+
+
+
+We also expect to be able to employ
+% We will develop
+effects systems~\cite{LuPotPOPL06} to restrict interactions between
+sets of object, \eg $\forall m,m':Mint. m\neq m' \rightarrow m.Purse()
+\# m'.Purse()$ says that \prg{Purse}s created by different \prg{Mint}s
+will not affect each other. These systems can expand our earlier work
+on effects and isolation \cite{ClaDroOOPLSA02,rolesForOwners}.
+
+
+
+%
+%In \cite{LinearLogicKnowledge} support for linear and non-linear assertions, principals who affirm facts,
+%while in \cite{Bauer07consumablecredentials} actions require credentials, and credentials may be consumed.
+%The above systems only specify the properties of a system, but do not prove that code has these properties.
+%These works define protocols, and prove invariants of the protocol ({\it e.g.} that the sum on moneys in a bak are constant). They do not, however, check that a set of methods indeed, adhere to that protocol, nor do they prove that this set is tamper-proof, in these sense that further extensions to that set might break the protocol.
+%
+%Also provenance: in the case of the confused deputy, we could specify which are the only lines of code which may affect the contents of the statistics file.
+%
+%
+%Also use \cite{murray10dphil} where they also specify situations which will {\em not} happen, ext 2.7.1.
+
+
+We expect to define the semantics of the specification language by
+means of satisfiability of assertions in the context of a given stack
+and heap \cite{MattAlex}.
+%For the various possible meanings of encapsulation, we will  build on our earlier work on encapsulation in the presence of universe types. \cite{pubsdoc:universe-types-encapsulation}.
+ For \deny~policies, we will  have to expand the approach,
+ define satisfiability over the history of executions.~ \cite{monitoring}.
+ % for the causal policies we will draw on our experience from  \cite{pubsdoc:universe-types-encapsulation}.
+ %
+% The specification language may initially come in two flavours: one for the Java-version, and one for the dynamic language, but we hope that in large parts they will coincide.
+
+\subsection{Language Features}
+
+We are also considering the extent to which particular language
+constructs can support reasoning about policies --- both for extant
+features and potential novel features.  We have already seen how
+reasoning about object-capability programming in the class-based Java
+style (in Fig.1) differs in some important respects from a
+lexically-scoped E style (in Fig.2): we would like to extend this
+analysis to understand particular constructs in more detail.
+
+We have begun collecting programming language idioms   often used in capability programs
+(\eg sealers, revocation, membranes \cite{membranes,membranesJavascript,MillerPhD}, {\em e.t.c.}), and
+ identify idioms which have the same effect ({\em e.g.,} the use of field \prg{mint}  in Fig.1 has the same effect as that of \prg{sealer}/\prg{unsealer} in Fig.2).
+%
+We will % try to
+lift idioms to more succinct, abstract language features.
+
+% Such an idiom is
+Consider the use of the field \prg{mint} in the code in Fig.1: its
+purpose is to ensure
+that  no transactions involve \prg{Purse}s from different  \prg{Mint}s.  This is enforced through  the \prg{private} % field
+annotation (line 4), % for \prg{mint}, the  %field
+ initialisation (lines 9 and 13), and check (line  17).  The idiom
+ would be directly expressible
+  more directly in a variation of ownership
+  types~\cite{ClaPotNobOOPSLA98} which allowed for dynamic checks for
+  owners~\cite{dynamicOwn,aliasICSE2013}. Making  the \prg{Mint} the owner of the  \prg{Purse}s and
+  replacing  the field declaration, the initialisation, and the check
+  mentioned above through one type argument to \prg{Mint}   would reduce
+  the code by 30\%.
+ % The variation of ownership types mentioned here will be developed in this workpackage.
+Crucially, it would also prevent a purse from
+ever leaking its mint capability to an untrusted object.
+
+An  extension of the money example is that \prg{Purse}s should belong
+to \prg{Person}s, and that  \prg{Person}s should not have access to   \prg{Purse}s belonging
+to  other  \prg{Person}s.
+Thus, a person    \prg{p1}  wanting to pay person  \prg{p2},  could create a \prg{Purse}, pay some amount into it,
+and then make it belonged to \prg{p2}, thus ensuring that the purse can be safely passed around and not be tampered with.
+% object should be encapsulated within a  \prg{Person} object.
+%This is another application of ownership types, which gives us that a \prg{Purse} has a \prg{Mint} as well as
+This can be modelled by  multiple ownership, here with a \prg{Mint}
+and a \prg{Person} owner \cite{multiple,rolesForOwners}
+although we need to discriminate
+to allow for different treatment of, and different roles for, the
+different owners: the \prg{Person} owner guarantees encapsulation, is
+checked statically, and is  mutable, while the  \prg{Mint} owner makes
+no encapsulation guarantees, is checked dynamically, and is
+immutable.
+%Such combinations of roles for owners is novel territory for programming languages.
+%
+%Observe that
+Encapsulation is often implicitly present in programs written in
+dynamic languages: In Fig.2, all \prg{purse}s created by the same \prg{
+  mint} share, and do not leak further, the same \prg{sealer}/\prg{
+  unsealer} pair. The code could be made more succinct and more
+abstract --- not to mention more secure --- with dynamically checked owners\cite{dynamicOwn}.
+
+
+
+More generally, we are interested in the role of restrictive features in supporting \deny~policies. We expect to expand these features and allow  dynamically enforced versions of the restrictions: dynamic application and revocation of the restrictions,  dynamic  linking of ownership domains\cite{ODs},  dynamic merger or dissolution of ownership boxes, \etc Such features have their counterpart in the dynamic treatment of
+ capabilities,\eg revocation, membranes, and proxies
+ \cite{membranes,membranesJavascript,proxiesECOOP2013}.
+These kind of  dynamically enforced  properties inspired by static type
+systems seems to offer interesting opportunities for cross-pollination
+between  static and dynamic  languages.
+
+% We will work on more explicit connections between policy and code, and  will develop special   annotations to identify which parts of the
+% code support which policies.
+% % Later on,
+% % Taking inspiration from AOP \cite{AOP},
+% %we will try to develop  powerful weaving operations, which will allow  separation of the concerns policy code separately from   functionality code, so that the
+% %"pre-weave" code is clear and explicit, while the "woven" code can be implicit and tangled.
+
+% \Methodology  We will  determine sufficiently interesting  subsets Joe-E and Grace, % , for which
+%  develop operational semantics,  a type system of  Joe-E,
+%  and  build  on the subsets to  formalize the new language features.
+% We will be discussing language features with the Grace team.
+

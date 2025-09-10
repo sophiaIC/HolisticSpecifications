@@ -1,0 +1,71 @@
+\section{Trust, Risk, and the Open World}
+
+\kjx{NO LONGER INCLUDED: IDEAS EDITED INTO INTRO}
+
+
+The key feature of an open system is that it can interact with unknown
+potentially malicious code.  We consider our system to be comprised of
+a module \M, and model an open environment by as an unknown,
+potentially malicious module \M'.  
+The system as a whole is M dynamically linked with \M', $\M*\M'$.
+THen, given some Policy (an invariant on the behaviour of the
+system) we have: 
+
+\begin{definition}
+M $\models$ Policy    iff
+$\forall M', \kappa, code.$
+       $(\kappa,code) \in Arising(M'*M)$
+                  $\Rightarrow   M'*M, \kappa \models$  Policy
+\end{definition}
+
+\kjx{What's the right LaTeX formatting here? DO we need to say what
+  $\kappa$ and ``code'' are? Do we want this here?}
+ 
+$\Arising(M'*M)$ restricts configurations to be considered to only those that are reachable though execution of M'*M.
+
+\paraB{Trust.}   Our notion of trust is that if an object $o$ is
+trusted, we can take it as obeying a specification Policy:
+
+\begin{definition}
+Definition 
+$M, \kappa \models o \obeys\ Policy$    iff
+                                        $\forall M'.  M'*M, \kappa \models Policy[o/this]$
+\end{definition}
+
+The ``$\obeys$'' predicate is hypothetical: there no central authority
+that can assign trustworthiness (or not) to objects; there is no
+``trust'' bit that we can test. Rather, ``$o \obeys\ Policy$'' is an
+assumption that may or may not be true, and we use that assumption to
+reason by cases. If we trust an object, we can use the object's
+specification $Policy$ to determine the results of a method call on
+that object. If we don't trust the object, we reason about the
+confirmation of the system to determine the maximum amount of damage
+the call could do: the risk.
+
+\paraB{Risk.}  Risks are effects against which we want to guard our
+objects: bounds on the potential damage caused by calls to untrusted
+objects.  The key to delinating risks are two further hypothetical
+predicates $\MayAccess$ and $\MayAffect$, which describe whether an
+object may access or may modify a certain property respectively.
+For example, we can state that a \lstinline+deposit+ request can on a
+trusted purse will not increase the accessibility of any trusted purse
+in the system:
+
+\begin{lstlisting}[escapechar=@]
+  policy Pol_deposit_1     //   1$^{st}$ case:
+      amt$\in \mathbb{N}$
+        @\textbf{ \{ res = dest.deposit(amt, src) \} }@
+      res $\rightarrow$ (
+              @\ldots@
+              $\forall$p.(p$\obeys$$\pre$ValidPurse @\ldots@
+              $\forall$o:$\pre$Object. $\forall$ p$\obeys$$\pre$ValidPurse.  $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p)  )
+\end{lstlisting}
+
+\noindent or that a valid purse's balance can only be changed by an
+object that can somehow access that purse object:a
+
+\begin{lstlisting}
+  policy Pol_protect_balance
+      $\forall$ o,p: p$\obeys$ValidPurse $\wedge$ o:Object
+      $\rightarrow$ [$\MayAffect$(o,p.balance) $\rightarrow$ $\MayAccess$(o,p)]
+\end{lstlisting}

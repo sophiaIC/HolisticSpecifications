@@ -1,0 +1,142 @@
+\section{June 2016 PurseProof2}
+
+We start by showing the specification for \prg{ValidMint}s. We require BLA, BLA ...
+
+\begin{figure*}[hbt]
+\begin{lstlisting}[escapechar=&]
+specification ValidPurse {
+  ghost field balance // Number
+
+
+  policy Purse_wf 
+      m $\obeys$ Mint $\wedge$ amt$\in \mathbb{N}$
+        &\textbf{ \{ res := new This(amt, m) \} }&
+      res $\obeys$ ValidPurse 
+
+  abstract predicate CanTrade(p1,p2)
+
+  policy Pol_deposit_1     //   1$^{st}$ case:
+      amt$\in \mathbb{N}$
+        &\textbf{ \{ res := this.deposit(amt, src) \} }&
+      res $\rightarrow$ (
+          // TRUST
+          CanTrade(this,src)$\PRE{}$  $\wedge$
+          // FUNCTIONAL  
+          0$\leq$amt$\leq$src.balance$\PRE{}\ \wedge$
+          this.balance=this.balance$\PRE$+amt $\wedge$
+          src.balance=src.balance$\PRE$-amt  $\wedge$
+          //RISK
+          $\forall$p.[ p$\obeys$$\pre$ValidPurse $\wedge$ p$\notin\{$this,src$\}\,\rightarrow$
+               p.balance=p.balance$\pre$ ]  $\wedge$
+          $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+               [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]   )
+
+  policy Pol_deposit_2     //   2$^{nd}$ case:
+      amt$\in \mathbb{N}$
+        &\textbf{ \{ res := this.deposit(amt, src) \} }&
+       $\neg$res $\rightarrow$ (
+          // TRUST and FUNCTIONAL  
+          $\neg$[ CanTrade(this,src)$\PRE{}$ $\wedge$ 0$\leq$amt$\leq$src.balance$\PRE{}$ ] $\wedge$
+          // RISK
+          $\forall$p.[ p$\obeys\PRE{}$ValidPurse$\,\rightarrow\,$ p.balance=p.balance$\pre$ ] $\wedge$
+          $\forall$o:$\pre$Object. $\forall$p$\obeys$$\pre$ValidPurse.
+               [ $\MayAccess$(o,p) $\rightarrow$ $\MayAccess\pre$(o,p) ]   )
+\end{lstlisting}
+\caption{\prg{ValidPurse} specification now with extra stuff
+  \kjx{can't see the extra stuff}}
+\label{fig:ValidPurseX}
+\end{figure*}
+
+
+
+
+\begin{figure*}[hbt]
+\begin{lstlisting}[escapechar=&]
+specification ValidLedger {
+  ghost field map // Map[[Purse, Number]]
+
+  policy Ledger_wf 
+      true
+        &\textbf{ \{ res := new This \} }&
+      res $\obeys$ ValidLedger $\wedge$ res.map = $\emptyset$
+  
+  policy Ledger_get1
+      true
+        &\textbf{ \{ res := this.get(k) \} }&
+      (k,v) $\in$ map $\rightarrow$ res = v
+
+  policy Ledger_get2
+      true
+        &\textbf{ \{ res := this.get(k) \} }&
+      (k,v) $\not\in$ map $\rightarrow$ res = null
+
+  policy Ledger_put1
+      true
+        &\textbf{ \{ res := this.put(k,v) \} }&
+      res = ((k,v) $\in$ map) 
+
+  policy Ledger_put2
+      true
+        &\textbf{ \{ res := this.put(k,v) \} }&
+      $\forall$j $\in$ &\textit{dom}&(map$\pre$) : ((k,v) $\in$ map = (k,v) $\in$ map$\pre$) $\wedge$ (j = k)
+
+  policy Ledger_contains 
+      true
+        &\textbf{ \{ res := this.contains(k) \} }&
+      res = (k $\in$ &\textit{dom}&(map))
+\end{lstlisting}
+\caption{\prg{ValidLedger} specification?}
+\label{fig:ValidLedger}
+\end{figure*}
+
+
+
+\begin{minipage}{\textwidth}
+\begin{lstlisting}
+ specification ValidMint {
+
+   abstract predicate MyPurses(m,p);
+   
+   policy My_Purses_CanTrade
+		$\forall$ p1, p2. MyPurses(this,p1) $\wedge$ MyPurses(this,p2) $\rightarrow$ CanTrade(p1,p2)
+   
+   policy My_Purses_Valid
+		$\forall$ p. MyPurses(this,p)  $\rightarrow$ p $\obeys$ ValidPurse
+
+   policy Purse_creation
+        amount: Number
+   	     { res = this.newPurse(amount )  }
+        MyPurses(prs)
+
+   policy Valid_deposit
+        amount: Number
+              { res = this.deposit(to, amount, from)  }
+        res $\rightarrow$ MyPurses(this,to) $\wedge$ MyPurses(this,from) $\wedge$ amount < ... $\wedge$ ....     
+
+   policy Valid_deposit
+        amount: Number
+              { res = this.deposit(to, amount, from)  }
+        $\neg$ (res) -> $\neg$( MyPurses(this,to) $\wedge$ MyPurses(this,from) $\wedge$ amount < ... $\wedge$ ....     )
+                               $\wedge$ "no effect outside Bank"
+
+    policy Valid_balance_1
+        true
+            { res =balance(prs) }
+        res $\in$ Number $\leftrightarrow$ prs $\obeys$ ValidPurse  
+  
+    policy Sprout
+        true
+          { res = this.sprout }
+      $\neg$MyPurses(thus,res)$\pre$ $\wedge$   MyPurses(this,res)  $\wedge$ res.balance = 0
+  
+    policy Create
+    true
+          { res=This.new  }
+    res $\obeys$ ValidMint
+
+}
+\end{lstlisting}
+\end{minipage}
+ 
+
+

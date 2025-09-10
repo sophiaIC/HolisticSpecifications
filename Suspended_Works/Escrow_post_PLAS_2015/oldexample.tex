@@ -1,0 +1,589 @@
+\section{Escrow Exchange }
+
+
+
+
+
+\paraC{Purses}
+The escrow exchange example is based upon a system   for modelling
+resources proposed in~\cite{ELang}. The ``mints'' and ``purses'' (or
+alternatively ``banks'' and ``accounts''),
+can model anything fungible, including currencies
+or commodities: a mint models a type of currency or commodity, and a
+purse models an amount of that currency or commodity.
+We can model
+both money and goods by purses, although we distinguish them
+dynamically by using purses from different mints for money and goods
+respectively.
+
+% They key feature of the mint system is that new money
+% (or goods, resources, whatever) can only be created by a client that
+% posesses a reference to the mint capability (i.e. the mint object),
+% and that
+% I think abovenotessential to our argument here.
+
+Figure~\ref{fig:PurseSpec} shows a traditional, Hoare logic style
+specification of the % public behaviour of
+ Mints and Purses. % disjunctive
+%
+%James - this was the bit that wasn't in the OOPSLA paper
+%and should have been...
+%
+% \footnoteC{\sd{it said}: numbered policies are shorthands for
+% disjunctive cases , \sd{but we want the code to satisfy \em{all} the
+% policies}}
+%
+%
+\jn{Specifications consist of sets of (ghost) fields and policies, and
+are  predicates over classes and objects. Any object which adheres to a specification
+may be safely assumed to satisfy all the policies in the
+specification.}
+
+\sd{A \prg{Purse} has two ghost fields: \prg{mint}, which is expected
+  to point to an object of class \prg{Mint}, and  \prg{balance} which
+  is expected to be a value of type \prg{Number}.  Note that ghost
+  fields need not appear as such within \prg{Purse} objects.
+\jnCUT{In
+  fact, in example \ref{example:modules} in section
+  \ref{section:formal}, we outline an implementation of the
+  \prg{Purse} class where the \prg{balance} corresponds to a method
+  call on the corresponding \prg{Mint}.}}
+
+A \prg{Mint} object acts as a token representing a particular
+currency or type of goods. Mints have no public methods, but can e.g.\
+be tested for identity to help verify transactions between purses.
+
+The specification of \prg{Purse}
+consists of two policies (\prg{Pol\_deposit\_1} and
+\prg{Pol\_deposit\_2}) describing the behaviour of the method deposit,
+and \jn{a third policy} (\prg{Pol\_sprout}) describing the behaviour
+of \prg{sprout}.
+% To simplify the specifications we omit constructors as they are not
+% important for the arguments we will make in this paper.
+
+\sd{We use the standard convention and distinguish  the values of terms $trm$ before and after execution of a method through the subscripts $trm\pre$ and $trm\post$. Moreover, when omitting the subscript, we mean the value before execution.
+% -- thus, \prg{p.balance} is shorthand for $\prg{p.balance}\post$.
+  For example, the assertion
+  $\prg{dest.balance}=\prg{dest.balance}\pre+\prg{amt}$ says that the
+  balance of \prg{dest} after execution of the method will be the sum
+  of \prg{amt} and the balance of \prg{dest} after execution of the
+  method.}  \sd{ We also use the convention that all methods either
+  return a boolean value, or a pointer to an object, and that the
+  result of a method call is assigned to a variable, \prg{res}. This
+  allows us to simulate exceptions and exception handling, by checking
+  the return value, and if it is \prg{false}, returning from the
+  method. A full model for exceptions will be part of future work.  }
+
+
+A \prg{Purse} object represents a particular purse
+(account). \sdCut{A purse \prg{prs} knows its balance, and the  \prg{Mint}
+% (currency) to which they
+it belongs to,  represented by the terms \prg{prs.balance} and
+\prg{prs.mint} respectively. These may access fields of \prg{prs}  or call ghost methods.}{I think the red stuff says it}
+ Money can be
+transferred between any two purses of the same mint through the method
+\prg{deposit}. If the destination and source are purses (\prg{dest,src}:\prg{Purse})
+from the same mint (predicate \prg{SameMint}), and the
+ source purse's
+balance  covers the amount to be deposited, then the amount is
+transferred to the destination purse without modifying any other
+purses, and the call returns \prg{true} -- % as expressed through policy
+c.f.\ policy \prg{Pol\_deposit\_1}.
+% at line 3-8 in Figure~\ref{fig:PurseSpec}.
+If the two purses are
+not from the same mint, or the argument purse has insufficient funds,
+the transaction does not take place, all purses remain unaffected, and
+the call returns \prg{false} --  c.f.\ policy \prg{Pol\_deposit\_2}.
+% in Figure~\ref{fig:PurseSpec}.
+
+
+A new purse can be created at any time by asking an existing purse to
+\prg{sprout} --- this returns a new, empty purse from the same mint
+--  % policy \prg{Pol\_sprout} in Figure~\ref{fig:PurseSpec}.
+c.f.\ \prg{Pol\_sprout}. The new purse has a zero
+balance but can then be filled via \prg{deposit}.
+
+% KJX COMMENTED OUT EARLIER!!
+% %%kjx fine without this!
+% % \footnoteC{{\sd{SD: not sure I agree with the following: Sprouting a
+% % new purse is like writing a cheque rather than handing over the full
+% % contents of your bank account, or putting a couple of cards to swap in
+% % an envelope rather than handing over your whole sticker book. ---}
+% % \jn{why not? I do! With cash, it's like handing over more than enough
+% %   money to pay rather than the whole contents of your wallet}
+% %   \sd{the result of sprout seems to me like a blank check which {\em only the owner of the account} may fill in, or
+% %   like making an empty envelope into which we will put the cards later on.}}}
+
+% % The new purse does not undermine the integrity of the system
+% % because it is empty: without directly invoking the mint capability
+% % clients can create new purses but not new money.
+
+% % \vspace{.1in}
+
+% %As a first attempt, we give a specification of the \prg{Purse} in
+% %
+% %This specification is quite straightforward: the \prg{sprout} method
+% %returns a new purse from the same mint, and the \prg{deposit} method
+% %deposits \prg{amt} from from the \prg{src} purse passed as an
+% %argument into the receiver purse.  The
+% %postcondition of \prg{deposit} which is mostly straightforward (purses
+% %must be from the same mints; the source purse's balance must cover the
+% %amount to be deposited, and if the deposit is successful, the amount is
+% %transferred to the destination purse without modifying any other
+% %purses) but gratuitously written conditionally (if something goes
+% %wrong, nothing happens).
+% %\jn{NEED TO REWERITE THE LAST BIT PROPERLY} \jn{do we want
+% %  the conditional postcondition here?  or not???. I wonder if not?}
+
+% \sd{All three policies have a post-condition of the form\\
+% ~ \SP~ \SP $\forall$p:$\PRE$ \prg{Purse}.\ \lstinline{p.balance=p.balance}$\PRE$\\
+% or a variation thereof. This post-condition guarantees that the method call will not
+% modify the balance of any pre-existing purse. This assertion is necessary when reasoning about the
+% effect of calling \prg{Purse}-methods from the \prg{Escrow}, and is,
+% essentially, a primitive
+% way of expressing framing. We will study better framing in further work.
+% }
+
+
+\begin{figure*}[t]
+\begin{lstlisting}[escapechar=@]
+specification Escrow {
+   fields sellerMoney, sellerGoods, buyerMoney, buyerGoods //  Purse
+   fields price, amt   // Number
+
+ policy Pol_deal_1    //   1$^{st}$ case:
+    SameMint(buyerMoney,sellerMoney) $\wedge$  SameMint(buyerGoods,sellerGoods) $\wedge$ price, amt:$\mathbb{N}$  $\wedge$
+    buyerMoney.balance$\pre\geq$price $\wedge$  sellerGoods.balance$\pre\geq$amt
+          @\textbf{  \{  res = deal(\ ) \} }@
+    res $\wedge$
+    buyerMoney.balance=buyerMoney.balance$\pre$-price $\wedge$ sellerMoney.balance=sellerMoney.balance$\pre$+price $\wedge$
+    buyerGoods.balance=buyerGoods.balance$\pre$+amt $\wedge$ sellerGoods.balance=sellerGoods.balance$\pre$-amt $\wedge$
+    $\forall$p:$\pre$Purse$\pre\setminus\{$sellerMoney,sellerGoods, buyerMoney,buyerGoods$\}:$ p.balance=p.balance.$\pre$
+
+ policy Pol_deal_2    //   2$^{nd}$ case:
+     $\neg$( SameMint(buyerMoney,sellerMoney) $\wedge$  SameMint(buyerGoods,sellerGoods) $\wedge$
+     buyerMoney.balance$\pre\geq$price $\wedge$  sellerGoods.balance$\pre\geq$amt  )
+          @\textbf{  \{  res = deal(\ ) \} }@
+     $\neg$res $\wedge$
+     $\forall$p:$\pre$Purse: p.balance=p.balance.$\pre$
+}
+
+\end{lstlisting}
+\caption{Specification of  \prg{Escrow::deal} -- First Attempt}
+\label{fig:EscrowSpec}
+ \end{figure*}
+
+%%FigEscrowSpec Was HERE
+
+
+
+\paraC{Specifying Swapsies}
+
+
+Figure~\ref{fig:EscrowSpec} is our first % traditional
+attempt at
+specifying an escrow exchange deal in the traditional Hoare-logic
+style.
+\sd{An \prg{Escrow} object has fields \prg{sellerMoney}, \prg{sellerGoods}, \prg{buyerMoney}, and \prg{buyerGoods},
+which represent the money and the goods purses of the buyer and the seller.
+The fields \prg{amnt} and \prg{price} serve to describe the amount of goods to be exchanged, and the price of this exchange.
+These fields will be supplied by other methods (see
+\cite{miller-esop2013}) which create the contract.}
+
+\sd{Even though we \jn{expect}   \prg{sellerMoney}, \prg{sellerGoods}, \prg{buyerMoney}, and \prg{buyerGoods} to be objects representing \prg{Purse}s, the \prg{Escrow} cannot guarantee nor check this. The first, superficial reason for this is, that our language is dynamically typed. The deeper reason is that \prg{Escrow} does not necessarily know all the classes which are legitimate implementations of \prg{Purse} objects. As we shall see later, the \prg{Escrow} can successfully co-ordinate objects of many different classes which implement the \prg{Purse} functionality.
+}
+
+
+% \sdCut{\jn{next sentence added after group:} An escrow exchange combines two deposits into
+% a single transactional swap.}{we say the word transactional}
+% %
+% % \footnoteC{ SD suggest we skip that, if at all it should have been said for Purse:
+% %  written roughly in the style of
+% % JML, but with enhanced formatting.  A specification is a conjunction
+% % of a set of policies.
+% % \jn{sure. we should put it earlier and talk about it then.
+% % we could try for a worksop paper just about chainmail,
+% % without Risk OR trust}
+% % }
+% %
+% % : however as a shorthand, we treat numbered policies as disjunctions.
+% %
+% %
+
+
+%  \sdCut{The  aim % of the deal method
+% is to transfer \prg{amt}
+% goods from the \prg{sellerGoods} purse into the \prg{buyerGoods}
+% purse, and to transfer \prg{price}  from the \prg{buyerMoney}
+% purse into the \prg{sellerMoney} purse.
+
+% This exchange needs to be transactional: %  in particular: atomic,
+% % consistent, and isolated.
+% Either \prg{amt} goods are exchanged for the
+% \prg{price}, or the whole exchange must be terminated. The exchange
+% must be robust against error and fraud --- whether a potentially
+% innocent mistake, such as a buyer accidentally supplying a
+% \prg{buyersMoney} purse with insufficient funds to pay the
+% \prg{price},
+% %  or a sophisticated attack, such as a concurrent
+% % process that could try to empty out the \prg{buyersMoney} purse after
+% % it has been validated but before the \prg{price} has been transferred
+% %to the seller,
+% or a seller that supplies some kind of impostor
+% \prg{sellersGoods} purse that appears to operate correctly but that
+% never actually transfers goods away from the seller.
+% }{I think it repeats some of the previous}
+
+% % Again, the whole
+% % point of this exercise is to construct this escrow exchange using only
+% % the basic mechanisms of object capabilities.
+% \sd{The method \prg{deal} is meant to ``close'' the deal, and perform the exchange transactionally
+% %Theexchange needs to be transactional: %  in particular: atomic,
+% % consistent, and isolated.
+% Either \prg{amt} goods are exchanged for the
+% \prg{price}, or the whole exchange is terminated. }
+
+The specification % itself
+ consists of two policies: \prg{Pol\_deposit\_1} %  The first policy
+promises that if the purses come from the same mints, and have
+sufficient funds (lines 6-7), then the result will be \prg{true} (line
+9), the transfer of the monies and the goods will take place (lines
+10-11), and all other purses will remain unaffected (line 12). \prg{Pol\_deposit\_2} % The second policy
+promises that if the purses do not come from the same mints, or have
+insufficient funds, then the result will be \prg{false}
+and all purses will be unaffected.
+
+
+
+
+\sdCut{\paraC{Na{\"\i}ve Implementation}
+
+% As a gentle introduction to the kind of reasoning we will need to
+% perform, %  about risk and trust,
+Figure~\ref{fig:DealV0} shows a very
+na{\"\i}ve attempt to implement the \prg{Escrow}:
+% specification.
+% Intentionally the ``simplest thing that could possibly
+% work'',
+% \cite{simplest}
+the \prg{deal} method just transfers the money from buyer to
+seller, and then transfer the goods from seller to buyer.  Indeed, if
+it is called in good faith (under the assumptions that everything is
+trustworthy, and there are enough money and goods in the respective
+purses   to complete the transfer) then \prg{deal} satisfies
+\prg{Pol\_deal\_1}.
+\sdCut{SD suggested earlier that we cut following: "This can be proved
+straightforwardly via the specification of the Purses' \prg{deposit}
+method in Figure~\ref{fig:EscrowSpec} --- we leave the details as an
+exercise for the reader's undergraduate students."
+\jn{sure. one of the jokes in paper for missing proofs.
+the next one was going to be ``as an exercise for the reader's graduate
+students'' and then ``as an exercise for the reader's postdocs''
+}
+ \sd{A, that was a good joke. Let us see whether we can put it back in, then}
+\jn{Yes, lets!}
+}
+{I now think that given the difficulty we have to state crisply what we mean, we should have no more jokes after section 1.
+}
+
+\begin{figure}[h]
+% do not change the lines, as hard coded in explanations
+% or if you do, update explanations
+\begin{lstlisting}
+method deal(                 // returns boolean
+       sellerMoney, sellerGoods,
+       buyerMoney, buyerGoods,
+       price, amt)
+  {
+   sellerMoney.deposit(price, buyerMoney)
+   return (buyerGoods.deposit(amt, sellerGoods))
+  }
+\end{lstlisting}
+\caption{Na{\"\i}ve Deal}
+\label{fig:DealV0}
+\end{figure}
+
+Unfortunately, \prg{deal} does not satisfy \prg{Pol\_deal\_2}:
+% Consider a call where
+If the buyer has enough money % \sd{and the money purses are from the same mint},
+%(\lstinline+buyerMoney.balance$\pre\geq$price+)
+but the seller does
+not have the goods to sell,  % \sd{or the goods are not from the same mint.}
+% (\lstinline+sellerGoods.balance$\pre\le$amt+). In this case, the call
+then \prg{deposit}   on line 6 will successfully pay the buyer's
+money to the seller, but the second \prg{deposit} on line 7 will fail
+to give the goods to the \prg{buyer}.
+}
+{I think it went too slowly}
+%  This fails to satisfy
+% \prg{Pol\_deal\_2}, which requires that the
+% exchange is transactional.
+%  transaction is atomic: all purses remain unchanged if the transaction
+% aborts.
+
+% \footnoteC{{\jn{we probably have to talk about the impossibility of checking
+%   ``samemint''?  If so, where?  Or can I jjst LEAVE IT OUT of the
+%   broken specification?} \sd{I added that above. IS that good?}   }}
+
+%
+%Catalogue the errors
+%
+%This code will also fail to a number of more sophisticated
+%attacks. For example, it would not detect an impostor
+%\sd{\prg{sellerMoney} purse which reports successful transfer of \prg{price}, but
+%instead took all the funds from the \prg{buyerMoney}, or even from its bank.}
+%\sd{In a concurrent  system, it is
+%possible the transaction could be started with enough goods in the
+%sellers purse, but that purse could be emptied out asynchronously
+%before line 7 is reached, again taking the money but not giving over
+%the goods.}
+%% This is why e.g.\ testing the purses' balance at the start
+%%of the method doesn't help much: even if we check that
+%%\lstinline+sellerGoods.balance$\pre\geq$amt+ at the start of the
+%%method, there's no guarantee it will be true by the time the goods are
+%%removed. Similarly, if we now try to undo the partial transaction,
+%%giving the seller their money back, there's no guarantee the buyer
+%%hasn't already disposed of the money they've just been paid.
+%More importantly, the specification from \ref{fig:EscrowSpec} does not forbid such behaviour. Namely the
+%specification is unaware of the open world in which \prg{Escrow} has to operate; it is
+%too weak, and makes no promises for the case where the arguments are {\em not} objects of class \prg{Purse}.
+%%(this is a famous attack first detected in OS/360).
+
+
+%%
+%%% attempted an intermediate step but dumped it.
+%%
+% \begin{figure}[h]
+% % do not change the lines, as hard coded in explanations
+% % or if you do, update explanations
+% \begin{lstlisting}
+% method dealV0a(              // returns boolean
+%        sellerMoney, sellerGoods,
+%        buyerMoney, buyerGoods,
+%        price, amt)
+% {
+%  if ((sellerGoods.balance <= amt) &&
+%      (buyerMoney.balance <= price))
+%     then {return false}
+%  if (!sellerMoney.deposit(price, buyerMoney))
+%     then {return false}
+%  return (buyerGoods.deposit(amt, sellerGoods))
+% }
+% \end{lstlisting}
+% \caption{Deal checking input balances}
+% \label{fig:CheckedDeal}
+% \end{figure}
+
+% Figure~\ref{fig:CheckedDeal} shows another attempt to address this
+% problem: we first check the balances in the input purses (lines 6 \&
+% 7) and only make the swap if both purses's balance are enough to
+% complete the transaction. Furthermore, we check that the buyer has
+% actually
+
+% To a first impression, this version appears
+% satisfy both clauses of the deal specification in
+% Figure~\ref{fig:EscrowSpec}:
+
+
+%
+%KJX LIST OF ATTACKS
+%
+% WHAT IF IT LIES ABOUT THE AMOUNT?
+% WHAT IF ITS PARALLEL, DISTRIBUTED
+% WHAT IF ITS A FAKE PURSE?
+% WHAT HAPPENS IF ITIS NOT A PURSE?? JUST SOME JUMK??
+
+
+\paraC{Swapping via an Escrow Purse}
+\label{sec:escrows}
+
+\sd{The \prg{deal} method in Figure~\ref{fig:DealV1} shows
+% how the
+% escrow can be implemented.
+a first attempt at its implementation.
+To make the exchange transactional, }
+it uses a pair of private
+% The accepted solution to these problems is to use a pair of private
+\textit{escrow} purses, one for on each side of the transaction
+(money and goods).  Rather than swapping money and goods between
+buyer's and seller's purses in one go, the buyer's money and seller's
+goods are moved first into escrow purses, and then % second
+from the
+escrow purses into the final destinations.  In this way, we only
+complete the second half of the transaction when we are sure % we have
+enough money and goods are securely in the escrow purses. If the
+transaction needs to be abandoned halfway through,
+% Skipped the why, as it appears at the bottom of 2.3
+% (say we've taken the
+% buyer's money, but then discover the seller does not have the goods
+% they promised)
+we can return the buyer's money from the escrow
+purse without any reference to the seller.
+
+The \prg{deal} method in Figure~\ref{fig:DealV1} shows
+% how the
+% escrow can be implemented.
+such an implementation.
+ This code is % essentially
+ based on \cite{miller-esop2013} and  \cite{capeFTfJP14}.
+%    the  escrow design for distributed JavaScript \cite{miller-esop2013}, as
+% rationally reconstructed
+% \cite{OxDictPhil}
+% by \cite{capeFTfJP14}.
+First, two escrow purses (\prg{escrowMoney} and
+\prg{escrowGoods}) are sprouted from the inputs --- lines 3--6. The escrow
+purses are newly created within the method, and so
+%  should be unable to
+cannot be manipulated by the buyer or seller.
+
+Second, we attempt to escrow the buyer's money by transferring it from
+the \prg{buyerMoney} purse into the new \prg{escrowMoney} purse ---
+line 8.  According to the specification (Fig.~\ref{fig:PurseSpec}),
+if this % \prg{deposit}
+request returns true, then the money will have been transferred and
+both purses must be from the same mint.  If the
+request % \prg{deposit}
+fails we abort the transaction.
+
+Third, we   attempt to escrow the seller's goods -- line 14, again
+by depositing them into the escrow purse.  If we are unsuccessful, we
+again abort the transaction,
+% although since buyer's money has now been
+% successfully escrowed,
+after we have returned that money to the buyer -- lines 21 and 22.
+%  before
+% returning from the \prg{deal} method.
+
+At this point (line 27) the \prg{deal} method should have sole
+access to sufficient money and goods in the escrow purses.  The method
+completes the transaction by transferring the escrowed money and goods
+into the respective destination purses %  via the \prg{deposit}s on lines
+-- lines 26 and 27. Thanks to the escrow purses, these transfers should not
+fail so this code should meet the Figure~\ref{fig:EscrowSpec}'s
+specification.  If only the truth were that simple.
+
+\begin{figure}
+% do not change the lines, as hard coded in explanations
+% or if you do, update explanations
+\begin{lstlisting}
+method dealV1( )
+ {
+   // make temporary money Purse
+   escrowMoney = sellerMoney.sprout
+   // make temporary goods Purse
+   escrowGoods = buyerGoods.sprout
+
+   res = escrowMoney.deposit(price, buyerMoney)
+   if (!res) then
+        // insufficient money in buyerMoney
+        // or different money mints
+        { return false }
+
+   // sufficient money, same mints
+   // price transferred to escrowMoney
+   res = escrowGoods.deposit(amt, sellerGoods)
+   if (!res) then
+        // insufficient goods in sellerGoods
+        // or different goods mints
+        {  // undo the goods transaction
+           buyerMoney.deposit(price,escrowMoney)
+           return false }
+
+   // price in escrowMoney, amt in escrowGoods
+   // now complete the transaction
+   buyerMoney.deposit(price, escrowMoney)
+   sellerGoods.deposit(amt, escrowGoods)
+}
+\end{lstlisting}
+\vspace*{-7mm}
+\caption{First attempt at Ecrow Exchange deal method}
+\label{fig:DealV1}
+\end{figure}
+
+
+
+
+** PLAS Where do escrow purses come from ***
+
+The Agent has them before the transaction.  No! This would require the
+Agent to know about all possible purses. Remember, no central
+authority.
+
+Seller and Buyer supply the escrows purses.  No! It would require
+Seller and Buyer to have agreed before the transaction. Remember:
+Seller and Buyer do not trust each other.
+
+The Agent asks the associated Banks to supply the escrows purses.  No!
+It would require the Agent to know about all possible banks. Remember,
+no central authority.
+
+The Agent asks sellerMoney to make one, and buyerGoods to make another one.
+Yes!
+
+
+\paraC{The failure of \prg{dealV1}}
+
+% \jn{YET TO WRITE: THE FAILURES ARE THE DIFFERENCES BEWEET V1 and V2
+%   SPEC and CODE --- WILL WRITE THEM UP **AFER** DESCRIBING OBEY and V2 STUFF}
+
+% \scd{needs to be stronger: does not satisfy fig3 spec; fig3 spec's not
+%   good enough.}
+% \jn{need more scenarios of failure}
+
+
+The \prg{dealV1} method in Figure~\ref{fig:DealV1} does not
+satisfy the \prg{Escrow} specification in Figure~\ref{fig:EscrowSpec}
+--- in fact, in an open system, it \textit{cannot}.  The critical
+problems are assumptions about trust: both the code and the
+specification implicitly trust the purse objects with which they interact.
+Considering both the \prg{Purse} and \prg{Escrow} specifications: what
+happens if a purse or escrow is asked to interact with an
+untrustworthy purse?  How much risk is involved: just the potentially
+untrustworthy purse? That purse plus any other purse it knows about,
+or interacts with (e.g.\ both are passed into the same method)?  Any
+purse (or indeed any object) anywhere in the system?
+
+Classical
+specifications like Figures~\ref{fig:PurseSpec}
+and~\ref{fig:EscrowSpec} have % absolutely
+no notion of the risks involved when
+an object that does not meet its specification. All bets are off: the
+world ends.
+%
+Just because we can't write specifications, however, doesn't mean that we can't
+write programs: unfortunately the code in Figure~\ref{fig:DealV1}
+is in no better shape than the specification.  Imagine if
+\prg{sellerMoney} was a malicious, untrustworthy object. At line 7,
+the \prg{sprout} call could itself return a malicious object, which
+would then be stored in \prg{escrowMoney}. Then at line 11, during
+execution of\ \lstinline+escrowMoney.deposit(price, buyerMoney)+ the
+malicious \prg{escrowMoney} purse could steal all the money out of
+\prg{buyerMoney} purse, and still return \prg{false}. As a result, the
+seller would lose all their money, and receive no goods!  Even if the
+seller was more cautious, and themselves sprouted a special temporary
+purse with a balance of exactly \prg{price} to pass in as
+\prg{sellerMoney}, they would still lose all this money without any
+recompense.
+
+
+Perhaps there is something else we could do --- a \prg{trusted} method
+on every object, say, that returns \prg{true} if the object is
+trusted, and \prg{false} otherwise?
+% , like tainting in Perl
+% \cite{Perl-tainging} or the dataflow checks that secure web browsers
+% \cite{existing-web-broweser-cites}?
+  The problem, of course, is that
+an object that is untrustworthy is, well, untrustworthy: we cannot
+expect a \prg{trusted} method ever to return \prg{false}.  This leads
+to our definition of trust: trust is {\em hypothetical}, and in
+relation to some specification.
+
+%Thus, trust is always with respect to some specification.}
+
+% SD: do not like the beliow, because we do not ever ascertain that something is
+% untrustworthy
+% an untrustworthy object: a untrustworthy
+% object is an object that does not obey its specification.
+
+
+

@@ -1,0 +1,128 @@
+\section{The Mint: Implementing \prg{ValidPurse}}
+
+\scd{sophia says shove this into the appendix.}
+\kjx{I thought we might need it somewhere I guess.
+but actually I don't think we need this in the paper.
+Some of the text below has been reworded to talk about the spec}
+
+\begin{figure}
+\begin{lstlisting}
+class mint.new -> Mint {
+  def ledger = collections.map.new // maps Purse to Numbers
+
+  method newPurse(amount : Number) -> Purse {
+    def p = purse.new(amount, self)
+    ledger.put(p, amount)
+    return p
+  }
+  method deposit(to : Purse, amount : Number, from : Purse) -> Boolean { 
+    if ((amount >= 0)
+         && {ledger.contains(to)}
+         && {ledger.contains(from)}
+         && {(ledger.get(from) - amount) >= 0})
+       then {
+         ledger.put(from, ledger.get(from) - amount)
+         ledger.put(to, ledger.get(to) + amount)
+         return true
+       } else {return false}
+  }
+  method balance(prs : Purse) -> Number {return ledger.get(prs)}
+}
+
+class purse.new(amount : Number, mint : Mint) {
+  method hashcode {asString.hashcode}
+  method asString {"a Purse"}
+  method balance {mint.balance(self)}
+  method sprout -> Purse { mint.newPurse(0) }
+  method deposit(amt : Number, src : Purse) -> Boolean {
+    return mint.deposit(self, amt, src)
+  }
+}
+\end{lstlisting}
+\caption{An implementation of Mint and Purse}
+\label{fig:ledger}
+\end{figure}
+
+
+
+% Figure~\ref{fig:ledger} shows a Grace implementation of Mints and
+% Purses that meets the \prg{ValidPurse} specification
+% \cite{capeFTfJP14}.
+
+A mint represents a fungible value --- perhaps a fiat currency, a
+crypto-currency, or a corporate share registry, or even an amount of
+goods that can be bought and sold.  A Purse holds some amount of the
+value of the Mint. A holder of a mint capability can inflate the
+currency of the mint, that is increase the sum of all the purses in
+that mint, while all that the holder of a purse can do is can transfer
+funds from that purse into another purse of the same mint.
+
+The integrity of the entire system depends on the Mint object ---
+anyone with access to a Mint can create money in that mint ``out of
+thin air'', so access to the Mint must be carefully controlled.  On
+the other hand, Purses can be passed around without affecting the
+total currency issued by the Mint (the sum of all balances).
+
+To make a secure payment, the payer will typically make a new, empty,
+temporary purse from one of their existing purses via
+\lstinline+sprout+, and deposit only enough funds for the payment into
+the temporary purse.  The payer then passes the temporary purse to the
+payee, who then empties it back into their primary purse.  This allows
+two \textit{mutually untrusting} components to transfer funds,
+provided that they both trust the mint and purse system.  \sd{Thus, if
+  the payer has a \lstinline+payerMainPurse+ account, and the payee
+  has a \lstinline+payeeMainPurse+ account, then the transaction may
+  take place as follows:}
+
+\label{s-payment}
+\begin{lstlisting}
+    //payer creates temp purse
+    def tempPurse = payerMainPurse.sprout
+    tempPurse.deposit(100, payerMainPurse)
+    //payer passes tempPurse to payee
+    payee.acceptPayment(100, tempPurse)
+    //payee
+    payeeMainPurse.deposit(100, tempPurse)
+\end{lstlisting}
+
+A feature of the Grace implementation is that each mint stores a
+ledger that tracks the balance of its purses.
+The ledger is an instance of the \lstinline+collection.map+ class, that is
+the \lstinline+map+ implementation from the standard
+\lstinline+collection+ library.
+% We use a map to store every purse's balance, rather than a field in
+% purse, say, because Grace's encapsulation is per-instance, like
+% Smalltalk, not per-class, like
+% Java or Joe. 
+%  The
+%   \lstinline+is confidential+ annotation (with the antonym
+%   \lstinline+is public+)
+% declares a field or method accessible only from \lstinline+self+
+% (confidential) or from any object (public) --- fields are confidential
+% by default, methods public by default.  A confidential
+% \lstinline+balance+ field could not be read or assigned from outside
+% the object, but a public field would certainly leak information and
+% potentially could be overwritten in such a way that the program would crash.
+
+Finally, it is important for the wider system that the
+\lstinline+deposit+ method will return true only if both purses
+are listed in the mint's \lstinline+legder+ and that the source purse
+has sufficient funds --- otherwise the \lstinline+deposit+ returns false.
+
+We believe this implementation meets the \prg{ValidPurse}
+specification, and we present it here to illustrates two key points
+about that specification. 
+
+First, this implmentation illustrates the key trust property of the
+\prg{ValidPurse} specification: that if a request like
+\prg{res=dest.deposit(0, src)} returns true, the \prg{dest} purse can
+vounch that the \prg{src} purse can be trusted. In this
+implementation, purses only trust other purses from the same mint: as 
+all purses are listed in their mint's ledger, a transfer validates the
+source purse by ensuring it is listed in the same ledger as the
+destination purse. 
+
+Second, there can be many different families of purses and mints in
+the system from this implementation, and also many alternative
+implementations. In an open system, we cannot expect a central
+authority to know which are trustworthy and which are not.

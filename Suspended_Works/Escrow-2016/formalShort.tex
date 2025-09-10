@@ -1,0 +1,333 @@
+\section{A Formal Model of Trust and Risk}
+\label{section:formal}
+ 
+In this section we provide an overview of our core programming
+language, \LangOO, our specification language, \Chainmail, and our
+Hoare logic. \kjx{The Hoare logic uses \textit{four-tuples} because it
+  includes an invariant that must be preserved during the execution of
+  a statement as well as a postcondition established afterwards.}
+\kjx{We also outline a key step required to prove} that
+\prg{deal\_version2} meets the \prg{ValidEscrow} specification:
+\kjx{we prove that two purses can establish mutual trust, and formally delineate
+the risk.}  Many
+details are relegated to our technical report \cite{appendix}; here we
+adopt its numbering for definitions.
+
+
+
+
+\subsection{\LangOO}
+
+We define a small object oriented language, \LangOO\ 
+(Featherweight Object Capability Language, not to be confused
+with FOCAL \cite{FOCAL-69}). \LangOO\ 
+ supports classes, fields and methods.
+(Figures~\ref{fig:DealV1} and~\ref{fig:DealV2} are effectively examples of \LangOO.)
+%
+\LangOO\ is  memory-safe: it does not allow
+addresses to be forged, or non-existent methods or fields to be
+called, read or written.   \LangOO\ is dynamically typed: it does not check
+that the arguments to a method call or a field write are of the
+appropriate type either statically or dynamically: similar to 
+JavaScript, Grace, E, and Dart's unchecked mode.
+ 
+
+% \LangOO\  supports
+Modules, $M$,  are  mappings from class
+identifiers to \LangOO\ class definitions, and from predicate identifiers to \Chainmail\ assertions as described in section \ref{sect:Chainmail}.
+The  linking operator $*$ combines these definitions, provided that 
+the modules' mappings have separate domains, and performs no other checks. 
+This reflects the open world setting,
+where objects of different provenance interoperate without a central
+authority.
+For example, taking $M_{p}$ as a module implementing purses, and $M_e$
+as another module implementing the escrow,
+$M_{p}*M_e$ is defined but $M_{e}*M_e$ is not.
+
+\LangOO\  enforces a weak form of privacy for fields; % are \prg{private}; 
+only the receiver may modify these fields,  and anybody may read them.
+% SD what it said before is wrong, and did not come from Appendix :-(
+%THIS IS STILL PROBABLY WRONG!
+
+The operational semantics of  \LangOO\ takes a module $\M$  
+and a runtime state $\sigma = \syntax{frame} \times \syntax{heap}$ 
+and maps statements onto a new 
+state $\sigma'$.
+% This is not needed for the main paper
+% and right hand sides of assignments (\ie paths, values, and method calls) to a value and new state and a value. 
+%The
+% operational semantics has the following shape: 
+
+\vspaceSD
+
+\setcounter{definition}{5}
+\begin{definition}[Shape of Execution]
+
+\begin{tabular}{lcl}
+ ${\rewriteLong {}}\s$ &  :  &    \syntax{Module}  $\times$  \syntax{state}  $\times$   {\syntax{Stmts}}
+  \ \  $\longrightarrow $ \ \     {\syntax{state}}
+%\\
+% ${\rewriteLong {}}\s$ &  :  &    \syntax{Module}  $\times$  \syntax{state}  $\times$   {{\syntax{Rhs}}}
+%  \ \  $\longrightarrow $ \ \     \syntax{heap} $\times$ \syntax{val}  
+\end{tabular}
+\end{definition}
+
+
+
+
+ 
+\paragraph{Arising and Reachable Configurations}  
+
+Policies need to be satisfied in all {\em configurations} (pairs of states and statements) which may
+arise during execution of the program. For example, if a program contains a class which has field which is not exported, and
+where this field is initialized to $0$ by the constructor, and incremented by $3$ in all method calls, then in the arising configurations the
+value of this field is guaranteed to be a multiple of $3$. Thus, through the concept of arising configurations we can 
+ignore configurations which are guarantee not to arise.
+
+To define arising configurations we need the concept of initial configuration, and reachability. 
+ A configuration is
+\emph{reachable} from some starting configuration if it is reached
+during the evaluation of the starting configuration after any number
+of steps.     We define
+the function 
+\mbox{$\Reach:\syntax{Module} \times \syntax{state} \times \syntax{Stmts} 
+\longrightarrow \mathcal{P}(\syntax{state} \times \syntax{Stmts})$}
+by cases on the structure of
+the statements. Note that  $\Reach(\M, \sigma, \stmts) $ is defined, 
+even when the execution should diverge. This is important, because it allows us to give meaning to capability policies without requiring termination. 
+
+
+\noindent We then define $\Arising(\M)$ as the set of runtime configurations
+which may be reached during execution of some initial context
+($\sigma_0$,$\code_0$).
+
+\setcounter{definition}{6}
+\begin{definition}[Arising and Initial configurations] 
+$ ~ $
+
+$\begin{array}{lcl}
+\SP {\mathcal{I}nit} & \ : \ & {\syntax{Module}} \   \longrightarrow\  \mathcal{P}( {\syntax{state} \times \syntax{Stmt}}  )
+\\
+ \Arising & : &  {\syntax{Module}}    \longrightarrow \mathcal{P}( {\syntax{state}} \times \syntax{Stmts}  )
+\end{array}$
+
+$\begin{array}{ll}
+ {\mathcal{I}nit}(\M)   =  &  \{ \ (\ \sigma_0, \kw{new}\ \clss{}.\prg{m}\lp\kw{new}\  \clss{'} \rp) \ |    \ \clss{},\clss{'}\in dom( \M),\\
+ & \ \ \ 
+   \mbox{where}\  \sigma_0\ =\ ( (\iota_0,\kw{null}),\chi_0),    \mbox{and}\   \chi_0(\iota)=(\prg{Object}, \emptyset)\  \}
+ \\
+ \Arising(\M)    =   & \    \bigcup_{ (\sigma,\code{})\in  \mathcal{I}nit (\M)}  \Reach(\M, \sigma, \code{})
+\end{array}$
+\end{definition}
+
+
+
+
+\subsection{\Chainmail}
+\label{sect:Chainmail}
+
+\Chainmail\ is a specification language where a specification is
+a conjunction of a set of named policies.
+(Figures~\ref{fig:ValidPurse} and~\ref{fig:ValidEscrow} are examples of
+\Chainmail\ specifications.)
+
+\Chainmail\ policies are based on one-state assertions ($\A$) and two-state assertions ($\B$).  To express the state in which an expression
+is evaluated, we annotate it with a subscript. For example, $x>1$ is a one-state, and 
+$ x\pre - x\post = 1$ is a two-state assertion. Validity of an assertion is defined in the usual manner, \eg 
+in a state $\sigma$ with  $\sigma(x)=4$ we have   $M,\sigma \models x>1$. If we also have $\sigma'(x)=3$,
+then we obtain    $\M,\sigma,\sigma' \models x\pre - x\post =
+1$.  \Chainmail\ specifications may also express ghost information,
+which is not stored explicitly in the state $\sigma$ but can be
+deduced from it --- e.g.\ the length of a null-terminated string.
+
+
+
+Policies can have one of the three following forms:  
+1) invariants of the form $\A$, which   require that $\A$ holds at all visible states of a 
+program; or  
+2)\  $\A\, \lb \, \prg{code}\, \rb\, \B$, which require that execution of \prg{code} in any state satisfying $\A$ will lead to a state
+satisfying $\B$ wrt the original state
+ or  
+ 3)\ $\A\, \lb \,  {\prg{any\_code}}\, \rb \, \B$ which requires that execution of {\em any} 
+ code in a state satisfying $\A$ will lead to a state satisfying $\B$ wrt the original state.
+
+\vspaceSD
+
+\setcounter{definition}{11}
+\begin{definition}[Policies]
+ $ ~ $ \\
+ $
+\begin{array}{lclcl}
+Policy & \BBC & \ \A \ | \  \A \ \{ \prg{code} \}\  \B \ | \ \  \A \ \{ \prg{any\_code} \}\ \B
+\\
+PolSpec & \  \BBC  & \  \prg{specification}\ S \, \lb\, Policy^*\, \rb
+\end{array}
+$
+\end{definition}
+
+
+One-state assertions include assertions about  expressions (such as $\leq$, $>$ \etc) and four additional
+assertions: $\syntax{\sExpr}\obeys\syntax{SpecId}$ to model trust,
+i.e.\ that an object confirms to a specification; and $\MayAccess$ and
+$\MayAffect$ to model risk, i.e.\ whether one object may access
+another, or alter a property.  These are {\em hypothetical}, in that
+they talk about the potential effects or behaviour of code: we cannot
+somehow evaluate their truth-value when executing the program.  The
+fourth assertion $\syntax{\sExpr}\kw{:}\syntax{ClassId}$ 
+simply tests class membership. 
+ 
+ 
+Validity of one-state assertions is expressed through the judgment
+$\M,\sigma \models \A$.  The key case is that some expression obeys a
+specification if it satisfies that specification's policies in all
+reachable configurations arising from the module.
+
+ 
+
+\vspace*{1mm}\noindent\textbf{(from Definition 13)}:
+
+\begin{itemize}
+  \item
+ $\M,\sigma  \models  \syntax{\sE}\kw{:}\prg{C}$ iff  $\sigma(\interp{ \syntax{\sE}}{\M,\sigma})\downarrow_1 = \prg{C}$.
+ 
+ \item 
+$\M,\sigma  \models \MayAffect \lp\syntax{\sE},\syntax{\sE'}\rp$ iff  
+% there exist fields  $\prg{f}_1$,... $\prg{f}_n$,  
+there exist  method \prg{m}, arguments $\bar{\prg{a}}$, state $\sigma'$, identifier \prg{z}, such that
+    $ \M, \sigma[\prg{z}\mapsto \interp {\syntax{\sE}} {\M,\sigma}], \syntax{z}\prg{.m}(\bar{\prg{a}}) \leadsto   \chi'$, and   $\interp {\syntax{\sE'}} {\M,\sigma} \neq  \interp {\syntax{\toby{\sE'}}} {\M,\sigma\downarrow_1,\chi'}    $.
+\item
+$\Prog{},\sigma \models { \MayAccess}(\prg{\sE},\prg{\sE'})$   \ iff \  there exist  fields $\bar{\prg{f}}$, % $\prg{f}_1$,... $\prg{f}_n$, 
+  such that
+     %  $\interp{\prg{z}.\prg{f}_1...\prg{f}_n}{\M,\sigma[\prg{z}\mapsto \interp {\syntax{\sE}} {\M,\sigma}]}= \interp {\prg{\sE'} }{\M,\sigma}$.
+     $\interp{\prg{z}.\ensuremath{\bar{\prg{f}}}}{\M,\sigma[\prg{z}\mapsto \interp {\syntax{\sE}} {\M,\sigma}]}= \interp {\prg{\sE'} }{\M,\sigma}$
+  \item
+$\M, \sigma  \models \sE \obeys \PolSpecId   $ \  iff  \\
+\SP  $\ \ \   \forall\, (\sigma,\code)\!\in\!\Arising(M).\   \forall  i\!\!\in\! \!\{1..n\}. \ \forall\,\sigma',\code'.$  \\
+\SP  $\ \ \    (\sigma',\code')\! \in \Reach(M,\sigma,\code)  \longrightarrow    M, \sigma'[z\mapsto\interp{e}{\sigma}]  \models \Policy_i[ z / {\kw{this}}]$ \\
+where $z$ is a fresh variable in $\sigma'$, and where
+ we assume that $\PolSpecId$ was defined as \ \  %  that   \PolSpecId was introduced by\\
+$ \ \prg{specification}\ \PolSpecId\  \{\ \Policy_1, ... \Policy_n\ \}$. \\
+\end{itemize}
+% \end{definition}
+
+Two-state assertions allow us to compare properties of two different
+states. Validity of two-state assertions $\M,\sigma,\sigma' \models \B$
+is defined similarly to one-state assertions, using cases.
+%
+We can now define adherence to policy, $\M,\sigma \models_{pol}  \Policy$:
+%    which
+% ensures that the requirements of $\Policy$ are satisfied in any context arising from $\M$.
+
+\vspaceSD
+\setcounter{definition}{14}
+\begin{definition}[Adherence to Policies] ~ ~ % \\
+% $ $ \\
+
+\begin{itemize}
+\item
+$\M,\sigma  \models_{pol} \A$   \  iff \ 
+$\M, \sigma \models \A$
+\item
+$\M,\sigma    \models_{pol} \A\, \{ \prg{code} \}\, \B$ \  iff \\ 
+ $ ~ $ \hspace{.2in} 
+ $(\ \M, \sigma \models \A\ \ \wedge\  \M, \sigma, \prg{code}  \leadsto \sigma' $ %  \\
+ %  $ ~ $   \hspace{.6in}  
+ $ \ \ \  \longrightarrow $ 
+%  \\  $ ~ $   \hspace{.2in}  
+$  \ \ \ \M, \sigma, \sigma' \models \B\ \ )$
+\item
+{$\M, \sigma \models_{pol} \A \ \{ \prg{any\_code} \}\ B$\ iff} \\
+ $ ~ $ \hspace{.2in}  $ \forall \prg{code}.\ (\  (\sigma,\prg{code} )\in \Arising(\M)\ \wedge\  \M, \sigma \models \A\  \wedge\  \M, \sigma, \prg{code}  \leadsto  \sigma' $ \\
+  $ ~ $   \hspace{.6in}  $ \ \ \  \longrightarrow $
+  % \\   $ ~ $   \hspace{.2in}  $ 
+   $\ \ \ \M, \sigma, \sigma' \models \B\ \ )$
+\end{itemize}
+\end{definition}
+
+% SD removed it, ad not central and moved the for all modules to later on
+%\setcounter{definition}{14}
+%\begin{definition}[Strong Adherence to Policies] ~ ~ % \\
+%% $ $ \\
+%
+%\noindent $\M   \models_{pol} Policy$   \  iff \ \\
+%\SP $\forall \M', \sigma, \code. \ 
+%(\ (\sigma,\code)\in \Arising(\M'*\M)\ \longrightarrow \M'*\M, \sigma \, \models Policy\ )$
+%\end{definition}
+
+
+\subsection{Hoare Logic}
+
+The Hoare logic allows us to prove adherence to policies. In order to
+reflect that the code to be verified is executed in an open system,
+and that it calls code whose specification and trustworthiness is
+unknown to the code being verified, we use Hoare four-tuples rather
+than Hoare triples, so that not only do they guarantee a postcondition
+holds {\em after} execution of the code, but also guarantee that
+\kjx{an invariant} is preserved {\em during} execution of the code.
+\kjx{These invariants are critical to modelling risk, as they let us 
+talk about the absence of temporary but unwanted effects caused on
+objects during execution.}% e.g.\ reasoning  that valid purses
+%always correctly protect their balances.}
+
+
+\kjx{A Hoare four-tuple  is either \mbox{\HoareExpl{\A}
+  {\prg{stms}} {\M} {\A'} {\B}} (executing 
+\prg{stms} in any state satisfying $\A$~will lead to a state which
+satisfies $\A'$) or \mbox{\HoareExpl{\A} {\prg{stms}} {\M} {\B'} {\B}}
+(executing \prg{stms} in any state satisfying
+$\A$~will lead to a state where the relation of the old and
+new state is described by $\B'$).}  \kjx{Critically,} both promise that the relation between
+the initial state, and {\em any} of the   intermediate states reached by
+execution of \prg{stms}, will \kjx{maintain the invariant} $\B$.
+The execution of \prg{stmts}  may call methods defined in \M, and the
+predicates appearing in $\A$, $\A'$, $\B'$, and $\B$, may use  predicates
+  defined in \M. 
+When \M\ is implicit from the context,
+we use the shorthand
+\Hoare{\A} {\prg{stms}}  {\A'} {\B}. 
+
+
+In order to model open systems, we require that after linking {\em any}
+module with the module at hand, the policy will be satisfied. As
+stated in \cite{JamesMorris}, \textit{``A programmer should be able to prove
+that his programs have various properties and do not malfunction,
+solely on the basis of what he can see from his private bailiwick.''}
+
+% SD removed as not cnetral to our argument
+% We introduce {\em logical variables} into our assertions. We assume that
+%these have the form \lvar, \lvar', and that they come from a separate domain. We also
+% assume that there exists a function \Lvars, which returns all the
+% logical variables within an assertion. For example
+% $\Lvars(\prg{p1.balance}=\lvar ) =\{\,\lvar\,\}$. Taking account of
+% logical variables we can define the validity of tuples formally:
+ 
+\vspace{-.05in}
+\begin{definition}[Validity of Hoare Four-Tuples]\label{defn:validity}
+
+\noindent
+%  \begin{itemize}
+%  \item
+%$M  \models \HoareImpl{\A} {\prg{stms}0.5} {\A'} {\B}  $ \ \ \  iff\\
+%\SP $ \Lvars(\A)=\Lvars(\A')=\{\, \overline{\lvar}\, \}\ \wedge \ \forall \M',\sigma, \overline{\val}.$\\
+%\SP\SP $ (\sigma,\_)\in \Arising(\M*\M')$\\
+%\SP\SP $ \wedge\ \M*\M',  \sigma{[\overline{\lvar}\mapsto\overline{\val}]} \models \A$\\
+%\SP\SP $ \wedge\  \M\!*\!\M', \sigma, \prg{stms}  \leadsto \prg{res}, \sigma'$\\
+%\SP\SP\SP \ \ \ $\longrightarrow$ \ \ \ \\
+%\SP\SP   $ \M\!*\!\M'\!, \sigma'{[\overline{\lvar}\mapsto\overline{\val}]} \models \A' $\\
+%\SP\SP    $\wedge$ \\
+%\SP\SP  $\forall {\sigma''}\!\in\!\Reach(M,\sigma,\stmts).\ \M\!*\!\M', \sigma, {\sigma''} \models \B   $
+%  \item
+$M  \models  \HoareImpl{\A} {\prg{stms}} {\B'} {\B}  $ \ \ \  iff \ \ 
+  $\forall \M',\sigma$.\\
+\SP $ (\sigma,\_)\in \Arising(\M*\M')\  \ \wedge  \ \ \M*\M',  \sigma \models \A \  \ \wedge \ \   \  \M\!*\!\M', \sigma, \prg{stms}  \leadsto \prg{res}, \sigma'$\\
+\SP\SP\SP\SP\SP\SP\SP\SP\SP\SP\SP \ \ \ $\longrightarrow$ \ \ \ \\
+\SP $M\!*\!\M'\!, \sigma, \sigma' \models \B' \ \ \ \wedge \ \ \forall {\sigma''}\!\in\!\Reach(M,\sigma,\stmts).\ \M\!*\!\M', \sigma, {\sigma''} \models \B $
+% \end{itemize}
+\end{definition}
+
+
+\input{formalShortHoareRules}
+
+\subsection{\kjx{Proving Mutual Trust}}
+\label{section:formalPROOF}
+\input{formalShortProofOutline}

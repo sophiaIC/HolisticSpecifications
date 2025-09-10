@@ -1,0 +1,394 @@
+%\appendix
+
+
+%already defined in LLNCS
+ \newtheorem{definition}{Definition}
+ \newtheorem{example}{Example}
+ \newtheorem{lemma}{Lemma}
+ \newtheorem{theorem}{Theorem}
+
+\input{FigureHoareLogic}
+
+\section{Formal Definition of the language \LangOO}
+
+ \subsection{Modules and Classes}
+ \label{formal:modules}
+
+  \LangOO\ modules map class identifiers to class descriptions,
+  {and specification identifiers} to specification descriptions.
+
+
+
+\begin{definition}[Modules]
+We define modules $\M\in\syntax{Module}$ as follows   \\  % to force line break
+
+\begin{tabular}  {@{}l@{\,}c@{\,}ll}
+\syntax{Module} \ \  &    =   & \syntax{ClassId}   \ $\cup$\  \syntax{SpecId}\   \\
+& &  $\longrightarrow$ \\
+& & ( \syntax{ClassDescr}    
+\ $\cup$\ \syntax{Specification}  )
+ \end{tabular}
+\\ 
+such that for any any module  $\M$, class identifier \prg{C}, and specification identifier \prg{S},  we have $\M(\prg{C})\in \syntax{ClassDescr}$ or undefined, and $\M(\prg{S})\in \syntax{Specification}$ or undefined.
+We describe \syntax{ClassDescr}s in Definition \ref{def:syntax:classes}, and  \syntax{Specification}s in Defintion \ref{def:syntax:classes}.
+\end{definition}
+
+
+
+\paragraph{Classes}
+
+We define the syntax of class definitions below. {Class definitions serve two purposes:
+They describe how a class contributes to the runtime behaviour of a program: for this we use its field and method declarations.
+They also describe how a class contributes to the
+semantics of its module: which specifications it claims to obey,
+how functions and  predicates are to be interpreted when applied to its objects\footnote{TODO: say earlier that  functions and predicates are interpreted depending on the class of receiver},
+and how ghost fields are to be interpreted.\footnote{TODO: perhaps use model field and not ghost field.}
+Note that ghost fields are interpreted according to the syntax of expressions - \syntax{Expr} - which will be given later.}
+
+Note that the language is untyped. Method bodies consist of sequences of statements; these can be field read or field assignments (only allowed if the object is \prg{this} -- i.e. as in Smalltalk), conditionals, and method calls. All else can be encoded.
+
+ {The keyword \kw{private} indicates that a class, say \prg{C},  is  private to its module. This means that even though anybody who has access to  objects of class \prg{C} may  call any methods on these objects, only classes from the same module as \prg{C} may construct objects of class \prg{C}.
+   In terms of the capabilities literature, this means that the capability to create new objects of that class is hidden within this module.
+   This form of privacy is enforced through the linking operator defined in Definition \ref{formal:Linking}.}
+
+ \begin{definition}[Classes, Methods, Args]
+\label{def:syntax:classes}
+We define the syntax of modules below.
+
+\begin{tabular}{lcll}
+ \syntax{ClassDescr}   &   \BBC  &   $ [ $  \kw{private} $ ]$  \kw{class}  \syntax{ClassId} \\
+ & &  \hspace{0.7in}  \kw{implements}  \syntax{SpecId}\\
+ & &   \lb\,  $($\ \kw{field} \syntax{FieldId}\ $)^*$ \\
+ & &  \hspace{0.16in}    $($\ \syntax{methBody}\ $)^*$ \\
+ & &  \hspace{0.16in}  {$($\ \syntax{FunDescr}\ $)^*$}  \\
+  & &  \hspace{0.16in}  $($\ \syntax{PredDescr}\ $)^*$  \\
+ & &  \hspace{0.16in}   $($\ \kw{ghost}   \syntax{GhFldId}\ = \ \syntax{Expr} \ $)^*$  \ \rb
+\\
+\syntax{methBody} &\BBC&
+     \kw{method}    \syntaxMeth\lp \syntax{ParId}$^*$ \rp\\
+ & & \hspace{0.1in}  \lb\, \syntax{Stmts} \semi   \kw{return}  \syntax{Arg}  \,
+    \rb
+ \\
+ \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
+\syntax{Stmt}    &\BBC&     \kw{var} \syntax{VarId}  {\kw{:=}} \syntax{Rhs}\\
+&  ~\SOR~ &     \syntax{VarId} {\kw{:=}} \syntax{Rhs} \\
+&  ~\SOR~ &    \kw{this}.\syntax{FieldId} {\kw{:=}} \syntax{Rhs} \\
+&  ~\SOR~ &   \kw{if}  \syntax{Arg}  \kw{then} \syntax{Stmts} \kw{else} \syntax{Stmts}\\
+&  ~\SOR~ &   \kw{skip}\\
+\syntax{Rhs} & \BBC&    {\syntax{Arg}}{\kw{.}}\syntax{MethId}\lp  \syntax{Arg}$^*$ \rp    ~\SOR~   \syntax{Arg}  \\
+&  ~\SOR~ &   {\kw{new} \syntax{ClassId}\lp \, \syntax{Arg}$^*$\, \rp} \\
+ \syntax{Arg} &\BBC&  \syntax{ParId} ~\SOR~ \syntax{VarId} ~\SOR~ {\kw{this}} \\
+&  ~\SOR~ & {\kw{this}}.\syntax{FieldId}
+ \end{tabular}
+\end{definition}
+
+Note that \LangOO\, supports a limited form of protection: the syntax
+  supports  reading of fields of any object, but restricts each object
+  to being able to modify only its \emph{own} fields.
+
+
+
+
+
+
+\paragraph{Lookup} We define  method lookup function, $\cal M$ which returns the corresponding method definition given a class and a method identifier, specification lookup function $\cal S$ which returns the set of specification identifiers which a class is claiming to be implementing, and  $\cal P$ .... and $\cal G$  ...
+\begin{definition}[Lookup] The lookup functions $\cal M$, $\cal S$, and $\cal P$ are defined as follows, where we assume that \prg{C} is a class identifier,   \prg{m} a method identifier,
+$P$ a predicate identifier, and \prg{f} a function identifier : $ ~ $ \\
+
+\noindent
+$
+\Meths {} {\prg{C}} {m}      =       \kw{method}\, m\, \lp p_1, ... p_n \rp
+\lb stms \semi\, \kw{return}\ {\syntax{a}} \rb
+ $
+
+\noindent
+ iff \ $ \M(\prg{C}) =  p\ \kw{class}\, \prg{C}\, \ .... \lb ...  $\\
+$ ~ $  \hspace{.8in} $ \kw{method}\, m\, \lp p_1, ... p_n \rp
+\lb stms \semi\, \kw{return}\ {\syntax{a}} \rb$\\
+$ ~ $ \hspace{.7in} $ ... \rb.$
+\\
+\noindent
+undefined, otherwise. $ ~ $ \\
+
+
+\noindent
+ $
+   {\cal S} ({\M}, {\prg{C}})\      = \     \{ \ \syntax{S} \ \}
+ $
+
+\noindent
+ iff \ $ \M(\prg{C}) \ =\   p\ \kw{class}\  \prg{C} \ \kw{implements}\ \syntax{S}  \lb   ...  \rb $\\
+\noindent
+undefined, otherwise. $ ~ $ \\
+
+
+\noindent
+ $
+   {\cal P} ({\M}, {\prg{C}}, {Q})\      =  \     \kw{predicate}\, Q\, \lp p_1, ... p_n \rp
+\lb\ \A \ \rb
+ $
+
+\noindent
+ iff \ $ \M(\prg{C})\ =\ p\  \kw{class}\  \prg{C} \ .... \lb ...  $\\
+$ ~ $  \hspace{.8in} $ \kw{predicate}\, Q\, \lp p_1, ... p_n \rp
+\lb\ \A \ \rb $\\
+$ ~ $ \hspace{.7in} $ ... \rb.$
+\\
+\noindent
+undefined, otherwise.$ ~ $ \\
+
+
+\noindent
+ $
+   {\cal G} ({\M}, {\syntax{C}}, {\mathit{gf}})\      =       expr $
+
+\noindent
+ iff \ $ \M(\syntax{C}) =\ p\  \kw{class}\  \syntax{C} \ .... \lb ...  $\\
+$ ~ $  \hspace{.87in} $ \kw{ghost}\,   {\mathit{gf}}\, \kw{=}\  expr $\\
+$ ~ $ \hspace{.7in} $ ... \rb.$
+\\
+\noindent
+undefined, otherwise.
+
+ $ ~ $ \\
+\noindent
+{In all the above, $p$ is either empty, or the annotation \kw{private}. }
+\end{definition}
+
+
+  \subsection{Execution  in \LangOO}
+
+
+
+In order to define execution in  \LangOO, we define runtime states, $\sigma$, the interpretation of arguments in such states,
+$\interp {a} {\sigma} $, and finally a relation of the form $\M, \sigma, stms \leadsto \sigma'$.\footnote{TODO: rename private to internal; rename ghost field to model field}.
+
+\input{FigureOperSemantics}
+
+  \paragraph{Runtime state}
+\label{formal:state} The runtime state~$\sigma$ consists of a stack frame~$\phi$, and a heap $\chi$. A stack frame  is  a mapping from
+  receiver (\this) to its address, and from {the local variables ($\syntax{VarId}$) and parameters ($\syntax{ParId}$) to their values.}  Values are integers,
+ the booleans \kw{true} or \kw{false}, addresses, or \kw{null}. Addresses are ranged over by $\iota$. The heap maps addresses to objects. Objects are tuples consisting of the class of the object, and a  mapping from field identifiers onto values.
+
+
+\begin{tabular}{lll}
+$\sigma \in $ \syntax{state}  & =  &  \syntax{frame}  $\times$ \syntax{heap} \\
+ $\phi \in$   \syntax{frame}  & =  &   \syntax{{StackId}} $\longrightarrow$ \syntax{val} \\
+ $\chi \in$   \syntax{heap}  & =  \ \ \ &  \syntax{addr} $\longrightarrow$ \syntax{object} \\
+ $\prg{v}\in$ \syntax{val} & = &  $\{$   \nullK, \kw{true}, \kw{false}  $\}$    $\cup\  \syntax{addr}\ \cup \ \mathbb{N}$ \\
+ \syntax{object}\ \ & = &  \syntax{ClassId} $\times$ ( \ \syntax{FieldId} $\longrightarrow$ \syntax{val} \ ) \ \SP \SP \\
+$\iota, \iota',..$  & $\in$ & $\syntax{addr}$  \\
+% \syntax{res}  & = & $\{\ \nullPEC, \  \stuck\ \}$\ $\cup$\ \\
+{\syntax{StackId}}  & = & {$\{\ \kw{this}\  \}$\ $\cup$\ \syntax{VarId}  $\cup$\ \syntax{ParId}}\\
+\end{tabular}
+\footnoteC{{we used to support null pointer exceptions and stuck, but see comment below}}
+
+ \paragraph{The Operational Semantics of \LangOO}
+\label{formal:semantics}
+
+\newcommand{\cons}{\mathit{::}}
+\newcommand{\st}{\ensuremath{\mathit{st}}}
+\newcommand{\fs}{\ensuremath{\mathit{fs}}}
+\newcommand{\traverseFields}[3]{\mathit{traverseFields}_{#1}(#2,#3)}
+{We define $\interp{a}{\sigma}$, the {\em interpretation} of  {an argument~$a\!\in\!\syntax{Arg}$} in a state $\sigma$ as follows. 
+
+\begin{definition}[Interpretation] For a state {$\sigma = ({\phi}%\cons\st
+,\chi)$} we define the partial function\\
+$\strut \ \ \ \ \interp {\_} {\_} :  state \times Path \rightarrow Value$\\
+as follows:
+
+$\begin{array}{lcl}
+\interp {\kw{null}} {\sigma} & = & {\kw{null}}
+\\
+\interp {\kw{true}} {\sigma} & = & {\kw{true}}
+\\
+{\interp {\kw{false}} {\sigma}} & = & {\kw{false}}
+\\
+\interp {{x}} {\sigma} & = & {\phi(x) \quad \mathrm{(for\   x \in\ } {\syntax{StackId}})},
+\\
+& & \mbox{ undefined,} \quad \ \ \ \mbox{otherwise}.
+\\
+ {\interp {p\kw{.}f} {\sigma}}  & = & {\chi(\interp {p} {\sigma})(f)}   \quad   \mbox{if} \interp {p} {\sigma}
+\mbox{ is defined,} \\
+& &  \quad \quad  \quad \quad  \quad \quad \mbox{and}\,  $f$\, \mbox{is a field of} \interp {\kw{this}} {\sigma}
+\\
+& & \mbox{ undefined,} \quad \ \ \ \mbox{otherwise}
+\end{array}$
+where \\
+\begin{tabular}{lcll}
+ $p \in$ \syntax{path}   &   \BBC  &    $x$  ~\SOR~ p.f
+ \end{tabular}
+
+ \noindent
+We also define the  lookup of the class of an expression,
+$\begin{array}{lcl}
+$~$   \ {\mathcal C}lass(e)_{\sigma} & = & (\sigma\downarrow_2(\interp {e} {\sigma}))\downarrow_1 \quad \ \ \  \mbox{if \interp {e} {\sigma}\ defined}
+\\
+& & \mbox{ undefined,} \quad \ \ \ \mbox{otherwise}
+\end{array}$
+
+\newcommand{\emptylist}{\epsilon}
+\noindent
+\end{definition}
+
+Execution uses module \M, and  maps a runtime state $\sigma$ and statements
+\syntax{stmts} (respectively a right hand side $rhs$) % (code in the general case)
+onto a new state $\sigma'$ (respectively a new heap $\chi'$ and
+a value). {We therefore do not give execution rules for things like null-pointer-exception, or stuck execution. This allows us to keep the system simple; it will be easy to extend the semantics to a fully-fledged language.}
+\begin{definition}
+
+ 
+Execution  of \LangOO\ statements and expressions is defined in figure \ref{fig:Execution}, and has the following shape:
+\begin{tabular}{lcl}
+ ${\rewriteLong {}}\s$ &  :  &    \syntax{Module}  $\times$  \syntax{state}  $\times$   {\syntax{Stmts}}
+  \ \  $\longrightarrow $ \ \     {{\syntax{state}}}
+\\
+${\rewriteLong {}}\s$ &  :  &    \syntax{Module}  $\times$  \syntax{state}  $\times$   {{\syntax{Rhs}}}
+  \ \  $\longrightarrow $ \ \     \syntax{heap} $\times$ \syntax{val}
+
+\end{tabular}
+
+\noindent
+\end{definition}
+
+{Note that execution is undefined -- will be stuck -- if we try to access fields or call methods which are not part of the object, and also, if we execute a conditional where the condition is not a boolean (neither \kw{true} nor \kw{false}). Such situations are possible, since \LangOO\, is untyped. Wrt to security the question arises whether the language then guards against denial of service attacks - pass the wrong kind of object, and get stuck. The answer is: yes in theory.  Even though we could guard against these by throwing exceptions, we cannot guard against denial of service attacks when passed an object on which "our" code will execute a method which will loop forever. All this does not affect the validity of our approach, since we are only claiming partial correctness.\footnote{TODO: Add similar disclaimer in the Soundness theorem}.
+}
+
+ 
+
+\paragraph{Arising Configurations}
+
+Policies need to be satisfied in all configurations which may arise during execution of some program. This leads us the concept of {\em arising} configuration. Arising configurations allow us to restrict the set of configurations we need to consider. For example, in a program where a class does not export visibility to a field, the constructor initialises the field to say $0$, and all method calls increment that field, the arising configurations will only consider states where the field is positive.
+
+
+We  can now define $\Arising(\M)$ as the set of runtime configurations
+which may be reached during execution of some initial context ($\sigma_0$,$\code_0$),
+with the module \M expanded with {\em any} module $\M'$.
+ A context is initial if its heap contains only objects of class \prg{Object}.
+%, and its stack contains only one frame]
+ % and the code contains exclusively method calls of methods defined in $M$. }
+%   form
+%   consider all configurations which may be reached from such initial configurations.
+  %  which are well-typed
+% under the assumptions that \kw{x} and \this\ denote objects of class \prg{Object}.
+%These concepts are defined in App. \ref{formal:arising}.
+%The {\em arising} configurations are those which may be reached by executing an initial configuration, where initial configurations all configurations that may be encountered at the start of program execution. %, \cf \ref{def:initial}.
+
+\begin{definition}[Arising and Initial configurations] $ $ We define the mappings \\
+$\begin{array}{lcl}
+\SP {\mathcal{I}nit} & \ : \ & {\syntax{Module}} \   \longrightarrow\  \mathcal{P}( {\syntax{state} \times \syntax{Stmt}}  )
+\\
+ \Arising & : &  {\syntax{Module}}    \longrightarrow \mathcal{P}( {\syntax{state}} \times \syntax{Stmts}  )
+\end{array}$
+
+\noindent
+as follows:\\
+$\begin{array}{l@{\,}l}
+ {\mathcal{I}nit}(\M)   =  &  \{ \ (\ \sigma_0, \kw{new}\ \clss{}.\prg{m}\lp\kw{new}\  \clss{'} \rp) \ |    \ \clss{},\clss{'}\in dom( \M) \\
+    &  \SP  \mbox{where}\  \sigma_0\ =\ ( (\iota,\kw{null}),\chi_0), \\
+    & \SP  \mbox{and}\   \chi_0(\iota)=(\prg{Object}, \emptyset)\  \}
+ \\
+ \Arising(\M)    =   & \    \bigcup_{ (\sigma,\code{})\in  \mathcal{I}nit (\M)}  \Reach(\M, \sigma, \code{})
+\end{array}$
+\end{definition}
+
+
+\noindent
+Initial configuration should be as ``minimal'' as possible, We therefore construct a heap which has only one object, and execute a method call on a newly created
+object, with another newly created object as argument.
+
+
+
+
+\begin{figure*}
+$
+\begin{array}{lcl}
+%  \Reach(\M{}, \sigma,\kw{a}) & \ =\  & \{ \ ( \kw{skip}, \sigma ) \}  %  \{ \ (\kw{a},\sigma) \ \}
+  \\
+ \Reach(\M{}, \sigma, \prg{v}\kw{:=} \kw{new}\, \clss{}\lp \prg{a}_1,...\prg{a}_n \rp) & = &  \{ \ ( \prg{v}\kw{:=}\kw{new}\, \clss{}\lp \prg{a}_1,...\prg{a}_n \rp,\sigma), \ ( \kw{skip}, \sigma' ) \}
+ \\
+ & &  \mbox{where }  \M,\sigma, \prg{v}\kw{:=} \kw{new}\, \clss{}\lp \prg{a}_1,...\prg{a}_n \rp \leadsto \sigma'
+ \\
+\Reach(\M{}, \sigma,\prg{stmt}\semi\prg{stmts}) & = &
+\Reach(\M,\sigma,\prg{stmt}) \cup \Reach(\M, \sigma',\prg{stmts})
+\\ & & \mbox{where }  \M,\sigma, \prg{stmt} \leadsto \sigma'
+\\
+\Reach(\M{}, \sigma,\prg{v}\kw{:=}\prg{a}) & = &
+ \{ ( \prg{v}\kw{:=}\prg{a}, \sigma), \ ( \kw{skip}, \sigma' ) \}
+ \\
+ & &  \mbox{where }  \M,\sigma, \prg{v}\kw{:=} \prg{a} \leadsto \sigma'
+\\
+
+\Reach(\M{}, \sigma,\prg{v} \kw{:=} \prg{a}\kw{.}\prg{m}\lp \prg{a}_1,...\prg{a}_n \rp) & = &
+\{ \ (\prg{v} \kw{:=}\prg{a}\kw{.}\prg{m}\lp \prg{a}_1,...\prg{a}_n \rp, \sigma ) , \ ({\kw {skip}}, \sigma''' ) \  \} \ \cup
+\ \Reach(\M{}, \sigma',\prg{stmts}) \\
+& &  \mbox{where}\ \sigma = \phi \cdot\chi\ \mbox{and}
+ \interp{\syntax{a}}{\phi\cdot\chi} = \iota\ \mbox{and} \\
+& & \Meths {} {$\chi(\iota)\downarrow_1$} {m} \  =  \\
+& &  ~ \hspace{.1in} \kw{method}\ m\lp par_1, \ldots par_n \rp
+ \lb stms \semi\, \kw{return}\ \syntax{a}' \rb
+\ \mbox{and}\\
+& & \phi'=\this \mapsto \iota, par_1 \mapsto  \interp{{\syntax{a}}_1}{\phi\cdot\chi}, \ldots par_n \mapsto  \interp{{\syntax{a}}_n}{\phi\cdot\chi}
+\ \mbox{and}\\
+& & \M,\, \phi'\cdot\chi, stmts \ \leadsto  \sigma''
+\ \mbox{and} \ \sigma'''= (\sigma\downarrow_1[\prg{v} \mapsto \interp{a'}{\sigma''}],  \sigma''\downarrow_2)
+\\
+\Reach(\M{}, \sigma,{\kw {skip}}) & = &
+\{ \ ({\kw {skip}}, \sigma ) \  \}   \\
+\Reach(\M{}, \sigma,{\kw {if}}\, \prg{a}\, {\kw {then}}\, \prg{stmts}_1\, {\kw {else}}\, \prg{stmts}_2\, ) & = &
+\{ \ ( {\kw {if}}\, \prg{a}\, {\kw {then}}\, \prg{stmts}_1\, {\kw {else}}\, \prg{stmts}_2, \sigma ) , \  \}  \  \cup \
+\Reach(\M{}, \sigma,\prg{stmts''})\\
+& & \mbox{ where } \prg{stmts''}=\prg{stmts}_1 \mbox{ if } \interp{a}{\sigma}={\kw {true}},\ \mbox{ otherwise }
+\prg{stmts''}=\prg{stmts}_2
+\end{array}
+$
+\caption{Reachable Configurations\label{fig:reach}}
+\end{figure*}
+
+
+\paragraph{Reachable Configurations}
+\label{formal:reachable}
+
+A configuration is reachable from another configuration, if the former may be required for the evaluation of the latter after any number of steps.
+
+$
+\SP  \Reach \ :
+\ {\syntax{Module} \times \syntax{state} \times \syntax{Stmts}}  \\
+\SP\SP\SP\SP \SP\SP\SP\SP \longrightarrow \mathcal{P}( {\syntax{Stmts} \times \syntax{state}}  )
+$
+
+%\kjx{again: e or Stmts??? fix here, fix in the paper} STmts
+
+\noindent
+In figure \ref{fig:reach} we define the function  $\Reach$  by cases on the structure of the expression, and depending on the execution of the statement. The set $\Reach(\M, \sigma, \stmts)$
+  collects all configurations reachable during execution of $\sigma, \stmts$. Note that the function  $\Reach(\M, \sigma, \stmts) $ is defined, even when the execution should diverge; of course then it may be an infinite set.
+  The definedness of  $\Reach(\M, \sigma, \stmts) $  is important, because it allows us to give meaning to capability policies without requiring termination.
+
+
+ 
+\begin{lemma}[$\Reach$ and $\leadsto$]\label{lemma:ReachAndOpSem}
+For all $\M$, $\M'$, $\sigma$, $\sigma'$, $\sigma'$,and \prg{stmt}, $\prg{stmt}'$, and $\prg{stmt}''$:
+\begin{itemize}
+\item 
+If $\M, \sigma, \prg{stmt} \leadsto \sigma'$, then
+$(\_,\sigma') \in \Reach (\M,\sigma,\prg{stmt})$.
+\item 
+If  
+$(\prg{stmt}',\sigma') \in \Reach (\M,\sigma,\prg{stmt})$,  and\\
+ $(\prg{stmt}'',\sigma'') \in \Reach (\M,\sigma',\prg{stmt}')$,  then\\
+$(\prg{stmt}''',\sigma'') \in \Reach (\M,\sigma,\prg{stmt})$.
+\item
+If $\M*\M'$ is defined, and $(\prg{stmt}',\sigma') \in \Reach (\M,\sigma,\prg{stmt})$, then
+$(\prg{stmt}',\sigma') \in \Reach (\M*\M',\sigma,\prg{stmt})$.
+\item
+If $\M*\M'$ is defined, then  $\Arising (\M)\subseteq\Arising (\M*\M')$.
+
+\end{itemize}
+\end{lemma}
+\begin{Proof}
+By structural induction on $\leadsto$ and the definition of $\Reach$ and $\Arising$.
+\end{Proof}
+
+\paragraph{Notation} We shall use $\sigma'\in \Reach (\M,\sigma,\prg{stmt})$ as a shorthand for $(\_,\sigma')\in \Reach (\M,\sigma,\prg{stmt})$ and $\sigma'\in \Arising (\M)$ as a shorthand for $(\_,\sigma')\in \Arising (\M)$.
+
+

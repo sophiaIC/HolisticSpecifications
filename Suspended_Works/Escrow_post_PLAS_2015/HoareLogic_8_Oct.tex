@@ -1,0 +1,164 @@
+\section{Hoare Logic}
+
+We define the Hoare Logic that allows us to prove adherence to policies. In order to reflect that the code to be verified is executed in an open system, and that it calls code whose specification and trustworthiness is unknown to the code being verified\footnote{TODO: Untanhgle the sentence}, we augment the Hoare triples, so that not only do they gurantee some property to hold {\em after} execution of the code, but also with the assertion that some property is preserved {\em during} execution of the code.\footnote{Shall we say that we augmented/adapted the notion of invariant from object invariant to ``code invariant''?}
+  
+Our Hoare tuples have the format \HoareExpl{\P} {\prg{code}} {\M} {\Q}
+{\Q'}, and it promises that ... in the presence of code and predicates
+as defined in \M. When the module \M\ is implicit from the context, or
+???\footnote{of no particular importance?} we use the shorthand
+\Hoare{\P} {\prg{code}}  {\Q} {\Q'}.\footnote{TO-DISCUSS: Is it OK to
+  have an implicit module \M in the Hoare logic, esp in view of the
+  lemma \ref{lemma:hl:preserve}? \kjx{Yes! Makes it look much nicer,
+    isn't a problem to think about}}
+
+
+
+\begin{definition}[Validity of Hoare Tuples] 
+$ $ \\
+
+  \begin{itemize}
+  \item
+$M  \models \HoareImpl{\P} {\prg{code}} {\Q} {\Q'}  $ \ \ \  iff\\
+\SP $\forall \M',\sigma.$\\
+\SP $ (\sigma,\_)\in \Arising(\M*\M')\ \wedge \M*\M', \sigma \models \P$\\
+\SP \ \ \ $\longrightarrow$ \ \ \ \\
+\SP \ \ \  $(\M\!*\!\M', \sigma, \prg{code}  \leadsto \prg{res}, \sigma'   \ \rightarrow  \  \M\!*\!\M'\!, \sigma, \sigma' \models \Q\, )$\\
+\SP\ \ \   $\wedge$ \\
+\SP\ \ \  $\forall \sigma'\!\in\!\Reach(M,\sigma,\code).\ \M\!*\!\M', \sigma, \sigma' \models \Q'   $
+
+\end{itemize}
+\end{definition}
+
+
+
+
+We define the Hoare rules in figure
+\ref{fig:HoareLogic}. \footnote{TODO: The str-1 ... str-2 rules are
+  only a rough sketch. Perhaps they can and should be amalgamated into
+  one rule. Also, perhaps there are more such rules.}
+\footnote{\toby{rule \textsc{meth-call-2} is that just ``only connectivity
+begets connectivity''?}}
+\footnote{\toby{In rule \textsc{framing-1}, the definition of disjointness
+(Definition~\autoref{defn:disjointness}) talks only about initial and final states, 
+not intermediate ones. So I fear it is not strong enough to help reason
+about preservation of the invariants. However, it perhaps is strong enough
+ to prove the version of \textsc{framing-1} that Sophia sent in her email
+on October 6th.}}
+\footnote{TODISCUSS: Rule FRAMING-1 is a pain, as it requires
+  knowledge about \prg{code} as well as \Q'', but I do not see how
+  this can be avoided. }
+\footnote{TODISCUSS: Rule FRAMING-2 is at the
+  heart of our work. I am surprised it looks so short. It is different
+  from the one in the photo James and I had sent in July; the old one
+  does not work. To check its application  in the proof steps for
+  \prg{Escrow}.\kjx{arg, why do I feel I should think about this?  but
+  really I don't want to, want to focus on stuff on the critical path
+  with what time and energy I have}}\footnote{TODO: Say that  $\sigma'\!\in\!\Reach(M,\sigma,\code)$ is a shorthand for $\sigma'.  (\sigma',\_')\!\in\!\Reach(M,\sigma,\code)$.}
+\footnote{\toby{In rule \textsc{varAss-2}, doesn't that rule require that
+$Q$ to not mention the value of \texttt{v}?} Maybe for \textsc{varAss-1} too?}
+\footnote{TODO: Explain that $PRE$ and $POST$ and $PRSRV$ look up the method's pre and post conditions}
+
+We need the notion of disjointness, and of framing.
+\begin{definition}[Disjointness]\label{defn:disjointness}
+$ $ \\
+
+$\M,\sigma \models \prg{code} \# \P$ iff \\
+$\M,\sigma  \models \P$ \  $\wedge$ \  $\M,\sigma, \prg{code} \leadsto \sigma', \prg{v}$ \ \ $\rightarrow$ \ \ $\M,\sigma'  \models \P$
+\end{definition}
+
+
+We have the standard definitions of entailment of the form $\P\, \rightarrow_\M\, \P'$ and $\Q\, \rightarrow_\M\, \Q'$\, but we also need an unusual definition of entailment:\footnote{TODO: What do the others think?} of the form $\P, \Q\, \rightarrow_\M\, \P'$. The former two say .... the latter says ....
+
+\begin{definition}[Entailment]
+$ $ \\
+
+\begin{itemize}
+\item
+$\P\, \rightarrow_\M\, \P'$\ \  iff\ \\
+$\forall  \sigma$. $\M, \sigma \models  \P$    $\rightarrow$ $\M,  \sigma \models  \P'$
+\item
+$\Q\, \rightarrow_\M\, \Q'$\ \  iff\ \\
+$\forall  \sigma, \sigma'$.  $\M, \sigma, \sigma' \models  \Q$ $\rightarrow$ $\M, \sigma, \sigma' \models  \Q'$ 
+\item
+$\P, \Q\, \rightarrow_\M\, \Q'$\ \  iff\ \\
+$\forall  \sigma, \sigma'$. $\M, \sigma \models  \P$  $\wedge$ $\M, \sigma, \sigma' \models  \Q$ $\rightarrow$ $\M, \sigma, \sigma' \models  \Q'$
+\end{itemize}
+\end{definition}
+
+\input{FigureHoareLogic} 
+
+Note that   entailment is preserved by linking:
+\begin{lemma}
+$ $ \\
+
+\begin{itemize}
+\item
+$\P\, \rightarrow_\M\, \P'$\ implies that\  $\P  \rightarrow_{\M\!*\!\M'}\, \P'$.
+\item
+$\Q\, \rightarrow_\M\, \Q'$\ implies that\  $\Q\, \rightarrow_{\M\!*\!\M'}\,  \Q'$
+
+$\P, \Q\, \rightarrow_\M\, \P'$\   implies that  $\P, \Q\, \rightarrow_{\M\!*\!\M'}\, \P'$\
+\end{itemize}
+\end{lemma}
+
+Examples of some entailments
+
+\begin{lemma}[Entailments] For all modules $\M$:
+$ ~ $
+
+\begin{enumerate}
+\item
+$ \MayAccess(\prg{x},\prg{y}) \wedge \MayAccess\pre({\prg{y},\prg{z}}) \ \rightarrow_\M \ \MayAccess(\prg{x},\prg{z}) $.
+\item
+...
+\end{enumerate}
+
+\end{lemma}
+
+Also,  derivability and validity of Hoare tuples is preserved for larger modules
+\begin{theorem}[Linking preserves derivations and validity]
+\label{lemma:hl:preserve}
+For all modules $\M$, $\M'$.
+\begin{itemize}
+\item
+If $\HoareExpl {\P} {\prg{code}}  {\M} {\Q} {\Q'}$ , then\\ $\HoareExpl {\P} {\prg{code}}  {\M\!*\!\M'} {\Q} {\Q'}$.
+ 
+\item
+If $\HoareExpl {\P} {\prg{code}}  {\M} {\Q} {\Q'}$, then \\ $\M \models \HoareImpl {\P} {\prg{code}} {\Q} {\Q'}$. \footnote{\toby{This second bullet just expresses soundness, no?}}
+\end{itemize}
+\end{theorem}
+
+Soundness
+
+\begin{theorem}[Soundness of the Hoare Logic]
+\label{lemma:hl:soundness}
+ For all modules \M, code \prg{code} and assertions $\P$, $\Q$ and $\Q'$:\\
+ 
+\noindent
+If $\HoareExpl {\P} {\prg{code}}{\M}  {\Q} {\Q'}$ then $\M \models \HoareImpl {\P} {\prg{code}} {\Q} {\Q'}$.  
+\end{theorem}
+
+\begin{definition}[Proving code's adherence to specification]
+In order to prove that a method adheres to its specification, 
+  where \P\ and \Q \  and \Q'\ are the method's pre,   postcondition, and invariant, 
+and where 
+the method's body is
+\prg{stmts}\semi \kw{return} \prg{a}
+we need to derive that \\
+  $ \SP\SP\SP$ $\Hoare {\P\wedge \kw{this} \obeys Spec} {\prg{stmts}}  {\Q''} {\Q'''} $\\
+and that \\
+  $ \SP\SP\SP$  $\Q''\equiv \Q[\prg{a}/\prg{res}] \ $\\
+ and\\
+  $ \SP\SP\SP$  $\Q'''\equiv \Q'[\prg{a}/\prg{res}] \ $
+\end{definition}\footnote{\toby{This is phrased as a definition. But
+doesn't proving a module's
+adherence to a specification involve some kind of inductive argument?
+It feels to me like it is some kind of inductive argument that would justify
+adding the $\wedge \kw{this} \obeys Spec$ precondition as, from my
+understanding, this precondition is added to capture the idea that when
+proving the correctness of method \texttt{m} we implicitly assume correctness
+of all of \texttt{m}'s callees, right?}}
+
+ 
+\footnote{Should we distinguish in \M\ between code and specification? I think we have to!}
+ 

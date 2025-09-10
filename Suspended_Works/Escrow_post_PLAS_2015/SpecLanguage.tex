@@ -1,0 +1,380 @@
+\section{The Specification Language Chainmail}
+
+%\subsection{Specifications}
+\label{sec:SpecLan}
+
+ Our specifications and policies are fundamentally two-state
+assertions. To express the state in which an expression is evaluated, we annotate it with a \t-subscript. For example, given $\sigma$ and $\sigma'$ where $\sigma(x)$=\toby{4},  and $\sigma'(x)$=\toby{3}, we have  $\M,\sigma,\sigma' \models x\pre \toby{-} x\post = 1$.\footnoteC{TOTHINK: I originally wanted to also support  $\interp{x\pre + x\post}{\sigma,\sigma'}$=7, but this became too fiddly.}
+% \sd{The specification language uses functions and  predicates  defined below.}.
+% \sd{In function bodies
+% \footnote{a better term than \syntax{FArg}?}  we allow the use of values, as well as known mathematical operators such as $+$, $-$ etc. Similarly, in predicate bodies we allow the use of known mathematical operators such as $\leq$, $\leq$ etc. \footnote{\sd{SD asks: do we need to allow $\wedge$, $\not$ etc explicitly? Perhaps they can all be encoded with what we have}}
+% }\footnote{\sd{TODO: Find better names than FunBody and PredBody}}
+
+\paragraph{Expressions and Assertions} We first define expressions, \syntax{\sExpr},
+and assertions \syntax{\A}, which depend on  {\em one
+  state} only. We allow the use of mathematical operators, like $+$
+and $-$, and we use the identifier  \syntax{f}    to indicate
+functions whose value depends on the state (eg the function
+\prg{length} of a list). We use the identifier  \syntax{sR}   to
+indicate predicates whose validity depends on the state (eg the
+predicate \prg{Acyclic} for a list). 
+
+The difference between expressions and arguments is that 
+expressions may express ghost information, which is not 
+stored explicitly in the state $\sigma$
+but can be deduced from it ---  e.g.\ the length of a list
+that is not stored with the list.
+
+\begin{definition}[Expressions]
+$ ~ $ \\
+
+\noindent
+% \begin{figure}[h]
+\begin{tabular}{lcll}
+ \syntax{\sExpr} \ \  &   \BBC  &   \toby{\syntax{Arg}}  ~\SOR~ \syntax{Val}   ~\SOR~ \syntax{\sExpr} $+$ \syntax{\sExpr}  ~\SOR~ ... \\
+ &  ~\SOR~   & \syntax{f}(\syntax{\sExpr}$^*$) \\
+&     ~\SOR~ & \kw{if} \syntax{\sExpr} \kw{then} \syntax{\sExpr} \kw{else} \syntax{\sExpr}
+ \\
+\syntax{funDescr} \ \  &   \BBC  &   \kw{function}  \syntax{f}\lp \syntax{ParId}$^*$ \rp\lb~   \syntax{\sExpr}~ \rb
+ \end{tabular}
+\label{fig:syntax:functions}
+% \end{figure}
+
+\end{definition}
+
+We now define the values of such expressions, and the validity of
+one-state assertions as follows:
+
+\begin{definition}[Interpretations]
+We define the interpretation of expressions,
+\noindent
+$
+\begin{array}{c}
+% \begin{array}{lcl}
+\  \interp{\cdot}{}\, : \, \syntax{\sExpr} \times   \syntax{Module} \times   \syntax{state}
+% \times \syntax{state}
+\rightarrow \syntax{Value}
+% \times \syntax{state}
+% \end{array}
+ \end{array}
+$
+
+\noindent
+using the notation  $\interp{\cdot}{\M,\sigma}$: \\
+
+
+\begin{itemize}
+\item
+ $\interp{val}{\M,\sigma} $    = $val$,\  for all values $val\ \toby{\in \syntax{Val}}$.
+\item
+ $\interp{\toby{a}}{\M,\sigma} $    = $\interp{\toby{a}{} }{\sigma}$\toby{, for all arguments $a\ \in \syntax{Arg}$}.
+\item  
+  $\interp{\syntax{\sE_1}+ \syntax{\sE_2}}{\M,\sigma}$ =
+ $\interp{\syntax{\sE_1}}{\M,\sigma} + \interp{\syntax{\sE_2}}{\M,\sigma}$.
+ \item
+  $\interp{\syntax{f}(\syntax{\sE_1},...\syntax{\sE_n})}{\M,\sigma}$ =
+ $\interp{\syntax{\sExpr}[\syntax{\sE_1}/\syntax{p_1}, ... \syntax{\sE_n}/\syntax{p_n}]}{\M,\sigma}$
+ \\
+   where
+ $ \M(f) =  \kw{function} ~\syntax{f}~\lp  \syntax{p_1}...\syntax{p_n}  \rp\lb~   \syntax{\sExpr}~ \rb $,
+ \\
+ undefined, otherwise.
+
+ \item
+$\interp{ \kw{if} ~\syntax{\sE_0} ~\kw{then} ~ \syntax{\sE_1} ~\kw{else} ~\syntax{\sE_2}}{\M,\sigma} $\\
+=$\interp{ \ \syntax{\sE_1} }{\M,\sigma} $, if $\interp{ \ \syntax{\sE_0} }{\M,\sigma} $=\kw{true}, \\
+=$\interp{ \ \syntax{\sE_2} }{\M,\sigma} $, if $\interp{ \ \syntax{\sE_0} }{\M,\sigma} $=\kw{false}. \\
+and undefined, otherwise.
+% \item TODO: Say something about further predefined functions
+\\
+ \end{itemize}
+ 
+\end{definition}
+
+\paragraph{One-state assertions} We now define a  language of   assertions which depend on one state.  We introduce three specific predicates: $\MayAffect$ and $\MayAccess$ which we   use to
+model risk, the assertion $\syntax{\sExpr}\kw{:}\syntax{ClassId} $ which expresses class membership, and the assertion
+$\syntax{\sExpr}\obeys\syntax{SpecId} $. The two former  predicates
+are {\em hypothetical}, in that they talk about the
+  potential effect of execution of code, or of the existence of paths to connect two objects. 
+In particular, the  $\MayAffect$ predicate ascertains whether its first
+parameter may execute code which affects the second one,  while
+$\MayAccess$ predicates 
+%, and $\MayPublicAccess$
+ ascertains whether
+its first parameter has {\em any} path to the second one.
+
+
+\noindent
+\begin{definition}[One-state Assertions]
+$ ~ $ \\
+
+\begin{tabular}{lcll}
+\syntax{\A} \ \  &   \BBC  &   \syntax{\sExpr}  ~\SOR~  \syntax{R}(\syntax{\sExpr}$^*$)
+ \\
+& ~\SOR~ &    \syntax{\sExpr} $\geq$ \syntax{\sExpr} ~\SOR~ \syntax{\A} $\wedge$ \syntax{\A} ~\SOR~ ...
+ \\
+& ~\SOR~ &  $\exists \prg{x}.$\syntax{\A} ~\SOR~ $\forall \prg{x}.$\syntax{\A} ~\SOR~ ...
+ \\
+& ~\SOR~ & \syntax{\sExpr}\kw{:}\syntax{ClassId} 
+\\
+& ~\SOR~ & $\MayAffect$ \lp\syntax{\sExpr},\syntax{\sExpr}\rp 
+\\
+& ~\SOR~ & $\MayAccess$\lp\syntax{\sExpr},\syntax{\sExpr}\rp 
+\\
+& ~\SOR~ & \syntax{\sExpr} \obeys \syntax{SpcId} \\
+\\
+ \syntax{PredDescr} \ \  &   \BBC  &  \kw{predicate}  \syntax{R}\lp \syntax{ParId}$^*$ \rp\lb~   \syntax{\A}~ \rb
+ \end{tabular}
+\label{fig:syntax:functions}
+\end{definition}
+
+ 
+\paragraph{Two state assertions} Two-state assertions\footnoteC{TODO add citation} allow us to compare properties of two different states, and thus say, e.g. that $\prg{p.balance}\post = \prg{p.balance}\pre + 10$. To differentiate between the two states we use the subscripts  \textsf{pre} and  \textsf{post}.
+
+\noindent
+\begin{definition}[Two-state Assertions]
+$ ~ $ \\
+
+% \begin{figure}[h]
+\begin{tabular}{lcll}
+ {\textit{t}} &   ::= & \textsf{pre} \ \     | \ \ \textsf{post}  \ \ | \ \ $\epsilon$
+ \\
+\syntax{\B} \ \  &   \BBC  &   \syntax{\A}$_{{\textit{t}}}$ \\
+&  ~\SOR~  &\syntax{\sExpr}$_{\textit{t}}$ $\geq$ \syntax{\sExpr}$_{{\textit{t}}}$ ~\SOR~ ... \\
+& \SOR & $\New(\syntax{\sExpr})$ \\
+&  ~\SOR~  & \syntax{\B}  $\wedge$ \syntax{\B}  ~\SOR~ ... \\
+& ~\SOR~ &  $\exists \prg{x}.$\syntax{\B}  ~\SOR~ $\forall \prg{x}.$\syntax{\B} . \\
+ \end{tabular}
+\label{fig:syntax:two:state:assert}
+% \end{figure}
+\end{definition}
+
+\noindent
+Given the syntax from above, we can express assertions like\\
+ $ ~ $ \ \ $ \ \ \ \ $  $\forall \prg{p}.\prg{p}:\pre\prg{Purse}.$\\
+$ ~ $ \ \ $ \ \ \ \ $ $\prg{p.bank}=\pre\prg{RBS} \rightarrow \prg{p.balance}\pre =\prg{p.balance}\post$,\\
+ to require that the \prg{balance} of any \prg{Purse} belonging to \prg{RBS} is immutable across the to states. Notice that for legibility, for infix predicates (such as = or $:$)  we annotate the predicate application rather than the assertion, \eg we write \prg{p.bank}=\pre\prg{RBS} to stand for (\prg{p.bank}=\prg{RBS})\pre.
+
+\paragraph{Policies} are expressed in terms of one-state assertions $\A$, $A'$, etc. and two state assertions $\B$, $\B''$ etc.\footnoteC{Should probably introduce this naming earlier on.}
+
+Policies can have one of the three following forms:  
+1)~invariants of the form $\A$, which   require that $\A$ holds at all visible states of a 
+program; or  
+2)\  $\A\, \lb \, \prg{code}\, \rb\, \B$, which require that execution of \prg{code} in any state which satisfies $\A$ will lead to a state
+ which satisfies $\B$ wrt the original state\footnoteC{How else to talk of validity of two-state assertions?}; 
+ or  
+ 3)\ $\A\, \{\prg{any\_code}\}\, \B$ which, similar to two state invariants, requires that execution of {\em any} code in a state which satisfies $\A$ will lead to a state which satisfies $\B$.
+
+
+\begin{definition}[Policies]
+ $ ~ $ \\
+ $
+\begin{array}{lclcl}
+Policy & \BBC & \ \A \ | \  \A \ \{ \prg{code} \}\  \B \ | \ \  \A \ \{ \prg{any\_code} \}\ \B
+\\
+PolSpec & \  \BBC  & \  \prg{spec}\ SpcId \, \lb\, Policy^*\, \rb
+\end{array}
+$
+\end{definition}
+
+\footnoteC{TODO: Give examples of policies. Probably refer to the main part of paper where we have the policies already, Perhaps there are some examples further to those in the paper we would like to talk about}.
+
+\paragraph{Validity of one-state, two-state assertions, and policies} We first defined validity of one-state assertions:
+
+ 
+Let $\sigma = (\phi,\chi)$ be a state. Then write
+\sd{$\sigma[v{\mapsto} \iota]$} as shorthand for
+$(\phi[v{\mapsto}\iota],\chi)$.
+
+\begin{definition}[Validity of one-state assertions --  $\MayAffect$ and $\MayAccess$] $ ~ $  
+\label{def:one-state-assertion:valid}
+We define the  validity an  assertion \syntax{\A}:
+$ ~ $
+\\
+ 
+\noindent
+$
+\  \ \ \models\ \subseteq \,  \syntax{Module} \times   \syntax{state}   \times  \sd{Assertion}
+% \toby{\syntax{A}} 
+% SD: A is a metavariable, and Assertion is a set
+$
+\\
+
+\noindent
+using the notation  $\M,\sigma \models \A$: \\
+
+ 
+\begin{itemize}
+ \item
+ $\M,\sigma  \models \syntax{\sE}$ iff $\interp{ \syntax{\sE}}{\M,\sigma}=\kw{true}$.
+ \footnoteC{DO we need to also allow for undefined? Probably no - look at Alex and Sophia ECOOP'13 paper.}
+  \item
+ $\M,\sigma   \models {\syntax{P}(\syntax{\sE_1},...\syntax{\sE_n})}$ iff \\
+   $\M,\sigma  \models {\syntax{A}[\syntax{\sE_1}/\syntax{p_1}, ... \syntax{\sE_n}/\syntax{p_n}]}$
+ \\
+ where  $ \M(P) =  \kw{predicate} ~\syntax{P}~\lp \syntax{p_1}...\syntax{p_n} \rp\lb~   \syntax{\A}~ \rb $,
+ \\
+ undefined, otherwise.
+ 
+  \item  $\M,\sigma  \models \syntax{\sE_1}\geq\syntax{\sE_2}$ iff $\interp{ \syntax{\sE_1}}{\M,\sigma}$
+  $\geq$ $\interp{ \syntax{\sE_2}}{\M,\sigma}$.
+  
+    \item
+ $\M,\sigma  \models \syntax{\A_1}\wedge\syntax{\A_2}$ iff  $\M,\sigma  \models \syntax{\A_1}$ and  $\M,\sigma  \models \syntax{\A_2}$.
+  
+  
+ \item
+  $\M,\sigma  \models \exists \prg{x}.\syntax{\A}$ iff for some address $\iota$ and some \toby{fresh} variable $\prg{z}\toby{\ \in \syntax{VarId}}$,  we have $\M,\sigma[\prg{z}\sd{\mapsto}\iota] \models  \syntax{\A[\prg{z}/\prg{x}}]$
+  
+  \item
+  $\M,\sigma  \models \forall \prg{x}.\syntax{\A}$ iff for all addresses $\iota\!\in dom\!(\sigma)$, and fresh variable $\prg{z}$, we have  $\M,\sigma[\prg{z}\sd{\mapsto}\iota] \models  \syntax{\A[\prg{z}/\prg{x}}]$.  
+  
+  \item
+ $\M,\sigma  \models  \syntax{\sE}\kw{:}\prg{C}$ iff  $\sigma(\interp{ \syntax{\sE}}{\M,\sigma})\downarrow_1 = \prg{C}$.
+ 
+ \item 
+$\M,\sigma  \models \MayAffect \lp\syntax{\sE},\syntax{\sE'}\rp$ iff  
+% there exist fields  $\prg{f}_1$,... $\prg{f}_n$,  
+there exists method \prg{m}, arguments $\bar{\prg{a}}$, state $\sigma'$, identifier \prg{z}, such that
+    $ \M, \sigma[\prg{z}\mapsto \interp {\syntax{\sE}} {\M,\sigma}], \syntax{z}\prg{.m}(\bar{\prg{a}}) \leadsto   \chi'$, and   $\interp {\syntax{\sE'}} {\M,\sigma} \neq  \interp {\syntax{\toby{\sE'}}} {\M,\sigma\downarrow_1,\chi'}    $.
+\item
+$\Prog{},\sigma \models { \MayAccess}(\prg{\sE},\prg{\sE'})$   \ iff \  there exist  fields  $\prg{f}_1$,... $\prg{f}_n$, such that
+      $\interp{\prg{z}.\prg{f}_1...\prg{f}_n}{\M,\sigma[\prg{z}\mapsto \interp {\syntax{\sE}} {\M,\sigma}]}= \interp {\prg{\sE'} }{\M,\sigma}$.
+  \item
+\sdJ{$\M, \sigma  \models \sE \obeys \prg{S}   $} \  iff  \\
+ $\sigma(\interp{ \syntax{\sE}}{\M,\sigma})\downarrow_1 = \prg{C}$, 
+ and 
+ $M(\prg{C}) = \kw{class}\,C\, \kw{satisfies}\,.., \prg{S}, ...\, \lb ... \rb.$
+%\SP  $\ \ \ \forall\, (\sigma,\code)\!\in\!\Arising(M).\ \forall  i\!\!\in\! \!\{1..n\}.$\\%  \wedge 
+%\SP  $\ \ \  \forall\,\sigma',\code'.\ (\sigma',\code')\!\in\!\Reach(M,\sigma,\code).$\\
+%\SP  $\ \ \ \ \ \ \ \ \ \SP M, \sigma'[z\mapsto\interp{e}{\sigma}]  \models \Policy_i[ z / {\kw{this}}]$ \\
+%where $z$ is a fresh variable in $\sigma'$, and where
+% we assume that $\PolSpecId$ was defined as \\ %  that   \PolSpecId was introduced by\\
+%$ \ \prg{specification}\ \PolSpecId\  \{\ \Policy_1, ... \Policy_n\ \}$, \\
+
+ \end{itemize} 
+ \end{definition}
+ 
+ \sdJ{Note that the definition of \sdJ{$\M, \sigma  \models \sE \obeys \prg{S}   $}  is syntactic; it
+depends on whether \prg{C},    the {\em class} of the object denoted by $\sE$,  claims that
+ it satisfies specification \prg{S}.}
+
+We now define validity of two state assertions, ...
+
+\begin{definition}
+[Validity of Two-state assertions] We define the judgment \\
+$
+\begin{array}{c}
+\begin{array}{lcl}
+\ \ \  \models  &   \subseteq &   Module \times state \times state \times \sd{TwoStateAssertion}
+% \toby{B}
+\end{array}
+\end{array}
+$
+
+\noindent
+using the notation $\Prog{},\sigma,\sigma'\models \B $ as follows
+\begin{itemize}
+\item
+$\Prog{},\sigma,\sigma'\models \syntax{\A}_{\textit{t}}$  
+iff   $\Prog{},\sigma''\models \syntax{\A}$, \\
+where  $\sigma''=\sigma$ if  {{\textit{t}}}=\textsf{pre}, and  $\sigma''=\sigma'$ otherwise.
+\item 
+$\Prog{},\sigma,\sigma'\models \syntax{\sE}_{\textit{t}} \geq \sE'_{\textit{t'}}$,
+    iff $\interp{\syntax{\sE}}{\M,\sigma_1} \geq \interp{\syntax{\sE'}}{\M,\sigma_2}$,\\
+    where $\sigma_1=\sigma$ if  {{\textit{t}}}=\textsf{pre}, and  $\sigma_1=\sigma'$ otherwise,\\
+    and $\sigma_2=\sigma$ if  {{\textit{t}}}$'$=\textsf{pre}, and  $\sigma_2=\sigma'$ otherwise.  
+\item 
+$\Prog{},\sigma,\sigma'\models \New(\syntax{\sE})$
+\ iff \ 
+$\interp{\syntax{\sE}}{\M,\sigma'}\in dom(\sigma')\setminus dom(\sigma)$
+\item
+$\Prog{},\sigma,\sigma'\models  \syntax{\B}_1   \wedge \syntax{\B}_2$   iff\\
+ $\Prog{},\sigma,\sigma'\models  \syntax{\toby{\B}}_1 $
+    and   $\Prog{},\sigma,\sigma'\models  \syntax{\toby{\B}}_2  $.
+\item
+  $\M,\sigma,\sd{\sigma'}  \models \exists \prg{x}.\syntax{\B}$ iff for some address $\iota$ and fresh variable $\prg{z}$,  we have $\M,\sigma[\prg{z}\mapsto\iota], \sd{\sigma'[\prg{z}\mapsto\iota]} \models  \syntax{\B[\prg{z}/\prg{x}}]$. 
+  \item
+  $\M,\sigma,\sd{\sigma'}  \models \forall \prg{x}.\syntax{\B}$ iff $\M,\sigma[\prg{z}\mapsto\iota],\sd{\sigma'[\prg{z}\mapsto\iota]}   \models  \syntax{\B[\prg{z}/\prg{x}}]$ holds for all addresses $\iota\!\in dom\!(\sigma)$, and fresh variable $\prg{z}$.  
+
+\end{itemize}
+
+\end{definition}
+
+\noindent
+  For example, for states $\sigma_1$, $\sigma_2$ where
+$\interp  {\prg{x.balance}} {\sigma_1}  = 4$  and $\interp
+{\prg{x.balance}} {\sigma2}  = 14$,
+we have\\
+%  $\Prog{},\sigma,\sigma' \not\models \prg{x.balance}\PRE  \geq 10$, and
+%  $\Prog{},\sigma_1,\sigma_2 \models \prg{x.balance}\POST  \geq 10$.  And we would also have that
+\noindent  $\Prog{},\sigma_1,\sigma_2\models \prg{x.balance}\POST = \prg{x.balance}\PRE+10$.
+
+\sdJ{ Finally, we define what it means for a module  $\M$ to satisfy a one-state assertion $\A$, and require that the $\A$ holds in all configuration arising from all possible extensions of $\M$:
+
+ \begin{definition}
+ \label{Def:modSatA}
+ \begin{itemize}
+ \item
+ $\M \models \A$\ iff \\
+  $\forall \M'. \forall (\code, \sigma)\in \Arising(\M{}*\M'). \ \ \M{}*\M', \sigma \models \A$
+%  \item
+%  $\M \models \B$\ iff \\
+%  $\forall \M'. \forall (\code, \sigma), (\code', \sigma)\in \Arising(\M{}*\M'). \ \ \M{}*\M', \sigma \models \A$
+\end{itemize}
+ \end{definition}
+} 
+% SD
+% All the resr is no longer needed now that we have broken the cycle. 
+%We now define adherence to policy, $\M,\sigma \models_{pol}  \Policy$,   which
+%ensures that the requirements of $\Policy$ are satisfied in any context arising from $\M$.
+%
+%\begin{definition}[Adherence to Policies] ~ ~ % \\
+%% $ $ \\
+%
+%\begin{itemize}
+%\item
+%$\M,\sigma  \models_{pol} \A$   \  iff \ 
+%$\M, \sigma \models \A$
+%\item
+%$\M,\sigma    \models_{pol} \A\, \{ \prg{code} \}\, \B$ \  iff \\ 
+% $ ~ $ \hspace{.2in} 
+% $(\ \M, \sigma \models \A\ \ \wedge\  \M, \sigma, \stmts  \leadsto  \sigma' $ \\
+%  $ ~ $   \hspace{.6in}  $ \ \ \  \longrightarrow $ 
+%%  \\  $ ~ $   \hspace{.2in}  
+%$  \ \ \ \M, \sigma, \sigma' \models \B\ \ )$
+%\item
+%\sd{$\M, \sigma \models \A \ \{ \prg{any\_code} \}\ \B$\ iff} \\
+% $ ~ $ \hspace{.2in}  $ \forall \prg{code}. (\sigma,\prg{code} )\in \Arising(\M) \wedge  \M, \sigma \models \A$\\
+% $ ~ $ \hspace{.4in}  $ \wedge\  \M, \sigma, \stmts  \leadsto   \sigma' $ \\
+%  $ ~ $   \hspace{.6in}  $ \ \ \  \longrightarrow $
+%  % \\   $ ~ $   \hspace{.2in}  $ 
+%   $\ \ \ \M, \sigma, \sigma' \models \B\ \ )$
+%\end{itemize}
+%\end{definition}
+%
+%In order to model open systems, require that after linking {\em any} module  with the module at hand,  the policy will be satisfied. \sd{As stated in \cite{JamesMorris}, "A programmer should be able to prove that his programs have various properties and do not malfunction, solely on the basis of what he can see from his private bailiwick."}
+%For example, to express that $M_5$ satisfies
+%\prg{EscrowSpec} we need to allow any possible implementation of \prg{Purse} as well as any other 
+%code to be linked, and still ensure that the Escrow policies %from figure \ref{fig:ValidEscrow}
+%are satisfied.
+%
+% 
+%\begin{definition}[Classes adhering to Specifications]
+%$ $ \\
+% 
+%
+%  \begin{itemize}
+%  \item
+%$M  \models_{pol} \ClassId \obeys  \PolSpecId  $\ \ \   iff\\
+%\SP $\ \ \ \forall \M',\sigma. (\sigma,\_)\in \Arising(\M*\M').$\\
+%\
+%\SP\SP $ M, \sigma \models_{pol} o:\ClassId \ \rightarrow\  o \obeys \PolSpecId  $
+%
+%\end{itemize}
+%\end{definition}
+
+ 
+
+
+

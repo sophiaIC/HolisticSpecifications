@@ -1,0 +1,326 @@
+%\appendix
+
+ 
+%already defined in LLNCS
+ \newtheorem{definition}{Definition}
+ \newtheorem{example}{Example}
+ \newtheorem{lemma}{Lemma}
+ \newtheorem{theorem}{Theorem}
+
+\input{FigureHoareLogic}
+
+\section{Formal Definition of the language \LangOO}
+
+ \subsection{Modules and Linking}
+ \label{formal:modules}
+
+  \LangOO\ modules map class identifiers to class descriptions, function  identifiers to  function descriptions,  and predicate identifiers to predicate descriptions. We also require implicitly for any module  $\M$, class identifier \c, function identifier \f, and predicate identifier \P, that 
+that $\M(\c)\in \syntax{ClassDescr}$ or undefined, that $\M(\f)\in \syntax{FunDescr}$ or undefined,  and $\M(\P)\in \syntax{PredDescr}$ or undefined. 
+
+
+
+\begin{definition}[Modules]
+ $ $ \\  % to force line break
+ 
+\begin{tabular}  {@{}l@{\,}c@{\,}ll}
+\\
+\syntax{Module} \ \  &    =   &    \syntax{ClassId}  $\cup$ \syntax{FunId} $\cup$ \syntax{PredId}   $\cup$ \syntax{SpecId}\   \\
+& &  $\longrightarrow$ \\
+& & ( \syntax{ClassDescr}  $\cup$ \syntax{FuncDescr} $\cup$ \syntax{PredDescr}\\
+& & \ \   $\cup$ \syntax{Specification}  )
+ \end{tabular}
+\end{definition}
+
+\noindent 
+We  define linking of modules, $M*M'$, to be the  union of their respective mappings, provided that the  domains of the two modules are disjoint:
+
+\begin{definition}[Linking and Lookup]
+\label{formal:Linking}
+Linking  of  modules $\M$ and $\M{'}$ is 
+
+\noindent $\ \ \ * \ : \ Module \times Module \ \longrightarrow \ Module  $
+\noindent
+
+$
+\M * \M{'}  =\ \left\{
+\begin{array}{l}
+                        \M *_{aux} \M{'},\ \ \   \hbox{if}\  \ dom(\M)\!\cap\!dom(\M{'})\!=\!\emptyset\\
+\bot  \ \ \ \mbox{otherwise.}
+\end{array}
+                    \right.\\
+(\M *_{aux} \M{'})(\clss{}) =\ \left\{
+\begin{array}{l}
+ \M(id),\ \ \ \mbox{if }
+\M(id) \mbox{ is defined}\\
+\M{'}(id) \ \ \  \mbox{otherwise.}
+\end{array}
+                    \right.
+                    $
+\end{definition}
+
+
+ 
+
+%%this was originally redefining macro M for some reason  
+%%the original macro had no arguments
+%%this one has got one. 
+%%actually I see no reason whatsoever for this defintion
+%%and removing it makes everything work
+%%
+%%\newcommand{\M}[1]{{\textit{M}{#1}}} %%KJX: WHY Sopha, WHY?  
+%%
+
+\paragraph{Classes}
+ 
+ We define the syntax ....
+
+\begin{definition}[Classes, Methods, Args]
+\label{def:syntax:classes}
+We define the syntax of modules below.
+
+\begin{tabular}{lcll}
+ \syntax{ClassDescr}   &   \BBC  &  \kw{class}  \syntax{ClassId} \\
+ & & \hspace{0.1in} \lb\,  (\kw{fld} \syntax{FieldId})$^*$   (\ \syntax{methBody}\ )$^*$ \ \rb
+\\
+\syntax{methBody} &\BBC&
+     \kw{method}    \syntaxMeth\lp \syntax{ParId}$^*$ \rp\\
+ & & \hspace{0.1in}  \lb\, \syntax{Stmts} \semi   \kw{return}  \syntax{Arg}  \, 
+    \rb
+ \\
+ \syntax{Stmts}  &\BBC&  \syntax{Stmt}     ~\SOR~  \syntax{Stmt} \semi \syntax{Stmts} \\
+\syntax{Stmt}    &\BBC&     \kw{var} \syntax{VarId}  {\kw{:=}} \syntax{Rhs}\\
+&  ~\SOR~ &     \syntax{VarId} {\kw{:=}} \syntax{Rhs} \\
+&  ~\SOR~ &    \kw{this}.\syntax{FieldId} {\kw{:=}} \syntax{Rhs} \\
+&  ~\SOR~ &   \kw{if}  \syntax{Arg}  \kw{then} \syntax{Stmts} \kw{else} \syntax{Stmts}\\
+&  ~\SOR~ &   \kw{skip}\\
+\syntax{Rhs} & \BBC&    \sd{\syntax{Arg}}{\kw{.}}\syntax{MethId}\lp  \syntax{Arg}$^*$ \rp    ~\SOR~   \syntax{Arg}  \\
+&  ~\SOR~ &   \sd{\kw{new} \syntax{ClassId}\lp \, \syntax{Arg}$^*$\, \rp} \\
+ \syntax{Arg} &\BBC&  \syntax{Path} ~\SOR~ \kw{true} ~\SOR~ \kw{false} ~\SOR~ \kw{null} \\
+\syntax{Path}    &\BBC& \syntax{ParId} ~\SOR~ \syntax{VarId} ~\SOR~ {\kw{this}} \\
+&   \SOR &  \syntax{Path}{\kw{.}} \syntax{FieldId} 
+ \end{tabular}
+\end{definition} 
+
+Note that \LangOO\, supports a limited form of protection: the syntax
+  supports  reading of fields of any object, but restricts each object
+  to being able to modify only its \emph{own} fields.
+ 
+\footnoteC{** TODO explain the syntax, and say why this language is so minimal. In particular why we do model object creation *** Also explain that we permit \kw{return} only at the end of a method body and how it looks in the Escrow. Say what we do not object creation, but these will come.
+}
+  
+
+\paragraph{Method Lookup} We define the method lookup function, $\cal M$ which returns the corresponding method definition given a class and a method identifier. 
+\begin{definition}[Lookup] The lookup function
+% $\cal M$ returns the corresponding method definition, if it is defined.
+
+%  \begin{center}
+$
+% \begin{array}{lcl}
+   \Meths {} {\clss{}} {m}      =       \kw{method}\, m\, \lp p_1, ... p_n \rp
+\lb stms \semi\, \kw{return}\ \sd{\syntax{a}} \rb  
+%  \end{array}
+ $
+% \end{center}
+
+\noindent
+ iff \ $ \M({\clss{}}) =  \kw{class}\  \syntax{c}\lb ...  $\\
+$ ~ $  \hspace{.7in} $ \kw{method}\, m\, \lp p_1, ... p_n \rp
+\lb stms \semi\, \kw{return}\ \sd{\syntax{a}} \rb$\\
+$ ~ $ \hspace{.6in} $ ... \rb.$
+\\
+\noindent
+undefined, otherwise.
+\end{definition}
+
+ 
+  \subsection{Execution of  \LangOO}
+
+\input{FigureOperSemantics} 
+
+  \paragraph{Runtime state}
+\label{formal:state} The runtime state~$\sigma$ consists of a stack frame~$\phi$, and a heap $\chi$. A stack frame  is  a mapping from 
+  receiver (\this) to its address, and from {the local variables ($\syntax{VarId}$) and parameters ($\syntax{ParId}$) to their values.}  Values are integers, 
+ the booleans \kw{true} or \kw{false}, addresses, or \kw{null}. Addresses are ranged over by $\iota$. The heap maps addresses to objects. Objects are tuples consisting of the class of the object, and a  mapping from field identifiers onto values.
+
+
+\begin{tabular}{lll}
+$\sigma \in $ \syntax{state}  & =  &  \syntax{frame}  $\times$ \syntax{heap} \\
+ $\phi \in$   \syntax{frame}  & =  &   \syntax{{StackId}} $\longrightarrow$ \syntax{val} \\
+ $\chi \in$   \syntax{heap}  & =  \ \ \ &  \syntax{addr} $\longrightarrow$ \syntax{object} \\
+ $\prg{v}\in$ \syntax{val} & = &  $\{$   \nullK, \kw{true}, \kw{false}  $\}$    $\cup\  \syntax{addr}\ \cup \ \mathbb{N}$ \\
+ \syntax{object}\ \ & = &  \syntax{ClassId} $\times$ ( \ \syntax{FieldId} $\longrightarrow$ \syntax{val} \ ) \ \SP \SP \\
+$\iota, \iota',..$  & $\in$ & $\syntax{addr}$  \\
+% \syntax{res}  & = & $\{\ \nullPEC, \  \stuck\ \}$\ $\cup$\ \\
+{\syntax{StackId}}  & = & {$\{\ \kw{this}\  \}$\ $\cup$\ \syntax{VarId}  $\cup$\ \syntax{ParId}}\\
+\end{tabular}
+\footnoteC{{we used to support null pointer exceptions and stuck, but see comment below}}
+
+ \paragraph{The Operational Semantics of \LangOO}
+\label{formal:semantics}
+
+\newcommand{\cons}{\mathit{::}}
+\newcommand{\st}{\ensuremath{\mathit{st}}}
+\newcommand{\fs}{\ensuremath{\mathit{fs}}}
+\newcommand{\traverseFields}[3]{\mathit{traverseFields}_{#1}(#2,#3)}
+{We define $\interp{a}{\sigma}$, the {\em interpretation} of \jn{an argument~$a \in \syntax{Arg}$} in a state $\sigma$ as follows. }
+
+\begin{definition}[Interpretation] For a state {$\sigma = ({\phi}%\cons\st
+,\chi)$} we define
+
+$\begin{array}{lcl}
+\interp {\kw{null}} {\sigma} & = & {\kw{null}}
+\\
+\interp {\kw{true}} {\sigma} & = & {\kw{true}}
+\\
+{\interp {\kw{false}} {\sigma}} & = & {\kw{false}}
+\\
+\interp {{x}} {\sigma} & = & {\phi(x) \quad \mathrm{(for\   x \in\ } {\syntax{StackId}})}
+%\ \cup\ \syntax{ParId}\mathrm{)}}
+\\
+{\interp {p\kw{.}f} {\sigma}} & = & {\chi(\interp {p} {\sigma})(f)}   \quad \quad \mbox{is} \interp {p} {\sigma}
+\mbox{ is defined,} 
+\\
+& & \mbox{ undefined,} \quad \quad \mbox{otherwise} 
+%\\
+%{\interp {x\kw{.}\fs\kw{.}f} {\sigma}} & = &  
+ %{\chi(\interp {x\kw{.}\fs} {\sigma})(f)}
+  %{\interp {x\kw{.}\fs} {\sigma}} & = & 
+ % {\traverseFields{\chi}{\interp{x}{\sigma}}{\fs}} 
+\end{array}$ 
+
+\newcommand{\emptylist}{\epsilon}
+\noindent
+% SD the bolow is no longer needed {Here $\fs$ is a non-empty \kw{.}-separated list of \syntax{FieldId}s.}
+\end{definition}
+
+Execution uses module \M, and  maps a runtime state $\sigma$ and statements 
+\syntax{stmts} (respectively a right hand side $rhs$) % (code in the general case)
+onto a new state $\sigma'$ (respectively a new heap $\chi'$ and
+a value). {We therefore do not give execution rules for things like null-pointer-exception, or stuck execution. This allows us to keep the system simple; it will be easy to extend the semantics to a fully-fledged language.} 
+\begin{definition}
+
+%result.
+Execution  of \LangOO\ statements and expressions is defined in figure \ref{fig:Execution}, and has the following shape: 
+\begin{tabular}{lcl}
+ ${\rewriteLong {}}\s$ &  :  &    \syntax{Module}  $\times$  \syntax{state}  $\times$   \toby{\syntax{Stmts}}
+  \ \  $\longrightarrow $ \ \     \sd{{\syntax{state}}} 
+\\
+${\rewriteLong {}}\s$ &  :  &    \syntax{Module}  $\times$  \syntax{state}  $\times$   {\toby{\syntax{Rhs}}}
+  \ \  $\longrightarrow $ \ \     \syntax{heap} $\times$ \syntax{val}  
+ 
+\end{tabular}
+
+\noindent
+\end{definition}
+ 
+\paragraph{Arising and Reachable Configurations}  
+\label{formal:reachable}
+
+Policies need to be satisfied in all configurations which may arise during execution of some program. This leads us the concept of {\em arising} configuration. Arising configurations allow us to restrict the set of configurations we need to consider. For example, in a program where a class does not export visibility to a field, the constructor initialises the field to say $0$, and all method calls increment that field, the arising configurations will only consider states where the field is positive.
+
+A configuration is reachable from another configuration, if the former may be required for the evaluation of the latter after any number of steps.   
+
+$
+\SP  \Reach \ :
+\ \toby{\syntax{Module} \times \syntax{state} \times \syntax{Stmts}}  \\
+\SP\SP\SP\SP \SP\SP\SP\SP \longrightarrow \mathcal{P}( \toby{\syntax{state} \times \syntax{Stmts}}  )
+$
+
+%\kjx{again: e or Stmts??? fix here, fix in the paper} STmts
+
+\noindent
+In figure \ref{fig:reach} we define the function  $\Reach$  by cases on the structure of the expression, and depending on the execution of the statement. The set $\Reach(\M, \sigma, \stmts)$
+  collects all configurations reachable during execution of $\sigma, \stmts$. Note that the function  $\Reach(\M, \sigma, \stmts) $ is defined, even when the execution should diverge. This is important, because it allows us to give meaning to capability policies without requiring termination. 
+%In case of divergence, $\Reach(\M, \sigma,\stmtssfra) $ will be an infinite set. 
+ 
+ 
+ 
+We  then define $\Arising(\M)$ as the set of runtime configurations
+which may be reached during execution of some initial context ($\sigma_0$,$\code_0$).
+ A context is initial if its heap contains only objects of class \prg{Object}.
+%, and its stack contains only one frame]
+ % and the code contains exclusively method calls of methods defined in $M$. }
+%   form 
+%   consider all configurations which may be reached from such initial configurations.
+  %  which are well-typed
+% under the assumptions that \kw{x} and \this\ denote objects of class \prg{Object}.
+%These concepts are defined in App. \ref{formal:arising}.
+%The {\em arising} configurations are those which may be reached by executing an initial configuration, where initial configurations all configurations that may be encountered at the start of program execution. %, \cf \ref{def:initial}.
+
+\begin{definition}[Arising and Initial configurations] $ $ We define the mappings \\
+$\begin{array}{lcl}
+\SP {\mathcal{I}nit} & \ : \ & \toby{\syntax{Module}} \   \longrightarrow\  \mathcal{P}( \toby{\syntax{state} \times \syntax{Stmt}}  )
+\\
+ \Arising & : &  \toby{\syntax{Module}}    \longrightarrow \mathcal{P}( \toby{\syntax{state}} \times \syntax{Stmts}  )
+\end{array}$
+
+\noindent
+as follows:\\
+$\begin{array}{l@{\,}l}
+ {\mathcal{I}nit}(\M)   =  &  \{ \ (\ \sigma_0, \kw{new}\ \clss{}.\prg{m}\lp\kw{new}\  \clss{'} \rp) \ |    \ \clss{},\clss{'}\in dom( \M) \\
+    &  \SP  \mbox{where}\  \sigma_0\ =\ ( (\iota,\kw{null}),\chi_0), \\
+    & \SP  \mbox{and}\   \chi_0(\iota)=(\prg{Object}, \emptyset)\  \}
+ \\
+ \Arising(\M)    =   & \    \bigcup_{ (\sigma,\code{})\in  \mathcal{I}nit (\M)}  \Reach(\M, \sigma, \code{})
+\end{array}$
+\end{definition}
+
+
+\noindent
+Initial configuration should be as ``minimal'' as possible, We therefore construct a heap which has only one object, and execute a method call on a newly created
+object, with another newly created object as argument. 
+
+
+
+
+\begin{figure*} 
+$
+\begin{array}{lcl}
+%  \Reach(\M{}, \sigma,\kw{a}) & \ =\  & \{ \ ( \kw{skip}, \sigma ) \}  %  \{ \ (\kw{a},\sigma) \ \}
+  \\
+ \Reach(\M{}, \sigma, \prg{v}\kw{:=} \kw{new}\, \clss{}\lp \prg{a}_1,...\prg{a}_n \rp) & = &  \{ \ ( \prg{v}\kw{:=}\kw{new}\, \clss{}\lp \prg{a}_1,...\prg{a}_n \rp,\sigma), \ ( \kw{skip}, \sigma' ) \}
+ \\
+ & &  \mbox{where }  \M,\sigma, \prg{v}\kw{:=} \kw{new}\, \clss{}\lp \prg{a}_1,...\prg{a}_n \rp \leadsto \sigma'
+ \\
+\Reach(\M{}, \sigma,\prg{stmt}\semi\prg{stmts}) & = &  
+\Reach(\M,\sigma,\prg{stmt}) \cup \Reach(\M, \sigma',\prg{stmts})  
+\\ & & \mbox{where }  \M,\sigma, \prg{stmt} \leadsto \sigma'
+\\
+\Reach(\M{}, \sigma,\prg{v}\kw{:=}\prg{a}) & = & 
+ \{ ( \prg{v}\kw{:=}\prg{a}, \sigma), \ ( \kw{skip}, \sigma' ) \}
+ \\
+ & &  \mbox{where }  \M,\sigma, \prg{v}\kw{:=} \prg{a} \leadsto \sigma'
+\\
+\Reach(\M{}, \sigma,\prg{v} \kw{:=} \prg{a}\kw{.}\prg{m}\lp \prg{a}_1,...\prg{a}_n \rp) & = &
+\{ \ (\prg{v} \kw{:=}\prg{a}\kw{.}\prg{m}\lp \prg{a}_1,...\prg{a}_n \rp, \sigma ) , \ ({\kw {skip}}, \sigma''' ) \  \} \ \cup 
+\ \Reach(\M{}, \sigma',\prg{stmts}) \\ 
+& &  \mbox{where}
+% \ \chi=\sigma\downarrow_1, \mbox{and}\ \sigma'=(\kw{this}\mapsto \interp{a_1}{\sigma},x_1 \mapsto \interp{a_n}{\sigma}..x_n \mapsto \interp{a_n}{\sigma}),\chi)\ 
+ \\ 
+& &  \mbox{and} \  
+BLA
+
+% \Meths {} 
+%      {\chi(\interp{a_1}{\sigma})\downarrow_1} 
+%      {\prg{m}}  
+      = ... \lp\ \prg{stmts}\kw{;} \, \kw{return} \prg{a}\ \rp   
+     \  \mbox{and}  \\
+     & & 
+       \M,\sigma', \prg{stmts}  \leadsto \sigma''   \  \mbox{and} \ \sigma'''= (\sigma\downarrow_1[\prg{v} \mapsto \interp{a}{\sigma''}],  \sigma''\downarrow_2)
+\\
+\Reach(\M{}, \sigma,{\kw {skip}}) & = &
+\{ \ ({\kw {skip}}, \sigma ) \  \}   \\ 
+\Reach(\M{}, \sigma,{\kw {if}}\, \prg{a}\, {\kw {then}}\, \prg{stmts}_1\, {\kw {else}}\, \prg{stmts}_2\, ) & = &
+\{ \ ( {\kw {if}}\, \prg{a}\, {\kw {then}}\, \prg{stmts}_1\, {\kw {else}}\, \prg{stmts}_2, \sigma ) , \  \}  \  \cup \
+\Reach(\M{}, \sigma,\prg{stmts''})\\
+& & \mbox{ where } \prg{stmts''}=\prg{stmts}_1 \mbox{ if } \interp{a}{\sigma}={\kw {true}},\ \mbox{ otherwise } 
+\prg{stmts''}=\prg{stmts}_2
+\end{array}
+$
+\caption{Reachable Configurations\label{fig:reach}}
+\end{figure*} 
+
+
+
+ 
+   

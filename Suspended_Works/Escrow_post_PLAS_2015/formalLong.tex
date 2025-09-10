@@ -1,0 +1,183 @@
+\section{Formal Definitions}
+
+In this section, we present a feather language, \LangOO, and build on that to
+define a specification language, \Chainmail, with explicit support
+for modelling trust and risk. We then use \LangOO\ and \Chainmail\ to
+prove that the mutually trusting escrow implementation
+(Figure~\ref{fig:DealV2}) meets our specification (Figure~\ref{fig:ValidEscrow}).
+%
+
+\subsection{\LangOO}
+\label{sec:Lan}
+
+In this section, we describe a small object oriented language,
+\LangOO\  (Featherweight Object Capability Language, not to be confused
+with FOCAL \cite{FOCAL-69}) which we will use to demonstrate our ideas. \LangOO\ is not
+meant to be representative of a real language, rather it is meant to
+demonstrate the salient features of our problem --- and our solution.
+%
+\LangOO\ is dynamically typed and memory-safe: it does not allow
+addresses to be forged, or non-existent methods or fields to be
+called, read or written. On the other hand, \LangOO\ does not check
+that the arguments to a method call or a field write are of the
+appropriate type either statically or dynamically: in this sense,
+\LangOO\ is inspired by JavaScript, E, and Dart's unchecked mode.
+\footnoteC{SD removed the following: Like
+Dart, \LangOO's syntax does support type annotations which are treated
+as comments. We keep types in order to make the programs easier to
+understand --- in spite of being unchecked in the semantics, all type
+annotations in this paper are correct.  On the other hand,}
+Morecover, our proofs
+of programs in \LangOO\ do not depend on the type annotations.
+%
+\LangOO\  supports modules, $M$,
+and a module linking operator $*$. In order to reflect the open world setting,
+where code of different provenance interoperates with one another without a central
+authority checking their compatibility,
+%\LangOO\  is dynamically typed, and
+linking only requires that the modules define separate entities and
+does not perform any other checks.
+%
+
+
+\footnoteC{SD removed the following: \LangOO\ enforces privacy dynamically. Accessing or calling
+private fields or methods is only allowed from method bodies of the
+same class as the object containing the field or method.
+%
+% same class or same object
+%
+Again, our aim is to model the open, dynamic guarantees given by
+contemporary distributed systems, and, as in such systems, for our
+proofs to rely upon minimal runtime guarantees provided by the
+programming language.
+Incorporating private fields directly allows us
+to reason about the core underlying programming idioms
+in a language without nested lexical scopes, rather than models
+of languages like JavaScript, E, or Grace that rely on lexical nesting
+for privacy.
+}
+
+\LangOO\ has one exception, \stuck, which stands for all dynamic
+failures: null pointer exceptions, stuck, reading/writing/calling
+non-existent fields or methods, and treating integers as addresses. We
+conflated all exceptions because these distinctions do not matter for
+our purposes. Crucially, though, \LangOO does support catching
+exceptions in the form of \kw{try} \syntax{e} \kw{catch} \syntax{e}. Tthis is
+vital so that programs can react when they discover that the
+objects they are collaborating with do not satisfy the expected
+specification.
+
+The operational semantics of  \LangOO\ has the shape\\
+ $\SP\SP\SP\SP\SP  \Prog{},\, \kappa,\, \syntax{e} \ \leadsto\  \kappa',\, \syntax{r}$,\\
+  where   \Prog{} contains the definitions of all the classes, $\kappa$, $\kappa'$ are runtime configurations, \syntax{e} is an expression, and \syntax{r} is a result, i.e. an address, or an integer, or \kw{null}, or the exception \stuck.
+
+Full definitions appear in the appendix
+
+
+\footnoteC{SD cut the following: In the remainder of this section we give a summary of the most
+salient features \LangOO. An interested reader may wish to peruse
+the appendix, but we believe that the rest of the paper can be
+understood without delving into the details of \LangOO.
+
+\LangOO\ modules are mappings from class identifiers to class
+descriptions. Class definitions contain field and method declarations
+which may be private or public. \LangOO\ does not support inheritance.  Values
+in  \LangOO\ are addresses, \nullKW and integers. Expressions are
+field read, field write, method call, and exception handling in the
+from or \kw{try} \syntax{e} \kw{catch} \syntax{e}.The full syntax
+definition appears % in the appendix
+ in figure \ref{fig:syntax}.
+
+ The meaning of private in \LangOO\ is similar to that in C++ or Java,
+ in that it allows private fields to be read or written, and private
+ methods to be called, only when the the receiver of the currently
+ executing method has the same class as the object whose field is
+ being accessed or whose method is being called. In contrast to Java
+ and C++, this restriction is enforced dynamically. This can be seen
+ by the operational semantics, rules \ruleN{fldRd}, \ruleN{fldAss},
+ and \ruleN{methCall} given in figure \ref{fig:ExecutionNormal},
+ and %in rules
+ \ruleN{fldRdPrivErr}, \ruleN{fldAssPrivErr}, and
+ \ruleN{methCallPrivErr} given in figure
+ \ref{fig:ExecutionExceptions}.
+% in the appendix.
+}
+
+\subsubsection{Paths}
+
+The notion of path is central to our specifications. Paths % in \LangOO\
+start with the receiver \this, or the formal parameter \x, followed by
+a possibly empty sequence of field identifiers (\prg{f}). We define
+the lookup of a path $p$ in a context $\kappa$ in the expected way,
+where we read the receiver or argument from the frame, and follow the
+values of the fields in the heap.
+
+
+\begin{definition}[Paths and their interpretations]
+\label{def:paths}
+~ \\
+
+$
+\begin{array}{l}
+\begin{array}{lcl}
+ \textit{p}  \in Path & ::= & \this  \  | \ \x \  |  \  \textit{p}.\prg{f}
+ \\
+  \interp{\cdot} {}  & : &  Path \times ctxt \longrightarrow  value
+\\
+ \end{array}
+ \\
+\begin{array}{lcll}
+\interp{\this}{\kappa}  & =  & \iota & \mbox{if}\ \kappa=((\iota,\_), \_) \\
+\interp{\x}{\kappa}  & =  & \iota & \mbox{if}\ \kappa=((\_,\val{}), \_) \\
+\interp{p.\prg{f}}{\kappa}  & =  & \val{} & \mbox{if}\  \interp{p}{\kappa}=\iota,  \mbox{and }   \kappa\downarrow_2(\iota,\prg{f})=\val{}\ \\
+\interp{p.\prg{f}}{\kappa}  & =  & \bot & \mbox{otherwise}\ \\
+\end{array}
+\end{array}
+$
+\end{definition}
+
+
+Therefore, if  execution of a path is defined, then looking up that path in context of the same configuration will return the same value, but the opposite does not hold. In other words,  $ \Prog{},\, \kappa,\, \syntax{p} \ \leadsto\  \kappa,\, \val{}$ implies \interp{\syntax{p}}{\kappa} = \val{}, while $\interp{\syntax{p}}{\kappa} = \val{}$ implies, for any program $\Prog{}$ that $ \Prog{},\, \kappa,\, \syntax{p} \ \leadsto\  \kappa,\, \val{}$  or $ \Prog{},\, \kappa,\, \syntax{p} \ \leadsto\  \kappa,\, \stuck$.
+
+
+%close to repeats above
+%
+%  Even though the syntax of \LangOO\ is similar to Java, and all fields
+%  and methods are annotated with a type, these types are not enforced
+%  neither statically nor dynamically.  \LangOO\ is memory safe, in that
+%  addresses cannot be forged, and it is dynamically typed in that does
+%  not allow non-existing methods to be called, and non-existing fields
+%  to be read or written. \LangOO\ requires the fields to be declared
+%  with a type, which is either a class name or an integer. This type is
+%  used for the initialisation of the fields.
+
+% Repeats figure aboe - can we just dump this para in to the appendix?
+%
+%  In \LangOO\ there is one exception, \stuck, which stands for null
+%  pointer exceptions, stuck, reading/writing/calling non-existent
+%  fields or methods, and treating integers as addresses, more in figure
+%  \ref{fig:ExecutionExceptions}. The exception is propagated to the
+%  enclosing expression, or enclosing method call, unless caught within
+%  a \kw{try} \syntax{e} \kw{catch} \syntax{e}. More in figure
+%  \ref{fig:ExecutionExcptionPropagateCatch}.
+
+
+
+
+ \subsection{The Specification Language \Chainmail}
+\input{SpecLanguage}
+
+
+\subsection{Verifying the Escrow against the Specification}
+
+We are now able to verify that the code in
+Figure~\ref{fig:DealV2} meets the specification in
+Figure~\ref{fig:ValidEscrow}. We follow the lines of argument laid out
+informally above:
+establishing mutual trust
+(section~\ref{sec:mutual-trust}),
+using escrow purses to manage risk (section~\ref{sec:escrows}),
+and hypothetical reasoning by cases (section~\ref{sec:VaildEscrow}).
+The devils are of course in the details, and the details are in
+Appendix~B as space did not permit us to include the full proof in
+body of the paper.

@@ -1,0 +1,229 @@
+\renewcommand{\true}{true}
+
+\begin{figure*} 
+$\begin{array}{l}
+ \begin{array}{lcl}
+      \inferenceruleNP {varAsg} {
+} {
+         \Hoare {\true}
+      {  \prg{v} \kw{:=} \prg{a} } { \prg{v}=\prg{a}\pre }  {\true}
+}
+& \SP\SP  &
+\inferenceruleN{fieldAsg} {
+ 
+}{
+     \Hoare
+     {\true}
+      { \kw{this.}\prg{f}  \kw{:=} \prg{a} }
+      { \kw{this.}\prg{f}   = \prg{a}\pre}
+       {\true}
+}
+\end{array}
+\\ \\
+  \inferenceruleNNP {meth-call-1} {
+    { \M(S) \,= \,  \kw{spec}\ S\  \lb\  \overline{Policy}, \A \,\lb \, \prg{this.m(par)}\, \rb\, \B, \overline{Policy'}\  \rb}
+% \SP\SP \SP\SP\SP
+  %  \B''[\prg{x}/\prg{this},\prg{y}/\prg{par}] = \B'''
+    } {
+    \Hoare{\prg{x}\obeys S\wedge  \A[\prg{x}/\prg{this},\prg{y}/\prg{par}]} {\prg{v} \, \kw{:=}\, \prg{x.m(y)}} {\B[\prg{x}/\prg{this},\prg{y}/\prg{par},\prg{v}/\prg{res}]}   {{\true}} % {\B'''}
+  }
+  \\
+  \\
+   \inferenceruleNNP {meth-call-2} {
+         \B \equiv \forall \prg{z}:\pre \Obj.\ \MayAccess({\prg{v},\prg{z}}) \rightarrow  
+    (\, \MayAccess\pre(\prg{x},\prg{z})\, \vee \, \MayAccess\pre(\prg{y},\prg{z})\, )\\
+   \B' \equiv   \forall \prg{z},\prg{u}:\pre \Obj. \ ( \ \MayAccess({\prg{u},\prg{z}}) \rightarrow \\
+       $ ~ $ \hspace{1.3in}  ( \MayAccess\pre(\prg{u},\prg{z}) \ \ \ \vee  \\
+                 $ ~ $ \hspace{1.7in}(\  (\MayAccess\pre({\prg{x},\prg{z}})\vee \MayAccess\pre({\prg{y},\prg{z}}) )\ \wedge \\
+                 $ ~ $ \hspace{1.8in}  (\MayAccess\pre({\prg{x},\prg{u}})\vee \MayAccess\pre({\prg{y},\prg{u}}) ) \ ) \ ) \ \  )  } {
+    \Hoare{\true} {\prg{v} \, \kw{:=}\, \prg{x.m(y)}} {\B}
+           { \B'  }
+}
+\\ \\
+   \inferenceruleNNP {frame-methCall} {
+          \Hoare{\A}   {v:=\prg{x.m(y)}} {{\true}}  {\B} \\
+B \equiv \forall \prg{z}. (\ \MayAffect(\prg{z},\A')  \rightarrow \B'({\prg{z}})\ )\ \ \wedge 
+          \\
+% trick for layout
+		\SP\SP  \ 
+		{\forall \prg{z}.(\ (\MayAccess(\prg{x},\prg{z}) \vee \MayAccess(\prg{y},\prg{z})
+           \vee \New(\prg{z}) \ )%(\prg{z}:\prg{Object}\wedge \neg ( \prg{z}:\pre\prg{Object}) ) \ )
+           \ \rightarrow\  \neg \B'(\prg{z})\ )}
+}
+{
+          \Hoare{{\A\wedge\A'}} {\prg{v:=x.m(y)}} {\A'} {{\true}}
+}
+\\ \\
+\begin{array}{lcl}
+ \inferenceruleB {\SP\SP\SP\SP\SP\SP\SP\SP\SP\SP}   {code-invar-1} {
+            { \M( S) \equiv \  \kw{spec}\ S\  \lb\  \overline{Policy}, P, \overline{Policy'}\  \rb}
+            \\
+            \B \equiv {\forall \prg{x}.(\, \prg{x} \obeys S \rightarrow P[/\prg{x}/\prg{this}]\, )}
+  }
+     {
+       \Hoare {{\true}} {\stmts} {{\true}} {\B}
+      }
+      & &
+\inferenceruleB {\SP\SP\SP\SP\SP\SP\SP\SP\SP\SP}   {code-invar-2} {           ~ \\
+     }{
+    \Hoare  {e \obeys S}  {\stmts}    {\true}  {e\pre \obeys S}
+      }
+
+\end{array}
+\\ \\
+\begin{array}{lcccr}
+  \inferenceruleNP{Cons-2} {  % NEW
+          \Hoare{\A}{\stmts}{ \B}{\B''}   \\
+           \sd{\A',\B' \rightarrow_\M \A,\_}   
+     }
+     {
+       \Hoare{\A'}{\stmts}{\sd{\B'\!\rightarrow\!\B}}{\B''}
+        }
+        &\ \ &
+\inferenceruleNP {Cons-3} 
+{ 
+  \Hoare{\A}{\stmts}{ \B}{\B'} %
+  \\
+ {{\A}, \B \rightarrow_\M \_,\A'}  
+} {
+   \Hoare{{\A}}{\stmts}{ \A'}{\B'}
+   }
+&    &
+  \inferenceruleNP {Cons-4} { % was Cons-2 
+          \Hoare{\A}{\stmts}{ \A'}{\B'}  
+        \\
+     {{\A},\A' \rightarrow_\M \B}  
+     }
+     {
+       \Hoare{\A}{\stmts}{ \B}{{\B'}}
+        }
+ \end{array}
+\\ \\
+\inferenceruleNNP{sequence} {
+        \Hoare{\A}{\stmtss_1}{\B_1}{\B'}  \ \SP        \Hoare{\A_2}{\stmtss_2}{ \B_2}{\B'}
+        % \\
+       \ \SP
+         {\A,\B_1\rightarrow_\M \_,\A_2}    \ \SP  {\B_1,\B_2\rightarrow_\M \B}
+        }
+     {
+       \Hoare{\A}{\stmtss_1; \, \stmtss_2}{ \B}{\B'}
+        } 
+\end{array} 
+$
+\caption{A selection of Hoare Logic rules; we assume that the module \M\ is globally given}
+\label{fig:HoareLogic}
+\end{figure*}
+
+% \noindent
+Figure \ref{fig:HoareLogic} shows a selection of our Hoare rules. It starts with two familiar Hoare Logic rules: In \ruleN{varAsg}  and \ruleN{fieldAsg}  the postconditions
+use the previous value of the
+right-hand-side, and thus  allow us to deduce, \eg: \\ % that\\
+\SP \SP \Hoare {\kw{this}.f=21} {\kw{this}.f=2*\kw{this}.f} {\kw{this}.f=42}  {\true}.
+\\
+%\vspace{.1in}
+%
+\scd{\ruleN{meth-call-1} is also familiar, as it reasons over method calls under the assumption that the 
+receiver   \obeys a specification $S$, and that the current state satisfies the precondition of 
+\prg{m} as defined in $S$.}
+% by making use of the \obeys assertion.
+
+The remaining rules are more salient.
+
+\ruleN{meth-call-2} expresses the basic axiom of object-capability
+systems that ``only connectivity begets connectivity''~\cite{MillerPhD}.
+\tobym{It promises in the postcondition that the result of the method call~\prg{v} 
+cannot expose access to any object \prg{z} that wasn't
+accessible initially to the method call's receiver~\prg{x} or argument~\prg{y}.
+Additionally, it also promises that,
+{\em during} execution of the method, accessibility does
+not change, unless the participants (here \prg{z}  and \prg{u})
+were accessible to the receiver and/or the argument {\em before}
+the call. Note that this latter promise is made via the invariant (fourth)  rather than  the postcondition (third) part
+of the Hoare-tuple. Note also that this rule is applicable {\em even if we know nothing} about the 
+receiver of the call:}
+\kjx{this rule and the invariants are critical to reasoning about risk.}
+
+\ruleN{code-invar-1} allows reasoning under the hypothesis that
+an object~$o$ \obeys its specification~$S$: in this case~$o$ can be trusted
+to act in accordance with~$S$ always.
+
+
+\ruleN{frame-methCall} also
+expresses an axiom of object-capability languages, namely that
+in order to cause some visible effect, one must have access to an object able
+to perform the effect. Coupled with ``only connectivity begets connectivity'',
+this implies that a method can cause some effect only if the caller has
+(transitive) access to some object able to cause the effect (including
+perhaps the callee).
+
+
+The remaining rules each make use of the entailment judgement~$\rightarrow_M$,
+which allows converting back and forth
+between one-state and two-state
+assertions and comes in number of flavours; the relevant ones are
+defined as follows.
+
+\setcounter{definition}{18}
+\begin{definition}[Entailment]
+\label{def:entail}
+$ $ \\
+
+\begin{enumerate} 
+\item
+\label{entailPQPP}
+{
+$\A, \B \rightarrow_\M \A',\A''$\ \  iff\ \\
+$\forall \sigma, \sigma'. \ \sigma\models \A\ \wedge\  \sigma,\sigma' \models \B \ \ \longrightarrow\ \ \sigma \models \A' \ \wedge\  \sigma' \models \A''$}
+\item
+\label{entailPPQ}
+{$\A, \A' \rightarrow_\M \B$}\ \  iff\ \\
+{$\forall \sigma, \sigma'. \ \sigma\models \A\ \wedge\  \sigma' \models \A'\  \ \longrightarrow\ \  \sigma,\sigma' \models \B$}
+\item
+\label{entailQQQ}
+{$\B, \B' \rightarrow_\M \B''$}\ \  iff\ \\
+{$\forall \sigma, \sigma', \sigma''. \  \sigma,\sigma' \models \B\ \wedge\   \sigma',\sigma'' \models \B'\  \ \longrightarrow\ \  \sigma,\sigma'' \models \B''$}
+\end{enumerate}
+\end{definition}
+
+The rules \ruleN{cons-3} and \ruleN{cons-4} make use of the entailment
+judgement to allow converting between one- and two-state postconditions
+during Hoare logic reasoning.
+To reason across sequenced computations $\stmtss_1; \stmtss_2$,
+the \ruleN{sequence} rule requires finding a one-state assertion~$\A_2$ 
+that holds after $\stmtss_1$ and is the precondition of $\stmtss_2$. It uses
+the entailment $\A, \B_1 \rightarrow_M \_,\A_2$ to require that
+$\stmtss_1$'s execution guarantees $\A_2$, and the entailment
+$B_1, B_2 \rightarrow_M B$ to require that the combined execution
+of $\stmtss_1$ and $\stmtss_2$ guarantees the top-level postcondition~$B$.
+
+ % \scd{Soundnss of the Hoare rules is stated below, and proven in \cite{appendix}}
+
+\noindent
+
+\setcounter{theorem}{2}
+\begin{theorem}[Soundness of the Hoare Logic]
+
+ For all modules \M, statements \prg{stms} and assertions $\A$, $\B$ and $\B'$ ,  
+\\
+$\SP\SP$ If \ \ $\HoareExpl {\A} {\prg{stms}}{\M}  {\B'} {\B}$, \   then\  $\M \models \HoareImpl {\A} {\prg{stms}} {\B'} {\B}$.  
+
+\end{theorem}
+
+\noindent
+\scd{The theorem is proven in \cite{appendix}.}
+
+
+\vspace{.05in}
+\noindent 
+\scd{In summary, we have four ''code agnostic'' rules ---
+% SD I am happy if you find a better word than code-agnistiv, 
+rules which 
+are applicable regardless of the underlying code. Rules \tobym{\ruleN{frame-methCall} 
+and \ruleN{meth-call-2}}  express  restrictions on the effects of a
+method call.
+\kjx{Normally such restrictions stem from the specification of the
+  method being called, but here we can argue in the absence of any
+  such specifications, allowing us to reason about risk even in open systems.}
+Rules \ruleN{Code-Invar-1}  and \ruleN{Code-Invar-2} are applicable on {\em any} code, and allow us to
+assume that an object which \obeys a specification $S$, satisfies all policies from $S$, and that the
+object, once trusted, will always be {\kw {obeying}} $S$.}

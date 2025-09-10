@@ -1,0 +1,122 @@
+
+\begin{figure*} 
+\begin{lstlisting}
+   true
+        {  var escrowMoney := sellerMoney.sprout  }
+   $\sM\pre \obeys \PS \longrightarrow$ 
+           $(\ \eM \obeys\, \PS\  \wedge$  
+             $CanTrade(\eM,\sM)\  \wedge$
+             $\eM.\bal = 0\  \wedge\   $
+             $\forall p\in\pre \GP.\  p.\bal\pre=p.\bal\ \wedge $
+             $ \sM  \obeys \PS\ ) \ \ \ \ \wedge $
+    $ \forall p:\pre \GP.$
+       $(\, p.\bal\pre=p.\bal \vee  \MayAccess\pre(\sM,p) \, )\ \ \wedge$
+    $ \forall z:\pre \Obj.$
+       $(\, \MayAccess(\eM,z) \longrightarrow \MayAccess\pre(\sM,z)\, ) \  \wedge$
+    $ \forall z,y:\pre \Obj.\ $
+       $ (\,  \MayAccess(\,z,y\,)\  \longrightarrow\   $
+            $(\, \MayAccess\pre(\, z, y\,)\  \vee$
+                    $\MayAccess\pre(\, \sM, y\,) \wedge$
+                    $\MayAccess\pre(\, \sM, z\,) \, ) \ \ )$
+    $\HoareCSep$
+    true
+   \end{lstlisting}
+%\vspace*{-7mm}
+\caption{Hoare tuple for first step in \prg{deal}}
+\label{fig:DealV3:S1}
+\end{figure*}
+
+
+% \paragraph{First Step} 
+\kjx{We now use our Hoare Logic to prove the key steps of the escrow
+  protocol, establishing mutual trust and delineating the risk. Here we have space to show just
+  one-way trust between the escrow and seller in full: the remaining reasoning
+  to establish mutual trust is outlined in the technical report \cite{appendix}.}
+%
+\kjx{Figure \ref{fig:DealV3:S1} shows the  Hoare tuple
+for the first statement in method \prg{deal} (line 4 from Figure \ref{fig:DealV2})}. 
+Lines 3-8 of Figure \ref{fig:DealV3:S1} describe the postcondition in case  \eM\ indeed \obeys \PS, while lines 9-17 make absolutely no assumption
+about the trustworthiness, or provenance, of \eM.
+
+\noindent
+% We obtain lines 3-7 from  policy \prg{Pol\_sprout}  and application of  \ruleN{Meth-Call-1} and \ruleN{Cons-2}, while line 8 requires a framing step.
+
+\noindent
+By \prg{Pol\_sprout}  and \ruleN{Meth-Call-1} we obtain that \\
+$  % (1) \\
+  \HoareNLSP {A}
+      {\sM \obeys  \PS}
+       {\eM:=\sM.\prg{sprout}}
+      { \eM  \obeys  \PS\  \wedge  ... rest ...} 
+         {\true} %  {\true}
+$
+
+\noindent
+By application   \ruleN{Cons-2} on the above we obtain\\
+$  
+ \HoareNLSP {B}
+      {\true}
+       {\eM:=\sM.\sprout}
+      { \sM\pre \obeys\, \PS \rightarrow \ \\
+      \HoareSP\SP\SP (\ \eM  \obeys \PS\  \wedge \ ... rest ...\, )}
+       { \true }  $
+
+\noindent
+To obtain line 8, we apply a basic framing rule %a la Reynolds 
+(\ruleN{frame-general} in \cite{appendix}) and get\\ % that \\
+\SP $\Hoare {...}  {\eM:=\sM.\sprout} {\eM\pre=\eM} {...} $, \\ and
+then, in conjunction with \ruleN{code-invar-2}, \ruleN{Cons-2}   we also obtain that\\ 
+$\HoareNLSP {C} 
+     {\true}  
+     {\eM:=\sM.\sprout} 
+     {\eM\pre\obeys\PS \rightarrow \eM\obeys\PS} 
+     {...}
+$ \\
+We can then apply a conjunction rule (\ruleN{Conj} in \cite{appendix}) on \ruleN{B} and  \ruleN{C}, and obtain the postcondition as in 4-8.\\
+To obtain 9-11, we will apply several of the code-agnostic rules. After all, here we cannot appeal to the specification of \sprout, as we do not
+know whether \sM\ adheres to \PS. We start by application of \ruleN{meth-Call-2}, and a consequence rule (\ruleN{Cons-1} in \cite{appendix}):\\
+$\HoareNLSP {D} 
+     {\true}  
+     {\eM:=\sM.\sprout} 
+     {\true} 
+     {\forall z. \ \MayAccess(\sM,z) \rightarrow \MayAccess\pre(\sM,z) }
+$ \\
+By applying  the fact that $\forall u,v,w,\ \MayAccess(u,v)\ \wedge\ \MayAccess(v,w) \rightarrow \MayAccess(u,w)$, and conjunction  and inference rules on \ruleN{D}, we get:\\
+$\HoareNLSP {E} 
+     {\neg \MayAccess(\sM,p)}  
+     {\eM:=\sM.\sprout} 
+     {\true} 
+     {\forall z. \ \MayAccess(\sM,z) \rightarrow \neg \MayAccess(z,p) }
+$ \\
+By application of rule  \ruleN{code-invar-1}, we obtain:\\
+$\HoareNLSP {F} 
+     {\true}  
+     {\eM:=\sM.\sprout} 
+     {\true} 
+     {\forall p. (\, p\obeys\PS \rightarrow (\forall z. \, \MayAffect(z,p.\bal) \rightarrow \MayAccess(z,p)) \, )}
+$ \\
+Through a combination of \ruleN{E} and \ruleN{F} and application of conjunction, and application of \ruleN{frame-meth-call}, we obtain that\\
+$\HoareNLSP {G} 
+      {\neg \MayAccess(\sM,p)}  
+     {\eM:=\sM.\sprout} 
+     {\true} 
+     {p\obeys\pre \PS \rightarrow (p.\bal=p.\bal\pre) }
+$ \\
+Now by applying \ruleN{Cons-2} on \ruleN{F}, we obtain\\
+$\HoareNLSP {H} 
+      { \true}  
+     {\eM:=\sM.\sprout} 
+     {\true} 
+     {\forall p. \, p\obeys\pre \PS \rightarrow \\
+      \SP\SP\SP\SP (\ p.\bal=p.\bal\pre  \ \vee\  \MayAccess(\sM,p) \ ) }
+$
+\\
+We now apply \ruleN{Cons-1} from \cite{appendix} to conjoin the invariant and postcondition, obtaining\\
+$\HoareNLSP {I} 
+      { \true}  
+     {\eM:=\sM.\sprout} 
+          {\forall p. \, p\obeys\pre \PS \rightarrow \\
+      \SP\SP\SP\SP (\ p.\bal=p.\bal\pre  \ \vee\  \MayAccess(\sM,p) \ ) }
+      {\true} $
+Last, we obtain lines 11-12 from \ruleN{Meth-Call-2}. We also obtain lines 13-17 from \ruleN{Meth-Call-2}, and   \ruleN{Cons-1} from \cite{appendix}.
+

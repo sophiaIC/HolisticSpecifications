@@ -1,0 +1,418 @@
+\section{A Formal Model of Trust and Risk}
+\label{section:formal}
+ 
+In this section, we sketch the most salient features of the formal underpinnings of our system; we leave the full exposition to further work.
+ 
+*** TODO: Focal and CHAINMAIL; the HOare Logic; the PROOF OUTLINE ***
+
+
+\subsection{Focal and Chainmail}
+
+\paragraph{Underlying Programming and Specification Language}
+We assume a small object oriented language, \LangOO\ 
+(Featherweight Object Capability Language, not to be confused
+with FOCAL \cite{FOCAL-69}) 
+which supports classes, fields and methods.
+%
+\LangOO\ is  memory-safe: it does not allow
+addresses to be forged, or non-existent methods or fields to be
+called, read or written.   \LangOO\ is dynamically typed: it does not check
+that the arguments to a method call or a field write are of the
+appropriate type either statically or dynamically: in this sense,
+\LangOO\ is inspired by JavaScript, E, and Dart's unchecked mode.
+ 
+
+\LangOO\  supports modules, $M$, which are  mappings from class
+identifiers to class definitions. 
+The module linking operator $*$ combines these definitions, provided that 
+the modules' mappings have separate domains, and performs no other checks. 
+This reflects the open world setting,
+where objects of different provenance interoperate without a central
+authority.
+For example, taking $M_{p}$ as a module implementing purses, and $M_e$
+as another module implementing the escrow,
+$M_{pm}*M_e$ is defined but $M_{e}*M_e$ is not.
+
+
+\LangOO\  dynamically enforces \prg{private} fields  and methods.   Accessing or calling
+private fields or methods is only allowed from method bodies of the
+same class; if not, the exception \stuck\ is thrown.
+\jnc{We model private fields as they are simpler than 
+nested lexical scopes.}
+ 
+
+The operational semantics of  \LangOO\ has the shape\\
+ $\SP\SP\SP\SP\SP  \Prog{},\, \kappa,\, \prg{code}\ \leadsto\  \kappa',\, \syntax{r}$,\\
+  where   \Prog{} is a module containing all class declarations used,
+  $\kappa$, $\kappa'$ are runtime configurations, \sd{\prg{code} is
+    some code in the syntax of \LangOO},  and \syntax{r} is a
+  result. Results are  addresses, % or an integer, or \kw{null},  
+  or the exception \stuck.
+
+ 
+% The notion of path is central to our specifications. 
+Paths are written as $p$. They % in \LangOO\
+start with the receiver \this, or the formal parameter \x, followed by
+a % possibly empty 
+sequence of field identifiers (\prg{f}). We define
+$\interp{p}{\kappa}$, the lookup of a path $p$ in a context $\kappa$ in the expected way,
+where we read the receiver or argument from the frame, and follow the
+values of the fields in the heap.
+ Therefore, if  execution of a path is defined, then looking up that
+ path in context of the same configuration will return the same value.
+\jnCUT{but the opposite does not hold. In other words,  $ \Prog{},\, \kappa,\, \syntax{p} \ \leadsto\  \kappa,\, \val{}$ implies \interp{\syntax{p}}{\kappa} = \val{}.}
+% \sdCut{while $\interp{\syntax{p}}{\kappa} = \val{}$ implies,%  for any program $\Prog{}$ 
+% that $ \Prog{},\, \kappa,\, \syntax{p} \ \leadsto\  \kappa,\, \val{}$  or $ \Prog{},\, \kappa,\, \syntax{p} \ \leadsto\  \kappa,\, \stuck$.}}{CUT}
+
+
+ \renewcommand{\code}{{\prg{code}}}
+
+We assume an underlying specification language with assertions indicated by  {\it P}. Validity of these assertions is expressed through the judgment  $\Prog{},\kappa \models {\it P}$. \sd{We also expect support for the assertion $p$:$\prg{ClassId}$  which expresses
+ that  path $p$ is pointing to an object of class \prg{ClassId}.} When writing method specifications, we need to compare properties of the state before with properties of the state after method call.  For this, we use annotations \textsf{pre}, or \textsf{post} and write two-state assertions, whose validity has the form    $\Prog{},\kappa, \kappa' \models {\it P}$.  
+
+
+  
+% \begin{example}
+\sd{If
+$\interp  {\prg{x.balance}} {\kappa} \!\! = \!\! 4$, and $\interp  {\prg{x.balance}} {\kappa'}\!\!  =\!\! 14$,   then % we   expect 
+ $\Prog{},\kappa  \models \prg{x.balance}  < 10$.   Also, if 
+$M_1, \kappa_1 \models x:\prg{Purse}$, and execution of  $y=x$\prg{.sprout()} leads to configuration 
+$\kappa_2$, then we expect that $M_1, \kappa_2 \models y:\prg{Purse}$.}
+%\end{example}
+
+% Note that validity of the assertions  is expressed over modules -- we will see later on why this is so.
+
+\sdCut{\paragraph{Objects' representations} \sd{We expect every module to have some notion of
+encapsulation, expressed through a relation $\prec  \subseteq \textit{Configuration}\times \textit{Address} \times \textit{Address}$.
+We leave the exact definition of $\prec$ to further work, but discuss some examples to give intuition:}
+
+\sd{In
+the \prg{Purse}s example, for a $p$  and $\kappa$ such that $\interp  {p.\prg{balance}} {\kappa}$ points to an
+object of class  $\prg{Purse}$, we would have that 
+$M_1, \kappa \models o \prec p$ iff 
+$\interp  {p.\prg{balance}} {\kappa}\! \in \!  \{ \interp  {p.\prg{balance}} {\kappa}, \interp { {p}} {\kappa} \} $, 
+and the same  for $M_2$, i.e.:  
+$M_2, \kappa \models o \prec p$ iff 
+$\interp  {p.\prg{balance}} {\kappa}\! \in \!  \{ \interp  {p.\prg{balance}} {\kappa}, \interp { {p}} {\kappa} \} $.
+ On the other hand,
+$M_3, \kappa \models o \prec p$ iff $\interp  {o} {\kappa} $ is the same as $\interp  {o} {\kappa} $, the 
+field \prg{accounts}, or the field \prg{balances} of the \prg{mint} that contains \prg{p}, or the contents 
+of these fields. }
+
+\sd{We do not require that $\prec$ is exclusive, {\it i.e.,} an object may be inside different objects. We expect however that module linking preserves $\prec$,  {\it i.e.,}  that $M, \kappa \models p \prec p'$ and $M*M'$ is defined, implies that  $M*M', \kappa \models p \prec p'$.}
+ }
+ {not needed for the time being}
+ 
+\paragraph{Hypothetical Access and Affect} We expand the specification language with the special predicates   $\MayAffect$, and $\MayAccess$ 
+which we use to model risk.
+
+\begin{definition}[$\MayAffect$ and $\MayAccess$] ~ \\
+\label{def:two-state-assertions-with-potential}
+\noindent\sd{We expand the definition of % $Q$ 
+assertions % to contain 
+with the predicates $\MayAffect(\_,\_)$, and $\MayAccess(\_,\_)$.}
+%\begin{array}{c}
+%\begin{array}{lcl}
+% \textit{R}  & ::= & ... \mbox{as in def. \ref{def:two-state-assertions} ...} \ \ | \\
+% & &   \ \   \MayAffect(p,p') \ \ |  \\
+%  & & \ \  \MayAccess(p,p') \ \ \    | \\
+%%  & & \ \  \MayPublicAccess(p,p')\ 
+%  \end{array}
+%\end{array}
+%$
+%
+% \noindent
+% \rm %%%HORRIBLE
+We define their  validity    as follows:
+
+\begin{itemize}
+ \item
+$\Prog{},\kappa\models { \MayAccess}(\prg{p},\prg{p'})  \ \mbox{iff} \ \ \\ 
+ % \sd{  \Prog{},\kappa\models   \prg{p} \prec \prg{p'} }\ \mbox{or} \  
+   \exists\, \mbox{fields}\, \prg{f}_1...\prg{f}_n.\ \
+      \interp{\prg{p}.\prg{f}_1...\prg{f}_n}{\kappa}= \interp {\prg{p'}} {\kappa}$
+\item
+  $\Prog{},\kappa \models\,  \MayAffect(\prg{p},\prg{p'})   \ \mbox{iff} \ \  \\ \exists\, \mbox{public  method}\, \prg{m},  \mbox{paths} \ ,\bar{\prg{p}}, \mbox{and configuration}\, \kappa':  \\
+     M, \kappa, \prg{p.m}(\bar{\prg{p}}) \leadsto \_, \kappa'\  \mbox{and}\ \interp {\prg{p'}} {\kappa} \neq  \interp {\prg{p'}} {\kappa'}   $.
+\end{itemize}
+\end{definition}
+
+%\begin{example}
+%\label{example:MayAccess:MayAffect}
+%\sd{Taking $M_1$ from Example \ref{example:modules}, if
+%$M_1, \kappa_1 \models x:\prg{Purse}$, and execution of  \prg{y=x.sprout();} \prg{z=y.balance; y=null;} leads to configuration 
+%$\kappa_3$, then it will hold that: 
+%\SP  $M_1, \kappa_1 \not\models o:Object \wedge \MayAffect(\prg{p},\prg{p.balance})$.}
+%  \end{example} 
+ 
+ 
+We expand validity of $\MayAccess$ and $\MayAffect$ to two state assertions, {\it e.g.,}
+%
+\noindent $\Prog{},\kappa,\kappa'\!\models\!\MayAccess(\prg{p},\prg{p'})_{{\textit{t}}}$ iff
+$\Prog{},\kappa''\!\models\!\MayAccess(\prg{p},\prg{p'})$,  where $\kappa''=\kappa$  if  {{\textit{t}}}=\textsf{pre},  else $\kappa''=\kappa'$.  
+\sdCut{
+\noindent $\Prog{},\kappa,\kappa'\models\!\MayAffect(\prg{p},\prg{p'})_{{\textit{t}}}$ iff
+$\Prog{},\kappa''\models\!\MayAffect(\prg{p},\prg{p'})$
+}{cut}
+ 
+%  Given the observations about paths stated in definition \ref{def:paths} it 
+%  holds that $\interpps{ \MayPublicAccess}{M,\kappa} (\prg{p},\prg{p'})$ implies $\interpps{ \MayAccess}{M,\kappa} (\prg{p},\prg{p'})$.
+
+
+\paragraph{Arising Runtime Configurations}
+\label{formal:arising}  
+
+To give meaning to our   policies,  it is essential
+to examine  only  those runtime contexts (i.e.\ configuration and code pairs) which
+may arise through the execution of the given modules.
+\forget
+{For example, if we allowed {\em any} well-formed configuration (well-formed in the sense of the type system) to be examined, and if we had a \prg{Purse} class which had private field \prg{balance}, and whose code never allowed  \prg{balance} to go negative, then  we would be unable to ascertain that the 5th policy from \cite{ELang} which guarantees that balances are always positive, is adhered to.\footnote{Such properties may be expressed through object invariants \cite{Mey88,LeinoMueller04}.}
+}
+
+We therefore define $\Arising(\Prog{})$ as the set of runtime configurations
+which may be reached during execution of some initial context ($\kappa_0$,$\code_0$).
+\sd{A context is initial if its heap contains only objects of class \prg{Object}, its stack contains only one frame, and the code contains exclusively method calls of methods defined in $M$. } The set $\Reach(\Prog{}, \kappa, \expr{})$
+  collects all configurations at the start of any method call during execution of $\kappa, \expr{}$ --- as in visible states.
+%   form 
+%   consider all configurations which may be reached from such initial configurations.
+  %  which are well-typed
+% under the assumptions that \kw{x} and \this\ denote objects of class \prg{Object}.
+%These concepts are defined in App. \ref{formal:arising}.
+%The {\em arising} configurations are those which may be reached by executing an initial configuration, where initial configurations all configurations that may be encountered at the start of program execution. %, \cf \ref{def:initial}.
+
+\begin{definition} $ $ \\
+$\begin{array}{lcl}
+ \Arising & : &  Program    \longrightarrow \mathcal{P}( \textit{Configuration} \times \textit{Expr}  )
+\\
+ \Arising(\Prog{}) \ &    = \  & \ \bigcup_{(\kappa,\code{})\in {\mathcal{I}nit}(\Prog{})} \Reach(\Prog{}, \kappa, \code{})
+\end{array}$
+\end{definition}
+
+
+
+
+\paragraph{Policies and Specifications}
+Policies  have one of the three following forms:  a)  invariants of the form $P$, which require that some property holds at all visible states of a program; b) Hoare-logic-like triples,  $P\, {\prg{code}}\, P'$ where $P$ must be a one-state assertion, and which require that execution of \prg{code} in any state which satisfies $P$ will lead to a state which satisfied $P'$; c)  $P\, {\prg{any\_code}}\, P'$ which, like two state invariants require that execution of {\em any} code in a state which satisfies $P$ will lead to a state which satisfies $P'$. 
+
+\begin{definition}[Policies]
+ $ ~ $ \\
+ $
+\begin{array}{lclcl}
+\Policy &  ::= & \ P \ | \  P \ \{ \prg{code} \}\  P \ | \ \  P \ \{ \prg{any\_code} \}\ P
+\end{array}
+$
+
+\end{definition}
+
+
+
+{\em Weak} adherence to policy, $M \models_{weak} \Policy$,   
+ensures that the requirements of $\Policy$ are satisfied in any context arising from $M$.
+
+\begin{definition}[Weak Adherence to Policies] ~ ~ % \\
+% $ $ \\
+
+\begin{itemize}
+\item
+$M  \models_{weak} P$   \  iff \\ 
+%$ ~ $ \hspace{.2in} 
+$ ~ $ \hspace{.2in}  $\forall ( \kappa,\_ )\in \Arising(M).   $ ~   ~ 
+$ M, \kappa \models P$
+\item
+$M  \models_{weak} P\, \{ \prg{code} \}\, P'$ \  iff \\ 
+% $ ~ $ \hspace{.2in}
+ $ \forall (\kappa,\_ )\in \Arising(M).$\\
+ $ ~ $ \hspace{.2in} 
+ $(\ \ M, \kappa \models P\ \ \wedge\  \ M, \kappa, \prg{code}  \leadsto \prg{res}, \kappa' $ \\
+  $ ~ $   \hspace{.6in}  $ \ \ \  \longrightarrow $ 
+%  \\  $ ~ $   \hspace{.2in}  
+$  \ \ \ \ M, \kappa, \kappa' \models P'\ \ )$
+\item
+$M  \models_{weak} P\, \{ \prg{any\_code} \}\,  P'  $ \  iff \\ 
+ $ \forall (\kappa,\prg{code} )\in \Arising(M).$\\  $ ~ $ \hspace{.2in} 
+ $(\ \ M, \kappa \models P\ \ \wedge\  \ M, \kappa, \prg{code}  \leadsto \prg{res}, \kappa' $ \\
+  $ ~ $   \hspace{.6in}  $ \ \ \  \longrightarrow $
+  % \\   $ ~ $   \hspace{.2in}  $ 
+   $\ \ \ \  M, \kappa, \kappa' \models P'\ \ )$
+\end{itemize}
+\end{definition}
+
+In order to model open systems, require that after linking {\em any} module  with the module at hand,  the policy will be satisfied. \sd{As stated in \cite{JamesMorris}, "A programmer should be able to prove that his programs have various properties and do not malfunction, solely on the basis of what he can see from his private bailiwick."}
+For example, to express that $M_5$ satisfies
+\prg{EscrowSpec} we need to allow any possible implementation of \prg{Purse} as well as any other 
+code to linked, and still ensure that the policies from figure \ref{fig:ValidEscrow} are satisfied.
+
+\begin{definition}[Strong Adherence to Policies] ~ ~  
+
+\begin{itemize}
+\item
+$M  \models \Policy$ \  \  iff \\ 
+%$ ~ $ \hspace{.2in} 
+$\forall M'. \ M*M' \mbox{is defined} \rightarrow  \ \  M*M'  \models_{weak} \Policy$
+\end{itemize}
+\end{definition}
+
+
+Therefore,   $M \models \Policy$ not only ensures that
+execution of $M$ will guarantee $\Policy$, but also, that the code of
+$M$ is so robust,  that any further other module
+linked with $M$ cannot break $\Policy$. 
+%
+%\noindent
+%Thus, even though:\\ %  in all   $\kappa_1$, where $p:_{\kappa}\prg{Purse}$, % and $m:_{\kappa}\prg{Mint}$ 
+%% and $o:_{\kappa}\prg{Object}$, \\ %    we have that\\
+%\SP $M_1, \kappa_1 \models \MayAffect(\prg{o},\prg{p.balance}) \rightarrow \MayAccess(\prg{o},\prg{p})$.\\
+%the module $M_1$ does not adhere to that policy, i.e.:\\
+%\SP $M_1  \not\models \MayAffect(\prg{o},\prg{p.balance}) \rightarrow \MayAccess(\prg{o},\prg{p})$.\\
+%This is so, because we can always link a further module $M'$, which has code which, at some point, accesses   
+%the boxed \prg{balance} and stores it in some further object, and then, later on, modifies the \prg{balance} of \prg{p} without 
+%necessarily having access to \prg{p} itself.
+%On the other hand, in an $M_3$ where \prg{balance} is private, we would have:\\
+%\SP $M_3, \kappa_1 \models \MayAffect(\prg{o},\prg{p.balance}) \rightarrow \MayAccess(\prg{o},\prg{p})$.
+%
+% \begin{example}
+% \label{example:Satisifed}
+%  \sd{Taking the four modules  from Example \ref{example:modules}, and the policy
+% $\prg{Pol\_protect\_bal}\!\equiv\!o\!:$\prg{Object}$\wedge{}p\!:$\prg{Valid\-Purse}
+
+
+\jn{removed Mint example here because I removed the Mint earlier}
+% For example, taking $M_{mp}$ to be the Mint from figure~\ref{fig:Ledger} and $M'_{mp}$  to be the same as $M_{mp}$ but where the field \prg{ledger} is public, we obtain
+% %\noindent$\wedge \MayAffect(o,p.\prg{balance}\rightarrow\MayAccess(o,p)$.
+% % Then, the modules in which the footprint of \prg{p.balance} is encapsulated satisfy the policy, but the others do not:\\
+% $M_{mp}\ \models \prg{Pol\_protect\_bal}$, but 
+% $M'_{mp}\ \not\models \prg{Pol\_protect\_bal}$.
+% The reason why   $M'_{mp}$ does not satifsy the policy is that
+% we can link a further module $M_{attack}$ which could access or change the
+% \prg{ledger} directly.
+%   \end{example} 
+
+
+
+\paragraph{Policy Specifications and the $\obeys$ assertion}
+A policy specification  consists of a name, \PolSpecId, a parameter, and a set of policies.
+\begin{definition}[Policies Specifications]
+\label{Def:PolSpec}
+$ ~ $ 
+
+%  \begin{itemize}
+% \item
+$
+ \begin{array}{lcl}
+\PolicySpec\! & \!::=\! & \!\prg{specification}\ \PolSpecId*(\ParId) \\
+& & \{\ \Policy^*\ \}
+  \end{array}
+$
+% \end{itemize}
+\end{definition}
+
+An object $o$ satisfies a \PolSpecId\ in a configuration $\kappa$, if it satisfies all the \Policy{}s from \PolSpecId. We require that the object satisfies the \Policy{}s not 
+only in the current configuration $\kappa$, but also in all future configurations $\kappa'$.
+ A class satisfies a \PolSpecId{} if all objects of that class are guaranteed to satisfy it.
+
+\begin{definition}[Adherence to Policies Specifications]
+% Adherence to policy specifications, and $\obeys$.\\
+Assuming a declaration\\ %  that   \PolSpecId was introduced by\\
+$ \ \prg{specification}\ \PolSpecId\,(\ParId)\{\ \Policy_1, ... \Policy_n\ \}$, \\
+then
+
+  \begin{itemize}
+  \item
+$M, \kappa  \models o \obeys \PolSpecId   $ \  iff  \\
+\SP  $\ \ \ \forall \kappa',\code, \code', i. (\kappa,\code)\!\in\!\Arising(M)$\\%  \wedge 
+\SP  $\ \ \  (\kappa',\code')\!\in\!\Reach(M,\kappa,\code), i\!\!\in\! \!\{1..n\}.$
+\SP  $\ \ \ \ \ \ \ \ \ \SP M, \kappa'  \models \Policy_i[ p / {\ParId}]$ 
+\item
+$M  \models \ClassId \obeys  \PolSpecId  $  iff\\
+\SP $\ \ \ \forall \kappa. (\kappa,\_)\in \Arising(M).$\\
+\
+\SP\SP $ M, \kappa \models o:\ClassId \ \rightarrow\  o \obeys \PolSpecId  $
+
+\end{itemize}
+\end{definition}
+
+
+  
+\noindent In other words, \prg{p} $\obeys$ \prg{Spec} in $\kappa$, if it
+conforms to all \prg{Spec}'s policies in all  
+configurations reachable from $\kappa$.
+
+\subsection{Hoare Logic}
+
+\paragraph{Validity of \prg{Escrow::deal}, Reasoning about Accessibility}
+ 
+\sd{
+Reasoning about accessibility is central to arguing that \prg{Escrow::deal} satisfies its risk specification. The argument hinges,
+essentially,  on the observation that if any pre-existing purse's money were to be affected by the call of \prg{Escrow::deal}, then one of the parties must have had access to that purse at some time during execution of the call (policy $\prg{Pol\_protect\_balance}).$ However, since neither the escrow, nor \prg{ValidPurse}s    grant  to any objects access to any pre-existing purses, the only way for a malicious participant to have access to a pre-existing  purse, is if it already had the access before the call of  \prg{Escrow::deal}.
+}
+
+ 
+We can reason about accessibility based on one of the underlying
+properties of object-capability systems, that ``\textit{only
+  connectivity begets connectivity}'' \cite{MillerPhD}.  Namely, object
+references % -- capabilities --- 
+can only be created % when objects are 
+through object creation, and 
+cannot be forged. \sd{Thus the only way one object $o$ can get
+% capability 
+access to another object $o'$ is if $o$ creates $o'$; 
+%or if $o$ is passed  to   $o'$ as a method argument in a method call;
+or if $o'$ is passed  to   $o$ as a method argument in a method call;
+%or if both  $o$ and    $o'$ are passed as arguments in a method call;
+or if  $o'$ is returned from a method call to $o$. In all previous ``$o$ passed'' is a shorthand for ``some object $o''$ with access to $o$ is passed'', and similar for $o'$.
+} 
+
+\sd{This is expressed through the following Hoare-logic style connectivity rule:}
+
+
+% \SP \\ 
+\noindent
+ \textbf{ConnRule\_MethCall}:\\
+$\begin{array}{c}
+\{ \ \ true\ \  \}\\ 
+\prg{x.m(y)} \\  
+ \{\  \forall z,z': \pre Object.  \SP \SP \SP  \SP \SP \SP  \SP \SP \SP  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \\
+ ( \MayAccess\post(z,z') \rightarrow  \SP \SP \SP  ~~~~~~~~~~~~~~~~~~~~~~~~  \\
+ ~~~~~ [(\MayAccess(\prg{x},z)\pre \vee \MayAccess(\prg{y},z)\pre) \ \wedge\\
+ ~~~~~~ ~~~ ~  \ \ (\MayAccess(\prg{x},z')\pre \vee \MayAccess(\prg{y},z')\pre ) ]  \ )  \ \ \}
+ \end{array}$
+% \SP \\
+\sd{Similar rules exist for field and variable assignment, but we omit
+  them here. 
+%The former is not used in the proof of \prg{Escrow::deal} .} % -- after all, 
+% since it does not contain any field assignments.
+}
+
+ This rule is independent of whether the participants \prg{x} and \prg{y} are trustworthy. The rule is sound because the underlying programming language is memory safe. A stronger version of the rule would guarantee that accessibility restrictions hold throughout the method's execution and nit just at the post-state; this will be needed  when we consider concurrent programming.
+%
+%\sd{The full meaning of   the rule
+%  \textbf{ConnRule\_MethCall} is that the accessibility restriction not only holds after the method call, but also holds during execution of the method \prg{m}. This distinction is not essential in the sequential setting, but will become crucial when we consider  concurrency.}
+
+
+
+% \vspace{.05in}
+\subsection*{Quality of Specification} 
+
+\jn{I'd kill this, leave it for the next paper. I don't think there's
+  enough context here to make this comprehensible}
+
+\sd{The risk specification is
+  weaker  than we would have liked. We currently guarantee that a
+  pre{\"e}xisiting purse's balance will remain unaffected, unless a
+  rogue purse had access to it before the call. Access is a necessary
+  but not a sufficient condition for being able to affect the purse's
+  balance, however. A risk specification guaranteeing that the balance is
+  unaffected, unless a rogue purse could affect the balance before the
+  call would be stronger, and more useful. Unfortunately, the current
+  specification of \prg{ValidPurse} is too weak for this guarantee to
+  be implementable. Namely, imagine a ``gullible'' object, which, if
+  given a valid purse, will transfer moneys from a third valid purse,
+  to which it had access. Then, a rogue participant purse would pass
+  the escrow purse with \prg{0} balance to the rogue purse, and thus
+  remove moneys from the third purse. We believe that we will be able
+  to tackle this problem by applying notions of encapsulation. 
+}
+
+\subsection{Proof Outline}
+
+*** still to be written ***

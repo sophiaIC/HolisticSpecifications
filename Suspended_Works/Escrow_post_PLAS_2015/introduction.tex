@@ -1,0 +1,185 @@
+\section{Introduction}
+
+% To misparaphrase Tolstoy: \textit{``Secure systems are all alike;
+%   every insecure system is insecure in its own way''}
+% \cite{WikipediaAnnaKareninaPrinciple}.  Attackers \textit{``only have to be lucky
+%   once''} but system designers \textit{``have to be lucky always''}
+% \cite{IRAThatcher}.
+
+Traditional systems designs
+%attempts to minimise the role of ``luck'' with
+%
+are based on
+%
+a closed world assumption: drawing a sharp border around a system
+where the system as a whole can be trusted because every component
+inside the border is known to be trustworthy, or is
+\emph{confined}~\cite{Lampson_73} by trustworthy mechanisms.  Open
+systems, on the other hand, have an open world assumption: they must
+interact with a wide range of component objects with different levels
+of mutual trust (or distrust) --- and whose configuration dynamically
+changes.
+%
+% Consider electronic payments systems such as Swift, Paypal,
+% or WeSwap.com: they must transfer funds between participants'
+% accounts, where the participants do not trust each other, cannot be
+% trusted by the payments system, and may join or leave the system at
+% any time.  With multiple competing payments systems across different
+% international juristidctions, there is no central authority that can
+% vouch for the trusworthiness of participants or payments systems.
+%
+Given a method request \lstinline+x.m(y)+, what can
+we conclude about the behaviour of this request if we know nothing
+about the receiver \lstinline+x+?
+
+
+In this paper, we lay the foundations for reasoning about the
+correctness of these kinds of open systems. Building on the
+object-capability security model \cite{MillerPhD} we introduce a
+first-class notion of \textit{trust}, where we write ``\prg{o} \obeys\
+\prg{Spec}'' to mean that object\ \prg{o} can be trusted to obey
+specification \prg{Spec}. The $\obeys$ predicate is hypothetical:
+there is no central authority that can assign trustworthiness (or not) to
+objects; there is no trust bit that we can test. Rather,
+``$\prg{o} \obeys\ \prg{Spec}$'' is an assumption that may or may not
+be true, and we will use that assumption to reason by cases. If we
+trust an object, we can use the object's specification $\prg{Spec}$ to
+determine the results of a method call on that object. If we don't
+trust the object, we determine the maximum amount of damage the call
+could do: the \textit{risk} of calling a method that turns out not to
+meet its specification.
+
+Risks are effects against which we want to guard our objects: bounds
+on the potential damage caused by calls to untrusted objects.  The key
+to delineating risks are two further hypothetical predicates:
+$\MayAccess$ and $\MayAffect$.  We write
+%
+\mbox{$\MayAffect$\!\lstinline+(o,p)+}
+%
+to mean that it is possible that some method invocation on $o$ would
+affect the object or property $p$, and
+%
+\mbox{$\MayAccess$\!\lstinline+(o,p)+}
+%
+to mean that it is possible that the code in object $o$ could
+potentially gain a capability to access to $p$.  This first-class
+notion of risk complements our first-class notion of trust:
+$\MayAccess$ and $\MayAffect$ let us reason about the
+potential damage to a system when one or more objects are not
+ trustworthy.
+
+Our complementary notions of trust and risk are set within a very
+flexible specification language, and supported by an Hoare logic,
+enabling us to reason whether or not objects can be trusted to meet
+their specifications, providing sufficient security guarantees while
+mitigating any risks.
+% %\paraA{Contributions:}
+Building on our earlier work
+\cite{capeTalkIFM14,swapsiesOnTheInternet2015} we formalise and prove
+correctness, trust, and risk for the Escrow Exchange
+\cite{miller-esop2013} a trusted third party that manages exchanges of
+different goods (e.g.\ money and shares) between untrusting
+counterparties \cite{swapsiesGotGotNeed}.  We were surprised to find
+that the specification for the Escrow Exchange is weaker than
+originally anticipated in two significant aspects: the escrow {\em
+  cannot guarantee} that a reported successful transaction implies a)
+that the participants were trustworthy, nor that b) the participants
+are exposed to no risk by an untrustworthy participant (but we were
+able to characterize the risk to which participants are exposed).  We
+were even more surprised to realize that it is {\em impossible to
+  write} an escrow which would give guarantees a) and b) ---
+%
+all the more striking given that a co-author is one of the original
+developers of the escrow example.
+
+
+
+
+% Toby: This paragraph doesn't seem relevant to the paper's contributions, which
+% do not include a new mechanism for implementing the escrow exchange,
+% so I cut it.
+%
+%% Common approaches to security cannot deal with the escrow exchange,
+%% because they aim to prevent any interactions that are not completely
+%% trustworthy.  Information flow systems, for example, detect when
+%% information leaks to an untrusted party; confinement systems guarantee
+%% that state is not read or leaked to other components; sandboxes ensure
+%% that components cannot affect the world outside the sandbox.  In an
+%% open system there is no universally trusted authority: so the approach
+%% we take is to reason explicitly about code's security properties and
+%% guarantees, calculating trust and risk as trusted and untrusted
+%% components interact in an open world.
+
+Common approaches to reasoning about programs cannot deal with the
+escrow exchange example.  Most program specification and
+verification methods
+%(proof tools, proof checkers, typically based
+%on Hoare logics of various kinds)
+have an implicit underlying
+assumption that components are meant to be trustworthy (i.e. meet their
+specifications). Our approach first makes that assumption explicit (as
+\obeys), lets us reason hypothetically and conditionally about
+those trust assumptions, even in cases where those assumptions fail
+(by quantifying risk via $\MayAccess$ and $\MayAffect$).
+
+\paraA{Paper Organization}
+\autoref{section:example}
+introduces the Escrow Exchange example,
+shows why
+a traditional specification
+is not descriptive enough
+and why a naive implementation is not robust enough.
+\autoref{section:formal} introduces our constructs and Hoare logic for modelling
+trust and risk, which we apply to a revised implementation of
+the Escrow to reason formally
+about its correctness.
+\autoref{section:related-work} discusses related work, and \autoref{section:conclusion} concludes.
+
+\paraA{Disclaimers} Throughout this paper, we make the simplifying
+assumptions that
+no two different arguments to methods are aliases,
+that the program is executed sequentially,
+that we can quantify over the entire heap,
+that objects do not breach their own encapsulation or throw
+  exceptions,
+that machines on open networks are not mutually suspicious,
+and that any underlying network is error-free.
+%\sd{While these problems are correctly addressed in the code proposed
+%in \cite{miller-esop2013}, we do not address them in this work.}
+This allows us to keep the specifications short, and to concentrate
+on the questions of risk and trust.
+Aliasing, concurrency, quantification, confinement, network errors,
+and exceptions
+can be dealt
+with using known techniques, but doing so
+would not shed further light on the questions we address.
+
+\paraA{Contribution} \kjx{This paper extends earlier informal
+  work presented at the PLAS workshop~\cite{swapsiesOnTheInternet2015}.  
+  Here we contribute the full
+  formal foundations of the system, defining $\obeys$, $\MayAccess$,
+  and $\MayAffect$ in the context of the \LangOO\ and \Chainmail\
+  languages (details in the full technical report~\cite{appendix}).  We present a novel Hoare logic
+  based on four-tuples to specify properties preserved during
+  execution: this allows us to model trust and delineate risk
+  even when a method's receiver is unknown.}  \kjx{We use 
+  our logic to prove formally that the key steps of the escrow example 
+  meet the specification.}
+
+
+% James cut the following to give more space to Sophia, but would
+% rather she didn't need it!
+
+% \paraA{Contributions}
+% %\kjx{not sure we need this but is it ever wise to leave it out?}
+% \toby{Do we need to explicitly call out the contributions over those of
+% the PLAS'15 paper?}
+% This paper makes the following contributions:
+% \begin{itemize}
+% \item $\obeys$ predicate to make trust explicit
+% \item $\MayAccess$ and $\MayAffect$ predicates to make risk explicit
+% \item Formal models of a core programming language ``\LangOO'',
+%   a specification language ``\Chainmail'', and Hoare logic
+% \item Formal specification of Escrow Eschange in \Chainmail, and formal
+%   proof that a \LangOO\ implementation meets the specification.
+% \end{itemize}

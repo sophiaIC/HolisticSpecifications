@@ -1,0 +1,292 @@
+\section{\tobym{Illuminating Examples}}
+\label{examples}
+\toby{Here we consider a suite of examples that shed light on the
+various subtle aspects of our approach.}
+
+\subsection{Unknown Assertions}
+\label{problems:undefinedAssert}
+Consider the following module definition.
+
+ \begin{lstlisting}
+  module M$_1$
+       $\equiv$
+  specification S$_1${
+    }
+  class C$_1$ satisfies S$_1${
+       }
+  module M$_2$
+       $\equiv$
+  class C$_2$ satisfies S$_1${
+      }
+  }
+\end{lstlisting}
+
+Here we see that $\M_1 \vdash \prg{C}_1 : \prg{S}_1$, and $\M_2 \vdash \prg{C}_2 : \prg{S}_2$
+ hold trivially, since the specifications have no policies. 
+ Also $\M_1 \not\vdash \prg{C}_1 : \prg{S}_2$, and $\M_2 \not\vdash \prg{C}_2 : \prg{S}_1$
+
+
+Assume a state $\sigma_1$ such that $\sigma_1(x)$ is an object of class $\prg{C}_1$, 
+and $\sigma_1(y)$ is an object of class $\prg{C}_2$.
+Then we have that $\M_1, \sigma_1 \models x \obeys \prg{S}_1$ holds, 
+while $\M_1, \sigma_1 \models y \obeys \prg{S}_1$ is unknown, and also
+$\M_1, \sigma_1 \not\models y \obeys \prg{S}_1$ is also unknown. 
+By Alex's clever definition however,  $\M_1, \sigma_1 \models y \obeys \prg{S}_1 \rightarrow  x \obeys \prg{S}_1$ holds.
+On the other hand, $\M_2*\M_1, \sigma_1 \models y \obeys \prg{S}_1$ holds, 
+and $\M_1*\M_1, \sigma_1 \models y \obeys \prg{S}_1 \rightarrow  x \obeys \prg{S}_1$ also holds.
+
+
+\subsection{Infinite execution}
+
+Consider the following module definition.
+
+ \begin{lstlisting}
+  module M$_1$
+       $\equiv$
+  specification S$_1${
+     policy P$_1$:
+        true
+           { this.m() }
+        false
+  }
+  class C$_1$ satisfies S$_1${
+      method m(){
+          this.m()
+      }
+  }
+\end{lstlisting}
+
+Specification $\prg{S}_1$ is clearly nonsensical, as it asserts the
+unsatisfiable postcondition \prg{false}. However, perhaps surprisingly,
+in our logic
+$\prg{M}_1, \prg{C}_1 \vdash \prg{S}_1$ holds. Indeed one can prove that policy
+$\prg{P}_1$ holds for method \prg{m()} of class $\prg{C}_1$ by appealing to
+the Hoare logic rule \textsc{meth-call-1}, 
+since $\prg{this} : \prg{C}_1 \rightarrow \prg{this}\  \obeys\  \prg{S}_1$.  This circularity is not
+a soundness issue, however, since \prg{m()} never terminates.
+Our Hoare logic is a logic of \emph{partial correctness}, i.e. the assertion
+\mbox{\HoareExpl{\A} {\prg{stms}} {\M} {\B'} {\B}} does not require
+\prg{stmts} to terminate and asserts  the postcondition \B' holds only once
+\prg{stmts} has terminated (and likewise asserts {\B} for all intermediate
+states only under the assumption that \prg{stmts} terminates) --- see
+\autoref{lemma:hl:soundness}. More elaborate examples of this kind of
+circular reasoning can also
+be performed in our logic, however all require reasoning about non-terminating
+computations and so do not threaten soundness.
+
+\subsection{Contradiction in the Specification}
+
+Our specification language allows one to express apparently contradictory
+specifications, such as the following.
+
+ \begin{lstlisting}
+  module M$_2$
+       $\equiv$
+  specification S$_2${
+     policy P$_2$:
+        $\neg$ this $\obeys$ S$_2$
+  }
+  class C$_2$ satisfies S$_2${
+      ...
+  }
+  class C$_3$  {
+      ...
+  }
+\end{lstlisting}
+
+Note that while class $\prg{C}_2$ claims to satisfy $\prg{S}_2$, the
+contradiction in policy $\prg{P}_2$ means that the module $\prg{M}_2$
+is not well formed, and so
+$\prg{M}_2, \prg{C}_2 \not\vdash \prg{S}_2$. In particular, suppose
+$\prg{M}_2, \prg{C}_2 \vdash \prg{S}_2$, then objects of
+class $\prg{C}_2$ satisfy specification $\prg{S}_2$ and so it follows
+from the definition of $\prg{S}_2$
+that for any such object~$o$, $\lnot (o\ \obeys\ \prg{S}_2)$.
+However, any such object clearly
+also {\obeys} $\prg{S}_2$ since the definition of {\obeys} is syntactic
+(see \autoref{def:one-state-assertion:valid}), a clear contradiction.
+
+Note further that $\prg{M}_2, \prg{C}_3 \not\vdash \prg{S}_2$.
+\sdJ{Namely, even though $\prg{C}_3$ does satisfy policy $\prg{P}_2$
+(ie $\prg{M}_2, \prg{C}_3 \vdash \prg{P}_2$), the class $\prg{C}_3$
+does not {\em claim} to satisfy the specification $\prg{S}_2$, as required in \autoref{def:one-state-assertion:valid}.
+}
+%
+%%\fcolorbox{purple}{lightgray}{
+%\begin{minipage}{0.8\columnwidth}
+%Actually, I think $\prg{M}_2, \prg{C}_3 \vdash \prg{S}_2$.\\
+%To prove $\prg{M}_2, \prg{C}_3 \vdash \prg{S}_2$ we need to show that all of
+%its policies hold, i.e. that: $\prg{M}_2, \prg{C}_3 \vdash \prg{P}_2$.
+%This holds iff (\autoref{def:one-state-assertion:valid})
+%forall $\M'$,
+%and for all $(\sigma,\code)\in \Arising(\prg{M}_2*\M')$, \\
+%\mbox{
+%$\prg{M}_2*\M', \sigma \models\kw{this} : \prg{C}_3  \rightarrow \neg\ (\kw{this}\ \obeys\ \prg{S}_2$)}, which would seem to hold from the syntactic
+%definition of \obeys. \\
+%Sophia, what am I missing?
+%\end{minipage}
+%}
+
+
+Note that $o \obeys \prg{S}_2$ implies  that $\neg(o \obeys \prg{S}_2)$, but the opposite does not hold, ie
+ $\neg(o \obeys \prg{S}_2)$ does not imply that $o \obeys \prg{S}_2$.
+ This is so because $\obeys$ is always judged syntactically, i.e. wrt the
+specifications that the class of the $o$ claims to satisfy and not wrt the behaviour of $o$.
+
+Therefore, the case analysis $o \obeys \prg{S}_2 \ \vee\ \neg(o \obeys \prg{S}_2)$
+does not introduce a problem.
+Namely, the case analysis   is equivalent to ``class of $o$ claims it satisfies   $\prg{S}_2$,
+or  class of $o$ does not claim it   satisfies   $\prg{S}_2$.''
+Also, by application of the implications from the previous paragraph,
+$o \obeys \prg{S}_2 \ \vee\ \neg(o \obeys \prg{S}_2)$ implies  (but is not equivalent to) $\neg(o \obeys \prg{S}_2 )\ \vee\ \neg(o \obeys \prg{S}_2)$.
+
+\subsection{Monotonicity}
+
+Consider the following module $\prg{M}_3$ that declares a single
+specification~$\prg{S}_3$
+and class~$\prg{C}_4$ that claims to satisfy $\prg{S}_3$.
+
+ \begin{lstlisting}
+  module M$_3$
+       $\equiv$
+  specification S$_3${
+  }
+  class C$_4$ satisfies S$_3${
+      ...
+  }
+\end{lstlisting}
+
+In the context of this module \emph{alone} all objects will be of class
+$\prg{C}_4$, and so each will obey $\prg{S}_3$. However, the assertion
+$\prg{M}_3 \models \forall o:Object.\ o\ \obeys\ \prg{S}_3$ does \emph{not} hold. This is because \autoref{Def:modSatA} requires that the assertion holds in all configuration arising from all possible extensions of $\M$, by linking
+$\M$ against all possible $\M'$. Naturally some of these $\M'$ can introduce
+new objects that do not obey $\prg{S}_3$.
+
+\subsection{Negative Positions}
+
+Quite often, we need to restrict the assertions appearing in negative positions. But I hope this is not necessary here:
+ \begin{lstlisting}
+  module M$_4$
+       $\equiv$
+  specification S$_4${
+       policy Pol$_{4a}$
+           true
+               { res=this.m(x) }
+           x $\obeys$ S$_4$ $\rightarrow$ res
+           
+       policy Pol$_{4b}$
+           true
+               { res=this.m(x) }
+           x $\obeys$ S$_4$ $\longleftrightarrow$ res
+  }
+  class C$_4$ satisfies S$_4${
+      method m(x){ ... }
+  }
+\end{lstlisting}
+
+It is possible to satisfy  $\prg{Pol}_4$ is you have a method that always returns true. But it is 
+impossible to satisfy $\prg{Pol}_4$, because it requires that \prg{this.m(x)} is is \prg{true} 
+whenever \prg{x} belongs to a class which claims to satisfy $\prg{S}_4$, and there can be many such classes, unknown to the class $\prg{C}_4$. That is for all possible classes, $\M_4 \not\vdash \prg{C}: \prg{S}_4$.
+
+On the other hand, the following spec is satisfiable (in fact, we have similar policies for Purse-s)
+
+\begin{lstlisting}
+  module M$_5$
+       $\equiv$
+  specification S$_5${
+       abstract predicate AP(o1,o2)
+
+       policy Pol$_5$
+           this.AP(o) $\rightarrow$ o $\obeys$ S$_5$
+
+       policy Pol$_6$
+           true
+               { res this.m(x) }
+          this.AP(o)  $\longleftrightarrow$ res
+  }
+  class C$_5$ satisfies S$_5${
+      ...
+  }
+\end{lstlisting}
+
+\subsection{Cyclic Definitions}
+
+
+ \begin{lstlisting}
+  module M$_6$
+       $\equiv$
+  specification S$_6${
+       field next
+       policy Pol$_6$
+           this.next$\neq$ null $\rightarrow$ this.next $\obeys$ S$_7$
+  }
+  specification S$_7${
+       field next
+       policy Pol$_7$
+           this.next$\neq$ null $\rightarrow$ this.next $\obeys$ S$_6$
+  }
+  private class C$_6$ satisfies S$_6$ {
+      field next
+      method m( ){ this.next = new C$_7$(null) }
+  }
+  private class C$_7$ satisfies S$_7$ {
+      field next
+      method m( ){ this.next = new C$_6$(null) }
+  }
+  class D{
+    ... new C$_6$(null)
+    ...
+  }
+\end{lstlisting}
+
+We have a cyclic definition. 
+In order for $\M_6 \vdash \prg{C}_6 : \prg{S}_6$ to hold, 
+we need to have that in each reachable state $\sigma$, if ${\cal C}lass (x,\sigma)=\prg{C}_6$ and if 
+$\sigma(x.next)\neq {\kw{ null}}$, then 
+$\M_6 \vdash \prg{C}  : \prg{S}_7$ where 
+$\prg{C}={\cal C}lass (x.f,\sigma)$. In the particular case, this 
+amounts to requiring that $\M_6 \vdash \prg{C}_7 : \prg{S}_7$.
+
+
+ \begin{lstlisting}
+  module M$_8$
+       $\equiv$
+  specification S$_8${
+       policy Pol$_8$
+           this  $\obeys$ S$_9$  $\rightarrow$ this $\obeys$ S$_9$
+  }
+  specification S$_9${
+       policy Pol$_9$
+           ... some unsatisfiable requirment ....
+  }
+  class C$_{surprise}$ satisfies S$_8$ {
+  }
+  class C$_{9}$ satisfies S$_8$, S_$9$ {
+  }
+\end{lstlisting}
+
+Surprisingly, we have that  $\M_8 \vdash \prg{C}_{surpise}: S_8$, even though $\M_8 \not\vdash \prg{C}_{surpise}: S_9$. Namely,
+for class \prg{C}$_{surprise}$ the assertion \prg{this} $\obeys$ \prg{S}$_9$ does not hold, and therefore the implication trivially holds.
+Similarly, because $\prg{Pol}_9$ is unsatisfiable, we have that $\M_8 \not\vdash \prg{C}_{9}: S_9$ and 
+therefore, $\M_8 \vdash \prg{C}_{9}: S_8$. 
+
+
+ 
+ 
+\subsection{Quantifiers}
+
+
+ \begin{lstlisting}
+  module M$_a$
+       $\equiv$
+  specification S$_a${
+       policy Pol$_a$
+           $\forall$ x. x $\obeys$ S$_a$
+}
+\end{lstlisting}
+ The policy $\prg{Pol}_a$ cannot be satisfied, because it requires all classes to declare that they satisfy \prg{S}$_a$.
+
+
+
+ 
+
