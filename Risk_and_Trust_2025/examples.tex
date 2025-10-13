@@ -10,19 +10,19 @@ The specification of  an  \prg{Escrow} appears in Fig. \ref{fig:EscrowSpec}. Thi
 \newcommand{\bM}{\prg{\bMT}}
 \newcommand{\sG}{\prg{\sGT}}
 \newcommand{\bG}{\prg{\sGT}}
-
+\newcommand{\old}{\ensuremath{_{old}}}
 
 \subsection{Purse}
 
-The \prg{Purse} has a ghost field (or abstract predicate), \prg{SameMint(\_)}, which guarantees that the receiver and argument belong to the same \prg{Mint}.  It also has another ghost field, which is the balance of the account.
+The \prg{Purse} has a ghost field (or abstract predicate), \prg{CanTrade(\_)}, which guarantees that the receiver and argument belong to the same \prg{Mint}.  It also has another ghost field, which is the balance of the account.
 
 \textbf{To discuss} \begin{enumerate}
 \item
 implicit obeys for the receiver
 \item
-\prg{SameMint} definition
+\prg{CanTrade} definition
 \item
-\prg{SameMint} role
+\prg{CanTrade} role
 \end{enumerate}
 %   fields sellerMoney, sellerGoods, buyerMoney, buyerGoods //  Purse
 %   fields price, amt   // Number
@@ -33,45 +33,67 @@ implicit obeys for the receiver
 $\textbf{specification}$ $Purse$ {
     
     $\textbf{ghost}$ balance:int
-    $\textbf{ghost}$ SameMint(x):bool  
+    $\textbf{ghost}$ CanTrade(x):bool  
          
-    $\textbf{scoped-invr}\  \forall b:nat.[\ \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}\geq b \ ]$
-    $\textbf{invr}\   \forall p:\prg{Object}[\ \ \prg{this.SameMint(p)}\ \ ]$ // enough?
-    $\textbf{scoped-invr}\   \forall p:\prg{Object}.,\forall b:bool.[\ \ \neg \prg{this.SameMint(p)}\ \ ]$ // enough?
-    $\textbf{invr}\  \prg{this}.\prg{balance}\geq 0$       
-    $\textbf{invr}\  \forall p:\prg{Object}.[\ \ \prg{this.SameMint(p)} \ \longrightarrow \  \obeys {\prg{p}} {Purse}\ \ ]$
+    $\textbf{invr}\  \prg{this}.\prg{balance}\geq 0$  
+    $\textbf{invr}\  \forall \prg{p}:\prg{Object}.[\ \ \prg{this.CanTrade(p)} \ \longrightarrow \  \obeys {\prg{p}} {\prg{Purse}}\ \wedge \  \prg{p.CanTrade(this)} \  ]$
+    $\textbf{invr}\   \forall \prg{p1},\prg{p2}:\prg{Object}[\ \ \prg{this.CanTrade(p1)}\ \wedge\  \prg{p1.CanTrade(p2)}\ \longrightarrow \  \prg{this.CanTrade(p2)}\ ]$  
+    $\textbf{scoped-invr}\  \forall b:int.[\ \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}\geq b \ ]$
+     
      
     true  // implicit $\obeys {\prg{this}} {Purse}$
          $\textbf{\{}$ this.transfer(p,amt) $\textbf\}$ : bool
-    res $\wedge$  this.SameMint(p) // implicit $\obeys {\prg{p}} {Purse}$
+    res $\wedge$  this.CanTrade(p) // implicit $\obeys {\prg{p}} {\prg{Purse}}$
     $\vee$
-    $\neg$res $\wedge$ [ this==p $\vee$ this.balance$\leq$amt $\vee$ $\neg(\, \prg{this.SameMint(p)}\,)$ ]
+    $\neg$res $\wedge$ [ this==p $\vee$ this.balance$\leq$amt $\vee$ $\neg(\, \prg{this.CanTrade(p)}\,)$ ]
 
-    this$\neq$p $\wedge$ this.balance=bm$\geq$amt  $\wedge$   this.SameMint(p)  
-     // implicit $\obeys {\prg{this}} {Purse} \ \wedge\ \    \obeys {\prg{p}} {Purse}$
+    this$\neq$p $\wedge$ this.balance=bm$\geq$amt $\wedge$  this.CanTrade(p)  
+     // $implicit \obeys {\prg{this}} {Purse} \ \wedge\ \    \obeys {\prg{p}} {\prg{Purse}}$
          $\textbf{\{}$ this.transfer(p,amt) $\textbf\}$ : bool
-    res $\wedge$ this.balance=balT-amt $\wedge$ p.balance=balP+amt 
+   res $\wedge$ this.balance=balT-amt $\wedge$ p.balance=balP+amt 
 
 }
 
 \end{lstlisting}
-\caption{Specification of  $Purse$ }
+\caption{Specification of  $Purse$ -- 1st version}
 \label{fig:PurseSpec}
  \end{figure*}
  
- NOTE: Julian proposed to replace lines 7 and 8 above with   \\
- $\ \ \  $ $\textbf{scoped-invr}\   \forall p:\prg{Object}.,\forall b:bool.[\ \ \neg \prg{this.SameMint(p)}\ \ ]$ 
-But this would require us to ecplain that $b$ is a value and not a variable. HMHHHHH Is this also a problem in the OOPSLA-25 paper!!!
+ 
+ \begin{figure*}[t]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{specification}$ $Purse$ {
+    
+    $\mbox{...  \textbf{ghost}, \textbf{invr}, \textbf{scoped-invr} } as\ earlier \ ...$
+     
+    // $implicit\  \obeys {\prg{this}} {\prg{Purse}}$
+    this.CanTrade(p) 
+    // $implicit \ obeys {\prg{p}} {\prg{Purse}}$
+     $\wedge$  this$\neq$p $\wedge$ this.balance=balT$\geq$amt $\wedge$ p.balance=balP
+         $\textbf{\{}$ this.transfer(p:Object,amt:nat) $\textbf\}$ : bool
+    res $\wedge$ this.balance=this.balance\old-amt $\wedge$ p.balance=p.balance\old+amt 
 
-A possible implementation of \prg{Purse} appears below. The Purses have a field storing therr Mint and their balance
+    // $implicit\  \obeys {\prg{this}} {\prg{Purse}}$
+    this=p $\vee$ this.balance$\leq$amt $\vee$ $\neg(\, \prg{this.CanTrade(p)}\,)$  
+         $\textbf{\{}$ this.transfer(p,amt) $\textbf\}$ : bool
+    $\neg$ res $\wedge$ this.balance=this.balance\old $\wedge$ p.balance=p.balance\old
+}
+
+\end{lstlisting}
+\caption{Specification of  $Purse$ -- 2nd version}
+\label{fig:PurseSpec:two}
+ \end{figure*}
+ 
+ 
+A possible implementation of \prg{Purse} appears below. The Purses have a field storing their Mint and their balance
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 $\textbf{class}$ $PurseImpl\_a\ \textbf{implements} Purse$ {
     
-    $\textbf{field}$  myMint: Mint
-    $\textbf{field}$  myBalance: int
+    $\textbf{field}$ myMint: Mint
+    $\textbf{field}$ myBalance: int
      
-    $\textbf{ghost}$ SameMint(x) $\textbf{is}$ this.myMint = x.myMint
+    $\textbf{ghost}$ CanTrade(x) $\textbf{is}$ this.myMint = x.myMint
     $\textbf{ghost}$ balance $\textbf{is}$ this.myBalance
     
     method transfer(p:Object,amt:nat)  // external
@@ -107,7 +129,7 @@ lookup table in the Mint
     
     $\textbf{field}$  myMint: Mint
      
-    $\textbf{ghost}$ SameMint(x) $\textbf{is}$ this.myMint.inMint(x)
+    $\textbf{ghost}$ CanTrade(x) $\textbf{is}$ this.myMint.inMint(x)
     $\textbf{ghost}$ balance $\textbf{is}$ this.myMint = x.myMint
     
     method transfer(p:Object,amt:nat) // external 
@@ -130,7 +152,7 @@ $\textbf{specification}$ $Escrow$ {
     
     //   1$^{st}$ case:
     $\obeys  {\{\sM,\sG\}} {Purse}$ $\wedge$ 
-    $\sM$.SameMint($\bM$) $\wedge$  $\sG$.SameMint($\bG$)  $\wedge$ price, amt:$\mathbb{N}$  $\wedge$
+    $\sM$.CanTrade($\bM$) $\wedge$  $\sG$.CanTrade($\bG$)  $\wedge$ price, amt:$\mathbb{N}$  $\wedge$
     $\bM$.balance=bm$\geq$price  $\wedge$  $\sM$.balance=sG$\geq$amt $\wedge$ ...
     $\obeys  {p} {Purse}$   $\wedge$ p.balance = pM
            $\textbf{\{}$ this.deal($\sM,\, \bM,\, \sG,\, \bG$, price, amt) $\textbf\}$
