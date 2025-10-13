@@ -2,11 +2,40 @@
 
 \label{app:expressivity}
 
+
+\begin{figure}[tbh]
+\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module DOM 
+   class Node
+      field cnt: int
+      field parent: Node 
+      
+   class Proxy
+      field hght: nat
+      field node: Node
+	
+      public method set(newCnt:int, up:nat): void
+            if this.hght >= up
+               setPrivate(newCnt, up)
+            else
+               return
+	       
+      private method setPrivate(newCnt:int, up:nat): void
+            if up==0 then
+               this.node.cnt := nwCnt
+            else
+               setPrivate(newCnt, up-1)
+\end{lstlisting}
+\caption{The DOM module  -- classes \prg{Node} and \prg{Proxy}}
+\label{fig:DoMCode}
+\end{figure}
+
 We argue the expressiveness of our approach by comparing with example specifications  proposed in \cite{OOPSLA22,dd,irisWasm23}.
 
 \subsection{The DOM}  %\sophiaPonder[renamed Wrapper to Proxy]{  
 \label{ss:DOM}
-This is the motivating example in \cite{dd}. It
+
+\subsubsection{The Problem} This is the motivating example in \cite{dd}. It
 deals with a tree of DOM nodes: Access to a DOM node
 gives access to all its \prg{parent}s, % simoplified it and \prg{children} nodes, 
 with the ability to modify the node's contents   -- where  \prg{parent} %\prg{children} 
@@ -22,43 +51,7 @@ the \prg{cnt} of all the ancestors of its  \prg{node}, up to the   \prg{hght}-th
 A possible implementation of such \prg{Node} and \prg{Proxy} classes is shown in Fig.  \ref{fig:DoMCode}, 
 while the creation of a tree, three proxies, and  passing the proxies to the external world is shown in Fig \ref{fig:DoMCodeClient}.
 
-\begin{figure}[tbh]
-\begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
-module DOM 
-   class Node
-      field cnt: int
-      field parent: Node 
-      
-   class Proxy
-      field hght: nat
-      field node: Node
-	
-      public method set(newCnt:int, up:nat): void
-            if this.hght >= up
-                  setPrivate(newCnt, up)
-            else
-                  return
-	       
-      private method setPrivate(newCnt:int, up:nat): void
-            if up==0 then
-                  this.node.cnt := nwCnt
-            else
-                  setPrivate(newCnt, up-1)
-\end{lstlisting}
-\caption{The DOM module  -- classes \prg{Node} and \prg{Proxy}}
-\label{fig:DoMCodeClient}
-\end{figure}
 
-
-We now discuss possible specifications. For this, we will use  the predicate $may\_modify \subseteq \prg{Proxy} \times \prg{Node}$, which says that 
-\prg{prx} has \emph{modification-capabilities} on \prg{nd}, where \prg{prx} is
-a  \prg{Proxy} and \prg{nd} is a \prg{Node}, if \prg{nd} is the \prg{prx}$k^{th}$  parent
-of   \prg{pr.node} where $k \leq \prg{nd}.\prg{hght}$.
-The formal definition is as follows:
-\\
-$\strut \SPSP   may\_modi\!f\!y(\prg{prx}, \prg{nd}) \triangleq \exists k:\mathbb{N}. [ \  \prg{prx}.\prg{node}.\prg{parent}^k=\prg{nd}\ \wedge k\leq   \prg{prx}.\prg{hght}]$
-\\
-Thus, a \prg{Proxy} object \prg{prx}, which satisfies $may\_modi\!f\!y(\prg{prx},\prg{nd})$ is a capability which may modify the node $\prg{nd}$. 
 
 
 \begin{figure}[tbh]
@@ -67,8 +60,8 @@ module DOM
    ... as before ...
    class Example
       public method demo(untrst:external) : void 
-          //  create a tree of  $\prg{Node}s$
-         nd1 := new Node; nd1.cnts := 1
+          //  create a tree of $\prg{Node}s$
+         nd1 := new Node; nd1.cnt := 1
          nd2 := new Mode; nd2.parent:= nd1; nd2,ctns:=2;
          nd3 := new Mode; nd3.parent:= nd1; nd3,ctns:=3;
          nd4 := new Mode; nd4.parent:= nd2; nd4,ctns:=4;
@@ -79,85 +72,157 @@ module DOM
          prx11 := newProxy; prx10.height:=1; prx10.node:=nd4; 
          prx12 := newProxy; prx10.height:=0; prx10.node:=nd4;
           
-         untrst.meth_A(); //  1st external call  
-         // no modification in the tree
+         // External calls:         
+         untrst.meth_A();       // no modification in the tree
          
-         untrst.meth_B(nd2); //  2nd external call  
-         // no modification in the tree     
+         untrst.meth_B(nd2);    // no modification in the tree     
          
-         untrst.meth_C(prx12); //  3rd external call  
-         // nd4.cnts may have changed; 
-         // all else has stayed the same
+         untrst.meth_C(prx12);  // nd4.cnt may have changed; 
+                                // all else has stayed the same
          
-         nd4.ctns:=4  // re-establish old value of nd4.ctns
-         untrst.meth_A( ); //  4th external call  
-         // nd4.cnts may have changed again; 
-         // all else has stayed the same
+         nd4.ctns:=4            // re-establish old value of nd4.ctns
+         untrst.meth_A( );      // nd4.cnt may have changed again; 
+                                // all else has stayed the same
          
-         untrst.meth_C(prx10);
-        // nd4.cnts, nd2.cnts, nd1.ctns may have changed; 
-        // all else has stayed the same          
+         untrst.meth_C(prx12);  // nd4.cnt, nd2.cnt, and nd1.ctns may have changed; 
+                                // all else has stayed the same
+      
+        // Revocation:
+         prx12.height := 1;     // revocation
+         nd1.ctns:=1            // re-establigh the old value of nd1.ctns
+         untrst.meth_C(prx12);  // nd1.ctns does not change     
 \end{lstlisting}
 \caption{The DOM module continued -- class \prg{Example} }
 \label{fig:DoMCodeClient}
 \end{figure}
+In Fig. \ref{f:DOM:Tree:Diagrs}  we show a diagram of  a tree consisting of the five nodes, \prg{nd1}, \prg{nd2},  \prg{nd3}, \prg{nd4} and \prg{nd5}, 
+and three proxies, \prg{prx10}, \prg{prx11},  and \prg{prx12}. These are created in lines 6-15 in the code in Fig. \ref{fig:DoMCodeClient}.
+Moreover, in Fig. \ref{f:DOM:Diagrs}  we revisit the diagram, and show highlight that three objects have capability on \prg{nd4.cnt},
+while two objects have capability on \prg{nd2.cnt}, and finally, only one object has capability on  \prg{nd1.cnt}.
 
-In Fig. \ref{f:DOM:Diagrs} in the left-most pane we see a tree consisting of the five nodes, \prg{nd1}, \prg{nd2},  \prg{nd3} and \prg{nd4}, 
-and the three proxies, \prg{prx10}, \prg{prx11},  and \prg{prx12}, created in lines 6-15 in the code in Fig. \ref{fig:DoMCodeClient}.
+We now consider the remaining code in Fig. \ref{fig:DoMCodeClient}:
+
+\begin{itemize}
+\item 
+The first external call, in line 18, does not affect the DOM tree or is \prg{cnt}, because \prg{untrst} has no access to it.
+ \item 
+The second external call, in line 20, also does not affect the DOM tree or is \prg{cnt} -- even though \prg{untrst} has access to a \prg{Node}, because the class has no public method, none of its fields may be modified. 
+ \item 
+The third external call, in line 22, may affect the contents of \prg{nd4.ctns}, because we have passed the capability \prg{prx12} in the call. 
+From then on, the capability is no longer protected.
+ \item 
+Before the fourth external call, on line 25, we restore the value of \prg{nd4.cnt} to what it was earlier. Nevertheless, even though the fourth external call, on 
+line 26, is identical to the from line 19, it may result in a modification of \prg{nd4.ctns}. This is so, because \prg{prx12} is no longer protected.
+ \item 
+The fifth external call, on line 29, may result in the modification of \prg{nd4.ctns}, \prg{nd2.ctns}, and \prg{nd1.ctns}, because we have passed the capability \prg{prx10}.
+ \item 
+We now revoke the capability of \prg{prx12}, on line 34, so that it can only affect \prg{nd4.cnt} and \prg{nd2.cnt}. We re-establish the value of \prg{nd1.cnt} on line 35, and on line 36 we make an external call. We know that this call cannot affect the value of \prg{nd1.cnt}.
+\footnote{Another example of a revocation would be to set the   \prg{parent} of \prg{nd4} to be \prg{nd3}; then, \prg{prx11} 
+would have capability on \prg{nd4} and \prg{nd3}.
+On the other hand, setting the \prg{parent} of \prg{nd4}  to be \prg{nd1} would augment the capability of \prg{prx11};
+such an augmentation would, however be forbidden by $S_{dom_4}$, if the corresponding capability was had already been exported to the external world.}
+\end{itemize}
+
+
+
+ 
+\begin{figure}[th] 
+\resizebox{7cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/Dom_A.png}
+} 
+\caption{DOM tree and Proxies, created as in the code from Fig \ref{fig:DoMCodeClient}}
+ \label{f:DOM:Tree:Diagrs}
+ \end{figure}
+
+
 
 \begin{figure}[th] 
 \begin{tabular}{|c|c|c|}
 \hline
-\resizebox{3,5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/ShopB.png}
-} 
-&
-\resizebox{3,5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/ShopC.png}
+\resizebox{3,8cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/Dom_B.png}
 }
 &
-\resizebox{3.5cm}{!}{
-\includegraphics[width=\linewidth]{diagrams/ShopD.png}
+\resizebox{3.8cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/Dom_C.png}
 }
-\\ 
-\hline % \hline
+&
+\resizebox{3,8cm}{!}{
+\includegraphics[width=\linewidth]{diagrams/Dom_D.png}
+}
+\\
+\hline
+\prg{prx10}, \prg{prx10}, and \prg{prx12} are the  
+&
+\prg{prx10} and  \prg{prx11}  are the 
+&
+\prg{prx10}  is the\ 
+\\
+capabilities for \prg{nd4.cnt} 
+&
+capabilities for \prg{nd2.cnt}  
+&
+capability for \prg{nd1.cnt}  
+\\
+\hline
 \end{tabular}
-\caption{DOM trees and Proxies}
+\caption{Capabilities for the DOM tree from Fig. \ref{f:DOM:Tree:Diagrs}. In particular, notice the many-to-many relation between capabilities and effects: For example, there are three capabilities on \prg{nd4.cnt}. And \prg{prx10} has capabilities on \prg{cnt} of three objects.}
+%\prg{nd1.cnt} \prg{nd2.cnt} and \prg{nd4.cnt}.}
  \label{f:DOM:Diagrs}
  \end{figure}
- 
+
+\subsubsection{Specifications}
+We now discuss possible specifications. For this, we will use  the predicate $may\_modify \subseteq \prg{Proxy} \times \prg{Node}$, which says that 
+\prg{prx} has \emph{modification-capabilities} on \prg{nd}, where \prg{prx} is
+a  \prg{Proxy} and \prg{nd} is a \prg{Node}, if \prg{nd} is the \prg{prx}$k^{th}$  parent
+of   \prg{pr.node} where $k \leq \prg{nd}.\prg{hght}$.
+The formal definition is as follows:
+\\
+$\strut \SPSP   may\_modi\!f\!y(\prg{prx}, \prg{nd}) \triangleq \exists k:\mathbb{N}. [ \  \prg{prx}.\prg{node}.\prg{parent}^k=\prg{nd}\ \wedge k\leq   \prg{prx}.\prg{hght}]$
+\\
+Thus, a \prg{Proxy} object \prg{prx}, which satisfies $may\_modi\!f\!y(\prg{prx},\prg{nd})$ is a capability which may modify the node $\prg{nd}$. 
+
  
 \vspace{.1cm}
 
 \noindent
-We now discuss propose three specifications:
-\ \ 
+We now use $may\_modify$ in writing the specifications.
 Below, $S_{dom\_1}$ mandates  that nodes, $\prg{nd}$ are not leaked. 
+Moreover, $S_{dom\_2}$  and $S_{dom\_3}$   mandate that the \prg{parent} node of a \prg{Node} cannot be modified by external code: 
+{Similarly, $S_{dom\_4}$ mandates  that proxies which $may\_modi\!f\!y(\prg{prx},\prg{nd})$ are not leaked.}
+{Finally, $S_{dom\_5}$ mandates   that proxies which $may\_modi\!f\!y(\prg{prx},\prg{nd})$ are not leaked, and that when a node $nd$ is protected, and  all proxies that can  $may\_modi\!f\!y(\prg{prx},\prg{nd})$ are protected, then  the $cnt$ of $nd$ cannot be modified by external code.}
 \\
 $\strut \SPSP  S_{dom\_1}\ \  \triangleq \ \ \TwoStatesN{ \prg{nd}:\prg{Node}}{\  \inside{\prg{nd}}\  ] \ }$ 
 \\
+\\
+$\strut \SPSP  S_{dom\_2}\ \  \triangleq \ \ \TwoStatesN{ \prg{nd}:\prg{Node},\prg{nd'}:\prg{Node}}{\  \prg{nd.parent}=\prg{nd}'   \ }$ 
+\\
+$\strut \SPSP  S_{dom\_3} \  \triangleq \ \ \TwoStatesN{ \prg{nd}:\prg{Node} }{\  \prg{nd.parent}=\prg{null} \ }$ 
+\\
 \noindent
-{Also, $S_{dom\_2}$ mandates  that proxies which $may\_modi\!f\!y(\prg{prx},\prg{nd})$ are not leaked.}
 \\
-$\strut \SPSP  S_{dom\_2}\ \  \triangleq \ \ \TwoStatesN{ \prg{nd}:\prg{Node}}{\  \forall \prg{prx}:\prg{Proxy}.[ \ may\_modi\!f\!y(\prg{prx}, \prg{nd}) \rightarrow \inside{\prg{prx}}\  ] \ }$ 
+$\strut \SPSP  S_{dom\_4}\ \  \triangleq \ \ \TwoStatesN{ \prg{nd}:\prg{Node}}{\  \forall \prg{prx}:\prg{Proxy}.[ \ may\_modi\!f\!y(\prg{prx}, \prg{nd}) \rightarrow \inside{\prg{prx}}\  ] \ }$ 
 \\
-{Finally, $S_{dom\_3}$ mandates   that proxies which $may\_modi\!f\!y(\prg{prx},\prg{nd})$ are not leaked, and that when a node $nd$ is protected, and  all proxies that can  $may\_modi\!f\!y(\prg{prx},\prg{nd})$ are protected, then  the $cnt$ of $nd$ cannot be modified by external code.}
 \\
-$\strut \SPSP  S_{dom\_3}\ \  \triangleq \ \  \forall{ \prg{nd}:\prg{Node}.\forall \prg{val}:\prg{Object} }$.\\
-$\strut \SPSP\strut  \SPSP\strut \SPSP	\{  \  \inside{\prg{nd}} \wedge \forall \prg{prx}:\prg{Proxy}.[ \ may\_modi\!f\!y(\prg{prx}, nd) \rightarrow \inside{\prg{prx}}\  ]  \wedge \prg{nd.cnt} = \prg{val} \ \}  $ 
+$\strut \SPSP  S_{dom\_5}\ \  \triangleq \ \  \forall{ \prg{nd}:\prg{Node}.\forall \prg{val}:\prg{Object} }$.\\
+$\strut \SPSP\strut  \SPSP\strut \SPSP	\{  \  \inside{\prg{nd}} \wedge \forall \prg{prx}:\prg{Proxy}.[ \ may\_modi\!f\!y(\prg{prx}, \prg{nd} ) \rightarrow \inside{\prg{prx}}\  ]  \wedge \prg{nd.cnt} = \prg{val} \ \}  $ 
 
 
-Note that $S_{dom\_3}$ is strictly stronger than $S_{dom\_2}$. 
-The module shown in Fig. \ref{fig:DoMCode}, and \ref{fig:DoMCodeClient} does satisfies all three specifications from above. 
-\footnote{The careful reader might worry that the method \prg{demo} in class \prg{Example} in Fig. \ref{fig:DoMCodeClient} 
+ Note that $S_{dom\_5}$ is strictly stronger than $S_{dom\_4}$. 
+The module shown in Fig. \ref{fig:DoMCode} and \ref{fig:DoMCodeClient} does satisfy  all the  specifications from above. 
 
-}
-Also,  $S_{dom\_3}$ is needed 
-for the proof of the preservation of the  values \prg{cnt}, as shown in the client in Fig. \ref{fig:DoMCodeClient}, while  
+The careful reader might worry that the method \prg{demo} in class \prg{Example} in Fig. \ref{fig:DoMCodeClient} 
+breaks specifications $S_{dom\_1}$, and $S_{dom\_4}$, since it does export \prg{nd1}  and \prg{prx12}. 
+However, there is no external state between the creation of   \prg{nd1} and its export, and so our scoped invariant is preserved. 
+Similarly, there is no external state between the creation of   \prg{prx10} and its export, and so our scoped invariant is preserved. 
 
 
+ To prove that the external calls in Fig. \ref{fig:DoMCodeClient} preserve the stated properties  we need to apply the specifications  $S_{dom\_2}$, 
+ and $S_{dom\_5}$, but we do not need   $S_{dom\_1}$ or $S_{dom\_3}$.
+ 
 
-\vspace{.1cm}
+
+\subsubsection{Other Specifications}
 
 \citet{OOPSLA22} specify this as:
  
@@ -175,8 +240,7 @@ to the node that was modified.
 The assertion $\exists {o}.[\ \external {\prg{o}} \wedge \access{\prg{o}}{\prg{pr}}\ ]$ is the contrapositive of our  $\inside{pr}$, but is is weaker than that, because it does not specify the frame from which $o$ is accessible.
 Therefore, $\prg{DOMSpec}$ is a stronger requirement than $S_{dom\_1}$.
 
-In Fig. \ref{fig:DoMCode} for a module that satisfies such a specification. 
-
+ 
 
 
 

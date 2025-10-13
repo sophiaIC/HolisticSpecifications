@@ -1,0 +1,328 @@
+\section{Appendix to Section \ref{sect:proofSystem} } \label{app:proof}
+\label{app:hoare}
+
+
+\subsection{Preliminaries: Specification Lookup,  Renamings, Underlying Hoare Logic}
+
+Definition \ref{d:promises} is broken down as follows:  $S_1 \txtin  S_2$ says that $S_1$ is textually included in $S_2$; \ \ $S \thicksim S'$ says that $S$ is a safe renaming of $S'$; \ \   $\promises M S$ says that $S$ is a safe renaming of one of the specifications given for $M$. 
+ 
+In particular, a safe renaming of  ${ \TwoStatesN {\overline {x:C}} {A}  }$ can replace any of the variables $\overline x$.  
+A safe renaming  of ${\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}$  can replace  the formal parameters ($\overline y$) by actual parameters  ($\overline {y'}$) but requires the actual parameters  not to include \prg{this}, or \prg{res}, (\ie $\prg{this}, \prg{res}\notin \overline{y'}$). -- %The latter requirement 
+Moreover, it can replace  the free variables which do not overlap with the formal parameters or the receiver ( $\overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this}\}$).
+
+\begin{definition}
+For a module $M$ and a specification $S$, we define:
+\label{d:promises}
+\begin{itemize}
+\item
+$S_1 \txtin  S_2  \ \ \ \triangleq\ \ \   S_1 \txteq  S_2$, or  $S_2 \txteq  S_1 \wedge S_3$, or $S_2\txteq S_3 \wedge S_1$,  or   $S_2 \txteq S_3 \wedge  S_1 \wedge S_4$ for some $S_3$, $S_4$.
+\item
+$S  \thicksim  S'$ \ \ \  is defined by cases
+
+\begin{itemize}
+\item
+$ { \TwoStatesN {\overline {x:C}} {A}  }   \thicksim  { \TwoStatesN {\overline {x':C}} {A'[\overline{x'/x}]} } $
+\item
+$ {\mprepostN{A_1}{p\ D}{m}{y}{D}{A_2} {A_3}}  \thicksim
+ {\mprepostN{A_1'}{p\ D}{m}{y'}{D}{A_2'} {A_3'}} $
+  \\
+ $\strut \hspace{2cm}    \ \  \triangleq\ \ \  A_1 = A_1'[\overline{y/y'}][\overline{x/x'}], \ \ A_2 = A_2'[\overline{y/y'}][\overline{x/x'}], \ \ A_3 = A_3'[\overline{y/y'}][\overline{x/x'}], \ \ \wedge$\\
+ $\strut \hspace{2cm}\ \ \ \ \ \ \ \ \ \prg{this}, \prg{res}\notin \overline{y'}, \ \ \overline{x}=\fv(A_1)\setminus\{{\overline y},\prg{this} \} $
+  \end{itemize} 
+  
+ \item  
+ $\promises M  S \ \ \ \triangleq
+ \ \ \ \exists S'.[ \ \ S'  \txtin \SpecOf M\ \ \wedge\ \ S' \thicksim S \ \ ]$
+  \end{itemize} 
+  \end{definition} 
+  
+The restriction on renamings of method specifications that  the actual parameters should not to include \prg{this}  or \prg{res} 
+ is necessary because \prg{this} and \prg{res}  denote different objects from the point of the caller  than from the point of the callee.
+It means that we are not able to verify a method call whose actual parameters include \prg{this} or \prg{res}. 
+This is not a serious restriction: we can encode any such method call by preceding it with assignments to fresh local variables, \prg{this'}:=\prg{this}, and   \prg{res'}:=\prg{res}, and using \prg{this'} and \prg{res'} in the call.
+
+ 
+
+\begin{example}
+\label{e:rename}
+The specification  from  Example \ref{example:mprepostl} can be renamed as 
+
+\small
+{
+   {\sprepost
+		{\strut \ \ \ \ \ \ \ \ \ S_{9r}} 
+		{  a1:\prg{Account}, a2: \prg{Account}\wedge  \inside{a1}\wedge  \inside{a2.\prg{key}} }
+		{\prg{public Account}} {\prg{set}} {\prg{nKey}:\prg{Key}}
+		{   \inside{a1}\wedge  \inside{a2.\prg{key}} }
+		{{   \inside{a1}\wedge  \inside{a2.\prg{key}} }}		
+}}
+
+\end{example}
+
+\begin{axiom}
+\label{ax:ul}
+{Assume   Hoare logic with judgements % of the form 
+\ $M \vdash_{ul} \{ A \} stmt \{ A' \}$, 
+with  $\Stable{A}$,  $\Stable{A'}$. }
+\end{axiom}
+
+\subsection{Types}
+\label{types}
+
+The rules in Fig. \ref{f:types} allow triples to talk about the types 
+Rule {\sc{types-1}} promises that types of local variables do not change.
+Rule {\sc{types-2}} generalizes {\sc{types-1}} to any statement, provided that  there already exists a triple for that statement.
+
+\begin{figure}[tht]
+$
+\begin{array}{c}
+ \begin{array}{lcl}
+\inferrule[\sc{types-1}]
+	{  stmt \ \mbox{contains no method call} \\
+	stmt  \ \mbox{contains   no assignment to $x$}}
+	{\hproves{M}  {x:C} {\ stmt\ }{x:C} }
+\\
+\\
+% THIS RULE IS NOT SOUND -- we need to adapt it
+%{
+\inferrule[\sc{types-2}]
+	{ \hprovesN{M}  {A} {\ s\ }  {A'} {A''}  }
+	{\hprovesN{M}  {x:C \wedge A} {\ s\ }  {x:C\wedge A'} {A''}}
+% \end{array}
+\end{array}
+\end{array}
+ $
+\caption{Types}
+\label{f:types}
+\end{figure}
+
+
+In {\sc{types-1}} we restricted to statements which do not contain method calls  in order to make lemma   \ref{l:no:meth:calls}  valid.
+
+ 
+\subsection{Second Phase - more}
+
+in Fig. \ref{f:substructural:app}, we    extend the Hoare Quadruples Logic with substructural rules, rules for conditionals, case analysis, and a contradiction rule.
+For the conditionals we assume the obvious operational. semantics, but do not define it in this paper
+
+\begin{figure}[htb]
+$
+\begin{array}{c}
+\begin{array}{lcl}
+\inferruleSD{[\sc{combine}]}
+	{  \begin{array}{l}
+	\hprovesN{M}  {A_1} {\ s\ } {A_2}  {A} \\ % \hspace{1.4cm}  
+	\hprovesN{M}  {A_3} {\ s\ } {A_4} {A}
+	\end{array}
+	}
+	{ \hprovesN{M}  {A_1 \wedge A_3 }{\ s\ } {A_2 \wedge A_4} {A} }
+& &
+\inferruleSD{[\sc{sequ}]}
+	{  \begin{array}{l} 
+	\hprovesN{M}  {A_1} {\ s_1\ } {A_2}  {A}  \\ % \hspace{1.4cm} 
+	\hprovesN{M}  {A_2} {\ s_2\ } {A_3} {A}
+	\end{array}
+	}
+	{   \hprovesN{M}  {A_1   }{\ s_1; \, s_2\ } {  A_3} {A} }
+\end{array}
+\\ \\
+\inferruleSD{ \hspace{3cm} [\sc{consequ}]}
+	{
+%	\begin{array}{l}
+	 { \hprovesN  {M}  {A_4} {\, s\, } { A_5} {A_6}  }
+	 \hspace{1.4cm} 
+	 M \vdash A_1 \rightarrow A_4 
+	 \hspace{1.4cm} 
+	{ M \vdash A_5   \rightarrow  A_2  }
+	 \hspace{1.4cm}   
+	{  M \vdash A_6 \rightarrow A_3 }
+%	\end{array}
+	}
+	{   \hprovesN{M}  {A_1 }{\ s\ } {A_2} {A_3} }
+  \end{array}
+ $
+ 
+ $
+\begin{array}{c}
+\inferruleSD{\hspace{2.5cm} [\sc{If\_Rule}]}
+	{
+	 \begin{array}{c}
+	  \hprovesN {M}   
+		{\  A \wedge Cond \  }
+		{\    stmt_1   \ }
+ 		{\ A' \ }
+		{\ A'' \ }
+	\\
+	    \hprovesN {M}   
+		{\  A \wedge \neg Cond \  }
+		{\    stmt_2   \ }
+ 		{\ A' \ }
+		{\ A'' \ }	
+	\end{array}
+	}	
+ 	{  	
+	\hprovesN {M}   
+		{\  A \  }
+		{\  \prg{if}\ Cond\ \prg{then}\ stmt_1\ \prg{else}\ stmt_2 \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+}
+\\
+\\
+\begin{array}{lcl}
+{
+\inferruleSD{\hspace{0.5cm} [\sc{Absurd}]}
+	{	
+	}	 
+ 	{  	
+	\hprovesN {M}   
+		{\  false \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+}
+} & &
+{
+\inferruleSD{\hspace{0.5cm} [\sc{Cases}]}
+	{ \begin{array}{l}
+	\hprovesN {M}   
+		{\  A \wedge A_{1}  \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+		\\
+		\hprovesN {M}   
+		{\   A \wedge A_{2} \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+	\end{array}	
+	}	 
+ 	{  	
+	\hprovesN {M}   
+		{\  A \wedge (A_1 \vee A_2) \  }
+		{\  \ stmt \ \ }
+		{\ A' \ }
+		{\ A'' \ }
+}
+}
+\end{array}
+\end{array}
+$
+ \vspace{-.5cm}
+\caption{Hoare Quadruples -    substructural rules, and conditionals }
+\label{f:substructural:app}
+\end{figure}
+
+\subsection{Extend the semantics and Hoare logic to accommodate scalars and conditionals}
+\label{s:app:scalars}
+
+{We extend the notion of protection to also allow it to apply to scalars. }
+
+\begin{definition}[Satisfaction  of Assertions  -- Protected From]
+\label{def:chainmail-protection-from-ext}
+extending the definition of Def 
+\ref{def:chainmail-protection-from}. We use $\alpha$ to range over addresses, $\beta$  to range over scalars, and   $\gamma$ to range over addresses or scalars.
+
+\noindent
+We define  $\satisfiesA{M}{\sigma}{\protectedFrom{{\gamma}} {{\gamma_{o}}}} $ as:
+\begin{enumerate}
+\item
+\label{cProtectedNew}
+ $\satisfiesA{M}{\sigma}{\protectedFrom{{\alpha}} {{\alpha_{o}}}}   \ \ \ \triangleq $ 
+  \begin{itemize}
+ \item
+$\alpha\neq \alpha_0$,
+ \ \ \ \  and% \\
+ \item
+$\forall n\in\mathbb{N}. \forall f_1,...f_n..
+[\ \ \interpret{\sigma}{\alpha_{o}.f_1...f_n}=\alpha \ \ \  \Longrightarrow \ \ \  \satisfiesA{M}{\sigma}{ {\interpret{\sigma}{\alpha_{o}.f_1...f_{n-1}}}:C} \ \wedge \ C\in M\ \ ]$
+\end{itemize}
+\item
+ $\satisfiesA{M}{\sigma}{\protectedFrom{{\gamma}} {{\beta_{o}}}}   \ \ \ \triangleq  \ \ \ true$
+ \item
+ $\satisfiesA{M}{\sigma}{\protectedFrom{{\beta}} {{\alpha_{o}}}}   \ \ \ \triangleq  \ \ \ false$
+  \item
+$\satisfiesA{M}{\sigma}{\protectedFrom{{\re}} {{\re_{o}}}} \ \ \ \triangleq $ \\
+  $\exists \gamma, \gamma_{o}. [\  \ \eval{M}{\sigma}{{\re}}{\gamma}\ \wedge \eval{M}{\sigma}{{\re_0}}{\gamma_0} \  \wedge \ 
+  \satisfiesA{M}{\sigma}{\protectedFrom{{\gamma}} {{\gamma_{o}}}}
+ \ \  ]$
+ \end{enumerate}
+ \end{definition} 
+
+
+
+{The definition from above gives rise to further cases of  protection; we supplement the triples from 
+Fig. \ref{f:protection} with some further inference rules, given   in Fig. \ref{f:protection:conseq:ext}.}
+Namely, any expression $\re$ is protected from a scalar (rules {\sc{Prot-In}}, {\sc{Prot-Bool}} and {\sc{Prot-Str}}).
+Moreover, if starting at some $\re_o$ and following any   sequence of fields $\overline f$ we reach   internal objects or  scalars (\ie never reach an external object), then any $\re$ is protected from $\re_o$ (rule {\sc{Prot\_Intl}}).
+
+
+\begin{figure}[htb]
+\begin{mathpar}
+\inferrule
+	{M \vdash \re_o : \prg{int} \rightarrow \protectedFrom{\re}{\re_o} }
+	{}
+	\quad[\textsc{Prot-Int}]
+	\and
+\inferrule
+	{M \vdash \re_o : \prg{bool} \rightarrow \protectedFrom{\re}{\re_o} }
+	{}
+	\quad[\textsc{Prot-Bool}]
+	\and
+\inferrule
+	{M \vdash \re_o : \prg{str} \rightarrow \protectedFrom{\re}{\re_o} }
+	{}
+	\quad[\textsc{Prot-Str}]
+\and
+ {
+\inferrule
+	{M \vdash  \protectedFrom{\re}{\re_o}  \wedge {\re} \internal\,  \rightarrow \re \neq e'} 
+	{}
+	\quad[\textsc{Prot-Neq]}
+  }
+  \and
+  {
+\inferrule
+	{M \vdash  A \rightarrow \forall \overline f.[\ \re_o.\overline f\internal\, \vee\, \re_o.\overline f:\prg{int} \,  \vee\,    \re_o.\overline f:\prg{bool}\,  \vee\,  \re_o.\overline f:\prg{str}\ ] }
+	{M \vdash  A \rightarrow \protectedFrom {\re} {\re_o} }
+	\quad[\textsc{Prot-Intl]}
+  } 
+\end{mathpar}
+\caption{Protection for Scalar and Internal Types}
+%  Extended Consequence Rules for Protection that include rules for protection involving scalars.}
+\label{f:protection:conseq:ext}
+\end{figure}
+
+
+
+ %
+%
+%The rules {\sc{Call\_Int}} and {\sc{Call\_Int\_Adapt}}   are weaker forms of  the  rule {\sc{Call\_Int\_Combine}} given here. 
+%Even though  {\sc{Call\_Int\_Combine}} is sound, we did not include it in the presented system, for the sake of simplicity and separation of concerns.
+%A similar stronger rule can be expressed for {\sc{Call\_Ext}} and  for {\sc{Call\_Ext\_Adapt}}.
+% \\
+%$
+%{\begin{array}{c}
+%  \inferruleSD  {\hspace{4.7cm} [\sc{Call\_Int\_Combine}]}
+% 	{
+% 	  	\begin{array}{c}
+% 		  \promises  M { \mprepostN  {A_{1a} \wedge A_{1r} }  {p\ C} {m} {y} {C} { A_{2a} \wedge A_{2r}}   {A_3}  }
+%		\\
+%		A_1'\txteq    A_{1a}[y_0/\prg{this}]  \wedge {\PushAS {y}{A_{1r}[y_0/\prg{this}]}}
+%		\\
+%		A_2'\txteq    A_{2a}[u/res,y_0/\prg{this}]  \wedge {\PushAS {y}{A_{2r}[u/res,y_0/\prg{this}]}}\
+%       	\end{array}
+% 		}
+% 	{  \hprovesN {M} 
+%						{ \  y_0:C, {\overline {y:C}} \wedge A_1' \ }  
+%						{ \ u:=y_0.m(y_1,.. y_n)\    }
+%						{ \ A_2'\ }
+%						{  \  A_3 \ }	
+%      }
+%\end{array}
+%}
+
+\input{appendix/appendixAdapt}
+
+ 

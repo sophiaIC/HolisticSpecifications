@@ -1,0 +1,912 @@
+\section{Appendix to Section \ref{sect:sound:proofSystem} -- Soundness of the Hoare Logics}
+
+\subsection{Expectations}
+\label{s:expectations}
+
+\begin{axiom}
+\label{lemma:axiom:enc:assert:ul}
+\label{ax:ul:sound}
+We require a sound logic of assertions ($M \vdash A$), and a sound Hoare logic , \ie that for all $M$, $A$, $A'$, $stmt$:
+\begin{center}
+$M \vdash A   \ \ \ \  \Longrightarrow  \ \ \ \  \forall \sigma.[\ M, \sigma \models A\ ]$.\\
+% \end{center}
+%\end{axiom}
+%
+%\noindent
+%Moreover, we assume that the  \ie for all $A$, $A'$, $stmt$:\ \ \  
+%
+%\begin{axiom}
+% \begin{center}
+{$M\ \vdash_{ul}\  \triple A {stmt} {A'}  \ \ \ \  \Longrightarrow  \ \ \ \ \satisfies  {M} { \triple A {stmt} {A'}}$ }
+ \end{center}
+\end{axiom}
+
+The expectation that $M\ \vdash_{ul}\  \triple A {stmt} {A'} $ is sound is not onerous: 
+since the assertions $A$ and $A'$ do not talk about protection, many Hoare logics from the literature could be taken.
+
+On the other hand, in the logic  $M \vdash A$ we want to allow the assertion $A$   to talk about protection. 
+Since protection is a novel concept, the   literature offers no such logics.
+Nevertheless, such a logic can be constructed by extending and underlying assertion logic $M \vdash_{ul} A$  which does not talk about protection.
+We show such an extension in Fig \ref{assert:logic:extend}.
+
+
+\begin{figure}[htb]
+$
+\begin{array}{c}
+\inferruleSD{[\sc{Ext-1}]}
+	{  M \vdash_{ul} A  	}
+	{ M \vdash_{ul} A   }
+\\ \\
+\begin{array}{lcl}
+\inferruleSD{[\sc{Ext-2}]}
+	{  
+	M \vdash A \rightarrow A'
+	 
+	}
+	{   M \vdash (A \wedge \protectedFrom {\re} {\re'}) \rightarrow (A' \wedge \protectedFrom {\re} {\re'})   }
+& & 
+\inferruleSD{[\sc{Ext-3}]}
+	{   
+	M \vdash A \rightarrow A'
+	 
+	}
+	{   M \vdash (A \wedge \inside {\re} {) \rightarrow (A' \wedge \inside{\re}})   }
+\end{array}
+\\ \\
+\inferruleSD{[\sc{Ext-4}]}
+	{   
+	\
+	}
+	{   M \vdash {((A_1 \vee A_2) \wedge \protectedFrom {\re} {\re'})) \leftrightarrow 
+	                     ((A_1  \wedge  \protectedFrom {\re} {\re'})  \vee (A_2  \wedge \protectedFrom {\re} {\re'}))  }}
+\\ \\
+\inferruleSD{[\sc{Ext-5}]}
+	{   \ 
+	}
+	{   M \vdash {((A_1 \vee A_2) \wedge \inside{\re}) \leftrightarrow 
+	                     ((A_1  \wedge  \inside{\re})  \vee (A_2  \wedge  \inside{\re}))  }}
+\end{array}
+$
+\caption{From $M \vdash_{ul} A$ to $M \vdash  A$}
+\label{assert:logic:extend}
+\end{figure}
+
+\noindent
+The extension shown in  in Fig.  \ref{assert:logic:extend}  preserves soundness of the logic:
+
+\begin{lemma}
+Assume a logic $\vdash_{ul}$, such that 
+\begin{center}
+$M \vdash_{ul} A   \ \ \ \  \Longrightarrow  \ \ \ \  \forall \sigma.[\ M, \sigma \models A\ ]$.\\
+ \end{center}
+
+\noindent
+Extend this logic according to the rules in Fig.  \ref{assert:logic:extend} and in Fig \ref{f:protection:conseq:ext}, and obtain $M \vdash  A$. Then, we have:
+\begin{center}
+$M \vdash A   \ \ \ \  \Longrightarrow  \ \ \ \  \forall \sigma.[\ M, \sigma \models A\ ]$.\\
+ \end{center}
+
+\end{lemma}
+
+\begin{proof}
+By induction over the derivation that $M \vdash A$.
+\end{proof}
+
+Note that the rules in  in Fig.  \ref{assert:logic:extend} allow the derivation  of $M\vdash A$, 
+for which $\Pos A$ does not hold -- \eg we can derive  $M \vdash \inside {\re}  \rightarrow  \inside{\re}$ through application of rule {\sc{Ext-3}}.
+However, this does not affect soundness of our logic --    $\Pos {\_}$ is required only in specifications.
+
+\subsection{\Strong satisfaction of assertions}
+\label{s:scoped:mean}
+
+\begin{definition}% [State Restriction, and Multi-level Sartisfaction]
+\label{def:restrict}
+For a state $\sigma$, and a number $i\in \mathbb{N}$ with $i \leq \DepthSt {\sigma}$,   module $M$, and assertions $A$, $A'$ we define: % $\RestictTo {\sigma} {i}$:
+\begin{itemize}
+\item
+$  \satDAssertFrom M  \sigma k   A  \ \  \ \triangleq \  \ \  
+  k\leq  \DepthSt {\sigma} \ \wedge \  \forall i\!\in\![k...\DepthSt {\sigma}].[\ M,{\RestictTo {\sigma}{i}} \models A[\overline{ {{\interpret \sigma z}/ z}}]\ ] \ \  \mbox{where} \ \
+  \overline z=\fv(A).$ 
+\end{itemize}
+\end{definition}
+ 
+ Remember the definition of  $\RestictTo  \sigma k$, which returns a new state whose top frame is the $k$-th frame from $\sigma$. Namely, $\RestictTo {(\phi_1...\phi_i...\phi_n,\chi)} {i}\ \ \ \triangleq \ \ \ (\phi_1...\phi_i,\chi)$
+  
+ 
+\begin{lemma}
+\label{l:shallow:scoped}
+For a states $\sigma$, $\sigma'$, numbers $k,k'\in \mathbb{N}$, assertions  $A$, $A'$, frame $\phi$ and variables $\overline z$, $\overline u$:
+\begin{enumerate}
+\item
+$ \satDAssertFrom M  \sigma { \DepthSt \sigma}   A \ \ \Longleftrightarrow\ \ M,\sigma \models A\ $
+\item
+$ \satDAssertFrom M  \sigma {k} A \ \wedge\  k\leq k'\  \  \   \Longrightarrow \ \ \satDAssertFrom M  \sigma {k'} A$ 
+\item 
+\label{shallow:to:scoped}
+$ M,\sigma \models A \ \wedge\ \Stable A \  \ \Longrightarrow \  \  \forall k  \leq  \DepthSt \sigma.[ \ \satDAssertFrom M  \sigma k   A \ ]$
+\item
+\label{fourSD}
+$ M  \models A \rightarrow A'\  \  \   \Longrightarrow \ \ \forall \sigma. \forall k\leq  { \DepthSt \sigma}.[ \ \satDAssertFrom M  \sigma {k} A
+\ \Longrightarrow \  \satDAssertFrom M  \sigma {k} A'\ ]$
+
+\end{enumerate}
+\end{lemma}
+ 
+ 
+
+
+  
+\noindent
+\vspace{.1cm}
+{\textbf{Proof Sketch}} 
+
+\begin{enumerate}
+\item
+By unfolding and folding the definitions.
+\item
+By unfolding and folding the definitions.
+\item
+By induction on the definition of $\Stable {\_}$.
+\item
+  By contradiction: Assume that there exists a $\sigma$,  and a  $k\leq \DepthSt \sigma$,    such that  \\
+$\strut \hspace{2cm}   \satDAssertFrom M  \sigma {k} A$ \ \ \ and \ \ \ $\neg (\satDAssertFrom M  \sigma {k} A')$\\
+ The  above implies that \\
+$\strut \hspace{2cm} \forall i\geq k.[\ \ M,{\RestictTo {\sigma}{i}} \models A[\overline{ {{\interpret \sigma z}/ z}}]\ \ ]$, \ \ \ and\\
+$\strut \hspace{2cm} \exists j\geq k.[\ \  M,{\RestictTo {\sigma}{j}} \not\models A'[ \overline{ {{\interpret \sigma z}/ z}}]\ \ ]$,\\
+ where  $\overline z \triangleq \fv(A)\cup \fv(A')$.\\
+ Take $\sigma''\triangleq  \RestictTo {\sigma}{j}$. Then we have that\\
+$\strut \hspace{2cm} M, \sigma'' \models A[\overline{ {{\interpret \sigma z}/ z}}]$,  and  $M,  \sigma'' \not\models A'[\overline{ {{\interpret \sigma z}/ z}}]$.\\
+ This contradicts $ M  \models A \rightarrow A'$.\\
+% SD I chopped the below, because I increase the set $\overline z$.
+% Note that here we are also using the property that $M \models A$  and $u\notin \fv(A)$ implies $M \models A[z/u]$ -- this is needed because we have free variables in $A$ which are not free in $A[...]$ 
+ {\footnoteSD{NOTE TO AUTHORS  proof hinges on the fact that we consider the "restricted" state, $\sigma''$ a "dully-fledged" state, and the fact that we no longer require "Arising".}}
+ {\footnoteSD{SD  wondered whether  \ref{l:shallow:scoped}.\ref{four} would still hold if we allowed the assertions to "reflect" on the frame, to say things eg like "this and x are the only local variables". But such assertions would not have the property \ref{l:shallow:scoped}.\ref{fiveSD}}}
+\end{enumerate}
+\noindent
+%\vspace{.1cm}
+{\textbf{End Proof Sketch}} 
+
+ 
+ 
+Finally, the following lemma allows us to combine shallow and \Strong satisfaction:
+
+\begin{lemma}
+\label{l:shallow:scoped:scoped}
+For states  $\sigma$,  $\sigma'$, frame $\phi$ such that $\sigma'=\sigma  \pushSymbol \phi$, and for  
+assertion $A$, such that $fv(A)=\emptyset$:
+\begin{itemize}
+\item
+$\satDAssertFrom M  \sigma k A\   \wedge \ M, \sigma' \models A \ \ \ \Longleftrightarrow \ \ \   \satDAssertFrom M  {\sigma'} k  A$ 
+\end{itemize}
+\end{lemma}
+
+\begin{proof}
+By structural induction on $A$, and unfolding/folding the definitions. Using also lemma \ref{l:prtFrom} from later.
+\end{proof}
+
+
+
+
+\subsection{Shallow and \Strong Semantics of Hoare tuples}
+\label{s:shallow:deep:appendix}
+Another example demonstrating that assertions at the end of a method execution might not hold after the call:
+
+\begin{example}[$Stb^+$ not always preserved by Method Return]
+\label{ex:motivate:scopes}
+Assume state $\sigma_a$, such that $\interpret {\sigma_a} {\prg{this}}=o_1$, $\interpret {\sigma} {\prg{this}.f}=o_2$, $\interpret {\sigma} {x}=o_3$, $\interpret {\sigma} {x.f}=o_2$,  
+and $\interpret {\sigma} {x.g}=o_4$, where $o_2$ is external and all other objects are internal. 
+We then have $..,\sigma_a \models  \inside {o_4}$.
+Assume %that
+ the continuation of $\sigma_a$   consists of a method $x.m()$. Then,
+upon entry to that method, when we push the new frame, we have  state $\sigma_b$, which also satisfies $..,\sigma_b \models  \inside {o_4}$.
+Assume % that
+ the   body of $m$ is $\prg{this}.f.m1(\prg{this}.g); \prg{this}.f := \prg{this};  \prg{this}.g := \prg{this}$, and % that 
+ the external method $m1$ stores in the 
+receiver a reference to the argument.
+Then, at the end of method execution, and before popping the stack, we have   state $\sigma_c$, which also satisfies $..,\sigma_c \models  \inside {o_4}$.
+However, after we pop the stack, we obtain $\sigma_d$, for which $..,\sigma_d \not\models  \inside {o_4}$.
+\end{example} 
+
+
+\begin{definition}[\Strong Satisfaction of Quadruples by States]
+\label{def:restrict:sat}
+For modules $\Mtwo$, $M$, state $\sigma$,  
+and assertions $A$, $A'$ and  $A''$
+\begin{itemize}
+\item
+$ {\satDAssertQuadrupleFrom \Mtwo  M  \sigma   {A} {A'} {A''} } \ \ \triangleq \ \ $  \\
+$\strut \hspace{.5cm} \forall k, \overline{z}, \sigma',\sigma''.[
+  \satDAssertFrom M  \sigma k   {A}  \  
+  \ \Longrightarrow$\\
+$\strut \hspace{4.5cm}    [ \ {\leadstoBoundedStarFin {M\madd \Mtwo}{\sigma}  {\sigma'} }\  \Rightarrow \    \satDAssertFrom M  {\sigma'} k   {\sdN{A'}}   \ ]
+%[\overline{\interpret \sigma z/z}]}} \ ]
+ \ \wedge$\\
+$\strut \hspace{4.5cm}    [ \ {\leadstoBoundedStar  {M\madd \Mtwo}{\sigma}  {\sigma''} }\  \Rightarrow\      \satDAssertFrom M  {\sigma''}  k  {(\externalexec \rightarrow A''[\sdN{\overline{\interpret \sigma z/z}}])} \ ] $\\
+$\strut \hspace{2.3cm}\ \ \ \ ]  $ \\
+$\strut \hspace{2.3cm}\ \ \ \  \mbox{where }  \sdN{ \overline z= \fv(A)}$ %\!\setminus\! \vs(\sigma.\prg{cont}),\ \overline w=\fv(A)  $ 
+\end{itemize}
+\end{definition}
+
+
+
+ 
+\begin{lemma} 
+For all $M$, $\Mtwo$ $A$, $A'$, $A''$ and $\sigma$:
+\begin{itemize}
+\item
+$ {\satDAssertQuadrupleFrom \Mtwo  M  \sigma   {A} {A'} {A''} } \ \Longrightarrow \ \
+  {\satAssertQuadruple  \Mtwo  M   {A}  \sigma  {A'} {A''} } $
+\end{itemize}
+\end{lemma}
+
+\label{sect:HLmeans}
+
+We  define the {\emph {meaning}} of  our Hoare triples, $\triple {A} {stmt} {A'}$,  in the usual way, \ie that execution of $stmt$ in a state that satisfies $A$ leads to a state which satisfies $A'$.  
+In addition to that, Hoare quadruples, $\quadruple {A} {stmt} {A'} {A''}$, promise that any external future states scoped by $\sigma$ will satisfy $A''$.
+We give both a weak and a shallow version of the semantics
+
+
+ \begin{definition}[\Strong Semantics of Hoare triples]
+For modules $M$, and assertions $A$, $A'$   we define:
+%  the semantics of Hoare-triples,   $M\ \models\  \{\, A \,  \}\ stmt\  \{\, A' \, \}$ as follows:
+\begin{itemize}
+\item
+\label{def:hoare:sem:one}
+$\satisfies  {M} {  \{\, A \,  \}\ stmt\  \{\, A' \, \} }\ \ \ \triangleq$\\
+{$\strut  \ \ \ \forall    \Mtwo. \forall  \sigma.[ \ \   %\arising{\sigma}{M\madd \Mtwo }\   \wedge\  
+ \sigma.\prg{cont}\txteq stmt\   \Longrightarrow \ 
+{\satAssertQuadruple  \Mtwo  M   {\  A\ }  \sigma  { A'  } {true} } \ \ ]$%  \ \ \  ]  $
+}
+ \item
+ \label{def:hoare:sem:two}
+$\satisfies {M} {\quadruple {A} {stmt} {A'} {A''}}  \ \ \  \triangleq$ \\
+{$\strut  \ \ \  \forall    \Mtwo. \forall  \sigma.[ \  \  \sigma.\prg{cont}\txteq stmt\   \Longrightarrow \ 
+{\satAssertQuadruple  \Mtwo  M    {\  A\ }  \sigma  { A'  } {A''} } \ \ ]$%  \ \ \  ]  $
+}
+\item
+\label{def:hoare:sem:three}
+$\satisfiesD {M} {  \{\, A \,  \}\ stmt\  \{\, A' \, \} }\ \ \ \triangleq$\\
+{$\strut  \ \ \ \forall    \Mtwo. \forall  \sigma.[ \ \   %\arising{\sigma}{M\madd \Mtwo }\   \wedge\  
+ \sigma.\prg{cont}\txteq stmt\   \Longrightarrow \ 
+{\satDAssertQuadrupleFrom \Mtwo  M  \sigma   {\  A\ } { A'  } {true} } \ \ ]$%  \ \ \  ]  $
+}
+ 
+ \item
+ \label{def:hoare:sem:four}
+$\satisfiesD {M} {\quadruple {A} {stmt} {A'} {A''}}  \ \ \  \triangleq$ \\
+{$\strut  \ \ \  \forall    \Mtwo. \forall  \sigma.[ \ \    \sigma.\prg{cont}\txteq stmt\   \Longrightarrow \ 
+{\satDAssertQuadrupleFrom \Mtwo  M  \sigma   {\  A\ } { A'  } {A''} } \ \ ]$%  \ \ \  ]  $
+}
+
+\end{itemize}
+\end{definition}
+
+
+
+ 
+ \begin{lemma}[\Strong   vs Shallow Semantics of Quadruples]
+For all $M$, $A$, $A'$, and $stmt$:
+\begin{itemize}
+\item
+$\satisfiesD {M} {\quadruple {A} {stmt} {A'} {A''}}   \ \ \ \Longrightarrow \ \ \ \satisfies  {M} {\quadruple {A} {stmt} {A'} {A''}} $
+\end{itemize}
+\end{lemma}
+ \begin{proof}
+ By unfolding and folding the definitions
+ \end{proof}
+ 
+ 
+\subsection{\Strong satisfaction of specifications} 
+%\subsection{\Strong satisfaction of specifications -- \red{better term than \Strong?}}  
+\label{sect:HLmeans:scoped}
+
+
+
+We now give a \Strong meaning to specifications: 
+
+\begin{definition} [\Strong Semantics of  Specifications]
+
+We define $\satisfiesD{M}{{S}}$ by cases: %  over the three possible syntactic forms.
+
+\label{def:necessity-semantics:strong}
+
+\begin{enumerate}
+\item
+{ 
+$\satisfiesD{M}{\TwoStatesN {\overline {x:C}} {A}} \ \  \ \triangleq   \ \ \ 
+\forall \sigma.[\  \satisfiesD {M} {\quadruple {\externalexec \wedge \overline {x:C} \wedge A} {\sigma} {A} {A} } \ ] $
+}
+  \item
+ {$\satisfiesD{M} { \mprepostN {A_1}{p\ D}{m}{y}{D}{A_2} {A_3}    }\  \ \ \   \triangleq  \ \ \ $}\\ 
+ {
+$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \    \forall   y_0,\overline y, \sigma[ \ \ \ \sigma\prg{cont}\txteq {u:=y_0.m(y_1,..y_n)} \ \ \Longrightarrow \ \ 
+\satisfiesD {M} {\quadruple  {A_1'} }   {\sigma}   {A_2' } {A_3' }  \  \ \  ]$ } \\
+$\strut \ \ \   \ \ \ \ \ \ \ \ \   \  \mbox{where}$\\
+$\strut  \ \ \   \ \ \ \ \ \ \ \ \   \  \ A_1' \triangleq   y_0:D,{\overline {y:D}}   \wedge   A[y_0/\prg{this}],\  \  A_2' \triangleq A_2[u/res,y_0/\prg{this}],\ \ A_3' \triangleq A_3[y_0/\prg{this}] $
+ \item
+ $\satisfiesD{M}{S\, \wedge\, S'}$\ \ \  \ \ \  $\triangleq$  \  \ \  \   $\satisfiesD{M}{S}\ \wedge \ \satisfiesD{M}{S'}$
+\end{enumerate}
+\end{definition}
+
+ \begin{lemma}[\Strong   vs Shallow Semantics of Quadruples]
+For all $M$, $S$:
+\begin{itemize}
+\item
+$\satisfiesD {M} {S}   \ \ \ \Longrightarrow \ \ \ \satisfies  {M} {S} $
+\end{itemize}
+\end{lemma}
+
+\subsection{Soundness of the Hoare Triples Logic}
+\label{s:sound:app:triples}
+
+\begin{auxLemma}
+\label{l:no:call}
+For any module $M$, assertions $A$, $A'$ and $A''$, such that $\Pos A$, and $\Pos {A'}$, and a statement $stmt$ which does not contain any method calls:
+\begin{center}
+$  \satisfiesD {M} {\triple {A} {stmt} {A'} }  \ \ \Longrightarrow\ \  \satisfiesD {M} {\quadruple {A} {stmt} {A'} {A''}}$
+\end{center}
+\end{auxLemma}
+
+\begin{proof}
+
+\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Lemmas about protection}
+\label{s:app:protect:lemmas}
+
+\begin{definition}
+
+$\LRelevantKO  {\sigma} {k}\ \ \ \triangleq\ \ \  \{ \alpha \mid  \exists i.[ \ k \leq i \leq \depth \sigma \ \wedge \ \alpha \in \LRelevantO  {\RestictTo \sigma i}\ ]$
+\end{definition}
+ 
+Lemma \ref{exec:rel} guarantees that  program execution reduces the locally reachable objects, unless it allocates new ones.
+That is, any objects locally reachable in the $k$-th frame of the new state ($\sigma'$), are either new, or were locally reachable in the $k$-th frame of the previous state ($\sigma$).
+
+{
+\begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$, where $\models \sigma$, and where $k\leq \DepthSt {\sigma}$:
+\label{exec:rel}
+\begin{itemize}
+\item
+$\leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \  \Longrightarrow\ \ 
+  \LRelevantKO   {\sigma'} {k}\cap \sigma   \subseteq\   \LRelevantKO {\sigma} {k}  $
+\item
+$\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \  \Longrightarrow\ \ 
+  \LRelevantKO   {\sigma'} {k}\cap \sigma   \subseteq\   \LRelevantKO {\sigma} {k} $
+\end{itemize}
+\end{lemma}
+ }
+ 
+\begin{proof} $~ $
+
+\begin{itemize}
+\item
+If the step is a method call, then the assertion follows by construction.
+If the steps is a   local execution in a method, we proceed by case analysis. If it is an assignment to a local variable, then 
+$\forall k.[\ \LRelevantKO   {\sigma'} {k}= \LRelevantKO   {\sigma} {k}\ ]$.
+If the step is the creation of a new object, then the assertion holds by construction.
+If it it is a field assignment, say, $\sigma'=\sigma[\alpha_1,f \mapsto \alpha_2]$, then we have that 
+$\alpha_1, \alpha_2 \  \LRelevantKO {\sigma} {\DepthSt \sigma}$. 
+And therefore, by Lemma \ref{rel:smaller}, we also have that $\alpha_1, \alpha_2 \  \LRelevantKO {\sigma} {k}$
+All locally reachable objects in $\sigma'$ were either already reachable in $\sigma$ or reachable through $\alpha_2$,
+Therefore, we also have that  $\LRelevantKO   {\sigma'} {k}\subseteq  \LRelevantKO   {\sigma} {k}$
+ And by definition of $\leadstoBounded  {\_}  {\_}  {\_}$, it is not a method return.
+ 
+\item
+By induction on the number of steps in $\leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma'}$. 
+For the steps that correspond to method calls, the assertion follows by construction.
+For the steps that correspond to local execution in a method, the assertion follows from the bullet above.
+For the steps that correspond to method returns, the assertion follows by lemma \ref{rel:smaller}.
+\end{itemize}
+\end{proof}
+
+Lemma \ref{change:external} guarantees that any change to the contents of an external object can only happen during execution of an external method.
+ 
+ {
+ \begin{lemma} For all $\sigma$, $\sigma'$:
+ \label{change:external}
+\begin{itemize}
+\item
+$\leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \wedge \  \sigma \models \external{\alpha} \ \wedge\  {\interpret{\sigma} {\alpha.f}} \neq {\interpret{\sigma'} {\alpha.f}}
+ \ \ \Longrightarrow\ \  M,\sigma \models \extThis$
+\end{itemize}
+\end{lemma}
+  } 
+  \begin{proof}
+  Through inspection of the operational semantics in Fig. \ref{f:loo-semantics}, and in particular rule {\sc{Write}}.
+  \end{proof}  
+  
+ 
+%   {
+% \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
+% \label{lemma:notInside:implies}
+%\begin{itemize}
+%\item
+%$ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \ \wedge \ \leadstoBounded  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\ \wedge \  \notSatDAssertFrom M  {\sigma'} k   {\inside{\alpha}}
+% \ \ \Longrightarrow\ \ $\\
+% $\exists \alpha_o,f.[\  \alpha_0 \in \LRelevantKO  {\sigma} {k} \ \wedge \ M, \sigma' \models \external {\alpha_o} \ \wedge \ \interpret {\sigma'} {\alpha_o.f} = \alpha\  \wedge$\\
+%$\strut \hspace{3cm} [ \alpha_o \notin \sigma\ \vee\ \alpha_o \notin \LRelevantKO {\sigma} {k}\ \vee\  \interpret {\sigma} {\alpha_o.f} \neq \alpha\ ]\ \ \ \ \ ] $
+%\end{itemize}
+%\end{lemma}
+%}
+
+Lemma \ref{lemma:inside:preserved}  guarantees that internal code which does not include method calls preserves absolute protection. 
+It is used in the proof of soundness of the inference rule {\sc{Prot-1}}.
+
+  {
+ \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
+ \label{lemma:inside:preserved} 
+\begin{itemize}
+\item
+$ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \, \wedge \,M, \sigma \models \intThis \, \wedge \, \sigma.\prg{cont} \mbox{ contains no method calls } \ \wedge\ \leadstoBounded   {\Mtwo\cdot M}  {\sigma}  {\sigma'}\  \ \ \Longrightarrow\ \ \satDAssertFrom M  {\sigma'} k   {\inside{\alpha}}$
+\item
+$ \satDAssertFrom M  {\sigma} k   {\inside{\alpha}}  \ \wedge \ M, \sigma \models \intThis \ \wedge \ \sigma.\prg{cont}  \mbox{ contains no method calls } \ \wedge\ \leadstoBoundedStar  {\Mtwo\cdot M}  {\sigma}  {\sigma'}\  \ \ \Longrightarrow\ \ \satDAssertFrom M  {\sigma'} k   {\inside{\alpha}}$
+\end{itemize}
+\end{lemma}
+}
+
+\begin{proof} $~ $
+
+\begin{itemize}
+\item
+Because $\sigma.\prg{cont}$   contains no method calls, we also have that $\DepthSt {\sigma'}=\DepthSt {\sigma}$. Let us take
+$m=\DepthSt {\sigma}$.
+
+We continue by contradiction.
+ Assume that $\satDAssertFrom M  {\sigma} k   {\inside{\alpha}}$ and $\notSatDAssertFrom M  {\sigma} k   {\inside{\alpha}}$  
+
+Then:\\
+(*)\ $\forall f.\forall i\in [k..m].\forall \alpha_o\in  \LRelevantKO {\sigma} {i}.[\ M, \sigma \models \external {\alpha_o} \Rightarrow \interpret {\sigma} {\alpha_o.f} \neq \alpha\ \wedge \alpha_o \neq \alpha \ ] $.
+\\
+(**) $\exists f.\exists  j\in [k..m].\exists \alpha_o\in  \LRelevantKO {\sigma'} {j}.[\ M, \sigma' \models \external {\alpha_o} \wedge \interpret {\sigma'} {\alpha_o.f} = \alpha\ \vee \alpha_o = \alpha\ ] $
+\\
+We proceed by cases
+\begin{description}
+\item{1st Case} $\alpha_o \notin  \sigma$, \ie $\alpha_o$ is a new object.
+  Then, by our operational semantics, it cannot have a field pointing to an already existing object ($\alpha$), nor can it be equal with $\alpha$. Contradiction.
+\item{2nd Case}  $\alpha_o \in  \sigma$. Then, by Lemma \ref{exec:rel}, we obtain that $\alpha_o \in \LRelevantKO {\sigma} {j}$.
+Therefore, using (*), we obtain that $\interpret {\sigma} {\alpha_o.f} \neq \alpha$, and therefore 
+$ \interpret {\sigma} {\alpha_o.f} \neq \interpret {\sigma'} {\alpha_o.f}$.
+By lemma \ref{change:external}, we obtain $M, \sigma \models \extThis$. Contradiction!
+\end{description}
+
+\item
+By induction on the   number of steps, and using the bullet above.
+\end{itemize}
+
+\end{proof}
+
+% \subsubsection{Lemmas about relative protection}
+
+ 
+  {
+ \begin{lemma} For all $\sigma$, $\sigma'$, and $\alpha$:
+ \label{lemma:protTwo}
+\begin{itemize}
+\item
+$  M, \sigma  \models    { \protectedFrom \alpha {\alpha_o}}  \ \wedge\   \sigma.\prg{heap}= \sigma'.\prg{heap} \ \ \Longrightarrow\ \  M, \sigma' \models      { \protectedFrom \alpha {\alpha_o}} $
+\end{itemize}
+\end{lemma}
+}
+
+\begin{proof}
+By unfolding and folding the definitions.
+\end{proof}
+
+{
+ \begin{lemma} For all $\sigma$,  and $\alpha$, $\alpha_o$, $\alpha_1$, $\alpha_2$:
+ \label{l:prtFrom}
+\begin{itemize}
+\item
+$ M, \sigma  \models    {\protectedFrom \alpha  {\alpha_o}}  \  \wedge \ \  M, \sigma  \models    {\protectedFrom \alpha  {\alpha_1}}    \   \ 
+\Longrightarrow\ \ M, \sigma[\alpha_2,f \mapsto \alpha_1] \models  \protectedFrom\alpha   {\alpha_o}$
+\end{itemize}
+\end{lemma}
+}
+
+{
+\begin{definition}
+\begin{itemize}
+\item
+$M, \sigma \models \internalPaths{\re} \ \ \triangleq \ \ \forall \overline{f}.[\  M, \sigma \models \internal{\re.\overline{f}}\ ]$
+\end{itemize}
+\end{definition}
+}
+
+{
+ \begin{lemma} For all $\sigma$, and $\alpha_o$ and $\alpha$:
+\begin{itemize}
+\item
+$M, \sigma \models \internalPaths{\alpha_o}  \    \ \ \Longrightarrow\ \ M, \sigma \models {\protectedFrom \alpha {\alpha_o}}$
+\end{itemize}
+\end{lemma}
+}
+
+\noindent
+\vspace{.2cm}
+\textbf{Proof Sketch Theorem \ref{l:triples:sound}} 
+The proof goes by case analysis over the rules from Fig. \ref{f:underly}  applied to obtain $M \vdash \{ A \}\ stmt \  \{ A' \} $:
+
+\begin{description} 
+
+\item[{\sc{embed\_ul}}] 
+By  soundness of the underlying Hoare logic (axiom \ref{ax:ul:sound}), we obtain that  $M\ \models\ \triple {A} {stmt}   {A'}$.
+By axiom \ref{ax:ul} we also obtain that $\Stable{A}$ and  $\Stable{A'}$. 
+This, together with   Lemma \ref{l:shallow:scoped}, part \ref{shallow:to:scoped}, gives us that
+$\satisfiesD {M} {\triple {A} {stmt} {A'} }$. 
+By the assumption of {\sc{extend}}, $stmt$ does not contain any method call. Rest follows by lemma \ref{l:no:call}.
+
+\item[{\sc{Prot-New}}] By operational semantics, no field of another object will point to $u$, and therefore $u$ is protected, and protected from all variables $x$.
+
+\item[{\sc{Prot-1}}] by Lemma \ref{lemma:inside:preserved}. The rule premise
+${\hproves{M}  	{\ z=e   } {\ stmt } {\ z=e\  }}$ allows us to consider addresses, $\alpha$,   rather than expressions, $e$.
+
+
+\item[{\sc{Prot-2}}] by Lemma \ref{lemma:protTwo}. The rule premise
+${\hproves{M}  	{\ z=e \wedge z=e'\ } {\ stmt } {\ z=e \wedge z=e'\ }}$ allows us to consider addresses $\alpha$, $\alpha'$ rather than expressions $e$, $e'$.
+
+\item[{\sc{Prot-3}}] also by Lemma \ref{lemma:protTwo}. Namely, the rule does not change, and $y.f$ in the old state has the same value as $x$ in the new state.
+
+\item[{\sc{Prot-4}}] by Lemma \ref{l:prtFrom}.
+
+\item[{\sc{types-1}}] 
+
+Follows from type system, the assumption of {\sc{types-1}} and lemma \ref{l:no:call}.
+
+
+\end{description}
+\noindent
+\vspace{.1cm}
+{\textbf{End Proof Sketch}} 
+
+
+
+\subsection{Well-founded ordering}
+
+ \begin{definition}
+\label{def:measure}
+For a module $M$, and modules $\Mtwo$,   we define a measure, $\measure {A, \sigma,A',A''} {M,\Mtwo} $, and based on it, a well founded ordering $(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5,A_6)$
+as follows:
+\begin{itemize}
+\item
+ $\measure {A, \sigma,A',A''} {M,\Mtwo} \  \ \triangleq \ \  (m, n)$,  \ \ \  where
+\begin{itemize}
+\item
+$m$ is the minimal number of execution steps so that $ \leadstoBoundedStarFin {M\cdot \Mtwo} {\sigma}    {\sigma'}$  for some $\sigma'$, {and $\infty$ otherwise}.
+ \item
+  $n$ is minimal depth of all proofs of $M \vdash \quadruple {A} {\sigma.\prg{cont}} {A'} {A''} $.
+\end{itemize}
+ \item
+ $(m,n) \ll (m',n')$\ \  \ \ $\triangleq$ \ \  \ \ $ m<m'\vee  (m=m'  \wedge n < n')   $.
+\item
+$(A_1,\sigma_1,A_2, A_3) \ll_{M,\Mtwo}  (A_4,\sigma_2,A_5, A_6)$  \  \  $\triangleq$ \ \ 
+$\measure {A_1, \sigma_1,A_2, A_3} {M,\Mtwo}  \ll \measure {A_4, \sigma_2,A_5. A_6} {M,\Mtwo} $
+\end{itemize}
+\end{definition}
+
+%\subsection{Our Well-founded ordering}
+
+\begin{lemma}
+\label{lemma:normal:two}
+For any modules $M$ and $\Mtwo$,  the relation $\_ \ll_{M,\Mtwo}  \_$ is well-founded.
+\end{lemma}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Public States, properties of executions consisting of several steps}
+
+We t define a state to be public, if the currently executing method is public.
+
+\begin{definition}
+We use the form
+$M, \sigma \models \pubMeth$ to express that the currently executing method is public.\footnote{This can be done by looking in the caller's frame -- ie the one right under the topmost frame -- the class of the current receiver and the name of the currently executing method, and then looking up the method definition in the module $M$; if not defined there, then it is not \prg{public}. }
+Note that $\pubMeth$ is not part of the assertion language.
+\end{definition}
+
+ \begin{auxLemma}[Enclosed Terminating Executions]\footnoteSD{TODO find better name for the aux lemma}
+ \label{lemma:encl:tem}
+ For   modules $\Mtwo$,   states $\sigma$, $\sigma'$, $\sigma_1$:
+\begin{itemize}
+\item
+$  \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'} \  \wedge \  \leadstoBoundedStar  {\Mtwo}  {\sigma}  {\sigma_1} 
+% $\\ $
+\ \ \  \Longrightarrow\ \ \  % $\\ $  
+ \exists \sigma_2.[\ \ \leadstoBoundedStarFin {\Mtwo} {\sigma_1}  {\sigma_2}  
+\ \wedge\ 
+\leadstoBoundedStarThree  {\Mtwo}  {\sigma_2}  {\sigma}   {\sigma'} \ \ ]$
+\end{itemize}
+
+\end{auxLemma} 
+
+\begin{auxLemma}[Executing  sequences]
+\label{lemma:subexp}
+For modules $\Mtwo$, statements $s_1$, $s_2$,  states $\sigma$, $\sigma'$, $\sigma'''$:
+\begin{itemize}
+\item
+$ \sigma.\texttt{cont} = s_1; s_2 \ \ \wedge\ \  \leadstoBoundedStarFin {\Mtwo}  {\sigma}  {\sigma'}\ \ 
+\wedge \ \
+\leadstoBoundedStar {\Mtwo}  {\sigma}  {\sigma''}\
+$\\
+$  \Longrightarrow$\\
+$   \exists \sigma''.[\ \ \ \ \   \leadstoBoundedStarFin {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}  {\sigma''}  
+\ \wedge\ 
+\leadstoBoundedStarFin {\Mtwo} {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'} \  \wedge$
+\\
+$\strut \hspace{1.2cm}  [ \ \ \leadstoBoundedStar {\Mtwo} {\sigma[\texttt{cont}\mapsto s_1]}   {\sigma''}\ \vee \ \leadstoBoundedStarFin {\Mtwo}  {\sigma''[\texttt{cont}\mapsto s_2]}   {\sigma'''}\ ]\ \ \ \ \ \ \ \  \ ] $
+\end{itemize}
+\end{auxLemma}
+
+\subsection{Summarised Executions}
+
+We repeat the two diagrams given in \S \ref{s:summaized}.
+
+\begin{tabular}{lll}
+\begin{minipage}{.45\textwidth}
+The diagram opposite  shows such an execution:
+  $ \leadstoBoundedStarFin {\Mtwo\cdot M}    {\sigma_2}  {\sigma_{30}}$ consists of 4 calls to external objects,
+and 3 calls to internal objects.
+The calls to external objects are from $\sigma_2$ to $\sigma_3$,  from $\sigma_3$ to $\sigma_4$, from $\sigma_9$ to $\sigma_{10}$, 
+and  from $\sigma_{16}$ to $\sigma_{17}$.
+ The calls to internal objects are from $\sigma_5$ to $\sigma_6$, rom $\sigma_7$ to $\sigma_8$, and from $\sigma_{21}$ to $\sigma_{23}$. 
+\end{minipage}
+& \ \  &
+\begin{minipage}{.4\textwidth}
+\resizebox{6.2cm}{!}
+{
+\includegraphics[width=\linewidth]{diagrams/summaryA.png}
+} \end{minipage}
+\end{tabular}
+
+\begin{tabular}{lll}
+\begin{minipage}{.45\textwidth}
+ In terms of our example, we want to summarise the execution of the two ``outer'' internal, public methods into the 
+ ``large'' steps $\sigma_6$ to $\sigma_{19}$ and $\sigma_{23}$ to $\sigma_{24}$.
+ And are not concerned with the states reached from these two public method executions.  
+\end{minipage}
+& \ \  &
+\begin{minipage}{.4\textwidth}
+\resizebox{6.2cm}{!}
+{
+\includegraphics[width=\linewidth]{diagrams/summaryB.png}
+} \end{minipage}
+\end{tabular} 
+
+\noindent 
+In order to express such summaries, Def. \ref{def:exec:sum} introduces the following concepts:
+\begin{itemize}
+\item
+ ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}}$ \ \ \  execution from $\sigma$ to $\sigma'$ scoped by $\sigma\bd$, involving  external states only.
+\item
+${\WithPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} {\sigma_1}}$ \  \ \  \ \ \ \ \ \ \ \  ${\sigma}$ is an external state  calling an internal public method, and \\
+$\strut \hspace{3.25cm}$ $\sigma'$ is the state after return from the public method, and \\
+$\strut \hspace{3.25cm}$  $\sigma_1$ is the first state upon entry to the public method.  
+%$\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\epsilon}$ \ \     \ \  $\triangleq$ \ \ 
+%$\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma''}$
+%\item
+%$\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$   \ \  int
+%\item
+%$\leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} $   \ \ \ \ \   \ \ \  \ \ \ \   \ \ \ \  $\triangleq$   \ \ 
+%  $ \exists n\in \mathbb{N}. \exists \sigma_1,...\sigma_n. \ \WithExtPub {\Mtwo\cdot M} {\sigma}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n} 
+%$
+\end{itemize}
+  
+  \noindent
+Continuing with our example, we have the following execution summaries:
+\begin{enumerate}
+\item
+${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_3}  {\sigma_5}}$\ \ \ 
+Purely external execution from $\sigma_3$ to $\sigma_5$, scoped by $\sigma_3$.
+\item
+${\WithPub {\Mtwo\cdot M}    {\sigma_5}  {\sigma_{20}} {\sigma_{6}}}$. \ \ \ 
+Public method call from external state $\sigma_5$ into  nternal state $\sigma_6$ returning to $\sigma_{20}$. 
+Note that this   summarises two  internal method executions ($\sigma_{6}-\sigma_{19}$, and $\sigma_8-\sigma_{14}$),
+and two external method executions ($\sigma_{6}-\sigma_{19}$, and $\sigma_8-\sigma_{14}$).
+\item
+ ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{20}}  {\sigma_{21}}}$.
+ \item
+${\WithPub {\Mtwo\cdot M}    {\sigma_{21}}  {\sigma_{25}} {\sigma_{23}}}$. \ \ \ 
+Public method call from  external state ${\sigma_{21}}$ into internal state $\sigma_{23}$, and returning to external state $\sigma_{25}$.
+ \item
+  ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma_3}  {\sigma_{25}}  {\sigma_{28}}}$.
+\ \ \ 
+  Purely external execution from $\sigma_{25}$ to $\sigma_{28}$, scoped by ${\sigma_3}$.
+\end{enumerate}
+
+
+\begin{definition}
+\label{def:exec:sum}
+For any module $M$  where $M$ is the internal module, external modules $\Mtwo$, and states $\sigma\bd$,  $\sigma$,  $\sigma_1$, ... $\sigma_n$, and $\sigma'$, we define:
+
+\begin{enumerate}
+
+% 1
+\item
+ ${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}}$ \ \ \ \ \   $\triangleq$ \ \ 
+$
+\begin{cases}
+M, \sigma  \models  \extThis\  \wedge\  \\
+[ \ \ \ 
+\sigma=\sigma' \, \wedge\,  \EarlierS  {\sigma\bd}  {\sigma} \, \wedge\,  \EarlierS  {\sigma\bd}  {\sigma''}\ \ \ \ \ \vee\\
+\ \ \ \exists \sigma''[\,  \leadstoBoundedThree {\Mtwo\cdot M} {\sigma}  {\sigma\bd}   {\sigma''} \  \wedge\  
+{\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma''}  {\sigma'}}\, ] \ \ \ ]
+\end{cases}
+$
+
+% 2
+\item
+${\WithPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} {\sigma_1}}$ \  \ \  \ \ \ \ \ \ \ \ $\triangleq$ \ \ 
+$\begin{cases}
+M, \sigma  \models \extThis \ \wedge \\
+\exists   \sigma_1'\ [ \ \   \leadstoBoundedThree  {\Mtwo\cdot M} {\sigma} {\sigma}  {\sigma_{1}}\, \wedge\,  M, \sigma_1 \models \pubMeth \ \wedge \\ 
+\strut \ \ \ \ \  \ \ \ \ \ \   \leadstoBoundedStarFin {\Mtwo\cdot M} {\sigma_1}  {\sigma_1'}  \ \wedge \   \leadstoBounded  {\Mtwo\cdot M} {\sigma_1'}      {\sigma'} \ \ ] 
+\end{cases}
+$
+
+% 3
+\item
+$\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\epsilon}$ \ \      \  $\triangleq$ \ \ 
+$\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma''}$
+
+% 4 
+\item
+\label{four:defg23a}
+$\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1}$  \ \ \  $\triangleq$ \ \ 
+$\exists \sigma_1',\sigma_2'.  
+\begin{cases}
+ \ \   {\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma_1'}}\ \wedge\ 
+{\WithPub {\Mtwo\cdot M}    {\sigma_1'}  {\sigma_2'} {\sigma_1}}  \ \ \wedge \\
+ \ \  {\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma_2'}  {\sigma'}}   \\
+  \end{cases}$
+
+ 
+ %5
+\item
+\label{four:defg23}
+$\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$   \ \  $\triangleq$ \ \ 
+$\exists \sigma_1'.[ \  \
+ \WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma_1'} {\sigma_1} 
+  \ \wedge \ 
+    {\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma_1'}  {\sigma'} {\sigma_2...\sigma_n} }   \  \ ]
+$
+
+% 6
+\item
+\label{six:g23}
+$\leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} $    \ \ \   \ \ \  \ \ \ \   \ \ \ \  $\triangleq$   \ \ 
+ $ \exists n\!\in\! \mathbb{N}. \exists \sigma_1,...\sigma_n. \ \WithExtPub {\Mtwo\cdot M} {\sigma}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n} 
+$
+\end{enumerate}
+\end{definition}
+
+\vspace{.1cm}
+
+Note   that 
+${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'}}$ implies that $\sigma$ is external, but does not
+imply that $\sigma'$ is external.
+${\leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma}  {\sigma}  {\sigma'}}$. 
+On the other hand, $\WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}$ implies that $\sigma$ and $\sigma'$ are external, and  $\sigma_1$, ... $\sigma_1$  are internal and public.
+Finally, note that   in part (\ref{six:g23}) above it is possible that $n=0$, and so 
+$\leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'} $  also holds when
+Finally, note that the decomposition used in (\ref{four:defg23}) is not unique, but since we only care for the public states this is of no importance.
+
+\vspace{.2cm}
+
+Lemma \ref{lemma:external_breakdown:term} says that\\
+\begin{enumerate}
+\item
+Any terminating execution which starts at an external state ($\sigma$) consists of a number of external states interleaved with another number of terminating calls to public methods.
+\item
+Any execution execution which starts at an external state ($\sigma$) and reaches another state ($\sigma'$) also consists of a number of external states interleaved with another number of terminating calls to public methods, which may be followed by a call to some public method (at $\sigma_2$), and from where another execution, scoped by $\sigma_2$  reaches $\sigma'$.
+\end{enumerate}
+
+
+ \begin{auxLemma}
+\label{lemma:external_breakdown:term}[Summarised Executions]
+For   module $M$, modules $\Mtwo$, and states $\sigma$, $\sigma'$:
+\\
+\\
+If $M,\sigma \models \extThis$, then
+\begin{enumerate}
+\item
+\label{lemma:external_breakdown:term:one}
+$\leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma}  {\sigma'}  \ \ \  \ 
+\Longrightarrow \ \ \  \ \leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'}$
+\item
+\label{lemma:external_breakdown:two}
+$\leadstoBoundedStar  {M\cdot \Mtwo}  {\sigma}  {\sigma'}  \ \ \  \ \ \  
+\Longrightarrow$ 
+
+\begin{enumerate}
+\item
+$\strut \ \ \ \ \ \ \ \    \leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma'}\ \ \ \  \vee$
+\item
+$\strut \ \ \ \ \ \ \ \    \exists \sigma_c,\sigma_d.[\ 
+\leadstoBoundedExtPub {\Mtwo\cdot M}    {\sigma}  {\sigma_c} 
+\wedge\ \leadstoBounded  {\Mtwo\cdot M}    {\sigma_c}  {\sigma_d} 
+\wedge \ M, \sigma_c \models \pubMeth \wedge \leadstoBoundedStar  {\Mtwo\cdot M}    {\sigma_d}  {\sigma'} \ ]
+$
+\end{enumerate}
+\end{enumerate}
+\end{auxLemma}
+ 
+
+
+
+\begin{auxLemma}
+\label{lemma:external_exec_preserves_more}[Preservation of Encapsulated Assertions]
+For any module $M$, modules $\Mtwo$,  assertion  $A$, and 
+% variables $\overline x$, and addresses $\overline \alpha$,
+ states $\sigma\bd$, $\sigma$, $\sigma_1$ ... $\sigma_n$, $\sigma_a$, $\sigma_b$ and $\sigma'$:
+
+\noindent
+If
+
+\noindent
+ $\strut \hspace{.5cm} M \vdash \encaps A \   \wedge   \ fv(A)=\emptyset \  \wedge \ 
+\satDAssertFrom M {\sigma} k A \ \wedge \ k \leq \DepthSt {\sigma\bd}$. 
+
+\noindent
+Then
+
+\begin{enumerate}
+% ΟΝΕ
+\item
+\label{lemma:external_exec_preserves_more:one}
+$  M, \sigma  \models \extThis \ \wedge \  \leadstoBoundedThree  {\Mtwo\cdot M} {\sigma} {\sigma\bd}  {\sigma'} 
+\ \ \Longrightarrow \ \ \ \satDAssertFrom M {\sigma'} k A$
+
+% TWO
+\item
+$   \leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} 
+\ \ \Longrightarrow \ \ \ \satDAssertFrom M {\sigma'} k A$
+
+% THREE
+\item
+\label{lemma:external_exec_preserves_more:three}
+$ \WithExtPub {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} {\sigma_1...\sigma_n}\ \ \wedge $\\
+ $\strut \ \ \ \  \  \forall i\in [1..n]. \forall \sigma_{f}.[ \ \  \satDAssertFrom M {\sigma_i} k A  \ \wedge \  \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{f}} \ 
+\ \ \Longrightarrow \ \  \satDAssertFrom M {\sigma_f} k A \ ]$\\
+$\Longrightarrow $
+\\
+ $\strut \ \ \ \  \ \satDAssertFrom M {\sigma'} k A $ 
+ \\
+  $\strut \ \ \ \  \  \wedge $
+  \\
+ $\strut \ \ \ \  \  \forall i\in [1..n].   \satDAssertFrom M {\sigma_i} k A $
+ \\
+ $\strut \ \ \ \  \  \wedge $
+  \\
+ $\strut \ \ \ \  \  \forall i\in [1..n]. \forall \sigma_{f}.[ \ \    \leadstoBoundedStarFin {M\cdot \Mtwo}  {\sigma_i}  {\sigma_{f}} \ 
+\ \ \Longrightarrow \ \  \satDAssertFrom M {\sigma_f} k A \ ]$ 
+
+
+\end{enumerate}
+
+\end{auxLemma}
+
+\noindent
+\textbf{Proof Sketch}
+
+\begin{enumerate}
+\item
+ is proven by Def. of $\encaps{\_}$ and the fact $\DepthSt {\sigma'} \geq \DepthSt {\sigma\bd}$ and therefore $k\leq  \DepthSt {\sigma'}$.
+In particular, the step $\leadstoBoundedThree  {\Mtwo\cdot M} {\sigma} {\sigma\bd}  {\sigma'}$ may push or pop a frame onto $\sigma$.
+If it pops a frame, then $\satDAssertFrom M {\sigma'} k A $ holds by definition.
+If is pushes a frame, then $M, \sigma' \models A$, by lemma \ref{lem:encap-soundness}; this gives that $\satDAssertFrom M {\sigma'} k A $.
+
+\item   by induction on the number of steps in $ \leadstoBoundedThreeStarExt {\Mtwo\cdot M} {\sigma\bd}  {\sigma}  {\sigma'} $, and using (1).
+
+\item
+ by induction on the number of states   appearing in ${\sigma_1...\sigma_n}$, and using (2).
+\end{enumerate}
+
+\textbf{End Proof Sketch}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{appendix/appendixSoundPreserve}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{appendix/appendixProofTheorems}

@@ -1,0 +1,647 @@
+OOPSLA24-25 Paper #128 Reviews and Comments
+===========================================================================
+Paper #128 Reasoning about External Calls
+
+
+Review #128A
+===========================================================================
+
+Overall merit
+-------------
+4. Weak Accept - lean positive, but will not argue to accept
+
+Reviewer expertise
+------------------
+3. I know the material, but am not an expert
+
+Paper summary
+-------------
+The paper describes a framework with which to describe the invariant for and prove that trusted code will not accidentally give an external module the ability to break the invariants inside of the trusted system. Achieving this safety property requires that the trusted system keep very careful track of the references and capabilities it affords to the untrusted part of the program, which the proposed approach aims to track.
+
+Three parts of the problem are identified:
+* Can we specify and ensure that an external module will *never* have access to a specific capability?
+* How to ensure that capability access (or lack thereof) is preserved through execution? Alternatively, how to propagate separation across multiple sequential method calls?
+* Finally, what happens to all of this when we finally invoke the untrusted code; what are the guarantees known from the callee's perspective given the caller's preconditions going into the invocation?
+
+The paper then discusses the proposed solutions to each of the three problems (protection, scoped invariants, and the adaptation operator, respectively); it then describes their implementation into a Hoare logic for a calculus the authors call Lul and the associated proofs of soundness that accompany the proof that one of the examples (Mgood) satisfies the desired safety property.
+
+Detailed review
+---------------
+I've personally ran into the problem of hardening trusted internal code against external untrusted code in the same language several times, primarily from the perspective of plugin architectures or video game modding. The paper describes the problem well and describes the proposed logic clearly, though I found section 2.2 somewhat less clear; it might be useful to introduce the execution diagrams from later in the paper a bit earlier, as I think that it might be possible to make the validity of a scoped invariant clearer with the visualization. I also think that adding a sentence or two to further clarify the difference between Mgood and Mfine would be useful.
+
+What I'm less enthusiastic about is that the paper builds up to a proof that Mgood indeed satisfies S1 and S2 using the proposed logical framework. This is clearly an accomplishment that took considerable work - but Mgood is a simple use case; practical plugin APIs can be considerably more complex with many more moving parts and abstractions. It would be good to talk in the related work about how this system could be used to further prove correct other abstractions or program verification tools that could be more automated, for example, or how it could potentially be checked automatically.
+
+A very minor comment on setting expectations; from the title, I was expecting a paper on FFI rather than intralanguage safety; normally I think about "external calls" in the context of calling C, for example, rather than using a runtime module loader (for example).
+
+Is the Data-Availability Statement reasonable?
+----------------------------------------------
+Yes; the authors state that they will provide the full appendices alongside the Coq source code.
+
+Questions for authors to answer in their response
+-------------------------------------------------
+In your view, how can we scale verification of defensive consistency? Do you think that it would be better to try to automate Hoare logic based approaches like you describe here, or would it be better to think of this work as a mechanism to formally verify the correctness of some other more user-facing abstraction?
+
+
+
+Review #128B
+===========================================================================
+* Updated: Dec 12, 2024
+
+Overall merit
+-------------
+1. Clear Reject - will argue strongly to reject
+
+Reviewer expertise
+------------------
+3. I know the material, but am not an expert
+
+Paper summary
+-------------
+This paper presents a new assertion system and Hoare logic to reason about external calls, which are calls from the code under analysis/development to external code (written by others). This context is extremely common nowadays because of the wide adoption of libraries, frameworks, and "Java native code" (that is, code integrated inside a programming language but written in other programming languages).
+
+Detailed review
+---------------
+# After reading the authors' response
+
+Overall, the response highlights that the definitions of language and semantics are needed to avoid ambiguity. If the paper states that the language is object-oriented, but then the authors state that "Expecting the language to support standard components from OO languages is not a valid assumption in the context of this research," clearly there is ambiguity. Similar considerations apply to the other points.
+
+# Review
+
+The problem tackled by this paper is relevant and interesting. In particular, external calls are defined as calls to external (untrusted) code where the specification is missing. This situation is common in almost every modern software application since these rely on external libraries. While documentation is usually available, formal specification is usually missing, and it should be inferred by looking at the library's code/bytecode/assembly code.
+
+Unfortunately, while tackling a relevant problem, the formalization misses fundamental pieces that make the overall approach obscure.
+Section 3.1 defines the language as "a small, imperative, sequential, class based, typed, object-oriented language." Therefore, I assume such a language supports all standard components of popular OO PLs, such as inheritance, dynamic dispatch of method calls, exceptions, and so on.
+A state is defined as a heap and a stack. At first, I misunderstood the stack, since I assumed it was the heap+stack memory like C++. With some forward-looking, I realized that instead, the stack was intended to be a stack of frames, where each frame contains the values of local variables of one method. Then, each frame "consists of a local variable map", but it stays obscure to me if such a map relates local variables to primitive values and addresses or if it might map local variables to objects (aka, mapping from fields to values) as well (in this way, something like stack-based allocations of objects in C++ might be supported).
+When moving to Section 3.2, I have several problems understanding the small details of the formalization. First of all, I am quite surprised about the definition of private fields and methods that is provided: it looks like private components are available to all classes inside the same module. This is definitely not the standard semantics of private components, which are only accessed by the same class or object but not by other classes belonging to the same module.
+Then the semantics is defined as unsurprising, but several details are unclear. The top stack contains the next statement to be executed, which is fine until exceptions are thrown, but as soon as an exceptional state is raised, such an approach seems not to be in a position to deal with that. Statements are assignments to variables and fields, allocation of new objects, method calls, and field reads. However, what is the behavior of a statement like "new C();"? Just allocates an object that is unreachable after the statement? I would guess that in their approach, statements and expressions are the same thing (as it is quite common, even if later on, def. 5.1 introduces expressions), so one can assign the result of a statement to a variable. But then what is the semantics of "x = x = new C();"?
+"When a method is called, ... the continuation of the body of the method": since with dynamic dispatch, you do not know statically what method you are calling, and as far as I can see, the state does not capture anything about the dynamic type of variables, how can you know the continuation of the body of the method? Later on (def. 5.3), an oracle classOf is used, and this oracle, starting from a state and an address, returns the object's dynamic type allocated at the given address. Unfortunately, such an oracle is neither formalized nor discussed in the paper.
+All these remarks apply only to Section 3, but similar considerations extend to the following sections (e.g., no idea about exceptional states in def. 4.1). Unfortunately, the absence of a (even minimal) language and semantics opens the door to assumptions and ambiguities that compromise the understanding of the paper's formal content.
+
+Another major problem/doubt is how the proposed approach resonates statically on internal and external calls. In particular, in a (polymorphic) object-oriented program, we might have method calls that, in some executions, call external methods and, in others, call internal methods. This is not a particular or exceptional situation; it happens in most real-world OO programs. Consider, for instance, just logging where a logger writes the messages somewhere. Such a component is intrinsically polymorphic since, during the development and testing phases, one wants to log everything locally, while during deployment, only a few messages are often logged through external services. Therefore, the logger is initialized with objects instances of different classes, some internal and others external.
+When I looked at Fig. 7, I realized that such a scenario is not supported since there are rules for method calls to internal methods and others for external methods. However, the scenario where there might be a mixture of the two is not supported. This might be the result of misunderstanding the language and semantics, but I fear that such an approach might make too strong assumptions about how method call dispatch behaves.
+
+Note: In my review, I strictly followed the call for papers, particularly its requirement that "papers must be self-contained; reviewers are under no obligation to read the supplementary material." Therefore, I considered only the submission containing 23 pages, the data availability statement, and references in my evaluation.
+
+
+
+Review #128C
+===========================================================================
+* Updated: Dec 17, 2024
+
+Overall merit
+-------------
+2. Reject - will argue to reject
+
+Reviewer expertise
+------------------
+4. I know a lot about this area
+
+Paper summary
+-------------
+This paper introduces a program logic for reasoning about ocap programs.
+The setting of the paper is a simple object-oriented language where a module
+system provides basic protection; objects external to the classes of the
+module can only access the public methods of the internal classes
+of the module. Modules can interact with external objects by invoking
+their methods, which may be the source of leaks of critical internal objects to
+external ones.  Given this setting, the goal of the paper is to:
+(i) provide a way for specifying that external objects to a module do not
+obtain access to certain internal objects of the module;
+(ii) a program logic for establishing such specifications for a module. 
+
+The key idea behind the specifications is the notion of protection. Given
+a state S of a program, an (internal) object is protected iff it cannot be
+accessed directly from any external objects in all states S' reachable from
+S. Here, directly means that in any path that connects the internal object
+with an external object in the object graph, the last edge is guarded by an
+internal object. 
+
+Building on this idea, the paper defines and gives semantics to: 
+1) a language of assertions that describe protection
+constraints;
+2) a language of module specification that builds on the language of
+assertions and supports (a) so called scoped invariants that hold for the
+dynamic extent of a method invocation and  (b) method pre- and post-conditions. 
+
+The program logic for proving these specifications takes the form of
+Hoare-style triplets for program statements and quadruples for method
+invocations. A key aspect of using the logic is a focus operator for
+assertions. This operator, called adaptation, allows an assertion about
+protection to be restricted to protection from objects bound to specific
+variables at method invocation sites.  Hence, this operator is useful for
+turning a general assertion about protection to one about the reachability
+of internal objects specifically from the arguments and the receiver of an
+invocation of an external method. 
+
+To validate the logic, the paper provides a proof of soundness with
+respect to the semantics of the specifications. 
+
+To demonstrate its applicability, the paper discusses the proof of a
+specification about a small example.
+
+Detailed review
+---------------
+==========================================================
+
+Addition after the author response: 
+
+Thanks to the authors for the detailed and extensive response. 
+
+This paper can be a step towards connecting capability safety and high-level 
+(behavioral) properties formally for the first time. However, the presentation of 
+the material  needs significant  work for the paper to make a convincing argument 
+that it lives up to its promise.
+
+Two major issues with the current submission are that:
+ (i) the presentation of the  formal development is incomplete (or at the very least 
+not self-contained as it  heavily relies  on the  appendix); and  
+(ii) the discussion of the single (and arguably  small) example  does not fully explain 
+how the logic can be used.
+
+===========================================================
+
+This is a very interesting and well-motivated paper. Over the last 20+
+years, there have been many claims about the security offered by object
+capabilities and capability safety, but a general approach to verifying how
+ocap programs regulate access to critical objects has remained elusive.
+The work in this paper is a step in this direction. 
+
+That said, I have some serious concerns about the paper: 
+
+1) Not a self-contained paper: 
+
+(i) The formal material critically depends on the appendix. In particular
+key definitions such as the semantics of Lul and the semantics of
+assertions is not explained sufficiently in the body of the paper.
+
+(ii) The proof of why Mgood satisfies S2 is also in the appendix, even
+though understanding how the logic enables that proof is the whole point
+of the paper. Worse, the appendix does not cover neither S3 (and in
+particular the S4-related step for the external call), which is the actual
+property we care about (see also point 2 below), nor discusses why S2 does
+not hold for Mbad, which is important as a demonstration of how the proof
+system handles problematic situations. 
+
+In sum, while it is customary for papers to place helpful but
+supplementary material in appendices, in this paper, some very critical
+pieces of the formal development and the discussed case study are all
+relegated to the appendix. As is, the paper does not make sense by itself.  
+
+2) Assertions, specifications and proofs: 
+
+  I cannot figure out how the rules of the logic can be used to show that
+  an invocation of an external method implies a post-condition that
+  specifies something about the value of an internal field. I can see how
+  the assertions can express such properties (which is also shown in
+  Appendix E) but I am not sure how they can be proven with the logic,
+  given the absence of code and specifications for external methods. I
+  would appreciate your help in clarifying this. 
+
+  Concretely, how can we show that the balance of  myAccnt 
+  remains greater or equal after the external method invocation? What if
+  pay calls transfer with a negative integer? 
+
+  In general, due to the absence of specifications for
+  external objects, I cannot see how the proposed approach can help
+  reasoning about high-level properties besides access to objects. If just
+  the latter is the goal of the paper, then that's fine but it should be
+  stated explicitly. Currently, though, sections 1 and 2 (and other parts of the
+  paper) imply that the logic can be used to prove high-level behavioral
+  properties of modules that make external calls. And arguably, that
+  should be the real goal, as capability safety and absence eventual access 
+  are means to obtain those high-level properties.
+
+3) Evaluation of the approach:
+
+   The motivation of the paper is pretty practical. However, the
+   evaluation of the practical applicability and limitations of the idea
+   is almost non-existent. This makes it very difficult for the reader to
+   understand what the approach can and cannot do. Another, substantial
+   case study would help a lot with that front. If selected carefully, it could
+   also help with demonstrating the delta with some of the other
+   approaches mentioned in the paper. 
+
+
+4) Presentation:
+
+  (i) Section 2 references terms such as path, frames and steps that have
+  a specific meaning in section 3 but do are not explained in section 2.
+  This section is supposed to provide intuition about the formal
+  development. Instead, it is highly confusing and only becomes somehow
+  clearer after reading the formal sections.
+
+  (ii) The formal sections are pretty terse. Most of the space is occupied
+  by definitions and the examples presented are not really explained.
+  Overall, that part of the paper reads more like a technical appendix.
+  Adding to the mix the material relegated to the actual appendix, this is
+  a very difficult paper to get through. As an example, after reading the
+  paper multiple times together with the appendix, I have not found an
+  example that shows concretely why the quadruple for specification needs
+  an extra dedicated assertion-guarantee for external method
+  invocations.  In general, as things are and despite committing
+  significant amount of time and energy on this paper, I cannot assert
+  with confidence that the technical development is correct. 
+
+  In an attempt to be constructive, I think it would be a significant
+  improvement in terms of presentation to:
+  (i) Turn section 2 into a ``the logic by example'' section. Similar to
+  the current version, the section should focus on the Shop example, but
+  instead of introducing the challenges, the goal would be to present
+  assertions,module specs, the rules of the logic and the proof of
+  correctness for Mgood (and discuss why Mbad) is incorrect.
+  (ii) Remove all material from the main body that have to do with the
+  soundness of the logic, and use the recovered space to give a complete
+  self-contained account of the remaining formalisms.
+  (iii) Bring in the paper some of the discussion about expressiveness
+  that is now in the appendix.
+
+
+
+Overall, while I believe there are good ideas here and the paper shows that the
+approach is promising, I do not think that the paper is ready for
+publication.
+
+Is the Data-Availability Statement reasonable?
+----------------------------------------------
+Yes
+
+Questions for authors to answer in their response
+-------------------------------------------------
+Could you please answer my questions in point 2 above?
+
+
+
+R1 Response by Author [Sophia Drossopoulou <scd@imperial.ac.uk>] (4595 words)
+---------------------------------------------------------------------------
+Overall Comments and Planned Improvements
+===================================
+
+We are delighted that all reviewers found the problem significant, and that the paper resonates with RA’s experience. In spite of 20+ years of research into the safety of object-capability programs, a general approach to verifying programs has remained elusive until now.  Because object-capability programs run in an unconstrained “open world”, we consider a model that captures how these programs control access to  capabilities, and the guarantees programs can (or cannot)  rely on is particularly timely we are committed to improving the paper’s presentation to clarify our approach as much as we can. 
+
+ In the improved version, we will
+
+* Expand Section 2 to better explain scoped invariants (RA), and illustrate the Hoare logic in proving external calls (RC). We will ensure that all terms are explained before use -- either informally, with a definition, or through application to an example -- including terms such as path, frame, access, external state, current call, step, object reachable, state reachable, and pointer semantics.
+
+* Provide more examples and motivation e.g., discuss how reasoning about access allows us to reason about internal fields; motivate the need for the guarantee/invariant part in quadruples; design alternatives for “protection”; take further examples from the appendix to explain applicability of our approach.
+
+All reviewers have highlighted points where the paper could give more explanations. We are very grateful for those suggestions, which will guide us to significantly clarify and improve. 
+
+Wrt concerns about the case study: The Shop was carefully designed to include a range of ocap-related features: public and private methods, methods with calls, with internal calls or two external calls, if-statements, and  methods that check for capabilities. While minimal, Shop is characteristic of a whole family of programs where effects are tamed by capabilities. We are happy to study examples proposed by the reviewers.
+
+We are confident we can assuage most of the concerns of reviews RA and RC. 
+
+The concerns of RB are less applicable to our work: Namely, they pertain 1) to the number and choice of the programming language features, and 2) the (surmised) lack of applicability to polymorphic calls. Wrt 1): It is customary for papers about novel approaches to program verification (see e.g. references in the submitted paper), to adopt the tiniest possible programming language so as to concentrate on the Hoare logic rather than the programming language. Wrt 2): Our logic does, indeed, support reasoning about polymorphic calls, details later.
+
+That said: we will endeavour to make the paper more self contained and easier to follow. Most changes involve exchanging material between the main paper and the appendices, or adding  explanations, making the changes straightforward to implement. Moreover, given the extra 2 pages, we are confident that we can fit the extra material, and if need be, we can move the proof of soundness to an appendix (RC).
+
+Finally, to better address the many queries about uses of the Hoare logic, we attach  an updated version of the last appendix (Appendix H).
+
+We thank all reviewers for their comments and suggestions.
+
+Specific Comments and Planned Improvements
+===================================
+
+Review #128A
+====
+
+> Detailed review
+
+
+> I've personally ran into the problem of hardening trusted internal code …
+
+That is exciting; we would greatly appreciate any further pointers you could share
+
+>  against external untrusted code in the same language several times, 
+
+Note that our approach works even when the internal and external code  are in different programming languages; the only requirement is that a module’s private fields are not visible outside the internal module -- this can be ensured by the platform, as eg in Cheri. We will clarify this; thank you.
+
+
+>  .. might be useful to introduce the execution diagrams from later in the paper a bit earlier, … to make the validity of a scoped invariant clearer with the visualization.
+
+Yes, excellent idea
+
+
+> … but Mgood is a simple use case; practical plugin APIs can be considerably more complex with many more moving parts and abstractions.
+
+
+
+As a running example, it is necessarily minimal, however, iit is carefully designed to include all relevant combinations of. While synthetic, this does mean that the Shop demonstrates our system’s ability to verify the protection of sensitive data under these possible combinations. As we have discussed, protection allows for more complex properties. While more arduous, it would not be more complex to prove these over larger and more complex modules.
+
+Further, Appendix E contains several case studies chosen from the literature.
+We would be glad to consider patterns that you could suggest.
+
+
+>  It would be good to talk in the related work about how this system could be used to further prove correct other abstractions or program verification tools that could be more automated, for example, or how it could potentially be checked automatically.
+
+
+See our response to “Questions for Authors”
+ 
+> A very minor comment on setting expectations; from the title, I was expecting a paper on FFI rather than intralanguage safety; as I think that it might be possible to make the validity of a scoped invariant clearer with the visualization.
+
+The paper is also about interlanguage safety (c.f. RB2’s comments), provided that the platform offers means to protect a module’s private state; cf capability-safe hardware as in Cheri.  This is an important point, which we will add to the paper. We would be eager to hear of a better title describing our paper.
+
+
+> Questions for authors to answer in their response
+-------------------------------------------------
+> In your view, how can we scale verification of defensive consistency? Do you think that it would be better to try to automate Hoare logic based approaches like you describe here, or would it be better to think of this work as a mechanism to formally verify the correctness of some other more user-facing abstraction?
+
+The first, major, step would be to develop specifications for the internal code module such as those described in Section 7. We believe that such specifications will be easy to write, because they do not require complex operators -- the concept of protection is natural in the ocap mindset. Writing such specifications will help programmers reflect about their code, and “hardening” their code, even in the absence of full-blown verification.
+
+Verifying  adherence to these such specs requires reasoning about protection -- c.f. Fig. 6 --  and about external calls  -- cf Fig. 7. A large part of the former’s remit could be subsumed by powerful type systems, eg Rust, Liquid Haskell. The latter, however, requires the use of the proof rules as in Fig. 7. Verification tools (eg Dafny, VerrX, Vyper), can be expanded, through the additiona of quadruples and scoped invariants. Note that this does not mean that the user would need to write the Hoare logic proofs themselves: by turning our rules into lthoeorems which are known to an SMT solver, we can offload the proof search to the tool itself, as is done, e.g., by Dafny. 
+
+Review #128B
+===========================================================================
+
+
+
+Detailed review
+---------------
+> Unfortunately, …  misses fundamental pieces that make the overall approach obscure.
+
+> Section 3.1 defines the language as "a small, imperative, sequential, class based, typed, object-oriented language." Therefore, I assume such a language supports all standard components of popular OO PLs, such as inheritance, dynamic dispatch of method calls, exceptions, and so on.
+
+Expecting the language to support standard components from OO languages is not a valid assumption in the context of this research. The language is only needed to demonstrate our ideas and so we defined as tiny a core language as possible, as eg in Igarashi et al “Featherweight Java: a minimal core calculus for Java and GJ” TOPLAS’01, Parkinsion & Bierman “Separation logic and abstraction”, POPL 05, O’ Hearn & Ishtiaq “BI as an assertion language for mutable data structures”, POPL’01, to name a few.
+
+
+
+> A state is defined as a heap and a stack. At first, I misunderstood the stack, since I assumed it was the heap+stack memory like C++. With some forward-looking, I realized that instead, the stack was intended to be a stack of frames, …
+
+Indeed, on line 183, we talk of stacks of frames, and define formally on line 304. We will make this explicit early on.
+
+> where each frame contains the values of local variables of one method. Then, each frame "consists of a local variable map", but it stays obscure to me if such a map relates local variables to primitive values and addresses …
+
+> indeed or if it might map local variables to objects (aka, mapping from fields to values) as well (in this way, something like stack-based allocations of objects in C++ might be supported). ..
+
+We do not support stack-based allocation, but this can be encoded. 
+We will explicitly say early on that we have pointer semantics, but please note that this is implied:  We talk of addresses in lines 301, 308, 317; and the diagrams, already on page 4 , show local variables pointing to objects, and also show aliasing.
+
+
+> When moving to Section 3.2, I have several problems understanding the small details of the formalization. 
+
+> First of all, I am quite surprised about the definition of private fields and methods that is provided: it looks like private components are available to all classes inside the same module. This is definitely not the standard semantics of private components, which are only accessed by the same class or object but not by other classes belonging to the same module.
+
+Indeed, there are many possible definitions for private fields, and we have chosen the weakest. But for the purposes of our work, all that matters is that external objects cannot read/write private fields, and thus we chose that definition. All the results of the current paper would still be valid if we had chosen per-class privacy.
+
+
+> Then the semantics is defined as unsurprising, but several details are unclear.
+
+> The top stack contains the next statement to be executed, which is fine until exceptions are thrown, but as soon as an exceptional state is raised, such an approach seems not to be in a position to deal with that.
+
+We do not support exceptions. However, supporting exceptions would not be problematic for us. We would only need to pop the frames from the stack until we find the corresponding exception handler. Cf  Ancona et al, “A core calculus for Java exceptions”, OOPSLA 2001.
+
+> Statements are assignments to variables and fields, allocation of new objects, method calls, and field reads. However, what is the behavior of a statement like "new C();"? Just allocates an object that is unreachable after the statement?
+
+
+`“x := new C();` ”is a statement. Indeed, it creates a new address containing a new object of class C, initialises its fields, and assigns the new address to x. This is a standard treatment, and we did not think it necessary to outline in the main paper. Happy to do that if the reviewers want us to. 
+
+>  I would guess that in their approach, statements and expressions are the same thing (as it is quite common, even if later on, def. 5.1 introduces expressions), so one can assign the result of a statement to a variable. But then what is the semantics of "x = x = new C();"?
+
+`x = x = new C();` is syntactically impossible in our language. The fact that we have expressions does not imply that we can assign the result of a statement to a variable. Moreover, the expressions, $e$ from section 5.1 only appear in assertions. We will clarify that.
+
+> "When a method is called, ... the continuation of the body of the method": since with dynamic dispatch, you do not know statically what method you are calling, and as far as I can see, the state does not capture anything about the dynamic type of variables, how can you know the continuation of the body of the method? 
+
+Objects carry their class and a field map. This is standard in oo calculi (eg Aldrich & Chambers “Ownership Domains: Separating Aliasing Policy from Mechanism”, ECOOP 2004)  and we did not mention explicitly, but happy to do that. But we did say it implicitly - eg lines 330 talks of the class of the object
+
+>  Later on (def. 5.3), an oracle classOf is used, and this oracle, starting from a state and an address, returns the object's dynamic type allocated at the given address. Unfortunately, such an oracle is neither formalized nor discussed in the paper.
+
+Because such a classOf function is standard, we did not elaborate in the main paper, but happy to rectify. The function is defined in line 1370 -- Appendix A.
+
+
+> All these remarks apply only to Section 3, but similar considerations extend to the following sections 
+> (e.g., no idea about exceptional states in def. 4.1).
+
+
+I suppose you meant “external state”, not “exceptional state”. This appears in Def 5.2, but, you are right that it should come much earlier.  
+
+> Unfortunately, the absence of a (even minimal) language and semantics opens the door to assumptions and ambiguities that compromise the understanding of the paper's formal content.
+
+The questions raised above are about how the formal semantics could be defined; they do not affect what the semantics should be. Most importantly, none of them affects the validity of our Hoare logic.  
+
+> Another major problem/doubt is how the proposed approach resonates statically on internal and external calls. In particular, in a (polymorphic) object-oriented program, we might have method calls that, in some executions, call external methods and, in others, call internal methods. This is not a particular or exceptional situation; it happens in most real-world OO programs. Consider, for instance, just logging where a logger writes the messages somewhere. Such a component is intrinsically polymorphic since, during the development and testing phases, one wants to log everything locally, while during deployment, only a few messages are often logged through external services. Therefore, the logger is initialized with objects instances of different classes, some internal and others external.
+
+
+> When I looked at Fig. 7, I realized that such a scenario is not supported since there are rules for method calls to internal methods and others for external methods. However, the scenario where there might be a mixture of the two is not supported. This might be the result of misunderstanding the language and semantics, but I fear that such an approach might make too strong assumptions about how method call dispatch behaves.
+
+Indeed, the rules in Fig. 7 do not directly address the possibility that the receiver might be internal or external. However, this scenario can be  supported through case-split rule, and the rule of consequence. For further details, compare with “H.8 Dealing with polymorphic function calls” of the attached material. 
+
+
+
+
+> Note: In my review, I strictly followed the call for papers, particularly its requirement that "papers must be self-contained; reviewers are under no obligation to read the supplementary material." Therefore, I considered only the submission containing 23 pages, the data availability statement, and references in my evaluation.
+
+The questions raised above are about how the formal semantics is defined rather than what the semantics should be. Most of the questions not addressed in the main paper have standard answers and none of the questions affects the validity of our Hoare logic. We hadn’t explicitly addressed polymorphic calls in the paper, but they are doable as  we have shown in our reply.
+
+Review #128C
+===============================================
+
+Detailed review
+---------------
+> This is a very interesting and well-motivated paper. Over the last 20+
+years, there have been many claims about the security offered by object
+capabilities and capability safety, but a general approach to verifying how
+ocap programs regulate access to critical objects has remained elusive.
+
+Thank you! Exactly because of these 20+ years of claims, it is time that works on the verification of ocap-based security get published and discussed.
+
+> That said, I have some serious concerns about the paper: 
+
+> 1) Not a self-contained paper: 
+
+> (i) The formal material critically depends on the appendix. In particular
+key definitions such as the semantics of Lul and the semantics of
+assertions is not explained sufficiently in the body of the paper.
+
+We tried to only omit parts that are standard in oo. But will take your guidance, and those of the other reviews,  to identify and expand the parts that are less standard.  
+
+> (ii) The proof of why Mgood satisfies S2 is also in the appendix, even
+though understanding how the logic enables that proof is the whole point
+of the paper.
+
+Following your suggestion, we shall move the most salient parts of that proof into section 2 (or section 8).  Compare also appendix H, Lemmas H.4-H.6, of the attached material.
+
+> Worse, the appendix does not cover neither S3 (and in
+particular the S4-related step for the external call), which is the actual
+property we care about (see also point 2 below), 
+
+Indeed it was missing, but  you can find this in updated  appendix H, lemma H.8,  of the new attached material. The key is the application of rule [Ext_Call_Adapt], and the guarantee $S_3$, than when the key is protected the balance does nor decrease.
+
+> nor discusses why S2 does not hold for Mbad, which is important as a demonstration of how the proof system handles problematic situations. 
+
+S2 does not hold for $M_{bad}$  because the method `set` in $M_{bad}$ allows external code to set the value of `key` even if the external code did not know the old value of `key`. . In the appendix, lemma H.6 of the new attached material we show how  `set` from $M_{fine}$ can be proven, and in sections H.5.3 and H.5.4,  we show the relevant proof steps.
+
+
+> In sum, while it is customary for papers to place helpful but
+supplementary material in appendices, in this paper, some very critical
+pieces of the formal development and the discussed case study are all
+relegated to the appendix. As is, the paper does not make sense by itself.  
+
+> 2) Assertions, specifications and proofs: 
+
+ >  I cannot figure out how the rules of the logic can be used to show that an invocation of an external method implies a post-condition that specifies something about the value of an internal field.
+
+
+The rules for proving properties of values of internal fields after invocation of external calls are Call_Ext_Adapt and  Call_Ext_Adapt_Strong. 
+
+These rules can prove preservation of encapsulated assertions. We define encapsulated assertions as assertions that require internal computation in order to be invalidated. If all methods in the public interface of a module preserve a given encapsulated assertion , then we can be sure that a call to external code from internal code will preserve that assertion .  Such encapsulated assertions may  depend on internal fields only (eg sum of moneys in DAO accounts is same as balance of the DAO)  or may be about access (eg key is protected), or may be about internal fields as well as access (eg key is protected and balance does not decrease) 
+
+Therefore, reasoning about object access allows us to reason about more complex properties of a program. For example, reasoning about access to an account’s password allows us to conclude that no illicit transfers may be made on that account.
+
+Sidenote: the fact that encapsulated assertions can only be invalidated by internal code does not mean that their validity only depends on internal fields. For example, whether an object is protected, depends on external as well as on internal fields, But only internal computation can break the protection of an object.
+
+>  I can see how the assertions can express such properties (which is also shown in
+  Appendix E) but I am not sure how they can be proven with the logic,
+  given the absence of code and specifications for external methods. I
+  would appreciate your help in clarifying this. 
+
+
+See earlier notes, 
+
+
+ >  Concretely, how can we show that the balance of  myAccnt  remains greater or equal after the external method invocation?
+
+
+
+>  What if pay calls transfer with a negative integer? 
+
+Here you caught a serious typo in our paper. The type of amt should be `nat` and not `int`. 
+Further, in our Coq formalism of the example erroneous assumption that the assumed underlying Hoare Logic proved the following:
+
+              M |- { bal=b } bal = bal + amt { bal>=b  }
+
+which is valid, only if amt is a natural.
+
+In the attached Appendix, Lemma H.9, you can see the proof that `transfer` satisfied $S_3$, where indeed we need the assumption that `amt` is positive -- step (71).
+
+
+Thank you. We will repair that.
+
+>   In general, due to the absence of specifications for external objects, I cannot see how the proposed approach can help  reasoning about high-level properties besides access to objects.
+
+ 
+A core contribution of the paper is to demonstrate that our notion of protection (restriction of external access to objects) allows us to reason about several important, complex, and high level properties that require access to those objects.
+
+Namely, if an encapsulated property can only be invalidated through public internal methods which require an ocap-object, if the internal code never calls these methods, and if at the time of the external call, no external object has access to the ocap-object, then the external call is guaranteed not to invalidate that encapsulated property.
+
+Thus, our work hinges on reasoning about access, but is not confined to that. It leverages the knowledge about access in order to reason about further properties involving values oif internal fields. All that, in the absence of any knowledge or specification of the external code.
+
+
+
+
+>  If just the latter is the goal of the paper, then that's fine but it should be stated explicitly. 
+Currently, though, sections 1 and 2 (and other parts of the paper) imply that the logic can be used to prove high-level behavioral properties of modules that make external calls. And arguably, that should be the real goal, as capability safety and absence eventual access are means to obtain those high-level properties.
+
+As you say, the goal of the paper is to leverage the knowledge about lack of access to capability objects to prove absence of certain effects.
+
+3) Evaluation of the approach:
+
+   The motivation of the paper is pretty practical. However, the
+   evaluation of the practical applicability and limitations of the idea
+   is almost non-existent. This makes it very difficult for the reader to
+   understand what the approach can and cannot do. Another, substantial
+   case study would help a lot with that front. If selected carefully, it could
+   also help with demonstrating the delta with some of the other
+   approaches mentioned in the paper. 
+
+The running Shop  example in this draft is carefully chosen to be minimal, yet intuitively comprehensible, while still embodying the key difficulties within the problem.  This is the level of validation generally evidenced by papers in ocap-related works :  (see, for example, references 12, 53, 54, 67, 77, 89  rom the submitted version of the paper). We are happy to study examples provided by the reviewers. 
+
+We expect we will have space to discuss one or two of the problems from Appendix E within the body text of a reviews draft.
+
+4) Presentation:
+
+  (i) Section 2 references terms such as path, frames and steps that have
+  a specific meaning in section 3 but do are not explained in section 2.
+  This section is supposed to provide intuition about the formal
+  development. Instead, it is highly confusing and only becomes somehow
+  clearer after reading the formal sections.
+
+ >  (ii) The formal sections are pretty terse. Most of the space is occupied
+  by definitions and the examples presented are not really explained.
+  Overall, that part of the paper reads more like a technical appendix.
+  Adding to the mix the material relegated to the actual appendix, this is
+  a very difficult paper to get through.
+
+We have aimed to illustrate the meaning of most of our definitions through examples. So, we believe that the meaning of the definitions is sufficiently clear in the paper. 
+If we had more space, we would have loved to discuss design alternatives for the concept of protection, give more examples about the use of our Hoare logic, and more examples assertion encapsulation.
+
+
+> As an example, after reading the
+  paper multiple times together with the appendix, I have not found an
+  example that shows concretely why the quadruple for specification needs
+  an extra dedicated assertion-guarantee for external method
+  invocations. 
+
+This is an excellent question; thank you. It also demonstrates a deeper understanding of the paper that the reviewer is claiming. 
+
+
+Scoped invariants guarantee that an assertion is preserved in intermediate external states reachable from the current call/frame (scoped execution) -- this is illustrated in Fig. 2.  Therefore, postconditions are insufficient characterizations of statements’ behaviour;  we also need guarantees about the intermediate external states reachable from the execution of that statement. This is alluded to in lines 743-744., but not sufficiently, and we will rectify.
+
+For example, consider the following $stmts_1$, where `this` is an `Accnt` and `e` is `external`:
+
+          `e.m(this.key); this.key:=new Key`
+
+Then, the assertion   $<\!\!<this.key>\!\!>$  is a postcondition  of $stmts_1$. But it is broken by the external call `e.m(this.key)`, and is re-established after it. Therefore, $<\!\!<this.key>\!\!>$  is not an invariant. That is:
+
+$\ \ \ \ \ \ \vdash\{ this:Accnt, e:external\}stmts_1\{<\!\!<this.key>\!\!>\}\ ||\ \{ true \}$
+
+But
+
+$\ \ \ \ \ \ \nvdash\{ this:Accnt, e:external\}stmts_1\{<\!\!<this.key>\!\!>\}\ ||\ \{<\!\!<this.key>\!\!>\}$
+
+We will add this illustration to the paper.
+  
+
+>  In general, as things are and despite committing
+  significant amount of time and energy on this paper, I cannot assert
+  with confidence that the technical development is correct. 
+
+We are grateful for your perseverance, and the questions, which gave us an opportunity to reflect more about the role of various design decisions. Despite your frustration about the reliance on the appendix we believe that by now you have understood most of the paper. And more importantly, we believe that with your input, the next instalment of the paper will be far more accessible. 
+
+ >  In an attempt to be constructive, I think it would be a significant
+  improvement in terms of presentation to:
+  (i) Turn section 2 into a ``the logic by example'' section. Similar to
+  the current version, the section should focus on the Shop example, but
+  instead of introducing the challenges, the goal would be to present
+  assertions,module specs, the rules of the logic and the proof of
+  correctness for Mgood (and discuss why Mbad) is incorrect.
+  (ii) Remove all material from the main body that have to do with the
+  soundness of the logic, and use the recovered space to give a complete
+  self-contained account of the remaining formalisms.
+  (iii) Bring in the paper some of the discussion about expressiveness
+  that is now in the appendix.
+
+We are happy to adopt all these suggestions. We would expand Section 2 to illustrate the use of the Hoare  logic, and would also add the diagrams illustrating the meaning of scoped invariants (as suggested by RA). We do not see how to move the challenges out of the chapter, because we believe that the meaning of  protection and of  scoped invariants  needs to be clarified early on, otherwise the logic would be unmotivated and unconvincing. We will explain how the Shop case study is characteristic of a whole family of examples, and compare with the case studies from the ocap literature.
+
+We are happy to relegate the discussion of soundness to the appendix, or remove it altogether.
+
+
+ 
+
+> Overall, while I believe there are good ideas here and the paper shows that the
+approach is promising, I do not think that the paper is ready for
+publication.
+
+> Is the Data-Availability Statement reasonable?
+----------------------------------------------
+> Yes
+
+> Questions for authors to answer in their response
+-------------------------------------------------
+> Could you please answer my questions in point 2 above?
+
+See response earlier on.
+
+Thank you for the many excellent questions and suggestions.
+
+
+
+Comment @A1 by Administrator
+---------------------------------------------------------------------------
+The reviewers thank the authors for the detailed response. The reviewers agree that while technically interesting, the current paper reads like an incomplete and unpolished dry technical report and needs significant improvements to be accepted at a top-tier venue. The reviewers understand the difficulty in presenting highly technical content and see potential in this work and therefore are willing to give authors a chance to revise the paper. Hence, the reviewers settled on the major revision decision, instead of rejection. 
+
+While the response is a good start to produce a paper that is acceptable, the reviewers expect significant work be put into revising this paper, possibly rewriting the entire paper. The revised paper has to 
+
+- deliver a self-contained, complete and rigorous paper that a PL researcher who is not invested in ocap can read and appreciate;  
+
+- provide sufficient evidence about the expressiveness and applicability of the logic 
+
+- include detailed discussions on scalability, generalizability, and broader utilization.
