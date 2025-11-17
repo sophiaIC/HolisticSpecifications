@@ -372,7 +372,6 @@ Moreover, we introduce a new, slightly modified form of two state invariants of 
 
 We specify the guarantees of   ERC20  as follows:
 \\
-ç
 \\
 $\strut \SPSP  S_{erc\_2}\ \  \triangleq \ \ \TwoStatesLB{ e:\prg{ERC20},p,p':\prg{Participant},n:\mathbb{N}} 
  {\ \forall p'.[\,(e.allowed(p',p) \rightarrow   \inside{p'}\, ] \ } { \ e.balance(b)=n \ } $ 
@@ -490,8 +489,55 @@ Then, the scoped invariants
 
 \noindent
  expresses that the unsealer is not leaked to external code ($S_{sealer\_1}$), and that if the external world has no access to the high-integrity value $\prg{v}$ nor to the its unsealer  \prg{us}, then it will not get access to the value  ($S_{sealer\_2}$). 
+ 
+ \subsection{Access Security for Hotel Electronic Keys}
+ 
+ In line with our earlier work at OOPSLA 2022, and our current work, \cite{AccessHL} also propose that secuirty should be understood in terms of necessary (rather than sufficient) pre-conditions. They propose accessibility tuples, of the form $<\ P \ >\ C \ <\ Q \ >$m which express that for any state $s$, whose execution with the command $C$ leads to a state $s'$ that satisfies $Q$,  must satisfy $P$. In contrast to our work, the \cite{AccessHL} accessibility tuples are in terms of two conditions and a command, whereas our tuples are only in terms of two conditions -- we quantify universally over the commands.
+ 
+ The Access Security for Hotel Electronic Keys problem is proposed in \cite{AccessHL}: in a hotel that uses cards to control access to its room, the room's door has a battery-powered lock which has an electronic door key, \prg{dk}. A card holds two electronic keys, \prg{ck1} and \prg{ck2}. Such a card can be used to update the lock's key: if  \prg{ck1} is the same as  \prg{dk}, then  \prg{dk} is set to  \prg{ck2}. From then on, \prg{ck2} may be used to open the door.
+ The code looks, essentially as follows
+ 
+ \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module Hotel
+   class Card
+      field ck1, ck2: Object
+	
+    class Lock
+      field dk: Object
+      field is_open: bool
+      
+      void open(card:Card)
+          if (this.dk == card.ck1)
+              this.dk := card.ck2
+              is_open := true
+          elsif (this.dk == card.ck1)
+              is_open := true
+          else 
+              is_open := false
+      
+   ...
+ \end{lstlisting}
+ 
+ The code in \cite{AccessHL} is essentially a snippet -- no modules, classes, or methods. It does not give a specification for the code either, but we assume that the specification would be, roughly
+\\
+$~ \strut \ \ \ \  (*) \ \ <  \prg{c.ck1}== \prg{l.dk} \vee \prg{c.ck2}== \prg{l.dk}\ > \ \prg{l.open(c)}\ < \ \prg{l.is\_open}\ >$
+\\
+where $\prg{c}$ is a \prg{Card} and  $\prg{l}$ is a \prg{Lock}. Notice, that in this work, the specification is over one method, nothing prevents another method in the nodule -- or a sequence of methods for that matter -- to break the necessity requirement that the door cannot be opened unless the card had access to the two keys. 
 
-%
+In contrast, our specification is holistic, and would  not be concerned over whether the opening is effected through a call to a method \prg{open}, or any other method from that module. However, the spec does assume that opening can only be effected through possession of a card with the appropriate electonic keys,
+
+$~  (**) \ \  \TwoStatesN{ \prg {cd}:\prg{Card}, \  \prg {lk}:\prg{Lock}}
+{  \  \   \neg  \prg{lk.isOpen} \ \wedge\ ( \prg{lk.dk}\in\{ \prg{cd}.\prg{ck1} , \prg{cd}.\prg{ck2} \}  \ 
+  \ \rightarrow \  \inside{\prg {cd}}\ ) \ \  }$
+  
+ 
+ The implementation also satisfies the stronger spec, $(*\!*\!*)$ below,  which says that regardless of the state of the lock, no card containing either of the the lock's keys may be leaked:
+ 
+  $~  (*\!*\!*) \ \  \TwoStatesN{ \prg {cd}:\prg{Card}, \  \prg {lk}:\prg{Lock}}
+{  \  \    \prg{lk.dk}\in\{ \prg{cd}.\prg{ck1} , \prg{cd}.\prg{ck2} \}  \ 
+  \ \rightarrow \  \inside{\prg {cd}}\  \  }$
+  
+ %
 %Moreover, we would add method specifications to the \prg{seal}, and \prg{unseal} methods as follows, where $res.1$ and $res.2$ stand for taking the 1st or 2nd element out of a tuple.
 %
 %  {\sprepost
