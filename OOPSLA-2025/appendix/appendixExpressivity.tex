@@ -492,50 +492,108 @@ Then, the scoped invariants
  
  \subsection{Access Security for Hotel Electronic Keys}
  
- In line with our earlier work at OOPSLA 2022, and our current work, \cite{AccessHL} also propose that secuirty should be understood in terms of necessary (rather than sufficient) pre-conditions. They propose accessibility tuples, of the form $<\ P \ >\ C \ <\ Q \ >$m which express that for any state $s$, whose execution with the command $C$ leads to a state $s'$ that satisfies $Q$,  must satisfy $P$. In contrast to our work, the \cite{AccessHL} accessibility tuples are in terms of two conditions and a command, whereas our tuples are only in terms of two conditions -- we quantify universally over the commands.
+
+A hotel giving access to rooms through cards with electronic keys is a case study in  \cite{AccessHL}. 
+This paper\footnote{at the time of writing not yet officially published, but  fresh in arXive}, 
+argue that security should be understood in terms of necessary (rather than sufficient) pre-conditions -- this is as we already proposed in the FASE and our OOPSLA 22 paper.
+In contrast to our OOPSLA'22 and the current paper, rather than fall back on a the negation of sufficient conditions, t\cite{AccessHL}  propose  a Hoare logic for necessary conditions.
+They propose what the call \emph{accessibility tuples}, of the form\\
+$ \strut \hspace{4cm}  <\,P \, >\, C \, <\, Q \, >$\\
+which express that for any states $\sigma$,$\sigma'$, if execution of command $C$ in state $\sigma$  leads to   state $\sigma'$, and if  $\sigma'$ satisfies $Q$,  then $\sigma$ must satisfy $P$. Moreover, in contrast to our work, the \cite{AccessHL} accessibility tuples are in terms of two conditions and a command, whereas our tuples are only in terms of two conditions -- we quantify universally over the commands.
  
- The Access Security for Hotel Electronic Keys problem is proposed in \cite{AccessHL}: in a hotel that uses cards to control access to its room, the room's door has a battery-powered lock which has an electronic door key, \prg{dk}. A card holds two electronic keys, \prg{ck1} and \prg{ck2}. Such a card can be used to update the lock's key: if  \prg{ck1} is the same as  \prg{dk}, then  \prg{dk} is set to  \prg{ck2}. From then on, \prg{ck2} may be used to open the door.
- The code looks, essentially as follows
+ The Access Security for Hotel Electronic Keys problem as proposed in \cite{AccessHL},  in a hotel that uses cards to control access to its room, the room's door has a battery-powered lock which has an electronic door key, \prg{dk}. A card holds two electronic keys, \prg{ck1} and \prg{ck2}. Such a card can be used to update the lock's key: if  \prg{ck1} is the same as  \prg{dk}, then  \prg{dk} is set to  \prg{ck2}. From then on, \prg{ck2} may be used to open the door.
+ A possible implementation in our toy language looks, essentially, as follows
  
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
 module Hotel
    class Card
       field ck1, ck2: Object
+      private init(k1, k2: Object)
+          this.ck1:= k1;
+          this.ck2:=k2
 	
     class Lock
       field dk: Object
       field is_open: bool
-      
-      void open(card:Card)
+      private init(k1, k2: Object)
+          this.ck1:= k1;
+          this.ck2:=k2
+                
+      public open(card:Card) : void
           if (this.dk == card.ck1)
               this.dk := card.ck2
               is_open := true
-          elsif (this.dk == card.ck1)
-              is_open := true
           else 
-              is_open := false
-      
-   ...
+              is_open := (this.dk == card.ck2)
  \end{lstlisting}
- 
- The code in \cite{AccessHL} is essentially a snippet -- no modules, classes, or methods. It does not give a specification for the code either, but we assume that the specification would be, roughly
+  
+ The code for the electronic keys given in \cite{AccessHL} is essentially a snippet -- no modules, classes, or methods.  The paper does not give a specification for the code either, but we assume that the specification would be, roughly
 \\
 $~ \strut \ \ \ \  (*) \ \ <  \prg{c.ck1}== \prg{l.dk} \vee \prg{c.ck2}== \prg{l.dk}\ > \ \prg{l.open(c)}\ < \ \prg{l.is\_open}\ >$
 \\
 where $\prg{c}$ is a \prg{Card} and  $\prg{l}$ is a \prg{Lock}. Notice, that in this work, the specification is over one method, nothing prevents another method in the nodule -- or a sequence of methods for that matter -- to break the necessity requirement that the door cannot be opened unless the card had access to the two keys. 
 
-In contrast, our specification is holistic, and would  not be concerned over whether the opening is effected through a call to a method \prg{open}, or any other method from that module. However, the spec does assume that opening can only be effected through possession of a card with the appropriate electonic keys,
+In contrast, our specification is holistic, and would  not be concerned over whether the opening is effected through a call to a method \prg{open}, or any other method from that module. However, the spec does assume that opening can only be effected through possession of a card with the appropriate electronic keys,
 
 $~  (**) \ \  \TwoStatesN{ \prg {cd}:\prg{Card}, \  \prg {lk}:\prg{Lock}}
 {  \  \   \neg  \prg{lk.isOpen} \ \wedge\ ( \prg{lk.dk}\in\{ \prg{cd}.\prg{ck1} , \prg{cd}.\prg{ck2} \}  \ 
   \ \rightarrow \  \inside{\prg {cd}}\ ) \ \  }$
   
  
- The implementation also satisfies the stronger spec, $(*\!*\!*)$ below,  which says that regardless of the state of the lock, no card containing either of the the lock's keys may be leaked:
+ The implementation also satisfies the specification $(*\!*\!*)$ below,  which says that regardless of the state of the lock, no card containing either of the the lock's keys may be leaked:
  
   $~  (*\!*\!*) \ \  \TwoStatesN{ \prg {cd}:\prg{Card}, \  \prg {lk}:\prg{Lock}}
 {  \  \    \prg{lk.dk}\in\{ \prg{cd}.\prg{ck1} , \prg{cd}.\prg{ck2} \}  \ 
   \ \rightarrow \  \inside{\prg {cd}}\  \  }$
+  
+  Note, that while  $(*\!*\!*)$  and  $(\!*)$  share the part about $( \prg{lk.dk}\in\{ \prg{cd}.\prg{ck1} , \prg{cd}.\prg{ck2} \}  \ 
+  \ \rightarrow \  \inside{\prg {cd}}\ )$ neither of the two is stronger than the other.
+  
+\subsection{Access through any element out of a set of  Electronic Keys}
+ 
+
+Another case study proposed in  \cite{AccessHL}, is that access should only be granted through possession of any out of a set of keys.
+
+ 
+ \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module Vault
+      field keys: List< Object >
+      field isOpen: boolean
+      
+      private init(keys:List<Object>)
+          ...
+      
+      public open(key:Object) : bool
+      	  keysList := keys
+          while keysList.notEmpty() do
+            	  firstKey := keysList.top();
+          	  if (firstKey == this.key) then 
+          	     isOpen:= true 
+	              return true
+         	  keysList.pop();
+          return false                   
+ \end{lstlisting}
+ 
+The paper  \cite{AccessHL} is concerned with the verification of the body of \prg{open}, and in particular the \prg{while}-loop,. And so, they could prove that\footnote{To be precise, their proof  is only  for the body of \prg{open} because their logic lacks support function calls. However, that lack is not a severe limitation; function calls can be easily added.} a call to \prg{v.open(k)} returns \prg{true} only if \prg{k} is one of the keys of \prg{v}:
+\\
+$~ \strut \ \ \ \  (*) \ \ <\  \prg{v.keys.contains(k)} \ > \ \prg{v.open(k)}\ < \ \prg{ret}==\prg{true}\  >$
+\\
+where \prg{v} is a \prg{Vault} and \prg{contains} is assumed to be a method in \prg{List} checking whether its argument is in the list.
+
+With our approach, we would use a standard, sufficient condition Hoare  logic to obtain that
+$~ \strut \ \ \ \  (*\!*) \ \ \{ \neg \prg{v.keys.contains(k)} \wedge \neg \prg{v.isOpen} \ \}$\\
+$~ \strut \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ \ \ \ \prg{l.open(k)}\ $\\
+$~ \strut \ \ \ \ \ \ \  \ \ \ \ \  \{ \ \neg \prg{v.keys.contains(k)} \wedge \neg \prg{v.isOpen} \ \}$
+\\
+The triple from $(*\!*)$ together with the fact that \prg{open} is the only public method would allow us to prove that if the vault is not open, and none of its keys are externally accessible, then it remains not open, and its keys remain externally in-accessible, \ie \\
+$~ \strut \ \ \ \  (*\!*\!*) \ \   \TwoStatesN{ \prg {v}:\prg{Vault} }
+{  \  \   \neg  \prg{v.isOpen} \ \wedge\ \forall \prg{k}:\prg{Object}.[  \ \prg{v.keys.contains(k)} \ \rightarrow \  \inside{\prg {k} } \ ] \ \  }$
+  
+ 
+ The implementation also satisfies   spec, $(*\!*\!*\!*)$ below,  which says that regardless of the state of the vault, none of its keys are leaked:
+\\
+ $~ \strut \ \ \ \  (*\!*\!*\!*) \ \   \TwoStatesN{ \prg {v}:\prg{Vault} }
+{  \  \    \forall \prg{k}:\prg{Object}.[  \ \prg{v.keys.contains(k)} \ \rightarrow \  \inside{\prg {k} } \ ] \ \  }$
   
  %
 %Moreover, we would add method specifications to the \prg{seal}, and \prg{unseal} methods as follows, where $res.1$ and $res.2$ stand for taking the 1st or 2nd element out of a tuple.
