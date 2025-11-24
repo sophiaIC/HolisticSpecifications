@@ -600,7 +600,7 @@ $~ \strut \ \ \ \  (*\!*\!*) \ \   \TwoStatesN{ \prg {v}:\prg{Vault} }
 In his thesis, Mark Miler discusses the revocation of access, whereby \prg{Alice} may grant to \prg{Bob} access to \prg{Carol}, but may later on want to restrict that access. For this, he follows the caretaker pattern. 
 
 Below we show a version of the caretaker pattern written in a class-based language. 
-With this approach, \prg{Alice} can pass to \prg{Bob} a \prg{Caretaker} to \prg{Carol}, and retain the \prg{Gate}. 
+With this approach, \prg{Alice} can pass to \prg{Bob} a \prg{Caretaker} object to \prg{Carol}, and retain the \prg{Gate}. 
 The \prg{Gate} object has the right to disable the \prg{enabled} field of the \prg{Caretaker}, and thus essentially revoke calls of the message on \prg{Target}.\footnote{Note that in the last line we assume that the underlying language offers some reflection features; in the absence of this, the \prg{Caretaker} would need to be programmed so as to have knowledge of the interface offered by \prg{target}.}
 
  \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
@@ -609,9 +609,10 @@ module WithRevocation
          field caretaker : Caretaker
          
          private method init(t: Target): void
-         	this.caretaker  := new Gate
-	        this.caretakertarget := t
-		this.caretaker.enabled := true
+            this.caretaker  := new Caretaker
+            this.caretaker.target := t
+            this.caretaker.enabled := true
+            return (gate,caretaker)  // we assume that the language supports pairs
 		
 	private method enable(): void
 		this.caretaker.enabled := true
@@ -621,10 +622,11 @@ module WithRevocation
 		
    class Caretaker
          field enabled : boolean
+         field target: Target
 	    
          public method forward(mssg: Message): void
             if (this.enabled) then
-               target.mssg()    / / calling mssg on target
+               this.target.mssg()    / / calling mssg on target
                  
  \end{lstlisting}
  
@@ -653,10 +655,10 @@ The external world cannot set, or reset the \prg{enabled} field of a \prg{Careta
 \\
 ~ \\
 $~ \strut \ \ \ \  (S_5) \ \   \TwoStatesN{ \prg {t}:\prg{Target} }
-{  \  \   \  A(t) \wedge \forall \prg{g}:\prg{Gate}.[  \ \prg{g.target}=\prg{t}  \rightarrow\  \neg\ \prg{g.enabled} \ ]  \ \  }$
+{  \  \   \  A(\prg t) \wedge \forall \prg{g}:\prg{Gate}.[  \ \prg{g.target}=\prg{t}  \rightarrow\  \neg\ \prg{g.enabled} \ ]  \ \  }$
 \\
 We assume that the effect of calling \prg{mssg} on a \prg{t} of class \prg{Target} is to invalidate assertion $A$. 
-Then, $(S_5)$ guarantees the preservation of $A(t)$ 
+Then, $(S_5)$ guarantees the preservation of $A(\prg t)$ 
 under external calls provided that the \prg{enabled} field of every \prg{Gate} targeting \prg{t} is \prg{false}.
  
 
