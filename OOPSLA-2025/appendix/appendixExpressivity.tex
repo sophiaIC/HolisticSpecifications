@@ -508,18 +508,18 @@ which express that for any states $\sigma$,$\sigma'$, if execution of command $C
 module Hotel
    class Card
       field ck1, ck2: Object
-      private init(k1, k2: Object)
+      private method init(k1, k2: Object)
           this.ck1:= k1;
           this.ck2:=k2
 	
     class Lock
       field dk: Object
       field is_open: bool
-      private init(k1, k2: Object)
+      private method init(k1, k2: Object)
           this.ck1:= k1;
           this.ck2:=k2
                 
-      public open(card:Card) : void
+      public method open(card:Card) : void
           if (this.dk == card.ck1)
               this.dk := card.ck2
               is_open := true
@@ -560,17 +560,17 @@ module Vault
       field keys: List< Object >
       field isOpen: boolean
       
-      private init(keys:List<Object>)
+      private method init(keys:List<Object>)
           ...
       
-      public open(key:Object) : bool
+      public method open(key:Object) : bool
       	  keysList := keys
           while keysList.notEmpty() do
             	  firstKey := keysList.top();
-          	  if (firstKey == this.key) then 
-          	     isOpen:= true 
-	              return true
-         	  keysList.pop();
+            	  if (firstKey == this.key) then 
+            	      isOpen:= true 
+            	      return true
+            	      keysList.pop();
           return false                   
  \end{lstlisting}
  
@@ -594,7 +594,72 @@ $~ \strut \ \ \ \  (*\!*\!*) \ \   \TwoStatesN{ \prg {v}:\prg{Vault} }
 \\
  $~ \strut \ \ \ \  (*\!*\!*\!*) \ \   \TwoStatesN{ \prg {v}:\prg{Vault} }
 {  \  \    \forall \prg{k}:\prg{Object}.[  \ \prg{v.keys.contains(k)} \ \rightarrow \  \inside{\prg {k} } \ ] \ \  }$
-  
+
+\subsection{Revocation and the Caretaker Pattern}
+
+In his thesis, Mark Miler discusses the revocation of access, whereby \prg{Alice} may grant to \prg{Bob} access to \prg{Carol}, but may later on want to restrict that access. For this, he follows the caretaker pattern. 
+
+Below we show a version of the caretaker pattern written in a class-based language. 
+With this approach, \prg{Alice} can pass to \prg{Bob} a \prg{Caretaker} to \prg{Carol}, and retain the \prg{Gate}. 
+The \prg{Gate} object has the right to disable the \prg{enabled} field of the \prg{Caretaker}, and thus essentially revoke calls of the message on \prg{Target}.\footnote{Note that in the last line we assume that the underlying language offers some reflection features; in the absence of this, the \prg{Caretaker} would need to be programmed so as to have knowledge of the interface offered by \prg{target}.}
+
+ \begin{lstlisting}[language = Chainmail, mathescape=true, frame=lines]
+module WithRevocation
+   class Gate
+         field caretaker : Caretaker
+         
+         private method init(t: Target): void
+         	this.caretaker  := new Gate
+	        this.caretakertarget := t
+		this.caretaker.enabled := true
+		
+	private method enable(): void
+		this.caretaker.enabled := true
+		
+	private method disable(): void
+		this.caretaker.disable := false
+		
+   class Caretaker
+         field enabled : boolean
+	    
+         public method forward(mssg: Message): void
+            if (this.enabled) then
+               target.mssg()    / / calling mssg on target
+                 
+ \end{lstlisting}
+ 
+ \vspace{.1cm}
+ \noindent
+ 
+ This pattern can be specified in our approach through the five five specifications,  below:
+ \\
+ $~ \strut \ \ \ \  (S_1) \ \   \TwoStatesN{ \prg {g}:\prg{Gate} }
+{  \  \   \  \inside{\prg {g} } \ \ \  }$
+\\
+$~ \strut \ \ \ \  (S_2) \ \   \TwoStatesN{ \prg {t}:\prg{Target} }
+{  \  \   \  \inside{\prg {t} } \ \ \  }$
+\\
+\prg{Gate}s are not leaked to the external world.
+Similarly, \prg{Target}s are not leaked to the external world.
+\\
+~\\
+$~ \strut \ \ \ \  (S_3) \ \   \TwoStatesN{ \prg {c}:\prg{Caretaker} }
+{  \  \        \prg{c.enabled} \ \  }$
+\\
+$~ \strut \ \ \ \  (S_4) \ \   \TwoStatesN{ \prg {c}:\prg{Caretaker} }
+{  \  \       \neg \prg{c.enabled} \ \  }$
+\\
+The external world cannot set, or reset the \prg{enabled} field of a \prg{Caretaker}.
+\\
+~ \\
+$~ \strut \ \ \ \  (S_5) \ \   \TwoStatesN{ \prg {t}:\prg{Target} }
+{  \  \   \  A(t) \wedge \forall \prg{g}:\prg{Gate}.[  \ \prg{g.target}=\prg{t}  \rightarrow\  \neg\ \prg{g.enabled} \ ]  \ \  }$
+\\
+We assume that the effect of calling \prg{mssg} on a \prg{t} of class \prg{Target} is to invalidate assertion $A$. 
+Then, $(S_5)$ guarantees the preservation of $A(t)$ 
+under external calls provided that the \prg{enabled} field of every \prg{Gate} targeting \prg{t} is \prg{false}.
+ 
+
  %
 %Moreover, we would add method specifications to the \prg{seal}, and \prg{unseal} methods as follows, where $res.1$ and $res.2$ stand for taking the 1st or 2nd element out of a tuple.
 %
