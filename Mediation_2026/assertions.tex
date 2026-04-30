@@ -1,0 +1,285 @@
+
+\subsection{Stratification}
+
+\label{sub:SpecO}
+
+We assume a sequence of specification identifiers, $S_1$, .... $S_m$, and a sequence of module identifiers, $M_1$,... $M_n$, where $n\geq m$. We also assume lookup functions, $\Spec$ and $\Mod$, which map the specification identifiers to specifications, and the module identifiers to modules. 
+
+
+Our assertions are    standard  (\eg properties of the values of expressions,  connectives, quantification \etc),   about protection (\ie ${\protectedFrom{{\re}} {{\re}}} $ and  $ {\inside {{\re}}} $), and about adherence to specifications ($ {\obeys {\re} {S}}$). Moreover, in order to be able to give a well-founded definition to the meaning of assertions, we introduce stratification to  assertions: an assertion at level $n$, denoted by $A^n$, may contain  $ {\obeys {\re} {S_i}}$ for $i<n$ in any positions, and may contain $ {\obeys {\re} {S_n}}$ in positive positions only.
+
+ 
+
+\begin{definition}[Straified Assertions]
+\label{def:assert:syntax}
+
+Given a sequence of specification identifiers,  $S_1$, .... $S_m$, for any number $n\in[0..m)$, we define $A^n$, the syntax of assertions at level $n$, as follows:
+
+$
+\begin{syntax}
+\syntaxElement{A^c}{}
+		{
+		\syntaxline
+				{{\re}}
+				{{\re} : C}
+				{\external{{\re}}}
+ 				{\protectedFrom{{\re}} {{\re}}} 
+				 {\inside {{\re}}} 
+				  {\neg A^c}
+				{A^c \wedge A^c}	
+		\endsyntaxline
+		}
+\endSyntaxElement
+\\
+\syntaxElement{A^0}{}
+		{
+		\syntaxline
+				{{\re}}
+				{{\re} : C}
+				{\external{{\re}}}
+ 				{\protectedFrom{{\re}} {{\re}}} 
+				 {\inside {{\re}}} 
+				  {\neg A^0}
+				{A^0 \wedge A^0\ \ \ }
+				 {\all{x:C}{A^0}}			
+		\endsyntaxline
+		}
+\endSyntaxElement
+ \\
+\syntaxElement{A^{n+1}}{}
+		{
+		\syntaxline
+				{{\re}}
+				{{\re} : C}
+				{\external{{\re}}}
+ 				{\protectedFrom{{\re}} {{\re}}} 
+				 {\inside {{\re}}} 
+				  {\neg  A^n}
+				 { A^{n+1}  \wedge A^{n+1}}
+				 {\all{x:C}{A^{n+1}}}	
+                  \endsyntaxline
+                }
+                {
+		\ \ 
+		\syntaxline
+				 {\obeys {\re} {S_{n+1}}}		
+		\endsyntaxline
+		}
+\endSyntaxElement
+\end{syntax}
+$
+
+ 
+\end{definition}
+
+We write $A$ for any $A\in A^m$ for some $m\in \mathbb{N}$.
+Concrete assertions, $A^c$ will be used when modules give meaning to abstract predicates.
+
+Like assertions, specifications are stratified too:
+
+\begin{definition}[Stratified Specifications]
+A specification consists of a name, $S_n$, and a set of stratified policies, $Pol^n$, defined as:
+
+$
+\begin{syntax}
+\syntaxElement{Spec^m}{}
+		{
+		\syntaxline
+				{ {\textbf{specification}}\ \  S_n \ \{ \ \ { (\ {\textbf{abstr}}\ P ( x^* ) \ )^*} \ \  (\ Pol^n\ )^* \ \ \} }		
+		\endsyntaxline
+		}
+\endSyntaxElement
+\\
+ \syntaxElement{Pol^{1}}{}
+		{
+		\syntaxline				
+ 				{ \{ \ A^0 \ \} \ \  \prg{this.m(y}^*\prg{)} \ \ 	     \{ \ A^1\ \} \ \ \	}
+% 				{ \{ \ \wf A \ \} \ \ \prg{any\_code} \ \   \{ \ \wf A \ \}	}	
+				{ {\textbf{invr}}\ A^1 \ }	
+		\endsyntaxline
+		}
+\endSyntaxElement
+\\
+\syntaxElement{Pol^{n+1}}{}
+		{
+		\syntaxline				
+ 				{ \{ \ A^n \ \} \ \  \prg{this.m(y}^*\prg{)} \ \ 	     \{ \  A^{n+1} \ \}	}
+% 				{ \{ \ \wf A \ \} \ \ \prg{any\_code} \ \   \{ \ \wf A \ \}	}	
+				{ {\textbf{invr}}\ A^{n+1} \  }	
+		\endsyntaxline
+		}
+\endSyntaxElement
+\end{syntax}
+$
+\footnote{@James: you were right that "obeys" in pre-conditions is as.if it appeared in a negative position.}
+
+ \end{definition} 
+\footnote{ AUTHORS:  
+ Note that $\re$ are ghostfields, and therefore can also be abstract predicates whose bodies are defined in the modules -- same as in ghostfields. 
+ Perhaps we do not need to clarify this.
+ }
+ 
+
+\subsection{Satisfaction of Assertions}
+
+We now define satisfaction  of assertions $A$, in the context of a modules $\Mod$, specifications $\Spec$, and a state $\sigma$.
+The judgment $\satM   \sigma m A$ is defined only if $A\in A^n$.
+The judgement $\satMN \sigma m n A$ is used to define $\satM \sigma m A$.
+\footnote{
+@authors: In contract with OOPSLA-25, we now use \emph{all} the modules. We need that for Def ???
+}
+\footnote{@authors:  What is external? Is it external to a module-id? or a spec-id?}
+
+
+\begin{definition}[Stratified Satisfaction of Assertions] 
+\label{def:chainmail-semantics}
+\label{def:chainmail-protection-from}
+\label{sect:semantics:assert:prtFrom}
+ \label{def:chainmail-protection}
+% We define satisfaction of basic assertions, $\ba A$, by a % program  state $\sigma$ and 
+% module $M$ as:\footnote{AUTHORS: This is essentially OOPSLA 2025}
+is defined below. Here, $m$ and $n$ are arbitrary out of $\mathbb N$ -- unless explicitly quantified.
+%We assume that the number of specifications in $\Spec$ is ${\mathcal s}$.
+
+\begin{enumerate}
+\item
+\label{sat}
+$\sat \sigma  A \ \ \ \triangleq \ \ \   \satM  \sigma {\mathcal s}  A $,\ \ \  where ${\mathcal s}$=number of specifications in $\Spec$.\footnote{But what about externals?}
+\item
+\label{satM}
+$\satM \sigma m A \ \ \ \triangleq \ \ \  \forall n\in \mathbb{N}. [\ \satMN \sigma m n A\ ]$
+\item
+\label{cExpr}
+$\satMN \sigma m n {{\re}}\ \ \ \triangleq \ \ \   \eval{\Mod}{\sigma}{{\re}}{\true}$  
+\item
+\label{cClass}
+$\satMN \sigma m n {\re : C}\ \ \ \triangleq \ \ \   \exists \alpha.[\ \eval{\Mod}{\sigma}{{\re}}{\alpha}\   \wedge \ \class{\alpha} {\sigma}= C\ ]$  
+\item
+\label{cExternal}
+$\satMN \sigma m n {\external \re}\ \ \ \triangleq \ \ \  \exists \alpha.[\ \eval{\Mod}{\sigma} {\re} {\alpha}\   \wedge \ \class{\alpha} {\sigma}= C  \ \wedge \ C \notin ???? \ ]$ 
+ \item
+ \label{cProtected}
+$\satMN \sigma m n {\protectedFrom \re  {\re_o}}$ $\ \  \triangleq\ \ $ 
+$\exists \alpha, \alpha_{o}. [$ 
+  \begin{enumerate}
+ \item
+ $ \eval{\Mod}{\sigma}{{\re}}{\alpha}\ \ \ \wedge\ \ \eval{\Mod}{\sigma}{{\re_o}}{\alpha_o}$,
+  \item
+$\alpha\neq \alpha_0$,
+ \item
+$\forall \alpha'.\forall f.[\ \alpha' \in {\Relevant {\alpha_o} {\sigma}} \wedge\   \satMN \sigma m n {\external {\alpha'}} 
+\ \ \Longrightarrow \ \  
+  \interpret {\sigma} {\alpha'.f} \neq \alpha     \ ] $  $  \strut \hspace{.25cm} ] $.
+\end{enumerate}
+
+\item
+ \label{sect:semantics:assert:prt}
+$\satMN \sigma m n {\inside \re} $ $\ \  \triangleq\ \  $ 
+$\exists \alpha. [$  
+\begin{enumerate}
+\item
+$ \eval{\Mod}{\sigma}{{\re}}{\alpha}$,
+ \item 
+ $\satMN {\sigma} m n {\extThis}\ \ \Longrightarrow\ \ \forall x\!\in\! \sigma. \satMN {\sigma} m n {x\neq \alpha}$,
+ \item
+$\forall \alpha'.\forall f.[\ \alpha' \in {\LRelevantO {\sigma}} \wedge\    \satMN \sigma m n {\external {\alpha'}} 
+\ \ \Longrightarrow \ \  
+  \interpret {\sigma} {\alpha'.f} \neq \alpha     \ ]$ 
+ \strut \hspace{.25cm} ].    \end{enumerate} 
+ 
+  \item
+ $\satMN \sigma m n {\neg \ A}\ \ \ \triangleq \ \ \   \notsatM   {\sigma} {m-1}  {A}$
+\item
+$\satMN \sigma m n {A_1\ \wedge\ A_2}\ \ \ \triangleq \ \ \   \satMN \sigma m n {A_1} \   \wedge \  \satMN \sigma m n {A_2}$
+\item
+\label{quant1}
+$\satMN \sigma m n  {\all{x:C}{A}} \ \ \ \triangleq \ \ \   
+\forall \alpha.[\   \satMN \sigma m n {\alpha:C}  \ \Longrightarrow   \ \satMN \sigma m n  {A[\alpha/x]} \ ] $
+
+\item
+\label{satObeys}
+$\satM   \sigma m    {\obeys  \re {S_i}} \ \ \ \triangleq \ \ \   \forall n\in \mathbb{N}.[ \satMN  \sigma m n   {\obeys \re {S_i} }$.
+
+\item
+\label{satObeysMNa}
+$\satMN  \sigma m n   {\obeys  \re {S_i}} \ \ \ \triangleq \ \ \   \satM  \sigma i    {\obeys  \re {S_i}} $\ \ \ \ if $i < m$.
+
+\item
+\label{satObeysMNb}
+$\satMN  \sigma m 0   {\obeys  \re {S_m}} \ \ \ \triangleq \ \ \  \exists \alpha. \eval{\Mod}{\sigma}{{\re}}{\alpha}$
+
+\item
+\label{satObeysMNc}
+$\satMN  \sigma m {i+1}   {\obeys  \re {S_m}} \ \ \ \triangleq \ \  $
+
+\begin{enumerate}
+\item
+$ \satMN  \sigma m {i}   {\obeys  \re {S_m}}$
+\item 
+$\forall k\leq i.\forall \sigma'\forall pol.[ \ pol\in\Spec(S_m) \ \wedge \Mod,\sigma \leadsto_k \sigma' \ 
+\Longrightarrow \ \satMN  \sigma m {i+1}   {\sats  \re {pol}} $
+\end{enumerate}
+
+\item
+$ \satMN  \sigma m {i+1}   {\sats  \re {\{ \ A  \ \} \   \prg{this.m(y}^*\prg{)} \  \{ \  A'  \ \} } }
+ \ \ \ \triangleq \ \ \
+ \forall \sigma'. $\\
+$ [ \  \  \ \satM   {\sigma} {m-1}  {A[\re/\prg{this}]}\ \ \wedge\ \  \sigma.cont=(\prg{this}.m(\overline y))[\re/\prg{this}] \ \ \wedge\ \
+\Mod, \sigma\leadsto^*_{fin} \sigma'  $\\
+$\strut \hspace{3cm} \hfill \ \   \ \  \  \Longrightarrow\ \ \ \  \satMN  {\sigma'} m {i}  {A'[\re/\prg{this}] }\ \ \ ]$
+
+\end{enumerate}
+
+ \end{definition} 
+ 
+ The following lemma demonstrates that our definitions are well-founded.
+ 
+ \begin{lemma}
+Take arbitrary assertions $A^m$, and $n, k\in \mathbb{N}$ 
+
+\begin{itemize}
+\item
+$k<m\ \ \ \Longrightarrow$
+\begin{itemize}
+\item
+$\satMN  \sigma m n   A^k\ \ \Longleftrightarrow\ \ \satMN  \sigma m {n+1}   A^k$
+\item
+$\satM    \sigma m    A^k\ \ \Longleftrightarrow\ \ \satM   \sigma {m+1}   A^k$
+\end{itemize}
+\item
+$\notsatMN    \sigma m  n  A^m\ \ \Longrightarrow\ \ \notsatMN   \sigma m {n+1}  A^m$
+\item
+$\satM   \sigma m   A^m\ \ \Longrightarrow\ \ \satM    \sigma {m+1}  A^m$
+
+\end{itemize}
+\end{lemma}
+ 
+ \subsection{A Module's Satisfaction of a specification}
+ Now, when does a module satisfy a specification? We define something like
+ 
+ \begin{definition}
+ Take a specification lookup $\Spec$, a modules lookup $\Mod$, and a module identifier $M_i$. We define
+ 
+ \begin{itemize}
+ \item
+ $\Spec, \Mod \models \obeys {M_i} {S_j}\ \ \  \triangleq$ 
+ 
+ \begin{enumerate}
+ \item
+ $i\geq j $ % and $\Mod (M_i)= \prg{module}\ M_i \ \prg{satisfies} S_j ....$
+ \item 
+ $\forall \Mod'.\forall \sigma.\forall \alpha.[\ \ \ \  \Mod' (M_i)=\Mod (M_i)\ \wedge\  \sigma \in Arising(\Mod') \ \wedge ClassOf(\alpha,\sigma)\in M_i$\\
+ $  \strut \hspace{2cm}\Longrightarrow \ \ \  \ \ 
+\ \ \ \  \satLong \Spec {\Mod'} \sigma {\obeys \alpha {S_j}}\ \ \ \ ]$
+
+\end{enumerate}
+\end{itemize}
+
+ \end{definition} 
+ 
+  
+ 
+ 
+ 
+ 
+ 

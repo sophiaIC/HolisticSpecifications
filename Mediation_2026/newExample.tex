@@ -1,0 +1,234 @@
+\renewcommand{\this}{\texttt{this}}
+\renewcommand{\balance}{\texttt{balance}}
+ 
+  \begin{figure*}[t]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{specification}$ $GoodPurse(\this)$ {
+    // $\mbox{we implicitly have that\ } \obeys {\this} {GoodPurse}$
+    
+    $\textbf{ghost}$ balance: Nat
+     
+    $\textbf{ghost}$ CanTrade(x) : bool
+    
+    $\textbf{method}$ sprout(): GoodPurse
+    $\textbf{method}$ transfer($p'$:Any,$amt$:Nat) : bool
+     
+    $\forall p.[ \ \this.CanTrade(p)\  \triangleq\ \this.\texttt{transfer}(p,0) = \texttt{true} \ ]$
+     
+    // CanTrade $\mbox{implies}$ GoodPurse
+     $\forall  p. [\ \this.CanTrade(p) \ \Longrightarrow \ \obeys  {p} {GoodPurse} \ ]$
+       
+    // CanTrade $\mbox{is an equivalence relation}$
+    $\this.CanTrade(\this)$
+    $\forall  p. [\ \this.CanTrade(p) \ \Longrightarrow \ p.CanTrade(\this) \ ]$
+    $\forall  p,p' [\ \this.CanTrade(p) \wedge \ p.CanTrade(p')  \ \Longrightarrow \ \this.CanTrade(p)  \ ]$
+       
+    $\forall gp, [\ \texttt{this.sprout()}=gp \ \Longrightarrow  \ \texttt{this.CanTrade}(gp)\  \wedge\  p.\balance=0]$
+    
+    $\textbf{scoped-invr}\  \forall \prg b:\prg{int}.[\ \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}=\prg b \ ]$ 
+    
+    // $CanTrade \ \mbox{is immutable and so is} \neg CanTrade$
+    $\textbf{scoped-invr}\  \forall \prg p.[\ \ \prg{this}.CanTrade(p) \ ]$ 
+    $\textbf{scoped-invr}\  \forall \prg p.[\ \ \neg \prg{this}.CanTrade(p) \ ]$ 
+    
+    // QUESTION: Is it implicit that $\obeys x {GoodPurse}$, \ $\neg (\obeys x {GoodPurse})$  are immutable?
+         
+    ${\texttt {this}}.CanTrade(p) \ \wedge\  {\texttt {amt}}\leq \texttt {this.balance}\ \wedge\ p\neq \this$
+        $\textbf{\{}$ res:=this.transfer($p$,$amt$) $\textbf\}$
+    res $\wedge$
+    $\mbox{the balances  of \texttt{this} and } p \mbox{ change as should}$
+    $\mbox{the balances of all other } GoodPurse \mbox{'s remain unaffected}$
+     
+    $\neg {\texttt {this}}.CanTrade(p) \vee {\texttt {amt}}> \texttt {this.balance}$
+        $\textbf{\{}$ res:=this.transfer($p$,$amt$) $\textbf\}$
+    $\neg$ res $\wedge$
+     $\mbox{the balances of all } GoodPurse \mbox{'s remain unaffected}$
+     
+}
+\end{lstlisting}
+\caption{Specification of  $GoodPurse$ }
+\label{fig:GoodPurse}
+ \end{figure*}
+ 
+ \vspace{.2cm}
+ 
+ \textbf{Notes on} $GoodPurse$:\\
+ \begin{itemize}
+ \item
+ \texttt{CanTrade} is not ghost
+ \item
+ Should we have have written  \\
+$\strut \hspace{1cm} \textbf{scoped-invr}\  \forall \prg b:\prg{int}.\forall p.[\ \obeys p {GoodPurse} \ \wedge\ \inside{\prg{p}}  \ \wedge \prg{p}.\prg{balance}=\prg b \ ]$ 
+\\
+instead of\\
+$\strut \hspace{1cm} \textbf{scoped-invr}\  \forall \prg b:\prg{int}.[\ \inside{\prg{this}}  \ \wedge \prg{this}.\prg{balance}=\prg b \ ]$ 
+\\
+and similar for all appearances of \texttt{this}? 
+\end{itemize}  
+ 
+ 
+ \begin{figure*}[t]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{specification}$ $FairParty$ {
+    
+     $\textbf{field}$  moneyPurse 
+     $\textbf{field}$  foodPurse 
+     
+     $\textbf{ghost}$ CanExchng(x) :       
+     
+     $\forall fp. [\ \obeys  {fp} {FairParty} \  \ \Longrightarrow \ \obeys  {fp.\prg{moneyPurse} }  {GoodPurse} \ \wedge\ \obeys  {fp.\prg{foodPurse} }  {GoodPurse} \ ]$
+      
+     $\forall fp. \texttt{this}.CanExchng(fp) \ \triangleq \texttt{this.moneyPurse}.CanTrade(\texttt{fp.moneyPurse}) \wedge$   
+                          $\texttt{this.foodPurse}.CanTrade(\texttt{fp.foodPurse}) $
+
+}
+\end{lstlisting}
+\caption{Specification of  $FairParty$}
+\label{fig:FairParty}
+ \end{figure*}
+ 
+  \textbf{Notes on} $FairParty$:\\
+ \begin{itemize}
+ \item
+ \texttt{CanExchng} is ghost, as opposed to \texttt{CanTrade}\\
+\item
+Should we have defined\\
+$\strut \hspace{1cm} \textbf{field}$  \texttt{moneyPurse: GoodPurse};  $\textbf{field}$;  \texttt{moneyPurse: GoodPurse}. \\
+If we do that, then we could omit line 8 from Fig. \ref{fig:FairParty}
+\item
+A corollary of the specification is that \\
+$\strut \hspace{1cm} \forall p. [\ \texttt{this}.CanExchng(p) \Longrightarrow \ \obeys p {FairParty}\ ]$
+ \end{itemize}  
+ 
+% \footnote{Should we have defined instead 
+%\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+%$\textbf{specification}$ $FairParty$ {
+%    
+%     $\textbf{field}$  moneyPurse : $GoodPurse$
+%     $\textbf{field}$  foodPurse : : $GoodPurse$
+%     
+%     $\textbf{ghost}$ CanExchng(x) :       
+%          
+%      $\forall x. \texttt{this}.CanExchng(x) \ \triangleq \texttt{this.moneyPurse}.CanTrade(\texttt{this.moneyPurse}) \wedge$   
+%                          $\texttt{this.foodPurse}.CanTrade(\texttt{this.foodPurse}) $
+%
+%}
+%\end{lstlisting}
+%}
+
+ \begin{figure*}[t]
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{specification}$ $Escrow$ {
+    
+    // 1$^{st}$ case:
+    $\obeys  {buyer} {FairParty}$ $\wedge$ 
+    $buyer$.CanExchng($seller$)  $\wedge  \mbox{ enough money and goods }$  
+        $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    res $\wedge$
+   $\mbox{ exchange happened } \wedge  \mbox{ all other moneys and goods remain unaffected }$
+   
+    //  2$^{nd}$ case:
+    $\{ p, p' \} = \{$ buyer, seller $\} \ \wedge\  \obeys  {p} {FairParty}$ $\wedge$ 
+    $p$.CanExchng($p'$) $\wedge \ \neg(\mbox{ enough money and goods})$  
+        $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$res $\wedge$
+    $\mbox{ exchange did not happen}  \wedge  \mbox{ all other moneys and goods remain unaffected }$
+    
+    //  3$^{rd}$ case:
+    $\{ p, p' \} = \{$ buyer, seller $\} \ \wedge\  \obeys  {p} {FairParty}$ $\wedge$ 
+    $\neg p$.CanExchng($p'$) 
+        $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$res $\wedge$
+    $\mbox{ moneys and goods protected from } p' \mbox{ remain unaffected }$   
+    
+    //  4$^{th}$ case:
+    $\neg \obeys  {buyer} {FairParty}$ $\wedge$ $\neg \obeys  {seller} {FairParty}$ 
+        $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    res$\in\{$ true, false $\}$ $\wedge$
+   $\mbox{ moneys and goods protected from } seller  \mbox{ and } buyer \mbox{ remain unaffected }$   
+}
+
+\end{lstlisting}
+\caption{Specification of  $Escrow$.\prg{::deal} }
+\label{fig:EscrowSpec}
+ \end{figure*}
+ 
+ 
+  \textbf{Notes on} $FairParty$:\\
+ \begin{itemize}
+ \item
+The 2$^{nd}$ case from above can is equivalent to\\
+\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+....   
+    //  2a  case:
+    $\obeys  {buyer} {FairParty}$ $\wedge$ 
+    $buyer$.CanExchng($seller$) $\wedge  \neg(   \mbox{ enough money and goods })$  
+        $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$res $\wedge$
+    $\mbox{ exchange did not happen}  \wedge  \mbox{ all other moneys and goods remain unaffected }$
+    
+    //  2b case:
+    $\obeys  {seller} {FairParty}$ $\wedge$ 
+    $seller$.CanExchng($buyer$) $\wedge  \neg(   \mbox{ enough money and goods })$  
+        $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$ res $\wedge$
+    $\mbox{ exchange did not happen}  \wedge  \mbox{ all other moneys and goods remain unaffected }$
+\end{lstlisting}
+
+\item
+Similar expandion is possible for the 3$^{rd}$ case.
+\item
+A corollary of the specification is that \\
+$\strut \hspace{1cm} \forall p. [\ \texttt{this}.CanExchng(p) \Longrightarrow \ \obeys p {FairParty}\ ]$
+ \end{itemize}  
+ 
+ 
+\newpage
+
+Here the longer version, before Susan's clever suggestion
+
+ \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+$\textbf{specification}$ $Escrow$ {
+    
+    // 1$^{st}$ case:
+    $\obeys  {buyer} {FairParty}$ $\wedge$ 
+    $buyer$.CanExchng($seller$)  $\wedge  \mbox{ enough money and goods }$  
+               $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    res $\wedge$
+   $\mbox{ exchange happened } \wedge  \mbox{ all other moneys and goods remain unaffected }$
+   
+    //  2$^{nd}$ case:
+    $\obeys  {buyer} {FairParty}$ $\wedge$ 
+    $buyer$.CanExchng($seller$) $\wedge  \neg(   \mbox{ enough money and goods })$  
+               $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$res $\wedge$
+    $\mbox{ exchange did not happen}  \wedge  \mbox{ all other moneys and goods remain unaffected }$
+    
+    //  3$^{rd}$ case:
+    $\obeys  {seller} {FairParty}$ $\wedge$ 
+    $seller$.CanExchng($buyer$) $\wedge  \neg(   \mbox{ enough money and goods })$  
+               $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$ res $\wedge$
+    $\mbox{ exchange did not happen}  \wedge  \mbox{ all other moneys and goods remain unaffected }$
+    
+     //  4$^{th}$ case:
+    $\obeys  {buyer} {FairParty}$ $\wedge$ 
+    $\neg (buyer$.CanExchng($seller$))  
+               $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$res $\wedge$
+    $\mbox{ moneys and goods protected from } seller \mbox{ remain unaffected }$   
+    
+       //  5$^{th}$ case:
+    $\obeys  {seller} {FairParty}$ $\wedge$ 
+    $\neg (seller$.CanExchng($buyer$))  
+               $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    $\neg$ es $\wedge$
+   $\mbox{ moneys and goods protected from } buyer \mbox{ remain unaffected }$   
+ 
+    //  6$^{th}$ case:
+    $\neg \obeys  {buyer} {FairParty}$ $\wedge$   $\neg \obeys  {seller} {FairParty}$ 
+               $\textbf{\{}$ res:=this.deal($buyer$,$seller$,$price$,$weight$) $\textbf\}$
+    res$\in\{$ true, false $\}$ $\wedge$
+   $\mbox{ moneys and goods protected from } seller  \mbox{ and } buyer \mbox{ remain unaffected }$   
+}
+\end{lstlisting}
