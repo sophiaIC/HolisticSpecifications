@@ -1,80 +1,71 @@
 \documentclass{article}
 \usepackage{graphicx} % Required for inserting images
-
+\usepackage{tabto}
 %\title{All good}
 %\author{Susan Eisenbach}
 \date{May 2026}
 
 \begin{document}
 
-%\maketitle
+\maketitle
+\TabPositions{0.75cm}
 
+I find the discussion of good and bad purses needlessly confusing because actual purses are passive not active. So I have tried to re-state it in terms that would instantly make sense to people who have never read Mark Miller. This is just for the introduction.
 
-
-For the introduction I wanted to start with two good agents. If this part is okay I will try to extend it so that it contains agents of unknown providence (hence needing an honest third party).  For simplicity of presentation the first agent is the one who is trading euros.
+For simplicity of presentation the first agent is the one who is trading euros.
 \\\\
 \textbf{Spec} Wallet
 
-    \textbf{field} isEuro : Bool  ---- false means the wallet contains dollars
+\tab\textbf{field} isEuro : Bool  ---- false means the wallet contains dollars
     
-    \textbf{field} value : Nat
+\tab\textbf{field} value : Nat
 \\ \\    
 \textbf{Spec} EWallet : Wallet
    
-    \textbf{inv} isEuro = true
+\tab\textbf{inv} isEuro = true
     \\\\
 \textbf{Spec} DWallet : Wallet
   
-    \textbf{inv} isEuro = false
+\tab\textbf{inv} isEuro = false
     \\\\
 \textbf{Spec} Agent
 
-    \textbf{field} ew : EWallet
-    
-    \textbf{field} dw : DWallet
+\tab\textbf{field} ew : EWallet
+
+\tab\textbf{field} dw : DWallet
 \\\\
 \textbf{Spec} CanTrade  (a1,a2 : Agent, num, rate : Nat) : Bool
 
----- a1 is the agent who wants to trade euros
+\tab --- a1 is the agent who wants to trade euros
 
----- rate is the exchange rate from euros to dollars
+\tab --- rate is the exchange rate from euros to dollars
 
----- num is the number of euros that are to be exchanged
+\tab --- num is the number of euros that are to be exchanged
 
-\textbf{return}
-
-\ \ \ \ (a1 $\neq$ a2)  $\wedge$  (a1.value $\geq$ num) $\wedge$ (rate * num $\leq$ a2.dw.value)\\
-
-         
+\tab\textbf{return} (a1 $\neq$ a2)  $\wedge$  (a1.value $\geq$ num) $\wedge$ (rate * num $\leq$ a2.dw.value)\\
+       
 \rm{What if there are good and bad agents? Then you want if both the agents are good and there is enough money the trade to happen and if only one agent is good the trade not to happen. In these three cases you want no other monies in the wallets to be touched. All bets are off if both agents are bad.}
-\\\\
+\newpage
+\noindent
 \textbf{Spec} IsGood (a : Agent) : Bool
 
---- to be defined
-\ \\\\
+\tab --- to be defined
+\\\\
 \textbf{Spec} Trade (a1, a2 : agent, num, rate : Nat) : (a1', a2' : agent) 
 
-\ \ \textbf{field} a1', a2' : agent
+\tab\textbf{field} a1', a2' : agent
 
-\ \ \textbf{if} IsGood(a1) $\wedge$ IsGood(a2) $\wedge$ canTrade (a1,a2,num,rate)
+\tab\textbf{if} IsGood(a1) $\wedge$ IsGood(a2) $\wedge$ canTrade (a1,a2,num,rate) \textbf{then}
+\tab\tab \ \ \ \ a1'.ew.value = a1.ew.value - num
+\tab\tab \ \ \ \ a1'.dw.value = a1.dw.value + rate * num
+\tab\tab \ \ \ \ a2'.ew.value = a2.ew.value + num
+\tab\tab \ \ \ \ a2'.dw.value = a2.dw.value - (1/rate)*num
+\tab\tab\ \ \ \ \textbf{return} (a1', a2')
 
+\tab\textbf{else} \textbf{if} (IsGood(a1) $\wedge$ $!$IsGood(a2))  $\vee$ (IsGood(a2) $\wedge$ $!$IsGood(a1)) \textbf{then}
+\tab\tab\ \ \ \ \textbf{return} (a1, a2)
 
-\ \ \ \ \ \ \ \ a1'.ew.value = a1.ew.value - num
-
-\ \ \ \ \ \ \ \ a1'.dw.value = a1.dw.value + rate * num
-
-\ \ \ \ \ \ \ \ a2'.ew.value = a2.ew.value + num
-
-\ \ \ \ \ \ \ \ a2'.dw.value = a2.dw.value - (1/rate)*num
-
-\ \ \ \ \textbf{return} (a1', a2')
-
-\ \ \ \ \textbf{else} \textbf{if} \ \ \ \ (IsGood(a1) $\wedge$ $!$IsGood(a2))  $\vee$ (IsGood(a2) $\wedge$ $!$IsGood(a1)) 
-        \textbf{}
-
-\ \ \ \ \textbf{return} (a1, a2)
-
-\ \ \ \ --- otherwise (a1', a2') can have any values
+\tab\textbf{else return} (a1', a2') can have any values
 \\ \\
 \rm{The outstanding questions are how do you know if an agent is a good agent and how do you ensure that if a good agent and a bad agent attempt a trade, nothing at all happens.}
 \\ \\
