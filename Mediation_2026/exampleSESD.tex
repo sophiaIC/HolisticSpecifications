@@ -1,0 +1,136 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{tabto}
+%\title{All good}
+%\author{Susan Eisenbach}
+\date{May 2026}
+
+\begin{document}
+
+
+
+\title{The example revisited}
+
+\author{Susan, with some modifications by Sophia}
+
+\maketitle
+
+\TabPositions{0.75cm, 1.25cm, 1.75cm, 2.25cm, 5cm}
+
+I find the discussion of good and bad purses needlessly confusing because actual purses are passive not active. So I have tried to re-state it in terms that would instantly make sense to people who have never read Mark Miller. This is just for the introduction.
+
+For simplicity of presentation the first agent is the one who is trading euros.\footnote{Dropped the field isEuro; the types make this distinction. This will make it more difficult to talk og "good euro wallet" -- multiple inheritance? -- but simplifies how we start the story}
+
+\section{First Version -- Honest Wallets}
+
+Here we have only honest wallets which may, or may not be able to trade with one another. Also, for the sake of simplicty we do not describe the footprints of methods, nor describe what has nit been modified.
+
+\vspace{.4cm}
+Te wallets hold some moneys, and have method for transfering mayes from one another
+
+\vspace{.2cm}
+
+\textbf{spec} Wallet
+
+\tab\textbf{private field} value : Nat
+
+\tab\textbf{ghost function} CanTrade (w' : Wallet) : Bool
+
+\tab \tab  true  \ iff \ this$\neq$w' and this $\wedge$ w' have a way of trading with one another;
+
+\tab \tab \tab eg because they are registered on the same bank, 
+
+\tab \tab \tab or their banks recognize each other  
+
+\tab\textbf{method} transfer (m:Nat, w' : Wallet) : Bool
+
+\tab\tab  true\ iff  \ this.CanTrade(w') $\wedge$ this.balance $\geq$ m,
+
+\tab\tab\tab  if so, then this.amount=old(this.amount)-m, and 
+
+\tab\tab\tab  w'.amount=old(w'.amount)+m
+
+
+\vspace{.4cm}
+\noindent
+We have EWallers holding Euros, and DWallets holding dollars
+
+\vspace{.2cm}
+  
+\textbf{spec} EWallet : Wallet  
+
+\textbf{spec} DWallet : Wallet  
+
+
+\vspace{.4cm}
+\noindent
+Agents hold an EWallet and a DWallet, and can trade with one another id their respective wallets can trade.
+
+\vspace{.2cm}
+
+\textbf{spec} Agent
+
+\tab\textbf{field} ew : EWallet
+
+\tab\textbf{field} dw : DWallet
+
+\tab\textbf{ghost function} CanTrade (a' : Agent) : Bool
+
+\tab\tab true iff this.ew.CanTrade(a'.ew) $\wedge$  this.dw.CanTrade(a'.dw)
+  
+ 
+   
+   \vspace{.4cm}
+\noindent    
+The Escrow makes exchanges between agents, through its method exchange, where  a1/a2  are the agents who wants to trade, rate  is the exchange rate, and num is the number of euros to be exchanged.
+
+\vspace{.2cm}
+
+\textbf{spec} Escrow
+
+\tab \textbf{method} exchange (a1, a2 : agent, num, rate : Nat) : bool
+
+
+\tab \tab  true iff corresponding wallets can trade with one another, 
+
+\tab\tab and had  enough euros/dollars
+
+\tab \tab \tab in which case the dollars/euros will have been transfered
+
+   \vspace{.2cm}
+The escrow works by calling the public function transfer from the respective wallets. In particular, it cannot inspect the field balance of he wallets.
+This leads to the question of potentially dishonest wallets.
+
+
+\section{Second Version -- Potentially dishonest Wallets}
+
+But what should the Escrow do when the wallets might export the functions to transfer, but migh lie. Eg might return true, even if they have not ransfered the moneys?
+
+
+\section{This is material from earlier -- to be redistributed}
+\rm{What if there are good and bad agents? Then you want if both the agents are good and there is enough money the trade to happen and if only one agent is good the trade not to happen. In these three cases you want no other monies in the wallets to be touched. All bets are off if both agents are bad.}
+\newpage
+\noindent
+\textbf{Spec} IsGood (a : Agent) : Bool
+
+\tab --- to be defined
+\\\\
+\textbf{Spec} Trade (a1, a2 : agent, num, rate : Nat) : (a1', a2' : agent) 
+
+\tab\textbf{field} a1', a2' : agent
+
+\tab\textbf{if} IsGood(a1) $\wedge$ IsGood(a2) $\wedge$ canTrade (a1,a2,num,rate) \textbf{then}
+\tab\tab \ \ \ \ a1'.ew.value = a1.ew.value - num
+\tab\tab \ \ \ \ a1'.dw.value = a1.dw.value + rate * num
+\tab\tab \ \ \ \ a2'.ew.value = a2.ew.value + num
+\tab\tab \ \ \ \ a2'.dw.value = a2.dw.value - (1/rate)*num
+\tab\tab\ \ \ \ \textbf{return} (a1', a2')
+
+\tab\textbf{else} \textbf{if} (IsGood(a1) $\wedge$ $!$IsGood(a2))  $\vee$ (IsGood(a2) $\wedge$ $!$IsGood(a1)) \textbf{then}
+\tab\tab\ \ \ \ \textbf{return} (a1, a2)
+
+\tab\textbf{else return} (a1', a2') can have any values
+\\ \\
+\rm{The outstanding questions are how do you know if an agent is a good agent and how do you ensure that if a good agent and a bad agent attempt a trade, nothing at all happens.}
+\\ \\
+\end{document}
