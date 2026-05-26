@@ -89,7 +89,7 @@
  
 
 \lstdefinelanguage{Chainmail}{
-    keywords={if, else, while, for, return, int, float,field,ghost,specification,signature,method,private,public,function,POST,PRE},   % primary keywords
+    keywords={if, else, while, for, shorthands, return, int, float,field,ghost,specification,signature,method,private,public,function,POST,PRE,simplifying, assumptions,with},   % primary keywords
     keywordstyle=\color{blue}\bfseries,                    % style for keywords
     ndkeywords={true, false, null,nat,bool},                        % secondary keywords
     ndkeywordstyle=\color{gray}\bfseries,             % style for secondary
@@ -266,9 +266,9 @@ The Escrow makes exchanges between agents, through its method exchange, where  a
 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 signature Wallet
-    field blnce: nat
+    gost field blnce: nat
     method transfer(w':Wallet, amt:nat): bool 
-    method sprout():Wallet
+    method sprout(): Wallet
     ghost function $\CanTrade$(w':Wallet): bool
  
  signature Escrow
@@ -283,37 +283,79 @@ We start with the Wallets ... vvvvv vvvv
 nnn nn mmm explain cccc explain  mmm explain cccc  mmm explain cccc explain  mmm explain cccc  mmm explain cccc explain  mmm explain cccc 
 
 explain GdWallet, explain, explain xxx vvv mmm explain cccc explain  mmm explain cccc mmm explain cccc explain  mmm explain cccc mmm explain cccc explain  mmm explain cccc 
-
+We will also be.using the shorthands \texttt{Had} and \texttt{Transferred} to express 
+ 
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
 specification GdWallet: Wallet
-     PRE:  true
-         res:=this.sprout()
-     POST: this.$\CanTrade$(res)
+   PRE:  true
+       res:=this.sprout()
+   POST: $\,\wedge\,$GdWallet(res)$\,wedge\,$this.$\CanTrade$(res)
       
-     PRE:  true
-         res:=this.$\CanTrade$(w)
-     POST: res $\Longrightarrow$ GdWallet(w)$\,\wedge\,$this$\neq$w         
+   PRE:  true
+       res:=this.$\CanTrade$(w)
+   POST: res $\Longrightarrow$ GdWallet(w)$\,\wedge\,$this$\neq$w        
     
-     PRE: true
-         res:=this.transfer(w',amt)
-     POST: ( res $\Longleftrightarrow$ this$\neq$w'$\,\wedge\,$old(this.blnce)$\geq$amt$\,\wedge\,$this.$\CanTrade$(w) ) 
-            $\,\wedge\,$
-           ( res $\Longrightarrow$  this.blnce=old(this.blnce)-amnt$\,\wedge\,$w'.blnce=old(w'.blnce)+amnt )                
+   PRE: true
+       res:=this.transfer(w',amt)
+   POST: ( res $\Longleftrightarrow$ this.$\CanTrade$(w)$\,\wedge\,$Had(this,amt) ) 
+         $\,\wedge\,$         
+         ( res $\Longrightarrow$ Transferred(this,w,amt) )  
+           
+with shorthands
+   Had(w:Wallet,amt:nat) $\triangleq$ old(w.blnce)$\geq$amt
+         
+   Unaffected(w) $\triangleq$  w.blnce$=$old(w.blnce)    
+   
+   Transferred(w,w':Wallet,amt:nat) $\triangleq$  w.blnce=old(w.blnce)-amnt$\,\wedge\,$
+                                       w'.blnce=old(w'.blnce)+amnt  
+                                       
+    OGdWallet(w) $\triangleq$  old(w)$\,\wedge\,$GdWallet(w)                                
 \end{lstlisting}
+
+%\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines]
+%specification GdWallet: Wallet
+%     PRE:  true
+%         res:=this.sprout()
+%     POST: $\,\wedge\,$GdWallet(res)$\,wedge\,$this.$\CanTrade$(res)
+%      
+%     PRE:  true
+%         res:=this.$\CanTrade$(w)
+%     POST: res $\Longrightarrow$ GdWallet(w)$\,\wedge\,$this$\neq$w        
+%    
+%     PRE: true
+%         res:=this.transfer(w',amt)
+%     POST: ( res $\Longleftrightarrow$ this$\neq$w'$\,\wedge\,$old(this.blnce)$\geq$amt$\,\wedge\,$this.$\CanTrade$(w) ) 
+%            $\,\wedge\,$
+%           ( res $\Longrightarrow$  this.blnce=old(this.blnce)-amnt$\,\wedge\,$w'.blnce=old(w'.blnce)+amnt )  
+%shorthands
+%         Had(w:Wallet,amt:nat) $\triangleq$ old(w.blnce)$\geq$amt
+%         
+%         Transferred(w,w':Wallet,amt:nat) $\triangleq$  w.blnce=old(w.blnce)-amnt$\,\wedge\,$w'.blnce=old(w'.blnce)+amnt         
+%\end{lstlisting}
 
 And now explain the GdEscrow  mmm explain cccc explain  mmm explain cccc mmm explain cccc explain  mmm explain cccc mmm explain cccc explain  mmm explain cccc mmm explain cccc explain  mmm explain cccc 
 
 mmm explain cccc explain  mmm explain cccc mmm explain cccc explain  mmm explain cccc 
 
+%The old version, without the shorthands
+%\begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines] 
+%specification GdEscrow: Escrow
+%     PRE:  GdWallet(we,we',wd,wd')$\,\wedge\,$card{we,we',wd,wd'}=4
+%         res := this.exchange(we,we',wd.wd,e,d)
+%     POST: ( res $\Longleftrightarrow$ we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$ 
+%                     old(we.blnce)$\geq$e $\,\wedge\,$old(wd'.blnce)$\geq$d )
+%           $\,\wedge\,$ 
+%           ( res $\Longrightarrow$ we.blnce=old(we.blnce)-e $\,\wedge\,$we'.blnce=old(we'.blnce)+amnt$\,\wedge\,$
+%                     wd.blnce=old(wd.blnce)+d $\,\wedge\,$wd'.blnce=old(wd'.blnce)-d  )       
+%\end{lstlisting}
+
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines] 
 specification GdEscrow: Escrow
      PRE:  GdWallet(we,we',wd,wd')$\,\wedge\,$card{we,we',wd,wd'}=4
          res := this.exchange(we,we',wd.wd,e,d)
-     POST: ( res $\Longleftrightarrow$ we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$ 
-                     old(we.blnce)$\geq$e $\,\wedge\,$old(wd'.blnce)$\geq$d )
+     POST: ( res $\Longleftrightarrow$ we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$Had(we,e)$\,\wedge\,$Had(wd',d) )
            $\,\wedge\,$ 
-           ( res $\Longrightarrow$ we.blnce=old(we.blnce)-e $\,\wedge\,$we'.blnce=old(we'.blnce)+amnt$\,\wedge\,$
-                     wd.blnce=old(wd.blnce)+d $\,\wedge\,$wd'.blnce=old(wd'.blnce)-d  )       
+           ( res $\Longrightarrow$ Transferred(we,we',e)$\,\wedge\,$Transferred(we,we',d)  )       
 \end{lstlisting}
 
 
@@ -323,37 +365,69 @@ specification GdEscrow: Escrow
 
 
     
+%\OLD LAYOUT
+%begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines] 
+%specification GdEscrow: Escrow
+%     PRE:  true
+%         res := this.exchange(we,we',wd.wd,e,d)     
+%     POST:( res $\Longrightarrow$ GdWallet(we,we',wd,wd')$\,\wedge\,$
+%        ( res $\Longrightarrow$ GdWallet(we,we',wd,wd')$\,\wedge\,$
+%                        we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$Had(we,e)$\,\wedge\,$Had(wd',d)  
+%                     $\vee$
+%                     $\neg$GdWallet(we)$\,\wedge\,\neg$GdWallet(we')$\,\wedge\,\neg$GdWallet(wd)$\,\wedge\,\neg$GdWallet(wd')  )                           
+%          $\,\wedge\,$ 
+%          ( $\neg$res $\Longrightarrow$ GdWallet(we,we',wd,wd')$\,\wedge\,$
+%                        ($\,\neg$we.$\CanTrade$(we')$\,\vee\, $wd.$\CanTrade$(wd')$\,\vee\,\neg$Had(we,e)$\,\vee\,\neg$Had(wd',d)$\,)$
+%                     $\vee$
+%                     $\exists$w,w'$\!\in\!\{$we,we',wd,wd'$\}$.GdWallet(w)$\,\wedge\,\neg$GdWallet(w') 
+%                     $\vee$
+%                     $\neg$GdWallet(we)$\,\wedge\,\neg$GdWallet(we')$\,\wedge\,\neg$GdWallet(wd)$\,\wedge\,\neg$GdWallet(wd')  )                            
+%          $\,\wedge\,$ 
+%          ( res$\,\wedge\,$GdWallet(we) $\Longrightarrow$ Transfered(we,we',e)$\,\wedge\,$Transfered(wd,wd',d)$\,\wedge\,$ 
+%                                 $\forall$w.$[\, $GdWallet(w)$\,\wedge\,$w$\notin\{$we,we',wd,wd'$\} \Longrightarrow$ Unaffected(w)$\, ]$)
+%          $\,\wedge\,$ 
+%          ( $\neg$res$\,\wedge\,$GdWallet(we,we',wd,wd') $\Longrightarrow$  $\forall$w.$[\, $GdWallet(w)$\ \Longrightarrow$ Unaffected(w)$\, ]$)
+%             $\,\wedge\,$ 
+%          $\forall$w.$[\ $GdWallet(w)$\,\wedge\,$w$\notin\{$we,we',wd,wd'$\}\,\wedge\, ... more\, later ...  \Longrightarrow$ Unaffected(w)$\, ]$
+%with simplifying assumptions
+%    card(we,we',wd,wd')=4
+%    GdWallet(we)$\Leftrightarrow$GdWallet(wd)
+%    GdWallet(we')$\Leftrightarrow$GdWallet(wd')             
+%\end{lstlisting}
+
 \begin{lstlisting}[mathescape=true, language=Chainmail, frame=lines] 
 specification GdEscrow: Escrow
      PRE:  true
-     POST: ( 
-           res  $\Longrightarrow$ ( GdWallet(we,we',wd,wd')$\,\wedge\,$we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$  
-                         old(we.blnce)$\geq$e $\,\wedge\,$old(wd'.blnce)$\geq$d  
-                     $\vee$
-                     $\neg$GdWallet(we)$\,\wedge\,\neg$GdWallet(we')$\,\wedge\,\neg$GdWallet(wd)$\,\wedge\,\neg$GdWallet(wd') 
-                     )                            
-           $\,\wedge\,$ 
-           $\neg$res $\Longrightarrow$ ( GdWallet(we,we',wd,wd')$\,\wedge\,$we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$  
-                         $\neg$(old(we.blnce)$\geq$e $\,\wedge\,$old(wd'.blnce)$\geq$d)   
-                     $\vee$
-                     GdWallet(we,we')$\,\wedge\,\neg$we.$\CanTrade$(we')
-                     $\vee$
-                     GdWallet(wd,wd)$\,\wedge\,\neg$wd.$\CanTrade$(wd')
-                     $\vee$
-                     $\neg$GdWallet(we)$\,\wedge\,\neg$GdWallet(we')$\,\wedge\,\neg$GdWallet(wd)$\,\wedge\,\neg$GdWallet(wd') 
-                     )                            
-           $\,\wedge\,$ 
-           ( res$\,\wedge\,$GdWallet(we) $\Longrightarrow$ we.blnce=old(we.blnce)-e$\,\wedge\,$we'.blnce=old(we'.blnce)+amnt$\,\wedge\,$
-              wd.blnce=old(wd.blnce)+d $\,\wedge\,$wd'.blnce=old(wd'.blnce)-d  )  ) 
-            (  es$\,\wedge\,\neg$GdWallet(we) $\Longrightarrow$ $\mbox{ .. to discuss later...}$ ) 
-           $\,\wedge\,$ 
-                  $\neg$res $\Longleftrightarrow$ (  GdWallet(we,we',wd,wd')$\,\wedge\,$we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$  
-                       old(we.blnce)$\geq$e $\,\wedge\,$old(wd'.blnce)$\geq$d  
-                       $\vee$
-                       $\neg$GdWallet(we)$\,\wedge\,\neg$GdWallet(we')$\,\wedge\,\neg$GdWallet(wd)$\,\wedge\,\neg$GdWallet(wd') 
-             ) 
-\end{lstlisting}
+         res := this.exchange(we,we',wd.wd,e,d)     
+     POST: 
+        // about the return value of the call
+        ( res $\Longrightarrow$ GdWallet(we,we',wd,wd')$\,\wedge\,$
+                          we.$\CanTrade$(we')$\,\wedge\, $wd.$\CanTrade$(wd')$\,\wedge\,$Had(we,e)$\,\wedge\,$Had(wd',d)  
+                 $\vee$
+                 $\neg$GdWallet(we)$\,\wedge\,\neg$GdWallet(we')$\,\wedge\,\neg$GdWallet(wd)$\,\wedge\,\neg$GdWallet(wd')  )                           
+        $\,\wedge\,$ 
+        ( $\neg$res $\Longrightarrow$ GdWallet(we,we',wd,wd')$\,\wedge\,$
+                       ($\,\neg$we.$\CanTrade$(we')$\,\vee\, $wd.$\CanTrade$(wd')$\,\vee\,\neg$Had(we,e)$\,\vee\,\neg$Had(wd',d)$\,)$
+                  $\vee$
+                  $\exists$w,w'$\!\in\!\{$we,we',wd,wd'$\}$.GdWallet(w)$\,\wedge\,\neg$GdWallet(w') 
+                  $\vee$
+                  $\neg$GdWallet(we)$\,\wedge\,\neg$GdWallet(we')$\,\wedge\,\neg$GdWallet(wd)$\,\wedge\,\neg$GdWallet(wd')  )                            
+        // about the side-effects of the call
+        $\,\wedge\,$ 
+        ( res$\,\wedge\,$GdWallet(we) $\Longrightarrow$ Transfered(we,we',e)$\,\wedge\,$Transfered(wd,wd',d)$\,\wedge\,$ 
+                              $\forall$w.$[\, $OGdWallet(w)$\,\wedge\,$w$\notin\{$we,we',wd,wd'$\} \Longrightarrow$ Unaffected(w)$\, ]$)
+        $\,\wedge\,$ 
+        ( $\neg$res$\,\wedge\,\exists$w$_o\!\in\!\{$we,we',wd,wd'$\}.$GdWallet(w$_o$) $\Longrightarrow$ $\forall$w.$[\, $OGdWallet(w)$\ \Longrightarrow$ Unaffected(w)$\, ]$ )
+        $\,\wedge\,$ 
+        $\forall$w.$[\ $OGdWallet(w)$\,\wedge\,$w$\notin\{$we,we',wd,wd'$\}\,\wedge\, ... more\, later ...  \Longrightarrow$ Unaffected(w)$\, ]$
+with simplifying assumptions
+    card(we,we',wd,wd')=4
+    GdWallet(we)$\Leftrightarrow$GdWallet(wd)
+    GdWallet(we')$\Leftrightarrow$GdWallet(wd')
+\end{lstlisting}    
 
+ddd
+%    card(we,we',wd,wd')=4$\,\wedge\,$GdWallet(we)$\Leftrightarrow$GdWallet(wd)$\,\wedge\,$GdWallet(we')$\Leftrightarrow$GdWallet(wd')             
 
 
 \end{document}
